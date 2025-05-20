@@ -25,6 +25,7 @@
 #include <type_traits>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
@@ -44,6 +45,14 @@ namespace Opm::gpuistl
  * @note we only support square matrices.
  *
  * @note We only support Block Compressed Sparse Row Format (BSR) for now.
+
+ * @note This class uses the legacy cuSPARSE API, to be compatible with CuSparse's ilu0 preconditioner. However,
+ *       this preconditioner is deprecated and will be removed in future versions of CuSparse. So we should migrate
+ *       to the new cuSPARSE generic API in the future.
+ *
+ * @note To also support block size 1, we use the GpuSparseMatrixGeneric class which uses the new cuSPARSE generic API.
+ *       This is a temporary solution, and we should migrate to the new API for all block sizes in the future by
+ *       replacing this class with GpuSparseMatrixGeneric.
  */
 template <typename T>
 class GpuSparseMatrix
@@ -171,6 +180,9 @@ public:
      */
     GpuVector<T>& getNonZeroValues()
     {
+        if (m_genericMatrixForBlockSize1 != nullptr) {
+            return m_genericMatrixForBlockSize1->getNonZeroValues();
+        }
         return m_nonZeroElements;
     }
 
@@ -181,6 +193,9 @@ public:
      */
     const GpuVector<T>& getNonZeroValues() const
     {
+        if (m_genericMatrixForBlockSize1 != nullptr) {
+            return m_genericMatrixForBlockSize1->getNonZeroValues();
+        }
         return m_nonZeroElements;
     }
 
@@ -191,6 +206,9 @@ public:
      */
     GpuVector<int>& getRowIndices()
     {
+        if (m_genericMatrixForBlockSize1 != nullptr) {
+            return m_genericMatrixForBlockSize1->getRowIndices();
+        }
         return m_rowIndices;
     }
 
@@ -201,6 +219,9 @@ public:
      */
     const GpuVector<int>& getRowIndices() const
     {
+        if (m_genericMatrixForBlockSize1 != nullptr) {
+            return m_genericMatrixForBlockSize1->getRowIndices();
+        }
         return m_rowIndices;
     }
 
@@ -211,6 +232,9 @@ public:
      */
     GpuVector<int>& getColumnIndices()
     {
+        if (m_genericMatrixForBlockSize1 != nullptr) {
+            return m_genericMatrixForBlockSize1->getColumnIndices();
+        }
         return m_columnIndices;
     }
 
@@ -221,6 +245,9 @@ public:
      */
     const GpuVector<int>& getColumnIndices() const
     {
+        if (m_genericMatrixForBlockSize1 != nullptr) {
+            return m_genericMatrixForBlockSize1->getColumnIndices();
+        }
         return m_columnIndices;
     }
 
@@ -267,8 +294,6 @@ public:
      * @brief mv performs matrix vector multiply y = Ax
      * @param[in] x the vector to multiply the matrix with
      * @param[out] y the output vector
-     *
-     * @note Due to limitations of CuSparse, this is only supported for block sizes greater than 1.
      */
     virtual void mv(const GpuVector<T>& x, GpuVector<T>& y) const;
 
@@ -276,8 +301,6 @@ public:
      * @brief umv computes y=Ax+y
      * @param[in] x the vector to multiply with A
      * @param[inout] y the vector to add and store the output in
-     *
-     * @note Due to limitations of CuSparse, this is only supported for block sizes greater than 1.
      */
     virtual void umv(const GpuVector<T>& x, GpuVector<T>& y) const;
 
@@ -286,8 +309,6 @@ public:
      * @brief umv computes y=alpha * Ax + y
      * @param[in] x the vector to multiply with A
      * @param[inout] y the vector to add and store the output in
-     *
-     * @note Due to limitations of CuSparse, this is only supported for block sizes greater than 1.
      */
     virtual void usmv(T alpha, const GpuVector<T>& x, GpuVector<T>& y) const;
 
@@ -353,6 +374,9 @@ private:
 
     detail::GpuSparseMatrixDescriptionPtr m_matrixDescription;
     detail::CuSparseHandle& m_cusparseHandle;
+
+    // For blockSize == 1, we use the generic API
+    std::unique_ptr<GpuSparseMatrixGeneric<T>> m_genericMatrixForBlockSize1;
 
     template <class VectorType>
     void assertSameSize(const VectorType& vector) const;
