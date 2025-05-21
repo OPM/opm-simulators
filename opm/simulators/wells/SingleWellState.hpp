@@ -30,7 +30,6 @@
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/ALQState.hpp>
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm {
 
@@ -48,7 +47,6 @@ public:
                     bool is_producer,
                     Scalar presssure_first_connection,
                     const std::vector<PerforationData<Scalar>>& perf_input,
-                    const PhaseUsage& pu,
                     Scalar temp);
 
     static SingleWellState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
@@ -90,7 +88,6 @@ public:
 
     WellStatus status{WellStatus::OPEN};
     bool producer;
-    PhaseUsage pu;
     Scalar bhp{0};
     Scalar thp{0};
     Scalar temperature{0};

@@ -148,7 +148,7 @@ WellState<FluidSystem, Indices>::WellState(const ParallelWellInfo<Scalar>& pinfo
     : phase_usage_{{BlackoilPhases::Aqua, BlackoilPhases::Liquid}}
 {
     wells_.add("test4",
-               SingleWellState<FluidSystem, Indices>{"dummy", pinfo, false, 0.0, {}, phase_usage_, 0.0});
+               SingleWellState<FluidSystem, Indices>{"dummy", pinfo, false, 0.0, {}, 0.0});
 }
 
 template<typename FluidSystem, typename Indices>
@@ -194,7 +194,6 @@ initSingleProducer(const Well& well,
                    const std::vector<PerforationData<Scalar>>& well_perf_data,
                    const SummaryState& summary_state)
 {
-    const auto& pu = this->phase_usage_;
     const Scalar temp = 273.15 + 15.56;
 
     auto& ws = this->wells_.add(well.name(),
@@ -203,7 +202,6 @@ initSingleProducer(const Well& well,
                                                 true,
                                                 pressure_first_connection,
                                                 well_perf_data,
-                                                pu,
                                                 temp});
 
     // the rest of the code needs to executed even if ws.perf_data is empty
@@ -225,14 +223,12 @@ initSingleInjector(const Well& well,
                    const std::vector<PerforationData<Scalar>>& well_perf_data,
                    const SummaryState& summary_state)
 {
-    const auto& pu = this->phase_usage_;
     const Scalar temp = well.hasInjTemperature() ? well.inj_temperature() : temperature_first_connection;
     auto& ws = this->wells_.add(well.name(), SingleWellState<FluidSystem, Indices>{well.name(),
                                                                      well_info,
                                                                      false,
                                                                      pressure_first_connection,
                                                                      well_perf_data,
-                                                                     pu,
                                                                      temp});
 
     // the rest of the code needs to executed even if ws.perf_data is empty
