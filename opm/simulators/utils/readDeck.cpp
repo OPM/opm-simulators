@@ -75,14 +75,17 @@
 
 #include <fmt/format.h>
 
-#include <cstdlib>
+#include <algorithm>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
+#include <system_error>
 #include <utility>
+#include <vector>
 
 namespace {
 
@@ -448,14 +451,72 @@ void Opm::ensureOutputDirExists(const std::string& cmdline_output_dir)
 void Opm::prepareResultOutputDirectory(const std::string&           baseName,
                                        const std::filesystem::path& outputDir)  
 {
-    //Loop over all files in the output directory and subdirectories and delete them if their name is baseName + a correct extension
-    std::regex r(baseName + R"(\.(F?(DBG|E?GRID|INIT|PRT|RFT|SMSPEC|UNSMRY|UNRST)|([ABCFGHSTUXYZ]\d{4})|(INFOSTEP|INFOITER|OPMRST)))");
-    for (auto& file : std::filesystem::directory_iterator(outputDir)) {
-        std::string fileName = file.path().filename();
-        if (std::regex_match(fileName, r)) {
-            std::filesystem::remove(file);
+    namespace fs = std::filesystem;
+
+    // Delete every regular file in the output directory whose name is
+    // baseName + one of a specific set of extensions.
+    //
+    // The following classes of files are known to the simulator and
+    // eligible for removal here:
+    //
+    //   1. Formatted and unformatted INIT, RFT, and SMSPEC files
+    //   2. Human readable report files (extensions PRT and DBG)
+    //   3. Formatted and unformatted unified and separate summary files
+    //   4. Formatted and unformatted unified and separate restart files
+    //   5. OPM-specific INFO*, OPMRST, and ESMRY files
+    //
+    // Note: We intentionally omit/exempt the grid files (i.e., extension
+    // F?E?GRID) as it's not entirely unheard of for CASE.DATA to use
+    // CASE.EGRID as an input file through the GDFILE keyword.  We don't
+    // want to inadvertently cause "file not found" errors and subsequent
+    // run failures in that situation.
+    const auto extensionRegEx = std::regex {
+        R"(\.(F?(INIT|RFT|SMSPEC|UNSMRY|UNRST)|([ABCFGHSTUXYZ]\d{4})|PRT|DBG|INFO(STEP|ITER)|OPMRST|ESMRY))"
+    };
+
+    // We collect a list of files to remove in order that the directory
+    // traversal not be disturbed by remove() calls.  The downside to this
+    // approach is that it opens up the common race window between the "time
+    // of check" and the "time of use".
+    auto fileRemovalList = std::vector<fs::path>{};
+
+    std::for_each(fs::directory_iterator { outputDir },
+                  fs::directory_iterator {}, // End iterator
+                  [&baseName, &extensionRegEx, &fileRemovalList]
+                  (const fs::directory_entry& dirEntry)
+    {
+        if (! dirEntry.is_regular_file()) {
+            return;
         }
-    }
+
+        const auto& file = dirEntry.path();
+
+        // Note: Normal string matching for the stem() since 'baseName'
+        // might contain regular expression metacharacters like '+' or '-'.
+        if ((file.stem() == baseName) &&
+            std::regex_match(file.extension().string(), extensionRegEx))
+        {
+            fileRemovalList.push_back(file);
+        }
+    });
+
+    // Affect actual file removal.
+    std::for_each(fileRemovalList.begin(), fileRemovalList.end(),
+                  [](const fs::path& file)
+    {
+        auto ec = std::error_code{};
+        fs::remove(file, ec);
+
+        if (ec) {
+            // Failed to remove the file for some reason.  Report condition
+            // to user, but don't do anything else.  Note: We print directly
+            // to 'cerr' here since we're typically called before the
+            // logging system is operational.
+            std::cerr << fmt::format("Failed to remove existing "
+                                     "result file '{}': {}\n",
+                                     file.string(), ec.message());
+        }
+    });
 }
 
 // Setup the OpmLog backends
