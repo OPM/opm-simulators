@@ -159,7 +159,7 @@ private:
                       "The preconditioner needs to be a CUDA preconditioner (eg. GPUDILU) wrapped in a "
                       "Opm::gpuistl::PreconditionerAdapter wrapped in a "
                       "Opm::gpuistl::GpuBlockPreconditioner. If you are unsure what this means, set "
-                      "preconditioner to 'GPUDILU'");
+                      "preconditioner to 'gpudilu'");
         }
 
         auto preconditionerAdapter = precAsHolder->getUnderlyingPreconditioner();
@@ -170,7 +170,7 @@ private:
                       "The preconditioner needs to be a CUDA preconditioner (eg. GPUDILU) wrapped in a "
                       "Opm::gpuistl::PreconditionerAdapter wrapped in a "
                       "Opm::gpuistl::GpuBlockPreconditioner. If you are unsure what this means, set "
-                      "preconditioner to 'GPUDILU'");
+                      "preconditioner to 'gpudilu'");
         }
         // We need to get the underlying preconditioner:
         auto preconditionerReallyOnGPU = preconditionerAdapterAsHolder->getUnderlyingPreconditioner();

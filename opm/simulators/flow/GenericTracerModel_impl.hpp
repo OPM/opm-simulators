@@ -396,7 +396,7 @@ linearSolve_(const TracerMatrix& M, TracerVector& x, TracerVector& b)
     prm.put("tol", tolerance);
     prm.put("verbosity", verbosity);
     prm.put("solver", std::string("bicgstab"));
-    prm.put("preconditioner.type", std::string("ParOverILU0"));
+    prm.put("preconditioner.type", std::string("paroverilu0"));
 
 #if HAVE_MPI
     if(gridView_.grid().comm().size() > 1)
@@ -454,7 +454,7 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
         prm.put("tol", tolerance);
         prm.put("verbosity", verbosity);
         prm.put("solver", std::string("bicgstab"));
-        prm.put("preconditioner.type", std::string("ParOverILU0"));
+        prm.put("preconditioner.type", std::string("paroverilu0"));
         auto [tracerOperator, solver] =
             createParallelFlexibleSolver<TracerVector>(gridView_.grid(), M, prm);
         (void) tracerOperator;
