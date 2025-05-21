@@ -342,7 +342,7 @@ wellHasTHPConstraints(const SummaryState& summaryState) const
 
 template<typename FluidSystem, typename Indices>
 void WellInterfaceGeneric<FluidSystem, Indices>::
-updateWellTestState(const SingleWellState<Scalar>& ws,
+updateWellTestState(const SingleWellState<FluidSystem, Indices>& ws,
                     const double& simulationTime,
                     const bool& writeMessageToOPMLog,
                     const bool zero_group_target,
@@ -625,7 +625,7 @@ getALQ(const WellState<FluidSystem, Indices>& well_state) const
 
 template<typename FluidSystem, typename Indices>
 void WellInterfaceGeneric<FluidSystem, Indices>::
-reportWellSwitching(const SingleWellState<Scalar> &ws,
+reportWellSwitching(const SingleWellState<FluidSystem, Indices> &ws,
                     DeferredLogger& deferred_logger) const
 {
     if (well_control_log_.empty())
@@ -679,7 +679,7 @@ wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
 
 template<typename FluidSystem, typename Indices>
 bool WellInterfaceGeneric<FluidSystem, Indices>::
-wellUnderGroupControl(const SingleWellState<Scalar>& ws) const
+wellUnderGroupControl(const SingleWellState<FluidSystem, Indices>& ws) const
 {
     // Check if well is under group control
     const bool isGroupControlled = (this->isInjector() && ws.injection_cmode == Well::InjectorCMode::GRUP) ||

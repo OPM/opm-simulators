@@ -41,7 +41,7 @@ namespace Opm {
 
 template<typename FluidSystem, typename Indices>
 bool WellConstraints<FluidSystem, Indices>::
-checkIndividualConstraints(SingleWellState<Scalar>& ws,
+checkIndividualConstraints(SingleWellState<FluidSystem, Indices>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,
@@ -78,7 +78,7 @@ checkIndividualConstraints(SingleWellState<Scalar>& ws,
 template<typename FluidSystem, typename Indices>
 Well::InjectorCMode
 WellConstraints<FluidSystem, Indices>::
-activeInjectionConstraint(const SingleWellState<Scalar>& ws,
+activeInjectionConstraint(const SingleWellState<FluidSystem, Indices>& ws,
                           const SummaryState& summaryState,
                           bool& thp_limit_violated_but_not_switched,
                           DeferredLogger& deferred_logger,
@@ -177,7 +177,7 @@ activeInjectionConstraint(const SingleWellState<Scalar>& ws,
 template<typename FluidSystem, typename Indices>
 Well::ProducerCMode
 WellConstraints<FluidSystem, Indices>::
-activeProductionConstraint(const SingleWellState<Scalar>& ws,
+activeProductionConstraint(const SingleWellState<FluidSystem, Indices>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,

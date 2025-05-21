@@ -38,9 +38,11 @@ template<class Scalar> struct PerforationData;
 class SummaryState;
 class Well;
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class SingleWellState {
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     SingleWellState(const std::string& name,
                     const ParallelWellInfo<Scalar>& pinfo,
                     bool is_producer,
