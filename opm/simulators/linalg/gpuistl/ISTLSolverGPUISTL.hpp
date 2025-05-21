@@ -96,6 +96,13 @@ public:
                                            Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
                                            Parameters::IsSet<Parameters::LinearSolverReduction>());
 
+        useWellConn_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
+
+        if (!useWellConn_) {
+            OPM_THROW(std::logic_error, "Well operators are currently not supported for the GPU backend. "
+            "Use --matrix-add-well-contributions=true to add well contributions to the matrix instead.");
+        }
+
         Opm::detail::printLinearSolverParameters(m_parameters, m_propertyTree, simulator.gridView().comm());
     }
 
@@ -380,6 +387,7 @@ private:
     const bool m_forceSerial;
     const Simulator& m_simulator;
     PropertyTree m_propertyTree;
+    bool useWellConn_;
 
     int m_lastSeenIterations = 0;
     int m_solveCount = 0;
