@@ -35,10 +35,11 @@ jobs:
       - name: Build Sphinx documentation
         run: |
           cd docs/sphinx
+          sphinx-build -b html source build/html
           make html
 
       - name: Deploy documentation
         uses: OPM/github-pages-deploy-action@releases/v4
         with:
-	  branch: gh-pages-${{ github.ref_name }}
-          publish_dir: docs/sphinx/build/html
+          branch: gh-pages-${{ github.ref_name }}
+          folder: python/gh-pages
