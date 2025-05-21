@@ -111,11 +111,11 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
 
     const auto version = Parameters::Get<Parameters::RelativeChangeVersion>();
     if (version == "pressure") {
-        relative_change_version_ = 1;
+        relative_change_version_ = RelativeChangeApproach::Pressure;
     } else if (version == "saturation") {
-        relative_change_version_ = 2;
+        relative_change_version_ = RelativeChangeApproach::Saturation;
     } else if (version == "pressure+saturation") {
-        relative_change_version_ = 3;
+        relative_change_version_ = RelativeChangeApproach::PressureSaturation;
     } else {
         throw std::runtime_error("Unsupported relative change version: " + version);
     }

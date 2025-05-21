@@ -457,15 +457,15 @@ relativeChange() const
     gridView.comm().sum(r.data(), r.size());
 
     switch(version) {
-        case 1: // "pressure"
+        case RelativeChangeApproach::Pressure:
             if (resultDenomPressure > 0.0)
                 return std::sqrt(resultDeltaPressure / resultDenomPressure);
             break;
-        case 2: // "saturation"
+        case RelativeChangeApproach::Saturation:
             if (resultDenomSaturation > 0.0)
                 return std::sqrt(resultDeltaSaturation / resultDenomSaturation);
             break;
-        case 3: // "pressure+saturation"
+        case RelativeChangeApproach::PressureSaturation:
             if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0) {
                 if (simulator_.timeStepIndex() == 0) {
                     return std::sqrt(resultDeltaPressure / resultDenomPressure);
