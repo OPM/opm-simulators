@@ -51,10 +51,10 @@ BOOST_AUTO_TEST_CASE(TestMatrixAdapter)
     // The name of the preconditioner on the GPU directly (key) and
     // the name of the wrapped preconditioner (value).
     auto preconditionerPairs = std::map<std::string, std::string> {
-        {"ILU0", "GPUILU0"},
-        {"JAC", "GPUJAC"},
-        {"OPMILU0", "OPMGPUILU0"},
-        {"DILU", "GPUDILU"},
+        {"ilu0", "gpuilu0"},
+        {"jac", "gpujac"},
+        {"opmilu0", "opmgpuilu0"},
+        {"dilu", "gpudilu"},
     };
 
     for (const auto& [gpuPreconditionerName, wrappedPreconditionerName] : preconditionerPairs) {
