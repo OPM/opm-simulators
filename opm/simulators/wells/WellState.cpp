@@ -148,7 +148,7 @@ WellState<FluidSystem, Indices>::WellState(const ParallelWellInfo<Scalar>& pinfo
     : phase_usage_{{BlackoilPhases::Aqua, BlackoilPhases::Liquid}}
 {
     wells_.add("test4",
-               SingleWellState<Scalar>{"dummy", pinfo, false, 0.0, {}, phase_usage_, 0.0});
+               SingleWellState<FluidSystem, Indices>{"dummy", pinfo, false, 0.0, {}, phase_usage_, 0.0});
 }
 
 template<typename FluidSystem, typename Indices>
@@ -158,7 +158,7 @@ serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
     WellState result(PhaseUsage{});
     result.alq_state = ALQState<Scalar>::serializationTestObject();
     result.well_rates = {{"test2", {true, {1.0}}}, {"test3", {false, {2.0}}}};
-    result.wells_.add("test4", SingleWellState<Scalar>::serializationTestObject(pinfo));
+    result.wells_.add("test4", SingleWellState<FluidSystem, Indices>::serializationTestObject(pinfo));
 
     return result;
 }
@@ -199,7 +199,7 @@ initSingleProducer(const Well& well,
     const Scalar temp = 273.15 + 15.56;
 
     auto& ws = this->wells_.add(well.name(),
-                                SingleWellState{well.name(),
+                                SingleWellState<FluidSystem, Indices>{well.name(),
                                                 well_info,
                                                 true,
                                                 pressure_first_connection,
@@ -228,7 +228,7 @@ initSingleInjector(const Well& well,
 {
     const auto& pu = this->phase_usage_;
     const Scalar temp = well.hasInjTemperature() ? well.inj_temperature() : temperature_first_connection;
-    auto& ws = this->wells_.add(well.name(), SingleWellState<Scalar>{well.name(),
+    auto& ws = this->wells_.add(well.name(), SingleWellState<FluidSystem, Indices>{well.name(),
                                                                      well_info,
                                                                      false,
                                                                      pressure_first_connection,

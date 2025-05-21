@@ -43,7 +43,7 @@ class Group;
 template<class Scalar> class GroupState;
 class Schedule;
 struct RatioLimitCheckReport;
-template<class Scalar> class SingleWellState;
+template<typename FluidSystem, typename Indices> class SingleWellState;
 template<typename FluidSystem, typename Indices> class WellState;
 
 template<typename FluidSystem, typename Indices>
@@ -81,9 +81,9 @@ protected:
                              const std::vector<PerforationData<Scalar>>& perf_data);
 
     // updating the voidage rates in well_state when requested
-    void calculateReservoirRates(const bool co2store, SingleWellState<Scalar>& ws) const;
+    void calculateReservoirRates(const bool co2store, SingleWellState<FluidSystem, Indices>& ws) const;
 
-    bool checkIndividualConstraints(SingleWellState<Scalar>& ws,
+    bool checkIndividualConstraints(SingleWellState<FluidSystem, Indices>& ws,
                                     const SummaryState& summaryState,
                                     DeferredLogger& deferred_logger,
                                     const std::optional<Well::InjectionControls>& inj_controls = std::nullopt,
