@@ -719,15 +719,15 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     }
 
                     segment_perforations[segment_index].push_back(n_activeperf);
-                    if (ws.parallel_info.get().globalToLocal(perf) > -1) {
+                    if (ws.parallel_info.get().globalPerfToLocalPerf(perf) > -1) {
                         active_perf_index_local_to_global.insert({n_activeperf_local, n_activeperf});
-                        active_to_local.insert({n_activeperf, ws.parallel_info.get().globalToLocal(perf)});
+                        active_to_local.insert({n_activeperf, ws.parallel_info.get().globalPerfToLocalPerf(perf)});
                         n_activeperf_local++;
                     }
                     n_activeperf++;
                 }
             }
-            ws.parallel_info.get().setActiveToLocalMap(active_to_local);
+            ws.parallel_info.get().setActivePerfToLocalPerfMap(active_to_local);
 
             // Check if the multi-segment well is distributed across several processes by comparing the local number
             // of active perforations (ws.perf_data.size()) with the total number of active perforations (n_activeperf).
@@ -914,7 +914,7 @@ calculateSegmentRatesBeforeSum(const ParallelWellInfo<Scalar>& pw_info,
     }
     // contributions from the perforations belong to this segment
     for (const int& perf : segment_perforations[segment]) {
-        auto local_perf = pw_info.activeToLocal(perf);
+        auto local_perf = pw_info.activePerfToLocalPerf(perf);
         // If local_perf == -1, then the perforation is not on this process.
         // The perforation of the other processes are added in calculateSegmentRates.
         if (local_perf > -1) {

@@ -217,11 +217,16 @@ public:
     /// \brief Collectively decide which rank has first perforation.
     void communicateFirstPerforation(bool hasFirst);
 
-    void setActiveToLocalMap(const std::unordered_map<int,int> active_to_local_map) const;
-    int activeToLocal(const int activeIndex) const;
-    int localToActive(std::size_t localIndex) const;
-    int globalToLocal(const int globalIndex) const;
-    int localToGlobal(std::size_t localIndex) const;
+    // \brief Set the activePerfToLocalPerf-Map for multisegment wells, to be called from WellState::initWellStateMSWell
+    void setActivePerfToLocalPerfMap(const std::unordered_map<int,int> active_to_local_map) const;
+    // \brief Convert a global active perforation index to a local active perforation index
+    int activePerfToLocalPerf(const int activeIndex) const;
+    // \brief Convert a local active perforation index to a global active perforation index
+    int localPerfToActivePerf(std::size_t localIndex) const;
+    // \brief Convert a global perforation index to a local perforation index
+    int globalPerfToLocalPerf(const int globalIndex) const;
+    // \brief Convert a local perforation index to a global perforation index
+    int localPerfToGlobalPerf(std::size_t localIndex) const;
 
     /// If the well does not have any open connections the member rankWithFirstPerf
     /// is not initialized, and no broadcast is performed. In this case the argument

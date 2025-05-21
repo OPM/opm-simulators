@@ -528,7 +528,7 @@ ParallelWellInfo<Scalar>::ParallelWellInfo(const std::pair<std::string, bool>& w
 }
 
 template<class Scalar>
-void ParallelWellInfo<Scalar>::setActiveToLocalMap(const std::unordered_map<int,int> active_to_local_map) const {
+void ParallelWellInfo<Scalar>::setActivePerfToLocalPerfMap(const std::unordered_map<int,int> active_to_local_map) const {
     //active_to_local_map_ is marked as mutable
     active_to_local_map_ = active_to_local_map;
     for (const auto& [key, value] : active_to_local_map) {
@@ -537,7 +537,7 @@ void ParallelWellInfo<Scalar>::setActiveToLocalMap(const std::unordered_map<int,
 }
 
 template<class Scalar>
-int ParallelWellInfo<Scalar>::localToActive(std::size_t localIndex) const {
+int ParallelWellInfo<Scalar>::localPerfToActivePerf(std::size_t localIndex) const {
     if (comm_->size() == 1)
         return localIndex;
     auto it = local_to_active_map_.find(localIndex);
@@ -547,7 +547,7 @@ int ParallelWellInfo<Scalar>::localToActive(std::size_t localIndex) const {
 }
 
 template<class Scalar>
-int ParallelWellInfo<Scalar>::activeToLocal(const int activeIndex) const {
+int ParallelWellInfo<Scalar>::activePerfToLocalPerf(const int activeIndex) const {
     if (comm_->size() == 1)
         return activeIndex;
     auto it = active_to_local_map_.find(activeIndex);
@@ -557,7 +557,7 @@ int ParallelWellInfo<Scalar>::activeToLocal(const int activeIndex) const {
 }
 
 template<class Scalar>
-int ParallelWellInfo<Scalar>::localToGlobal(std::size_t localIndex) const {
+int ParallelWellInfo<Scalar>::localPerfToGlobalPerf(std::size_t localIndex) const {
     if(globalPerfCont_)
         return globalPerfCont_->localToGlobal(localIndex);
     else // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
@@ -565,7 +565,7 @@ int ParallelWellInfo<Scalar>::localToGlobal(std::size_t localIndex) const {
 }
 
 template<class Scalar>
-int ParallelWellInfo<Scalar>::globalToLocal(const int globalIndex) const {
+int ParallelWellInfo<Scalar>::globalPerfToLocalPerf(const int globalIndex) const {
     if(globalPerfCont_)
         return globalPerfCont_->globalToLocal(globalIndex);
     else // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
