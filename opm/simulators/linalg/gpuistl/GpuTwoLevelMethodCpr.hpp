@@ -217,7 +217,7 @@ public:
    * @param coarsePolicy The policy for constructing the coarse level solver.
    * @param preSteps The number of smoothing steps to apply before the coarse
    * level correction.
-   * @param preSteps The number of smoothing steps to apply after the coarse
+   * @param postSteps The number of smoothing steps to apply after the coarse
    * level correction.
    */
   GpuTwoLevelMethodCpr(const FineOperatorType& op,
@@ -226,7 +226,9 @@ public:
                     CoarseLevelSolverPolicy& coarsePolicy,
                     std::size_t preSteps=1, std::size_t postSteps=1)
     : operator_(&op), smoother_(smoother),
-      preSteps_(preSteps), postSteps_(postSteps)
+      preSteps_(preSteps), postSteps_(postSteps),
+      u_(op.getmat().N()*op.getmat().blockSize()),
+      rhs_(op.getmat().N()*op.getmat().blockSize())
   {
     policy_ = policy.clone();
     policy_->createCoarseLevelSystem(*operator_);
@@ -236,7 +238,8 @@ public:
   GpuTwoLevelMethodCpr(const GpuTwoLevelMethodCpr& other)
   : operator_(other.operator_), coarseSolver_(new CoarseLevelSolver(*other.coarseSolver_)),
     smoother_(other.smoother_), policy_(other.policy_->clone()),
-    preSteps_(other.preSteps_), postSteps_(other.postSteps_)
+    preSteps_(other.preSteps_), postSteps_(other.postSteps_),
+    u_(other.u_), rhs_(other.rhs_)
   {}
 
   ~GpuTwoLevelMethodCpr()
@@ -288,28 +291,27 @@ public:
 
   void apply(GpuDomainType& v, const GpuRangeType& d)
   {
-    //FineDomainType u(v);
-    //FineRangeType rhs(d);
-    //LevelContext context;
-    //SequentialInformation info;
-    //context.pinfo=&info;
-    //context.lhs=&u;
-    //context.update=&v;
-    //context.smoother=smoother_;
-    //context.rhs=&rhs;
-    //context.matrix=operator_;
+    u_ = v;
+    rhs_ = d;
+    LevelContext context;
+    SequentialInformation info;
+    context.pinfo=&info;
+    context.lhs=&u_;
+    context.update=&v;
+    context.smoother=smoother_;
+    context.rhs=&rhs_;
+    context.matrix=operator_;
     // Presmoothing
-    smoother_->apply(v, d);
-    //presmooth(context, preSteps_);
+    presmooth(context, preSteps_);
     //Coarse grid correction
-    //policy_->moveToCoarseLevel(*context.rhs);
-    //InverseOperatorResult res;
-    //coarseSolver_->apply(policy_->getCoarseLevelLhs(), policy_->getCoarseLevelRhs(), res);
-    //*context.lhs=0;
-    //policy_->moveToFineLevel(*context.lhs);
-    //*context.update += *context.lhs;
+    policy_->moveToCoarseLevel(*context.rhs);
+    InverseOperatorResult res;
+    coarseSolver_->apply(policy_->getCoarseLevelLhs(), policy_->getCoarseLevelRhs(), res);
+    *context.lhs=0;
+    policy_->moveToFineLevel(*context.lhs);
+    *context.update += *context.lhs;
     // Postsmoothing
-    //postsmooth(context, postSteps_);
+    postsmooth(context, postSteps_);
   }
 //   //! Category of the preconditioner (see SolverCategory::Category)
     virtual SolverCategory::Category category() const
@@ -361,6 +363,10 @@ private:
   std::size_t preSteps_;
   /** @brief The number of postsmoothing steps to apply. */
   std::size_t postSteps_;
+  /** @brief Temporary vector for the left-hand side. */
+  FineDomainType u_;
+  /** @brief Temporary vector for the right-hand side. */
+  FineRangeType rhs_;
 };
 }// end namespace Amg
 }// end namespace Dune

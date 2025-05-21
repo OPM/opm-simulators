@@ -74,17 +74,17 @@ public:
 
     virtual void pre(VectorType& x, VectorType& b) override
     {
-        //twolevel_method_.pre(x, b);
+        twolevel_method_.pre(x, b);
     }
 
     virtual void apply(VectorType& v, const VectorType& d) override
     {
-        //twolevel_method_.apply(v, d);
+        twolevel_method_.apply(v, d);
     }
 
     virtual void post(VectorType& x) override
     {
-        //twolevel_method_.post(x);
+        twolevel_method_.post(x);
     }
 
     virtual void update() override
@@ -100,8 +100,7 @@ public:
 
     virtual bool hasPerfectUpdate() const override
     {
-        //return twolevel_method_.hasPerfectUpdate();
-        return false;
+        return twolevel_method_.hasPerfectUpdate();
     }
 
     // Static methods to indicate that this preconditioner needs pre() and post() calls
@@ -124,7 +123,7 @@ private:
 
     void updateImpl()
     {
-        //twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
+        twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
     const OperatorType& linear_operator_;
