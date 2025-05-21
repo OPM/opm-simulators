@@ -110,7 +110,7 @@ init(const int numPerfs,
               end = duneC_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            const int local_perf_index = pw_info_.activeToLocal(perf);
+            const int local_perf_index = pw_info_.activePerfToLocalPerf(perf);
             if (local_perf_index < 0) // then the perforation is not on this process
                 continue;
             row.insert(local_perf_index);
@@ -122,7 +122,7 @@ init(const int numPerfs,
               end = duneB_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            const int local_perf_index = pw_info_.activeToLocal(perf);
+            const int local_perf_index = pw_info_.activePerfToLocalPerf(perf);
             if (local_perf_index < 0) // then the perforation is not on this process
                 continue;
             row.insert(local_perf_index);

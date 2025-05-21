@@ -108,7 +108,7 @@ MultisegmentWellSegments(const int numSegments,
             perforations_[segment_index].push_back(i_perf_wells);
             well.perfDepth()[i_perf_wells] = connection.depth();
             const Scalar segment_depth = segment_set[segment_index].depth();
-            int local_perf_index = parallel_well_info.activeToLocal(i_perf_wells);
+            int local_perf_index = parallel_well_info.activePerfToLocalPerf(i_perf_wells);
             if (local_perf_index > -1) // If local_perf_index == -1, then the perforation is not on this process
                 local_perforation_depth_diffs_[local_perf_index] = well_.perfDepth()[i_perf_wells] - segment_depth;
             i_perf_wells++;
