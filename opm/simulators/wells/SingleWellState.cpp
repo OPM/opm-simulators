@@ -41,21 +41,19 @@ SingleWellState(const std::string& name_,
                 bool is_producer,
                 Scalar pressure_first_connection,
                 const std::vector<PerforationData<Scalar>>& perf_input,
-                const PhaseUsage& pu_,
                 Scalar temp)
     : name(name_)
     , parallel_info(pinfo)
     , producer(is_producer)
-    , pu(pu_)
     , temperature(temp)
-    , well_potentials(pu_.num_phases)
-    , productivity_index(pu_.num_phases)
-    , implicit_ipr_a(pu_.num_phases)
-    , implicit_ipr_b(pu_.num_phases)
-    , surface_rates(pu_.num_phases)
-    , reservoir_rates(pu_.num_phases)
-    , prev_surface_rates(pu_.num_phases)
-    , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu_.num_phases)
+    , well_potentials(FluidSystem::numActivePhases())
+    , productivity_index(FluidSystem::numActivePhases())
+    , implicit_ipr_a(FluidSystem::numActivePhases())
+    , implicit_ipr_b(FluidSystem::numActivePhases())
+    , surface_rates(FluidSystem::numActivePhases())
+    , reservoir_rates(FluidSystem::numActivePhases())
+    , prev_surface_rates(FluidSystem::numActivePhases())
+    , perf_data(perf_input.size(), pressure_first_connection, !is_producer, FluidSystem::numActivePhases())
     , trivial_group_target(false)
 {
     for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
@@ -71,7 +69,7 @@ template<typename FluidSystem, typename Indices>
 SingleWellState<FluidSystem, Indices> SingleWellState<FluidSystem, Indices>::
 serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 {
-    SingleWellState result("testing", pinfo, true, 1.0, {}, PhaseUsage{}, 2.0);
+    SingleWellState result("testing", pinfo, true, 1.0, {}, 2.0);
     result.perf_data = PerfData<Scalar>::serializationTestObject();
 
     return result;
@@ -261,16 +259,16 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
     std::fill(this->surface_rates.begin(), this->surface_rates.end(), 0.0);
     switch (prod_controls.cmode) {
     case Well::ProducerCMode::ORAT:
-        assert(this->pu.phase_used[BlackoilPhases::Liquid]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] = -prod_controls.oil_rate;
         break;
     case Well::ProducerCMode::WRAT:
-        assert(this->pu.phase_used[BlackoilPhases::Aqua]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)] = -prod_controls.water_rate;
         break;
     case Well::ProducerCMode::GRAT:
-        assert(this->pu.phase_used[BlackoilPhases::Vapour]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] = -prod_controls.gas_rate;
         break;
     case Well::ProducerCMode::GRUP:
     case Well::ProducerCMode::THP:
@@ -328,16 +326,16 @@ update_injector_targets(const Well& ecl_well, const SummaryState& st)
 
     switch (inj_controls.injector_type) {
     case InjectorType::WATER:
-        assert(pu.phase_used[BlackoilPhases::Aqua]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] = inj_surf_rate;
         break;
     case InjectorType::GAS:
-        assert(pu.phase_used[BlackoilPhases::Vapour]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] = inj_surf_rate;
         break;
     case InjectorType::OIL:
-        assert(pu.phase_used[BlackoilPhases::Liquid]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] = inj_surf_rate;
         break;
     case InjectorType::MULTI:
         // Not currently handled, keep zero init.
