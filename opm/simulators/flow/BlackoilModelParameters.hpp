@@ -175,6 +175,13 @@ struct NupcolGroupRateTolerance { static constexpr Scalar value = 0.001; };
 
 namespace Opm {
 
+// Relative change approaches available
+enum class RelativeChangeApproach {
+    Pressure,
+    Saturation,
+    PressureSaturation
+};
+
 /// Solver parameters for the BlackoilModel.
 template <class Scalar>
 struct BlackoilModelParameters
@@ -375,7 +382,7 @@ public:
     ConvergenceMonitorParams monitor_params_; //!< Convergence monitoring parameters
 
     /// Version of relative change used in time step control
-    int relative_change_version_;
+    RelativeChangeApproach relative_change_version_{RelativeChangeApproach::Pressure};
 
     // Relative tolerance of group rates (VREP, REIN)
     // If violated the nupcol wellstate is updated
