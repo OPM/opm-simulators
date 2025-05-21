@@ -83,6 +83,13 @@ public:
         m_propertyTree = setupPropertyTree(m_parameters,
                                            Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
                                            Parameters::IsSet<Parameters::LinearSolverReduction>());
+
+        useWellConn_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
+
+        if (!useWellConn_) {
+            OPM_THROW(std::logic_error, "Well operators are currently not supported for the GPU backend. "
+            "Use --matrix-add-well-contributions=true to add well contributions to the matrix instead.");
+        }
     }
 
     /// Construct a system solver.
@@ -304,6 +311,7 @@ private:
     const bool m_forceSerial;
     const Simulator& m_simulator;
     PropertyTree m_propertyTree;
+    bool useWellConn_;
 
     int m_lastSeenIterations = 0;
     int m_solveCount = 0;
