@@ -1706,7 +1706,7 @@ namespace Opm
     wellIndex(const int                      perf,
               const IntensiveQuantities&     intQuants,
               const Scalar                   trans_mult,
-              const SingleWellState<Scalar>& ws) const
+              const SingleWellState<FluidSystem, Indices>& ws) const
     {
         OPM_TIMEFUNCTION_LOCAL();
         // Add a Forchheimer term to the gas phase CTF if the run uses
@@ -1785,7 +1785,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     updateConnectionDFactor(const Simulator& simulator,
-                            SingleWellState<Scalar>& ws) const
+                            SingleWellState<FluidSystem, Indices>& ws) const
     {
         if (! this->well_ecl_.getWDFAC().useDFactor()) {
             return;
@@ -1806,7 +1806,7 @@ namespace Opm
     WellInterface<TypeTag>::
     computeConnectionDFactor(const int                      perf,
                              const IntensiveQuantities&     intQuants,
-                             const SingleWellState<Scalar>& ws) const
+                             const SingleWellState<FluidSystem, Indices>& ws) const
     {
         auto rhoGS = [regIdx = this->pvtRegionIdx()]() {
             return FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regIdx);
@@ -1847,7 +1847,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     updateConnectionTransmissibilityFactor(const Simulator& simulator,
-                                           SingleWellState<Scalar>& ws) const
+                                           SingleWellState<FluidSystem, Indices>& ws) const
     {
         auto connCF = [&connIx = std::as_const(ws.perf_data.ecl_index),
                        &conns = this->well_ecl_.getConnections()]
