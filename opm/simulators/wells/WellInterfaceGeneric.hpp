@@ -45,7 +45,7 @@ class SummaryState;
 template<typename FluidSystem, typename Indices> class VFPProperties;
 class WellTestState;
 template<typename FluidSystem, typename Indices> class WellState;
-template<class Scalar> class SingleWellState;
+template<typename FluidSystem, typename Indices> class SingleWellState;
 class Group;
 class Schedule;
 
@@ -169,12 +169,12 @@ public:
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
-    void reportWellSwitching(const SingleWellState<Scalar>& ws,
+    void reportWellSwitching(const SingleWellState<FluidSystem, Indices>& ws,
                              DeferredLogger& deferred_logger) const;
 
     bool changedToOpenThisStep() const { return this->changed_to_open_this_step_; }
 
-    void updateWellTestState(const SingleWellState<Scalar>& ws,
+    void updateWellTestState(const SingleWellState<FluidSystem, Indices>& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,
                              const bool zero_group_target,
@@ -225,7 +225,7 @@ protected:
     bool wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
                                            const WellState<FluidSystem, Indices>& well_state) const;
 
-    bool wellUnderGroupControl(const SingleWellState<Scalar>& ws) const;
+    bool wellUnderGroupControl(const SingleWellState<FluidSystem, Indices>& ws) const;
 
     std::pair<bool,bool>
     computeWellPotentials(std::vector<Scalar>& well_potentials,

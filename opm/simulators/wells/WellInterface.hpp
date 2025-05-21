@@ -347,13 +347,13 @@ public:
     std::vector<Scalar> wellIndex(const int perf,
                                   const IntensiveQuantities& intQuants,
                                   const Scalar trans_mult,
-                                  const SingleWellState<Scalar>& ws) const;
+                                  const SingleWellState<FluidSystem, Indices>& ws) const;
 
     void updateConnectionDFactor(const Simulator& simulator,
-                                 SingleWellState<Scalar>& ws) const;
+                                 SingleWellState<FluidSystem, Indices>& ws) const;
 
     void updateConnectionTransmissibilityFactor(const Simulator& simulator,
-                                                SingleWellState<Scalar>& ws) const;
+                                                SingleWellState<FluidSystem, Indices>& ws) const;
 
     virtual bool iterateWellEqWithSwitching(const Simulator& simulator,
                                             const double dt,
@@ -488,7 +488,7 @@ protected:
 
     Scalar computeConnectionDFactor(const int perf,
                                     const IntensiveQuantities& intQuants,
-                                    const SingleWellState<Scalar>& ws) const;
+                                    const SingleWellState<FluidSystem, Indices>& ws) const;
 };
 
 } // namespace Opm
