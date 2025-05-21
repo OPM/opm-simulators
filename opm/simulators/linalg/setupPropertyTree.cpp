@@ -62,6 +62,9 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
 #endif
     }
 
+    // We use lower case as the internal canonical representation of solver names.
+    std::transform(conf.begin(), conf.end(), conf.begin(), ::tolower);
+
     // Use CPR configuration.
     if ((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes") || (conf == "cpr_trueimpesanalytic")) {
         if (!linearSolverMaxIterSet) {
@@ -145,7 +148,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.weight_type", "trueimpes"s);
     prm.put("preconditioner.pre_smooth", 0);
     prm.put("preconditioner.post_smooth", 1);
-    prm.put("preconditioner.finesmoother.type", "ParOverILU0"s);
+    prm.put("preconditioner.finesmoother.type", "paroverilu0"s);
     prm.put("preconditioner.finesmoother.relaxation", 1.0);
     prm.put("preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.maxiter", 1);
@@ -160,7 +163,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.post_smooth", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.beta", 0.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ILU0"s);
+    prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ilu0"s);
     prm.put("preconditioner.coarsesolver.preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.preconditioner.maxlevel", 15);
     prm.put("preconditioner.coarsesolver.preconditioner.skip_isolated", 0);
@@ -195,7 +198,7 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     }
     prm.put("preconditioner.pre_smooth", 0);
     prm.put("preconditioner.post_smooth", 1);
-    prm.put("preconditioner.finesmoother.type", "ParOverILU0"s);
+    prm.put("preconditioner.finesmoother.type", "paroverilu0"s);
     prm.put("preconditioner.finesmoother.relaxation", 1.0);
     prm.put("preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.maxiter", 1);
@@ -210,7 +213,7 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.post_smooth", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.beta", 0.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ILU0"s);
+    prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ilu0"s);
     prm.put("preconditioner.coarsesolver.preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.preconditioner.maxlevel", 15);
     prm.put("preconditioner.coarsesolver.preconditioner.skip_isolated", 0);
@@ -244,7 +247,7 @@ setupAMG([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     prm.put("preconditioner.pre_smooth", 1);
     prm.put("preconditioner.post_smooth", 1);
     prm.put("preconditioner.beta", 1e-5);
-    prm.put("preconditioner.smoother", "ILU0"s);
+    prm.put("preconditioner.smoother", "ilu0"s);
     prm.put("preconditioner.verbosity", 0);
     prm.put("preconditioner.maxlevel", 15);
     prm.put("preconditioner.skip_isolated", 0);
@@ -272,9 +275,9 @@ setupILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     prm.put("solver", getSolverString(p));
     if (p.linear_solver_accelerator_ == "gpu") {
         // TODO: We could add ParOverILU0 as an alias in the GPU path to simplify this.
-        prm.put("preconditioner.type", "OPMILU0"s);
+        prm.put("preconditioner.type", "opmilu0"s);
     } else {
-        prm.put("preconditioner.type", "ParOverILU0"s);
+        prm.put("preconditioner.type", "paroverilu0"s);
     }
     prm.put("preconditioner.relaxation", p.ilu_relaxation_);
     prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
@@ -290,7 +293,7 @@ setupDILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParame
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
     prm.put("solver", getSolverString(p));
-    prm.put("preconditioner.type", "DILU"s);
+    prm.put("preconditioner.type", "dilu"s);
     return prm;
 }
 

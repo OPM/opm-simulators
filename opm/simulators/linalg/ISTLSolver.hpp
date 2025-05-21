@@ -359,7 +359,10 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             rhs_ = &b;
 
             // TODO: check all solvers, not just one.
-            if (isParallel() && prm_[activeSolverNum_].template get<std::string>("preconditioner.type") != "ParOverILU0") {
+            // We use lower case as the internal canonical representation of solver names
+            std::string type = prm_[activeSolverNum_].template get<std::string>("preconditioner.type", "paroverilu0");
+            std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+            if (isParallel() && type != "paroverilu0") {
                 detail::makeOverlapRowsInvalid(getMatrix(), overlapRows_);
             }
         }
@@ -591,6 +594,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             using namespace std::string_literals;
 
             auto preconditionerType = prm.get("preconditioner.type"s, "cpr"s);
+            // We use lower case as the internal canonical representation of solver names
+            std::transform(preconditionerType.begin(), preconditionerType.end(), preconditionerType.begin(), ::tolower);
             if (preconditionerType == "cpr" || preconditionerType == "cprt"
                 || preconditionerType == "cprw" || preconditionerType == "cprwt") {
                 const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";

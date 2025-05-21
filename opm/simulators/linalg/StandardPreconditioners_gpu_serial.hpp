@@ -45,14 +45,14 @@ struct StandardPreconditioners<Operator,
     static constexpr int maxblocksize = 6;
     static void add()
     {
-        F::addCreator("ILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using GpuILU0 =
                 typename gpuistl::GpuSeqILU0<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
             return std::make_shared<GpuILU0>(op.getmat(), w);
         });
 
-        F::addCreator("JAC", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using GPUJac = typename gpuistl::GpuJac<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
             return std::make_shared<GPUJac>(op.getmat(), w);
@@ -64,7 +64,7 @@ struct StandardPreconditioners<Operator,
         // dispatch the creation of the preconditioner based on the block size. 
         //
         // Note that this dispatching is not needed in the future, since we will have a constructor taking GPU matrices directly.
-        F::addCreator("OPMILU0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("opmilu0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             return dispatchOnBlockSize<maxblocksize>(op, [&](const auto& cpuMatrix) {
                 const bool split_matrix = prm.get<bool>("split_matrix", true);
                 const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
@@ -77,7 +77,7 @@ struct StandardPreconditioners<Operator,
             });
         });
 
-        F::addCreator("DILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("dilu", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             return dispatchOnBlockSize<maxblocksize>(op, [&](const auto& cpuMatrix) {
                 const bool split_matrix = prm.get<bool>("split_matrix", true);
                 const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
@@ -89,7 +89,7 @@ struct StandardPreconditioners<Operator,
             });
         });
 
-        F::addCreator("CPR", [](const O& op, const P& prm, const std::function<V()>& weightsCalculator, std::size_t pressureIndex) {
+        F::addCreator("cpr", [](const O& op, const P& prm, const std::function<V()>& weightsCalculator, std::size_t pressureIndex) {
             if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                 OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
             }
@@ -100,7 +100,7 @@ struct StandardPreconditioners<Operator,
             return std::make_shared<GpuOwningTwoLevelPreconditioner>(op, prm, weightsCalculator, pressureIndex);
         });
 
-        F::addCreator("CPRT", [](const O& op, const P& prm, const std::function<V()>& weightsCalculator, std::size_t pressureIndex) {
+        F::addCreator("cprt", [](const O& op, const P& prm, const std::function<V()>& weightsCalculator, std::size_t pressureIndex) {
             if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                 OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
             }
@@ -116,7 +116,7 @@ struct StandardPreconditioners<Operator,
         if constexpr (std::is_same_v<O, Dune::MatrixAdapter<M, V, V>>) {
 #if HAVE_AMGX
             // Only add AMGX for scalar matrices
-            F::addCreator("AMGX", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            F::addCreator("amgx", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
                 // Only create AMGX preconditioner for scalar matrices
                 if (op.getmat().blockSize() == 1) {
                     auto prm_copy = prm;
