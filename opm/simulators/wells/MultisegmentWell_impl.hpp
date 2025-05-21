@@ -1677,8 +1677,9 @@ namespace Opm
 
             const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
             converged = report.converged();
-            if (this->parallel_well_info_.communication().size() > 1 && converged != this->parallel_well_info_.communication().min(converged)) {
-                OPM_THROW(std::runtime_error, fmt::format("Misalignment of the parallel simulation run in iterateWellEqWithSwitching - the well calculation succeeded on rank {} but failed on other ranks.", this->parallel_well_info_.communication().rank()));
+            if (this->parallel_well_info_.communication().size() > 1 &&
+                this->parallel_well_info_.communication().max(converged) != this->parallel_well_info_.communication().min(converged)) {
+                OPM_THROW(std::runtime_error, fmt::format("Misalignment of the parallel simulation run in iterateWellEqWithSwitching - the well calculation for well {} succeeded some ranks but failed on other ranks.", this->name()));
             }
             if (converged) {
                 // if equations are sufficiently linear they might converge in less than min_its_after_switch
@@ -2168,6 +2169,7 @@ namespace Opm
                 max_pressure = std::max(max_pressure, pressure_cell);
             }
         }
+        max_pressure = this->parallel_well_info_.communication().max(max_pressure);
         return max_pressure;
     }
 
