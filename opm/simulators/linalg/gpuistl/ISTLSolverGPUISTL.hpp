@@ -123,6 +123,10 @@ public:
         m_propertyTree = setupPropertyTree(m_parameters,
                                            Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
                                            Parameters::IsSet<Parameters::LinearSolverReduction>());
+        if (!Parameters::Get<Parameters::MatrixAddWellContributions>()) {
+            OPM_THROW(std::logic_error, "Well operators are currently not supported for the GPU backend. "
+            "Use --matrix-add-well-contributions=true to add well contributions to the matrix instead.");
+        }
 
         Opm::detail::printLinearSolverParameters(m_parameters, m_propertyTree, simulator.gridView().comm());
     }
