@@ -43,6 +43,10 @@
 #include <opm/models/ptflash/flashindices.hh>
 #include <opm/models/ptflash/flashparameters.hh>
 
+#include <array>
+#include <iostream>
+#include <string>
+
 namespace Opm {
 
 /*!
@@ -88,13 +92,13 @@ class FlashIntensiveQuantities
     using ComponentVector = Dune::FieldVector<Evaluation, numComponents>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
+    using DiffusionIntensiveQuantities = ::Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
+    using EnergyIntensiveQuantities = ::Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
-    using DiffusionIntensiveQuantities = Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
-    using EnergyIntensiveQuantities = Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     //! The type of the object returned by the fluidState() method
-    using FluidState = Opm::CompositionalFluidState<Evaluation, FluidSystem, enableEnergy>;
+    using FluidState = CompositionalFluidState<Evaluation, FluidSystem, enableEnergy>;
 
     FlashIntensiveQuantities() = default;
 
@@ -131,8 +135,8 @@ public:
 
             Evaluation sumz = 0.0;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                z[compIdx] = Opm::max(z[compIdx], 1e-8);
-                sumz +=z[compIdx];
+                z[compIdx] = max(z[compIdx], 1e-8);
+                sumz += z[compIdx];
             }
             z /= sumz;
         }
@@ -142,11 +146,12 @@ public:
         }
 
         Evaluation p = priVars.makeEvaluation(pressure0Idx, timeIdx);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fluidState_.setPressure(phaseIdx, p);
+        }
 
         // Get initial K and L from storage initially (if enabled)
-        const auto *hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
+        const auto* hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
         if (hint) {
              for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                  const Evaluation& Ktmp = hint->fluidState().K(compIdx);
@@ -205,28 +210,28 @@ public:
             std::cout << L << std::endl;
         }
 
-
         // Update phases
         typename FluidSystem::template ParameterCache<Evaluation> paramCache(eos_type);
         paramCache.updatePhase(fluidState_, FluidSystem::oilPhaseIdx);
 
         const Scalar R = Opm::Constants<Scalar>::R;
-        Evaluation Z_L = (paramCache.molarVolume(FluidSystem::oilPhaseIdx) * fluidState_.pressure(FluidSystem::oilPhaseIdx) )/
-        (R * fluidState_.temperature(FluidSystem::oilPhaseIdx));
+        const Evaluation Z_L = (paramCache.molarVolume(FluidSystem::oilPhaseIdx) *
+                                fluidState_.pressure(FluidSystem::oilPhaseIdx)) /
+                               (R * fluidState_.temperature(FluidSystem::oilPhaseIdx));
         paramCache.updatePhase(fluidState_, FluidSystem::gasPhaseIdx);
-        Evaluation Z_V = (paramCache.molarVolume(FluidSystem::gasPhaseIdx) * fluidState_.pressure(FluidSystem::gasPhaseIdx) )/
-        (R * fluidState_.temperature(FluidSystem::gasPhaseIdx));
-
+        const Evaluation Z_V = (paramCache.molarVolume(FluidSystem::gasPhaseIdx) *
+                                fluidState_.pressure(FluidSystem::gasPhaseIdx)) /
+                               (R * fluidState_.temperature(FluidSystem::gasPhaseIdx));
 
         // Update saturation
         Evaluation Sw = 0.0;
         if constexpr (waterEnabled) {
             Sw = priVars.makeEvaluation(water0Idx, timeIdx);
         }
-        Evaluation L = fluidState_.L();
-        Evaluation So = Opm::max((1 - Sw) * (L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
-        Evaluation Sg = Opm::max(1 - So - Sw, 0.0);
-        Scalar sumS = Opm::getValue(So) + Opm::getValue(Sg) + Opm::getValue(Sw);
+        const Evaluation L = fluidState_.L();
+        Evaluation So = max((1 - Sw) * (L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
+        Evaluation Sg = max(1 - So - Sw, 0.0);
+        const Scalar sumS = getValue(So) + getValue(Sg) + getValue(Sw);
         So /= sumS;
         Sg /= sumS;
 
@@ -256,12 +261,13 @@ public:
         // calculate relative permeability
         MaterialLaw::relativePermeabilities(relativePermeability_,
                                             materialParams, fluidState_);
-        Opm::Valgrind::CheckDefined(relativePermeability_);
+        Valgrind::CheckDefined(relativePermeability_);
 
         // set the phase viscosity and density
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (phaseIdx == static_cast<unsigned int>(FluidSystem::oilPhaseIdx) 
-             || phaseIdx == static_cast<unsigned int>(FluidSystem::gasPhaseIdx)) {
+            if (phaseIdx == static_cast<unsigned int>(FluidSystem::oilPhaseIdx) ||
+                phaseIdx == static_cast<unsigned int>(FluidSystem::gasPhaseIdx))
+            {
                 paramCache.updatePhase(fluidState_, phaseIdx);
             }
 
@@ -270,7 +276,7 @@ public:
             fluidState_.setViscosity(phaseIdx, mu);
 
             mobility_[phaseIdx] = relativePermeability_[phaseIdx] / mu;
-            Opm::Valgrind::CheckDefined(mobility_[phaseIdx]);
+            Valgrind::CheckDefined(mobility_[phaseIdx]);
 
             const Evaluation& rho = FluidSystem::density(fluidState_, paramCache, phaseIdx);
             fluidState_.setDensity(phaseIdx, rho);
@@ -282,7 +288,7 @@ public:
 
         // porosity
         porosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
-        Opm::Valgrind::CheckDefined(porosity_);
+        Valgrind::CheckDefined(porosity_);
 
         // intrinsic permeability
         intrinsicPerm_ = problem.intrinsicPermeability(elemCtx, dofIdx, timeIdx);
@@ -319,9 +325,7 @@ public:
      * \copydoc ImmiscibleIntensiveQuantities::mobility
      */
     const Evaluation& mobility(unsigned phaseIdx) const
-    {
-        return mobility_[phaseIdx];
-    }
+    { return mobility_[phaseIdx]; }
 
     /*!
      * \copydoc ImmiscibleIntensiveQuantities::porosity

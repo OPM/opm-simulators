@@ -28,11 +28,13 @@
 #ifndef OPM_FLASH_NEWTON_METHOD_HH
 #define OPM_FLASH_NEWTON_METHOD_HH
 
-#include <opm/models/nonlinear/newtonmethod.hh>
-
 #include <opm/common/Exceptions.hpp>
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/nonlinear/newtonmethod.hh>
+
 #include <algorithm>
+#include <cmath>
 
 namespace Opm::Properties {
 
@@ -42,12 +44,12 @@ struct DiscNewtonMethod;
 } // namespace Opm::Properties
 
 namespace Opm {
+
 /*!
  * \ingroup FlashModel
  *
  * \brief A Newton solver specific to the PTFlash model.
  */
-
 template <class TypeTag>
 class FlashNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMethod>
 {
@@ -92,18 +94,18 @@ protected:
         ////
         // Pressure updates
         ////
-        // limit pressure reference change to 20% of the total value per iteration
+        // limit pressure reference change relative to the total value per iteration
         constexpr Scalar max_percent_change = 0.2;
         constexpr Scalar upper_bound = 1. + max_percent_change;
         constexpr Scalar lower_bound = 1. - max_percent_change;
-        clampValue_(nextValue[pressure0Idx],
-                    currentValue[pressure0Idx] * lower_bound,
-                    currentValue[pressure0Idx] * upper_bound);
+        nextValue[pressure0Idx] = std::clamp(nextValue[pressure0Idx],
+                                             currentValue[pressure0Idx] * lower_bound,
+                                             currentValue[pressure0Idx] * upper_bound);
 
         ////
         // z updates
         ////
-        // restrict update to at most 0.1
+        // restrict update
         Scalar maxDeltaZ = 0.0;  // in update vector
         Scalar sumDeltaZ = 0.0; // changes in last component (not in update vector)
         for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
@@ -112,36 +114,34 @@ protected:
         }
         maxDeltaZ = std::max(std::abs(sumDeltaZ), maxDeltaZ);
 
-        // if max. update is above 0.2, restrict that one to 0.2 and adjust the rest accordingly (s.t. last comp. update is sum of the changes in update vector)
-        // \Note: original code uses 0.1, while 0.1 looks like having problem make it converged. So there is some more to investigate here
+        // if max. update is above limit, restrict that one to limit and adjust the rest
+        // accordingly (s.t. last comp. update is sum of the changes in update vector)
+        // \Note: original code uses 0.1, while 0.1 looks like having problem make it converged.
+        // So there is some more to investigate here
         constexpr Scalar deltaz_limit = 0.2;
         if (maxDeltaZ > deltaz_limit) {
-            Scalar alpha = deltaz_limit / maxDeltaZ;
+            const Scalar alpha = deltaz_limit / maxDeltaZ;
             for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
                 nextValue[z0Idx + compIdx] = currentValue[z0Idx + compIdx] - alpha * update[z0Idx + compIdx];
             }
         }
 
         // ensure that z-values are less than tol or more than 1-tol
-        Scalar tol = 1e-8;
+        constexpr Scalar tol = 1e-8;
         for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-            clampValue_(nextValue[z0Idx + compIdx], tol, 1-tol);
+           nextValue[z0Idx + compIdx] = std::clamp(nextValue[z0Idx + compIdx], tol, 1-tol);
         }
 
         if constexpr (waterEnabled) {
-            // limit change in water saturation to 0.2
+            // limit change in water saturation
             constexpr Scalar dSwMax = 0.2;
             if (update[Indices::water0Idx] > dSwMax) {
                 nextValue[Indices::water0Idx] = currentValue[Indices::water0Idx] - dSwMax;
             }
         }
     }
-private:
-    void clampValue_(Scalar& val, Scalar minVal, Scalar maxVal) const
-    {
-        val = std::clamp(val, minVal, maxVal);
-    }
-
 };  // class FlashNewtonMethod
+
 } // namespace Opm
+
 #endif

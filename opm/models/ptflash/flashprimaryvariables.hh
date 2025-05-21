@@ -28,13 +28,14 @@
 #ifndef OPM_PTFLASH_PRIMARY_VARIABLES_HH
 #define OPM_PTFLASH_PRIMARY_VARIABLES_HH
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/ptflash/flashindices.hh>
 
-#include <opm/material/common/Valgrind.hpp>
-
-#include <iostream>
+#include <ostream>
 
 namespace Opm {
 
@@ -73,8 +74,8 @@ class FlashPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    using Toolbox = typename Opm::MathToolbox<Evaluation>;
-    using EnergyModule = Opm::EnergyModule<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>;
+    using Toolbox = MathToolbox<Evaluation>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>;
 
 public:
     FlashPrimaryVariables() : ParentType()
@@ -134,16 +135,16 @@ public:
      *
      * \param os The \c std::ostream which should be used for the output.
      */
-    void print(std::ostream& os = std::cout) const
+    void print(std::ostream& os) const
     {
         os << "(p_" << FluidSystem::phaseName(FluidSystem::oilPhaseIdx) << " = "
-           << this->operator[](pressure0Idx);
+           << (*this)[pressure0Idx];
         for (unsigned compIdx = 0; compIdx < numComponents - 2; ++compIdx) {
             os << ", z_" << FluidSystem::componentName(compIdx) << " = "
-               << this->operator[](z0Idx + compIdx);
+               << (*this)[z0Idx + compIdx];
         }
         if constexpr (waterEnabled) {
-            os << ", S_w = " << this->operator[](water0Idx);
+            os << ", S_w = " << (*this)[water0Idx];
         }
         os << ")" << std::flush;
     }
