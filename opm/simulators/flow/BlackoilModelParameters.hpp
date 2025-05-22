@@ -161,6 +161,7 @@ struct ConvergenceMonitoringCutOff { static constexpr int value = 6; };
 template<class Scalar>
 struct ConvergenceMonitoringDecayFactor { static constexpr Scalar value = 0.75; };
 
+struct RelativeChangeVersion { static constexpr auto value = "pressure"; };
 
 template<class Scalar>
 struct NupcolGroupRateTolerance { static constexpr Scalar value = 0.001; };
@@ -168,6 +169,13 @@ struct NupcolGroupRateTolerance { static constexpr Scalar value = 0.001; };
 } // namespace Opm::Parameters
 
 namespace Opm {
+
+// Relative change approaches available
+enum class RelativeChangeApproach {
+    Pressure,
+    Saturation,
+    PressureSaturation
+};
 
 /// Solver parameters for the BlackoilModel.
 template <class Scalar>
@@ -352,6 +360,9 @@ public:
     };
 
     ConvergenceMonitorParams monitor_params_; //!< Convergence monitoring parameters
+
+    /// Version of relative change used in time step control
+    RelativeChangeApproach relative_change_version_{RelativeChangeApproach::Pressure};
 
     // Relative tolerance of group rates (VREP, REIN)
     // If violated the nupcol wellstate is updated
