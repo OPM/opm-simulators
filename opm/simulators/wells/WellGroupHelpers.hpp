@@ -230,6 +230,7 @@ public:
                             const GroupState<Scalar>& group_state,
                             const VFPProdProperties<Scalar>& vfp_prod_props,
                             const Schedule& schedule,
+                            const Parallel::Communication& comm,
                             const int report_time_step);
 
     static GuideRate::RateVector

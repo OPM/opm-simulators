@@ -908,6 +908,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                         const GroupState<Scalar>& group_state,
                         const VFPProdProperties<Scalar>& vfp_prod_props,
                         const Schedule& schedule,
+                        const Parallel::Communication& comm,
                         const int report_time_step)
 {
     // TODO: Only dealing with production networks for now.
@@ -963,7 +964,13 @@ computeNetworkPressures(const Network::ExtNetwork& network,
 
                     if (well.isInjector() || !well_state.isOpen(wellname)) continue;
                     const Scalar efficiency = well.getEfficiencyFactor(/*network*/ true) * well_state.getGlobalEfficiencyScalingFactor(wellname);
-                    node_inflows[node][BlackoilPhases::Vapour] += well_state.well(wellname).alq_state.get() * efficiency;
+                    Scalar alq = 0.0;
+                    const auto& well_index = well_state.index(well.name());
+                    if (well_index.has_value() && well_state.wellIsOwned(well_index.value(), well.name())) {
+                        alq += well_state.well(wellname).alq_state.get();
+                    }
+                    alq = comm.sum(alq);
+                    node_inflows[node][BlackoilPhases::Vapour] +=  alq * efficiency;
                 }
             }
         }
