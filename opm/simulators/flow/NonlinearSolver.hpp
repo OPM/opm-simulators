@@ -176,8 +176,9 @@ struct NonlinearSolverParameters
                 OPM_THROW_NOLOG(TooManyIterations, msg);
             }
             auto relativeChange = model_->relativeChange();
-            if (timeStepControl && !timeStepControl->timeStepAccepted(relativeChange)) {
+            if (timeStepControl && !timeStepControl->timeStepAccepted(relativeChange, timer.currentStepLength())) {
                 report.converged = false;
+                report.time_step_rejected = true;
                 failureReport_ = report;
 
                 std::string msg = "Relative change in solution for time step was " + std::to_string(relativeChange) + ", which is larger than the tolerance accepted by the timestepping algorithm.";

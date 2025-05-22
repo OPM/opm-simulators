@@ -60,7 +60,7 @@ namespace Opm
         /// \return suggested time step size for the next step
         virtual double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange , const AdaptiveSimulatorTimer& substepTimer) const = 0;
 
-        virtual bool timeStepAccepted(const double error) const = 0;
+        virtual bool timeStepAccepted(const double error, const double timeStep) const = 0;
 
         /// virtual destructor (empty)
         virtual ~TimeStepControlInterface () {}
