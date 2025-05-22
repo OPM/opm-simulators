@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include <iostream>
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
