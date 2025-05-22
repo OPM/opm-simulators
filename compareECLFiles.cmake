@@ -408,6 +408,12 @@ add_test_runSimulator(CASENAME spe1case1_carfin
 		      DIR lgr
 		      TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
 
+add_test_runSimulator(CASENAME spe1case1_carfin_gr
+                      FILENAME SPE1CASE1_CARFIN_GR
+   	              SIMULATOR flow
+		      DIR lgr
+		      TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
+
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
 add_test_runSimulator(CASENAME tuning_xxxmbe
                       FILENAME 01_TUNING_XXXMBE
