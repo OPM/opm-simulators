@@ -28,11 +28,15 @@
 #ifndef EWOMS_RICHARDS_NEWTON_METHOD_HH
 #define EWOMS_RICHARDS_NEWTON_METHOD_HH
 
-#include "richardsproperties.hh"
+#include <dune/common/fvector.hh>
 
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 
-#include <dune/common/fvector.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbasenewtonmethod.hh>
+#include <opm/models/richards/richardsproperties.hh>
+
+#include <algorithm>
 
 namespace Opm {
 
@@ -64,7 +68,8 @@ class RichardsNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonM
     using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
 
 public:
-    explicit RichardsNewtonMethod(Simulator& simulator) : ParentType(simulator)
+    explicit RichardsNewtonMethod(Simulator& simulator)
+        : ParentType(simulator)
     {}
 
 protected:
@@ -85,8 +90,9 @@ protected:
         nextValue -= update;
 
         // do not clamp anything after 4 iterations
-        if (this->numIterations_ > 4)
+        if (this->numIterations_ > 4) {
             return;
+        }
 
         const auto& problem = this->simulator_.problem();
 
@@ -94,10 +100,10 @@ protected:
         const MaterialLawParams& matParams =
             problem.materialLawParams(globalDofIdx, /*timeIdx=*/0);
 
-        Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
+        ImmiscibleFluidState<Scalar, FluidSystem> fs;
 
         // set the temperature
-        Scalar T = problem.temperature(globalDofIdx, /*timeIdx=*/0);
+        const Scalar T = problem.temperature(globalDofIdx, /*timeIdx=*/0);
         fs.setTemperature(T);
 
         /////////
@@ -114,8 +120,8 @@ protected:
         // non-wetting pressure can be larger than the
         // reference pressure if the medium is fully
         // saturated by the wetting phase
-        Scalar pWOld = currentValue[pressureWIdx];
-        Scalar pNOld =
+        const Scalar pWOld = currentValue[pressureWIdx];
+        const Scalar pNOld =
             std::max(problem.referencePressure(globalDofIdx, /*timeIdx=*/0),
                      pWOld + (pC[gasPhaseIdx] - pC[liquidPhaseIdx]));
 
@@ -127,7 +133,7 @@ protected:
 
         PhaseVector satOld;
         MaterialLaw::saturations(satOld, matParams, fs);
-        satOld[liquidPhaseIdx] = std::max<Scalar>(0.0, satOld[liquidPhaseIdx]);
+        satOld[liquidPhaseIdx] = std::max(Scalar{0.0}, satOld[liquidPhaseIdx]);
 
         /////////
         // find the wetting phase pressures which
@@ -137,22 +143,22 @@ protected:
         fs.setSaturation(liquidPhaseIdx, satOld[liquidPhaseIdx] - 0.2);
         fs.setSaturation(gasPhaseIdx, 1.0 - (satOld[liquidPhaseIdx] - 0.2));
         MaterialLaw::capillaryPressures(pC, matParams, fs);
-        Scalar pwMin = pNOld - (pC[gasPhaseIdx] - pC[liquidPhaseIdx]);
+        const Scalar pwMin = pNOld - (pC[gasPhaseIdx] - pC[liquidPhaseIdx]);
 
         fs.setSaturation(liquidPhaseIdx, satOld[liquidPhaseIdx] + 0.2);
         fs.setSaturation(gasPhaseIdx, 1.0 - (satOld[liquidPhaseIdx] + 0.2));
         MaterialLaw::capillaryPressures(pC, matParams, fs);
-        Scalar pwMax = pNOld - (pC[gasPhaseIdx] - pC[liquidPhaseIdx]);
+        const Scalar pwMax = pNOld - (pC[gasPhaseIdx] - pC[liquidPhaseIdx]);
 
         /////////
         // clamp the result to the minimum and the maximum
         // pressures we just calculated
         /////////
-        Scalar pW = nextValue[pressureWIdx];
-        pW = std::max(pwMin, std::min(pW, pwMax));
+        const Scalar pW = std::clamp(nextValue[pressureWIdx], pwMin, pwMax);
         nextValue[pressureWIdx] = pW;
     }
 };
+
 } // namespace Opm
 
 #endif

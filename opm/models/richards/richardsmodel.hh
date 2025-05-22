@@ -28,48 +28,54 @@
 #ifndef EWOMS_RICHARDS_MODEL_HH
 #define EWOMS_RICHARDS_MODEL_HH
 
-#include <opm/material/densead/Math.hpp>
-
-#include "richardsproperties.hh"
-#include "richardsindices.hh"
-#include "richardslocalresidual.hh"
-#include "richardsextensivequantities.hh"
-#include "richardsratevector.hh"
-#include "richardsboundaryratevector.hh"
-#include "richardsprimaryvariables.hh"
-#include "richardsintensivequantities.hh"
-#include "richardsnewtonmethod.hh"
-
-#include <opm/models/common/multiphasebasemodel.hh>
-
 #include <opm/material/components/NullComponent.hpp>
+#include <opm/material/densead/Math.hpp>
 #include <opm/material/fluidsystems/LiquidPhase.hpp>
 #include <opm/material/fluidsystems/GasPhase.hpp>
 #include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 
+#include <opm/models/common/multiphasebasemodel.hh>
+#include <opm/models/richards/richardsproperties.hh>
+#include <opm/models/richards/richardsindices.hh>
+#include <opm/models/richards/richardslocalresidual.hh>
+#include <opm/models/richards/richardsextensivequantities.hh>
+#include <opm/models/richards/richardsratevector.hh>
+#include <opm/models/richards/richardsboundaryratevector.hh>
+#include <opm/models/richards/richardsprimaryvariables.hh>
+#include <opm/models/richards/richardsintensivequantities.hh>
+#include <opm/models/richards/richardsnewtonmethod.hh>
+
+#include <cassert>
 #include <sstream>
 #include <string>
+#include <tuple>
 
 namespace Opm {
+
 template <class TypeTag>
 class RichardsModel;
+
 }
 
 namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
+
 //! The type tag for problems discretized using the Richards model
 struct Richards { using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
+
 } // end namespace TTag
 
 //! By default, assume that the first phase is the liquid one
 template<class TypeTag>
-struct LiquidPhaseIndex<TypeTag, TTag::Richards> { static constexpr int value = 0; };
+struct LiquidPhaseIndex<TypeTag, TTag::Richards>
+{ static constexpr int value = 0; };
 
 //! By default, assume that the non-liquid phase is gaseos
 template<class TypeTag>
-struct GasPhaseIndex<TypeTag, TTag::Richards> { static constexpr int value = 1 - getPropValue<TypeTag, Properties::LiquidPhaseIndex>(); };
+struct GasPhaseIndex<TypeTag, TTag::Richards>
+{ static constexpr int value = 1 - getPropValue<TypeTag, Properties::LiquidPhaseIndex>(); };
 
 /*!
  * \brief By default, assume that component which the liquid is made of has
@@ -81,47 +87,58 @@ struct GasPhaseIndex<TypeTag, TTag::Richards> { static constexpr int value = 1 -
  * prefer Ethanol of H2O??)
  */
 template<class TypeTag>
-struct LiquidComponentIndex<TypeTag, TTag::Richards> { static constexpr int value = getPropValue<TypeTag, Properties::LiquidPhaseIndex>(); };
+struct LiquidComponentIndex<TypeTag, TTag::Richards>
+{ static constexpr int value = getPropValue<TypeTag, Properties::LiquidPhaseIndex>(); };
 
 //! By default, assume that the gas component is the other than the liquid one
 template<class TypeTag>
-struct GasComponentIndex<TypeTag, TTag::Richards> { static constexpr int value = 1 - getPropValue<TypeTag, Properties::LiquidComponentIndex>(); };
+struct GasComponentIndex<TypeTag, TTag::Richards>
+{ static constexpr int value = 1 - getPropValue<TypeTag, Properties::LiquidComponentIndex>(); };
 
 //! The local residual operator
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::Richards> { using type = Opm::RichardsLocalResidual<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::Richards>
+{ using type = RichardsLocalResidual<TypeTag>; };
 
 //! The global model used
 template<class TypeTag>
-struct Model<TypeTag, TTag::Richards> { using type = Opm::RichardsModel<TypeTag>; };
+struct Model<TypeTag, TTag::Richards>
+{ using type = RichardsModel<TypeTag>; };
 
 //! the RateVector property
 template<class TypeTag>
-struct RateVector<TypeTag, TTag::Richards> { using type = Opm::RichardsRateVector<TypeTag>; };
+struct RateVector<TypeTag, TTag::Richards>
+{ using type = RichardsRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
 template<class TypeTag>
-struct BoundaryRateVector<TypeTag, TTag::Richards> { using type = Opm::RichardsBoundaryRateVector<TypeTag>; };
+struct BoundaryRateVector<TypeTag, TTag::Richards>
+{ using type = RichardsBoundaryRateVector<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::Richards> { using type = Opm::RichardsPrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::Richards>
+{ using type = RichardsPrimaryVariables<TypeTag>; };
 
 //! The class for the intensive quantities
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::Richards> { using type = Opm::RichardsIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::Richards>
+{ using type = RichardsIntensiveQuantities<TypeTag>; };
 
 //! The class for the quantities required for the flux calculation
 template<class TypeTag>
-struct ExtensiveQuantities<TypeTag, TTag::Richards> { using type = Opm::RichardsExtensiveQuantities<TypeTag>; };
+struct ExtensiveQuantities<TypeTag, TTag::Richards>
+{ using type = RichardsExtensiveQuantities<TypeTag>; };
 
 //! The class of the Newton method
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::Richards> { using type = Opm::RichardsNewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::Richards>
+{ using type = RichardsNewtonMethod<TypeTag>; };
 
 //! The class with all index definitions for the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::Richards> { using type = Opm::RichardsIndices; };
+struct Indices<TypeTag, TTag::Richards>
+{ using type = RichardsIndices; };
 
 /*!
  * \brief The wetting phase used.
@@ -140,7 +157,7 @@ private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    using type = Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> >;
+    using type = LiquidPhase<Scalar, NullComponent<Scalar>>;
 };
 
 /*!
@@ -158,7 +175,7 @@ private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    using type = Opm::GasPhase<Scalar, Opm::NullComponent<Scalar> >;
+    using type = GasPhase<Scalar, NullComponent<Scalar>>;
 };
 
 /*!
@@ -179,7 +196,7 @@ private:
     using NonWettingFluid = GetPropType<TypeTag, Properties::NonWettingFluid>;
 
 public:
-    using type = Opm::TwoPhaseImmiscibleFluidSystem<Scalar, WettingFluid, NonWettingFluid>;
+    using type = TwoPhaseImmiscibleFluidSystem<Scalar, WettingFluid, NonWettingFluid>;
 };
 
 
@@ -265,7 +282,6 @@ class RichardsModel
     static const unsigned liquidCompIdx = getPropValue<TypeTag, Properties::LiquidComponentIndex>();
     static const unsigned gasCompIdx = getPropValue<TypeTag, Properties::GasComponentIndex>();
 
-
     // some consistency checks
     static_assert(numPhases == 2,
                   "Exactly two fluids are required for this model");
@@ -306,10 +322,12 @@ public:
     std::string primaryVarName(unsigned pvIdx) const
     {
         std::ostringstream oss;
-        if (pvIdx == Indices::pressureWIdx)
+        if (pvIdx == Indices::pressureWIdx) {
             oss << "pressure_" << FluidSystem::phaseName(liquidPhaseIdx);
-        else
+        }
+        else {
             assert(0);
+        }
 
         return oss.str();
     }
@@ -320,10 +338,12 @@ public:
     std::string eqName(unsigned eqIdx) const
     {
         std::ostringstream oss;
-        if (eqIdx == Indices::contiEqIdx)
+        if (eqIdx == Indices::contiEqIdx) {
             oss << "continuity_" << FluidSystem::phaseName(liquidPhaseIdx);
-        else
+        }
+        else {
             assert(0);
+        }
 
         return oss.str();
     }
@@ -377,12 +397,11 @@ public:
     { return phaseIdx == liquidPhaseIdx; }
 
     void registerOutputModules_()
-    {
-        ParentType::registerOutputModules_();
-    }
+    { ParentType::registerOutputModules_(); }
 
-    mutable Scalar referencePressure_;
+    Scalar referencePressure_{};
 };
+
 } // namespace Opm
 
 #endif

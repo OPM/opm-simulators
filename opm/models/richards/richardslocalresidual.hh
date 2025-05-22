@@ -28,9 +28,13 @@
 #ifndef EWOMS_RICHARDS_LOCAL_RESIDUAL_HH
 #define EWOMS_RICHARDS_LOCAL_RESIDUAL_HH
 
-#include "richardsintensivequantities.hh"
+#include <dune/common/fvector.hh>
 
-#include "richardsextensivequantities.hh"
+#include <opm/material/common/MathToolbox.hpp>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/richards/richardsproperties.hh>
 
 namespace Opm {
 
@@ -51,7 +55,7 @@ class RichardsLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     enum { contiEqIdx = Indices::contiEqIdx };
     enum { liquidPhaseIdx = getPropValue<TypeTag, Properties::LiquidPhaseIndex>() };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
     /*!
@@ -67,9 +71,9 @@ public:
 
         // partial time derivative of the wetting phase mass
         storage[contiEqIdx] =
-            Toolbox::template decay<LhsEval>(intQuants.fluidState().density(liquidPhaseIdx))
-            *Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(liquidPhaseIdx))
-            *Toolbox::template decay<LhsEval>(intQuants.porosity());
+            Toolbox::template decay<LhsEval>(intQuants.fluidState().density(liquidPhaseIdx)) *
+            Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(liquidPhaseIdx)) *
+            Toolbox::template decay<LhsEval>(intQuants.porosity());
     }
 
     /*!
@@ -82,18 +86,20 @@ public:
     {
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
 
-        unsigned focusDofIdx = elemCtx.focusDofIndex();
-        unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(liquidPhaseIdx));
+        const unsigned focusDofIdx = elemCtx.focusDofIndex();
+        const unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(liquidPhaseIdx));
 
         const IntensiveQuantities& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
 
         // compute advective mass flux of the liquid phase. This is slightly hacky
         // because it is specific to the element-centered finite volume method.
         const Evaluation& rho = up.fluidState().density(liquidPhaseIdx);
-        if (focusDofIdx == upIdx)
-            flux[contiEqIdx] = extQuants.volumeFlux(liquidPhaseIdx)*rho;
-        else
-            flux[contiEqIdx] = extQuants.volumeFlux(liquidPhaseIdx)*Toolbox::value(rho);
+        if (focusDofIdx == upIdx) {
+            flux[contiEqIdx] = extQuants.volumeFlux(liquidPhaseIdx) * rho;
+        }
+        else {
+            flux[contiEqIdx] = extQuants.volumeFlux(liquidPhaseIdx) * Toolbox::value(rho);
+        }
     }
 
     /*!

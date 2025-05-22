@@ -33,7 +33,9 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 
-#include "richardsintensivequantities.hh"
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/richards/richardsproperties.hh>
 
 namespace Opm {
 
@@ -63,7 +65,8 @@ class RichardsRateVector
     using ParentType = Dune::FieldVector<Evaluation, numEq>;
 
 public:
-    RichardsRateVector() : ParentType()
+    RichardsRateVector()
+        : ParentType()
     { Opm::Valgrind::SetUndefined(*this); }
 
     /*!
@@ -94,7 +97,7 @@ public:
     {
         // convert to mass rates
         ParentType::operator[](contiEqIdx) =
-            value[contiEqIdx]*FluidSystem::molarMass(liquidCompIdx);
+            value[contiEqIdx] * FluidSystem::molarMass(liquidCompIdx);
     }
 
     /*!
@@ -111,9 +114,9 @@ public:
     void setVolumetricRate(const FluidState& fluidState, unsigned phaseIdx, const RhsEval& volume)
     {
        (*this)[contiEqIdx] =
-            fluidState.density(phaseIdx)
-            * fluidState.massFraction(phaseIdx, liquidCompIdx)
-            * volume;
+            fluidState.density(phaseIdx) *
+            fluidState.massFraction(phaseIdx, liquidCompIdx) *
+            volume;
 
         EnergyModule::setEnthalpyRate(*this, fluidState, phaseIdx, volume);
     }
@@ -125,8 +128,9 @@ public:
     template <class RhsEval>
     RichardsRateVector& operator=(const RhsEval& value)
     {
-        for (unsigned i=0; i < this->size(); ++i)
+        for (unsigned i = 0; i < this->size(); ++i) {
             (*this)[i] = value;
+        }
         return *this;
     }
 
@@ -135,8 +139,9 @@ public:
      */
     RichardsRateVector& operator=(const RichardsRateVector& other)
     {
-        for (unsigned i=0; i < this->size(); ++i)
+        for (unsigned i = 0; i < this->size(); ++i) {
             (*this)[i] = other[i];
+        }
         return *this;
     }
 };

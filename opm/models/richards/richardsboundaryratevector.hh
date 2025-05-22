@@ -28,10 +28,14 @@
 #ifndef EWOMS_RICHARDS_BOUNDARY_RATE_VECTOR_HH
 #define EWOMS_RICHARDS_BOUNDARY_RATE_VECTOR_HH
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
 
-#include "richardsintensivequantities.hh"
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/richards/richardsproperties.hh>
+
+#include <algorithm>
 
 namespace Opm {
 
@@ -54,12 +58,10 @@ class RichardsBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
     enum { contiEqIdx = Indices::contiEqIdx };
     enum { liquidPhaseIdx = getPropValue<TypeTag, Properties::LiquidPhaseIndex>() };
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
-    RichardsBoundaryRateVector() : ParentType()
-    {}
-
+    RichardsBoundaryRateVector() = default;
     /*!
      * \copydoc
      * ImmiscibleBoundaryRateVector::ImmiscibleBoundaryRateVector(Scalar)
@@ -79,31 +81,36 @@ public:
      * \copydoc ImmiscibleBoundaryRateVector::setFreeFlow
      */
     template <class Context, class FluidState>
-    void setFreeFlow(const Context& context, unsigned bfIdx, unsigned timeIdx, const FluidState& fluidState)
+    void setFreeFlow(const Context& context, unsigned bfIdx,
+                     unsigned timeIdx, const FluidState& fluidState)
     {
         ExtensiveQuantities extQuants;
         extQuants.updateBoundary(context, bfIdx, timeIdx, fluidState);
         const auto& insideIntQuants = context.intensiveQuantities(bfIdx, timeIdx);
-        unsigned focusDofIdx = context.focusDofIndex();
-        unsigned interiorDofIdx = context.interiorScvIndex(bfIdx, timeIdx);
+        const unsigned focusDofIdx = context.focusDofIndex();
+        const unsigned interiorDofIdx = context.interiorScvIndex(bfIdx, timeIdx);
 
         ////////
         // advective fluxes of all components in all phases
         ////////
         (*this) = Evaluation(0.0);
 
-        unsigned phaseIdx = liquidPhaseIdx;
+        const unsigned phaseIdx = liquidPhaseIdx;
         Evaluation density;
         if (fluidState.pressure(phaseIdx) > insideIntQuants.fluidState().pressure(phaseIdx)) {
-            if (focusDofIdx == interiorDofIdx)
+            if (focusDofIdx == interiorDofIdx) {
                 density = fluidState.density(phaseIdx);
-            else
-                density = Opm::getValue(fluidState.density(phaseIdx));
+            }
+            else {
+                density = getValue(fluidState.density(phaseIdx));
+            }
         }
-        else if (focusDofIdx == interiorDofIdx)
+        else if (focusDofIdx == interiorDofIdx) {
             density = insideIntQuants.fluidState().density(phaseIdx);
-        else
-            density = Opm::getValue(insideIntQuants.fluidState().density(phaseIdx));
+        }
+        else {
+            density = getValue(insideIntQuants.fluidState().density(phaseIdx));
+        }
 
         // add advective flux of current component in current
         // phase
@@ -111,9 +118,9 @@ public:
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
-            Opm::Valgrind::CheckDefined((*this)[i]);
+            Valgrind::CheckDefined((*this)[i]);
         }
-        Opm::Valgrind::CheckDefined(*this);
+        Valgrind::CheckDefined(*this);
 #endif
     }
 
@@ -129,10 +136,8 @@ public:
         this->setFreeFlow(context, bfIdx, timeIdx, fluidState);
 
         // we only allow fluxes in the direction opposite to the outer unit normal
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            Evaluation& val = this->operator[](eqIdx);
-            val = Toolbox::min(0.0, val);
-        }
+        std::for_each(this->begin(), this->end(),
+                      [](auto& val) { val = Toolbox::min(0.0, val); });
     }
 
     /*!
@@ -147,10 +152,8 @@ public:
         this->setFreeFlow(context, bfIdx, timeIdx, fluidState);
 
         // we only allow fluxes in the same direction as the outer unit normal
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            Evaluation& val = this->operator[](eqIdx);
-            val = Toolbox::max(0.0, val);
-        }
+        std::for_each(this->begin(), this->end(),
+                      [](auto& val) { val = Toolbox::max(0.0, val); });
     }
 
     /*!
