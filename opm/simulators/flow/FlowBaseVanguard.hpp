@@ -47,6 +47,7 @@
 
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -98,6 +99,7 @@ protected:
     static const int dimensionworld = Grid::dimensionworld;
     using Element = typename GridView::template Codim<0>::Entity;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
+    mutable std::optional<std::vector<std::unordered_map<std::size_t, std::size_t>>> lgrMappers;
 
 public:
     /*!
@@ -204,6 +206,15 @@ public:
             return index_pair->second;
         }
     }
+
+
+    virtual int compressedIndexForInteriorLGR([[maybe_unused]] const std::string& lgr_tag, 
+                                              [[maybe_unused]]  const Connection&    conn) const
+    {
+        throw std::runtime_error("compressedIndexForInteriorLGR not implemented");
+        return  -1;
+    };
+
     /*!
      * \brief Extract Cartesian index triplet (i,j,k) of an active cell.
      *
