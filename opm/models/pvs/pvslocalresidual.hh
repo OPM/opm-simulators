@@ -28,12 +28,13 @@
 #ifndef EWOMS_PVS_LOCAL_RESIDUAL_HH
 #define EWOMS_PVS_LOCAL_RESIDUAL_HH
 
-#include "pvsproperties.hh"
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/common/diffusionmodule.hh>
 #include <opm/models/common/energymodule.hh>
-
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 
@@ -59,12 +60,12 @@ class PvsLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidu
     enum { conti0EqIdx = Indices::conti0EqIdx };
 
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
-    using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
+    using DiffusionModule = ::Opm::DiffusionModule<TypeTag, enableDiffusion>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
     /*!
@@ -82,11 +83,11 @@ public:
 
         // compute storage term of all components within all phases
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            unsigned eqIdx = conti0EqIdx + compIdx;
+            const unsigned eqIdx = conti0EqIdx + compIdx;
             storage[eqIdx] +=
-                Toolbox::template decay<LhsEval>(fs.molarity(phaseIdx, compIdx))
-                * Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
-                * Toolbox::template decay<LhsEval>(intQuants.porosity());
+                Toolbox::template decay<LhsEval>(fs.molarity(phaseIdx, compIdx)) *
+                Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
+                Toolbox::template decay<LhsEval>(intQuants.porosity());
         }
 
         EnergyModule::addPhaseStorage(storage, elemCtx.intensiveQuantities(dofIdx, timeIdx), phaseIdx);
@@ -102,8 +103,9 @@ public:
                         unsigned timeIdx) const
     {
         storage = 0.0;
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             addPhaseStorage(storage, elemCtx, dofIdx, timeIdx, phaseIdx);
+        }
 
         EnergyModule::addSolidEnergyStorage(storage, elemCtx.intensiveQuantities(dofIdx, timeIdx));
     }
@@ -118,10 +120,10 @@ public:
     {
         flux = 0.0;
         addAdvectiveFlux(flux, elemCtx, scvfIdx, timeIdx);
-        Opm::Valgrind::CheckDefined(flux);
+        Valgrind::CheckDefined(flux);
 
         addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
-        Opm::Valgrind::CheckDefined(flux);
+        Valgrind::CheckDefined(flux);
     }
 
     /*!
@@ -134,34 +136,34 @@ public:
     {
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
 
-        unsigned focusDofIdx = elemCtx.focusDofIndex();
+        const unsigned focusDofIdx = elemCtx.focusDofIndex();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             // data attached to upstream and the downstream DOFs
             // of the current phase
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            const unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const IntensiveQuantities& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
 
             // this is a bit hacky because it is specific to the element-centered
             // finite volume scheme. (N.B. that if finite differences are used to
             // linearize the system of equations, it does not matter.)
             if (upIdx == focusDofIdx) {
-                Evaluation tmp =
-                    up.fluidState().molarDensity(phaseIdx)
-                    * extQuants.volumeFlux(phaseIdx);
+                const Evaluation tmp =
+                    up.fluidState().molarDensity(phaseIdx) *
+                    extQuants.volumeFlux(phaseIdx);
 
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     flux[conti0EqIdx + compIdx] +=
-                        tmp*up.fluidState().moleFraction(phaseIdx, compIdx);
+                        tmp * up.fluidState().moleFraction(phaseIdx, compIdx);
                 }
             }
             else {
-                Evaluation tmp =
-                    Toolbox::value(up.fluidState().molarDensity(phaseIdx))
-                    * extQuants.volumeFlux(phaseIdx);
+                const Evaluation tmp =
+                    Toolbox::value(up.fluidState().molarDensity(phaseIdx)) *
+                    extQuants.volumeFlux(phaseIdx);
 
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     flux[conti0EqIdx + compIdx] +=
-                        tmp*Toolbox::value(up.fluidState().moleFraction(phaseIdx, compIdx));
+                        tmp * Toolbox::value(up.fluidState().moleFraction(phaseIdx, compIdx));
                 }
             }
         }
@@ -189,9 +191,9 @@ public:
                        unsigned dofIdx,
                        unsigned timeIdx) const
     {
-        Opm::Valgrind::SetUndefined(source);
+        Valgrind::SetUndefined(source);
         elemCtx.problem().source(source, elemCtx, dofIdx, timeIdx);
-        Opm::Valgrind::CheckDefined(source);
+        Valgrind::CheckDefined(source);
     }
 };
 

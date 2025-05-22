@@ -28,11 +28,11 @@
 #ifndef EWOMS_PVS_INDICES_HH
 #define EWOMS_PVS_INDICES_HH
 
-#include "pvsproperties.hh"
-
 #include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 
 namespace Opm {
+
 /*!
  * \ingroup PvsModel
  *
@@ -48,24 +48,24 @@ class PvsIndices
 {
     static constexpr int numComponents = getPropValue<TypeTag, Properties::NumComponents>();
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    using EnergyIndices = Opm::EnergyIndices<PVOffset + numComponents, enableEnergy>;
+    using EnergyIndices = ::Opm::EnergyIndices<PVOffset + numComponents, enableEnergy>;
 
 public:
     //! Number of partial differential equations or primary variables, respectively
-    static const int numEq = numComponents + EnergyIndices::numEq_;
+    static constexpr int numEq = numComponents + EnergyIndices::numEq_;
 
     // Primary variable indices
 
     //! Index for the pressure of the first phase
-    static const int pressure0Idx = PVOffset + 0;
+    static constexpr int pressure0Idx = PVOffset + 0;
     //! Index of the either the saturation or the mole
     //! fraction of the phase with the lowest index
-    static const int switch0Idx = PVOffset + 1;
+    static constexpr int switch0Idx = PVOffset + 1;
 
     // equation indices
 
     //! Index of the mass conservation equation for the first component
-    static const int conti0EqIdx = PVOffset;
+    static constexpr int conti0EqIdx = PVOffset;
 };
 
 } // namespace Opm

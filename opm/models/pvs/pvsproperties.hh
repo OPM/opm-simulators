@@ -30,13 +30,7 @@
 #ifndef EWOMS_PVS_PROPERTIES_HH
 #define EWOMS_PVS_PROPERTIES_HH
 
-#include <opm/models/common/multiphasebaseproperties.hh>
-#include <opm/models/common/diffusionmodule.hh>
-#include <opm/models/common/energymodule.hh>
-#include <opm/models/io/vtkcompositionmodule.hpp>
-#include <opm/models/io/vtkphasepresencemodule.hpp>
-#include <opm/models/io/vtkdiffusionmodule.hpp>
-#include <opm/models/io/vtkenergymodule.hpp>
+#include <opm/models/utils/propertysystem.hh>
 
 namespace Opm::Properties {
 

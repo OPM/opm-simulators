@@ -28,9 +28,11 @@
 #ifndef EWOMS_PVS_NEWTON_METHOD_HH
 #define EWOMS_PVS_NEWTON_METHOD_HH
 
-#include "pvsproperties.hh"
-
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/nonlinear/newtonmethod.hh>
+
+#include <algorithm>
+#include <cmath>
 
 namespace Opm::Properties {
 
@@ -93,31 +95,33 @@ protected:
         Scalar sumSatDelta = 0.0;
         Scalar maxSatDelta = 0.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
-            if (!currentValue.phaseIsPresent(phaseIdx))
+            if (!currentValue.phaseIsPresent(phaseIdx)) {
                 continue;
+            }
 
             maxSatDelta = std::max(std::abs(update[switch0Idx + phaseIdx]),
                                    maxSatDelta);
             sumSatDelta += update[switch0Idx + phaseIdx];
         }
-        maxSatDelta = std::max(std::abs(- sumSatDelta), maxSatDelta);
+        maxSatDelta = std::max(std::abs(-sumSatDelta), maxSatDelta);
 
         if (maxSatDelta > 0.2) {
-            Scalar alpha = 0.2/maxSatDelta;
+            const Scalar alpha = 0.2 / maxSatDelta;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
-                if (!currentValue.phaseIsPresent(phaseIdx))
+                if (!currentValue.phaseIsPresent(phaseIdx)) {
                     continue;
+                }
 
                 nextValue[switch0Idx + phaseIdx] =
-                    currentValue[switch0Idx + phaseIdx]
-                    - alpha*update[switch0Idx + phaseIdx];
+                    currentValue[switch0Idx + phaseIdx] -
+                    alpha * update[switch0Idx + phaseIdx];
             }
         }
 
         // limit pressure reference change to 20% of the total value per iteration
-        clampValue_(nextValue[pressure0Idx],
-                    currentValue[pressure0Idx]*0.8,
-                    currentValue[pressure0Idx]*1.2);
+        nextValue[pressure0Idx] = std::clamp(nextValue[pressure0Idx],
+                                             currentValue[pressure0Idx] * 0.8,
+                                             currentValue[pressure0Idx] * 1.2);
     }
 
     /*!
@@ -129,10 +133,8 @@ protected:
         ParentType::endIteration_(uCurrentIter, uLastIter);
         this->problem().model().switchPrimaryVars_();
     }
-
-    void clampValue_(Scalar& val, Scalar minVal, Scalar maxVal) const
-    { val = std::max(minVal, std::min(val, maxVal)); }
 };
+
 } // namespace Opm
 
 #endif

@@ -28,13 +28,13 @@
 #ifndef EWOMS_PVS_RATE_VECTOR_HH
 #define EWOMS_PVS_RATE_VECTOR_HH
 
-#include "pvsindices.hh"
+#include <dune/common/fvector.hh>
 
-#include <opm/models/common/energymodule.hh>
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
-#include <dune/common/fvector.hh>
+#include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 
@@ -62,11 +62,11 @@ class PvsRateVector
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     using ParentType = Dune::FieldVector<Evaluation, numEq>;
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     PvsRateVector() : ParentType()
-    { Opm::Valgrind::SetUndefined(*this); }
+    { Valgrind::SetUndefined(*this); }
 
     /*!
      * \copydoc ImmiscibleRateVector::ImmiscibleRateVector(Scalar)
@@ -78,8 +78,7 @@ public:
     /*!
      * \copydoc ImmiscibleRateVector::ImmiscibleRateVector(const ImmiscibleRateVector&)
      */
-    PvsRateVector(const PvsRateVector& value) : ParentType(value)
-    {}
+    PvsRateVector(const PvsRateVector& value) = default;
 
     /*!
      * \copydoc ImmiscibleRateVector::setMassRate
@@ -112,11 +111,12 @@ public:
     template <class FluidState, class RhsEval>
     void setVolumetricRate(const FluidState& fluidState, unsigned phaseIdx, const RhsEval& volume)
     {
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             (*this)[conti0EqIdx + compIdx] =
-                fluidState.density(phaseIdx, compIdx)
-                * fluidState.moleFraction(phaseIdx, compIdx)
-                * volume;
+                fluidState.density(phaseIdx, compIdx) *
+                fluidState.moleFraction(phaseIdx, compIdx) *
+                volume;
+        }
 
         EnergyModule::setEnthalpyRate(*this, fluidState, phaseIdx, volume);
     }
@@ -127,8 +127,9 @@ public:
     template <class RhsEval>
     PvsRateVector& operator=(const RhsEval& value)
     {
-        for (unsigned i=0; i < this->size(); ++i)
+        for (unsigned i = 0; i < this->size(); ++i) {
             (*this)[i] = value;
+        }
         return *this;
     }
 
@@ -137,8 +138,9 @@ public:
      */
     PvsRateVector& operator=(const PvsRateVector& other)
     {
-        for (unsigned i=0; i < this->size(); ++i)
+        for (unsigned i = 0; i < this->size(); ++i) {
             (*this)[i] = other[i];
+        }
         return *this;
     }
 };
