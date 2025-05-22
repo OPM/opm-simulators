@@ -214,9 +214,9 @@ public:
 
 private:
     // Weights to make approximate pressure equations.
-    std::function<GPUVector()> getWeightsCalculator()
+    std::function<GPUVector&()> getWeightsCalculator()
     {
-        std::function<GPUVector()> weightsCalculator;
+        std::function<GPUVector&()> weightsCalculator;
 
         using namespace std::string_literals;
 
@@ -233,7 +233,7 @@ private:
                 auto diagonalIndices = Opm::Amg::precomputeDiagonalIndices(*m_matrix);
                 m_diagonalIndices = std::make_unique<GPUVectorInt>(diagonalIndices);
 
-                weightsCalculator = [this, transpose]() {
+                weightsCalculator = [this, transpose]() -> GPUVector& {
                     // GPU implementation for quasiimpes weights
                     Amg::getQuasiImpesWeights(*m_matrix, pressureIndex, transpose, *m_weights, *m_diagonalIndices);
                     return *m_weights;
@@ -244,7 +244,7 @@ private:
                 m_weights = std::make_unique<GPUVector>(m_cpuWeights);
 
                 // CPU implementation wrapped for GPU
-                weightsCalculator = [this]() {
+                weightsCalculator = [this]() -> GPUVector& {
 
                     // Use the CPU implementation to calculate the weights
                     ElementContext elemCtx(m_simulator);
@@ -262,7 +262,7 @@ private:
                 m_weights = std::make_unique<GPUVector>(m_cpuWeights);
 
                 // CPU implementation wrapped for GPU
-                weightsCalculator = [this]() {
+                weightsCalculator = [this]() -> GPUVector& {
 
                     // Use the CPU implementation to calculate the weights
                     ElementContext elemCtx(m_simulator);
@@ -288,7 +288,7 @@ private:
     {
         if (!m_matrix) {
             m_matrix.reset(new auto(GPUMatrix::fromMatrix(M)));
-            std::function<GPUVector()> weightsCalculator = getWeightsCalculator();
+            std::function<GPUVector&()> weightsCalculator = getWeightsCalculator();
             const bool parallel = false;
             m_gpuSolver = std::make_unique<SolverType>(
                 *m_matrix, parallel, m_propertyTree, pressureIndex, weightsCalculator, m_forceSerial, nullptr);
