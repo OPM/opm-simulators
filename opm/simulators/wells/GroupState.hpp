@@ -107,7 +107,6 @@ public:
     bool has_number_of_wells_under_this_control(const std::string& gname) const;
     void update_number_of_wells_under_this_control(const std::string& gname, int number);
     int number_of_wells_under_this_control(const std::string& gname) const;
-    
 
     bool has_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const;
     void update_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase, int number);
