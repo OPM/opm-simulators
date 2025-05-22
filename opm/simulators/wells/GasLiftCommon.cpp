@@ -47,16 +47,6 @@ GasLiftCommon(WellState<Scalar>& well_state,
  ****************************************/
 
 template<class Scalar>
-int
-GasLiftCommon<Scalar>::debugUpdateGlobalCounter_() const
-{
-    auto count = this->well_state_.gliftUpdateDebugCounter();
-    const std::string msg = fmt::format("global counter = {}", count);
-    displayDebugMessage_(msg);
-    return count;
-}
-
-template<class Scalar>
 void GasLiftCommon<Scalar>::
 displayDebugMessageOnRank0_(const std::string& msg) const
 {
