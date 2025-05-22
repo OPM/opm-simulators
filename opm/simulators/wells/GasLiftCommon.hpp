@@ -28,16 +28,17 @@ namespace Opm {
 
 class DeferredLogger;
 template<class Scalar> class GroupState;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class GasLiftCommon
 {
 public:
     virtual ~GasLiftCommon() = default;
 
 protected:
-    GasLiftCommon(WellState<Scalar>& well_state,
+    using Scalar = typename FluidSystem::Scalar;
+    GasLiftCommon(WellState<FluidSystem, Indices>& well_state,
                   const GroupState<Scalar>& group_state,
                   DeferredLogger& deferred_logger,
                   const Parallel::Communication& comm,
@@ -52,7 +53,7 @@ protected:
                      const std::string& msg,
                      MessageType msg_type = MessageType::INFO) const;
 
-    WellState<Scalar>& well_state_;
+    WellState<FluidSystem, Indices>& well_state_;
     const GroupState<Scalar>& group_state_;
     DeferredLogger& deferred_logger_;
     const Parallel::Communication& comm_;

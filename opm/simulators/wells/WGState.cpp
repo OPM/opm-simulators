@@ -21,50 +21,58 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/wells/WGState.hpp>
 
 #include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm {
 
-template<class Scalar>
-WGState<Scalar>::WGState(const PhaseUsage& pu) :
+template<typename FluidSystem, typename Indices>
+WGState<FluidSystem, Indices>::WGState(const PhaseUsage& pu) :
     well_state(pu),
     group_state(pu.num_phases),
     well_test_state{}
 {}
 
-template<class Scalar>
-WGState<Scalar> WGState<Scalar>::
+template<typename FluidSystem, typename Indices>
+WGState<FluidSystem, Indices> WGState<FluidSystem, Indices>::
 serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 {
     WGState result(PhaseUsage{});
-    result.well_state = WellState<Scalar>::serializationTestObject(pinfo);
+    result.well_state = WellState<FluidSystem, Indices>::serializationTestObject(pinfo);
     result.group_state = GroupState<Scalar>::serializationTestObject();
     result.well_test_state = WellTestState::serializationTestObject();
 
     return result;
 }
 
-template<class Scalar>
-void WGState<Scalar>::wtest_state(std::unique_ptr<WellTestState> wtest_state)
+template<typename FluidSystem, typename Indices>
+void WGState<FluidSystem, Indices>::wtest_state(std::unique_ptr<WellTestState> wtest_state)
 {
     wtest_state->filter_wells( this->well_state.wells() );
     this->well_test_state = std::move(*wtest_state);
 }
 
-template<class Scalar>
-bool WGState<Scalar>::operator==(const WGState& rhs) const
+template<typename FluidSystem, typename Indices>
+bool WGState<FluidSystem, Indices>::operator==(const WGState& rhs) const
 {
     return this->well_state == rhs.well_state &&
            this->group_state == rhs.group_state &&
            this->well_test_state == rhs.well_test_state;
 }
 
-template struct WGState<double>;
+#include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
+
+INSTANTIATE_TYPE_INDICES(WGState, double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template struct WGState<float>;
+INSTANTIATE_TYPE_INDICES(WGState, float)
 #endif
 
 }

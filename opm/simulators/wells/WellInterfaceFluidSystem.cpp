@@ -28,6 +28,10 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
@@ -43,8 +47,8 @@
 namespace Opm
 {
 
-template<class FluidSystem>
-WellInterfaceFluidSystem<FluidSystem>::
+template<typename FluidSystem, typename Indices>
+WellInterfaceFluidSystem<FluidSystem, Indices>::
 WellInterfaceFluidSystem(const Well& well,
                          const ParallelWellInfo<Scalar>& parallel_well_info,
                          const int time_step,
@@ -55,17 +59,17 @@ WellInterfaceFluidSystem(const Well& well,
                          const int num_phases,
                          const int index_of_well,
                          const std::vector<PerforationData<Scalar>>& perf_data)
-    : WellInterfaceGeneric<Scalar>(well, parallel_well_info, time_step, param,
+    : WellInterfaceGeneric<FluidSystem, Indices>(well, parallel_well_info, time_step, param,
                                    pvtRegionIdx, num_components, num_phases,
                                    index_of_well, perf_data)
     , rateConverter_(rate_converter)
 {
 }
 
-template <typename FluidSystem>
+template<typename FluidSystem, typename Indices>
 void
-WellInterfaceFluidSystem<FluidSystem>::
-calculateReservoirRates(const bool co2store, SingleWellState<Scalar>& ws) const
+WellInterfaceFluidSystem<FluidSystem, Indices>::
+calculateReservoirRates(const bool co2store, SingleWellState<FluidSystem, Indices>& ws) const
 {
     const int np = this->number_of_phases_;
     const auto& pu = this->phaseUsage();
@@ -152,10 +156,10 @@ calculateReservoirRates(const bool co2store, SingleWellState<Scalar>& ws) const
     }
 }
 
-template <typename FluidSystem>
+template<typename FluidSystem, typename Indices>
 bool
-WellInterfaceFluidSystem<FluidSystem>::
-checkIndividualConstraints(SingleWellState<Scalar>& ws,
+WellInterfaceFluidSystem<FluidSystem, Indices>::
+checkIndividualConstraints(SingleWellState<FluidSystem, Indices>& ws,
                            const SummaryState& summaryState,
                            DeferredLogger& deferred_logger,
                            const std::optional<Well::InjectionControls>& inj_controls,
@@ -176,10 +180,10 @@ checkIndividualConstraints(SingleWellState<Scalar>& ws,
                                        deferred_logger, inj_controls, prod_controls);
 }
 
-template <typename FluidSystem>
+template<typename FluidSystem, typename Indices>
 bool
-WellInterfaceFluidSystem<FluidSystem>::
-checkGroupConstraints(WellState<Scalar>& well_state,
+WellInterfaceFluidSystem<FluidSystem, Indices>::
+checkGroupConstraints(WellState<FluidSystem, Indices>& well_state,
                       const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
@@ -205,10 +209,10 @@ checkGroupConstraints(WellState<Scalar>& well_state,
                                                              rCoeff, deferred_logger);
 }
 
-template <typename FluidSystem>
+template<typename FluidSystem, typename Indices>
 bool
-WellInterfaceFluidSystem<FluidSystem>::
-checkConstraints(WellState<Scalar>& well_state,
+WellInterfaceFluidSystem<FluidSystem, Indices>::
+checkConstraints(WellState<FluidSystem, Indices>& well_state,
                  const GroupState<Scalar>& group_state,
                  const Schedule& schedule,
                  const SummaryState& summaryState,
@@ -224,11 +228,11 @@ checkConstraints(WellState<Scalar>& well_state,
     }
 }
 
-template<typename FluidSystem>
-std::optional<typename WellInterfaceFluidSystem<FluidSystem>::Scalar>
-WellInterfaceFluidSystem<FluidSystem>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename WellInterfaceFluidSystem<FluidSystem, Indices>::Scalar>
+WellInterfaceFluidSystem<FluidSystem, Indices>::
 getGroupInjectionTargetRate(const Group& group,
-                            const WellState<Scalar>& well_state,
+                            const WellState<FluidSystem, Indices>& well_state,
                             const GroupState<Scalar>& group_state,
                             const Schedule& schedule,
                             const SummaryState& summaryState,
@@ -258,11 +262,11 @@ getGroupInjectionTargetRate(const Group& group,
                                                                 deferred_logger);
 }
 
-template<typename FluidSystem>
-typename WellInterfaceFluidSystem<FluidSystem>::Scalar
-WellInterfaceFluidSystem<FluidSystem>::
+template<typename FluidSystem, typename Indices>
+typename WellInterfaceFluidSystem<FluidSystem, Indices>::Scalar
+WellInterfaceFluidSystem<FluidSystem, Indices>::
 getGroupProductionTargetRate(const Group& group,
-                             const WellState<Scalar>& well_state,
+                             const WellState<FluidSystem, Indices>& well_state,
                              const GroupState<Scalar>& group_state,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
@@ -290,12 +294,12 @@ getGroupProductionTargetRate(const Group& group,
                                                                  deferred_logger);
 }
 
-template<typename FluidSystem>
+template<typename FluidSystem, typename Indices>
 bool
-WellInterfaceFluidSystem<FluidSystem>::
+WellInterfaceFluidSystem<FluidSystem, Indices>::
 zeroGroupRateTarget(const SummaryState& summary_state,
                     const Schedule& schedule,
-                    const WellState<Scalar>& well_state,
+                    const WellState<FluidSystem, Indices>& well_state,
                     const GroupState<Scalar>& group_state,
                     DeferredLogger& deferred_logger) const
 {
@@ -327,13 +331,12 @@ zeroGroupRateTarget(const SummaryState& summary_state,
     }
 }
 
-template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
+#include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
 
-template class WellInterfaceFluidSystem<FS<double>>;
+INSTANTIATE_TYPE_INDICES(WellInterfaceFluidSystem, double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class WellInterfaceFluidSystem<FS<float>>;
+INSTANTIATE_TYPE_INDICES(WellInterfaceFluidSystem, float)
 #endif
 
 } // namespace Opm

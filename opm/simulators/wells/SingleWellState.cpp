@@ -24,32 +24,36 @@
 
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/wells/PerforationData.hpp>
 
 namespace Opm {
 
-template<class Scalar>
-SingleWellState<Scalar>::
+template<typename FluidSystem, typename Indices>
+SingleWellState<FluidSystem, Indices>::
 SingleWellState(const std::string& name_,
                 const ParallelWellInfo<Scalar>& pinfo,
                 bool is_producer,
                 Scalar pressure_first_connection,
                 const std::vector<PerforationData<Scalar>>& perf_input,
-                const PhaseUsage& pu_,
                 Scalar temp)
     : name(name_)
     , parallel_info(pinfo)
     , producer(is_producer)
-    , pu(pu_)
     , temperature(temp)
-    , well_potentials(pu_.num_phases)
-    , productivity_index(pu_.num_phases)
-    , implicit_ipr_a(pu_.num_phases)
-    , implicit_ipr_b(pu_.num_phases)
-    , surface_rates(pu_.num_phases)
-    , reservoir_rates(pu_.num_phases)
-    , prev_surface_rates(pu_.num_phases)
-    , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu_.num_phases)
+    , well_potentials(FluidSystem::numActivePhases())
+    , productivity_index(FluidSystem::numActivePhases())
+    , implicit_ipr_a(FluidSystem::numActivePhases())
+    , implicit_ipr_b(FluidSystem::numActivePhases())
+    , surface_rates(FluidSystem::numActivePhases())
+    , reservoir_rates(FluidSystem::numActivePhases())
+    , prev_surface_rates(FluidSystem::numActivePhases())
+    , perf_data(perf_input.size(), pressure_first_connection, !is_producer, FluidSystem::numActivePhases())
     , trivial_group_target(false)
 {
     for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
@@ -61,18 +65,18 @@ SingleWellState(const std::string& name_,
     }
 }
 
-template<class Scalar>
-SingleWellState<Scalar> SingleWellState<Scalar>::
+template<typename FluidSystem, typename Indices>
+SingleWellState<FluidSystem, Indices> SingleWellState<FluidSystem, Indices>::
 serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 {
-    SingleWellState result("testing", pinfo, true, 1.0, {}, PhaseUsage{}, 2.0);
+    SingleWellState result("testing", pinfo, true, 1.0, {}, 2.0);
     result.perf_data = PerfData<Scalar>::serializationTestObject();
 
     return result;
 }
 
-template<class Scalar>
-void SingleWellState<Scalar>::init_timestep(const SingleWellState& other)
+template<typename FluidSystem, typename Indices>
+void SingleWellState<FluidSystem, Indices>::init_timestep(const SingleWellState& other)
 {
     if (this->producer != other.producer)
         return;
@@ -88,8 +92,8 @@ void SingleWellState<Scalar>::init_timestep(const SingleWellState& other)
     this->temperature = other.temperature;
 }
 
-template<class Scalar>
-void SingleWellState<Scalar>::shut()
+template<typename FluidSystem, typename Indices>
+void SingleWellState<FluidSystem, Indices>::shut()
 {
     this->bhp = 0;
     this->thp = 0;
@@ -105,21 +109,21 @@ void SingleWellState<Scalar>::shut()
     connpi.assign(connpi.size(), 0);
 }
 
-template<class Scalar>
-void SingleWellState<Scalar>::stop()
+template<typename FluidSystem, typename Indices>
+void SingleWellState<FluidSystem, Indices>::stop()
 {
     this->thp = 0;
     this->status = Well::Status::STOP;
 }
 
-template<class Scalar>
-void SingleWellState<Scalar>::open()
+template<typename FluidSystem, typename Indices>
+void SingleWellState<FluidSystem, Indices>::open()
 {
     this->status = Well::Status::OPEN;
 }
 
-template<class Scalar>
-void SingleWellState<Scalar>::updateStatus(Well::Status new_status)
+template<typename FluidSystem, typename Indices>
+void SingleWellState<FluidSystem, Indices>::updateStatus(Well::Status new_status)
 {
     switch (new_status) {
     case Well::Status::OPEN:
@@ -136,8 +140,8 @@ void SingleWellState<Scalar>::updateStatus(Well::Status new_status)
     }
 }
 
-template<class Scalar>
-void SingleWellState<Scalar>::
+template<typename FluidSystem, typename Indices>
+void SingleWellState<FluidSystem, Indices>::
 reset_connection_factors(const std::vector<PerforationData<Scalar>>& new_perf_data)
 {
    if (this->perf_data.size() != new_perf_data.size()) {
@@ -168,73 +172,73 @@ reset_connection_factors(const std::vector<PerforationData<Scalar>>& new_perf_da
     }
 }
 
-template<class Scalar>
-Scalar SingleWellState<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar SingleWellState<FluidSystem, Indices>::
 sum_connection_rates(const std::vector<Scalar>& connection_rates) const
 {
     return this->parallel_info.get().sumPerfValues(connection_rates.begin(), connection_rates.end());
 }
 
-template<class Scalar>
-Scalar SingleWellState<Scalar>::sum_brine_rates() const
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar SingleWellState<FluidSystem, Indices>::sum_brine_rates() const
 {
     return this->sum_connection_rates(this->perf_data.brine_rates);
 }
 
-template<class Scalar>
-Scalar SingleWellState<Scalar>::sum_polymer_rates() const
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar SingleWellState<FluidSystem, Indices>::sum_polymer_rates() const
 {
     return this->sum_connection_rates(this->perf_data.polymer_rates);
 }
 
-template<class Scalar>
-Scalar SingleWellState<Scalar>::sum_solvent_rates() const
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar SingleWellState<FluidSystem, Indices>::sum_solvent_rates() const
 {
     return this->sum_connection_rates(this->perf_data.solvent_rates);
 }
 
-template<class Scalar>
-Scalar SingleWellState<Scalar>::sum_microbial_rates() const
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar SingleWellState<FluidSystem, Indices>::sum_microbial_rates() const
 {
     return this->sum_connection_rates(this->perf_data.microbial_rates);
 }
 
-template<class Scalar>
-Scalar SingleWellState<Scalar>::sum_oxygen_rates() const
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar SingleWellState<FluidSystem, Indices>::sum_oxygen_rates() const
 {
     return this->sum_connection_rates(this->perf_data.oxygen_rates);
 }
 
-template<class Scalar>
-Scalar SingleWellState<Scalar>::sum_urea_rates() const
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar SingleWellState<FluidSystem, Indices>::sum_urea_rates() const
 {
     return this->sum_connection_rates(this->perf_data.urea_rates);
 }
 
-template<class Scalar>
-Scalar SingleWellState<Scalar>::sum_wat_mass_rates() const
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar SingleWellState<FluidSystem, Indices>::sum_wat_mass_rates() const
 {
     return this->sum_connection_rates(this->perf_data.wat_mass_rates);
 }
 
-template<class Scalar>
-Scalar SingleWellState<Scalar>::sum_filtrate_rate() const
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar SingleWellState<FluidSystem, Indices>::sum_filtrate_rate() const
 {
     if (this->producer) return 0.;
 
     return this->sum_connection_rates(this->perf_data.filtrate_data.rates);
 }
 
-template<class Scalar>
-Scalar SingleWellState<Scalar>::sum_filtrate_total() const
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar SingleWellState<FluidSystem, Indices>::sum_filtrate_total() const
 {
     if (this->producer) return 0.;
 
     return this->sum_connection_rates(this->perf_data.filtrate_data.total);
 }
 
-template<class Scalar>
-void SingleWellState<Scalar>::
+template<typename FluidSystem, typename Indices>
+void SingleWellState<FluidSystem, Indices>::
 update_producer_targets(const Well& ecl_well, const SummaryState& st)
 {
     constexpr Scalar bhp_safety_factor = 0.99;
@@ -255,16 +259,16 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
     std::fill(this->surface_rates.begin(), this->surface_rates.end(), 0.0);
     switch (prod_controls.cmode) {
     case Well::ProducerCMode::ORAT:
-        assert(this->pu.phase_used[BlackoilPhases::Liquid]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] = -prod_controls.oil_rate;
         break;
     case Well::ProducerCMode::WRAT:
-        assert(this->pu.phase_used[BlackoilPhases::Aqua]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)] = -prod_controls.water_rate;
         break;
     case Well::ProducerCMode::GRAT:
-        assert(this->pu.phase_used[BlackoilPhases::Vapour]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] = -prod_controls.gas_rate;
         break;
     case Well::ProducerCMode::GRUP:
     case Well::ProducerCMode::THP:
@@ -292,8 +296,8 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
         this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
 }
 
-template<class Scalar>
-void SingleWellState<Scalar>::
+template<typename FluidSystem, typename Indices>
+void SingleWellState<FluidSystem, Indices>::
 update_injector_targets(const Well& ecl_well, const SummaryState& st)
 {
     const Scalar bhp_safety_factor = 1.01;
@@ -322,16 +326,16 @@ update_injector_targets(const Well& ecl_well, const SummaryState& st)
 
     switch (inj_controls.injector_type) {
     case InjectorType::WATER:
-        assert(pu.phase_used[BlackoilPhases::Aqua]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] = inj_surf_rate;
         break;
     case InjectorType::GAS:
-        assert(pu.phase_used[BlackoilPhases::Vapour]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] = inj_surf_rate;
         break;
     case InjectorType::OIL:
-        assert(pu.phase_used[BlackoilPhases::Liquid]);
-        this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] = inj_surf_rate;
         break;
     case InjectorType::MULTI:
         // Not currently handled, keep zero init.
@@ -344,8 +348,8 @@ update_injector_targets(const Well& ecl_well, const SummaryState& st)
         this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
 }
 
-template<class Scalar>
-bool SingleWellState<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool SingleWellState<FluidSystem, Indices>::
 update_type_and_targets(const Well& ecl_well, const SummaryState& st)
 {
     bool switchedToProducer = false;
@@ -377,8 +381,8 @@ update_type_and_targets(const Well& ecl_well, const SummaryState& st)
     return switchedToProducer;
 }
 
-template<class Scalar>
-bool SingleWellState<Scalar>::operator==(const SingleWellState& rhs) const
+template<typename FluidSystem, typename Indices>
+bool SingleWellState<FluidSystem, Indices>::operator==(const SingleWellState& rhs) const
 {
     return this->name == rhs.name &&
            this->status == rhs.status &&
@@ -403,10 +407,12 @@ bool SingleWellState<Scalar>::operator==(const SingleWellState& rhs) const
            this->production_cmode == rhs.production_cmode;
 }
 
-template class SingleWellState<double>;
+#include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
+
+INSTANTIATE_TYPE_INDICES(SingleWellState, double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class SingleWellState<float>;
+INSTANTIATE_TYPE_INDICES(SingleWellState, float)
 #endif
 
 }

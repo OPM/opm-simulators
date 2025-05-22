@@ -46,7 +46,7 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-#include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGasLift.hpp> // commented out for compilation cause
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
@@ -88,8 +88,8 @@ template<class Scalar> class WellContributions;
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
         class BlackoilWellModel : public WellConnectionAuxiliaryModule<TypeTag, BlackoilWellModel<TypeTag>>
-                                , public BlackoilWellModelGeneric<GetPropType<TypeTag,
-                                                                              Properties::Scalar>>
+                                , public BlackoilWellModelGeneric<GetPropType<TypeTag, Properties::FluidSystem>,
+                                                                     GetPropType<TypeTag, Properties::Indices> >
         {
         public:
             // ---------      Types      ---------
@@ -178,7 +178,7 @@ template<class Scalar> class WellContributions;
 
             using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag> >;
 
-            using BlackoilWellModelGeneric<Scalar>::initFromRestartFile;
+            using BlackoilWellModelGeneric<FluidSystem, Indices>::initFromRestartFile;
             void initFromRestartFile(const RestartValue& restartValues)
             {
                 initFromRestartFile(restartValues,
@@ -188,7 +188,7 @@ template<class Scalar> class WellContributions;
                                     this->simulator_.vanguard().enableDistributedWells());
             }
 
-            using BlackoilWellModelGeneric<Scalar>::prepareDeserialize;
+            using BlackoilWellModelGeneric<FluidSystem, Indices>::prepareDeserialize;
             void prepareDeserialize(const int report_step)
             {
                 prepareDeserialize(report_step, grid().size(0),
@@ -458,7 +458,7 @@ template<class Scalar> class WellContributions;
             void updateAverageFormationFactor();
 
             void computePotentials(const std::size_t widx,
-                                   const WellState<Scalar>& well_state_copy,
+                                   const WellState<FluidSystem, Indices>& well_state_copy,
                                    std::string& exc_msg,
                                    ExceptionType::ExcEnum& exc_type,
                                    DeferredLogger& deferred_logger) override;

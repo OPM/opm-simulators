@@ -27,6 +27,13 @@
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
@@ -34,10 +41,10 @@
 
 namespace Opm {
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template<class RatioFunc>
-bool WellTest<Scalar>::
-checkMaxRatioLimitWell(const SingleWellState<Scalar>& ws,
+bool WellTest<FluidSystem, Indices>::
+checkMaxRatioLimitWell(const SingleWellState<FluidSystem, Indices>& ws,
                        const Scalar max_ratio_limit,
                        const RatioFunc& ratioFunc) const
 {
@@ -52,10 +59,10 @@ checkMaxRatioLimitWell(const SingleWellState<Scalar>& ws,
     return (well_ratio > max_ratio_limit);
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template<class RatioFunc>
-void WellTest<Scalar>::
-checkMaxRatioLimitCompletions(const SingleWellState<Scalar>& ws,
+void WellTest<FluidSystem, Indices>::
+checkMaxRatioLimitCompletions(const SingleWellState<FluidSystem, Indices>& ws,
                               const Scalar max_ratio_limit,
                               const RatioFunc& ratioFunc,
                               RatioLimitCheckReport& report) const
@@ -99,10 +106,10 @@ checkMaxRatioLimitCompletions(const SingleWellState<Scalar>& ws,
     }
 }
 
-template<class Scalar>
-void WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellTest<FluidSystem, Indices>::
 checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                 const SingleWellState<Scalar>& ws,
+                 const SingleWellState<FluidSystem, Indices>& ws,
                  RatioLimitCheckReport& report) const
 {
     static constexpr int Oil = BlackoilPhases::Liquid;
@@ -133,10 +140,10 @@ checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
     }
 }
 
-template<class Scalar>
-void WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellTest<FluidSystem, Indices>::
 checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                 const SingleWellState<Scalar>& ws,
+                 const SingleWellState<FluidSystem, Indices>& ws,
                  RatioLimitCheckReport& report) const
 {
     static constexpr int Gas = BlackoilPhases::Vapour;
@@ -167,10 +174,10 @@ checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
     }
 }
 
-template<class Scalar>
-void WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellTest<FluidSystem, Indices>::
 checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                      const SingleWellState<Scalar>& ws,
+                      const SingleWellState<FluidSystem, Indices>& ws,
                       RatioLimitCheckReport& report) const
 {
     static constexpr int Oil = BlackoilPhases::Liquid;
@@ -207,8 +214,8 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
     }
 }
 
-template<class Scalar>
-bool WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool WellTest<FluidSystem, Indices>::
 checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                     const std::vector<Scalar>& rates_or_potentials,
                     DeferredLogger& deferred_logger) const
@@ -252,11 +259,11 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
     return false;
 }
 
-template<class Scalar>
-typename WellTest<Scalar>::RatioLimitCheckReport
-WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename WellTest<FluidSystem, Indices>::RatioLimitCheckReport
+WellTest<FluidSystem, Indices>::
 checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                     const SingleWellState<Scalar>& ws,
+                     const SingleWellState<FluidSystem, Indices>& ws,
                      DeferredLogger& deferred_logger) const
 {
     // TODO: not sure how to define the worst-offending completion when more than one
@@ -304,9 +311,9 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     return report;
 }
 
-template<class Scalar>
-void WellTest<Scalar>::
-updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
+template<typename FluidSystem, typename Indices>
+void WellTest<FluidSystem, Indices>::
+updateWellTestStateEconomic(const SingleWellState<FluidSystem, Indices>& ws,
                             const double simulation_time,
                             const bool write_message_to_opmlog,
                             WellTestState& well_test_state,
@@ -459,8 +466,8 @@ updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
     }
 }
 
-template<class Scalar>
-void WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellTest<FluidSystem, Indices>::
 updateWellTestStatePhysical(const double simulation_time,
                             const bool write_message_to_opmlog,
                             WellTestState& well_test_state,
@@ -479,10 +486,12 @@ updateWellTestStatePhysical(const double simulation_time,
     }
 }
 
-template class WellTest<double>;
+#include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
+
+INSTANTIATE_TYPE_INDICES(WellTest, double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class WellTest<float>;
+INSTANTIATE_TYPE_INDICES(WellTest, float)
 #endif
 
 } // namespace Opm
