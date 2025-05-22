@@ -31,7 +31,6 @@
 #include <opm/simulators/linalg/WellOperators.hpp>
 
 #include <cstddef>
-#include <iostream>
 
 namespace Opm
 {
@@ -136,13 +135,9 @@ namespace Opm
                 for (const auto& row : fineLevelMatrix) {
                     for (auto col = row.begin(), cend = row.end(); col != cend; ++col) {
                         coarseLevelMatrix_->entry(rownum, col.index()) = 0.0;
-                        //std::cout << "rownum: " << rownum << " col.index(): " << col.index() << std::endl;
                     }
                     ++rownum;
                 }
-                // coarseLevelMatrix_->entry(0, 26) = 0.0;
-                // coarseLevelMatrix_->entry(26, 26) = 0.0;
-                // coarseLevelMatrix_->entry(26, 0) = 0.0;
             } else {
                 coarseLevelMatrix_.reset(
                     new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), fineLevelMatrix.nonzeroes(), CoarseMatrix::row_wise));
