@@ -1379,18 +1379,18 @@ updateAndCommunicateGroupData(const int reportStepIdx,
 
     std::vector<bool> is_production_group = {true, false, false, false};
     const Phase all[] = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
-    for (int i = 0; i < 4; i++) {                                              
-        WellGroupHelpers<Scalar>::updateGroupControlledWells(schedule(), 
-                                                            well_state, 
-                                                            this->groupState(), 
-                                                            summaryState_, 
-                                                            &guideRate_, 
-                                                            reportStepIdx, 
-                                                            "FIELD", 
-                                                            "", 
-                                                            is_production_group[i], 
-                                                            all[i]);
-    } 
+    for (int i = 0; i < 4; i++) {
+        WellGroupHelpers<Scalar>::updateGroupControlledWells(schedule(),
+                                                             well_state,
+                                                             this->groupState(),
+                                                             summaryState_,
+                                                             &guideRate_,
+                                                             reportStepIdx,
+                                                             "FIELD",
+                                                             "",
+                                                             is_production_group[i],
+                                                             all[i]);
+    }
 
     // the group target reduction rates needs to be update since wells may have switched to/from GRUP control
     // The group target reduction does not honor NUPCOL.
