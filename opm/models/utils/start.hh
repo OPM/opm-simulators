@@ -27,20 +27,17 @@
 #ifndef EWOMS_START_HH
 #define EWOMS_START_HH
 
+#include <dune/common/parallel/mpihelper.hh>
+
+#include <opm/material/common/ResetLocale.hpp>
+
 #include <opm/models/utils/propertysystem.hh>
-// the following header is not required here, but it must be included before
-// dune/common/densematrix.hh because of some c++ ideosyncrasies
-#include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/terminal.hpp>
 #include <opm/models/utils/simulator.hh>
 
 #include <opm/simulators/utils/readDeck.hpp>
-
-#include <opm/material/common/ResetLocale.hpp>
-
-#include <dune/common/parallel/mpihelper.hh>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -49,8 +46,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-
 #include <unistd.h>
+#include <vector>
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -63,7 +60,7 @@ namespace Opm {
  * \brief Announce all runtime parameters to the registry but do not specify them yet.
  */
 template <class TypeTag>
-static inline void registerAllParameters_(bool finalizeRegistration = true)
+static inline void registerAllParameters_(bool finalizeRegistration)
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using TM = GetPropType<TypeTag, Properties::ThreadManager>;
@@ -94,20 +91,19 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
 template <class TypeTag>
 static inline int setupParameters_(int argc,
                                    const char **argv,
-                                   bool registerParams=true,
-                                   bool allowUnused=false,
-                                   bool handleHelp = true)
+                                   bool registerParams,
+                                   bool allowUnused,
+                                   bool handleHelp,
+                                   const int myRank)
 {
     using Problem = GetPropType<TypeTag, Properties::Problem>;
-
-    // first, get the MPI rank of the current process
-    int myRank = 0;
 
     ////////////////////////////////////////////////////////////
     // Register all parameters
     ////////////////////////////////////////////////////////////
-    if (registerParams)
-        registerAllParameters_<TypeTag>();
+    if (registerParams) {
+        registerAllParameters_<TypeTag>(true);
+    }
 
     ////////////////////////////////////////////////////////////
     // set the parameter values
@@ -115,19 +111,20 @@ static inline int setupParameters_(int argc,
 
     // fill the parameter tree with the options from the command line
     const auto& positionalParamCallback = Problem::handlePositionalParameter;
-    std::string helpPreamble = ""; // print help if non-empty!
-    if (myRank == 0 && handleHelp)
+    std::string helpPreamble; // print help if non-empty!
+    if (myRank == 0 && handleHelp) {
         helpPreamble = Problem::helpPreamble(argc, argv);
-    std::string s =
+    }
+    const std::string s =
         Parameters::parseCommandLineOptions(argc,
                                             argv,
                                             positionalParamCallback,
                                             helpPreamble);
-    if (!s.empty())
-    {
+    if (!s.empty()) {
         int status = 1;
-        if (s == "Help called") // only on master process
+        if (s == "Help called") { // only on master process
             status = -1; // Use negative values to indicate --help argument
+        }
 #if HAVE_MPI
         // Force -1 if the master process has that.
         int globalStatus;
@@ -164,15 +161,18 @@ static inline int setupParameters_(int argc,
     Parameters::getLists(usedParams, unusedParams);
     if (!allowUnused && !unusedParams.empty()) {
         if (myRank == 0) {
-            if (unusedParams.size() == 1)
+            if (unusedParams.size() == 1) {
                 std::cerr << "The following explicitly specified parameter is unknown:\n";
-            else
+            }
+            else {
                 std::cerr << "The following " << unusedParams.size()
                           << " explicitly specified parameters are unknown:\n";
+            }
 
             std::cerr << "\n";
-            for (const auto& keyValue : unusedParams)
+            for (const auto& keyValue : unusedParams) {
                 std::cerr << "   " << keyValue << "\n";
+            }
             std::cerr << "\n";
 
             std::cerr << "Use\n"
@@ -199,7 +199,7 @@ static inline int setupParameters_(int argc,
  * \param argv The array of the command line arguments
  */
 template <class TypeTag>
-static inline int start(int argc, char **argv,  bool registerParams=true)
+static inline int start(int argc, char **argv,  bool registerParams)
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -211,16 +211,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
     resetLocale();
 
     int myRank = 0;
-    try
-    {
-        int paramStatus = setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), registerParams);
-        if (paramStatus == 1)
-            return 1;
-        if (paramStatus == 2)
-            return 0;
-
-        TM::init();
-
+    try {
         // initialize MPI, finalize is done automatically on exit
 #if HAVE_DUNE_FEM
         Dune::Fem::MPIManager::initialize(argc, argv);
@@ -228,13 +219,29 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 #else
         myRank = Dune::MPIHelper::instance(argc, argv).rank();
 #endif
+        const int paramStatus =
+            setupParameters_<TypeTag>(argc,
+                                      const_cast<const char**>(argv),
+                                      registerParams,
+                                      false,
+                                      true,
+                                      myRank);
+        if (paramStatus == 1) {
+            return 1;
+        }
+        if (paramStatus == 2) {
+            return 0;
+        }
+
+        TM::init();
+
         // setting up backend for STDCOUT logger
         if (myRank == 0) {
             setupStreamLogging("STDOUT_LOGGER");
         }
 
         // read the initial time step and the end time
-        Scalar endTime = Parameters::Get<Parameters::EndTime<Scalar>>();
+        const Scalar endTime = Parameters::Get<Parameters::EndTime<Scalar>>();
         if (endTime < -1e50) {
             if (myRank == 0) {
                 Parameters::printUsage(argv[0], std::cerr,
@@ -243,7 +250,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
             return 1;
         }
 
-        Scalar initialTimeStepSize = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
+        const Scalar initialTimeStepSize = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
         if (initialTimeStepSize < -1e50) {
             if (myRank == 0) {
                 Parameters::printUsage(argv[0], std::cerr,
@@ -255,44 +262,47 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 
         if (myRank == 0) {
 #ifdef EWOMS_VERSION
-            std::string versionString = EWOMS_VERSION;
+            const std::string versionString = EWOMS_VERSION;
 #else
-            std::string versionString = "";
+            const std::string versionString;
 #endif
             const std::string briefDescription = Problem::briefDescription();
             if (!briefDescription.empty()) {
-                std::string tmp = breakLines(briefDescription,
-                                             /*indentWidth=*/0,
-                                             getTtyWidth());
+                const std::string tmp = breakLines(briefDescription,
+                                                   /*indentWidth=*/0,
+                                                   getTtyWidth());
                 std::cout << tmp << std::endl << std::endl;
             }
-            else
+            else {
                 std::cout << "opm models " << versionString
                           << " will now start the simulation. " << std::endl;
+            }
         }
 
         // print the parameters if requested
-        int printParams = Parameters::Get<Parameters::PrintParameters>();
+        const int printParams = Parameters::Get<Parameters::PrintParameters>();
         if (myRank == 0) {
-            std::string endParametersSeparator("# [end of parameters]\n");
+            const std::string endParametersSeparator("# [end of parameters]\n");
             if (printParams) {
                 bool printSeparator = false;
                 if (printParams == 1 || !isatty(fileno(stdout))) {
                     Parameters::printValues(std::cout);
                     printSeparator = true;
                 }
-                else
+                else {
                     // always print the list of specified but unused parameters
-                    printSeparator =
-                        printSeparator ||
-                        Parameters::printUnused(std::cout);
-                if (printSeparator)
+                    printSeparator = printSeparator || Parameters::printUnused(std::cout);
+                }
+                if (printSeparator) {
                     std::cout << endParametersSeparator;
+                }
             }
-            else
+            else {
                 // always print the list of specified but unused parameters
-                if (Parameters::printUnused(std::cout))
+                if (Parameters::printUnused(std::cout)) {
                     std::cout << endParametersSeparator;
+                }
+            }
         }
 
         // instantiate and run the concrete problem. make sure to
@@ -306,8 +316,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         }
         return 0;
     }
-    catch (std::exception& e)
-    {
+    catch (std::exception& e) {
         if (myRank == 0) {
             std::cout << e.what() << ". Abort!\n" << std::flush;
 
@@ -317,8 +326,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 
         return 1;
     }
-    catch (...)
-    {
+    catch (...) {
         if (myRank == 0) {
             std::cout << "Unknown exception thrown!\n" << std::flush;
 

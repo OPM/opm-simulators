@@ -21,14 +21,16 @@
 #ifndef EWOMS_ALIGNED_ALLOCATOR_HH
 #define EWOMS_ALIGNED_ALLOCATOR_HH
 
-#include <utility>
+#include <cassert>
+#include <cstdlib>
 #include <memory>
 #include <type_traits>
-#include <cassert>
+#include <utility>
 
 namespace Opm {
 
 namespace detail {
+
 constexpr inline bool is_alignment(std::size_t value) noexcept
 {
     return (value > 0) && ((value & (value - 1)) == 0);
@@ -42,7 +44,7 @@ struct is_alignment_constant
 template<std::size_t A, std::size_t B>
 struct min_size
     : std::integral_constant<std::size_t, (A < B) ? A : B>
-{ };
+{};
 
 template<class T>
 struct offset_object
@@ -67,6 +69,7 @@ struct max_count_of
 {};
 
 using std::addressof;
+
 }
 
 inline void* aligned_alloc(std::size_t alignment,
@@ -89,9 +92,9 @@ inline void aligned_free(void* ptr)
     ::free(ptr);
 }
 
-
 template<class T, std::size_t Alignment>
-class aligned_allocator {
+class aligned_allocator
+{
     static_assert(detail::is_alignment_constant<Alignment>::value, "Alignment must be powers of two!");
 
 public:
@@ -110,30 +113,31 @@ private:
 
 public:
     template<class U>
-    struct rebind {
+    struct rebind
+    {
         using other = aligned_allocator<U, Alignment>;
     };
 
-    aligned_allocator()
-        noexcept = default;
+    aligned_allocator() noexcept = default;
 
     template<class U>
     aligned_allocator(const aligned_allocator<U,
-                      Alignment>&) noexcept {
-    }
+                      Alignment>&) noexcept
+    {}
 
-    pointer address(reference value) const
-        noexcept {
+    pointer address(reference value) const noexcept
+    {
         return detail::addressof(value);
     }
 
-    const_pointer address(const_reference value) const
-        noexcept {
+    const_pointer address(const_reference value) const noexcept
+    {
         return detail::addressof(value);
     }
 
     pointer allocate(size_type size,
-                     const_void_pointer = 0) {
+                     const_void_pointer = 0)
+    {
         void* p = aligned_alloc(MaxAlign::value,
                                 sizeof(T) * size);
         if (!p && size > 0) {
@@ -142,36 +146,41 @@ public:
         return static_cast<T*>(p);
     }
 
-    void deallocate(pointer ptr, size_type) {
+    void deallocate(pointer ptr, size_type)
+    {
         aligned_free(ptr);
     }
 
-    constexpr size_type max_size() const
-        noexcept {
+    constexpr size_type max_size() const noexcept
+    {
         return detail::max_count_of<T>::value;
     }
 
     template<class U, class... Args>
-    void construct(U* ptr, Args&&... args) {
+    void construct(U* ptr, Args&&... args)
+    {
         void* p = ptr;
         ::new(p) U(std::forward<Args>(args)...);
     }
 
     template<class U>
-    void construct(U* ptr) {
+    void construct(U* ptr)
+    {
         void* p = ptr;
         ::new(p) U();
     }
 
     template<class U>
-    void destroy(U* ptr) {
+    void destroy(U* ptr)
+    {
         (void)ptr;
         ptr->~U();
     }
 };
 
 template<std::size_t Alignment>
-class aligned_allocator<void, Alignment> {
+class aligned_allocator<void, Alignment>
+{
     static_assert(detail::is_alignment_constant<Alignment>::value,
                   "The specified alignment is not a power of two!");
 
@@ -181,7 +190,8 @@ public:
     using const_pointer = const void*;
 
     template<class U>
-    struct rebind {
+    struct rebind
+    {
         using other = aligned_allocator<U, Alignment>;
     };
 };

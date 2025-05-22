@@ -93,7 +93,11 @@ initSimulator(const char *filename)
     Opm::Parameters::SetDefault<Opm::Parameters::ThreadsPerProcess>(2);
     Parameters::endRegistration();
     setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
-                              argv, /*registerParams=*/false);
+                              argv,
+                              /*registerParams=*/false,
+                              /*allowUnused*/false,
+                              /*handleHelp*/true,
+                              /*myRank*/0);
 
     FlowGenericVanguard::readDeck(filename);
     return std::make_unique<Simulator>();

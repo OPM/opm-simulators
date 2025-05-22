@@ -45,5 +45,5 @@ struct DiffusionProblem { using InheritsFrom = std::tuple<DiffusionBaseProblem, 
 int main(int argc, char **argv)
 {
     using ProblemTypeTag = Opm::Properties::TTag::DiffusionProblem;
-    return Opm::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv, true);
 }

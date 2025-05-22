@@ -86,7 +86,7 @@ main(int argc, char** argv)
     // At the moment, this is probably as optimal as can be.
     // We only read the RUNSPEC of the Deck file to get the numComp,
     // and for this we need to first read the CLI arguments.
-    Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), true);
+    Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), true, false, true, 0);
 
     auto inputFilename
         = Opm::FlowGenericVanguard::canonicalDeckPath(Opm::Parameters::Get<Opm::Parameters::EclDeckFileName>());

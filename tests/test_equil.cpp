@@ -122,7 +122,12 @@ initSimulator(const char *filename)
         "--check-satfunc-consistency=false",
     };
 
-    Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/false);
+    Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
+                                   argv,
+                                   /*registerParams=*/false,
+                                   /*allowUnused*/false,
+                                   /*handleHelp*/true,
+                                   /*myRank*/0);
 
     Opm::FlowGenericVanguard::readDeck(filename);
 
@@ -245,7 +250,7 @@ struct EquilFixture {
         BlackoilModelParameters<double>::registerParameters();
         AdaptiveTimeStepping<TypeTag>::registerParameters();
         Parameters::Register<Parameters::EnableTerminalOutput>("Dummy added for the well model to compile.");
-        registerAllParameters_<TypeTag>();
+        registerAllParameters_<TypeTag>(true);
     }
 
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;

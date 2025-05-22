@@ -43,8 +43,10 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -82,7 +84,8 @@ class Simulator
     using Communication = Dune::Communication<MPIComm>;
 
     // \Note: too small eps can not rule out confusion from the rounding errors, as we use 1.e-9 as a minimum.
-    static constexpr Scalar eps =  constexpr_max(std::numeric_limits<Scalar>::epsilon(), static_cast<Scalar>(1.0e-9));
+    static constexpr Scalar eps =
+        constexpr_max(std::numeric_limits<Scalar>::epsilon(), static_cast<Scalar>(1.0e-9));
 
 public:
     // do not allow to copy simulators around
@@ -209,8 +212,8 @@ public:
         Parameters::Register<Parameters::RestartTime<Scalar>>
             ("The simulation time at which a restart should be attempted [s]");
         Parameters::Register<Parameters::PredeterminedTimeStepsFile>
-            ("A file with a list of predetermined time step sizes (one "
-             "time step per line)");
+            ("A file with a list of predetermined time step sizes "
+             "(one time step per line)");
 
         Vanguard::registerParameters();
         Model::registerParameters();
@@ -334,6 +337,7 @@ public:
      */
     const Timer& executionTimer() const
     { return executionTimer_; }
+
     Timer& executionTimer()
     { return executionTimer_; }
 
@@ -383,9 +387,7 @@ public:
      * \param timeStepSize The new value for the time step size \f$\mathrm{[s]}\f$
      */
     void setTimeStepSize(Scalar value)
-    {
-         timeStepSize_ = value;
-    }
+    { timeStepSize_ = value; }
 
     /*!
      * \brief Set the current time step index to a given value.
@@ -565,8 +567,8 @@ public:
         // make sure that we don't exceed the end of the
         // current episode.
         return std::max<Scalar>(0.0,
-                                (episodeStartTime() + episodeLength())
-                                - (this->time() + this->startTime()));
+                                (episodeStartTime() + episodeLength()) -
+                                (this->time() + this->startTime()));
     }
 
     /*
@@ -588,7 +590,7 @@ public:
         TimerGuard writeTimerGuard(writeTimer_);
 
         setupTimer_.start();
-        Scalar restartTime = Parameters::Get<Parameters::RestartTime<Scalar>>();
+        const Scalar restartTime = Parameters::Get<Parameters::RestartTime<Scalar>>();
         if (restartTime > -1e30) {
             // try to restart a previous simulation
             time_ = restartTime;
@@ -607,12 +609,13 @@ public:
             res.deserializeEnd();
             OPM_END_PARALLEL_TRY_CATCH("Deserialization failed: ",
                                        Dune::MPIHelper::getCommunication());
-            if (verbose_)
+            if (verbose_) {
                 std::cout << "Deserialization done."
                           << " Simulator time: " << time() << humanReadableTime(time())
                           << " Time step index: " << timeStepIndex()
                           << " Episode index: " << episodeIndex()
                           << "\n" << std::flush;
+            }
         }
         else {
             // if no restart is done, apply the initial solution
@@ -757,8 +760,10 @@ public:
 
             if (verbose_) {
                 std::cout << "Time step " << timeStepIndex() + 1 << " done. "
-                          << "CPU time: " << executionTimer_.realTimeElapsed() << " seconds" << humanReadableTime(executionTimer_.realTimeElapsed())
-                          << ", end time: " << this->time() + oldDt << " seconds" << humanReadableTime(this->time() + oldDt)
+                          << "CPU time: " << executionTimer_.realTimeElapsed()
+                          << " seconds" << humanReadableTime(executionTimer_.realTimeElapsed())
+                          << ", end time: " << this->time() + oldDt << " seconds"
+                          << humanReadableTime(this->time() + oldDt)
                           << ", step size: " << oldDt << " seconds" << humanReadableTime(oldDt)
                           << "\n" << std::flush;
             }
@@ -930,7 +935,8 @@ private:
 
 namespace Properties {
 template<class TypeTag>
-struct Simulator<TypeTag, TTag::NumericModel> { using type = ::Opm::Simulator<TypeTag>; };
+struct Simulator<TypeTag, TTag::NumericModel>
+{ using type = ::Opm::Simulator<TypeTag>; };
 }
 
 } // namespace Opm

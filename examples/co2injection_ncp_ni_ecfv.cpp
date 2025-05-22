@@ -62,5 +62,5 @@ struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionNcpNiEcfvProblem>
 int main(int argc, char **argv)
 {
     using EcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionNcpNiEcfvProblem;
-    return Opm::start<EcfvProblemTypeTag>(argc, argv);
+    return Opm::start<EcfvProblemTypeTag>(argc, argv, true);
 }

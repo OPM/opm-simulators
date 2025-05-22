@@ -56,5 +56,5 @@ struct UseP1FiniteElementGradients<TypeTag, TTag::LensProblemVcfvFd> { static co
 int main(int argc, char **argv)
 {
     using ProblemTypeTag = Opm::Properties::TTag::LensProblemVcfvFd;
-    return Opm::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv, true);
 }

@@ -59,5 +59,5 @@ struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem>
 int main(int argc, char **argv)
 {
     using VcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionImmiscibleNiVcfvProblem;
-    return Opm::start<VcfvProblemTypeTag>(argc, argv);
+    return Opm::start<VcfvProblemTypeTag>(argc, argv, true);
 }

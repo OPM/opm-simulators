@@ -35,5 +35,5 @@
 int main(int argc, char **argv)
 {
     using TypeTag = Opm::Properties::TTag::Tutorial1Problem; /*@\label{tutorial1:set-type-tag}@*/
-    return Opm::start<TypeTag>(argc, argv); /*@\label{tutorial1:call-start}@*/
+    return Opm::start<TypeTag>(argc, argv, true); /*@\label{tutorial1:call-start}@*/
 }

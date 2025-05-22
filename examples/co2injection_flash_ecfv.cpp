@@ -81,5 +81,5 @@ int main(int argc, char **argv)
 #if ! HAVE_QUAD
     Opm::Co2InjectionTolerance = 1e-5;
 #endif
-    return Opm::start<EcfvProblemTypeTag>(argc, argv);
+    return Opm::start<EcfvProblemTypeTag>(argc, argv, true);
 }
