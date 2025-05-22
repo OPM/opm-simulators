@@ -76,6 +76,8 @@ namespace {
             waterRate = rates[pu.phase_pos[BlackoilPhases::Aqua]];
         }
 
+        //std::cout << oilRate << " " << gasRate << " " << waterRate << std::endl;
+
         return {oilRate, gasRate, waterRate};
     }
 
@@ -1073,108 +1075,129 @@ getProductionGroupRateVector(const GroupState<Scalar>& group_state,
 
 template<class Scalar>
 Scalar WellGroupHelpers<Scalar>::
-getGuideRate(const std::string& name,
-             const Schedule& schedule,
-             const WellState<Scalar>& wellState,
-             const GroupState<Scalar>& group_state,
-             const int reportStepIdx,
-             const GuideRate* guideRate,
-             const GuideRateModel::Target target,
-             const PhaseUsage& pu)
+updateGuideRate(const std::string& name,
+                const Schedule& schedule,
+                const WellState<Scalar>& wellState,
+                GroupState<Scalar>& group_state,
+                const int reportStepIdx,
+                const GuideRate& guideRate,
+                Opm::GuideRateModel::Target target,
+                int& number_of_wells_under_this_group_control,
+                std::vector<std::string>& next_sub_group_with_guide_rate,
+                const bool is_production_group,
+                const Phase injection_phase,
+                const PhaseUsage& pu)
 {
-    if (schedule.hasWell(name, reportStepIdx)) {
-        if (guideRate->has(name) || guideRate->hasPotentials(name)) {
-            return guideRate->get(name, target, getWellRateVector(wellState, pu, name));
+    if (schedule.hasWell(name, reportStepIdx)) { 
+        // if NONE there is no group controls
+        if (target != GuideRateModel::Target::NONE && (guideRate.has(name) || guideRate.hasPotentials(name))) {
+            return guideRate.get(name, target, getWellRateVector(wellState, pu, name));
         } else {
+            //std::cout << name << "what " << std::endl;
             return 0.0;
         }
     }
 
-    if (guideRate->has(name)) {
-        return guideRate->get(name, target, getProductionGroupRateVector(group_state, pu, name));
-    }
-
     Scalar totalGuideRate = 0.0;
     const Group& group = schedule.getGroup(name, reportStepIdx);
 
     for (const std::string& groupName : group.groups()) {
-        const Group::ProductionCMode& currentGroupControl = group_state.production_control(groupName);
-        if (currentGroupControl == Group::ProductionCMode::FLD
-            || currentGroupControl == Group::ProductionCMode::NONE) {
+        bool include = false;
+        if (is_production_group) {     
+            const Group::ProductionCMode& currentGroupControl = group_state.production_control(groupName);
+            include = ( currentGroupControl == Group::ProductionCMode::FLD
+                || currentGroupControl == Group::ProductionCMode::NONE);
+        } else {
+            const Group::InjectionCMode& currentGroupControl = group_state.injection_control(groupName, injection_phase);
+            include = ( currentGroupControl == Group::InjectionCMode::FLD
+                || currentGroupControl == Group::InjectionCMode::NONE);
+        }
+        if ( include ) {
             // accumulate from sub wells/groups
-            totalGuideRate += getGuideRate(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, pu);
+            const auto gr_guide_rate = updateGuideRate(groupName, schedule, wellState, group_state, reportStepIdx, 
+                guideRate, target, number_of_wells_under_this_group_control, next_sub_group_with_guide_rate, is_production_group, injection_phase, pu);
+            //std::cout << gr_guide_rate << " " << number_of_wells_under_this_group_control << " " << groupName << std::endl;
+                
+            if (number_of_wells_under_this_group_control > 0 || guideRate.has(groupName))
+                totalGuideRate += gr_guide_rate;
+
+        } else {
+            // we still need to update for subgroups
+            if (is_production_group) {     
+                const Group::ProductionCMode& currentGroupControl = group_state.production_control(groupName);
+                target = WGHelpers::TargetCalculator<Scalar>::guideTargetMode(currentGroupControl);
+            } else {
+                target = WGHelpers::InjectionTargetCalculator<Scalar>::guideTargetMode(injection_phase);
+            }
+            int number_of_wells_under_this_group_control2 = 0;
+            //std::cout << name << " dont accumualte? " << groupName << std::endl;
+            std::vector<std::string> next_sub_group_with_guide_rate2;
+            updateGuideRate(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, 
+                number_of_wells_under_this_group_control2, next_sub_group_with_guide_rate2, is_production_group, injection_phase, pu);
         }
     }
 
     for (const std::string& wellName : group.wells()) {
         const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
 
-        if (wellTmp.isInjector())
+        if (is_production_group && wellTmp.isInjector())
+            continue;
+
+        if (!is_production_group && !wellTmp.isInjector())
             continue;
 
         if (wellTmp.getStatus() == Well::Status::SHUT)
             continue;
 
+        //std::cout << "hello " << wellName << " " << updateGuideRate(wellName, schedule, wellState, group_state,
+        //    reportStepIdx, guideRate, target, number_of_wells_under_this_group_control, next_sub_group_with_guide_rate, pu) << std::endl;
         // Only count wells under group control or the ru
-        if (!wellState.isProductionGrup(wellName))
+        if (is_production_group && !wellState.isProductionGrup(wellName))
+            continue;
+        if (!is_production_group && !wellState.isInjectionGrup(wellName))
             continue;
 
-        totalGuideRate += getGuideRate(wellName, schedule, wellState, group_state,
-                                       reportStepIdx, guideRate, target, pu);
+        number_of_wells_under_this_group_control++;
+        //if (wellState.well(wellName).production_cmode != Well::ProducerCMode::GRUP)
+        //    continue;
+        //if ((ws.production_cmode != Well::ProducerCMode::GRUP)){
+        //td::cout << wellName << " update " << std::endl;
+        //std::cout << "hello " << wellName << " " << updateGuideRate(wellName, schedule, wellState, group_state,
+        //    reportStepIdx, guideRate, target, number_of_wells_under_this_group_control, next_sub_group_with_guide_rate, pu) << std::endl;
+        totalGuideRate += updateGuideRate(wellName, schedule, wellState, group_state,
+                                       reportStepIdx, guideRate, target, number_of_wells_under_this_group_control, next_sub_group_with_guide_rate,
+                                       is_production_group, injection_phase, pu);
 
     }
-    return totalGuideRate;
-}
 
-template<class Scalar>
-Scalar WellGroupHelpers<Scalar>::
-getGuideRateInj(const std::string& name,
-                const Schedule& schedule,
-                const WellState<Scalar>& wellState,
-                const GroupState<Scalar>& group_state,
-                const int reportStepIdx,
-                const GuideRate* guideRate,
-                const GuideRateModel::Target target,
-                const Phase& injectionPhase,
-                const PhaseUsage& pu)
-{
-    if (schedule.hasWell(name, reportStepIdx)) {
-        return getGuideRate(name, schedule, wellState, group_state,
-                            reportStepIdx, guideRate, target, pu);
+    if (is_production_group) {
+        group_state.update_prod_guide_rates(name, totalGuideRate);
+        group_state.update_number_of_wells_under_this_control(name, number_of_wells_under_this_group_control);
+        group_state.update_sub_group_with_guiderate(name, next_sub_group_with_guide_rate);
+    } else {
+        group_state.update_inj_guide_rates(name, injection_phase, totalGuideRate);
+        group_state.update_number_of_wells_under_this_inj_control(name, injection_phase, number_of_wells_under_this_group_control);
+        group_state.update_sub_group_inj_with_guiderate(name, injection_phase, next_sub_group_with_guide_rate);
     }
 
-    if (guideRate->has(name, injectionPhase)) {
-        return guideRate->get(name, injectionPhase);
-    }
+    if ( (is_production_group && guideRate.has(name)) || (!is_production_group && guideRate.has(name,injection_phase)) ) {
+        auto guiderate = 0.0;
+        if (is_production_group && guideRate.has(name))
+            guiderate = guideRate.get(name, target, getProductionGroupRateVector(group_state, pu, name));
+        else if (!is_production_group && guideRate.has(name,injection_phase))
+            guiderate = guideRate.get(name, injection_phase);
 
-    Scalar totalGuideRate = 0.0;
-    const Group& group = schedule.getGroup(name, reportStepIdx);
+        //std::cout << "has guide rate " << name << " " << totalGuideRate << " " << number_of_wells_under_this_group_control << std::endl;
+        //std::cout << "setup " << name << " " <<totalGuideRate << " " << number_of_wells_under_this_group_control << " " << std::endl;
 
-    for (const std::string& groupName : group.groups()) {
-        const Group::InjectionCMode& currentGroupControl
-            = group_state.injection_control(groupName, injectionPhase);
-        if (currentGroupControl == Group::InjectionCMode::FLD
-            || currentGroupControl == Group::InjectionCMode::NONE) {
-            // accumulate from sub wells/groups
-            totalGuideRate += getGuideRateInj(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, injectionPhase, pu);
+        number_of_wells_under_this_group_control = 0;
+        if (totalGuideRate == 0 ) {
+            next_sub_group_with_guide_rate.push_back(name);
+            return 0.0;
         }
+        return guiderate;
     }
 
-    for (const std::string& wellName : group.wells()) {
-        const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
-
-        if (!wellTmp.isInjector())
-            continue;
-
-        if (wellTmp.getStatus() == Well::Status::SHUT)
-            continue;
-
-        // Only count wells under group control or the ru
-        if (!wellState.isInjectionGrup(wellName))
-            continue;
-
-        totalGuideRate += guideRate->get(wellName, target, getWellRateVector(wellState, pu, wellName));
-    }
     return totalGuideRate;
 }
 
@@ -1260,17 +1283,18 @@ groupControlledWells(const Schedule& schedule,
                 auto deferred_logger = Opm::DeferredLogger();
                 const auto& control_group_target = tcalc.groupTarget(ctrl, deferred_logger);
 
+                #warning UPDATE
                 // Calculates the guide rate of the parent group with control. 
                 // It is allowed that the guide rate of this group is defaulted. The guide rate will be derived from the children groups 
-                const auto& control_group_guide_rate = getGuideRate(control_group_name,
-                                                    schedule,
-                                                    well_state,
-                                                    group_state,
-                                                    report_step,
-                                                    guideRate,
-                                                    tcalc.guideTargetMode(),
-                                                    pu);
-
+                //const auto& control_group_guide_rate = updateGuideRate(control_group_name,
+                //                                    schedule,
+                //                                    well_state,
+                //                                    group_state,
+                //                                    report_step,
+                //                                    guideRate,
+                //                                    tcalc.guideTargetMode(),
+                //                                    pu);
+                Scalar control_group_guide_rate  = 0.0;
                 if (control_group_guide_rate > 0) {
                     // Target rate for the auto choke group
                     const Scalar target_rate = control_group_target * group_guide_rate / control_group_guide_rate;
@@ -1464,17 +1488,23 @@ checkGroupConstraintsProd(const std::string& name,
     // we need to find out the level where the current well is applied to the local reduction
     std::size_t local_reduction_level = 0;
     for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-        const int num_gr_ctrl = groupControlledWells(schedule,
-                                                     wellState,
-                                                     group_state,
-                                                     summaryState,
-                                                     guideRate,
-                                                     reportStepIdx,
-                                                     chain[ii],
-                                                     "",
-                                                     /*is_producer*/ true,
-                                                     /*injectionPhaseNotUsed*/ Phase::OIL);
-        if (guideRate->has(chain[ii]) && num_gr_ctrl > 0) {
+        //const int num_gr_ctrl = groupControlledWells(schedule,
+        //                                             wellState,
+        //                                             group_state,
+        //                                             summaryState,
+        //                                             guideRate,
+        //                                             reportStepIdx,
+        //                                             chain[ii],
+        //                                             "",
+        //                                             /*is_producer*/ true,
+        //                                             /*injectionPhaseNotUsed*/ Phase::OIL);
+        
+        const auto& group_cont_wells = group_state.number_of_wells_under_this_control(chain[ii]);
+        //if (guideRate->has(chain[ii]) && group_cont_wells != num_gr_ctrl )
+        //    std::cout << "group_cont_wells "<< chain[ii]<< " " << group_cont_wells <<  " " << num_gr_ctrl << " " << guideRate->has(chain[ii]) << std::endl;
+
+
+        if (guideRate->has(chain[ii]) && group_cont_wells > 0) {
             local_reduction_level = ii;
         }
     }
@@ -1508,6 +1538,7 @@ checkGroupConstraintsProd(const std::string& name,
                 target += current_rate_available * efficiencyFactor;
             }
         }
+        //std::cout << "compute local fraction " << name << " " << chain[ii + 1] << std::endl;
         target *= localFraction(chain[ii + 1]);
     }
     // Avoid negative target rates comming from too large local reductions.
@@ -1643,16 +1674,17 @@ checkGroupConstraintsInj(const std::string& name,
     // we need to find out the level where the current well is applied to the local reduction
     std::size_t local_reduction_level = 0;
     for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-        const int num_gr_ctrl = groupControlledWells(schedule,
-                                                     wellState,
-                                                     group_state,
-                                                     summaryState,
-                                                     guideRate,
-                                                     reportStepIdx,
-                                                     chain[ii],
-                                                     "",
-                                                     /*is_producer*/ false,
-                                                     injectionPhase);
+        //const int num_gr_ctrl = groupControlledWells(schedule,
+        //                                             wellState,
+        //                                             group_state,
+        //                                             summaryState,
+        //                                             guideRate,
+        //                                             reportStepIdx,
+        //                                             chain[ii],
+        //                                             "",
+        //                                             /*is_producer*/ false,
+        //                                             injectionPhase);
+        const auto& num_gr_ctrl = group_state.number_of_wells_under_this_inj_control(chain[ii], injectionPhase);
         if (guideRate->has(chain[ii], injectionPhase) && num_gr_ctrl > 0) {
             local_reduction_level = ii;
         }

@@ -49,7 +49,10 @@ GroupState<Scalar> GroupState<Scalar>::serializationTestObject()
     result.inj_resv_rates = {{"test6", {9.0, 10.0}}};
     result.inj_rein_rates = {{"test7", {11.0}}};
     result.inj_vrep_rate = {{"test8", 12.0}, {"test9", 13.0}};
+    result.m_prod_guide_rates = {{"test8", 12.0}, {"test9", 13.0}};
     result.m_grat_sales_target = {{"test10", 14.0}};
+    result.m_number_of_wells_under_this_control = {{"test10", 3}};
+    result.m_sub_group_with_guiderate = {{"test10", {"test10s"}}};
     result.m_gpmaint_target = {{"test11", 15.0}};
     result.injection_controls = {{{Phase::FOAM, "test12"}, Group::InjectionCMode::REIN}};
     result.gpmaint_state.add("foo", GPMaint::State::serializationTestObject());
@@ -73,7 +76,10 @@ bool GroupState<Scalar>::operator==(const GroupState& other) const
            this->m_grat_sales_target == other.m_grat_sales_target &&
            this->injection_controls == other.injection_controls &&
            this->gpmaint_state == other.gpmaint_state &&
-           this->m_gconsump_rates == other.m_gconsump_rates;
+           this->m_gconsump_rates == other.m_gconsump_rates &&
+           this->m_prod_guide_rates == other.m_prod_guide_rates &&
+           this->m_number_of_wells_under_this_control == m_number_of_wells_under_this_control &&
+           this->m_sub_group_with_guiderate == m_sub_group_with_guiderate;
 }
 
 //-------------------------------------------------------------------------
@@ -414,6 +420,175 @@ injection_control(const std::string& gname, Phase phase) const
         throw std::logic_error("Could not find ontrol for injection group: " + gname);
 
     return group_iter->second;
+}
+
+
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_prod_guide_rates(const std::string& gname, Scalar target)
+{
+    this->m_prod_guide_rates[gname] = target;
+}
+
+template<class Scalar>
+Scalar GroupState<Scalar>::
+prod_guide_rates(const std::string& gname) const
+{
+    auto group_iter = this->m_prod_guide_rates.find(gname);
+    if (group_iter == this->m_prod_guide_rates.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+has_prod_guide_rates(const std::string& gname) const
+{
+    return (this->m_prod_guide_rates.count(gname) > 0);
+}
+
+
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_number_of_wells_under_this_control(const std::string& gname, int number)
+{
+    this->m_number_of_wells_under_this_control[gname] = number;
+}
+
+template<class Scalar>
+int GroupState<Scalar>::
+number_of_wells_under_this_control(const std::string& gname) const
+{
+    auto group_iter = this->m_number_of_wells_under_this_control.find(gname);
+    if (group_iter == this->m_number_of_wells_under_this_control.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+has_number_of_wells_under_this_control(const std::string& gname) const
+{
+    return (this->m_number_of_wells_under_this_control.count(gname) > 0);
+}
+
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_sub_group_with_guiderate(const std::string& gname, const std::vector<std::string>& subname)
+{
+    this->m_sub_group_with_guiderate[gname] = subname;
+}
+
+template<class Scalar>
+const std::vector<std::string>& GroupState<Scalar>::
+sub_group_with_guiderate(const std::string& gname) const
+{
+    auto group_iter = this->m_sub_group_with_guiderate.find(gname);
+    if (group_iter == this->m_sub_group_with_guiderate.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+has_sub_group_with_guiderate(const std::string& gname) const
+{
+    return (this->m_sub_group_with_guiderate.count(gname) > 0);
+}
+
+//-------------------------------------------------------------------------
+
+
+
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_inj_guide_rates(const std::string& gname, Phase phase, Scalar target)
+{
+    this->m_inj_guide_rates[{phase, gname}] = target;
+}
+
+template<class Scalar>
+Scalar GroupState<Scalar>::
+inj_guide_rates(const std::string& gname, Phase phase) const
+{
+    auto group_iter = this->m_inj_guide_rates.find({phase, gname});
+    if (group_iter == this->m_inj_guide_rates.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+has_inj_guide_rates(const std::string& gname, Phase phase) const
+{
+    return (this->m_inj_guide_rates.count({phase, gname}) > 0);
+}
+
+
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase, int number)
+{
+    this->m_number_of_wells_under_this_inj_control[{phase, gname}] = number;
+}
+
+template<class Scalar>
+int GroupState<Scalar>::
+number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const
+{
+    auto group_iter = this->m_number_of_wells_under_this_inj_control.find({phase, gname});
+    if (group_iter == this->m_number_of_wells_under_this_inj_control.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+has_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const
+{
+    return (this->m_number_of_wells_under_this_inj_control.count({phase, gname}) > 0);
+}
+
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_sub_group_inj_with_guiderate(const std::string& gname, Phase phase, const std::vector<std::string>& subname)
+{
+    this->m_sub_group_inj_with_guiderate[{phase, gname}] = subname;
+}
+
+template<class Scalar>
+const std::vector<std::string>& GroupState<Scalar>::
+sub_group_inj_with_guiderate(const std::string& gname, Phase phase) const
+{
+    auto group_iter = this->m_sub_group_inj_with_guiderate.find({phase, gname});
+    if (group_iter == this->m_sub_group_inj_with_guiderate.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+has_sub_group_inj_with_guiderate(const std::string& gname,Phase phase) const
+{
+    return (this->m_sub_group_inj_with_guiderate.count({phase, gname}) > 0);
 }
 
 //-------------------------------------------------------------------------

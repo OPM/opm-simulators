@@ -136,7 +136,13 @@ template<class Scalar>
 GuideRateModel::Target
 TargetCalculator<Scalar>::guideTargetMode() const
 {
-    switch (cmode_) {
+    return guideTargetMode(cmode_);
+}
+template<class Scalar>
+GuideRateModel::Target
+TargetCalculator<Scalar>::guideTargetMode(const Group::ProductionCMode& cmode)
+{
+    switch (cmode) {
     case Group::ProductionCMode::ORAT:
         return GuideRateModel::Target::OIL;
     case Group::ProductionCMode::WRAT:
@@ -149,7 +155,7 @@ TargetCalculator<Scalar>::guideTargetMode() const
         return GuideRateModel::Target::RES;
     default:
         // Should never be here.
-        assert(false);
+        //assert(false);
         return GuideRateModel::Target::NONE;
     }
 }
@@ -261,6 +267,19 @@ GuideRateModel::Target
 InjectionTargetCalculator<Scalar>::guideTargetMode() const
 {
     return target_;
+}
+
+template<class Scalar>
+GuideRateModel::Target
+InjectionTargetCalculator<Scalar>::guideTargetMode(const Phase& phase)
+{
+    switch (phase) {
+    case(Phase::OIL): return GuideRateModel::Target::OIL;
+    case(Phase::WATER): return GuideRateModel::Target::WAT;
+    case(Phase::GAS): return GuideRateModel::Target::GAS;
+    default: throw std::logic_error("Invalid injection phase in InjectionTargetCalculator");
+    }
+    return GuideRateModel::Target::GAS;
 }
 
 #define INSTANTIATE_TARGET_CALCULATOR(T,...) \

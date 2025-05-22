@@ -104,6 +104,31 @@ public:
     void injection_control(const std::string& gname, Phase phase, Group::InjectionCMode cmode);
     Group::InjectionCMode injection_control(const std::string& gname, Phase phase) const;
 
+    bool has_prod_guide_rates(const std::string& gname) const;
+    void update_prod_guide_rates(const std::string& gname, Scalar target);
+    Scalar prod_guide_rates(const std::string& gname) const;
+
+    bool has_number_of_wells_under_this_control(const std::string& gname) const;
+    void update_number_of_wells_under_this_control(const std::string& gname, int number);
+    int number_of_wells_under_this_control(const std::string& gname) const;
+
+    bool has_sub_group_with_guiderate(const std::string& gname) const;
+    void update_sub_group_with_guiderate(const std::string& gname, const std::vector<std::string>& subgname);
+    const std::vector<std::string>& sub_group_with_guiderate(const std::string& gname) const;
+
+
+    bool has_inj_guide_rates(const std::string& gname, Phase phase) const;
+    void update_inj_guide_rates(const std::string& gname, Phase phase, Scalar target);
+    Scalar inj_guide_rates(const std::string& gname, Phase phase) const;
+
+    bool has_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const;
+    void update_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase, int number);
+    int number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const;
+
+    bool has_sub_group_inj_with_guiderate(const std::string& gname, Phase phase) const;
+    void update_sub_group_inj_with_guiderate(const std::string& gname, Phase phase, const std::vector<std::string>& subgname);
+    const std::vector<std::string>& sub_group_inj_with_guiderate(const std::string& gname, Phase phase) const;
+
     void update_gconsump(const Schedule& schedule, const int report_step, const SummaryState& summary_state);
     const std::pair<Scalar, Scalar>& gconsump_rates(const std::string& gname) const;
 
@@ -139,6 +164,7 @@ public:
             iterateContainer(inj_resv_rates, func);
             iterateContainer(inj_rein_rates, func);
             iterateContainer(inj_surface_rates, func);
+            //iterateContainer(m_sub_group_with_guiderate, func);
         };
 
         // Compute the size of the data.
@@ -204,6 +230,12 @@ public:
         serializer(injection_controls);
         serializer(gpmaint_state);
         serializer(m_gconsump_rates);
+        serializer(m_prod_guide_rates);
+        serializer(m_number_of_wells_under_this_control);
+        serializer(m_sub_group_with_guiderate); //will this work???
+        serializer(m_inj_guide_rates);
+        serializer(m_number_of_wells_under_this_inj_control);
+        serializer(m_sub_group_inj_with_guiderate); //will this work???
     }
 
 private:
@@ -220,6 +252,13 @@ private:
     std::map<std::string, Scalar> m_grat_sales_target;
     std::map<std::string, Scalar> m_gpmaint_target;
     std::map<std::string, Scalar> group_thp;
+    std::map<std::string, Scalar> m_prod_guide_rates;
+    std::map<std::string, int> m_number_of_wells_under_this_control;
+    std::map<std::string, std::vector<std::string>> m_sub_group_with_guiderate;
+
+    std::map<std::pair<Phase, std::string>, Scalar> m_inj_guide_rates;
+    std::map<std::pair<Phase, std::string>, int> m_number_of_wells_under_this_inj_control;
+    std::map<std::pair<Phase, std::string>, std::vector<std::string>> m_sub_group_inj_with_guiderate;
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
     WellContainer<GPMaint::State> gpmaint_state;
