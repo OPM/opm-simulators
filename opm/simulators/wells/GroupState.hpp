@@ -104,6 +104,16 @@ public:
     void injection_control(const std::string& gname, Phase phase, Group::InjectionCMode cmode);
     Group::InjectionCMode injection_control(const std::string& gname, Phase phase) const;
 
+    bool has_number_of_wells_under_this_control(const std::string& gname) const;
+    void update_number_of_wells_under_this_control(const std::string& gname, int number);
+    int number_of_wells_under_this_control(const std::string& gname) const;
+    
+
+    bool has_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const;
+    void update_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase, int number);
+    int number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const;
+
+
     void update_gconsump(const Schedule& schedule, const int report_step, const SummaryState& summary_state);
     const std::pair<Scalar, Scalar>& gconsump_rates(const std::string& gname) const;
 
@@ -204,6 +214,8 @@ public:
         serializer(injection_controls);
         serializer(gpmaint_state);
         serializer(m_gconsump_rates);
+        serializer(m_number_of_wells_under_this_control);
+        serializer(m_number_of_wells_under_this_inj_control);
     }
 
 private:
@@ -220,6 +232,9 @@ private:
     std::map<std::string, Scalar> m_grat_sales_target;
     std::map<std::string, Scalar> m_gpmaint_target;
     std::map<std::string, Scalar> group_thp;
+    std::map<std::string, int> m_number_of_wells_under_this_control;
+    std::map<std::pair<Phase, std::string>, int> m_number_of_wells_under_this_inj_control;
+
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
     WellContainer<GPMaint::State> gpmaint_state;
