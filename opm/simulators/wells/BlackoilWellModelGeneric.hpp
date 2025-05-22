@@ -102,7 +102,11 @@ public:
 
     virtual ~BlackoilWellModelGeneric() = default;
     virtual int compressedIndexForInteriorLGR([[maybe_unused]] const std::string& lgr_tag,
-                                              [[maybe_unused]] const Connection& conn) const = 0;
+                                              [[maybe_unused]] const Connection& conn) const
+    {
+        throw std::runtime_error("compressedIndexForInteriorLGR not implemented");
+        return  -1;
+    };
 
 
     int numLocalWells() const;
