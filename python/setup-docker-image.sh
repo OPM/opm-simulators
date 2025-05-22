@@ -6,6 +6,12 @@
 # A ready made Docker image is available at Dockerhub:
 # docker run -i -t lindkvis/manylinux2014_opm:latest
 
-dnf install -y almalinux-release-devel
+LIBTYPE=${1:-"static"}
 
-dnf install -y blas-static lapack-static suitesparse-static ninja-build
+dnf install -y almalinux-release-devel ninja-build
+
+if [ "$LIBTYPE" == "static" ]; then
+    dnf install -y blas-static lapack-static suitesparse-static
+else
+    dnf install -y blas-devel lapack-devel suitesparse-devel
+fi
