@@ -26,9 +26,9 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install Python packages
-        run: |
-          pip install sphinx breathe furo
+     - name: Install compatible versions of Sphinx and Breathe
+       run: |
+         pip install "sphinx<7.2" breathe furo
 
       - name: Generate Doxyfile
         run: |
@@ -90,7 +90,6 @@ jobs:
 
       - name: Build Doxygen documentation
         run: |
-          ls
           doxygen Doxyfile
 
       - name: Build Sphinx documentation
