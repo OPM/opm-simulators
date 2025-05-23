@@ -242,23 +242,15 @@ public:
                                  const PhaseUsage& pu,
                                  const std::string& group_name);
 
-    static Scalar getGuideRate(const std::string& name,
-                               const Schedule& schedule,
-                               const WellState<Scalar>& wellState,
-                               const GroupState<Scalar>& group_state,
-                               const int reportStepIdx,
-                               const GuideRate* guideRate,
-                               const GuideRateModel::Target target,
-                               const PhaseUsage& pu);
-
-    static Scalar getGuideRateInj(const std::string& name,
+    static Scalar updateGuideRate(const std::string& name,
                                   const Schedule& schedule,
                                   const WellState<Scalar>& wellState,
-                                  const GroupState<Scalar>& group_state,
+                                  GroupState<Scalar>& group_state,
                                   const int reportStepIdx,
-                                  const GuideRate* guideRate,
-                                  const GuideRateModel::Target target,
-                                  const Phase& injectionPhase,
+                                  const GuideRate& guideRate,
+                                  Opm::GuideRateModel::Target target,
+                                  const bool is_production_group,
+                                  const Phase injection_phase,
                                   const PhaseUsage& pu);
 
     static int updateGroupControlledWells(const Schedule& schedule,

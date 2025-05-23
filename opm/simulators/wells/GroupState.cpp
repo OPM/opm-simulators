@@ -56,7 +56,8 @@ GroupState<Scalar> GroupState<Scalar>::serializationTestObject()
     result.m_gconsump_rates = {{"testA", {0.2, 0.1}}};
     result.m_number_of_wells_under_this_control = {{"test13", 3}};
     result.m_number_of_wells_under_this_inj_control = {{ {Phase::WATER, "test14"}, 3}};
-
+    result.m_prod_guide_rates = {{"test8", 12.0}, {"test9", 13.0}};
+    result.m_inj_guide_rates = {{{Phase::WATER, "test14"}, 12.0}, {{Phase::WATER, "test15"}, 13.0}};
     return result;
 }
 
@@ -76,6 +77,8 @@ bool GroupState<Scalar>::operator==(const GroupState& other) const
            this->injection_controls == other.injection_controls &&
            this->m_number_of_wells_under_this_control == m_number_of_wells_under_this_control &&
            this->m_number_of_wells_under_this_inj_control == m_number_of_wells_under_this_inj_control &&
+           this->m_prod_guide_rates == other.m_prod_guide_rates &&
+           this->m_inj_guide_rates == other.m_inj_guide_rates &&
            this->gpmaint_state == other.gpmaint_state &&
            this->m_gconsump_rates == other.m_gconsump_rates;
 }
@@ -477,6 +480,62 @@ has_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase
 }
 
 //-------------------------------------------------------------------------
+template<class Scalar>
+void GroupState<Scalar>::
+update_prod_guide_rates(const std::string& gname, Scalar target)
+{
+    this->m_prod_guide_rates[gname] = target;
+}
+
+template<class Scalar>
+Scalar GroupState<Scalar>::
+prod_guide_rates(const std::string& gname) const
+{
+    auto group_iter = this->m_prod_guide_rates.find(gname);
+    if (group_iter == this->m_prod_guide_rates.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+has_prod_guide_rates(const std::string& gname) const
+{
+    return (this->m_prod_guide_rates.count(gname) > 0);
+}
+
+
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_inj_guide_rates(const std::string& gname, Phase phase, Scalar target)
+{
+    this->m_inj_guide_rates[{phase, gname}] = target;
+}
+
+template<class Scalar>
+Scalar GroupState<Scalar>::
+inj_guide_rates(const std::string& gname, Phase phase) const
+{
+    auto group_iter = this->m_inj_guide_rates.find({phase, gname});
+    if (group_iter == this->m_inj_guide_rates.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+template<class Scalar>
+bool GroupState<Scalar>::
+has_inj_guide_rates(const std::string& gname, Phase phase) const
+{
+    return (this->m_inj_guide_rates.count({phase, gname}) > 0);
+}
+
+
+//-------------------------------------------------------------------------
+ 
 
 //-------------------------------------------------------------------------
 
