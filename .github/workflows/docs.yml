@@ -77,9 +77,8 @@ jobs:
 
       - name: Build Sphinx documentation
         run: |
-          cd docs/sphinx
-          sphinx-build -b html source build
-          make html
+           sphinx-build -b html docs/sphinx/source docs/sphinx/build/html
+           make html
 
       - name: Copy documentation to gh-pages
         run: |
