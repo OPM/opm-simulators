@@ -38,8 +38,12 @@ jobs:
           sphinx-build -b html source build/html
           make html
 
+      - name: Copy documentation to gh-pages
+          run: |
+            mkdir docs/sphinx/gh-pages
+            cp -r docs/sphinx/build/* docs/sphinx/gh-pages
       - name: Deploy documentation
         uses: OPM/github-pages-deploy-action@releases/v4
         with:
-          branch: gh-pages-${{ github.ref_name }}
-          folder: python/gh-pages
+          branch: gh-pages
+          folder: docs/sphinx/gh-pages 
