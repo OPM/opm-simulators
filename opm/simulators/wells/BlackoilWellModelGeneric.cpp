@@ -65,6 +65,7 @@
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/TargetCalculator.hpp>
 
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
@@ -1354,10 +1355,26 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             }
         }
     }
-
-
     auto& well_state = this->wellState();
     const auto& well_state_nupcol = this->nupcolWellState();
+
+
+
+    std::vector<bool> is_production_group = {true, false, false, false};
+    const Phase all[] = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
+    for (int i = 0; i < 4; i++) {
+        WellGroupHelpers<Scalar>::updateGroupControlledWells(schedule(),
+                                                             well_state,
+                                                             this->groupState(),
+                                                             summaryState_,
+                                                             &guideRate_,
+                                                             reportStepIdx,
+                                                             "FIELD",
+                                                             "",
+                                                             is_production_group[i],
+                                                             all[i]);
+    }
+
     // the group target reduction rates needs to be update since wells may have switched to/from GRUP control
     // The group target reduction does not honor NUPCOL.
     std::vector<Scalar> groupTargetReduction(numPhases(), 0.0);
@@ -1424,6 +1441,25 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                               well_state_nupcol,
                                               well_state);
 
+    
+    //std::vector<bool> prod = {true, false, false, false};
+    //const Phase all[] = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
+    std::vector<GuideRateModel::Target> targets = {WGHelpers::TargetCalculator<Scalar>::guideTargetMode(this->groupState().production_control("FIELD")),GuideRateModel::Target::WAT,
+        GuideRateModel::Target::OIL,GuideRateModel::Target::GAS };
+
+    for (int i = 0; i < 4; i++) {
+        WellGroupHelpers<Scalar>::updateGuideRate("FIELD",
+                                                schedule(),
+                                                well_state,
+                                                this->groupState(),
+                                                reportStepIdx,
+                                                guideRate_,
+                                                targets[i],
+                                                is_production_group[i],
+                                                all[i],
+                                                this->phase_usage_);
+    }
+                                                 
     // Set ALQ for off-process wells to zero
     for (const auto& wname : schedule().wellNames(reportStepIdx)) {
         const bool is_producer = schedule().getWell(wname, reportStepIdx).isProducer();

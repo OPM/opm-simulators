@@ -116,6 +116,7 @@ guideRateSum(const Group& group,
              const std::string& always_included_child,
              const bool always_use_potentials)
 {
+
     Scalar total_guide_rate = 0.0;
     int number_of_included_well_or_groups = 0;
     for (const std::string& child_group : group.groups()) {
@@ -138,6 +139,7 @@ guideRateSum(const Group& group,
         }
     }
 
+    if (false) {
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
         if (is_producer_) {
@@ -150,6 +152,28 @@ guideRateSum(const Group& group,
             total_guide_rate += guideRate(child_well, always_included_child, always_use_potentials);
         }
     }
+    }
+    if (group.wellgroup()) {
+        Scalar gs_rates = is_producer_? this->group_state_.prod_guide_rates(group.name()) : this->group_state_.inj_guide_rates(group.name(), injection_phase_);
+        Scalar child_rate = 0.0;
+        bool isWell = schedule_.hasWell(always_included_child, report_step_);
+        if (isWell) {
+            //bool already_included = is_producer_? well_state_.isProductionGrup(always_included_child) : well_state_.isInjectionGrup(always_included_child);
+            bool already_included_local = is_producer_? well_state_.isProductionGrupLocal(always_included_child) : well_state_.isInjectionGrupLocal(always_included_child);
+            //if (already_included != already_included_local) {
+            //    std::cout << "HEI local " << group.name() << " " << always_included_child << " " << already_included << " " << already_included_local << std::endl;
+            //}
+            const bool isInGroup = WellGroupHelpers<Scalar>::isInGroupChainTopBot(always_included_child, group.name(), schedule_, report_step_);
+            if (!already_included_local && isInGroup) {
+                child_rate = guideRate(always_included_child, always_included_child, always_use_potentials);
+            }
+        }        
+        //if ( std::abs(gs_rates + child_rate - total_guide_rate) > 1e-6) {
+        //    std::cout << "HEI " << group.name() << " " << always_included_child << " " << gs_rates << " " << child_rate << " " << total_guide_rate << std::endl;
+        //}
+        total_guide_rate = gs_rates + child_rate;
+    }
+
     return {total_guide_rate, number_of_included_well_or_groups};
 }
 
@@ -160,14 +184,32 @@ guideRate(const std::string& name,
           const bool always_use_potentials)
 {
     if (schedule_.hasWell(name, report_step_)) {
-        return WellGroupHelpers<Scalar>::getGuideRate(name, schedule_, well_state_, group_state_,
-                                                      report_step_, guide_rate_, target_, pu_);
+        if (guide_rate_->has(name) || guide_rate_->hasPotentials(name)) {
+            Scalar gs_rates = this->well_state_.well(name).guide_rate;
+            //Scalar gs_rates_d = guide_rate_->get(name, target_, WellGroupHelpers<Scalar>::getWellRateVector(well_state_, pu_, name));
+            //if ( std::abs(gs_rates - gs_rates_d) > 1e-3) {
+            //    std::cout << "WHAT WELL " << name << " " << gs_rates << " " << gs_rates_d << std::endl;
+            //}
+            return gs_rates;
+        } else {
+            return 0.0;
+        }
     } else {
         if (groupControlledWells(name, always_included_child) > 0) {
             if (is_producer_ && guide_rate_->has(name) && !always_use_potentials) {
-                return guide_rate_->get(name, target_, getGroupRateVector(name));
+                Scalar gs_rates = this->group_state_.prod_guide_rates(name);
+                //Scalar gs_rates_d = guide_rate_->get(name, target_, getGroupRateVector(name));
+                //if ( std::abs(gs_rates - gs_rates_d) > 1e-3) {
+                //    std::cout << "WHAT " << name << " " << gs_rates << " " << gs_rates_d << std::endl;
+                //}
+                return gs_rates;
             } else if (!is_producer_ && guide_rate_->has(name, injection_phase_) && !always_use_potentials) {
-                return guide_rate_->get(name, injection_phase_);
+                Scalar gs_rates = this->group_state_.inj_guide_rates(name, injection_phase_);
+                //Scalar gs_rates_d = guide_rate_->get(name, injection_phase_);
+                //if ( std::abs(gs_rates - gs_rates_d) > 1e-3) {
+                //    std::cout << "WHAT INJ" << name << " " << gs_rates << " " << gs_rates_d << std::endl;
+                //}
+                return gs_rates;
             } else {
                 // We are a group, with default guide rate.
                 // Compute guide rate by accumulating our children's guide rates.
@@ -190,8 +232,6 @@ groupControlledWells(const std::string& group_name,
     return WellGroupHelpers<Scalar>::groupControlledWells(schedule_,
                                                           well_state_,
                                                           this->group_state_,
-                                                          this->summary_state_,
-                                                          this->guide_rate_,
                                                           report_step_,
                                                           group_name,
                                                           always_included_child,

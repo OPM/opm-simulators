@@ -62,6 +62,7 @@ public:
     Scalar groupTarget(const std::optional<Group::ProductionControls>& ctrl,
                        DeferredLogger& deferred_logger) const;
 
+    static GuideRateModel::Target guideTargetMode(const Group::ProductionCMode& cmode);
     GuideRateModel::Target guideTargetMode() const;
 
 private:
@@ -99,6 +100,7 @@ public:
     Scalar groupTarget(const std::optional<Group::InjectionControls>& ctrl,
                        DeferredLogger& deferred_logger) const;
 
+    static GuideRateModel::Target guideTargetMode(const Phase& injection_phase);
     GuideRateModel::Target guideTargetMode() const;
 
 private:

@@ -77,6 +77,7 @@ public:
         serializer(filtrate_conc);
         serializer(perf_data);
         serializer(primaryvar);
+        serializer(guide_rate);
     }
 
     bool operator==(const SingleWellState&) const;
@@ -91,6 +92,7 @@ public:
     Scalar thp{0};
     Scalar temperature{0};
     Scalar efficiency_scaling_factor{1.0};
+    Scalar guide_rate{0};
 
     // filtration injection concentration
     Scalar filtrate_conc{0};

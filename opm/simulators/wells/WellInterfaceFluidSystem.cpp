@@ -155,7 +155,9 @@ calculateReservoirRates(const bool co2store, SingleWellState<Scalar>& ws) const
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkIndividualConstraints(SingleWellState<Scalar>& ws,
+checkIndividualConstraints(WellState<Scalar>& well_state,
+                           const GroupState<Scalar>& group_state,
+                           const Schedule& schedule,
                            const SummaryState& summaryState,
                            DeferredLogger& deferred_logger,
                            const std::optional<Well::InjectionControls>& inj_controls,
@@ -171,7 +173,7 @@ checkIndividualConstraints(SingleWellState<Scalar>& ws,
     };
 
     return WellConstraints(*this).
-            checkIndividualConstraints(ws, summaryState, rRates,
+            checkIndividualConstraints(well_state, group_state, schedule, summaryState, rRates,
                                        this->operability_status_.thp_limit_violated_but_not_switched,
                                        deferred_logger, inj_controls, prod_controls);
 }
@@ -214,7 +216,7 @@ checkConstraints(WellState<Scalar>& well_state,
                  const SummaryState& summaryState,
                  DeferredLogger& deferred_logger) const
 {
-    const bool ind_broken = checkIndividualConstraints(well_state.well(this->index_of_well_),
+    const bool ind_broken = checkIndividualConstraints(well_state,group_state, schedule,
                                                        summaryState, deferred_logger);
     if (ind_broken) {
         return true;

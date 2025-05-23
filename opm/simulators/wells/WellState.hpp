@@ -23,10 +23,10 @@
 
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
-
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/Events.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <opm/output/data/Wells.hpp>
 
@@ -183,6 +183,15 @@ public:
     bool isProductionGrup(const std::string& name) const
     {
         return this->global_well_info.value().in_producing_group(name);
+    }
+
+    bool isProductionGrupLocal(const std::string& name) const
+    {
+        return this->well(name).production_cmode == Well::ProducerCMode::GRUP;
+    }
+    bool isInjectionGrupLocal(const std::string& name) const
+    {
+        return this->well(name).injection_cmode == Well::InjectorCMode::GRUP;
     }
 
     bool isOpen(const std::string& name) const

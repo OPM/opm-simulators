@@ -37,10 +37,14 @@ class DeferredLogger;
 using RegionId = int;
 class Rates;
 template<class Scalar> class SingleWellState;
+template<class Scalar> class WellState;
 class SummaryState;
 template<class Scalar> class WellInterfaceGeneric;
 enum class WellInjectorCMode;
 enum class WellProducerCMode;
+template<class Scalar> class GroupState;
+class Schedule;
+
 
 //! \brief Class for computing well group constraints.
 template<class Scalar>
@@ -54,7 +58,9 @@ public:
                                             std::vector<Scalar>&)>;
 
     bool
-    checkIndividualConstraints(SingleWellState<Scalar>& ws,
+    checkIndividualConstraints(WellState<Scalar>& well_state,
+                              const GroupState<Scalar>& group_state,
+                              const Schedule& schedule,
                                const SummaryState& summaryState,
                                const RateConvFunc& calcReservoirVoidageRates,
                                bool& thp_limit_violated_but_not_switched,

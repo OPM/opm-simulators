@@ -242,30 +242,30 @@ public:
                                  const PhaseUsage& pu,
                                  const std::string& group_name);
 
-    static Scalar getGuideRate(const std::string& name,
-                               const Schedule& schedule,
-                               const WellState<Scalar>& wellState,
-                               const GroupState<Scalar>& group_state,
-                               const int reportStepIdx,
-                               const GuideRate* guideRate,
-                               const GuideRateModel::Target target,
-                               const PhaseUsage& pu);
-
-    static Scalar getGuideRateInj(const std::string& name,
+    static Scalar updateGuideRate(const std::string& name,
                                   const Schedule& schedule,
-                                  const WellState<Scalar>& wellState,
-                                  const GroupState<Scalar>& group_state,
+                                  WellState<Scalar>& wellState,
+                                  GroupState<Scalar>& group_state,
                                   const int reportStepIdx,
-                                  const GuideRate* guideRate,
-                                  const GuideRateModel::Target target,
-                                  const Phase& injectionPhase,
+                                  const GuideRate& guideRate,
+                                  Opm::GuideRateModel::Target target,
+                                  const bool is_production_group,
+                                  const Phase injection_phase,
                                   const PhaseUsage& pu);
 
+    static int updateGroupControlledWells(const Schedule& schedule,
+                                    const WellState<Scalar>& well_state,
+                                    GroupState<Scalar>& group_state,
+                                    const SummaryState& summary_state,
+                                    const GuideRate* guideRate,
+                                    const int report_step,
+                                    const std::string& group_name,
+                                    const std::string& always_included_child,
+                                    const bool is_production_group,
+                                    const Phase injection_phase);
     static int groupControlledWells(const Schedule& schedule,
                                     const WellState<Scalar>& well_state,
                                     const GroupState<Scalar>& group_state,
-                                    const SummaryState& summary_state,
-                                    const GuideRate* guideRate,
                                     const int report_step,
                                     const std::string& group_name,
                                     const std::string& always_included_child,
@@ -294,6 +294,12 @@ public:
                      const std::string& top,
                      const Schedule& schedule,
                      const int report_step);
+
+    static bool
+    isInGroupChainTopBot(const std::string& bottom,
+                         const std::string& top,
+                         const Schedule& schedule,
+                         const int report_step);
 
     static std::string
     control_group(const Group& group,

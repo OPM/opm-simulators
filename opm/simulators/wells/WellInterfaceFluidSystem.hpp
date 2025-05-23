@@ -83,7 +83,9 @@ protected:
     // updating the voidage rates in well_state when requested
     void calculateReservoirRates(const bool co2store, SingleWellState<Scalar>& ws) const;
 
-    bool checkIndividualConstraints(SingleWellState<Scalar>& ws,
+    bool checkIndividualConstraints(WellState<Scalar>& ws,
+                                    const GroupState<Scalar>& group_state,
+                                    const Schedule& schedule,
                                     const SummaryState& summaryState,
                                     DeferredLogger& deferred_logger,
                                     const std::optional<Well::InjectionControls>& inj_controls = std::nullopt,

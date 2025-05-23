@@ -63,7 +63,7 @@ public:
 
     bool has_production_reduction_rates(const std::string& gname) const;
     void update_production_reduction_rates(const std::string& gname,
-                                           const std::vector<Scalar>& rates);
+                                           const std::vector<Scalar>& rates) const;
     const std::vector<Scalar>& production_reduction_rates(const std::string& gname) const;
 
     bool has_injection_reduction_rates(const std::string& gname) const;
@@ -103,6 +103,23 @@ public:
     bool has_injection_control(const std::string& gname, Phase phase) const;
     void injection_control(const std::string& gname, Phase phase, Group::InjectionCMode cmode);
     Group::InjectionCMode injection_control(const std::string& gname, Phase phase) const;
+
+    bool has_number_of_wells_under_this_control(const std::string& gname) const;
+    void update_number_of_wells_under_this_control(const std::string& gname, int number);
+    int number_of_wells_under_this_control(const std::string& gname) const;
+
+    bool has_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const;
+    void update_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase, int number);
+    int number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const;
+
+    bool has_prod_guide_rates(const std::string& gname) const;
+    void update_prod_guide_rates(const std::string& gname, Scalar target) const;
+    Scalar prod_guide_rates(const std::string& gname) const;
+
+    bool has_inj_guide_rates(const std::string& gname, Phase phase) const;
+    void update_inj_guide_rates(const std::string& gname, Phase phase, Scalar target);
+    Scalar inj_guide_rates(const std::string& gname, Phase phase) const;
+    
 
     void update_gconsump(const Schedule& schedule, const int report_step, const SummaryState& summary_state);
     const std::pair<Scalar, Scalar>& gconsump_rates(const std::string& gname) const;
@@ -204,6 +221,10 @@ public:
         serializer(injection_controls);
         serializer(gpmaint_state);
         serializer(m_gconsump_rates);
+        serializer(m_number_of_wells_under_this_control);
+        serializer(m_number_of_wells_under_this_inj_control);
+        serializer(m_prod_guide_rates);
+        serializer(m_inj_guide_rates);
     }
 
 private:
@@ -211,7 +232,7 @@ private:
     std::map<std::string, std::vector<Scalar>> m_production_rates;
     std::map<std::string, std::vector<Scalar>> m_network_leaf_node_production_rates;
     std::map<std::string, Group::ProductionCMode> production_controls;
-    std::map<std::string, std::vector<Scalar>> prod_red_rates;
+    mutable std::map<std::string, std::vector<Scalar>> prod_red_rates;
     std::map<std::string, std::vector<Scalar>> inj_red_rates;
     std::map<std::string, std::vector<Scalar>> inj_surface_rates;
     std::map<std::string, std::vector<Scalar>> inj_resv_rates;
@@ -220,6 +241,11 @@ private:
     std::map<std::string, Scalar> m_grat_sales_target;
     std::map<std::string, Scalar> m_gpmaint_target;
     std::map<std::string, Scalar> group_thp;
+    std::map<std::string, int> m_number_of_wells_under_this_control;
+    std::map<std::pair<Phase, std::string>, int> m_number_of_wells_under_this_inj_control;
+    mutable std::map<std::string, Scalar> m_prod_guide_rates;
+    std::map<std::pair<Phase, std::string>, Scalar> m_inj_guide_rates;
+
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
     WellContainer<GPMaint::State> gpmaint_state;
