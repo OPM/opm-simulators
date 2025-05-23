@@ -188,9 +188,19 @@ guideRate(const std::string& name,
     } else {
         if (groupControlledWells(name, always_included_child) > 0) {
             if (is_producer_ && guide_rate_->has(name) && !always_use_potentials) {
-                return guide_rate_->get(name, target_, getGroupRateVector(name));
+                Scalar gs_rates = this->group_state_.prod_guide_rates(name);
+                Scalar gs_rates_d = guide_rate_->get(name, target_, getGroupRateVector(name));
+                if ( std::abs(gs_rates - gs_rates_d) > 1e-3) {
+                    std::cout << "WHAT " << name << " " << gs_rates << " " << gs_rates_d << std::endl;
+                }
+                return gs_rates;
             } else if (!is_producer_ && guide_rate_->has(name, injection_phase_) && !always_use_potentials) {
-                return guide_rate_->get(name, injection_phase_);
+                Scalar gs_rates = this->group_state_.inj_guide_rates(name, injection_phase_);
+                Scalar gs_rates_d = guide_rate_->get(name, injection_phase_);
+                if ( std::abs(gs_rates - gs_rates_d) > 1e-3) {
+                    std::cout << "WHAT INJ" << name << " " << gs_rates << " " << gs_rates_d << std::endl;
+                }
+                return gs_rates;
             } else {
                 // We are a group, with default guide rate.
                 // Compute guide rate by accumulating our children's guide rates.

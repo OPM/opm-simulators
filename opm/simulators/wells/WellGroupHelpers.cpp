@@ -1122,6 +1122,21 @@ updateGuideRate(const std::string& name,
         //totalGuideRate += updateGuideRate(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, is_production_group, injection_phase, pu);
     }
 
+    if ( (is_production_group && guideRate.has(name)) || (!is_production_group && guideRate.has(name,injection_phase)) ) {
+        auto guiderate = 0.0;
+        if (is_production_group && guideRate.has(name))
+            guiderate = guideRate.get(name, target, getProductionGroupRateVector(group_state, pu, name));
+        else if (!is_production_group && guideRate.has(name,injection_phase))
+            guiderate = guideRate.get(name, injection_phase);
+
+        if (is_production_group) {
+            group_state.update_prod_guide_rates(name, guiderate);
+        } else {
+            group_state.update_inj_guide_rates(name, injection_phase, guiderate);
+        }
+        return guiderate;
+    }        
+
     for (const std::string& wellName : group.wells()) {
         const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
 
