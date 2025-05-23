@@ -1,0 +1,110 @@
+name: Build opm-simulators Doxygen Docs and push to gh-pages
+
+on:
+  push:
+    branches:
+      - '**'
+    pull_request_target:
+        types: closed
+        branches: master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Python packages
+        run: |
+          pip install sphinx==7.2.6 breathe==4.35.0 furo
+
+      - name: Generate Doxyfile
+        run: |
+          doxygen -g Doxyfile
+
+      - name: Delete the FILE_PATTERNS block entirely
+        run: |
+          sed -i '/^FILE_PATTERNS/,/[^\\]$/d' Doxyfile
+
+      - name: Add new FILE_PATTERNS line at the end
+        run: |
+          echo 'FILE_PATTERNS          = *.cpp *.hpp' >> Doxyfile
+
+      - name: Rewrite some of the defaulted values in Doxyfile
+        run: |
+          sed -i \
+          -e 's/^PROJECT_NAME.*/PROJECT_NAME           = "opm-simulators"/' \
+          -e 's|^OUTPUT_DIRECTORY.*|OUTPUT_DIRECTORY       = docs/doxygen|' \
+          -e 's/^GENERATE_XML.*/GENERATE_XML           = YES/' \
+          -e 's/^RECURSIVE.*/RECURSIVE              = YES/' \
+          -e 's|^INPUT.*|INPUT                  = opm/simulators opm/models|' \
+          -e 's/^EXTRACT_ALL.*/EXTRACT_ALL            = YES/' \
+          Doxyfile
+
+      - name: Quickstart Sphinx
+        run: |
+          rm -rf docs/sphinx/*
+          sphinx-quickstart -q -p "opm-simulators" -a "opm-dev" --sep docs/sphinx
+
+      - name: Overwrite conf.py with custom config
+        run: |
+          echo "import os" > docs/sphinx/source/conf.py
+          echo "import sys" >> docs/sphinx/source/conf.py
+          echo "from pathlib import Path" > docs/sphinx/source/conf.py
+          echo "sys.path.insert(0, str(Path('.').resolve()))" >> docs/sphinx/source/conf.py
+          echo "" >> docs/sphinx/source/conf.py
+          echo "extensions = ['breathe']" >> docs/sphinx/source/conf.py
+          echo "breathe_projects = {" >> docs/sphinx/source/conf.py
+          echo "    'OPM': '../../doxygen/xml'" >> docs/sphinx/source/conf.py
+          echo "}" >> docs/sphinx/source/conf.py
+          echo "breathe_default_project = 'OPM'" >> docs/sphinx/source/conf.py
+          echo "" >> docs/sphinx/source/conf.py
+          echo "html_theme = 'furo'" >> docs/sphinx/source/conf.py
+
+      - name: Create index.rst with Breathe directives
+        run: |
+          echo "opm-simulators documentation" > docs/sphinx/source/index.rst
+          echo "============================" >> docs/sphinx/source/index.rst
+          echo "" >> docs/sphinx/source/index.rst
+          echo ".. toctree::" >> docs/sphinx/source/index.rst
+          echo "   :maxdepth: 2" >> docs/sphinx/source/index.rst
+          echo "   :caption: Contents:" >> docs/sphinx/source/index.rst
+          echo "" >> docs/sphinx/source/index.rst
+          echo "" >> docs/sphinx/source/index.rst
+          echo "API Reference" >> docs/sphinx/source/index.rst
+          echo "=============" >> docs/sphinx/source/index.rst
+          echo "" >> docs/sphinx/source/index.rst
+          echo ".. doxygenindex::" >> docs/sphinx/source/index.rst
+          echo "   :project: OPM" >> docs/sphinx/source/index.rst
+
+      - name: Build Doxygen documentation
+        run: |
+          ls
+          doxygen Doxyfile
+
+      - name: Build Sphinx documentation
+        run: |
+           sphinx-build -b html docs/sphinx/source docs/sphinx/build/html
+           make html
+
+      - name: Copy documentation to gh-pages
+        run: |
+            mkdir docs/sphinx/gh-pages
+            cp -r docs/sphinx/build/* docs/sphinx/gh-pages
+      - name: Deploy documentation
+        uses: OPM/github-pages-deploy-action@releases/v4
+        with:
+          branch: gh-pages
+          folder: docs/sphinx/gh-pages 
