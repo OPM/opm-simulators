@@ -399,7 +399,8 @@ bool SingleWellState<Scalar>::operator==(const SingleWellState& rhs) const
            this->trivial_group_target == rhs.trivial_group_target &&
            this->segments == rhs.segments &&
            this->events == rhs.events &&
-           this->injection_cmode == rhs.injection_cmode &&
+           this->guide_rate == rhs.guide_rate &&
+           this->injection_cmode == rhs.injection_cmode &&           
            this->production_cmode == rhs.production_cmode;
 }
 

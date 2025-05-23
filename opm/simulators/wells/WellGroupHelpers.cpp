@@ -1075,7 +1075,7 @@ template<class Scalar>
 Scalar WellGroupHelpers<Scalar>::
 updateGuideRate(const std::string& name,
                 const Schedule& schedule,
-                const WellState<Scalar>& wellState,
+                WellState<Scalar>& wellState,
                 GroupState<Scalar>& group_state,
                 const int reportStepIdx,
                 const GuideRate& guideRate,
@@ -1148,16 +1148,27 @@ updateGuideRate(const std::string& name,
 
         if (wellTmp.getStatus() == Well::Status::SHUT)
             continue;
+       
+        Scalar guide_rate_well = 0.0;
+        if (target != GuideRateModel::Target::NONE && (guideRate.has(wellName) || guideRate.hasPotentials(wellName))) {
+            guide_rate_well = guideRate.get(wellName, target, getWellRateVector(wellState, pu, wellName));
+        }
 
         // Only count wells under group control
-        if (is_production_group && !wellState.isProductionGrup(wellName))
-            continue;
-        
-        if (!is_production_group && !wellState.isInjectionGrup(wellName))
-            continue;
+        const bool include = is_production_group? wellState.isProductionGrup(wellName) : wellState.isInjectionGrup(wellName);
+        if (include) {
+            totalGuideRate += guide_rate_well;
+        }
 
-        if (target != GuideRateModel::Target::NONE && (guideRate.has(wellName) || guideRate.hasPotentials(wellName))) {
-            totalGuideRate += guideRate.get(wellName, target, getWellRateVector(wellState, pu, wellName));
+        const auto& well_index = wellState.index(wellName);
+        if (well_index.has_value() && wellState.wellIsOwned(well_index.value(), wellName))
+        {
+            // the well is found and owned we update the well state 
+            auto& ws = wellState.well(well_index.value());
+            if (guide_rate_well > 0 ) {
+                ws.guide_rate = guide_rate_well;
+                //std::cout << "update well guide rate " << wellName << " " << guide_rate_well << std::endl;
+            }
         }
     }
     if (is_production_group) {
@@ -1304,7 +1315,7 @@ groupControlledWells(const Schedule& schedule,
     auto num_wells = is_production_group? group_state.number_of_wells_under_this_control(group_name): group_state.number_of_wells_under_this_inj_control(group_name, injection_phase);
     if (schedule.hasWell(always_included_child, report_step)) {
         const bool isInGroup = isInGroupChainTopBot(always_included_child, group_name, schedule, report_step);
-        bool already_included = is_production_group? well_state.isProductionGrup(always_included_child) : well_state.isInjectionGrup(always_included_child);
+        bool already_included = is_production_group? well_state.isProductionGrupLocal(always_included_child) : well_state.isInjectionGrupLocal(always_included_child);
         if (!already_included && isInGroup) {
             num_wells++;
         }

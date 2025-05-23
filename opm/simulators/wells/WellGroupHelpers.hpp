@@ -244,7 +244,7 @@ public:
 
     static Scalar updateGuideRate(const std::string& name,
                                   const Schedule& schedule,
-                                  const WellState<Scalar>& wellState,
+                                  WellState<Scalar>& wellState,
                                   GroupState<Scalar>& group_state,
                                   const int reportStepIdx,
                                   const GuideRate& guideRate,
