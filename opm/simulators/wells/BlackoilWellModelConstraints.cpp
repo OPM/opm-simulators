@@ -440,7 +440,7 @@ actionOnBrokenConstraints(const Group& group,
 
     if (oldControl != newControl) {
         const std::string from = Group::InjectionCMode2String(oldControl);
-        group_state.injection_control(group.name(), controlPhase, newControl);
+        group_state.update_injection_control(group.name(), controlPhase, newControl);
         if (wellModel_.comm().rank() == 0) {
             auto msg = fmt::format("Switching injection control mode for group {} from {} to {}",
                                    group.name(),
@@ -470,7 +470,7 @@ actionOnBrokenConstraints(const Group& group,
     if (newControl == Group::ProductionCMode::FLD && oldControl != Group::ProductionCMode::FLD) {
         // If newControl is FLD, the group should be subject to higher order controls
         assert(group.productionGroupControlAvailable());
-        group_state.production_control(group.name(), newControl);
+        group_state.update_production_control(group.name(), newControl);
         if (wellModel_.comm().rank() == 0) {
             const std::string message = fmt::format("Switching production control mode for group {} from {} to {}",
             group.name(),
@@ -492,7 +492,7 @@ actionOnBrokenConstraints(const Group& group,
                  newControl == Group::ProductionCMode::GRAT) ||
                 (group_limit_action.liquid == Group::ExceedAction::RATE &&
                  newControl == Group::ProductionCMode::LRAT)) {
-                group_state.production_control(group.name(), newControl);
+                group_state.update_production_control(group.name(), newControl);
                 ss = fmt::format("Switching production control mode for group {} from {} to {}",
                                  group.name(),
                                  Group::ProductionCMode2String(oldControl),
@@ -539,7 +539,7 @@ actionOnBrokenConstraints(const Group& group,
     }
     case Group::ExceedAction::RATE: {
         if (oldControl != newControl) {
-            group_state.production_control(group.name(), newControl);
+            group_state.update_production_control(group.name(), newControl);
             ss = fmt::format("Switching production control mode for group {} from {} to {}",
                              group.name(),
                              Group::ProductionCMode2String(oldControl),
