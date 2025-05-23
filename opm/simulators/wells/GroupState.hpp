@@ -63,7 +63,7 @@ public:
 
     bool has_production_reduction_rates(const std::string& gname) const;
     void update_production_reduction_rates(const std::string& gname,
-                                           const std::vector<Scalar>& rates);
+                                           const std::vector<Scalar>& rates) const;
     const std::vector<Scalar>& production_reduction_rates(const std::string& gname) const;
 
     bool has_injection_reduction_rates(const std::string& gname) const;
@@ -113,7 +113,7 @@ public:
     int number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const;
 
     bool has_prod_guide_rates(const std::string& gname) const;
-    void update_prod_guide_rates(const std::string& gname, Scalar target);
+    void update_prod_guide_rates(const std::string& gname, Scalar target) const;
     Scalar prod_guide_rates(const std::string& gname) const;
 
     bool has_inj_guide_rates(const std::string& gname, Phase phase) const;
@@ -232,7 +232,7 @@ private:
     std::map<std::string, std::vector<Scalar>> m_production_rates;
     std::map<std::string, std::vector<Scalar>> m_network_leaf_node_production_rates;
     std::map<std::string, Group::ProductionCMode> production_controls;
-    std::map<std::string, std::vector<Scalar>> prod_red_rates;
+    mutable std::map<std::string, std::vector<Scalar>> prod_red_rates;
     std::map<std::string, std::vector<Scalar>> inj_red_rates;
     std::map<std::string, std::vector<Scalar>> inj_surface_rates;
     std::map<std::string, std::vector<Scalar>> inj_resv_rates;
@@ -243,7 +243,7 @@ private:
     std::map<std::string, Scalar> group_thp;
     std::map<std::string, int> m_number_of_wells_under_this_control;
     std::map<std::pair<Phase, std::string>, int> m_number_of_wells_under_this_inj_control;
-    std::map<std::string, Scalar> m_prod_guide_rates;
+    mutable std::map<std::string, Scalar> m_prod_guide_rates;
     std::map<std::pair<Phase, std::string>, Scalar> m_inj_guide_rates;
 
 

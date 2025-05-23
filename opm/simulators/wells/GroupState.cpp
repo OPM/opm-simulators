@@ -174,7 +174,7 @@ has_production_reduction_rates(const std::string& gname) const
 template<class Scalar>
 void GroupState<Scalar>::
 update_production_reduction_rates(const std::string& gname,
-                                  const std::vector<Scalar>& rates)
+                                  const std::vector<Scalar>& rates) const
 {
     if (rates.size() != this->num_phases)
         throw std::logic_error("Wrong number of phases");
@@ -482,7 +482,7 @@ has_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase
 //-------------------------------------------------------------------------
 template<class Scalar>
 void GroupState<Scalar>::
-update_prod_guide_rates(const std::string& gname, Scalar target)
+update_prod_guide_rates(const std::string& gname, Scalar target) const
 {
     this->m_prod_guide_rates[gname] = target;
 }

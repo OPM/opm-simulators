@@ -230,7 +230,7 @@ namespace Opm
         }
         bool changed = false;
         if (iog == IndividualOrGroup::Individual) {
-            changed = this->checkIndividualConstraints(ws, summaryState, deferred_logger);
+            changed = this->checkIndividualConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         } else if (iog == IndividualOrGroup::Group) {
             changed = this->checkGroupConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         } else {
@@ -261,10 +261,10 @@ namespace Opm
             if (iterationIdx >= nupcol || this->well_control_log_.empty()) {
                 this->well_control_log_.push_back(from);
             }
-            if (to != "GRUP") {
+           //if (to != "GRUP") {
                 updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
                 updatePrimaryVariables(simulator, well_state, deferred_logger);
-            }
+            //}
         }
 
         return changed;
@@ -314,7 +314,7 @@ namespace Opm
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
                     bool isGroupControl = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::GRUP : ws.production_cmode == Well::ProducerCMode::GRUP; 
                     if (! (isGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
-                        changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                        changed = this->checkIndividualConstraints(well_state, group_state, schedule, summary_state, deferred_logger, inj_controls, prod_controls);
                     }
                     if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
                         changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);

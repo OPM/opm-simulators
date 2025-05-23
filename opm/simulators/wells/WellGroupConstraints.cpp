@@ -28,11 +28,13 @@
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-
+#include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm
 {
+
+
 
 template<class Scalar>
 std::pair<bool, Scalar>
@@ -192,8 +194,36 @@ checkGroupConstraints(WellState<Scalar>& well_state,
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
             if (group_constraint.first) {
-                ws.production_cmode = Well::ProducerCMode::GRUP;
+                const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(), group.name(), schedule, well_.currentStep());
+                // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
+                const std::size_t num_ancestors = chain.size() - 1;
+                // we need to find out the level where the current well is applied to the local reduction
+                std::size_t local_reduction_level = 0;
+                for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
+                    const int num_gr_ctrl = WellGroupHelpers<Scalar>::groupControlledWells(schedule,
+                                                                well_state,
+                                                                group_state,
+                                                                well_.currentStep(),
+                                                                chain[ii],
+                                                                "",
+                                                                /*is_producer*/ true,
+                                                                /*injectionPhaseNotUsed*/ Phase::OIL);
+                    if (well_.guideRate()->has(chain[ii]) && num_gr_ctrl > 0) {
+                        local_reduction_level = ii;
+                    }
+                }
+                auto group_local = chain[local_reduction_level];
+                auto current_reduction_rates = group_state.production_reduction_rates(group_local);
                 const int np = well_state.numPhases();
+                for (int p = 0; p<np; ++p) {
+                    current_reduction_rates[p] -= ws.surface_rates[p];
+                }
+                group_state.update_production_reduction_rates(group_local, current_reduction_rates);
+                
+                auto current_guide_rates = group_state.prod_guide_rates(well.groupName()) + well_state.well(well.name()).guide_rate;
+                group_state.update_prod_guide_rates(well.groupName(), current_guide_rates);
+
+                ws.production_cmode = Well::ProducerCMode::GRUP;                                
                 for (int p = 0; p<np; ++p) {
                     ws.surface_rates[p] *= group_constraint.second;
                 }

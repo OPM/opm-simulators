@@ -1432,7 +1432,7 @@ checkGroupConstraintsProd(const std::string& name,
     // efficiencyfactor is the well efficiency factor for the first group the well is
     // part of. Later it is the accumulated factor including the group efficiency factor
     // of the child of group.
-
+    auto current_reduction_rates = group_state.production_reduction_rates(parent);
     // NOTE: if name is a group, the rates-argument is the portion of the 'full' group rates that
     // is potentially available for control by an ancestor, i.e. full rates minus reduction rates
     OPM_TIMEFUNCTION();
