@@ -27,7 +27,8 @@ jobs:
           python-version: '3.x'
 
       - name: Install Python packages
-        run: pip install sphinx breathe furo
+        run: |
+          pip install sphinx breathe furo
 
       - name: Generate Doxyfile
         run: |
@@ -54,6 +55,7 @@ jobs:
 
       - name: Quickstart Sphinx
         run: |
+          rm -rf docs/sphinx/*
           sphinx-quickstart -q -p "opm-simulators" -a "opm-dev" --sep docs/sphinx
 
       - name: Overwrite conf.py with custom config
@@ -69,6 +71,22 @@ jobs:
           echo "breathe_default_project = 'OPM'" >> docs/sphinx/source/conf.py
           echo "" >> docs/sphinx/source/conf.py
           echo "html_theme = 'furo'" >> docs/sphinx/source/conf.py
+
+      - name: Create index.rst with Breathe directives
+        run: |
+          echo "opm-simulators documentation" > docs/sphinx/source/index.rst
+          echo "============================" >> docs/sphinx/source/index.rst
+          echo "" >> docs/sphinx/source/index.rst
+          echo ".. toctree::" >> docs/sphinx/source/index.rst
+          echo "   :maxdepth: 2" >> docs/sphinx/source/index.rst
+          echo "   :caption: Contents:" >> docs/sphinx/source/index.rst
+          echo "" >> docs/sphinx/source/index.rst
+          echo "" >> docs/sphinx/source/index.rst
+          echo "API Reference" >> docs/sphinx/source/index.rst
+          echo "=============" >> docs/sphinx/source/index.rst
+          echo "" >> docs/sphinx/source/index.rst
+          echo ".. doxygenindex::" >> docs/sphinx/source/index.rst
+          echo "   :project: OPM" >> docs/sphinx/source/index.rst
 
       - name: Build Doxygen documentation
         run: |
