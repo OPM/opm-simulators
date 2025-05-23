@@ -2,13 +2,10 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('.'))
 
-extensions = [
-    'breathe', 
-]
-
+extensions = ['breathe']
 breathe_projects = {
-	"OPM": "../../doxygen/xml"
+    'OPM': '../../doxygen/xml'
 }
-breathe_default_project = "OPM"
+breathe_default_project = 'OPM'
 
-html_theme = 'furo' # or ‘sphinc_rtd_theme’
+html_theme = 'furo'
