@@ -29,17 +29,46 @@ jobs:
       - name: Install Python packages
         run: pip install sphinx breathe furo
 
+      - name: Generate Doxyfile
+        run: |
+          doxygen -g Doxyfile
+
+      - name: Delete the FILE_PATTERNS block entirely
+        run: |
+          sed -i '/^FILE_PATTERNS/,/[^\\]$/d' Doxyfile
+
+      - name: Add new FILE_PATTERNS line at the end
+        run: |
+          echo 'FILE_PATTERNS          = *.cpp *.hpp' >> Doxyfile
+
+      - name: Rewrite some of the defaulted values in Doxyfile
+        run: |
+          sed -i \
+          -e 's/^PROJECT_NAME.*/PROJECT_NAME           = "opm-simulators"/' \
+          -e 's|^OUTPUT_DIRECTORY.*|OUTPUT_DIRECTORY       = docs/doxygen|' \
+          -e 's/^GENERATE_XML.*/GENERATE_XML           = YES/' \
+          -e 's/^RECURSIVE.*/RECURSIVE              = YES/' \
+          -e 's|^INPUT.*|INPUT                  = opm/simulators opm/models|' \
+          -e 's/^EXTRACT_ALL.*/EXTRACT_ALL            = YES/' \
+          Doxyfile
+
+      - name: Quickstart Sphinx
+        run: |
+          sphinx-quickstart -q -p "opm-simulators" -a "opm-dev" --sep docs/sphinx
+
       - name: Build Doxygen documentation
-        run: doxygen Doxyfile
+        run: |
+          ls
+          doxygen Doxyfile
 
       - name: Build Sphinx documentation
         run: |
           cd docs/sphinx
-          sphinx-build -b html source build/html
+          sphinx-build -b html source build
           make html
 
       - name: Copy documentation to gh-pages
-          run: |
+        run: |
             mkdir docs/sphinx/gh-pages
             cp -r docs/sphinx/build/* docs/sphinx/gh-pages
       - name: Deploy documentation
