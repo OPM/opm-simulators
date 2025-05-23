@@ -56,6 +56,20 @@ jobs:
         run: |
           sphinx-quickstart -q -p "opm-simulators" -a "opm-dev" --sep docs/sphinx
 
+      - name: Overwrite conf.py with custom config
+        run: |
+          echo "import os" > docs/sphinx/source/conf.py
+          echo "import sys" >> docs/sphinx/source/conf.py
+          echo "sys.path.insert(0, os.path.abspath('.'))" >> docs/sphinx/source/conf.py
+          echo "" >> docs/sphinx/source/conf.py
+          echo "extensions = ['breathe']" >> docs/sphinx/source/conf.py
+          echo "breathe_projects = {" >> docs/sphinx/source/conf.py
+          echo "    'OPM': '../../doxygen/xml'" >> docs/sphinx/source/conf.py
+          echo "}" >> docs/sphinx/source/conf.py
+          echo "breathe_default_project = 'OPM'" >> docs/sphinx/source/conf.py
+          echo "" >> docs/sphinx/source/conf.py
+          echo "html_theme = 'furo'" >> docs/sphinx/source/conf.py
+
       - name: Build Doxygen documentation
         run: |
           ls
