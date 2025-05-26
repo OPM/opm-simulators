@@ -116,13 +116,13 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     monitor_params_.cutoff_ = Parameters::Get<Parameters::ConvergenceMonitoringCutOff>();
     monitor_params_.decay_factor_ = Parameters::Get<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>();
 
-    const auto version = Parameters::Get<Parameters::RelativeChangeVersion>();
+    const auto version = Parameters::Get<Parameters::RelativeChangeApproach>();
     if (version == "pressure") {
-        relative_change_version_ = RelativeChangeApproach::Pressure;
+        relative_change_version_ = RelativeChangeApproaches::Pressure;
     } else if (version == "saturation") {
-        relative_change_version_ = RelativeChangeApproach::Saturation;
+        relative_change_version_ = RelativeChangeApproaches::Saturation;
     } else if (version == "pressure+saturation") {
-        relative_change_version_ = RelativeChangeApproach::PressureSaturation;
+        relative_change_version_ = RelativeChangeApproaches::PressureSaturation;
     } else {
         throw std::runtime_error("Unsupported relative change version: " + version);
     }
@@ -299,7 +299,7 @@ void BlackoilModelParameters<Scalar>::registerParameters()
     Parameters::Register<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>
         ("Decay factor for convergence monitoring");
     
-    Parameters::Register<Parameters::RelativeChangeVersion>
+    Parameters::Register<Parameters::RelativeChangeApproach>
         ("Version of relative change used in time step control. Allowed values are "
          "'pressure', "
          "'saturation', "

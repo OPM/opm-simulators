@@ -373,7 +373,7 @@ relativeChange() const
     std::array<Scalar,4> r{};
     auto& [resultDeltaPressure, resultDenomPressure, resultDeltaSaturation, resultDenomSaturation] = r;
 
-    auto version = this->param_.relative_change_version_;
+    const auto version = this->param_.relative_change_version_;
 
     const auto& elemMapper = simulator_.model().elementMapper();
     const auto& gridView = simulator_.gridView();
@@ -451,20 +451,22 @@ relativeChange() const
     gridView.comm().sum(r.data(), r.size());
 
     switch(version) {
-        case RelativeChangeApproach::Pressure:
+        case RelativeChangeApproaches::Pressure:
             if (resultDenomPressure > 0.0)
                 return std::sqrt(resultDeltaPressure / resultDenomPressure);
             break;
-        case RelativeChangeApproach::Saturation:
+        case RelativeChangeApproaches::Saturation:
             if (resultDenomSaturation > 0.0)
                 return std::sqrt(resultDeltaSaturation / resultDenomSaturation);
             break;
-        case RelativeChangeApproach::PressureSaturation:
+        case RelativeChangeApproaches::PressureSaturation:
             if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0) {
+                // Only using pressure for time step zero is a pragmatic choice to avoid excessive cutting for the first step
                 if (simulator_.timeStepIndex() == 0) {
                     return std::sqrt(resultDeltaPressure / resultDenomPressure);
                 }
-                return std::max(std::sqrt(resultDeltaPressure/resultDenomPressure), std::sqrt(resultDeltaSaturation/resultDenomSaturation));        
+                return std::max(std::sqrt(resultDeltaPressure/resultDenomPressure),
+                                std::sqrt(resultDeltaSaturation/resultDenomSaturation));        
             }
             break;
     }
