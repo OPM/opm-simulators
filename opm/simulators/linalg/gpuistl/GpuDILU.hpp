@@ -22,7 +22,10 @@
 #include <memory>
 #include <opm/grid/utility/SparseTable.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/ILU_variants_helper_kernels.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/kernel_enums.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_resources.hpp>
 #include <vector>
@@ -67,7 +70,7 @@ public:
     //! \brief Constructor.
     //!
     //!  Constructor gets all parameters to operate the prec.
-    explicit GpuDILU(const GPUMatrix& gpuMatrix, const CPUMatrixT& cpuMatrix, bool splitMatrix, bool tuneKernels, int mixedPrecisionScheme);
+    explicit GpuDILU(const GPUMatrix& gpuMatrix, const CPUMatrixT& cpuMatrix, bool splitMatrix, bool tuneKernels, int mixedPrecisionScheme, bool reorder);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -144,6 +147,8 @@ private:
     GpuVector<int> m_gpuNaturalToReorder;
     //! row conversion from reordered to natural matrix indices stored on the GPU
     GpuVector<int> m_gpuReorderToNatural;
+    //! \brief Potentially stores the level sets on the GPU
+    GpuBuffer<size_t> m_gpuLevelSets; //TODO: make this an optional to not spend time on the copy if not needed
     //! \brief Stores the inverted diagonal that we use in DILU
     GpuVector<field_type> m_gpuDInv;
     //! \brief Bool storing whether or not we should store matrices in a split format
@@ -158,6 +163,10 @@ private:
     int m_lowerSolveThreadBlockSize = -1;
     int m_moveThreadBlockSize = -1;
     int m_DILUFactorizationThreadBlockSize = -1;
+    //! \brief The reorder parameter can be set to false to shorten the update time, but slows the apply time
+    bool m_reorder;
+
+    GpuBuffer<size_t> m_diagIdxs;
 
     // Graphs for Apply
     std::map<std::pair<field_type*, const field_type*>, GPUGraph> m_apply_graphs;
