@@ -261,7 +261,7 @@ namespace Opm
             if (iterationIdx >= nupcol || this->well_control_log_.empty()) {
                 this->well_control_log_.push_back(from);
             }
-            updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+            updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger, /*initialize*/ false);
             updatePrimaryVariables(simulator, well_state, deferred_logger);
         }
 
@@ -323,7 +323,7 @@ namespace Opm
                                                                         ws.production_cmode == Well::ProducerCMode::THP;
                         if (!thp_controlled){
                             // don't call for thp since this might trigger additional local solve
-                            updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+                            updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger, /*initialize*/ false);
                         } else {
                             ws.thp = this->getTHPConstraint(summary_state);
                         }
@@ -403,7 +403,7 @@ namespace Opm
             ws.production_cmode = Well::ProducerCMode::BHP;
         }
 
-        updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
+        updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger, /*initialize*/ true);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
 
@@ -1125,7 +1125,8 @@ namespace Opm
     updateWellStateWithTarget(const Simulator& simulator,
                               const GroupState<Scalar>& group_state,
                               WellState<Scalar>& well_state,
-                              DeferredLogger& deferred_logger) const
+                              DeferredLogger& deferred_logger,
+                              const bool initialize)
     {
         OPM_TIMEFUNCTION();
         // only bhp and wellRates are used to initilize the primaryvariables for standard wells
@@ -1203,39 +1204,42 @@ namespace Opm
             }
 
             case Well::InjectorCMode::THP:
-            {
-                auto rates = ws.surface_rates;
-                Scalar bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state,
-                                                                             rates,
-                                                                             well,
-                                                                             summaryState,
-                                                                             this->getRefDensity(),
-                                                                             deferred_logger);
-                ws.bhp = bhp;
+            {   
                 ws.thp = this->getTHPConstraint(summaryState);
-
-                // if the total rates are negative or zero
-                // we try to provide a better intial well rate
-                // using the well potentials
-                Scalar total_rate = std::accumulate(rates.begin(), rates.end(), 0.0);
-                if (total_rate <= 0.0)
-                    ws.surface_rates = ws.well_potentials;
+                if (initialize) {
+                    auto rates = ws.surface_rates;
+                    Scalar bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state,
+                                                                                rates,
+                                                                                well,
+                                                                                summaryState,
+                                                                                this->getRefDensity(),
+                                                                                deferred_logger);
+                    ws.bhp = bhp;
+                
+                    // if the total rates are negative or zero
+                    // we try to provide a better intial well rate
+                    // using the well potentials
+                    Scalar total_rate = std::accumulate(rates.begin(), rates.end(), 0.0);
+                    if (total_rate <= 0.0)
+                        ws.surface_rates = ws.well_potentials;
+                }
 
                 break;
             }
             case Well::InjectorCMode::BHP:
             {
                 ws.bhp = controls.bhp_limit;
-                Scalar total_rate = 0.0;
-                for (int p = 0; p<np; ++p) {
-                    total_rate += ws.surface_rates[p];
+                if (initialize) {
+                    Scalar total_rate = 0.0;
+                    for (int p = 0; p<np; ++p) {
+                        total_rate += ws.surface_rates[p];
+                    }
+                    // if the total rates are negative or zero
+                    // we try to provide a better intial well rate
+                    // using the well potentials
+                    if (total_rate <= 0.0)
+                        ws.surface_rates = ws.well_potentials;
                 }
-                // if the total rates are negative or zero
-                // we try to provide a better intial well rate
-                // using the well potentials
-                if (total_rate <= 0.0)
-                    ws.surface_rates = ws.well_potentials;
-
                 break;
             }
             case Well::InjectorCMode::GRUP:
@@ -1423,41 +1427,53 @@ namespace Opm
             case Well::ProducerCMode::BHP:
             {
                 ws.bhp = controls.bhp_limit;
-                Scalar total_rate = 0.0;
-                for (int p = 0; p<np; ++p) {
-                    total_rate -= ws.surface_rates[p];
-                }
-                // if the total rates are negative or zero
-                // we try to provide a better intial well rate
-                // using the well potentials
-                if (total_rate <= 0.0){
+                if (initialize) {
+                    Scalar total_rate = 0.0;
                     for (int p = 0; p<np; ++p) {
-                        ws.surface_rates[p] = -ws.well_potentials[p];
+                        total_rate -= ws.surface_rates[p];
+                    }
+                    // if the total rates are negative or zero
+                    // we try to provide a better intial well rate
+                    // using the well potentials
+                    if (total_rate <= 0.0){
+                        for (int p = 0; p<np; ++p) {
+                            ws.surface_rates[p] = -ws.well_potentials[p];
+                        }
                     }
                 }
                 break;
             }
             case Well::ProducerCMode::THP:
-            {
-                const bool update_success = updateWellStateWithTHPTargetProd(simulator, well_state, deferred_logger);
-
-                if (!update_success) {
-                    // the following is the original way of initializing well state with THP constraint
-                    // keeping it for robust reason in case that it fails to get a bhp value with THP constraint
-                    // more sophisticated design might be needed in the future
-                    auto rates = ws.surface_rates;
-                    this->adaptRatesForVFP(rates);
-                    const Scalar bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(
-                        well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
-                    ws.bhp = bhp;
-                    ws.thp = this->getTHPConstraint(summaryState);
-                    // if the total rates are negative or zero
-                    // we try to provide a better initial well rate
-                    // using the well potentials
-                    const Scalar total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
-                    if (total_rate <= 0.0) {
-                        for (int p = 0; p < this->number_of_phases_; ++p) {
-                            ws.surface_rates[p] = -ws.well_potentials[p];
+            {   
+                ws.thp = this->getTHPConstraint(summaryState);
+                if (initialize) {
+                    const double dt = simulator.timeStepSize();
+                    auto bhp_target = estimateOperableBhp(simulator, dt, well_state, summaryState, deferred_logger);
+                    if (bhp_target.has_value()) {
+                        const Scalar bhp = std::max(bhp_target.value(), static_cast<Scalar>(controls.bhp_limit));
+                        solveWellWithBhp(simulator, dt, bhp, well_state, deferred_logger);
+                    } else {
+                        deferred_logger.debug("Did not find operable bhp for well " + this->name() + ", re-trying initialization." );
+                        const bool update_success = updateWellStateWithTHPTargetProd(simulator, well_state, deferred_logger);
+                        if (!update_success) {
+                            // the following is the original way of initializing well state with THP constraint
+                            // keeping it for robust reason in case that it fails to get a bhp value with THP constraint
+                            // more sophisticated design might be needed in the future
+                            auto rates = ws.surface_rates;
+                            this->adaptRatesForVFP(rates);
+                            const Scalar bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(
+                                well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
+                            ws.bhp = bhp;
+                            
+                            // if the total rates are negative or zero
+                            // we try to provide a better initial well rate
+                            // using the well potentials
+                            const Scalar total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
+                            if (total_rate <= 0.0) {
+                                for (int p = 0; p < this->number_of_phases_; ++p) {
+                                    ws.surface_rates[p] = -ws.well_potentials[p];
+                                }
+                            }
                         }
                     }
                 }
