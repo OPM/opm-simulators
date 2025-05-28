@@ -105,6 +105,7 @@ extractLowerAndUpperMatrices(const M& naturalMatrix, const std::vector<int>& reo
     return {std::unique_ptr<GPUM>(new auto(GPUM::fromMatrix(reorderedLower, true))),
             std::unique_ptr<GPUM>(new auto(GPUM::fromMatrix(reorderedUpper, true)))};
 }
+
 } // namespace Opm::gpuistl::detail
 
 #endif
