@@ -59,16 +59,16 @@ void solveLowerLevelSet(T* reorderedMat,
 
 template <class T, int blocksize>
 void solveLowerLevelSetNoReorder(const T* reorderedMat,
-                                const int* rowIndices,
-                                const int* colIndices,
-                                const size_t* indexConversion,
-                                int startIdx,
-                                int rowsInLevelSet,
-                                const T* dInv,
-                                const T* d,
-                                T* v,
-                                int threadBlockSize,
-                                cudaStream_t stream);
+                                 const int* rowIndices,
+                                 const int* colIndices,
+                                 const size_t* indexConversion,
+                                 int startIdx,
+                                 int rowsInLevelSet,
+                                 const T* dInv,
+                                 const T* d,
+                                 T* v,
+                                 int threadBlockSize,
+                                 cudaStream_t stream);
 
 /**
  * @brief Perform a lower solve on certain rows in a matrix that can safely be computed in parallel
@@ -193,7 +193,7 @@ void computeDiluDiagonal(T* reorderedMat,
                          T* dInv,
                          int threadBlockSize);
 
-                         /**
+/**
  * @brief Computes the DILU of a BCSR matrix and stores it in a vector containing the diagonal blocks
  * @param mat pointer to GPU memory containing nonzerovalues of the sparse matrix. The matrix reordered such
  * that rows in the same level sets are contiguous
