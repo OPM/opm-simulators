@@ -19,18 +19,18 @@
 #ifndef OPM_GPUDILU_HPP
 #define OPM_GPUDILU_HPP
 
+#include <map>
 #include <memory>
 #include <opm/grid/utility/SparseTable.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/ILU_variants_helper_kernels.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/kernel_enums.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/ILU_variants_helper_kernels.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_resources.hpp>
-#include <vector>
-#include <map>
 #include <utility>
+#include <vector>
 
 
 namespace Opm::gpuistl
@@ -66,11 +66,16 @@ public:
     //! \brief The matrix type the preconditioner is for.
     using matrix_type = GPUMatrix;
 
-    
+
     //! \brief Constructor.
     //!
     //!  Constructor gets all parameters to operate the prec.
-    explicit GpuDILU(const GPUMatrix& gpuMatrix, const CPUMatrixT& cpuMatrix, bool splitMatrix, bool tuneKernels, int mixedPrecisionScheme, bool reorder);
+    explicit GpuDILU(const GPUMatrix& gpuMatrix,
+                     const CPUMatrixT& cpuMatrix,
+                     bool splitMatrix,
+                     bool tuneKernels,
+                     int mixedPrecisionScheme,
+                     bool reorder);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -111,7 +116,8 @@ public:
         return false;
     }
 
-    virtual bool hasPerfectUpdate() const override {
+    virtual bool hasPerfectUpdate() const override
+    {
         return true;
     }
 
@@ -148,7 +154,7 @@ private:
     //! row conversion from reordered to natural matrix indices stored on the GPU
     GpuVector<int> m_gpuReorderToNatural;
     //! \brief Potentially stores the level sets on the GPU
-    GpuBuffer<size_t> m_gpuLevelSets; //TODO: make this an optional to not spend time on the copy if not needed
+    GpuBuffer<size_t> m_gpuLevelSets; // TODO: make this an optional to not spend time on the copy if not needed
     //! \brief Stores the inverted diagonal that we use in DILU
     GpuVector<field_type> m_gpuDInv;
     //! \brief Bool storing whether or not we should store matrices in a split format
@@ -166,6 +172,7 @@ private:
     //! \brief The reorder parameter can be set to false to shorten the update time, but slows the apply time
     bool m_reorder;
 
+    //! \brief The indices of the blocks that are the diagonal entries
     GpuBuffer<size_t> m_diagIdxs;
 
     // Graphs for Apply
@@ -173,10 +180,10 @@ private:
     std::map<std::pair<field_type*, const field_type*>, GPUGraphExec> m_executableGraphs;
 
     // Stream for the DILU operations on the GPU
-    GPUStream m_stream{};
+    GPUStream m_stream {};
     // Events for synchronization with main stream
-    GPUEvent m_before{};
-    GPUEvent m_after{};
+    GPUEvent m_before {};
+    GPUEvent m_after {};
 };
 } // end namespace Opm::gpuistl
 
