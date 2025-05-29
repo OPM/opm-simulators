@@ -43,32 +43,32 @@ namespace Opm::gpuistl::detail
  * @param[in] rows Number of rows in the matrix
  * @param[out] diagIndices Array to store the indices of diagonal elements
  */
-    template <class T>
-    void computeDiagIndicesNoReorder(const T* mat,
-                                     const int* rowIndices,
-                                     const int* colIndices,
-                                     const size_t* indexConversion,
-                                     int rows,
-                                     size_t* diagIndices);
+template <class T>
+void computeDiagIndicesNoReorder(const T* mat,
+                                 const int* rowIndices,
+                                 const int* colIndices,
+                                 const size_t* indexConversion,
+                                 int rows,
+                                 size_t* diagIndices);
 
-  /**
-   * @brief Computes indices of diagonal elements for non-reordered GPU preconditioner.
-   *
-   * @tparam T Matrix element type
-   * @param[in] mat The matrix in BCSR format
-   * @param[in] rowIndices Row indices of the BCSR matrix
-   * @param[in] colIndices Column indices of the BCSR matrix
-   * @param[in] indexConversion Index conversion mapping
-   * @param[in] rows Number of rows in the matrix
-   * @param[out] diagIndices Array to store the indices of diagonal elements
-   */
-    template <class T>
-    void computeDiagIndices(const T* mat,
-                            const int* rowIndices,
-                            const int* colIndices,
-                            const int* reorderedToNatural,
-                            int rows,
-                            size_t* diagIndices);
+/**
+ * @brief Computes indices of diagonal elements for non-reordered GPU preconditioner.
+ *
+ * @tparam T Matrix element type
+ * @param[in] mat The matrix in BCSR format
+ * @param[in] rowIndices Row indices of the BCSR matrix
+ * @param[in] colIndices Column indices of the BCSR matrix
+ * @param[in] indexConversion Index conversion mapping
+ * @param[in] rows Number of rows in the matrix
+ * @param[out] diagIndices Array to store the indices of diagonal elements
+ */
+template <class T>
+void computeDiagIndices(const T* mat,
+                        const int* rowIndices,
+                        const int* colIndices,
+                        const int* reorderedToNatural,
+                        int rows,
+                        size_t* diagIndices);
 
-}
+} // namespace Opm::gpuistl::detail
 #endif

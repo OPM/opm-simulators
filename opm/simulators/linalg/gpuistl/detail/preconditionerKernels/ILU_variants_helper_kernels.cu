@@ -21,126 +21,115 @@
 
 namespace Opm::gpuistl::detail
 {
-    namespace {
-        // precompute the diagonal indices to speedup the update
-        // The matrix here is not reordered, so the i'th thread computes
-        // the diagonal element index not the i'th row of the matrix,
-        // That is what we would have done if there was no coloring.
-        // Instead it represents what the j'th rows in the k'th levelset
-        // correspons to via the indexConversion array.
-        template <class T>
-        __global__ void cuComputeDiagIndicesNoReorder(const T* mat,
-                                                const int* rowIndices,
-                                                const int* colIndices,
-                                                const size_t* indexConversion,
-                                                int rows,
-                                                size_t* diagIndices)
-        {
-            const auto rawIdx = blockDim.x * blockIdx.x + threadIdx.x;
-            if (rawIdx < rows) {
-                const size_t realRowIdx = indexConversion[rawIdx];
-                const size_t nnzIdx = rowIndices[realRowIdx];
-
-                size_t diagIdx = nnzIdx;
-                while (colIndices[diagIdx] != realRowIdx) {
-                    ++diagIdx;
-                }
-
-                diagIndices[realRowIdx] = diagIdx;
-            }
-        }
-
-        // In this case we have a reordered matrix, so the firsth i rows will
-        // in the same levelset and contiguous in the matrix. For this reason
-        // we convert from the reordered index (i) to the natural index (j) which
-        // will give us the diagonal element index as the row and column indices match there
-        template <class T>
-        __global__ void cuComputeDiagIndices(const T* mat,
-                             const int* rowIndices,
-                             const int* colIndices,
-                             const int* reorderedToNatural,
-                             int rows,
-                             size_t* diagIndices)
-        {
-            const auto rawIdx = blockDim.x * blockIdx.x + threadIdx.x;
-            if (rawIdx < rows) {
-                const int naturalRowIdx = reorderedToNatural[rawIdx];
-                const size_t nnzIdx = rowIndices[rawIdx];
-
-                size_t diagIdx = nnzIdx;
-                while (colIndices[diagIdx] != naturalRowIdx) {
-                    ++diagIdx;
-                }
-
-                // I choose to have this indexed in the same order as the matrix in hopes
-                // of memory coalescing.
-                diagIndices[rawIdx] = diagIdx;
-            }
-        }
-
-    } // empty namespace
-
-
+namespace
+{
+    // precompute the diagonal indices to speedup the update
+    // The matrix here is not reordered, so the i'th thread computes
+    // the diagonal element index not the i'th row of the matrix,
+    // That is what we would have done if there was no coloring.
+    // Instead it represents what the j'th rows in the k'th levelset
+    // correspons to via the indexConversion array.
     template <class T>
-    void computeDiagIndicesNoReorder(const T* mat,
+    __global__ void cuComputeDiagIndicesNoReorder(const T* mat,
+                                                  const int* rowIndices,
+                                                  const int* colIndices,
+                                                  const size_t* indexConversion,
+                                                  int rows,
+                                                  size_t* diagIndices)
+    {
+        const auto rawIdx = blockDim.x * blockIdx.x + threadIdx.x;
+        if (rawIdx < rows) {
+            const size_t realRowIdx = indexConversion[rawIdx];
+            const size_t nnzIdx = rowIndices[realRowIdx];
+
+            size_t diagIdx = nnzIdx;
+            while (colIndices[diagIdx] != realRowIdx) {
+                ++diagIdx;
+            }
+
+            diagIndices[realRowIdx] = diagIdx;
+        }
+    }
+
+    // In this case we have a reordered matrix, so the firsth i rows will
+    // in the same levelset and contiguous in the matrix. For this reason
+    // we convert from the reordered index (i) to the natural index (j) which
+    // will give us the diagonal element index as the row and column indices match there
+    template <class T>
+    __global__ void cuComputeDiagIndices(const T* mat,
                                          const int* rowIndices,
                                          const int* colIndices,
-                                         const size_t* indexConversion,
+                                         const int* reorderedToNatural,
                                          int rows,
                                          size_t* diagIndices)
     {
-        // Have cuda/hip automatically pick a reasonable block size for this kernel based on static analysis
-        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
-            cuComputeDiagIndicesNoReorder<T>
-        );
+        const auto rawIdx = blockDim.x * blockIdx.x + threadIdx.x;
+        if (rawIdx < rows) {
+            const int naturalRowIdx = reorderedToNatural[rawIdx];
+            const size_t nnzIdx = rowIndices[rawIdx];
 
-        // Calculate the number of blocks needed
-        int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rows, threadBlockSize);
+            size_t diagIdx = nnzIdx;
+            while (colIndices[diagIdx] != naturalRowIdx) {
+                ++diagIdx;
+            }
 
-        // launch kernel
-        cuComputeDiagIndicesNoReorder<T><<<threadBlockSize, nThreadBlocks>>>(
-            mat, rowIndices, colIndices, indexConversion, rows, diagIndices
-        );
+            // I choose to have this indexed in the same order as the matrix in hopes
+            // of memory coalescing.
+            diagIndices[rawIdx] = diagIdx;
+        }
     }
 
-    template <class T>
-    void computeDiagIndices(const T* mat,
+} // namespace
+
+
+template <class T>
+void
+computeDiagIndicesNoReorder(const T* mat,
                             const int* rowIndices,
                             const int* colIndices,
-                            const int* reorderedToNatural,
+                            const size_t* indexConversion,
                             int rows,
                             size_t* diagIndices)
-    {
-        // Have cuda/hip automatically pick a reasonable block size for this kernel based on static analysis
-        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
-            cuComputeDiagIndices<T>
-        );
+{
+    // Have cuda/hip automatically pick a reasonable block size for this kernel based on static analysis
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuComputeDiagIndicesNoReorder<T>);
 
-        // Calculate the number of blocks needed
-        int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rows, threadBlockSize);
+    // Calculate the number of blocks needed
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rows, threadBlockSize);
 
-        // launch kernel
-        cuComputeDiagIndices<T><<<threadBlockSize, nThreadBlocks>>>(
-            mat, rowIndices, colIndices, reorderedToNatural, rows, diagIndices
-        );
-    }
+    // launch kernel
+    cuComputeDiagIndicesNoReorder<T>
+        <<<threadBlockSize, nThreadBlocks>>>(mat, rowIndices, colIndices, indexConversion, rows, diagIndices);
+}
+
+template <class T>
+void
+computeDiagIndices(const T* mat,
+                   const int* rowIndices,
+                   const int* colIndices,
+                   const int* reorderedToNatural,
+                   int rows,
+                   size_t* diagIndices)
+{
+    // Have cuda/hip automatically pick a reasonable block size for this kernel based on static analysis
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuComputeDiagIndices<T>);
+
+    // Calculate the number of blocks needed
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rows, threadBlockSize);
+
+    // launch kernel
+    cuComputeDiagIndices<T>
+        <<<threadBlockSize, nThreadBlocks>>>(mat, rowIndices, colIndices, reorderedToNatural, rows, diagIndices);
+}
 
 
 } // namespace Opm::gpuistl::detail
 
-#define DEFINE_KERNEL_WRAPPERS_FOR_TYPES(T) \
-    template void Opm::gpuistl::detail::computeDiagIndicesNoReorder<T>(const T*, \
-                                                                              const int*, \
-                                                                              const int*, \
-                                                                              const size_t*, \
-                                                                              int, \
-                                                                              size_t*); \
-    template void Opm::gpuistl::detail::computeDiagIndices<T>(const T*, \
-                                                              const int*, \
-                                                              const int*, \
-                                                              const int*, \
-                                                              int, \
-                                                              size_t*);
+#define DEFINE_KERNEL_WRAPPERS_FOR_TYPES(T)                                                                            \
+    template void Opm::gpuistl::detail::computeDiagIndicesNoReorder<T>(                                                \
+        const T*, const int*, const int*, const size_t*, int, size_t*);                                                \
+    template void Opm::gpuistl::detail::computeDiagIndices<T>(                                                         \
+        const T*, const int*, const int*, const int*, int, size_t*);
 
 DEFINE_KERNEL_WRAPPERS_FOR_TYPES(float)
 DEFINE_KERNEL_WRAPPERS_FOR_TYPES(double)

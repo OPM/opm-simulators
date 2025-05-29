@@ -21,28 +21,33 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <fmt/core.h>
+#include <functional>
 #include <limits>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/GraphColoring.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/autotuner.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuDILU.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/autotuner.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/coloringAndReorderingUtils.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/DILUKernels.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
-#include <tuple>
-#include <functional>
-#include <utility>
 #include <string>
+#include <tuple>
+#include <utility>
 
 namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
-GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuMatrix, const M& cpuMatrix, bool splitMatrix, bool tuneKernels, int mixedPrecisionScheme, bool reorder)
+GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuMatrix,
+                             const M& cpuMatrix,
+                             bool splitMatrix,
+                             bool tuneKernels,
+                             int mixedPrecisionScheme,
+                             bool reorder)
     : m_levelSets(Opm::getMatrixRowColoring(cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(detail::createReorderedToNatural(m_levelSets))
     , m_naturalToReordered(detail::createNaturalToReordered(m_levelSets))
@@ -59,8 +64,9 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
 {
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
     // Some sanity check
-    OPM_ERROR_IF(cpuMatrix.N() != m_gpuMatrix.N(),
-                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_gpuMatrix.N(), cpuMatrix.N()));
+    OPM_ERROR_IF(
+        cpuMatrix.N() != m_gpuMatrix.N(),
+        fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_gpuMatrix.N(), cpuMatrix.N()));
     OPM_ERROR_IF(cpuMatrix[0][0].N() != m_gpuMatrix.blockSize(),
                  fmt::format("CuSparse matrix not same blocksize as DUNE matrix. {} vs {}.",
                              m_gpuMatrix.blockSize(),
@@ -74,57 +80,56 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
                              m_gpuMatrix.nonzeroes(),
                              cpuMatrix.nonzeroes()));
     if (m_reorder && (m_splitMatrix || m_mixedPrecisionScheme != MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG)) {
-        OPM_THROW(std::runtime_error, "Reordering is only supported for full precision matrices without matrix splitting.");
+        OPM_THROW(std::runtime_error,
+                  "Reordering is only supported for full precision matrices without matrix splitting.");
     }
     if (m_splitMatrix) {
         m_gpuMatrixReorderedDiag = std::make_unique<GpuVector<field_type>>(blocksize_ * blocksize_ * cpuMatrix.N());
         std::tie(m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper)
             = detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrix<field_type>>(cpuMatrix,
-                                                                                              m_reorderedToNatural);
-    }
-    else {
+                                                                                               m_reorderedToNatural);
+    } else {
         m_gpuMatrixReordered = detail::createReorderedMatrix<M, field_type, GpuSparseMatrix<field_type>>(
             cpuMatrix, m_reorderedToNatural);
     }
 
     if (m_mixedPrecisionScheme != MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG) {
-        if (!m_splitMatrix){
+        if (!m_splitMatrix) {
             OPM_THROW(std::runtime_error, "Matrix must be split when storing as float.");
         }
-        m_gpuMatrixReorderedLowerFloat = std::make_unique<FloatMat>(m_gpuMatrixReorderedLower->getRowIndices(), m_gpuMatrixReorderedLower->getColumnIndices(), blocksize_);
-        m_gpuMatrixReorderedUpperFloat = std::make_unique<FloatMat>(m_gpuMatrixReorderedUpper->getRowIndices(), m_gpuMatrixReorderedUpper->getColumnIndices(), blocksize_);
+        m_gpuMatrixReorderedLowerFloat = std::make_unique<FloatMat>(
+            m_gpuMatrixReorderedLower->getRowIndices(), m_gpuMatrixReorderedLower->getColumnIndices(), blocksize_);
+        m_gpuMatrixReorderedUpperFloat = std::make_unique<FloatMat>(
+            m_gpuMatrixReorderedUpper->getRowIndices(), m_gpuMatrixReorderedUpper->getColumnIndices(), blocksize_);
 
         if (m_mixedPrecisionScheme == MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG) {
-            m_gpuDInvFloat = std::make_unique<FloatVec>(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize());
+            m_gpuDInvFloat
+                = std::make_unique<FloatVec>(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize());
         }
     }
 
     // Precompute diagaon indices and handle the actual reordering if that is enabled.
-    if (m_reorder){
-        detail::computeDiagIndices<field_type>(
-            m_gpuMatrixReordered->getNonZeroValues().data(),
-            m_gpuMatrixReordered->getRowIndices().data(),
-            m_gpuMatrixReordered->getColumnIndices().data(),
-            m_gpuReorderToNatural.data(),
-            m_gpuMatrix.N(),
-            m_diagIdxs.data());
+    if (m_reorder) {
+        detail::computeDiagIndices<field_type>(m_gpuMatrixReordered->getNonZeroValues().data(),
+                                               m_gpuMatrixReordered->getRowIndices().data(),
+                                               m_gpuMatrixReordered->getColumnIndices().data(),
+                                               m_gpuReorderToNatural.data(),
+                                               m_gpuMatrix.N(),
+                                               m_diagIdxs.data());
         reorderAndSplitMatrix(m_moveThreadBlockSize);
-    }
-    else{
-        detail::computeDiagIndicesNoReorder<field_type>(
-            m_gpuMatrix.getNonZeroValues().data(),
-            m_gpuMatrix.getRowIndices().data(),
-            m_gpuMatrix.getColumnIndices().data(),
-            m_gpuLevelSets.data(),
-            m_gpuMatrix.N(),
-            m_diagIdxs.data());
+    } else {
+        detail::computeDiagIndicesNoReorder<field_type>(m_gpuMatrix.getNonZeroValues().data(),
+                                                        m_gpuMatrix.getRowIndices().data(),
+                                                        m_gpuMatrix.getColumnIndices().data(),
+                                                        m_gpuLevelSets.data(),
+                                                        m_gpuMatrix.N(),
+                                                        m_diagIdxs.data());
     }
     computeDiagonal(m_DILUFactorizationThreadBlockSize);
 
     if (m_tuneThreadBlockSizes) {
         tuneThreadBlockSizes();
     }
-
 }
 
 template <class M, class X, class Y, int l>
@@ -154,7 +159,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d)
             apply(v, d, m_lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
 
             OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream.get(), &m_apply_graphs[ptrs].get()));
-            OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_executableGraphs[ptrs].get(), m_apply_graphs[ptrs].get(), nullptr, nullptr, 0));
+            OPM_GPU_SAFE_CALL(
+                cudaGraphInstantiate(&m_executableGraphs[ptrs].get(), m_apply_graphs[ptrs].get(), nullptr, nullptr, 0));
         }
         OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs].get(), 0));
     }
@@ -227,18 +233,17 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     lowerSolveThreadBlockSize,
                     m_stream.get());
             } else {
-                detail::DILU::solveLowerLevelSetNoReorder<field_type, blocksize_>(
-                    m_gpuMatrix.getNonZeroValues().data(),
-                    m_gpuMatrix.getRowIndices().data(),
-                    m_gpuMatrix.getColumnIndices().data(),
-                    m_gpuLevelSets.data(),
-                    levelStartIdx,
-                    numOfRowsInLevel,
-                    m_gpuDInv.data(),
-                    d.data(),
-                    v.data(),
-                    lowerSolveThreadBlockSize,
-                    m_stream.get());
+                detail::DILU::solveLowerLevelSetNoReorder<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
+                                                                                  m_gpuMatrix.getRowIndices().data(),
+                                                                                  m_gpuMatrix.getColumnIndices().data(),
+                                                                                  m_gpuLevelSets.data(),
+                                                                                  levelStartIdx,
+                                                                                  numOfRowsInLevel,
+                                                                                  m_gpuDInv.data(),
+                                                                                  d.data(),
+                                                                                  v.data(),
+                                                                                  lowerSolveThreadBlockSize,
+                                                                                  m_stream.get());
             }
         }
         levelStartIdx += numOfRowsInLevel;
@@ -250,7 +255,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
         const int numOfRowsInLevel = m_levelSets[level].size();
         levelStartIdx -= numOfRowsInLevel;
         if (m_splitMatrix) {
-            if (m_mixedPrecisionScheme == MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG){
+            if (m_mixedPrecisionScheme == MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG) {
                 detail::DILU::solveUpperLevelSetSplit<blocksize_, field_type, float>(
                     m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
                     m_gpuMatrixReorderedUpperFloat->getRowIndices().data(),
@@ -262,7 +267,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     v.data(),
                     upperSolveThreadBlockSize,
                     m_stream.get());
-            } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG){
+            } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG) {
                 detail::DILU::solveUpperLevelSetSplit<blocksize_, field_type, float>(
                     m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
                     m_gpuMatrixReorderedUpperFloat->getRowIndices().data(),
@@ -301,17 +306,16 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     upperSolveThreadBlockSize,
                     m_stream.get());
             } else {
-                detail::DILU::solveUpperLevelSetNoReorder<field_type, blocksize_>(
-                    m_gpuMatrix.getNonZeroValues().data(),
-                    m_gpuMatrix.getRowIndices().data(),
-                    m_gpuMatrix.getColumnIndices().data(),
-                    m_gpuLevelSets.data(),
-                    levelStartIdx,
-                    numOfRowsInLevel,
-                    m_gpuDInv.data(),
-                    v.data(),
-                    upperSolveThreadBlockSize,
-                    m_stream.get());
+                detail::DILU::solveUpperLevelSetNoReorder<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
+                                                                                  m_gpuMatrix.getRowIndices().data(),
+                                                                                  m_gpuMatrix.getColumnIndices().data(),
+                                                                                  m_gpuLevelSets.data(),
+                                                                                  levelStartIdx,
+                                                                                  numOfRowsInLevel,
+                                                                                  m_gpuDInv.data(),
+                                                                                  v.data(),
+                                                                                  upperSolveThreadBlockSize,
+                                                                                  m_stream.get());
             }
         }
     }
@@ -381,12 +385,12 @@ GpuDILU<M, X, Y, l>::reorderAndSplitMatrix(int moveThreadBlockSize)
             moveThreadBlockSize);
     } else {
         detail::copyMatDataToReordered<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
-                                                                m_gpuMatrix.getRowIndices().data(),
-                                                                m_gpuMatrixReordered->getNonZeroValues().data(),
-                                                                m_gpuMatrixReordered->getRowIndices().data(),
-                                                                m_gpuNaturalToReorder.data(),
-                                                                m_gpuMatrixReordered->N(),
-                                                                moveThreadBlockSize);
+                                                               m_gpuMatrix.getRowIndices().data(),
+                                                               m_gpuMatrixReordered->getNonZeroValues().data(),
+                                                               m_gpuMatrixReordered->getRowIndices().data(),
+                                                               m_gpuNaturalToReorder.data(),
+                                                               m_gpuMatrixReordered->N(),
+                                                               moveThreadBlockSize);
     }
 }
 
@@ -399,7 +403,10 @@ GpuDILU<M, X, Y, l>::computeDiagonal(int factorizationBlockSize)
         const int numOfRowsInLevel = m_levelSets[level].size();
         if (m_splitMatrix) {
             if (m_mixedPrecisionScheme == MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG) {
-                detail::DILU::computeDiluDiagonalSplit<blocksize_, field_type, float, MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG>(
+                detail::DILU::computeDiluDiagonalSplit<blocksize_,
+                                                       field_type,
+                                                       float,
+                                                       MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
                     m_gpuMatrixReorderedLower->getRowIndices().data(),
                     m_gpuMatrixReorderedLower->getColumnIndices().data(),
@@ -417,7 +424,10 @@ GpuDILU<M, X, Y, l>::computeDiagonal(int factorizationBlockSize)
                     m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
                     factorizationBlockSize);
             } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG) {
-                detail::DILU::computeDiluDiagonalSplit<blocksize_, field_type, float, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(
+                detail::DILU::computeDiluDiagonalSplit<blocksize_,
+                                                       field_type,
+                                                       float,
+                                                       MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
                     m_gpuMatrixReorderedLower->getRowIndices().data(),
                     m_gpuMatrixReorderedLower->getColumnIndices().data(),
@@ -436,7 +446,10 @@ GpuDILU<M, X, Y, l>::computeDiagonal(int factorizationBlockSize)
                     factorizationBlockSize);
             } else {
                 // TODO: should this be field type twice or field type then float in the template?
-                detail::DILU::computeDiluDiagonalSplit<blocksize_, field_type, float, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(
+                detail::DILU::computeDiluDiagonalSplit<blocksize_,
+                                                       field_type,
+                                                       float,
+                                                       MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
                     m_gpuMatrixReorderedLower->getRowIndices().data(),
                     m_gpuMatrixReorderedLower->getColumnIndices().data(),
@@ -490,41 +503,45 @@ GpuDILU<M, X, Y, l>::tuneThreadBlockSizes()
 {
     if (m_reorder) {
         // tune the thread-block size of the update function
-        auto tuneMoveThreadBlockSizeInUpdate = [this](int moveThreadBlockSize){
+        auto tuneMoveThreadBlockSizeInUpdate = [this](int moveThreadBlockSize) {
             this->update(moveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
         };
-        m_moveThreadBlockSize = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate, "(in DILU update) Move data to reordered matrix");
+        m_moveThreadBlockSize = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate,
+                                                            "(in DILU update) Move data to reordered matrix");
     }
 
-    auto tuneFactorizationThreadBlockSizeInUpdate = [this](int factorizationThreadBlockSize){
+    auto tuneFactorizationThreadBlockSizeInUpdate = [this](int factorizationThreadBlockSize) {
         this->update(m_moveThreadBlockSize, factorizationThreadBlockSize);
     };
-    m_DILUFactorizationThreadBlockSize = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate, "(in DILU update) DILU factorization");
+    m_DILUFactorizationThreadBlockSize
+        = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate, "(in DILU update) DILU factorization");
 
     // tune the thread-block size of the apply
     GpuVector<field_type> tmpV(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
     GpuVector<field_type> tmpD(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
     tmpD = 1;
 
-    auto tuneLowerSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int lowerSolveThreadBlockSize){
+    auto tuneLowerSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int lowerSolveThreadBlockSize) {
         this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
     };
-    m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneLowerSolveThreadBlockSizeInApply, "(in DILU apply) Triangular lower solve");
+    m_lowerSolveThreadBlockSize
+        = detail::tuneThreadBlockSize(tuneLowerSolveThreadBlockSizeInApply, "(in DILU apply) Triangular lower solve");
 
-    auto tuneUpperSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int upperSolveThreadBlockSize){
+    auto tuneUpperSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int upperSolveThreadBlockSize) {
         this->apply(tmpV, tmpD, m_lowerSolveThreadBlockSize, upperSolveThreadBlockSize);
     };
-    m_upperSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneUpperSolveThreadBlockSizeInApply, "(in DILU apply) Triangular upper solve");
+    m_upperSolveThreadBlockSize
+        = detail::tuneThreadBlockSize(tuneUpperSolveThreadBlockSizeInApply, "(in DILU apply) Triangular upper solve");
 }
 
 } // namespace Opm::gpuistl
-#define INSTANTIATE_CUDILU_DUNE(realtype, blockdim)                                                                      \
-    template class ::Opm::gpuistl::GpuDILU<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,            \
-                                         ::Opm::gpuistl::GpuVector<realtype>,                                            \
-                                         ::Opm::gpuistl::GpuVector<realtype>>;                                           \
-    template class ::Opm::gpuistl::GpuDILU<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,             \
-                                         ::Opm::gpuistl::GpuVector<realtype>,                                            \
-                                         ::Opm::gpuistl::GpuVector<realtype>>
+#define INSTANTIATE_CUDILU_DUNE(realtype, blockdim)                                                                    \
+    template class ::Opm::gpuistl::GpuDILU<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,          \
+                                           ::Opm::gpuistl::GpuVector<realtype>,                                        \
+                                           ::Opm::gpuistl::GpuVector<realtype>>;                                       \
+    template class ::Opm::gpuistl::GpuDILU<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,           \
+                                           ::Opm::gpuistl::GpuVector<realtype>,                                        \
+                                           ::Opm::gpuistl::GpuVector<realtype>>
 
 INSTANTIATE_CUDILU_DUNE(double, 1);
 INSTANTIATE_CUDILU_DUNE(double, 2);
