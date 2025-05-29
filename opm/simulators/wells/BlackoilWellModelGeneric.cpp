@@ -1286,7 +1286,8 @@ void BlackoilWellModelGeneric<Scalar>::
 updateAndCommunicateGroupData(const int reportStepIdx,
                               const int iterationIdx,
                               const Scalar tol_nupcol,
-                              DeferredLogger& deferred_logger)
+                              DeferredLogger& deferred_logger,
+                              bool update_wellgrouptarget)
 {
     OPM_TIMEFUNCTION();
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
@@ -1423,6 +1424,77 @@ updateAndCommunicateGroupData(const int reportStepIdx,
 
     well_state.communicateGroupRates(comm_);
     this->groupState().communicate_rates(comm_);
+
+    if (update_wellgrouptarget) {
+        for (const auto& well : well_container_generic_) {
+            const auto& ws = this->wellState().well(well->indexOfWell());
+            const auto& group = this->schedule().getGroup(well->wellEcl().groupName(), well->currentStep());
+            std::vector<Scalar> resv_coeff(well->phaseUsage().num_phases, 0.0);
+            const int fipnum = 0;
+            int pvtreg = well->pvtRegionIdx();
+            calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
+            const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
+                                    ws.efficiency_scaling_factor;
+            // Translate injector type from control to Phase.
+            Scalar group_target = std::numeric_limits<Scalar>::max();
+            if (well->isProducer()) {
+                group_target = WellGroupHelpers<Scalar>::getGroupTargetProd(well->name(),
+                                            well->wellEcl().groupName(),
+                                            group,
+                                            this->wellState(),
+                                            this->groupState(),
+                                            well->currentStep(),
+                                            well->guideRate(),
+                                            ws.surface_rates.data(),
+                                            well->phaseUsage(),
+                                            efficiencyFactor,
+                                            this->schedule(),
+                                            summaryState_,
+                                            resv_coeff,
+                                            deferred_logger);
+            } else {
+                const auto& well_controls = well->wellEcl().injectionControls(summaryState_);
+                auto injectorType = well_controls.injector_type;
+                Phase injectionPhase;
+                switch (injectorType) {
+                case InjectorType::WATER:
+                {
+                    injectionPhase = Phase::WATER;
+                    break;
+                }
+                case InjectorType::OIL:
+                {
+                    injectionPhase = Phase::OIL;
+                    break;
+                }
+                case InjectorType::GAS:
+                {
+                    injectionPhase = Phase::GAS;
+                    break;
+                }
+                default:
+                    throw("Expected WATER, OIL or GAS as type for injector " + well->name());
+                }
+                group_target = WellGroupHelpers<Scalar>::getGroupTargetInj(well->name(),
+                                            well->wellEcl().groupName(),
+                                            group,
+                                            this->wellState(),
+                                            this->groupState(),
+                                            well->currentStep(),
+                                            well->guideRate(),
+                                            ws.surface_rates.data(),
+                                            injectionPhase,
+                                            well->phaseUsage(),
+                                            efficiencyFactor,
+                                            this->schedule(),
+                                            summaryState_,
+                                            resv_coeff,
+                                            deferred_logger);
+            }
+            auto& ws_update = this->wellState().well(well->indexOfWell());
+            ws_update.group_target = group_target;
+        }
+    }
 }
 
 template<class Scalar>

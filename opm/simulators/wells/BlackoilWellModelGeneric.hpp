@@ -438,7 +438,8 @@ protected:
     void updateAndCommunicateGroupData(const int reportStepIdx,
                                        const int iterationIdx,
                                        const Scalar tol_nupcol,
-                                       DeferredLogger& deferred_logger);
+                                       DeferredLogger& deferred_logger,
+                                       bool update_wellgrouptarget = true);
 
     void inferLocalShutWells();
 
