@@ -380,7 +380,7 @@ private:
             m_gpuSolver = std::make_unique<SolverType>(
                 *m_matrix, parallel, m_propertyTree, pressureIndex, weightsCalculator, m_forceSerial, nullptr);
         } else {
-            m_matrix->updateNonzeroValues(M);
+            m_matrix->updateNonzeroValues(M, true);
             m_gpuSolver->update();
         }
     }
