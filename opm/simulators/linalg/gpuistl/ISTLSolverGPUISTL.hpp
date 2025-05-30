@@ -165,22 +165,7 @@ public:
 
 
         m_lastSeenIterations = result.iterations;
-        if (!result.converged) {
-            if (result.reduction < m_parameters.relaxed_linear_solver_reduction_) {
-                std::stringstream ss;
-                ss << "Full linear solver tolerance not achieved. The reduction is:" << result.reduction << " after "
-                   << result.iterations << " iterations ";
-                OpmLog::warning(ss.str());
-                return true;
-            }
-        }
-        // Check for failure of linear solver.
-        if (!m_parameters.ignoreConvergenceFailure_ && !result.converged) {
-            const std::string msg("Convergence failure for linear solver.");
-            OPM_THROW_NOLOG(NumericalProblem, msg);
-        }
-
-        return result.converged;
+        return checkConvergence(result);
     }
 
     int iterations() const override
@@ -200,6 +185,26 @@ public:
     }
 
 private:
+    bool checkConvergence(const Dune::InverseOperatorResult& result) const
+    {
+       if (!result.converged) {
+            if (result.reduction < m_parameters.relaxed_linear_solver_reduction_) {
+                std::stringstream ss;
+                ss << "Full linear solver tolerance not achieved. The reduction is:" << result.reduction << " after "
+                   << result.iterations << " iterations ";
+                OpmLog::warning(ss.str());
+                return true;
+            }
+        }
+        // Check for failure of linear solver.
+        if (!m_parameters.ignoreConvergenceFailure_ && !result.converged) {
+            const std::string msg("Convergence failure for linear solver.");
+            OPM_THROW_NOLOG(NumericalProblem, msg);
+        }
+
+        return result.converged;
+    }
+
     void updateMatrix(const Matrix& M) {
         if (!m_matrix) {
 
