@@ -1211,20 +1211,6 @@ groupControlledWells(const Schedule& schedule,
                                                         pu);
 
             if (group_guide_rate > 0) {
-                // Guide rate is not default for the auto choke group
-                // Scalar gratTargetFromSales = 0.0;
-                // if (group_state.has_grat_sales_target(control_group_name))
-                //     gratTargetFromSales = group_state.grat_sales_target(control_group_name);
-
-                // std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
-                // WGHelpers::TargetCalculator tcalc(control_group_cmode,
-                //                                 pu,
-                //                                 resv_coeff,
-                //                                 gratTargetFromSales,
-                //                                 group.name(),
-                //                                 group_state,
-                //                                 group.has_gpmaint_control(control_group_cmode));
-                // auto deferred_logger = Opm::DeferredLogger();
                 const auto& ctrl = control_group.productionControls(summary_state);
                 const auto& control_group_target = tcalc.groupTarget(ctrl, deferred_logger);
 
