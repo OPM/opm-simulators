@@ -20,6 +20,18 @@
 
 namespace Opm
 {
+
+/**
+ * \brief Abstract interface for ISTL solvers.
+ *
+ * This class defines the interface for ISTL solvers used in OPM.
+ * It provides methods for preparing the solver, setting and getting
+ * residuals, solving the system, and managing communication.
+ *
+ * \note This class is used in the ISTLSolverRuntimeOptionProxy which we
+ *       where we can set the solver type at runtime, and this proxy holds a 
+ *       pointer to an instance of this class.
+ */
 template <class TypeTag>
 class AbstractISTLSolver
 {
