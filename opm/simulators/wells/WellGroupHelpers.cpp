@@ -908,6 +908,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                         const GroupState<Scalar>& group_state,
                         const VFPProdProperties<Scalar>& vfp_prod_props,
                         const Schedule& schedule,
+                        const Parallel::Communication& comm,
                         const int report_time_step)
 {
     // TODO: Only dealing with production networks for now.
@@ -958,13 +959,18 @@ computeNetworkPressures(const Network::ExtNetwork& network,
             // Add the ALQ amounts to the gas rates if requested.
             if (network.node(node).add_gas_lift_gas()) {
                 const auto& group = schedule.getGroup(node, report_time_step);
+                Scalar alq = 0.0;
                 for (const std::string& wellname : group.wells()) {
                     const Well& well = schedule.getWell(wellname, report_time_step);
-
                     if (well.isInjector() || !well_state.isOpen(wellname)) continue;
                     const Scalar efficiency = well.getEfficiencyFactor(/*network*/ true) * well_state.getGlobalEfficiencyScalingFactor(wellname);
-                    node_inflows[node][BlackoilPhases::Vapour] += well_state.getALQ(wellname) * efficiency;
+                    const auto& well_index = well_state.index(wellname);
+                    if (well_index.has_value() && well_state.wellIsOwned(well_index.value(), wellname)) {
+                        alq += well_state.well(wellname).alq_state.get() * efficiency;
+                    }
                 }
+                alq = comm.sum(alq);
+                node_inflows[node][BlackoilPhases::Vapour] +=  alq;
             }
         }
 

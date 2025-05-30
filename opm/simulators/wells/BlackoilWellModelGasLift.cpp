@@ -55,7 +55,7 @@ gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<Scalar>*>& well_contain
 {
     for (const auto& well : well_container) {
         if (well->isProducer()) {
-            auto alq = wellState.getALQ(well->name());
+            const auto alq = wellState.well(well->name()).alq_state.get();
             const std::string msg = fmt::format("ALQ_REPORT : {} : {}",
                                                 well->name(), alq);
             gliftDebug(msg, deferred_logger);

@@ -121,7 +121,7 @@ addOrRemoveALQincrement_(GradMap &grad_map,
             well_name, (add ? "adding" : "subtracting"), old_alq, new_alq);
         this->displayDebugMessage_(msg);
     }
-    this->well_state_.setALQ(well_name, gi.alq);
+    this->well_state_.well(well_name).alq_state.set(gi.alq);
     const auto& pu = this->well_state_.phaseUsage();
     std::vector<Scalar> well_pot(pu.num_phases, 0.0);
     if (pu.phase_used[BlackoilPhases::PhaseIndex::Liquid])

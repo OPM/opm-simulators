@@ -353,17 +353,19 @@ template<class Scalar>
 bool GasLiftGroupInfo<Scalar>::
 checkDoGasLiftOptimization_(const std::string& well_name)
 {
-    if (this->well_state_.gliftCheckAlqOscillation(well_name)) {
-        displayDebugMessage_(
-             "further optimization skipped due to oscillation in ALQ", well_name);
-        return false;
-    }
     auto itr = this->ecl_wells_.find(well_name);
     if (itr == this->ecl_wells_.end()) {
         // well_name is not present in the well_model's well container
         //displayDebugMessage_("Could not find well in ecl_wells. Skipping.", well_name);
         return false;
     }
+
+    if (this->well_state_.well(well_name).alq_state.oscillation()) {
+        displayDebugMessage_(
+             "further optimization skipped due to oscillation in ALQ", well_name);
+        return false;
+    }
+
     const Well *well = (itr->second).first;
     //assert(well); // Should never be nullptr
     if (well->isInjector()) {
@@ -583,7 +585,7 @@ initializeGroupRatesRecursive_(const Group& group)
                 const int index = (itr->second).second;
                 if (well->isProducer()) {
                     auto [sw_oil_rate, sw_gas_rate, sw_water_rate, sw_oil_pot, sw_gas_pot, sw_water_pot] = getProducerWellRates_(well, index);
-                    auto sw_alq = this->well_state_.getALQ(well_name);
+                    auto sw_alq = this->well_state_.well(well_name).alq_state.get();
                     const Scalar factor = well->getEfficiencyFactor() *
                                           this->well_state_.getGlobalEfficiencyScalingFactor(well_name);
                     oil_rate += (factor * sw_oil_rate);

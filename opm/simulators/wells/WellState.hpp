@@ -30,7 +30,6 @@
 
 #include <opm/output/data/Wells.hpp>
 
-#include <opm/simulators/wells/ALQState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
@@ -195,56 +194,6 @@ public:
         return this->global_well_info.value().efficiency_scaling_factor(name);
     }
 
-    Scalar getALQ(const std::string& name) const
-    {
-        return this->alq_state.get(name);
-    }
-
-    void setALQ(const std::string& name, Scalar value)
-    {
-        this->alq_state.set(name, value);
-    }
-
-    int gliftGetDebugCounter()
-    {
-        return this->alq_state.get_debug_counter();
-    }
-
-    void gliftSetDebugCounter(int value)
-    {
-        return this->alq_state.set_debug_counter(value);
-    }
-
-    int gliftUpdateDebugCounter()
-    {
-        return this->alq_state.update_debug_counter();
-    }
-
-    bool gliftCheckAlqOscillation(const std::string &name) const
-    {
-        return this->alq_state.oscillation(name);
-    }
-
-    int gliftGetAlqDecreaseCount(const std::string &name)
-    {
-        return this->alq_state.get_decrement_count(name);
-    }
-
-    int gliftGetAlqIncreaseCount(const std::string &name)
-    {
-        return this->alq_state.get_increment_count(name);
-    }
-
-    void gliftUpdateAlqIncreaseCount(const std::string &name, bool increase)
-    {
-        this->alq_state.update_count(name, increase);
-    }
-
-    void gliftTimeStepInit()
-    {
-        this->alq_state.reset_count();
-    }
-
     // If the ALQ has changed since the previous time step,
     // reset current_alq and update default_alq. ALQ is used for
     // constant lift gas injection and for gas lift optimization
@@ -252,6 +201,14 @@ public:
     void updateWellsDefaultALQ(const Schedule& schedule,
                               const int report_step,
                               const SummaryState& summary_state);
+
+    void gliftTimeStepInit()
+    {
+        for (size_t i = 0; i < this->size(); ++i) {
+            this->wells_[i].alq_state.reset_count();
+        }
+    }
+
 
     int wellNameToGlobalIdx(const std::string& name)
     {
@@ -277,10 +234,6 @@ public:
     void openWell(int well_index);
     void shutWell(int well_index);
     void stopWell(int well_index);
-
-    void switchToProducer(const std::string& name) {
-        alq_state.insert(name);
-    }
 
     /// The number of phases present.
     int numPhases() const
@@ -359,7 +312,6 @@ public:
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
-        serializer(alq_state);
         serializer(well_rates);
         if (serializer.isSerializing()) {
             serializer(wells_.size());
@@ -390,14 +342,13 @@ private:
     // well might appear in the WellContainer on different processes.
     WellContainer<SingleWellState<Scalar>> wells_;
 
-    // The members alq_state, global_well_info and well_rates are map like
+    // The members global_well_info and well_rates are map like
     // structures which will have entries for *all* the wells in the system.
 
     // Use of std::optional<> here is a technical crutch, the
     // WellStateFullyImplicitBlackoil class should be default constructible,
     // whereas the GlobalWellInfo is not.
     std::optional<GlobalWellInfo<Scalar>> global_well_info;
-    ALQState<Scalar> alq_state;
 
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or

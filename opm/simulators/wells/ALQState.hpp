@@ -21,7 +21,9 @@
 #define OPM_ALQ_STATE_HEADER_INCLUDED
 
 #include <map>
+#include <optional>
 #include <string>
+
 
 namespace Opm {
 
@@ -31,22 +33,14 @@ class ALQState
 public:
     static ALQState serializationTestObject();
 
-    std::size_t pack_size() const;
-    std::size_t unpack_data(const Scalar* data);
-    std::size_t pack_data(Scalar* data) const;
-
-    Scalar get(const std::string& wname) const;
-    void update_default(const std::string& wname, Scalar value);
-    void insert(const std::string& wname);
-    void set(const std::string& wname, Scalar value);
-    bool oscillation(const std::string& wname) const;
-    void update_count(const std::string& wname, bool increase);
+    Scalar get() const;
+    void update_default(Scalar value);
+    void set(Scalar value);
+    bool oscillation() const;
+    void update_count(bool increase);
     void reset_count();
-    int  get_increment_count(const std::string& wname) const;
-    int  get_decrement_count(const std::string& wname) const;
-    void set_debug_counter(int value);
-    int  get_debug_counter();
-    int  update_debug_counter();
+    int  get_increment_count() const;
+    int  get_decrement_count() const;
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -55,17 +49,15 @@ public:
         serializer(default_alq_);
         serializer(alq_increase_count_);
         serializer(alq_decrease_count_);
-        serializer(debug_counter_);
     }
 
     bool operator==(const ALQState&) const;
 
 private:
-    std::map<std::string, Scalar> current_alq_;
-    std::map<std::string, Scalar> default_alq_;
-    std::map<std::string, int> alq_increase_count_;
-    std::map<std::string, int> alq_decrease_count_;
-    int debug_counter_ = 0;
+    std::optional<Scalar> current_alq_;
+    Scalar default_alq_{0.0};
+    int alq_increase_count_{0};
+    int alq_decrease_count_{0};
 };
 
 }

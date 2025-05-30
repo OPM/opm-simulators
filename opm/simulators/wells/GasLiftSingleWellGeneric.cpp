@@ -155,7 +155,7 @@ runOptimize(const int iteration_idx)
                 Scalar alq = state->alq();
                 if (this->debug)
                     logSuccess_(alq, iteration_idx);
-                this->well_state_.setALQ(this->well_name_, alq);
+                this->well_state_.well(this->well_name_).alq_state.set(alq);
                 const auto& pu = this->phase_usage_;
                 std::vector<Scalar> well_pot(pu.num_phases, 0.0);
                 if (pu.phase_used[BlackoilPhases::PhaseIndex::Liquid])
@@ -235,7 +235,7 @@ wellTestALQ()
         warnMaxIterationsExceeded_();
     }
     if (success) {
-        this->well_state_.gliftUpdateAlqIncreaseCount(this->well_name_, increase);
+        this->well_state_.well(this->well_name_).alq_state.update_count(increase);
     }
     return {cur_alq, success};
 }
@@ -481,8 +481,8 @@ template<class Scalar>
 void GasLiftSingleWellGeneric<Scalar>::
 debugShowAlqIncreaseDecreaseCounts_()
 {
-    auto inc_count = this->well_state_.gliftGetAlqIncreaseCount(this->well_name_);
-    auto dec_count = this->well_state_.gliftGetAlqDecreaseCount(this->well_name_);
+    auto inc_count = this->well_state_.well(this->well_name_).alq_state.get_increment_count();
+    auto dec_count = this->well_state_.well(this->well_name_).alq_state.get_decrement_count();
     const std::string msg = fmt::format("ALQ increase/decrease count : {}/{}", inc_count, dec_count);
     displayDebugMessage_(msg);
 }
@@ -1423,7 +1423,7 @@ runOptimizeLoop_(bool increase)
     }
     std::optional<bool> increase_opt;
     if (success) {
-        this->well_state_.gliftUpdateAlqIncreaseCount(this->well_name_, increase);
+        this->well_state_.well(this->well_name_).alq_state.update_count(increase);
         increase_opt = increase;
     } else {
         increase_opt = std::nullopt;
@@ -1446,8 +1446,8 @@ GasLiftSingleWellGeneric<Scalar>::runOptimize1_()
 {
     OPM_TIMEFUNCTION();
     std::unique_ptr<GasLiftWellState<Scalar>> state;
-    int inc_count = this->well_state_.gliftGetAlqIncreaseCount(this->well_name_);
-    int dec_count = this->well_state_.gliftGetAlqDecreaseCount(this->well_name_);
+    const int inc_count = this->well_state_.well(this->well_name_).alq_state.get_increment_count();
+    const int dec_count = this->well_state_.well(this->well_name_).alq_state.get_decrement_count();
     if (dec_count == 0 && inc_count == 0) {
         state = tryIncreaseLiftGas_();
         if (!state || !(state->alqChanged())) {
@@ -1599,7 +1599,7 @@ updateWellStateAlqFixedValue_(const GasLiftWell& well)
         // If item 2 is NO, then item 3 is regarded as the fixed
         // lift gas injection rate for the well.
         auto new_alq = *max_alq_optional;
-        this->well_state_.setALQ(this->well_name_, new_alq);
+        this->well_state_.well(this->well_name_).alq_state.set(new_alq);
     }
     // else {
     //    // If item 3 is defaulted, the lift gas rate remains

@@ -862,12 +862,8 @@ updateEclWellsConstraints(const int              timeStepIdx,
                          (const auto wellIdx, const auto& well)
     {
         auto& ws = this->wellState().well(wellIdx);
-
         ws.updateStatus(well.getStatus());
-        auto switchToProducer = ws.update_type_and_targets(well, st);
-        if (switchToProducer) {
-            this->wellState().switchToProducer(well.name());
-        }
+        ws.update_type_and_targets(well, st);
     });
 }
 
@@ -1252,6 +1248,7 @@ assignNodeValues(std::map<std::string, data::NodeData>& nodevalues,
                                                                                  this->groupState(),
                                                                                  *(vfp_properties_->getProd()),
                                                                                  schedule(),
+                                                                                 comm_,
                                                                                  reportStepIdx);
     for (const auto& [node, converged_pressure] : converged_pressures) {
         auto it = nodevalues.find(node);
@@ -1424,15 +1421,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                               well_state_nupcol,
                                               well_state);
 
-    // Set ALQ for off-process wells to zero
-    for (const auto& wname : schedule().wellNames(reportStepIdx)) {
-        const bool is_producer = schedule().getWell(wname, reportStepIdx).isProducer();
-        const bool not_on_this_process = !well_state.has(wname);
-        if (is_producer && not_on_this_process) {
-            well_state.setALQ(wname, 0.0);
-        }
-    }
-
     well_state.communicateGroupRates(comm_);
     this->groupState().communicate_rates(comm_);
 }
@@ -1570,6 +1558,7 @@ updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor, con
                                                                         this->groupState(),
                                                                         *(vfp_properties_->getProd()),
                                                                         schedule(),
+                                                                        comm_,
                                                                         reportStepIdx);
 
     // here, the network imbalance is the difference between the previous nodal pressure and the new nodal pressure

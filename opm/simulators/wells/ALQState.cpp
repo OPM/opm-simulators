@@ -32,146 +32,69 @@ template<class Scalar>
 ALQState<Scalar> ALQState<Scalar>::serializationTestObject()
 {
     ALQState result;
-    result.current_alq_ = {{"test1", 1.0}};
-    result.default_alq_ = {{"test2", 2.0}, {"test3", 3.0}};
-    result.alq_increase_count_= {{"test4", 4}};
-    result.alq_decrease_count_= {{"test5", 5}};
-    result.debug_counter_ = 6;
-
+    result.current_alq_ = {1.0};
+    result.default_alq_ = {2.0};
+    result.alq_increase_count_= {4};
+    result.alq_decrease_count_= {5};
     return result;
 }
 
 template<class Scalar>
-void ALQState<Scalar>::insert(const std::string& wname)
+Scalar ALQState<Scalar>::get() const
 {
-    this->current_alq_.emplace(wname, 0.0);
+    if (this->current_alq_)
+        return *this->current_alq_;
+
+    return this->default_alq_;
 }
 
 template<class Scalar>
-Scalar ALQState<Scalar>::get(const std::string& wname) const
+void ALQState<Scalar>::update_default(Scalar value)
 {
-    auto iter = this->current_alq_.find(wname);
-    if (iter != this->current_alq_.end())
-        return iter->second;
-
-    auto default_iter = this->default_alq_.find(wname);
-    if (default_iter != this->default_alq_.end())
-        return default_iter->second;
-
-    throw std::logic_error("No ALQ value registered for well: " + wname);
-}
-
-template<class Scalar>
-void ALQState<Scalar>::update_default(const std::string& wname, Scalar value)
-{
-    auto default_iter = this->default_alq_.find(wname);
-    if (default_iter == this->default_alq_.end() || default_iter->second != value) {
-        this->default_alq_.insert_or_assign(wname, value);
-        this->current_alq_.insert_or_assign(wname, value);
+    if (default_alq_ != value) {
+        this->default_alq_ = value;
+        this->current_alq_ = value;
     }
 }
 
 template<class Scalar>
-void ALQState<Scalar>::set(const std::string& wname, Scalar value)
+void ALQState<Scalar>::set(Scalar value)
 {
-    this->current_alq_[wname] = value;
+    this->current_alq_ = value;
 }
 
 template<class Scalar>
-int ALQState<Scalar>::get_debug_counter()
+bool ALQState<Scalar>::oscillation() const
 {
-    return this->debug_counter_;
+    return this->alq_increase_count_ > 0 && this->alq_decrease_count_ >= 1;
 }
 
 template<class Scalar>
-int ALQState<Scalar>::update_debug_counter()
-{
-    this->debug_counter_++;
-    return this->debug_counter_;
-}
-
-template<class Scalar>
-void ALQState<Scalar>::set_debug_counter(int value)
-{
-    this->debug_counter_ = value;
-}
-
-namespace {
-
-int get_counter(const std::map<std::string, int>& count_map, const std::string& wname) {
-    auto count_iter = count_map.find(wname);
-    if (count_iter == count_map.end())
-        return 0;
-    return count_iter->second;
-}
-
-}
-
-template<class Scalar>
-bool ALQState<Scalar>::oscillation(const std::string& wname) const
-{
-    auto inc_count = get_counter(this->alq_increase_count_, wname);
-    if (inc_count == 0)
-        return false;
-
-    auto dec_count = get_counter(this->alq_decrease_count_, wname);
-    return dec_count >= 1;
-}
-
-template<class Scalar>
-void ALQState<Scalar>::update_count(const std::string& wname, bool increase)
+void ALQState<Scalar>::update_count(bool increase)
 {
     if (increase)
-        this->alq_increase_count_[wname] += 1;
+        this->alq_increase_count_ += 1;
     else
-        this->alq_decrease_count_[wname] += 1;
+        this->alq_decrease_count_ += 1;
 }
 
 template<class Scalar>
 void ALQState<Scalar>::reset_count()
 {
-    this->alq_decrease_count_.clear();
-    this->alq_increase_count_.clear();
+    this->alq_decrease_count_ = 0;
+    this->alq_increase_count_ = 0;
 }
 
 template<class Scalar>
-int ALQState<Scalar>::get_increment_count(const std::string& wname) const
+int ALQState<Scalar>::get_increment_count() const
 {
-    return get_counter(this->alq_increase_count_, wname);
+    return this->alq_increase_count_;
 }
 
 template<class Scalar>
-int ALQState<Scalar>::get_decrement_count(const std::string& wname) const
+int ALQState<Scalar>::get_decrement_count() const
 {
-    return get_counter(this->alq_decrease_count_, wname);
-}
-
-template<class Scalar>
-std::size_t ALQState<Scalar>::pack_size() const
-{
-    return this->current_alq_.size();
-}
-
-template<class Scalar>
-std::size_t ALQState<Scalar>::pack_data(Scalar* data) const
-{
-    std::size_t index = 0;
-    for (const auto& [_, value] : this->current_alq_) {
-        (void)_;
-        data[index++] = value;
-    }
-    return index;
-}
-
-template<class Scalar>
-std::size_t ALQState<Scalar>::unpack_data(const Scalar* data)
-{
-    std::size_t index = 0;
-    for (auto& [_, value] : this->current_alq_) {
-        (void)_;
-        value = data[index++];
-    }
-    return index;
+    return this->alq_decrease_count_;
 }
 
 template<class Scalar>
@@ -180,8 +103,7 @@ bool ALQState<Scalar>::operator==(const ALQState& rhs) const
     return this->current_alq_ == rhs.current_alq_ &&
            this->default_alq_ == rhs.default_alq_ &&
            this->alq_increase_count_ == rhs.alq_increase_count_ &&
-           this->alq_decrease_count_ == rhs.alq_decrease_count_ &&
-           this->debug_counter_ == rhs.debug_counter_;
+           this->alq_decrease_count_ == rhs.alq_decrease_count_;
 }
 
 template class ALQState<double>;
