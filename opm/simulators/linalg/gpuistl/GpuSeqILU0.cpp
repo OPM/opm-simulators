@@ -125,7 +125,7 @@ void
 GpuSeqILU0<M, X, Y, l>::update()
 {
     if constexpr (is_gpu_matrix_v<M>) {
-        m_LU.updateNonzeroValues(detail::makeMatrixWithNonzeroDiagonal(m_underlyingMatrix));
+        m_LU.updateNonzeroValues(detail::makeMatrixWithNonzeroDiagonal(m_underlyingMatrix), true);
     } else {
         m_LU.updateNonzeroValues(m_underlyingMatrix);
     }
