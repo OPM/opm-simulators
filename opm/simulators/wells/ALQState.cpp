@@ -66,12 +66,7 @@ void ALQState<Scalar>::set(Scalar value)
 template<class Scalar>
 bool ALQState<Scalar>::oscillation() const
 {
-    auto inc_count = this->alq_increase_count_;
-    if (inc_count == 0)
-        return false;
-
-    auto dec_count = this->alq_decrease_count_;
-    return dec_count >= 1;
+    return this->alq_increase_count_ > 0 && this->alq_decrease_count_ >= 1;
 }
 
 template<class Scalar>

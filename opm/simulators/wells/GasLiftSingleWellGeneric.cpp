@@ -1446,8 +1446,8 @@ GasLiftSingleWellGeneric<Scalar>::runOptimize1_()
 {
     OPM_TIMEFUNCTION();
     std::unique_ptr<GasLiftWellState<Scalar>> state;
-    int inc_count = this->well_state_.well(this->well_name_).alq_state.get_increment_count();
-    int dec_count = this->well_state_.well(this->well_name_).alq_state.get_decrement_count();
+    const int inc_count = this->well_state_.well(this->well_name_).alq_state.get_increment_count();
+    const int dec_count = this->well_state_.well(this->well_name_).alq_state.get_decrement_count();
     if (dec_count == 0 && inc_count == 0) {
         state = tryIncreaseLiftGas_();
         if (!state || !(state->alqChanged())) {

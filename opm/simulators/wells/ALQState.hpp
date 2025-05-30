@@ -21,8 +21,8 @@
 #define OPM_ALQ_STATE_HEADER_INCLUDED
 
 #include <map>
-#include <string>
 #include <optional>
+#include <string>
 
 
 namespace Opm {
