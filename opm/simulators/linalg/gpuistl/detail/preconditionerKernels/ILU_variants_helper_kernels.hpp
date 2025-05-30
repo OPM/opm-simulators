@@ -33,7 +33,7 @@ namespace Opm::gpuistl::detail
   not recomputing indices during each update kernel.
 */
 /**
- * @brief Computes indices of diagonal elements for reordered GPU preconditioner.
+ * @brief Computes indices of diagonal elements for non-reordered GPU preconditioner.
  *
  * @tparam T Matrix element type
  * @param[in] mat The matrix in BCSR format
@@ -52,7 +52,7 @@ void computeDiagIndicesNoReorder(const T* mat,
                                  size_t* diagIndices);
 
 /**
- * @brief Computes indices of diagonal elements for non-reordered GPU preconditioner.
+ * @brief Computes indices of diagonal elements for reordered GPU preconditioner.
  *
  * @tparam T Matrix element type
  * @param[in] mat The matrix in BCSR format

@@ -108,7 +108,7 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
         }
     }
 
-    // Precompute diagaon indices and handle the actual reordering if that is enabled.
+    // Precompute diagaonal block element indices and handle the actual reordering if that is enabled.
     if (m_reorder) {
         detail::computeDiagIndices<field_type>(m_gpuMatrixReordered->getNonZeroValues().data(),
                                                m_gpuMatrixReordered->getRowIndices().data(),
