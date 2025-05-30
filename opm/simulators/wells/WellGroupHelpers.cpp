@@ -405,7 +405,6 @@ updateGroupTargetReduction(const Group& group,
                 }
             }
         } else {
-
             const Group::ProductionCMode& currentGroupControl = group_state.production_control(subGroupName);
             const bool individual_control = (currentGroupControl != Group::ProductionCMode::FLD
                                              && currentGroupControl != Group::ProductionCMode::NONE);
@@ -461,7 +460,6 @@ updateGroupTargetReduction(const Group& group,
                 }
         } else {
                 if ((ws.production_cmode != Well::ProducerCMode::GRUP)){
-                    // if (!group.as_choke()) {
                     if (!has_choke){
                         for (int phase = 0; phase < np; phase++) {
                             groupTargetReduction[phase] -= ws.surface_rates[phase] * efficiency;
@@ -1159,14 +1157,11 @@ groupControlledWells(const Schedule& schedule,
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
         if (is_production_group) {
-                // included = included || well_state.isProductionGrup(child_well) || group.as_choke();
                 included = included || well_state.isProductionGrup(child_well) || has_choke;
         } else {
             included = included || well_state.isInjectionGrup(child_well);
         }
-
         const auto ctrl1 = group_state.production_control(group.name());
-        // if (group.as_choke() && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))){
         if (has_choke && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))){
             // The auto choke group has not own group control but inherits control from an ancestor group.
             // Number of wells should be calculated as zero when wells of auto choke group do not deliver target.
@@ -1187,11 +1182,7 @@ groupControlledWells(const Schedule& schedule,
             // Get the ancestor of the auto choke group that has group control (cmode != FLD, NONE)
             const auto& control_group_name = control_group(group, group_state, report_step, schedule);
             const auto& control_group = schedule.getGroup(control_group_name, report_step);
-          
-            // const auto& control_group_cmode = ctrl.cmode;
-
             const auto& control_group_cmode = group_state.production_control(control_group_name);
-            // const auto& group_guide_rate = group.productionControls(summary_state).guide_rate;
 
             Scalar gratTargetFromSales = 0.0;
             if (group_state.has_grat_sales_target(control_group_name))
@@ -1199,25 +1190,25 @@ groupControlledWells(const Schedule& schedule,
 
             std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
             WGHelpers::TargetCalculator tcalc(control_group_cmode,
-                                            pu,
-                                            resv_coeff,
-                                            gratTargetFromSales,
-                                            group.name(),
-                                            group_state,
-                                            group.has_gpmaint_control(control_group_cmode));
+                                              pu,
+                                              resv_coeff,
+                                              gratTargetFromSales,
+                                              group.name(),
+                                              group_state,
+                                              group.has_gpmaint_control(control_group_cmode));
             auto deferred_logger = Opm::DeferredLogger();
 
 
-            // Calculates the guide rate of the parent group with control. 
-            // It is allowed that the guide rate of this group is defaulted. The guide rate will be derived from the children groups 
+            // Calculates the guide rate of the parent group with control.
+            // It is allowed that the guide rate of this group is defaulted. The guide rate will be derived from the children groups.
             const auto& group_guide_rate = getGuideRate(group.name(),
-                                                schedule,
-                                                well_state,
-                                                group_state,
-                                                report_step,
-                                                guideRate,
-                                                tcalc.guideTargetMode(),
-                                                pu);
+                                                        schedule,
+                                                        well_state,
+                                                        group_state,
+                                                        report_step,
+                                                        guideRate,
+                                                        tcalc.guideTargetMode(),
+                                                        pu);
 
             if (group_guide_rate > 0) {
                 // Guide rate is not default for the auto choke group
