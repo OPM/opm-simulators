@@ -1129,27 +1129,20 @@ assignDynamicWellStatus(data::Wells& wsrpt,
                         const int reportStepIndex) const
 {
     this->loopOwnedWells([this, reportStepIndex, &wsrpt]
-                         (const auto wellID, const Well& well)
+                         ([[maybe_unused]] const auto wellID,
+                          const Well& well)
     {
+
         auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
+        xwel.dynamicStatus = this->wellState().well(well.name()).status;
 
-        xwel.dynamicStatus = this->schedule()[reportStepIndex]
-            .wells(well.name()).getStatus();
-
-        if ((xwel.dynamicStatus == Well::Status::OPEN) &&
-            this->wellTestState().well_is_closed(well.name()) &&
-            !this->wasDynamicallyShutThisTimeStep(wellID))
-        {
-            // Well is supposed to be flowing according to the run
-            // specification (Schedule object), but it is not operable or
-            // cannot meet its economic limits (well testing).
-            //
-            // Assign status based on the well's defined automatic shut-in
-            // procedure.
-            xwel.dynamicStatus = well.getAutomaticShutIn()
-                ? Well::Status::SHUT : Well::Status::STOP;
+        // Well was shut this time step we keep it open one last time
+        // for output
+        if (wasDynamicallyShutThisTimeStep(well.name())) {
+            xwel.dynamicStatus = Well::Status::OPEN;
         }
     });
+
 }
 
 template<class Scalar>
@@ -1161,17 +1154,17 @@ assignShutConnections(data::Wells& wsrpt,
                          ([[maybe_unused]] const auto wellID,
                           const Well&                 well)
     {
-        auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
-        xwel.dynamicStatus  = this->wellState().well(well.name()).status;
-        if (wasDynamicallyShutThisTimeStep(well.name())) {
-            xwel.dynamicStatus = Well::Status::OPEN; // we will output
-        }
-        const auto wellStatusInSchedule = this->schedule().getWell(well.name(), reportStepIndex).getStatus();
-        const auto wellIsOpenInSchedule = wellStatusInSchedule == Well::Status::OPEN;
-        auto skip = [wellIsOpenInSchedule](const Connection& conn)
+        const auto wellIsOpen =
+            this->schedule()[reportStepIndex].wells(well.name())
+            .getStatus() == Well::Status::OPEN;
+
+        auto skip = [wellIsOpen](const Connection& conn)
         {
-            return wellIsOpenInSchedule && (conn.state() != Connection::State::SHUT);
+            return wellIsOpen && (conn.state() != Connection::State::SHUT);
         };
+
+        auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
+
         auto& xcon = xwel.connections;
         for (const auto& conn : well.getConnections()) {
             if (skip(conn)) {

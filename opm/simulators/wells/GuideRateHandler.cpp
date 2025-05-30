@@ -668,9 +668,10 @@ updateGuideRatesForWells_()
         const auto well_index = this->well_state_.index(wname);
 
         if (well_index.has_value() && this->well_state_.wellIsOwned(*well_index, wname)) {
-            // the well is found and owned
-            const auto& wpot = this->well_state_.well(*well_index).well_potentials;
+            const auto& ws = this->well_state_.well(well_index.value());
 
+            // the well is found and owned
+            const auto& wpot = ws.well_potentials;
             if (o_pos >= 0) { well_pot[o_ix] = static_cast<double>(wpot[o_pos]); }
             if (g_pos >= 0) { well_pot[g_ix] = static_cast<double>(wpot[g_pos]); }
             if (w_pos >= 0) { well_pot[w_ix] = static_cast<double>(wpot[w_pos]); }
@@ -754,6 +755,7 @@ updateProductionGroupPotentialFromSubGroups(const Group& group, std::vector<Scal
 
         if (well_tmp.getStatus() == Well::Status::SHUT)
             continue;
+
         const auto& well_index = this->well_state_.index(well_name);
         if (!well_index.has_value()) // the well is not found
             continue;
@@ -762,8 +764,10 @@ updateProductionGroupPotentialFromSubGroups(const Group& group, std::vector<Scal
         {
             continue;
         }
-
         const auto& ws = this->well_state_.well(well_index.value());
+        if (ws.status == Well::Status::SHUT)
+            continue;
+
         for (int phase = 0; phase < this->num_phases_; phase++) {
             pot[phase] += wefac * ws.well_potentials[phase];
         }
