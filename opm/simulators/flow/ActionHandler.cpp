@@ -244,7 +244,7 @@ applyActions(const int reportStep,
         const auto wellpi = fetchWellPI<Scalar>(this->wellModel_, wellpi_wells, this->comm_);
 
         const auto sim_update_current = this->schedule_
-            .applyAction(reportStep, *action, matches, wellpi);
+            .applyAction(reportStep, *action, matches, wellpi, true);
 
         sim_update.append(sim_update_current);
         this->actionState_.add_run(*action, simTime, actionResult);
