@@ -99,7 +99,7 @@ computeDiagIndicesNoReorder(const T* mat,
 
     // launch kernel
     cuComputeDiagIndicesNoReorder<T>
-        <<<threadBlockSize, nThreadBlocks>>>(mat, rowIndices, colIndices, indexConversion, rows, diagIndices);
+        <<<nThreadBlocks, threadBlockSize>>>(mat, rowIndices, colIndices, indexConversion, rows, diagIndices);
 }
 
 template <class T>
@@ -119,7 +119,7 @@ computeDiagIndices(const T* mat,
 
     // launch kernel
     cuComputeDiagIndices<T>
-        <<<threadBlockSize, nThreadBlocks>>>(mat, rowIndices, colIndices, reorderedToNatural, rows, diagIndices);
+        <<<nThreadBlocks, threadBlockSize>>>(mat, rowIndices, colIndices, reorderedToNatural, rows, diagIndices);
 }
 
 
