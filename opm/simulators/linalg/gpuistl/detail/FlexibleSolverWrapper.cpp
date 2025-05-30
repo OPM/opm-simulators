@@ -103,9 +103,9 @@ using CommunicationType = Dune::Communication<int>;
 #endif
 
 #define INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER(real_type)                                                                 \
-    template class ::Opm::gpuistl::detail::FlexibleSolverWrapper<::Opm::gpuistl::GpuSparseMatrix<real_type>,                   \
-                                                         ::Opm::gpuistl::GpuVector<real_type>,                         \
-                                                         CommunicationType>
+    template class ::Opm::gpuistl::detail::FlexibleSolverWrapper<::Opm::gpuistl::GpuSparseMatrix<real_type>,           \
+                                                                 ::Opm::gpuistl::GpuVector<real_type>,                 \
+                                                                 CommunicationType>
 
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER(float);
