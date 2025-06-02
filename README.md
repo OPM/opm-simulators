@@ -1,78 +1,40 @@
-# Open Porous Media Simulators and Automatic Differentiation Library
+![OPM logo](https://github.com/OPM/.github/blob/main/profile/OPM%20logo%20small%20cropped.png)
+# Open Porous Media Simulators
+[![Home Page](https://img.shields.io/badge/Home_Page-opm--project.org-8888FF)](https://opm-project.org/)
+[![License](https://img.shields.io/badge/License-GPL_V.3%2B-2ea44f)](#)
+[![Documentation](https://img.shields.io/badge/docs-manual-999999)](https://opm-project.org/?page_id=955)
+[![Main Article - 10.1016/j.camwa.2020.05.014](https://img.shields.io/badge/Main_Article-10.1016%2Fj.camwa.2020.05.014-FF9900)](#)
+[![Zenodo](https://img.shields.io/badge/Zenodo_Src-10.5281%2Fzenodo.12637570-ff2222)](https://doi.org/10.5281/zenodo.12637570)
 
-CONTENT
--------
+> The `opm-simulators` repository contains the OPM Flow reservoir simulator which uses automatic differentiation and standard input-formats to simulate reservoirs of industrial complexity on real assets by commercial actors. It is cooperatively developed by multiple industry-partners and academic institutions under the GPL 3 license.
+> 
+> Flow is a fully implicit black-oil simulators which also supports CO2 storage, H2 storage, thermal simulations, solvents, as well as polymers. It works with the Eclipse formats, making it easy to integrate into existing workflows. The automatic differentiation is implemented in [opm-common](OPM/opm-common). The manual can be found here on the OPM [home page](https://opm-project.org/?page_id=955).
 
-opm-simulators contains the OPM Flow reservoir simulator, which is a fully
-implicit black-oil simulator that also supports CO2 storage, H2 storage, thermal,
-solvent, and polymer options. It supports input and output in the common Eclipse formats,
-allowing easy integration in existing workflows.
-Its system assembly approach builds on automatic differentiation,
-using the local AD class Evaluation from opm-common. The linear solver subsystem is based on
-the dune-istl library.
+## Supported Platforms
+- RHEL 8+
+- Ubuntu 22.04 LTS and 24.04 LTS
+- Debian
+- Mac OS X
+- WSL2
 
-For more information see https://opm-project.org, for the OPM manual see
-https://opm-project.org/?page_id=955
-
-LICENSE
--------
-
-The library is distributed under the GNU General Public License,
-version 3 or later (GPLv3+).
-
-
-PLATFORMS
----------
-
-The opm-simulators module is designed to run on Linux platforms. It is
-also regularly run on Mac OS X. No efforts have been made to ensure
-that the code will compile and run on windows platforms.
+[Download binaries here](https://opm-project.org/?page_id=36)
 
 
-REQUIREMENTS
-------------
+## Building from Source
+`opm-simulators` Depends on:
+- [opm-common](OPM/opm-common)
+- [opm-grid](OPM/opm-grid)
+- [Dune and all other dependencies are listed and tracked on the home page](https://opm-project.org/?page_id=239)
 
-opm-simulators requires several other OPM modules, see
-http://opm-project.org/?page_id=274. In addition, opm-simulators
-requires Dune and some other software to be available, for details
-see https://opm-project.org/?page_id=239.
-
-
-DOWNLOADING
------------
-
-For a read-only download:
-git clone git://github.com/OPM/opm-simulators.git
-
-If you want to contribute, fork OPM/opm-simulators on github.
+[Follow the build instructions on the home page](http://opm-project.org/?page_id=36).
 
 
-BUILDING
---------
-
-See build instructions at http://opm-project.org/?page_id=36
+## In-Code Documentation
+In addition to providing the [manual](https://opm-project.org/?page_id=955) we also document the source code with Doxygen, using the `make doc` command.
 
 
-IN-CODE DOCUMENTATION
----------------------
-
-Efforts have been made to document the code with Doxygen.
-In order to build the documentation, enter the command
-
- make doc
-
-in the topmost directory.
-
-
-REPORTING ISSUES
-----------------
-
-The OPM mailing list can be used for questions and issue reporting,
-see https://opm-project.org/?page_id=358
-
-Issues can also be reported in the Git issue tracker online at:
-
-    https://github.com/OPM/opm-simulators/issues
+## Reporting Issues
+Issues can either be reported here on [GitHub repository](https://github.com/OPM/opm-simulators/issues), or using the [OPM mailing list](https://opm-project.org/?page_id=358)
 
 To help diagnose build errors, please provide a link to a build log together
 with the issue description.
@@ -88,7 +50,87 @@ You can capture such a log from the build using the `script' utility, e.g.:
 The resulting file can be uploaded to for instance gist.github.com.
 
 
-CONTRIBUTING
-------------
+## Citing
+To cite OPM Flow we primarily use the paper `The Open Porous Media Flow reservoir simulator` published in the `Computers & Mathematics with Applications` (CAMWA) Journal. The correctly attribute credit to later contributors, we also want the Zenodo repository containing the source code to be cited. The BibTex for both can be found below.
+<details>
+<summary>BibTeX for CAMWA article</summary>
+  
+```bibtex
+@article{OPMFLOW,
+ title = {The {Open} {Porous} {Media} {Flow} reservoir simulator},
+ journal = {Computers \& Mathematics with Applications},
+ volume = {81},
+ pages = {159-185},
+ year = {2021},
+ note = {Development and Application of Open-source Software for Problems with Numerical PDEs},
+ issn = {0898-1221},
+ doi = {https://doi.org/10.1016/j.camwa.2020.05.014},
+ url = {https://www.sciencedirect.com/science/article/pii/S0898122120302182},
+ author = {Atgeirr Flø Rasmussen and Tor Harald Sandve and Kai Bao and Andreas Lauser and Joakim Hove and Bård Skaflestad and Robert Klöfkorn and Markus Blatt and Alf Birger Rustad and Ove Sævareid and Knut-Andreas Lie and Andreas Thune}
+}
+```
+</details>
+
+<details>
+<summary> BibTeX for source code (Zenodo) </summary>
+
+```bibtex
+@software{ahmed_2025_15573878,
+  author       = {Ahmed, Elyes and
+                  Alvestad, Jostein and
+                  BAO, KAI and
+                  Baxendale, David and
+                  Berge, Runar Lie and
+                  Berland, Håvard and
+                  Blatt, Markus and
+                  Bowden, Josh and
+                  Bueno, Jose Eduardo and
+                  Chang, Justin and
+                  Egberts, Paul and
+                  Fuchs, Franz Georg and
+                  Hægland, Håkon and
+                  Hove, Joakim and
+                  Kippe, Vegard and
+                  Klöfkorn, Robert and
+                  Krogstad, Stein and
+                  Kvarving, Arne Morten and
+                  Landa Marban, David and
+                  Logstein, Jan Inge and
+                  Lye, Kjetil Olsen and
+                  Machado, Cintia Goncalves and
+                  Marchiori, Giacomo and
+                  Meyer Andersen, Tobias and
+                  Mykkeltvedt, Trine and
+                  Nane, Razvan and
+                  Nebel, Lisa Julia and
+                  Nilsen, Halvor Møll and
+                  Qiu, Tong Dong and
+                  Qiu, Tuoling and
+                  Rasmussen, Atgeirr Flø and
+                  Ritorto, Antonella and
+                  Rustad, Alf Birger and
+                  Sandve, Tor Harald and
+                  Sævareid, Ove and
+                  Skaflestad, Bård and
+                  Skille, Torbjørn and
+                  Tveit, Svenn and
+                  Verveer, Peter and
+                  Tóth, Michal and
+                  Goodfield, Matthew and
+                  Sæternes, Erik Hide},
+  title        = {OPM Flow 2025.04},
+  month        = jun,
+  year         = 2025,
+  publisher    = {Zenodo},
+  version      = {2025.04},
+  doi          = {10.5281/zenodo.15573878},
+  url          = {https://doi.org/10.5281/zenodo.15573878},
+}
+```
+</details>
+
+We try to keep track of all publications having used OPM Flow in their scientific papers [here](https://opm-project.org/?page_id=39). Reach out to the contact point mentioned on the page if you want your article there.
+
+## CONTRIBUTING
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
