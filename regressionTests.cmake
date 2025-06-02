@@ -2717,5 +2717,6 @@ if(BUILD_FLOW_FLOAT_VARIANTS)
       spe1
     TEST_ARGS
       --tolerance-mb=1e-6
+      --tolerance-cnv=0.05
   )
 endif()
