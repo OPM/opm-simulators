@@ -293,28 +293,43 @@ namespace Opm
     General3rdOrderController::General3rdOrderController( const double tolerance,
                                                           const double safetyFactor,
                                                           const bool rejectCompletedStep,
-                                                          const std::string toleranceTestVersion,
+                                                          const std::string& toleranceTestVersion,
                                                           const double maxReductionTimeStep,
-                                                          const std::string parameters,
+                                                          const std::string& parameters,
                                                           const bool verbose)
         : tolerance_( tolerance )
         , safetyFactor_( safetyFactor )
         , rejectCompletedStep_( rejectCompletedStep )
-        , toleranceTestVersion_( toleranceTestVersion )
         , maxReductionTimeStep_( maxReductionTimeStep )
         , verbose_( verbose )
     {
         std::istringstream parameters_stream(parameters);
         std::string value;
         int counter = 0;
-        while (std::getline(parameters_stream, value, ';')) {
-            if (counter < 3) {
-                beta_[counter] = std::stod(value);
+        try {
+            while (std::getline(parameters_stream, value, ';'))
+            {
+                if (counter < 3) {
+                    beta_[counter] = std::stod(value);
+                }
+                else {
+                    alpha_[counter - 3] = std::stod(value);
+                }
+                counter++;
             }
-            else {
-                alpha_[counter - 3] = std::stod(value);
-            }
-            counter++;
+        }
+        catch (const std::exception& e) {
+            OPM_THROW(std::runtime_error, "The parameter string for the time step controller is invalid: " + parameters);
+        }
+
+        if (toleranceTestVersion == "standard") {
+            toleranceTestVersion_ = ToleranceTestVersions::Standard;
+        }
+        else if (toleranceTestVersion == "control-error-filtering") {
+            toleranceTestVersion_ = ToleranceTestVersions::ControlErrorFiltering;
+        }
+        else {
+            OPM_THROW(std::runtime_error, "Unsupported tolerance test version given: " + toleranceTestVersion);
         }
     }
 
@@ -330,10 +345,24 @@ namespace Opm
     double General3rdOrderController::
     computeTimeStepSize(const double dt, const int /* iterations */, const RelativeChangeInterface& /* relChange */, const AdaptiveSimulatorTimer& substepTimer) const
     {
+        if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0)
+        {
+            if ( verbose_ )
+            {
+                OpmLog::info("The solution between time steps does not change, there is no time step constraint from the controller.");
+            }
+            return std::numeric_limits<double>::max();
+        }
+
+        for( int i = 0; i < 2; ++i )
+        {
+            assert(std::isfinite(errors_[i]));
+        }
+
         // Use an I controller after report time steps
         if (substepTimer.currentStepNum() < 3)
         {
-            controllerVersion_ = 0; // "I-controller"
+            controllerVersion_ = InternalControlVersions::IController;
             const double newDt = dt * timeStepFactor(errors_, timeSteps_);
             if (verbose_)
             {
@@ -344,7 +373,7 @@ namespace Opm
         // Use the general third order controller for all other time steps
         else
         {
-            controllerVersion_ = 1; // "3rdOrder";
+            controllerVersion_ = InternalControlVersions::General3rdOrder;
             const double newDt = dt * timeStepFactor(errors_, timeSteps_);
             if (verbose_)
             {
@@ -355,10 +384,9 @@ namespace Opm
     }
 
     double General3rdOrderController::
-    timeStepFactor(const std::array<double, 3> errors, const std::array<double, 3> timeSteps) const
+    timeStepFactor(const std::array<double, 3>& errors, const std::array<double, 3>& timeSteps) const
     {
-        // "3rdOrder"
-        if (controllerVersion_ == 1)
+        if (controllerVersion_ == InternalControlVersions::General3rdOrder)
         {
             return std::pow(safetyFactor_ * tolerance_ / errors[2], beta_[0]) *
                    std::pow(safetyFactor_ * tolerance_ / errors[1], beta_[1]) *
@@ -366,38 +394,34 @@ namespace Opm
                    std::pow(timeSteps[2] / timeSteps[1], -alpha_[0]) *
                    std::pow(timeSteps[1] / timeSteps[0], -alpha_[1]);
         }
-        // "I-controller"
+        // controllerVersion_ == InternalControlVersions::IController
         return std::pow(safetyFactor_ * tolerance_ / errors[2], 0.35);
     }
 
     bool General3rdOrderController::
-    timeStepAccepted(const double error, const double timeStep) const
+    timeStepAccepted(const double error, const double timeStepJustCompleted) const
     {
         bool acceptTimeStep = true;
 
         // Reject time step if chosen tolerance test version fails
-        if (toleranceTestVersion_ == "standard")
+        if (toleranceTestVersion_ == ToleranceTestVersions::Standard)
         {
             if (rejectCompletedStep_ && error > tolerance_)
             {
                 acceptTimeStep = false;
             }
         }
-        else if (toleranceTestVersion_ == "control-error-filtering")
+        else if (toleranceTestVersion_ == ToleranceTestVersions::ControlErrorFiltering)
         {
             const std::array<double, 3> tempErrors{errors_[0], errors_[1], error};
-            const std::array<double, 3> tempTimeSteps{timeSteps_[0], timeSteps_[1], timeStep};
-            double stepFactor = timeStepFactor(tempErrors, tempTimeSteps);
+            const std::array<double, 3> tempTimeSteps{timeSteps_[0], timeSteps_[1], timeStepJustCompleted};
+            const double stepFactor = timeStepFactor(tempErrors, tempTimeSteps);
             if (rejectCompletedStep_ && stepFactor < maxReductionTimeStep_)
             {
                 acceptTimeStep = false;
             }
         }
-        else
-        {
-            OPM_THROW(std::runtime_error, "Unsupported tolerance test version: " + toleranceTestVersion_);
-        }
-        
+
         if (acceptTimeStep)
         {
             // Shift errors and time steps
@@ -409,21 +433,7 @@ namespace Opm
 
             // Store new error and time step
             errors_[2] = error;
-            timeSteps_[2] = timeStep;
-
-            for( int i = 0; i < 2; ++i )
-            {
-                assert(std::isfinite(errors_[i]));
-            }
-            
-            if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
-            {
-                if ( verbose_ )
-                {
-                    OpmLog::info("The solution between time steps does not change, there is no time step constraint from the controller.");
-                }
-                return std::numeric_limits<double>::max();
-            }
+            timeSteps_[2] = timeStepJustCompleted;
         }
         
         return acceptTimeStep;
