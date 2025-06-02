@@ -1,4 +1,9 @@
-# Open Porous Media Simulators and Automatic Differentiation Library
+# Open Porous Media Simulators
+[![License - GPL V.3+](https://img.shields.io/badge/License-GPL_V.3%2B-2ea44f)](https://)
+[![docs - manual](https://img.shields.io/badge/docs-manual-999999)](https://opm-project.org/?page_id=955)
+[![Journal Publication - 10.1016/j.camwa.2020.05.014](https://img.shields.io/badge/Journal_Publication-10.1016%2Fj.camwa.2020.05.014-2222FF)](https://doi.org/10.1016/j.camwa.2020.05.014)
+[![Zenodo src backup - 10.5281/zenodo.12637570](https://img.shields.io/badge/Zenodo_src_backup-10.5281%2Fzenodo.12637570-ff2222)](https://doi.org/10.5281/zenodo.12637570)
+
 
 CONTENT
 -------
