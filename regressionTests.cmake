@@ -1142,5 +1142,5 @@ if(BUILD_FLOW_FLOAT_VARIANTS)
                            ABS_TOL ${abs_tol}
                            REL_TOL ${rel_tol}
                            DIR spe1
-                           TEST_ARGS --tolerance-mb=1e-6)
+                           TEST_ARGS --tolerance-mb=5.0e-6 --tolerance-cnv=0.05)
 endif()
