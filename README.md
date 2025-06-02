@@ -1,83 +1,50 @@
-# Open Porous Media Simulators
+<h1 align="center">
+  <img src="doc/logo/opmlogo.png" alt="Logo" width="32" height="32" style="vertical-align: middle;"> 
+  Open Porous Media Simulators 
+  <img src="doc/logo/opmlogo.png" alt="Logo" width="32" height="32" style="vertical-align: middle;">
+</h1>
+
+[![Home Page - opm-project.org](https://img.shields.io/badge/Home_Page-opm--project.org-8888FF)](https://opm-project.org/)
 [![License - GPL V.3+](https://img.shields.io/badge/License-GPL_V.3%2B-2ea44f)](https://)
 [![docs - manual](https://img.shields.io/badge/docs-manual-999999)](https://opm-project.org/?page_id=955)
 [![Journal Publication - 10.1016/j.camwa.2020.05.014](https://img.shields.io/badge/Journal_Publication-10.1016%2Fj.camwa.2020.05.014-2222FF)](https://doi.org/10.1016/j.camwa.2020.05.014)
 [![Zenodo src backup - 10.5281/zenodo.12637570](https://img.shields.io/badge/Zenodo_src_backup-10.5281%2Fzenodo.12637570-ff2222)](https://doi.org/10.5281/zenodo.12637570)
 
+> 💡 The `opm-Simulators` repository containes the OPM Flow reservoir simulator which uses automatic differentation and standard input-formats to simulate reservoirs of industrial complexity on real assets by commercial actors. It is cooperatively developed by multiple industry-partners and academic institutions under the GPL 3 license.
+> 
+> Flow is a fully implicit black-oil simulators which also supports CO2 storage, H2 storage, thermal simulations, solvents, as well as polymers. It works with the Eclipse formats, making it easy to integrate into existing workflows. The automatic differentation is implemented in [opm-common](https://github.com/OPM/opm-common). The manual can be found here on the OPM [home page](https://opm-project.org/?page_id=955).
 
-CONTENT
--------
-
-opm-simulators contains the OPM Flow reservoir simulator, which is a fully
-implicit black-oil simulator that also supports CO2 storage, H2 storage, thermal,
-solvent, and polymer options. It supports input and output in the common Eclipse formats,
-allowing easy integration in existing workflows.
-Its system assembly approach builds on automatic differentiation,
-using the local AD class Evaluation from opm-common. The linear solver subsystem is based on
-the dune-istl library.
-
-For more information see https://opm-project.org, for the OPM manual see
-https://opm-project.org/?page_id=955
-
-LICENSE
--------
-
-The library is distributed under the GNU General Public License,
-version 3 or later (GPLv3+).
-
-
-PLATFORMS
+🌍 Supported Platforms
 ---------
+- ✅ RHEL 8+
+- ✅ Ubuntu 22.04 LTS and 24.04 LTS
+- ✅ Debian
+- ✅ Mac OS X
+- 🚫 Windows
 
-The opm-simulators module is designed to run on Linux platforms. It is
-also regularly run on Mac OS X. No efforts have been made to ensure
-that the code will compile and run on windows platforms.
+⬇️ [Download binaries here](https://opm-project.org/?page_id=36) ⬇️
 
 
-REQUIREMENTS
+🛠️ Building from Source
 ------------
 
-opm-simulators requires several other OPM modules, see
-http://opm-project.org/?page_id=274. In addition, opm-simulators
-requires Dune and some other software to be available, for details
-see https://opm-project.org/?page_id=239.
+`opm-simulators` Depends on:
+- [opm-common](https://github.com/OPM/opm-common)
+- [opm-grid](https://github.com/OPM/opm-grid)
+- [Dune, and other depencies kept track of on the home page](https://opm-project.org/?page_id=239)
+
+[Follow the build instructions on the home page](http://opm-project.org/?page_id=36).
 
 
-DOWNLOADING
------------
-
-For a read-only download:
-git clone git://github.com/OPM/opm-simulators.git
-
-If you want to contribute, fork OPM/opm-simulators on github.
-
-
-BUILDING
---------
-
-See build instructions at http://opm-project.org/?page_id=36
-
-
-IN-CODE DOCUMENTATION
+📖 In-Code Documentation
 ---------------------
-
-Efforts have been made to document the code with Doxygen.
-In order to build the documentation, enter the command
-
- make doc
-
-in the topmost directory.
+In addition to providing the [manual](https://opm-project.org/?page_id=955) we also document the source code with Doxygen, using the `make doc` command.
 
 
-REPORTING ISSUES
+⚠️ Reporting Issues
 ----------------
 
-The OPM mailing list can be used for questions and issue reporting,
-see https://opm-project.org/?page_id=358
-
-Issues can also be reported in the Git issue tracker online at:
-
-    https://github.com/OPM/opm-simulators/issues
+Issues can either be reported here on [github repository](https://github.com/OPM/opm-simulators/issues), or using the [OPM mailing list](https://opm-project.org/?page_id=358)
 
 To help diagnose build errors, please provide a link to a build log together
 with the issue description.
@@ -91,3 +58,20 @@ You can capture such a log from the build using the `script' utility, e.g.:
     cat CMakeCache.txt CMakeFiles/CMake*.log >> $LOGFILE
 
 The resulting file can be uploaded to for instance gist.github.com.
+
+📑 **Citing**
+---------------------
+To cite OPM Flow we primarily use the following publication introducing the software in the `Computers & Mathematics with Applications` Journal:
+```bibtex
+@article{OPMFLOW,
+ title = {The {Open} {Porous} {Media} {Flow} reservoir simulator},
+ journal = {Computers \& Mathematics with Applications},
+ volume = {81},
+ pages = {159-185},
+ year = {2021},
+ note = {Development and Application of Open-source Software for Problems with Numerical PDEs},
+ issn = {0898-1221},
+ doi = {https://doi.org/10.1016/j.camwa.2020.05.014},
+ url = {https://www.sciencedirect.com/science/article/pii/S0898122120302182},
+ author = {Atgeirr Flø Rasmussen and Tor Harald Sandve and Kai Bao and Andreas Lauser and Joakim Hove and Bård Skaflestad and Robert Klöfkorn and Markus Blatt and Alf Birger Rustad and Ove Sævareid and Knut-Andreas Lie and Andreas Thune}
+}
