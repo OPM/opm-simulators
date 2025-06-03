@@ -233,11 +233,12 @@ createController(const UnitSystem& unitSystem)
          }},
         {"general3rdorder",
          [tol]() {
-             const double safetyFactor = Parameters::Get<Parameters::TimeStepControlSafetyFactor>(); // 0.8
-             const bool rejectCompletedStep = Parameters::Get<Parameters::TimeStepControlRejectCompletedStep>(); // false
-             const std::string toleranceTestVersion = Parameters::Get<Parameters::TimeStepControlToleranceTestVersion>(); // "standard"
-             const double maxReductionTimeStep = Parameters::Get<Parameters::TimeStepControlMaxReductionTimeStep>(); // 0.1
-             const std::string parameters = Parameters::Get<Parameters::TimeStepControlParameters>(); // ""
+             const double safetyFactor = Parameters::Get<Parameters::TimeStepControlSafetyFactor>();
+             const bool rejectCompletedStep = Parameters::Get<Parameters::TimeStepControlRejectCompletedStep>();
+             const std::string toleranceTestVersion = Parameters::Get<Parameters::TimeStepControlToleranceTestVersion>();
+             const double maxReductionTimeStep = Parameters::Get<Parameters::TimeStepControlMaxReductionTimeStep>();
+             const std::string parameters = Parameters::Get<Parameters::TimeStepControlParameters>();
+             const bool verbose = Parameters::Get<Parameters::TimeStepVerbosity>();
              return RetVal{
                  TimeStepControlType::General3rdOrder,
                  std::make_unique<General3rdOrderController>(tol,
@@ -245,7 +246,8 @@ createController(const UnitSystem& unitSystem)
                                                              rejectCompletedStep,
                                                              toleranceTestVersion,
                                                              maxReductionTimeStep,
-                                                             parameters),
+                                                             parameters,
+                                                             verbose),
                  false
              };
         }},

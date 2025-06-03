@@ -211,13 +211,15 @@ namespace Opm
     public:
         static constexpr TimeStepControlType Type = TimeStepControlType::General3rdOrder;
 
-        General3rdOrderController( const double tolerance = 1e-3,
-                                   const double safetyFactor = 0.8,
-                                   const bool rejectCompletedStep = false,
-                                   const std::string& toleranceTestVersion = "",
-                                   const double maxReductionTimeStep = 0.1,
-                                   const std::string& parameters = "",
-                                   const bool verbose = false);
+        General3rdOrderController() = default;
+
+        General3rdOrderController( const double tolerance,
+                                   const double safetyFactor,
+                                   const bool rejectCompletedStep,
+                                   const std::string& toleranceTestVersion,
+                                   const double maxReductionTimeStep,
+                                   const std::string& parameters,
+                                   const bool verbose);
 
         static General3rdOrderController serializationTestObject();
 
