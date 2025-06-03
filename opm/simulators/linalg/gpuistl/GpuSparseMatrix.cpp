@@ -219,7 +219,8 @@ GpuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix, bool copyNonZe
 
     } else {
         const T* newNonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
-        m_nonZeroElements.copyFromHost(newNonZeroElements, nonzeroes() * blockSize() * blockSize());
+        // copy from host to device using stream 0 and asynchronous transfer
+        m_nonZeroElements.copyFromHost(newNonZeroElements, nonzeroes() * blockSize() * blockSize(), 0);
     }
 }
 
