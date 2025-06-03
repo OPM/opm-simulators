@@ -78,6 +78,8 @@ public:
     // Only usable for testing purposes
     explicit WellState(const ParallelWellInfo<Scalar>& pinfo);
 
+    WellState() = default;
+
     // explicit WellState(const PhaseUsage& pu)
     //     : phase_usage_(pu)
     // {}
