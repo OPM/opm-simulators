@@ -434,7 +434,7 @@ OpmGpuILU0<M, X, Y, l>::tuneThreadBlockSizes()
 }
 
 } // namespace Opm::gpuistl
-#define INSTANTIATE_CUDILU_DUNE(realtype, blockdim)                                                                    \
+#define INSTANTIATE_GPUILU_DUNE(realtype, blockdim)                                                                    \
     template class ::Opm::gpuistl::OpmGpuILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>;                                        \
@@ -442,16 +442,16 @@ OpmGpuILU0<M, X, Y, l>::tuneThreadBlockSizes()
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>
 
-INSTANTIATE_CUDILU_DUNE(double, 1);
-INSTANTIATE_CUDILU_DUNE(double, 2);
-INSTANTIATE_CUDILU_DUNE(double, 3);
-INSTANTIATE_CUDILU_DUNE(double, 4);
-INSTANTIATE_CUDILU_DUNE(double, 5);
-INSTANTIATE_CUDILU_DUNE(double, 6);
+INSTANTIATE_GPUILU_DUNE(double, 1);
+INSTANTIATE_GPUILU_DUNE(double, 2);
+INSTANTIATE_GPUILU_DUNE(double, 3);
+INSTANTIATE_GPUILU_DUNE(double, 4);
+INSTANTIATE_GPUILU_DUNE(double, 5);
+INSTANTIATE_GPUILU_DUNE(double, 6);
 
-INSTANTIATE_CUDILU_DUNE(float, 1);
-INSTANTIATE_CUDILU_DUNE(float, 2);
-INSTANTIATE_CUDILU_DUNE(float, 3);
-INSTANTIATE_CUDILU_DUNE(float, 4);
-INSTANTIATE_CUDILU_DUNE(float, 5);
-INSTANTIATE_CUDILU_DUNE(float, 6);
+INSTANTIATE_GPUILU_DUNE(float, 1);
+INSTANTIATE_GPUILU_DUNE(float, 2);
+INSTANTIATE_GPUILU_DUNE(float, 3);
+INSTANTIATE_GPUILU_DUNE(float, 4);
+INSTANTIATE_GPUILU_DUNE(float, 5);
+INSTANTIATE_GPUILU_DUNE(float, 6);
