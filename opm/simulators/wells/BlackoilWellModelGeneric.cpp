@@ -44,6 +44,7 @@
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
+#include <opm/input/eclipse/Schedule/Well/NameOrder.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 
@@ -72,8 +73,9 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
-#include <stdexcept>
+#include <iterator>
 #include <sstream>
+#include <stdexcept>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -108,18 +110,19 @@ BlackoilWellModelGeneric(Schedule& schedule,
 {
 
     const auto numProcs = comm_.size();
-    this->not_on_process_ = [this, numProcs](const Well& well) {
-        if (numProcs == decltype(numProcs){1})
+    this->not_on_process_ = [this, numProcs](const std::string& well) {
+        if (numProcs == decltype(numProcs){1}) {
             return false;
+        }
 
         // Recall: false indicates NOT active!
-        const auto value = std::make_pair(well.name(), true);
+        const auto value = std::make_pair(well, true);
         auto candidate = std::lower_bound(this->parallel_well_info_.begin(),
                                           this->parallel_well_info_.end(),
                                           value);
 
         return (candidate == this->parallel_well_info_.end())
-                || (*candidate != value);
+            || (*candidate != value);
     };
 
     const auto& node_pressures = eclState.getRestartNetworkPressures();
@@ -295,8 +298,21 @@ template<class Scalar>
 std::vector<Well> BlackoilWellModelGeneric<Scalar>::
 getLocalWells(const int timeStepIdx) const
 {
-    auto w = schedule().getWells(timeStepIdx);
-    w.erase(std::remove_if(w.begin(), w.end(), not_on_process_), w.end());
+    auto w = std::vector<Well>{};
+
+    auto wnames = this->schedule().wellNames(timeStepIdx);
+    wnames.erase(std::remove_if(wnames.begin(), wnames.end(),
+                                this->not_on_process_),
+                 wnames.end());
+
+    w.reserve(wnames.size());
+
+    std::transform(wnames.begin(), wnames.end(),
+                   std::back_inserter(w),
+                   [&st = this->schedule()[timeStepIdx]]
+                   (const std::string& wname)
+                   { return st.wells(wname); });
+
     return w;
 }
 
@@ -2002,50 +2018,55 @@ template<class Scalar>
 std::vector<std::vector<int>> BlackoilWellModelGeneric<Scalar>::
 getMaxWellConnections() const
 {
-    std::vector<std::vector<int>> wells;
+    auto wellConnections = std::vector<std::vector<int>>{};
 
-    auto schedule_wells = schedule().getWellsatEnd();
-    schedule_wells.erase(std::remove_if(schedule_wells.begin(), schedule_wells.end(), not_on_process_), schedule_wells.end());
-    wells.reserve(schedule_wells.size());
+    auto schedule_wells = this->schedule().wellNames();
+    schedule_wells.erase(std::remove_if(schedule_wells.begin(),
+                                        schedule_wells.end(),
+                                        this->not_on_process_),
+                         schedule_wells.end());
 
-    auto possibleFutureConnections = schedule().getPossibleFutureConnections();
+    wellConnections.reserve(schedule_wells.size());
+
+    const auto possibleFutureConnections = schedule().getPossibleFutureConnections();
+
 #if HAVE_MPI
     // Communicate Map to other processes, since it is only available on rank 0
     Parallel::MpiSerializer ser(comm_);
     ser.broadcast(Parallel::RootRank{0}, possibleFutureConnections);
 #endif
-    // initialize the additional cell connections introduced by wells.
-    for (const auto& well : schedule_wells)
-    {
-        std::vector<int> compressed_well_perforations = this->getCellsForConnections(well);
 
-        const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
+    // initialize the additional cell connections introduced by wells.
+    for (const auto& well : schedule_wells) {
+        auto& compressed_well_perforations = wellConnections.emplace_back
+            (this->getCellsForConnections(this->schedule().back().wells(well)));
+
+        const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well);
         if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
             for (const auto& global_index : possibleFutureConnectionSetIt->second) {
-                // THIS NEEDS TO BE UPDATED TO USE LGR
-                
-                int compressed_idx = compressedIndexForInterior(global_index);
-        
+                const int compressed_idx = compressedIndexForInterior(global_index);
                 if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
                     compressed_well_perforations.push_back(compressed_idx);
                 }
             }
         }
+
         // also include wells with no perforations in case
         std::sort(compressed_well_perforations.begin(),
                   compressed_well_perforations.end());
-
-        wells.push_back(compressed_well_perforations);
     }
-    return wells;
+
+    return wellConnections;
 }
 
 template<class Scalar>
 int BlackoilWellModelGeneric<Scalar>::numLocalWellsEnd() const
 {
-    auto w = schedule().getWellsatEnd();
-    w.erase(std::remove_if(w.begin(), w.end(), not_on_process_), w.end());
-    return w.size();
+    const auto& wnames = schedule().back().well_order().names();
+
+    return std::count_if(wnames.begin(), wnames.end(),
+                         [this](const std::string& wname)
+                         { return ! this->not_on_process_(wname); });
 }
 
 template<class Scalar>

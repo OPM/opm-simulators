@@ -41,6 +41,7 @@
 #include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/Well/NameOrder.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
@@ -1182,7 +1183,10 @@ void GenericOutputBlackoilModule<FluidSystem>::
 setupExtraBlockData(const std::size_t        reportStepNum,
                     std::function<bool(int)> isCartIdxOnThisRank)
 {
-    for (const auto& well : schedule_.getWells(reportStepNum - 1)) {
+    const auto& sched = this->schedule_[reportStepNum - 1];
+
+    for (const auto& wname : sched.well_order()) {
+        const auto& well = sched.wells.get(wname);
         for (const auto& connection : well.getConnections()) {
             if (isCartIdxOnThisRank(connection.global_index())) {
                 this->extraBlockData_.emplace(std::piecewise_construct,

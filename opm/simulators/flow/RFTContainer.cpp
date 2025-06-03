@@ -28,6 +28,7 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/RFTConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/NameOrder.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
@@ -85,7 +86,7 @@ addToWells(data::Wells& wellDatas,
         gatherAndUpdateMap(gasConnectionSaturations_, comm);
     }
 
-    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
+    for (const auto& wname : this->schedule_[reportStepNum].well_order()) {
         // Don't bother with wells not on this process.
         if (!wellQuery_(wname)) {
             continue;
@@ -144,12 +145,14 @@ allocate(const std::size_t reportStepNum)
         return;
     }
 
-    for (const auto& well: schedule_.getWells(reportStepNum)) {
+    for (const auto& wname : schedule_[reportStepNum].well_order()) {
 
         // don't bother with wells not on this process
-        if (!wellQuery_(well.name())) {
+        if (!wellQuery_(wname)) {
             continue;
         }
+
+        const auto& well = schedule_[reportStepNum].wells.get(wname);
 
         for (const auto& connection: well.getConnections()) {
             const std::size_t index = connection.global_index();

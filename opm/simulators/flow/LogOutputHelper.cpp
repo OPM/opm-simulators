@@ -27,6 +27,7 @@
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/Well/NameOrder.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
@@ -41,6 +42,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <iomanip>
 #include <numeric>
 #include <sstream>
@@ -202,8 +204,8 @@ cumulative(const std::size_t reportStepNum,
         this->outputCumulativeReportRecord_(values, names, {});
     }
 
-    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
-        const auto& well = this->schedule_.getWell(wname, reportStepNum);
+    for (const auto& wname : this->schedule_[reportStepNum].well_order()) {
+        const auto& well = this->schedule_[reportStepNum].wells.get(wname);
 
         std::vector<Scalar> values(WellCumDataType::numWCValues);
         std::vector<std::string> names(WellCumDataType::numWCNames);
@@ -435,8 +437,8 @@ injection(const std::size_t reportStepNum,
         this->outputInjectionReportRecord_(values, names, {});
     }
 
-    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
-        const auto& well = this->schedule_.getWell(wname, reportStepNum);
+    for (const auto& wname : this->schedule_[reportStepNum].well_order()) {
+        const auto& well = this->schedule_[reportStepNum].wells.get(wname);
 
         // Ignore production wells for the injection report.
         if (well.isProducer()) {
@@ -513,20 +515,26 @@ template<class Scalar>
 void LogOutputHelper<Scalar>::
 msw(const std::size_t reportStepNum) const
 {
-    const auto& wells = this->schedule_.getWells(reportStepNum);
-    if (std::any_of(wells.begin(), wells.end(),
-                    [](const auto& well) { return well.isMultiSegment(); }))
-    {
-        this->beginMSWReport_();
-        std::for_each(wells.begin(), wells.end(),
-                      [this](const auto& well)
-                      {
-                          if (well.isMultiSegment()) {
-                              this->outputMSWReportRecord_(well);
-                          }
-                      });
-        this->endMSWReport_();
+    const auto& sched = this->schedule_[reportStepNum];
+
+    auto msWells = std::vector<std::reference_wrapper<const Well>>{};
+    for (const auto& wname : sched.well_order()) {
+        if (const auto& well = sched.wells.get(wname); well.isMultiSegment()) {
+            msWells.push_back(std::cref(well));
+        }
     }
+
+    if (msWells.empty()) {
+        return;
+    }
+
+    this->beginMSWReport_();
+
+    std::for_each(msWells.begin(), msWells.end(),
+                  [this](const Well& well)
+                  { this->outputMSWReportRecord_(well); });
+
+    this->endMSWReport_();
 }
 
 
@@ -567,8 +575,8 @@ production(const std::size_t reportStepNum,
         this->outputProductionReportRecord_(values, names, {});
     }
 
-    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
-        const auto& well = this->schedule_.getWell(wname, reportStepNum);
+    for (const auto& wname : this->schedule_[reportStepNum].well_order()) {
+        const auto& well = this->schedule_[reportStepNum].wells.get(wname);
 
         // Ignore injection wells for the production report.
         if (well.isInjector()) {
