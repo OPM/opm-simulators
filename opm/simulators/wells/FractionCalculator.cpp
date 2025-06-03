@@ -171,7 +171,7 @@ guideRate(const std::string& name,
 {
     if (schedule_.hasWell(name, report_step_)) {
         return WellGroupHelpers<FluidSystem, Indices>::getGuideRate(name, schedule_, well_state_, group_state_,
-                                                      report_step_, guide_rate_, target_, pu_);
+                                                      report_step_, guide_rate_, target_);
     } else {
         if (groupControlledWells(name, always_included_child) > 0) {
             if (is_producer_ && guide_rate_->has(name) && !always_use_potentials) {
@@ -213,7 +213,6 @@ getGroupRateVector(const std::string& group_name)
 {
     assert(is_producer_);
     return WellGroupHelpers<FluidSystem, Indices>::getProductionGroupRateVector(this->group_state_,
-                                                                  this->pu_,
                                                                   group_name);
 }
 

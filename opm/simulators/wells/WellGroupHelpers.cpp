@@ -60,25 +60,30 @@
 #include <stdexcept>
 
 namespace {
-    template<class Scalar>
+    template<typename FluidSystem>
     Opm::GuideRate::RateVector
-    getGuideRateVector(const std::vector<Scalar>& rates, const Opm::PhaseUsage& pu)
+    getGuideRateVector(const std::vector<typename FluidSystem::Scalar>& rates)
     {
+        using Scalar = typename FluidSystem::Scalar;
+
         using Opm::BlackoilPhases;
 
         Scalar oilRate = 0.0;
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
-            oilRate = rates[pu.phase_pos[BlackoilPhases::Liquid]];
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))  {
+            const int pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+            oilRate = rates[pos];
         }
 
         Scalar gasRate = 0.0;
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
-            gasRate = rates[pu.phase_pos[BlackoilPhases::Vapour]];
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            gasRate = rates[pos];
         }
 
         Scalar waterRate = 0.0;
-        if (pu.phase_used[BlackoilPhases::Aqua]) {
-            waterRate = rates[pu.phase_pos[BlackoilPhases::Aqua]];
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            waterRate = rates[pos];
         }
 
         return {oilRate, gasRate, waterRate};
@@ -109,7 +114,7 @@ namespace Opm {
 
         // only sum satelite production once
         if (wellState.isRank0() && !injector) {
-            const auto rateComp = selectRateComponent(wellState.phaseUsage(), phasePos);
+            const auto rateComp = selectRateComponent(phasePos);
             if (rateComp.has_value()) {
                 rate += satelliteProduction(schedule[reportStepIdx], group.groups(), *rateComp);
             }
@@ -171,17 +176,21 @@ satelliteProduction(const ScheduleState& sched,
 
 template <typename FluidSystem, typename Indices>
 std::optional<GSatProd::GSatProdGroup::Rate> WellGroupHelpers<FluidSystem, Indices>::
-selectRateComponent(const PhaseUsage& pu, const int phasePos)
+selectRateComponent(const int phasePos)
 {
+    // TODO: this function can be wrong, phasePos is not used anymore, this function requries checking and refactoring.
     using Rate = GSatProd::GSatProdGroup::Rate;
 
     for (const auto& [phase, rateComp] : std::array {
-        std::pair { BlackoilPhases::Aqua, Rate::Water },
-        std::pair { BlackoilPhases::Liquid, Rate::Oil },
-        std::pair { BlackoilPhases::Vapour, Rate::Gas } })
+        std::pair { FluidSystem::waterPhaseIdx, Rate::Water },
+        std::pair { FluidSystem::oilPhaseIdx, Rate::Oil },
+        std::pair { FluidSystem::gasPhaseIdx, Rate::Gas } })
     {
-        if (pu.phase_used[phase] && (pu.phase_pos[phase] == phasePos)) {
-            return rateComp;
+        if (FluidSystem::phaseIsActive(phase)) {
+            const auto activePhasePos = FluidSystem::canonicalToActivePhaseIdx(phase);
+            if (activePhasePos == phasePos) {
+                return rateComp;
+            }
         }
     }
 
@@ -994,20 +1003,18 @@ template<typename FluidSystem, typename Indices>
 GuideRate::RateVector
 WellGroupHelpers<FluidSystem, Indices>::
 getWellRateVector(const WellState<FluidSystem, Indices>& well_state,
-                  const PhaseUsage& pu,
                   const std::string& name)
 {
-    return getGuideRateVector(well_state.currentWellRates(name), pu);
+    return getGuideRateVector<FluidSystem>(well_state.currentWellRates(name));
 }
 
 template<typename FluidSystem, typename Indices>
 GuideRate::RateVector
 WellGroupHelpers<FluidSystem, Indices>::
 getProductionGroupRateVector(const GroupState<Scalar>& group_state,
-                             const PhaseUsage& pu,
                              const std::string& group_name)
 {
-    return getGuideRateVector(group_state.production_rates(group_name), pu);
+    return getGuideRateVector<FluidSystem>(group_state.production_rates(group_name));
 }
 
 template<typename FluidSystem, typename Indices>
@@ -1019,19 +1026,18 @@ getGuideRate(const std::string& name,
              const GroupState<Scalar>& group_state,
              const int reportStepIdx,
              const GuideRate* guideRate,
-             const GuideRateModel::Target target,
-             const PhaseUsage& pu)
+             const GuideRateModel::Target target)
 {
     if (schedule.hasWell(name, reportStepIdx)) {
         if (guideRate->has(name) || guideRate->hasPotentials(name)) {
-            return guideRate->get(name, target, getWellRateVector(wellState, pu, name));
+            return guideRate->get(name, target, getWellRateVector(wellState, name));
         } else {
             return 0.0;
         }
     }
 
     if (guideRate->has(name)) {
-        return guideRate->get(name, target, getProductionGroupRateVector(group_state, pu, name));
+        return guideRate->get(name, target, getProductionGroupRateVector(group_state, name));
     }
 
     Scalar totalGuideRate = 0.0;
@@ -1042,7 +1048,7 @@ getGuideRate(const std::string& name,
         if (currentGroupControl == Group::ProductionCMode::FLD
             || currentGroupControl == Group::ProductionCMode::NONE) {
             // accumulate from sub wells/groups
-            totalGuideRate += getGuideRate(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, pu);
+            totalGuideRate += getGuideRate(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target);
         }
     }
 
@@ -1060,7 +1066,7 @@ getGuideRate(const std::string& name,
             continue;
 
         totalGuideRate += getGuideRate(wellName, schedule, wellState, group_state,
-                                       reportStepIdx, guideRate, target, pu);
+                                       reportStepIdx, guideRate, target);
 
     }
     return totalGuideRate;
@@ -1081,7 +1087,7 @@ getGuideRateInj(const std::string& name,
 {
     if (schedule.hasWell(name, reportStepIdx)) {
         return getGuideRate(name, schedule, wellState, group_state,
-                            reportStepIdx, guideRate, target, pu);
+                            reportStepIdx, guideRate, target);
     }
 
     if (guideRate->has(name, injectionPhase)) {
@@ -1114,7 +1120,7 @@ getGuideRateInj(const std::string& name,
         if (!wellState.isInjectionGrup(wellName))
             continue;
 
-        totalGuideRate += guideRate->get(wellName, target, getWellRateVector(wellState, pu, wellName));
+        totalGuideRate += guideRate->get(wellName, target, getWellRateVector(wellState, wellName));
     }
     return totalGuideRate;
 }
@@ -1174,9 +1180,9 @@ groupControlledWells(const Schedule& schedule,
             // This behaviour is then similar to no-autochoke group with wells not on GRUP control.
             // The rates of these wells are summed up. The parent group target is reduced with this rate.
             // This reduced target becomes the target of the other child group of this parent.
-            const PhaseUsage& pu = well_state.phaseUsage();
-            std::vector<Scalar> rates(pu.num_phases, 0.0);
-            for (int phase_pos = 0; phase_pos < pu.num_phases; ++phase_pos) {
+            const auto num_phases = Indices::numPhases;
+            std::vector<Scalar> rates(num_phases, 0.0);
+            for (int phase_pos = 0; phase_pos < num_phases; ++phase_pos) {
                  rates[phase_pos] = WellGroupHelpers<FluidSystem, Indices>::sumWellSurfaceRates(group,
                                                                                   schedule,
                                                                                   well_state,
@@ -1199,9 +1205,8 @@ groupControlledWells(const Schedule& schedule,
                 if (group_state.has_grat_sales_target(control_group_name))
                     gratTargetFromSales = group_state.grat_sales_target(control_group_name);
 
-                std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
-                WGHelpers::TargetCalculator tcalc(control_group_cmode,
-                                                pu,
+                std::vector<Scalar> resv_coeff(num_phases, 1.0);
+                WGHelpers::TargetCalculator<FluidSystem, Indices> tcalc(control_group_cmode,
                                                 resv_coeff,
                                                 gratTargetFromSales,
                                                 group.name(),
@@ -1218,8 +1223,7 @@ groupControlledWells(const Schedule& schedule,
                                                     group_state,
                                                     report_step,
                                                     guideRate,
-                                                    tcalc.guideTargetMode(),
-                                                    pu);
+                                                    tcalc.guideTargetMode());
 
                 if (control_group_guide_rate > 0) {
                     // Target rate for the auto choke group
@@ -1424,7 +1428,6 @@ checkGroupConstraintsProd(const std::string& name,
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
     WGHelpers::TargetCalculator tcalc(currentGroupControl,
-                                      pu,
                                       resv_coeff,
                                       gratTargetFromSales,
                                       group.name(),
@@ -1438,7 +1441,6 @@ checkGroupConstraintsProd(const std::string& name,
                                         reportStepIdx,
                                         guideRate,
                                         tcalc.guideTargetMode(),
-                                        pu,
                                         true,
                                         Phase::OIL);
 
@@ -1762,8 +1764,7 @@ checkGroupConstraintsInj(const std::string& name,
         const auto& gconsale = schedule[reportStepIdx].gconsale().get(group.name(), summaryState);
         sales_target = gconsale.sales_target;
     }
-    WGHelpers::InjectionTargetCalculator tcalc(currentGroupControl,
-                                               pu,
+    WGHelpers::InjectionTargetCalculator<FluidSystem, Indices> tcalc(currentGroupControl,
                                                resv_coeff,
                                                group.name(),
                                                sales_target,

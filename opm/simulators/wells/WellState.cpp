@@ -145,7 +145,6 @@ namespace Opm {
 
 template<typename FluidSystem, typename Indices>
 WellState<FluidSystem, Indices>::WellState(const ParallelWellInfo<Scalar>& pinfo)
-    : phase_usage_{{BlackoilPhases::Aqua, BlackoilPhases::Liquid}}
 {
     wells_.add("test4",
                SingleWellState<FluidSystem, Indices>{"dummy", pinfo, false, 0.0, {}, 0.0});
@@ -155,7 +154,7 @@ template<typename FluidSystem, typename Indices>
 WellState<FluidSystem, Indices> WellState<FluidSystem, Indices>::
 serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 {
-    WellState result(PhaseUsage{});
+    WellState result;
     result.well_rates = {{"test2", {true, {1.0}}}, {"test3", {false, {2.0}}}};
     result.wells_.add("test4", SingleWellState<FluidSystem, Indices>::serializationTestObject(pinfo));
 
@@ -313,8 +312,7 @@ init(const std::vector<Scalar>& cellPressures,
     const int nw = wells_ecl.size();
 
     // Initialize perfphaserates_, which must be done here.
-    const auto& pu = this->phaseUsage();
-    const int np = pu.num_phases;
+    const int np = this->numPhases();
 
     {
         const auto& wg_events = schedule[report_step].wellgroup_events();
@@ -530,7 +528,6 @@ report(const int* globalCellIdxMap,
     }
 
     using rt = data::Rates::opt;
-    const auto& pu = this->phaseUsage();
 
     data::Wells res;
     for (std::size_t well_index = 0; well_index < this->size(); ++well_index) {
@@ -557,41 +554,44 @@ report(const int* globalCellIdxMap,
         well.filtrate.total = ws.sum_filtrate_total();
         well.filtrate.concentration = ws.filtrate_conc;
 
-        if (pu.phase_used[BlackoilPhases::Aqua]) {
-            well.rates.set(rt::wat, wv[ pu.phase_pos[BlackoilPhases::Aqua] ] );
-            well.rates.set(rt::reservoir_water, reservoir_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
-            well.rates.set(rt::productivity_index_water, wpi[pu.phase_pos[BlackoilPhases::Aqua]]);
-            well.rates.set(rt::well_potential_water, well_potentials[pu.phase_pos[BlackoilPhases::Aqua]]);
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            well.rates.set(rt::wat, wv[phase_pos]);
+            well.rates.set(rt::reservoir_water, reservoir_rates[phase_pos]);
+            well.rates.set(rt::productivity_index_water, wpi[phase_pos]);
+            well.rates.set(rt::well_potential_water, well_potentials[phase_pos]);
             well.rates.set(rt::mass_wat, ws.sum_wat_mass_rates());
         }
 
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
-            well.rates.set(rt::oil, wv[ pu.phase_pos[BlackoilPhases::Liquid] ] );
-            well.rates.set(rt::reservoir_oil, reservoir_rates[pu.phase_pos[BlackoilPhases::Liquid]]);
-            well.rates.set(rt::productivity_index_oil, wpi[pu.phase_pos[BlackoilPhases::Liquid]]);
-            well.rates.set(rt::well_potential_oil, well_potentials[pu.phase_pos[BlackoilPhases::Liquid]]);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+            well.rates.set(rt::oil, wv[phase_pos]);
+            well.rates.set(rt::reservoir_oil, reservoir_rates[phase_pos]);
+            well.rates.set(rt::productivity_index_oil, wpi[phase_pos]);
+            well.rates.set(rt::well_potential_oil, well_potentials[phase_pos]);
         }
 
-        if( pu.phase_used[BlackoilPhases::Vapour] ) {
-            well.rates.set(rt::gas, wv[ pu.phase_pos[BlackoilPhases::Vapour] ] );
-            well.rates.set(rt::reservoir_gas, reservoir_rates[pu.phase_pos[BlackoilPhases::Vapour]]);
-            well.rates.set(rt::productivity_index_gas, wpi[pu.phase_pos[BlackoilPhases::Vapour]]);
-            well.rates.set(rt::well_potential_gas, well_potentials[pu.phase_pos[BlackoilPhases::Vapour]]);
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            well.rates.set(rt::oil, wv[phase_pos]);
+            well.rates.set(rt::reservoir_oil, reservoir_rates[phase_pos]);
+            well.rates.set(rt::productivity_index_oil, wpi[phase_pos]);
+            well.rates.set(rt::well_potential_oil, well_potentials[phase_pos]);
         }
 
-        if (pu.has_solvent || pu.has_zFraction) {
+        if (Indices::enableSolvent || Indices::enableExtbo) {
             well.rates.set(rt::solvent, ws.sum_solvent_rates());
         }
 
-        if (pu.has_polymer) {
+        if (Indices::enablePolymer) {
             well.rates.set(rt::polymer, ws.sum_polymer_rates());
         }
 
-        if (pu.has_brine) {
+        if (Indices::enableBrine) {
             well.rates.set(rt::brine, ws.sum_brine_rates());
         }
 
-        if (pu.has_micp) {
+        if (Indices::enableMICP) {
             well.rates.set(rt::microbial, ws.sum_microbial_rates());
             well.rates.set(rt::oxygen, ws.sum_oxygen_rates());
             well.rates.set(rt::urea, ws.sum_urea_rates());

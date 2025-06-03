@@ -32,18 +32,17 @@ namespace Opm {
 
 class DeferredLogger;
 template<class Scalar> class GroupState;
-struct PhaseUsage;
 
 namespace WGHelpers {
 
 /// Based on a group control mode, extract or calculate rates, and
 /// provide other conveniences.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class TargetCalculator
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     TargetCalculator(const Group::ProductionCMode cmode,
-                     const PhaseUsage& pu,
                      const std::vector<Scalar>& resv_coeff,
                      const Scalar group_grat_target_from_sales,
                      const std::string& group_name,
@@ -66,7 +65,6 @@ public:
 
 private:
     Group::ProductionCMode cmode_;
-    const PhaseUsage& pu_;
     const std::vector<Scalar>& resv_coeff_;
     const Scalar group_grat_target_from_sales_;
     const std::string& group_name_;
@@ -76,12 +74,13 @@ private:
 
 /// Based on a group control mode, extract or calculate rates, and
 /// provide other conveniences.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class InjectionTargetCalculator
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     InjectionTargetCalculator(const Group::InjectionCMode& cmode,
-                              const PhaseUsage& pu,
                               const std::vector<Scalar>& resv_coeff,
                               const std::string& group_name,
                               const Scalar sales_target,
@@ -103,7 +102,6 @@ public:
 
 private:
     Group::InjectionCMode cmode_;
-    const PhaseUsage& pu_;
     const std::vector<Scalar>& resv_coeff_;
     const std::string& group_name_;
     Scalar sales_target_;
@@ -118,3 +116,5 @@ private:
 } // namespace Opm
 
 #endif
+
+#include "TargetCalculator.cpp"

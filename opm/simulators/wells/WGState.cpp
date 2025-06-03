@@ -34,9 +34,9 @@
 namespace Opm {
 
 template<typename FluidSystem, typename Indices>
-WGState<FluidSystem, Indices>::WGState(const PhaseUsage& pu) :
-    well_state(pu),
-    group_state(pu.num_phases),
+WGState<FluidSystem, Indices>::WGState() :
+    well_state{},
+    group_state(Indices::numPhases),
     well_test_state{}
 {}
 
@@ -44,7 +44,7 @@ template<typename FluidSystem, typename Indices>
 WGState<FluidSystem, Indices> WGState<FluidSystem, Indices>::
 serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 {
-    WGState result(PhaseUsage{});
+    WGState result{};
     result.well_state = WellState<FluidSystem, Indices>::serializationTestObject(pinfo);
     result.group_state = GroupState<Scalar>::serializationTestObject();
     result.well_test_state = WellTestState::serializationTestObject();
