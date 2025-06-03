@@ -872,14 +872,16 @@ accelerationPressureLossContribution(const int seg,
 template <class FluidSystem, class Indices>
 void
 MultisegmentWellSegments<FluidSystem,Indices>::
-copyPhaseDensities(const PhaseUsage& pu, SegmentState<Scalar>& segSol) const
+copyPhaseDensities(SegmentState<Scalar>& segSol) const
 {
+    // TODO: probably we should change the the name phaseMap
+    // this part can be wrong and needs to be checked
     auto* rho = segSol.phase_density.data();
 
     const auto phaseMap = std::vector {
-        std::pair { BlackoilPhases::Liquid, FluidSystem::oilPhaseIdx },
-        std::pair { BlackoilPhases::Vapour, FluidSystem::gasPhaseIdx },
-        std::pair { BlackoilPhases::Aqua  , FluidSystem::waterPhaseIdx },
+        FluidSystem::oilPhaseIdx,
+        FluidSystem::gasPhaseIdx,
+        FluidSystem::waterPhaseIdx
     };
 
     // Densities stored in 'rho' as
@@ -888,16 +890,17 @@ copyPhaseDensities(const PhaseUsage& pu, SegmentState<Scalar>& segSol) const
     //  ...
     //  { p0, p1, ..., (np - 1), mixture, mixture_with_exponents }]
     // Stride is np + 2.
-    for (const auto& [boPhase, fsPhaseIdx] : phaseMap) {
-        if (pu.phase_used[boPhase]) {
-            this->copyPhaseDensities(fsPhaseIdx, pu.num_phases + 2,
-                                     rho + pu.phase_pos[boPhase]);
+    constexpr int num_phases = FluidSystem::numPhases;
+    for (const auto& fsPhaseIdx : phaseMap) {
+        if (FluidSystem::phaseIsActive(fsPhaseIdx)) {
+            const auto phase_active_index = FluidSystem::canonicalToActivePhaseIdx(fsPhaseIdx);
+            this->copyPhaseDensities(fsPhaseIdx, num_phases + 2, rho + phase_active_index);
         }
     }
 
     // Mixture densities.
     for (auto seg = 0*this->densities_.size(); seg < this->densities_.size(); ++seg) {
-        const auto mixOffset = seg*(pu.num_phases + 2) + pu.num_phases;
+        const auto mixOffset = seg*(num_phases + 2) + num_phases;
 
         rho[mixOffset + 0] = this->mixtureDensity(seg);
         rho[mixOffset + 1] = this->mixtureDensityWithExponents(seg);

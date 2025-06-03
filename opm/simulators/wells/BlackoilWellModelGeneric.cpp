@@ -104,7 +104,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , terminal_output_(comm_.rank() == 0 &&
                        Parameters::Get<Parameters::EnableTerminalOutput>())
     , guideRate_(schedule)
-    , active_wgstate_(phase_usage)
+    , active_wgstate_()
     , last_valid_wgstate_(phase_usage)
     , nupcol_wgstate_(phase_usage)
 {

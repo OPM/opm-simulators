@@ -336,7 +336,7 @@ getGuideRateValues(const Well& well) const
     }
 
     const auto qs = WellGroupHelpers<FluidSystem, Indices>::
-        getWellRateVector(wellModel_.wellState(), wellModel_.phaseUsage(), wname);
+        getWellRateVector(wellModel_.wellState(), wname);
 
     this->getGuideRateValues(qs, well.isInjector(), wname, grval);
 
@@ -444,7 +444,7 @@ calculateWellGuideRates(const int reportStepIdx) const
             || RetrieveWellGuideRate{wellModel_.guideRate(), wname};
 
         const auto qs = WellGroupHelpers<FluidSystem, Indices>::
-            getWellRateVector(wellModel_.wellState(), wellModel_.phaseUsage(), wname);
+            getWellRateVector(wellModel_.wellState(), wname);
 
         auto getGR = [this, &wname, &qs](const GuideRateModel::Target t)
         {
