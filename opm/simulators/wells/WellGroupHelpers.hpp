@@ -67,7 +67,7 @@ public:
                                       const GSatProd::GSatProdGroup::Rate rateComp);
 
     static std::optional<GSatProd::GSatProdGroup::Rate>
-    selectRateComponent(const PhaseUsage& pu, const int phasePos);
+    selectRateComponent(const int phasePos);
 
     static void setCmodeGroup(const Group& group,
                               const Schedule& schedule,
@@ -238,12 +238,10 @@ public:
 
     static GuideRate::RateVector
     getWellRateVector(const WellStateType& well_state,
-                      const PhaseUsage& pu,
                       const std::string& name);
 
     static GuideRate::RateVector
     getProductionGroupRateVector(const GroupState<Scalar>& group_state,
-                                 const PhaseUsage& pu,
                                  const std::string& group_name);
 
     static Scalar getGuideRate(const std::string& name,
@@ -252,8 +250,7 @@ public:
                                const GroupState<Scalar>& group_state,
                                const int reportStepIdx,
                                const GuideRate* guideRate,
-                               const GuideRateModel::Target target,
-                               const PhaseUsage& pu);
+                               const GuideRateModel::Target target);
 
     static Scalar getGuideRateInj(const std::string& name,
                                   const Schedule& schedule,
