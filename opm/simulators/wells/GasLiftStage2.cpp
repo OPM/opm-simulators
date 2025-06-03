@@ -128,14 +128,16 @@ addOrRemoveALQincrement_(GradMap &grad_map,
         this->displayDebugMessage_(msg);
     }
     this->well_state_.well(well_name).alq_state.set(gi.alq);
-    const auto& pu = this->well_state_.phaseUsage();
-    std::vector<Scalar> well_pot(pu.num_phases, 0.0);
-    if (pu.phase_used[BlackoilPhases::PhaseIndex::Liquid])
-        well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Liquid]] = gi.new_oil_rate;
-    if (pu.phase_used[BlackoilPhases::PhaseIndex::Aqua])
-        well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Aqua]] = gi.new_water_rate;
-    if (pu.phase_used[BlackoilPhases::PhaseIndex::Vapour])
-        well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Vapour]] = gi.new_gas_rate;
+    std::vector<Scalar> well_pot(this->well_state_.numPhases(), 0.0);
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        well_pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] = gi.new_oil_rate;
+    }
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        well_pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)] = gi.new_water_rate;
+    }
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        well_pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] = gi.new_gas_rate;
+    }
 
     this->well_state_[well_name].well_potentials = well_pot;
 }
