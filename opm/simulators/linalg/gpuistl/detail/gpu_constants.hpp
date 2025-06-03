@@ -16,12 +16,25 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CUSPARSE_CONSTANTS_HPP
-#define CUSPARSE_CONSTANTS_HPP
+#ifndef OPM_GPU_CONSTANTS_HEADER_HPP
+#define OPM_GPU_CONSTANTS_HEADER_HPP
+
+#include <cuda_runtime.h>
 #include <cusparse.h>
+
 namespace Opm::gpuistl::detail
 {
-const constexpr auto CUSPARSE_MATRIX_ORDER = CUSPARSE_DIRECTION_ROW;
-}
+
+/**
+ * @brief The default GPU stream (stream 0)
+ */
+constexpr cudaStream_t DEFAULT_STREAM = 0;
+
+/**
+ * @brief Default matrix ordering for CuSparse operations
+ */
+constexpr auto CUSPARSE_MATRIX_ORDER = CUSPARSE_DIRECTION_ROW;
+
+} // namespace Opm::gpuistl::detail
 
 #endif
