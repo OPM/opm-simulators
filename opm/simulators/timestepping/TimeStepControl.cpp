@@ -336,7 +336,7 @@ namespace Opm
     General3rdOrderController
     General3rdOrderController::serializationTestObject()
     {
-        General3rdOrderController result(1.0, 2.0, false, "", 3.0, "", false);
+        General3rdOrderController result(1.0, 2.0, false, "standard", 3.0, "0.125;0.25;0.125;0.75;0.25", false);
         result.errors_ = {2.0, 3.0};
 
         return result;
