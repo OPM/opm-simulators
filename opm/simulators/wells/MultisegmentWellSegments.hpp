@@ -132,8 +132,7 @@ public:
         return local_perforation_depth_diffs_[local_perf_index];
     }
 
-    void copyPhaseDensities(const PhaseUsage& pu,
-                            SegmentState<Scalar>& segSol) const;
+    void copyPhaseDensities(SegmentState<Scalar>& segSol) const;
 
 private:
     // TODO: trying to use the information from the Well opm-parser as much

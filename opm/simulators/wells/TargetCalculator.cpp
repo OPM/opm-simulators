@@ -16,6 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_TARGETCALCULATOR_CPP_INCLUDED
+#define OPM_TARGETCALCULATOR_CPP_INCLUDED
 
 #include <config.h>
 #include <opm/simulators/wells/TargetCalculator.hpp>
@@ -31,17 +33,15 @@
 
 namespace Opm::WGHelpers {
 
-template<class Scalar>
-TargetCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+TargetCalculator<FluidSystem, Indices>::
 TargetCalculator(const Group::ProductionCMode cmode,
-                 const PhaseUsage& pu,
                  const std::vector<Scalar>& resv_coeff,
                  const Scalar group_grat_target_from_sales,
                  const std::string& group_name,
                  const GroupState<Scalar>& group_state,
                  const bool use_gpmaint)
     : cmode_(cmode)
-    , pu_(pu)
     , resv_coeff_(resv_coeff)
     , group_grat_target_from_sales_(group_grat_target_from_sales)
     , group_name_(group_name)
@@ -51,36 +51,38 @@ TargetCalculator(const Group::ProductionCMode cmode,
 {
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template <typename RateType>
-RateType TargetCalculator<Scalar>::calcModeRateFromRates(const RateType* rates) const
+RateType TargetCalculator<FluidSystem, Indices>::calcModeRateFromRates(const RateType* rates) const
 {
     switch (cmode_) {
     case Group::ProductionCMode::ORAT: {
-        assert(pu_.phase_used[BlackoilPhases::Liquid]);
-        const int pos = pu_.phase_pos[BlackoilPhases::Liquid];
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        const int pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
         return rates[pos];
     }
     case Group::ProductionCMode::WRAT: {
-        assert(pu_.phase_used[BlackoilPhases::Aqua]);
-        const int pos = pu_.phase_pos[BlackoilPhases::Aqua];
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+        const int pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
         return rates[pos];
     }
     case Group::ProductionCMode::GRAT: {
-        assert(pu_.phase_used[BlackoilPhases::Vapour]);
-        const int pos = pu_.phase_pos[BlackoilPhases::Vapour];
+        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+        const int pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
         return rates[pos];
     }
     case Group::ProductionCMode::LRAT: {
-        assert(pu_.phase_used[BlackoilPhases::Liquid]);
-        assert(pu_.phase_used[BlackoilPhases::Aqua]);
-        const int opos = pu_.phase_pos[BlackoilPhases::Liquid];
-        const int wpos = pu_.phase_pos[BlackoilPhases::Aqua];
+        // TODO: do need both oil and water activate to use LRAT?
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+        const int opos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+        const int wpos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
         return rates[opos] + rates[wpos];
     }
     case Group::ProductionCMode::RESV: {
         auto mode_rate = rates[0] * resv_coeff_[0];
-        for (int phase = 1; phase < pu_.num_phases; ++phase) {
+        const int num_phases = FluidSystem::numPhases;
+        for (int phase = 1; phase < num_phases; ++phase) {
             mode_rate += rates[phase] * resv_coeff_[phase];
         }
         return mode_rate;
@@ -92,8 +94,9 @@ RateType TargetCalculator<Scalar>::calcModeRateFromRates(const RateType* rates) 
     }
 }
 
-template<class Scalar>
-Scalar TargetCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar
+TargetCalculator<FluidSystem, Indices>::
 groupTarget(const std::optional<Group::ProductionControls>& ctrl,
             DeferredLogger& deferred_logger) const
 {
@@ -132,9 +135,9 @@ groupTarget(const std::optional<Group::ProductionControls>& ctrl,
     }
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 GuideRateModel::Target
-TargetCalculator<Scalar>::guideTargetMode() const
+TargetCalculator<FluidSystem, Indices>::guideTargetMode() const
 {
     switch (cmode_) {
     case Group::ProductionCMode::ORAT:
@@ -154,10 +157,9 @@ TargetCalculator<Scalar>::guideTargetMode() const
     }
 }
 
-template<class Scalar>
-InjectionTargetCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+InjectionTargetCalculator<FluidSystem, Indices>::
 InjectionTargetCalculator(const Group::InjectionCMode& cmode,
-                          const PhaseUsage& pu,
                           const std::vector<Scalar>& resv_coeff,
                           const std::string& group_name,
                           const Scalar sales_target,
@@ -166,7 +168,6 @@ InjectionTargetCalculator(const Group::InjectionCMode& cmode,
                           const bool use_gpmaint,
                           DeferredLogger& deferred_logger)
     : cmode_(cmode)
-    , pu_(pu)
     , resv_coeff_(resv_coeff)
     , group_name_(group_name)
     , sales_target_(sales_target)
@@ -175,22 +176,22 @@ InjectionTargetCalculator(const Group::InjectionCMode& cmode,
 
 {
     // initialize to avoid warning
-    pos_ = pu.phase_pos[BlackoilPhases::Aqua];
+    pos_ =  FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
     target_ = GuideRateModel::Target::WAT;
 
     switch (injection_phase) {
     case Phase::WATER: {
-        pos_ = pu.phase_pos[BlackoilPhases::Aqua];
+        pos_ =  FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
         target_ = GuideRateModel::Target::WAT;
         break;
     }
     case Phase::OIL: {
-        pos_ = pu.phase_pos[BlackoilPhases::Liquid];
+        pos_ =  FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
         target_ = GuideRateModel::Target::OIL;
         break;
     }
     case Phase::GAS: {
-        pos_ = pu.phase_pos[BlackoilPhases::Vapour];
+        pos_ =  FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
         target_ = GuideRateModel::Target::GAS;
         break;
     }
@@ -201,8 +202,9 @@ InjectionTargetCalculator(const Group::InjectionCMode& cmode,
     }
 }
 
-template<class Scalar>
-Scalar InjectionTargetCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar
+InjectionTargetCalculator<FluidSystem, Indices>::
 groupTarget(const std::optional<Group::InjectionControls>& ctrl,
             DeferredLogger& deferred_logger) const
 {
@@ -232,16 +234,22 @@ groupTarget(const std::optional<Group::InjectionControls>& ctrl,
         // possibility that the group in question has both a VREP control and another injection control for a different phase.
         const std::vector<Scalar>& group_injection_reservoir_rates = this->group_state_.injection_reservoir_rates(this->group_name_);
         Scalar voidage_rate = group_state_.injection_vrep_rate(ctrl->voidage_group) * ctrl->target_void_fraction;
-        if (ctrl->phase != Phase::WATER)
-            voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Aqua]];
-        if (ctrl->phase != Phase::OIL)
-            voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Liquid]];
-        if (ctrl->phase != Phase::GAS)
-            voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Vapour]];
+        if (ctrl->phase != Phase::WATER) {
+            const int pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            voidage_rate -= group_injection_reservoir_rates[pos];
+        }
+        if (ctrl->phase != Phase::OIL) {
+            const int pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+            voidage_rate -= group_injection_reservoir_rates[pos];
+        }
+        if (ctrl->phase != Phase::GAS) {
+            const int pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            voidage_rate -= group_injection_reservoir_rates[pos];
+        }
         return voidage_rate / resv_coeff_[pos_];
     }
     case Group::InjectionCMode::SALE: {
-        assert(pos_ == pu_.phase_pos[BlackoilPhases::Vapour]);
+        assert(pos_ == FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx) );
         // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
         // Gas import and consumption is already included in the REIN rates
         Scalar inj_rate = group_state_.injection_rein_rates(this->group_name_)[pos_];
@@ -256,13 +264,14 @@ groupTarget(const std::optional<Group::InjectionControls>& ctrl,
     }
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 GuideRateModel::Target
-InjectionTargetCalculator<Scalar>::guideTargetMode() const
+InjectionTargetCalculator<FluidSystem, Indices>::guideTargetMode() const
 {
     return target_;
 }
 
+/*
 #define INSTANTIATE_TARGET_CALCULATOR(T,...) \
     template __VA_ARGS__                     \
     TargetCalculator<T>::calcModeRateFromRates(const __VA_ARGS__* rates) const;
@@ -293,5 +302,7 @@ INSTANTIATE_TYPE(double)
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
 #endif
+*/
 
 } // namespace Opm::WGHelpers
+#endif

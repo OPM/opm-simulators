@@ -41,7 +41,7 @@ struct WGState
 {
     using Scalar = typename FluidSystem::Scalar;
 
-    explicit WGState(const PhaseUsage& pu);
+    WGState();
 
     static WGState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
 
