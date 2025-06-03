@@ -26,7 +26,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseResource.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cusparse_constants.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/preconditioner_should_call_post_pre.hpp>
 
