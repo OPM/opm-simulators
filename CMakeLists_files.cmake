@@ -1008,6 +1008,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp
   opm/simulators/linalg/PreconditionerFactory.hpp
   opm/simulators/linalg/PreconditionerFactory_impl.hpp
+  opm/simulators/linalg/printlinearsolverparameter.hpp
   opm/simulators/linalg/StandardPreconditioners.hpp
   opm/simulators/linalg/StandardPreconditioners_mpi.hpp
   opm/simulators/linalg/StandardPreconditioners_serial.hpp
