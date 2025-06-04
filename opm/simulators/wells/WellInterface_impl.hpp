@@ -403,6 +403,8 @@ namespace Opm
         else {
             ws.production_cmode = Well::ProducerCMode::BHP;
         }
+        // We will try to open the well
+        ws.open();
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
