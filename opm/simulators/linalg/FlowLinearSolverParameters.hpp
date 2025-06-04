@@ -55,11 +55,7 @@ struct FlowIstlSolverParams {};
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams>
 {
-#if COMPILE_GPU_BRIDGE
     using type = ISTLSolverRuntimeOptionProxy<TypeTag>;
-#else
-    using type = ISTLSolverRuntimeOptionProxy<TypeTag>;
-#endif
 };
 
 }
