@@ -27,6 +27,16 @@
 
 namespace Opm::gpuistl::detail
 {
+
+/**
+ * @brief FlexibleSolverWrapper is compilational trick to reduce compile time overhead
+ * 
+ * Essentially this class acts as a direct interface towards the FlexibleSolver class, but
+ * we want to have a clear wall between the ISTLSolverGPUISTL and the FlexibleSolver to avoid
+ * compilational overhead (the former is based on TypeTag the latter on operators). 
+ *
+ * This wrapper handles the mapping from matrices to concrete operator types.
+ */
 template <class Matrix, class Vector, class Comm>
 class FlexibleSolverWrapper
 {
@@ -42,9 +52,9 @@ public:
                           bool parallel,
                           const PropertyTree& prm,
                           std::size_t pressureIndex,
-                          std::function<Vector()> weightCalculator,
-                          const bool forceSerial,
-                          Comm* comm);
+                          const std::function<Vector()>& weightCalculator,
+                          bool forceSerial,
+                          const Comm* comm);
 
     void update();
 
