@@ -99,7 +99,6 @@ protected:
     static const int dimensionworld = Grid::dimensionworld;
     using Element = typename GridView::template Codim<0>::Entity;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
-    mutable std::optional<std::vector<std::unordered_map<std::size_t, std::size_t>>> lgrMappers;
 
 public:
     /*!
@@ -448,7 +447,10 @@ protected:
      *  It is initialized the first time it is called
      */
     std::unordered_map<int,int> cartesianToCompressed_;
-
+    /*! \brief Mapping between LGR cartesian and compressed cells.
+     *  It is initialized as it is called
+     */
+    mutable std::optional<std::vector<std::unordered_map<std::size_t, std::size_t>>> lgrMappers_;
     /*! \brief Cell center depths
      */
     std::vector<Scalar> cellCenterDepth_;

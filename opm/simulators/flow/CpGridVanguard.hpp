@@ -121,12 +121,12 @@ public:
     {
         const std::array<int,3> lgr_ijk = {conn.getI(), conn.getJ(), conn.getK()};
         const auto& lgr_level = this->grid().getLgrNameToLevel().at(lgr_tag);
-        if (ParentType::lgrMappers.has_value() == false) {
-            ParentType::lgrMappers.emplace(this->grid().mapLocalCartesianIndexSetsToLeafIndexSet());
+        if (ParentType::lgrMappers_.has_value() == false) {
+            ParentType::lgrMappers_.emplace(this->grid().mapLocalCartesianIndexSetsToLeafIndexSet());
         }
         const auto& lgr_dim = this->grid().currentData()[lgr_level]->logicalCartesianSize();
         const auto lgr_cartesian_index = (lgr_ijk[2]*lgr_dim[0]*lgr_dim[1]) + (lgr_ijk[1]*lgr_dim[0]) + (lgr_ijk[0]);
-        return ParentType::lgrMappers.value()[lgr_level].at(lgr_cartesian_index);
+        return ParentType::lgrMappers_.value()[lgr_level].at(lgr_cartesian_index);
     }   
     /*!
      * Checking consistency of simulator
