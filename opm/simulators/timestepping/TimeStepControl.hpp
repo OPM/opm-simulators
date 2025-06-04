@@ -37,6 +37,16 @@ namespace Opm
       General3rdOrder,
     };
 
+    enum class ToleranceTestVersions {
+        Standard,
+        ControlErrorFiltering,
+    };
+
+    enum class InternalControlVersions {
+        IController,
+        General3rdOrder,
+    };
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     ///  A simple iteration count based adaptive time step control.
@@ -66,7 +76,7 @@ namespace Opm
                                    const RelativeChangeInterface& /* relativeChange */,
                                    const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
         
-        bool timeStepAccepted(const double /* error */) const override { return true; }
+        bool timeStepAccepted(const double /* error */, const double /* timeStepJustCompleted */) const override { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -119,7 +129,7 @@ namespace Opm
                                    const RelativeChangeInterface& relativeChange,
                                    const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
 
-        bool timeStepAccepted(const double /* error */) const override { return true; }
+        bool timeStepAccepted(const double /* error */, const double /* timeStepJustCompleted */) const override { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -170,7 +180,7 @@ namespace Opm
                                    const RelativeChangeInterface& relativeChange,
                                    const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
 
-        bool timeStepAccepted(const double /* error */) const override { return true; }
+        bool timeStepAccepted(const double /* error */, const double /* timeStepJustCompleted */) const override { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -201,19 +211,26 @@ namespace Opm
     public:
         static constexpr TimeStepControlType Type = TimeStepControlType::General3rdOrder;
 
-        General3rdOrderController( const double tolerance = 1e-3,
-                                   const double safetyFactor = 0.8,
-                                   const bool rejectCompletedStep = false,
-                                   const bool verbose = false );
+        General3rdOrderController() = default;
+
+        General3rdOrderController( const double tolerance,
+                                   const double safetyFactor,
+                                   const bool rejectCompletedStep,
+                                   const std::string& toleranceTestVersion,
+                                   const double maxReductionTimeStep,
+                                   const std::string& parameters,
+                                   const bool verbose);
 
         static General3rdOrderController serializationTestObject();
 
         double computeTimeStepSize(const double dt,
-                                   const int /*iterations */,
-                                   const RelativeChangeInterface& relativeChange,
+                                   const int /* iterations */,
+                                   const RelativeChangeInterface& /* relativeChange */,
                                    const AdaptiveSimulatorTimer& substepTimer) const override;
 
-        bool timeStepAccepted(const double error) const override;
+        double timeStepFactor(const std::array<double, 3>& errors, const std::array<double, 3>& timeSteps) const;
+
+        bool timeStepAccepted(const double error, const double timeStepJustCompleted) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -223,6 +240,11 @@ namespace Opm
             serializer(rejectCompletedStep_);
             serializer(errors_);
             serializer(timeSteps_);
+            serializer(beta_);
+            serializer(alpha_);
+            serializer(controllerVersion_);
+            serializer(toleranceTestVersion_);
+            serializer(maxReductionTimeStep_);
             serializer(verbose_);
         }
 
@@ -230,12 +252,16 @@ namespace Opm
 
 
     protected:
-        const double tolerance_ = 1e-3;
+        const double tolerance_ = 0.1;
         const double safetyFactor_ = 0.8;
         const bool rejectCompletedStep_ = false;
-        mutable std::vector<double> errors_{};
-        mutable std::vector<double> timeSteps_{};
-        mutable int counterSinceFailure_ = 0;
+        mutable std::array<double, 3> errors_{};
+        mutable std::array<double, 3> timeSteps_{};
+        mutable std::array<double, 3> beta_{0.125, 0.25, 0.125};
+        mutable std::array<double, 2> alpha_{0.75, 0.25};
+        mutable InternalControlVersions controllerVersion_{InternalControlVersions::IController};
+        ToleranceTestVersions toleranceTestVersion_{ToleranceTestVersions::Standard};
+        const double maxReductionTimeStep_ = 0.1;
         const bool verbose_ = false;
     };
 
@@ -266,7 +292,7 @@ namespace Opm
                                    const RelativeChangeInterface& /*relativeChange */,
                                    const AdaptiveSimulatorTimer& substepTimer) const override;
 
-        bool timeStepAccepted(const double /* error */) const override { return true; }
+        bool timeStepAccepted(const double /* error */, const double /* timeStepJustCompleted */) const override { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)

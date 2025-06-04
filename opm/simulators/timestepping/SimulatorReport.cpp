@@ -35,7 +35,7 @@ namespace Opm
         return SimulatorReportSingle{1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
                                      7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
                                      13, 14, 15, 16, 17, 18,
-                                     true, false, 19, 20.0, 21.0,
+                                     true, false, false, 19, 20.0, 21.0,
                                      22, 23, 24, 25, 26, 27, 28};
     }
 
@@ -60,6 +60,7 @@ namespace Opm
                this->min_linear_iterations == rhs.min_linear_iterations &&
                this->max_linear_iterations == rhs.max_linear_iterations &&
                this->converged == rhs.converged &&
+               this->time_step_rejected == rhs.time_step_rejected &&
                this->well_group_control_changed == rhs.well_group_control_changed &&
                this->exit_status == rhs.exit_status &&
                this->global_time == rhs.global_time &&
