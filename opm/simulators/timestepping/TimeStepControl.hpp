@@ -56,17 +56,18 @@ namespace Opm
     {
     public:
         static constexpr TimeStepControlType Type = TimeStepControlType::SimpleIterationCount;
+        
         SimpleIterationCountTimeStepControl() = default;
 
         /// \brief constructor
         /// \param target_iterations  number of desired iterations (e.g. Newton iterations) per time step in one time step
-        //  \param decayrate          decayrate of time step when target iterations are not met (should be <= 1)
-        //  \param growthrate         growthrate of time step when target iterations are not met (should be >= 1)
-        /// \param verbose            if true get some output (default = false)
-        SimpleIterationCountTimeStepControl( const int target_iterations,
-                                             const double decayrate,
-                                             const double growthrate,
-                                             const bool verbose = false);
+        /// \param decayrate          decayrate of time step when target iterations are not met (should be <= 1)
+        /// \param growthrate         growthrate of time step when target iterations are not met (should be >= 1)
+        /// \param verbose            if true, get some output
+        SimpleIterationCountTimeStepControl(const int target_iterations,
+                                            const double decayrate,
+                                            const double growthrate,
+                                            const bool verbose);
 
         static SimpleIterationCountTimeStepControl serializationTestObject();
 
@@ -76,7 +77,8 @@ namespace Opm
                                    const RelativeChangeInterface& /* relativeChange */,
                                    const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
         
-        bool timeStepAccepted(const double /* error */, const double /* timeStepJustCompleted */) const override { return true; }
+        bool timeStepAccepted(const double /* error */,
+                              const double /* timeStepJustCompleted */) const override { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -114,12 +116,15 @@ namespace Opm
     {
     public:
         static constexpr TimeStepControlType Type = TimeStepControlType::PID;
+
+        PIDTimeStepControl() = default;
+
         /// \brief constructor
         /// \param tol      tolerance for the relative changes of the numerical solution to be accepted
-        ///                 in one time step (default is 1e-3)
-        /// \param verbose  if true get some output (default = false)
-        explicit PIDTimeStepControl(const double tol = 1e-3,
-                                    const bool verbose = false);
+        ///                 in one time step
+        /// \param verbose  if true, get some output
+        PIDTimeStepControl(const double tol,
+                           const bool verbose);
 
         static PIDTimeStepControl serializationTestObject();
 
@@ -129,7 +134,8 @@ namespace Opm
                                    const RelativeChangeInterface& relativeChange,
                                    const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
 
-        bool timeStepAccepted(const double /* error */, const double /* timeStepJustCompleted */) const override { return true; }
+        bool timeStepAccepted(const double /* error */,
+                              const double /* timeStepJustCompleted */) const override { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -142,16 +148,15 @@ namespace Opm
         bool operator==(const PIDTimeStepControl&) const;
 
     protected:
-        const double tol_ = 1e-3;
+        const double tol_ = 0.1;
         mutable std::vector< double > errors_{};
-
         const bool verbose_ = false;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     ///  PID controller based adaptive time step control as above that also takes
-    ///  an target iteration into account.
+    ///  target iterations into account.
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class PIDAndIterationCountTimeStepControl : public PIDTimeStepControl
@@ -160,17 +165,22 @@ namespace Opm
     public:
         static constexpr TimeStepControlType Type = TimeStepControlType::PIDAndIterationCount;
 
+        PIDAndIterationCountTimeStepControl() = default;
+
         /// \brief constructor
-        /// \param target_iterations  number of desired iterations per time step
-        /// \param tol        tolerance for the relative changes of the numerical solution to be accepted
-        ///                   in one time step (default is 1e-3)
-        /// \param verbose    if true get some output (default = false)
-        explicit PIDAndIterationCountTimeStepControl(const int target_iterations = 20,
-                                                     const double decayDampingFactor = 1.0,
-                                                     const double growthDampingFactor = 1.0/1.2,
-                                                     const double tol = 1e-3,
-                                                     const double minTimeStepBasedOnIterations = 0.,
-                                                     const bool verbose = false);
+        /// \param target_iterations            number of desired iterations per time step
+        /// \param decayDampingFactor           limiting the decrease in time step if iteration count was high
+        /// \param growthDampingFactor          limiting the increase in time step if iteration count was low
+        /// \param tol                          tolerance for the relative changes of the numerical solution to be
+        ///                                     accepted in one time step
+        /// \param minTimeStepBasedOnIterations time step suggestion from target iterations should not be below this
+        /// \param verbose                      if true, get some output
+        PIDAndIterationCountTimeStepControl(const int target_iterations,
+                                            const double decayDampingFactor,
+                                            const double growthDampingFactor,
+                                            const double tol,
+                                            const double minTimeStepBasedOnIterations,
+                                            const bool verbose);
 
         static PIDAndIterationCountTimeStepControl serializationTestObject();
 
@@ -180,7 +190,8 @@ namespace Opm
                                    const RelativeChangeInterface& relativeChange,
                                    const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
 
-        bool timeStepAccepted(const double /* error */, const double /* timeStepJustCompleted */) const override { return true; }
+        bool timeStepAccepted(const double /* error */,
+                              const double /* timeStepJustCompleted */) const override { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -190,15 +201,17 @@ namespace Opm
             serializer(decayDampingFactor_);
             serializer(growthDampingFactor_);
             serializer(minTimeStepBasedOnIterations_);
+            serializer(verbose_);
         }
 
         bool operator==(const PIDAndIterationCountTimeStepControl&) const;
 
     protected:
-        const int     target_iterations_;
-        const double  decayDampingFactor_;
-        const double  growthDampingFactor_;
-        const double  minTimeStepBasedOnIterations_;
+        const int target_iterations_ = 8;
+        const double decayDampingFactor_ = 1.0;
+        const double growthDampingFactor_ = 3.2;
+        const double minTimeStepBasedOnIterations_ = 0.0;
+        const bool verbose_ = false;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -212,25 +225,36 @@ namespace Opm
         static constexpr TimeStepControlType Type = TimeStepControlType::General3rdOrder;
 
         General3rdOrderController() = default;
-
-        General3rdOrderController( const double tolerance,
-                                   const double safetyFactor,
-                                   const bool rejectCompletedStep,
-                                   const std::string& toleranceTestVersion,
-                                   const double maxReductionTimeStep,
-                                   const std::string& parameters,
-                                   const bool verbose);
+        
+        /// \brief constructor
+        /// \param tolerance                    tolerance for the relative changes of the numerical solution to be
+        ///                                     accepted in one time step
+        /// \param safetyFactor                 multiplied with tolerance to ensure that target relative change is
+        ///                                     lower than tolerance
+        /// \param rejectCompletedStep          if true, discard the recently completed time step and try again
+        /// \param toleranceTestVersion         the test used to decide if a time step should be rejected
+        /// \param maxReductionTimeStep         limits the reduction in time step size for control error filtering
+        /// \param parameters                   parameter values for the controller formula
+        /// \param verbose                      if true, get some output
+        General3rdOrderController(const double tolerance,
+                                  const double safetyFactor,
+                                  const bool rejectCompletedStep,
+                                  const std::string& toleranceTestVersion,
+                                  const double maxReductionTimeStep,
+                                  const std::string& parameters,
+                                  const bool verbose);
 
         static General3rdOrderController serializationTestObject();
 
         double computeTimeStepSize(const double dt,
                                    const int /* iterations */,
-                                   const RelativeChangeInterface& /* relativeChange */,
+                                   const RelativeChangeInterface& relativeChange,
                                    const AdaptiveSimulatorTimer& substepTimer) const override;
 
         double timeStepFactor(const std::array<double, 3>& errors, const std::array<double, 3>& timeSteps) const;
 
-        bool timeStepAccepted(const double error, const double timeStepJustCompleted) const override;
+        bool timeStepAccepted(const double error,
+                              const double timeStepJustCompleted) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -278,6 +302,7 @@ namespace Opm
     {
     public:
         static constexpr TimeStepControlType Type = TimeStepControlType::HardCodedTimeStep;
+        
         HardcodedTimeStepControl() = default;
 
         /// \brief constructor
@@ -292,7 +317,8 @@ namespace Opm
                                    const RelativeChangeInterface& /*relativeChange */,
                                    const AdaptiveSimulatorTimer& substepTimer) const override;
 
-        bool timeStepAccepted(const double /* error */, const double /* timeStepJustCompleted */) const override { return true; }
+        bool timeStepAccepted(const double /* error */,
+                              const double /* timeStepJustCompleted */) const override { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
