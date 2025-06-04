@@ -60,9 +60,9 @@ jobs:
 
       - name: Overwrite conf.py with custom config
         run: |
-          echo "import os" > docs/sphinx/source/conf.py
+          echo "import os" >> docs/sphinx/source/conf.py
           echo "import sys" >> docs/sphinx/source/conf.py
-          echo "from pathlib import Path" > docs/sphinx/source/conf.py
+          echo "from pathlib import Path" >> docs/sphinx/source/conf.py
           echo "sys.path.insert(0, str(Path('.').resolve()))" >> docs/sphinx/source/conf.py
           echo "" >> docs/sphinx/source/conf.py
           echo "extensions = ['breathe']" >> docs/sphinx/source/conf.py
@@ -75,7 +75,7 @@ jobs:
 
       - name: Create index.rst with Breathe directives
         run: |
-          echo "opm-simulators documentation" > docs/sphinx/source/index.rst
+          echo "opm-simulators documentation" >> docs/sphinx/source/index.rst
           echo "============================" >> docs/sphinx/source/index.rst
           echo "" >> docs/sphinx/source/index.rst
           echo ".. toctree::" >> docs/sphinx/source/index.rst
