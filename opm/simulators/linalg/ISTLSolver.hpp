@@ -48,6 +48,7 @@
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
+#include <opm/simulators/linalg/printlinearsolverparameter.hpp>
 
 #include <any>
 #include <cstddef>
@@ -304,14 +305,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 #endif
 
             // Print parameters to PRT/DBG logs.
-            if (on_io_rank && parameters_[activeSolverNum_].linear_solver_print_json_definition_) {
-                std::ostringstream os;
-                os << "\nProperty tree for linear solvers:\n";
-                for (std::size_t i = 0; i<prm_.size(); i++) {
-                    prm_[i].write_json(os, true);
-                }
-                OpmLog::note(os.str());
-            }
+            detail::printLinearSolverParameters(parameters_, activeSolverNum_, prm_,  simulator_.gridView().comm());
         }
 
         // nothing to clean here
