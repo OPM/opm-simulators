@@ -547,7 +547,7 @@ checkGconsaleLimits(const Group& group,
             break;
         }
         case GConSale::MaxProcedure::RATE: {
-            this->groupState().production_control(group.name(), Group::ProductionCMode::GRAT);
+            this->groupState().update_production_control(group.name(), Group::ProductionCMode::GRAT);
             ss = fmt::format("Maximum GCONSALE limit violated for {}. "
                              "The group is switched from {} to {} "
                              "and limited by the maximum sales rate after "
