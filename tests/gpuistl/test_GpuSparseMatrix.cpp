@@ -112,14 +112,14 @@ void runRandomSparsityMatrixTest()
     double nonzeroPercent = 0.2;
     std::mt19937 generator(42); // Fixed seed for reproducibility
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
-    const int N = 300;
+    const size_t N = 300;
     using M = Dune::FieldMatrix<double, dim, dim>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, dim>>;
 
     std::vector<std::vector<size_t>> nonzerocols(N);
     int nonZeroes = 0;
-    for (auto row = 0; row < N; ++row) {
+    for (size_t row = 0; row < N; ++row) {
         // Always include the diagonal element to ensure each row has at least one entry
         nonzerocols.at(row).push_back(row);
         nonZeroes++;
@@ -133,13 +133,13 @@ void runRandomSparsityMatrixTest()
         }
     }
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
-    for (auto row = B.createbegin(); row != B.createend(); ++row) {
-        for (size_t j = 0; j < nonzerocols[row.index()].size(); ++j) {
-            row.insert(nonzerocols[row.index()][j]);
+    for (auto row_iter = B.createbegin(); row_iter != B.createend(); ++row_iter) {
+        for (size_t j = 0; j < nonzerocols[row_iter.index()].size(); ++j) {
+            row_iter.insert(nonzerocols[row_iter.index()][j]);
         }
     }
     // This might not be the most elegant way of filling in a Dune sparse matrix, but it works.
-    for (int i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i) {
         for (size_t j = 0; j < nonzerocols[i].size(); ++j) {
             for (size_t c1 = 0; c1 < dim; ++c1) {
                 for (size_t c2 = 0; c2 < dim; ++c2) {

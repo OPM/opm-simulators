@@ -775,6 +775,7 @@ if(CUDA_FOUND)
                        is_gpu_pointer
                        throw_macros_on_gpu
                        preconditioner_factory_gpu
+                       GpuPressureTransferPolicy
                        PROPERTIES LABELS ${gpu_label})
   if(MPI_FOUND)
     set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
@@ -790,6 +791,7 @@ if(HYPRE_FOUND)
 endif()
 
 if(AMGX_FOUND)
+  set_tests_properties(AmgxInterface PROPERTIES LABELS gpu_cuda)
   set_tests_properties(AmgxPreconditioner PROPERTIES LABELS gpu_cuda)
 endif()
 

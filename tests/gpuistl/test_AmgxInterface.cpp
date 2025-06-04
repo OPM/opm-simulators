@@ -35,20 +35,31 @@
 
 using namespace Opm::gpuistl;
 
-// RAII class for managing AMGX resources during tests
-class AmgxResourceGuard {
-public:
-    AmgxResourceGuard()
-    {
+// Global fixture for AMGX initialization and finalization
+struct AmgxGlobalFixture {
+    AmgxGlobalFixture() {
         AmgxInterface::initialize();
+    }
+    ~AmgxGlobalFixture() {
+        AmgxInterface::finalize();
+    }
+};
+
+// Register the global fixture
+BOOST_GLOBAL_FIXTURE(AmgxGlobalFixture);
+
+// RAII class for managing AMGX config and resources (not init/finalize)
+class AmgxTestResources {
+public:
+    AmgxTestResources()
+    {
         cfg_ = AmgxInterface::createConfig("");
         rsrc_ = AmgxInterface::createResources(cfg_);
     }
 
-    ~AmgxResourceGuard() {
+    ~AmgxTestResources() {
         AmgxInterface::destroyResources(rsrc_);
         AmgxInterface::destroyConfig(cfg_);
-        AmgxInterface::finalize();
     }
 
     AMGX_config_handle getConfig() const { return cfg_; }
@@ -63,7 +74,7 @@ private:
 BOOST_AUTO_TEST_CASE(TestVectorTransfer)
 {
     // Setup AMGX resources
-    AmgxResourceGuard resources;
+    AmgxTestResources resources;
 
     // Create test data
     const int n = 100;
@@ -114,7 +125,7 @@ BOOST_AUTO_TEST_CASE(TestVectorTransfer)
 BOOST_AUTO_TEST_CASE(TestMatrixTransfer)
 {
     // Setup AMGX resources
-    AmgxResourceGuard resources;
+    AmgxTestResources resources;
 
     // Create a simple tridiagonal matrix
     const int N = 10;
@@ -205,7 +216,7 @@ BOOST_AUTO_TEST_CASE(TestTemplatedUtilities)
 BOOST_AUTO_TEST_CASE(TestErrorHandling)
 {
     // Setup AMGX resources
-    AmgxResourceGuard resources;
+    AmgxTestResources resources;
 
     // Create vectors of different sizes
     GpuVector<double> vec1(10);
