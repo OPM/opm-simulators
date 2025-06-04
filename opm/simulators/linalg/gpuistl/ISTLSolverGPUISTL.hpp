@@ -31,6 +31,7 @@
 #endif
 
 #include <opm/simulators/linalg/gpuistl/detail/FlexibleSolverWrapper.hpp>
+#include <opm/simulators/linalg/printlinearsolverparameter.hpp>
 
 namespace Opm::gpuistl
 {
@@ -77,6 +78,10 @@ public:
         m_propertyTree = setupPropertyTree(m_parameters,
                                            Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
                                            Parameters::IsSet<Parameters::LinearSolverReduction>());
+
+        Opm::detail::printLinearSolverParameters(m_parameters,
+                                                 m_propertyTree, 
+                                                 simulator.gridView().comm());
     }
 
     /// Construct a system solver.
