@@ -161,7 +161,7 @@ void FlowLinearSolverParameters::registerParameters()
         ("Parallelize ILU decomposition and application on GPU");
     Parameters::Register<Parameters::LinearSolverAccelerator>
         ("Choose the backend for the linear solver, usage: "
-         "'--linear-solver-accelerator=[cpu|gpu]'. The default is 'cpu'. ");
+         "'--linear-solver-accelerator=[cpu|gpu]'.");
 
     Parameters::SetDefault<Parameters::LinearSolverVerbosity>(0);
 }
