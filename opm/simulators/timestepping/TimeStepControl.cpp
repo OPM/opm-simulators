@@ -92,6 +92,9 @@ namespace Opm
             dtEstimate *= growthrate_;
         }
 
+        if( verbose_ )
+            OpmLog::info(fmt::format("Computed step size: {} days", unit::convert::to( dtEstimate, unit::day )));
+
         return dtEstimate;
     }
 
@@ -192,7 +195,7 @@ namespace Opm
             // adjust dt by given tolerance
             const double newDt = dt * tol_ / error;
             if ( verbose_ )
-                    OpmLog::info(fmt::format("Computed step size (tol): {} days", unit::convert::to( newDt, unit::day )));
+                    OpmLog::info(fmt::format("Computed step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
         }
         else if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
@@ -211,7 +214,7 @@ namespace Opm
                                  std::pow( tol_         / errors_[ 2 ], kI ) *
                                  std::pow( errors_[1]*errors_[1]/errors_[ 0 ]/errors_[ 2 ], kD ));
             if( verbose_ )
-                OpmLog::info(fmt::format("Computed step size (pow): {} days", unit::convert::to( newDt, unit::day )));
+                OpmLog::info(fmt::format("Computed step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
         }
     }
@@ -243,6 +246,7 @@ namespace Opm
         , decayDampingFactor_( decayDampingFactor )
         , growthDampingFactor_( growthDampingFactor )
         , minTimeStepBasedOnIterations_(minTimeStepBasedOnIterations)
+        , verbose_(verbose)
     {}
 
     PIDAndIterationCountTimeStepControl
@@ -270,6 +274,9 @@ namespace Opm
             dtEstimateIter = dt * (1.0 + off_target_fraction * growthDampingFactor_);
         }
 
+        if( verbose_ )
+            OpmLog::info(fmt::format("Computed step size (from iteration target): {} days", unit::convert::to( dtEstimateIter, unit::day )));
+
         return std::min(dtEstimatePID, dtEstimateIter);
     }
 
@@ -279,7 +286,8 @@ namespace Opm
                this->target_iterations_ == ctrl.target_iterations_ &&
                this->decayDampingFactor_ == ctrl.decayDampingFactor_ &&
                this->growthDampingFactor_ == ctrl.growthDampingFactor_ &&
-               this->minTimeStepBasedOnIterations_ == ctrl.minTimeStepBasedOnIterations_;
+               this->minTimeStepBasedOnIterations_ == ctrl.minTimeStepBasedOnIterations_ &&
+               this->verbose_ == ctrl.verbose_;
     }
 
 
@@ -343,7 +351,7 @@ namespace Opm
     }
 
     double General3rdOrderController::
-    computeTimeStepSize(const double dt, const int /* iterations */, const RelativeChangeInterface& /* relChange */, const AdaptiveSimulatorTimer& substepTimer) const
+    computeTimeStepSize(const double dt, const int /* iterations */, const RelativeChangeInterface& relChange, const AdaptiveSimulatorTimer& substepTimer) const
     {
         if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0)
         {
@@ -359,28 +367,23 @@ namespace Opm
             assert(std::isfinite(errors_[i]));
         }
 
-        // Use an I controller after report time steps
-        if (substepTimer.currentStepNum() < 3)
+        if (substepTimer.currentStepNum() < 3) // Use an I controller after report time steps
         {
             controllerVersion_ = InternalControlVersions::IController;
-            const double newDt = dt * timeStepFactor(errors_, timeSteps_);
-            if (verbose_)
-            {
-                OpmLog::info(fmt::format("Computed step size (pow): {} days", unit::convert::to( newDt, unit::day )));
-            }
-            return newDt;
         }
-        // Use the general third order controller for all other time steps
-        else
+        else // Use the general third order controller for all other time steps
         {
             controllerVersion_ = InternalControlVersions::General3rdOrder;
-            const double newDt = dt * timeStepFactor(errors_, timeSteps_);
-            if (verbose_)
-            {
-                OpmLog::info(fmt::format("Computed step size (pow): {} days", unit::convert::to( newDt, unit::day )));
-            }
-            return newDt;
         }
+
+        const double newDt = dt * timeStepFactor(errors_, timeSteps_);
+
+        if (verbose_)
+        {
+            OpmLog::info(fmt::format("Computed step size: {} days", unit::convert::to( newDt, unit::day ),
+                                     "\nBased on relative change: {}", relChange.relativeChange()));
+        }
+        return newDt;
     }
 
     double General3rdOrderController::
