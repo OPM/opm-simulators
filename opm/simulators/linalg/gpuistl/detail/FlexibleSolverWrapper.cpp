@@ -38,9 +38,9 @@ namespace
                             [[maybe_unused]] bool parallel,
                             const PropertyTree& prm,
                             std::size_t pressureIndex,
-                            std::function<Vector()> weightCalculator,
-                            [[maybe_unused]] const bool forceSerial,
-                            [[maybe_unused]] Comm* comm)
+                            const std::function<Vector()>& weightCalculator,
+                            [[maybe_unused]] bool forceSerial,
+                            [[maybe_unused]] const Comm* comm)
     {
         // For now only matrix adapter is supported
         using OperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
@@ -61,9 +61,9 @@ FlexibleSolverWrapper<Matrix, Vector, Comm>::FlexibleSolverWrapper(const Matrix&
                                                                    bool parallel,
                                                                    const PropertyTree& prm,
                                                                    std::size_t pressureIndex,
-                                                                   std::function<Vector()> weightCalculator,
-                                                                   const bool forceSerial,
-                                                                   Comm* comm)
+                                                                   const std::function<Vector()>& weightCalculator,
+                                                                   bool forceSerial,
+                                                                   const Comm* comm)
     : FlexibleSolverWrapper(
           createOperatorAndSolver(matrix, parallel, prm, pressureIndex, weightCalculator, forceSerial, comm))
 {
