@@ -78,6 +78,7 @@
 #include <cassert>
 #include <functional>
 #include <iterator>
+#include <numeric>
 #include <sstream>
 #include <stdexcept>
 #include <tuple>
@@ -223,7 +224,7 @@ initFromRestartFile(const RestartValue& restartValues,
     this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
     this->initializeWellProdIndCalculators();
-    initializeWellPerfData();
+    this->initializeWellPerfData(report_step);
 
     const bool handle_ms_well = param_.use_multisegment_well_ && anyMSWellOpenLocal();
     // Resize for restart step
@@ -270,7 +271,7 @@ prepareDeserialize(int report_step, const std::size_t numCells, bool enable_dist
     this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
     this->initializeWellProdIndCalculators();
-    initializeWellPerfData();
+    this->initializeWellPerfData(report_step);
 
     // Resize unconditionally, including when this rank has no local wells at
     // report_step. Skipping it there leaves the PREVIOUS call's well state in
@@ -287,12 +288,19 @@ prepareDeserialize(int report_step, const std::size_t numCells, bool enable_dist
     //
     // WellState::resize handles an empty well list correctly - base_init clears
     // the well container and init returns early after the bookkeeping.
-    const bool handle_ms_well = param_.use_multisegment_well_ &&
-                                !this->wells_ecl_.empty() && anyMSWellOpenLocal();
-    this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
-                             this->schedule(), handle_ms_well, numCells,
-                             this->well_perf_data_, this->summaryState_, enable_distributed_wells,
+    const auto handle_ms_well = this->param_.use_multisegment_well_
+        && anyMSWellOpenLocal();
+
+    this->wellState().resize(this->wells_ecl_,
+                             this->local_parallel_well_info_,
+                             this->schedule(),
+                             handle_ms_well,
+                             numCells,
+                             this->well_perf_data_,
+                             this->summaryState_,
+                             enable_distributed_wells,
                              this->eclState().getSimulationConfig().isThermal());
+
     this->wellState().clearWellRates();
     this->commitWGState();
     this->updateNupcolWGState();
@@ -445,9 +453,11 @@ initializeWellProdIndCalculators()
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
-initializeWellPerfData()
+initializeWellPerfData(const int report_step)
 {
     well_perf_data_.resize(wells_ecl_.size());
+
+    auto allFound = std::vector<int>(this->schedule().numWells(report_step), 0);
 
     this->conn_idx_map_.clear();
     this->conn_idx_map_.reserve(wells_ecl_.size());
@@ -475,7 +485,6 @@ initializeWellPerfData()
 
         auto& parallelWellInfo = this->local_parallel_well_info_[well_index].get();
         parallelWellInfo.beginReset();
-
 
         for (const auto& connection : well.getConnections()) {
 
@@ -534,11 +543,24 @@ initializeWellPerfData()
 
         parallelWellInfo.endReset();
 
-        checker.checkAllConnectionsFound();
+        allFound[well.seqIndex()] = static_cast<int>
+            (checker.checkAllConnectionsFound().first);
 
         parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
 
         ++well_index;
+    }
+
+    this->comm_.sum(allFound.data(), allFound.size());
+
+    const auto numAllFound =
+        std::accumulate(allFound.begin(), allFound.end(), 0);
+
+    if (numAllFound != static_cast<int>(allFound.size())) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Not all connections found for "
+                              "all {} wells at report step {}",
+                              allFound.size(), report_step));
     }
 }
 
