@@ -118,6 +118,7 @@ template<class Array>
 std::string formatBorder(const Array& widths)
 {
     std::string ss;
+    ss = " ";
     std::for_each(widths.begin(), widths.end(),
                   [&ss](const auto w)
                   { ss += fmt::format(":{:->{}}", "", w); });
@@ -130,7 +131,7 @@ template<std::size_t size>
 std::string formatTextRow(const std::array<int, size>& widths,
                           const std::array<std::string_view, size>& entries)
 {
-    std::string ss;
+    std::string ss = " ";
     std::for_each(widths.begin(), widths.end(),
                   [&entries, &ss, i = 0](const auto w) mutable
                   { ss += fmt::format(":{:^{}}", entries[i++], w); });
@@ -386,7 +387,7 @@ fipResv(const Inplace& inplace, const std::string& name) const
         this->outputResvFluidInPlace_(current_values, reg);
     }
 
-    OpmLog::note(fmt::format("{:=^91}", ""));
+    OpmLog::note(fmt::format(" {:=^91}", ""));
 }
 
 template<class Scalar>
@@ -1355,18 +1356,18 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
                              const Scalar value,
                              const UnitSystem::measure m)
     {
-        return fmt::format("{0: >52}:{0: >8}{1:<5}={2:>14.0f}  {3:<18}:\n",
+        return fmt::format(" {0: >52}:{0: >8}{1:<5}={2:>14.0f}  {3:<18}:\n",
                            "", text, value, units.name(m));
     };
 
     auto topLabel = [](const char* text)
     {
-        return fmt::format("{: >52}: {:^47}:\n", "", text);
+        return fmt::format(" {: >52}: {:^47}:\n", "", text);
     };
 
     auto formatEntry = [](auto& fip, std::string_view label)
     {
-        return fmt::format(":{:<25}:{:^15.0f}{:^14.0f}{:^14.0f}:{:^16.0f}:"
+        return fmt::format(" :{:<25}:{:^15.0f}{:^14.0f}{:^14.0f}:{:^16.0f}:"
                            "{:^15.0f}{:^14.0f}{:^14.0f}:\n",
                            label,
                            fip[Inplace::Phase::OilInLiquidPhase],
@@ -1379,12 +1380,12 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
     };
 
     std::ostringstream ss;
-    ss << fmt::format("\n{0: >52}{0:=>50}\n", "");
+    ss << fmt::format("\n {0: >52}{0:=>50}\n", "");
     if (reg == 0) {
-        ss << fmt::format("{0: >52}:{1:^48}:\n", "", "FIELD TOTALS");
+        ss << fmt::format(" {0: >52}:{1:^48}:\n", "", "FIELD TOTALS");
     }
     else {
-        ss << fmt::format("{0: >52}:{1:>20} REPORT REGION {2:>{3}}{0: ^11}:\n",
+        ss << fmt::format(" {0: >52}:{1:>20} REPORT REGION {2:>{3}}{0: ^11}:\n",
                           "", name, reg, 8 - name.size());
     }
     ss << topEntry("PAV", pav, UnitSystem::measure::pressure)
@@ -1394,12 +1395,12 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
            << topLabel("Pore volumes are taken at reference conditions");
     }
 
-    ss << fmt::format("{0: >26}:{0:->15} OIL {1:>4} {0:->18}:"
+    ss << fmt::format(" {0: >26}:{0:->15} OIL {1:>4} {0:->18}:"
                       "-- WAT{0: >2} {1:>4} --:{0:->14}  GAS{0: >3} {2:>4} {0:-^15}:\n",
                       "",
                       units.name(UnitSystem::measure::liquid_surface_volume),
                       units.name(UnitSystem::measure::gas_surface_volume))
-       << fmt::format("{0: >26}:{1:^15}{2:^14}{3:^14}:{3:^16}:{4:^15}{5:^14}{3:^14}:\n",
+       << fmt::format(" {0: >26}:{1:^15}{2:^14}{3:^14}:{3:^16}:{4:^15}{5:^14}{3:^14}:\n",
                       "",
                       "LIQUID",
                       "VAPOUR",
@@ -1414,7 +1415,7 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
     if (reg != 0) {
         ss << formatBorder(widths) << '\n';
     }
-    ss << fmt::format("{:=^132}\n\n", "");
+    ss << fmt::format(" {:=^132}\n\n", "");
 
     OpmLog::note(ss.str());
 }
@@ -1430,8 +1431,8 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
     std::ostringstream ss;
     if (reg == 0) {
         const auto widths = std::array{9, 15, 15, 15, 15, 15};
-        ss << fmt::format("\n{0: >52}{0:=>35}", "")
-           << fmt::format("\n{0: >52}:  RESERVOIR VOLUMES {1:^13}:\n",
+        ss << fmt::format("\n {0: >52}{0:=>35}", "")
+           << fmt::format("\n {0: >52}:  RESERVOIR VOLUMES {1:^13}:\n",
                           "",  units.name(UnitSystem::measure::volume))
            << formatBorder(widths) << '\n'
            << formatTextRow(widths,
@@ -1462,9 +1463,9 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
                                 "HYDRO-CARBON"sv,
                             })
            << formatBorder(widths) << '\n'
-           << fmt::format(":{:<9}:", "FIELD");
+           << fmt::format(" :{:<9}:", "FIELD");
     } else {
-        ss << fmt::format(":{:<9}:", reg);
+        ss << fmt::format(" :{:<9}:", reg);
     }
 
     ss << fmt::format("{0:>15.0f}:{1:>15.0f}:{2:>15.0f}:{3:>15.0f}:{4:>15.0f}:",
