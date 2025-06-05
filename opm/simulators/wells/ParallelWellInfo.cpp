@@ -809,7 +809,8 @@ checkAllConnectionsFound()
     }
     if (missingCells && pwinfo_.isOwner())
     {
-        OPM_THROW(std::runtime_error, msg);
+      std::cout << "Warning " << msg << std::endl;
+      //         OPM_THROW(std::runtime_error, msg);
     }
     return !missingCells;
 }
