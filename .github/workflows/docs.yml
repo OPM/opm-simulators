@@ -91,7 +91,6 @@ jobs:
 
       - name: Build Doxygen documentation
         run: |
-          ls
           doxygen Doxyfile
 
       - name: Build Sphinx documentation
