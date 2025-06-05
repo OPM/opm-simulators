@@ -310,46 +310,48 @@ protected:
                            Parameters::Get<Parameters::ParsingStrictness>(),
                            Parameters::Get<Parameters::ActionParsingStrictness>(),
                            Parameters::Get<Parameters::InputSkipMode>(),
-                           keepKeywords,
+                           keepKeywords || getPropValue<PreTypeTag, Properties::EnableMech>(),
                            getNumThreads(),
                            Parameters::Get<Parameters::EclOutputInterval>(),
                            Parameters::Get<Parameters::Slave>(),
                            cmdline_params,
                            Opm::moduleVersion(),
                            Opm::compileTimestamp());
+
             setupTime_ = externalSetupTimer.elapsed();
         }
-        // readDeck() may throw std::runtime_error on parse failure.
-        // These exceptions are synchronized across MPI ranks via comm.min()
-        // inside readDeck(), so cooperative shutdown is safe — returning false
-        // lets Main::~Main() call MPI_Finalize().
-        catch (const std::runtime_error& e)
-        {
-            if (outputCout_) {
-                std::cerr << "Failed to create valid EclipseState object." << std::endl;
-                std::cerr << e.what() << std::endl;
+        catch (const std::runtime_error& e) {
+            // readDeck() may throw std::runtime_error on parse failure.  These
+            // exceptions are synchronized across MPI ranks via comm.min()
+            // inside readDeck(), so cooperative shutdown is safe.  Returning
+            // false lets Main::~Main() call MPI_Finalize().
+            if (this->outputCout_) {
+                std::cerr << "Failed to create valid EclipseState object.\n"
+                          << "Exception caught: " << e.what() << std::endl;
             }
+
             exitCode = EXIT_FAILURE;
             return false;
         }
-        // Other exceptions (e.g., std::bad_alloc, std::invalid_argument)
-        // may not be synchronized across ranks. Use MPI_Abort() to prevent
-        // deadlocks from unsynchronized failures.
-        catch (const std::exception& e)
-        {
-            if (outputCout_) {
-                std::cerr << "Unexpected error during initialization." << std::endl;
-                std::cerr << "Exception caught: " << e.what() << std::endl;
+        catch (const std::exception& e) {
+            // Other exceptions (e.g., std::bad_alloc, std::invalid_argument)
+            // may not be synchronized across ranks.  Use MPI_Abort() to
+            // prevent deadlocks from unsynchronized failures.
+            if (this->outputCout_) {
+                std::cerr << "Unexpected error during initialization.\n"
+                          << "Exception caught: " << e.what() << std::endl;
             }
+
 #if HAVE_MPI
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 #endif
+
             exitCode = EXIT_FAILURE;
             return false;
         }
 
 #if HAVE_CUDA
-    Opm::gpuistl::printDevice();
+        Opm::gpuistl::printDevice();
 #endif
 
         exitCode = EXIT_SUCCESS;
