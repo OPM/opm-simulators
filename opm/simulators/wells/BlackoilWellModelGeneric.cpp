@@ -77,6 +77,7 @@
 #include <cassert>
 #include <functional>
 #include <iterator>
+#include <numeric>
 #include <sstream>
 #include <stdexcept>
 #include <tuple>
@@ -224,7 +225,7 @@ initFromRestartFile(const RestartValue& restartValues,
     this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
     this->initializeWellProdIndCalculators();
-    initializeWellPerfData();
+    this->initializeWellPerfData(report_step);
 
     handle_ms_well &= anyMSWellOpenLocal();
     // Resize for restart step
@@ -269,15 +270,21 @@ prepareDeserialize(int report_step, const std::size_t numCells, bool handle_ms_w
     this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
     this->initializeWellProdIndCalculators();
-    initializeWellPerfData();
+    this->initializeWellPerfData(report_step);
 
     if (! this->wells_ecl_.empty()) {
         handle_ms_well &= anyMSWellOpenLocal();
-        this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
-                                 this->schedule(), handle_ms_well, numCells,
-                                 this->well_perf_data_, this->summaryState_, enable_distributed_wells);
 
+        this->wellState().resize(this->wells_ecl_,
+                                 this->local_parallel_well_info_,
+                                 this->schedule(),
+                                 handle_ms_well,
+                                 numCells,
+                                 this->well_perf_data_,
+                                 this->summaryState_,
+                                 enable_distributed_wells);
     }
+
     this->wellState().clearWellRates();
     this->commitWGState();
     this->updateNupcolWGState();
@@ -335,9 +342,11 @@ initializeWellProdIndCalculators()
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
-initializeWellPerfData()
+initializeWellPerfData(const int report_step)
 {
     well_perf_data_.resize(wells_ecl_.size());
+
+    auto allFound = std::vector<int>(this->schedule().numWells(report_step), 0);
 
     this->conn_idx_map_.clear();
     this->conn_idx_map_.reserve(wells_ecl_.size());
@@ -365,7 +374,6 @@ initializeWellPerfData()
 
         auto& parallelWellInfo = this->local_parallel_well_info_[well_index].get();
         parallelWellInfo.beginReset();
-
 
         for (const auto& connection : well.getConnections()) {
 
@@ -419,11 +427,24 @@ initializeWellPerfData()
 
         parallelWellInfo.endReset();
 
-        checker.checkAllConnectionsFound();
+        allFound[well.seqIndex()] = static_cast<int>
+            (checker.checkAllConnectionsFound().first);
 
         parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
 
         ++well_index;
+    }
+
+    this->comm_.sum(allFound.data(), allFound.size());
+
+    const auto numAllFound =
+        std::accumulate(allFound.begin(), allFound.end(), 0);
+
+    if (numAllFound != static_cast<int>(allFound.size())) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Not all connections found for "
+                              "all {} wells at report step {}",
+                              allFound.size(), report_step));
     }
 }
 
