@@ -259,17 +259,6 @@ public:
     /*!
      * \brief Assign the energy specific primary variables to a PrimaryVariables object
      */
-    static void assignPrimaryVars(PrimaryVariables& priVars,
-                                  Scalar)
-    {
-        if constexpr (enableEnergy) {
-            priVars[temperatureIdx] = temperatureIdx;
-        }
-    }
-
-    /*!
-     * \brief Assign the energy specific primary variables to a PrimaryVariables object
-     */
     template <class FluidState>
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   const FluidState& fluidState)
