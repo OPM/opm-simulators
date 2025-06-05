@@ -49,6 +49,7 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
 
     # set_source_files_properties(${relpath} PROPERTIES LANGUAGE HIP)
     list(APPEND ${LIST} ${relpath})
+    list(APPEND ${LIST}_HIPIFIED ${hip_file_path})
   endif()
 endmacro()
 
@@ -295,13 +296,19 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/kernel_enums.hpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuVector.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuView.cpp)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/cpr_amg_operations.cu)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/vector_operations.cu)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuSparseMatrix.cpp)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuSparseMatrixGeneric.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuDILU.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg OpmGpuILU0.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuJac.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuSeqILU0.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg set_device.cpp)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/FlexibleSolverWrapper.cpp)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg FlexibleSolver_gpu_instantiate.cpp)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg PreconditionerFactory_gpu_instantiate.cpp)
+
 
   # HEADERS
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/autotuner.hpp)
@@ -323,6 +330,7 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuVector.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuView.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuSparseMatrix.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuSparseMatrixGeneric.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/CuMatrixDescription.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/CuSparseResource.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/CuSparseResource_impl.hpp)
@@ -331,6 +339,7 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/cusparse_wrapper.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/cusparse_constants.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/vector_operations.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/cpr_amg_operations.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/has_function.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/preconditioner_should_call_post_pre.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/deviceBlockOperations.hpp)
@@ -347,7 +356,12 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg gpu_resources.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/is_gpu_pointer.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg PreconditionerCPUMatrixToGPUMatrix.hpp)
-  
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg ISTLSolverGPUISTL.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/FlexibleSolverWrapper.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuOwningTwoLevelPreconditioner.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuPressureTransferPolicy.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuTwoLevelMethodCpr.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg AmgxInterface.hpp)
   if(MPI_FOUND)
     ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuOwnerOverlapCopy.hpp)
   endif()
@@ -513,6 +527,7 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_is_gpu_pointer.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_throw_macros_on_gpu.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_preconditioner_factory_gpu.cpp)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuPressureTransferPolicy.cpp)
 
   if(MPI_FOUND)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuOwnerOverlapCopy.cpp)
@@ -947,6 +962,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/BlackoilAquiferModel.hpp
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
   opm/simulators/aquifers/SupportsFaceTag.hpp
+  opm/simulators/linalg/AbstractISTLSolver.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/bicgstabsolver.hh
   opm/simulators/linalg/blacklist.hh
@@ -970,6 +986,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/ilufirstelement.hh
   opm/simulators/linalg/is_gpu_operator.hpp
   opm/simulators/linalg/ISTLSolver.hpp
+  opm/simulators/linalg/ISTLSolverRuntimeOptionProxy.hpp
   opm/simulators/linalg/istlpreconditionerwrappers.hh
   opm/simulators/linalg/istlsolverwrappers.hh
   opm/simulators/linalg/istlsparsematrixadapter.hh
@@ -1293,4 +1310,8 @@ if(AMGX_FOUND)
   list(APPEND PUBLIC_HEADER_FILES
     opm/simulators/linalg/AmgxPreconditioner.hpp
   )
+endif()
+
+if (CONVERT_CUDA_TO_HIP)
+  add_custom_target(hipified_headers  DEPENDS ${PUBLIC_HEADER_FILES_HIPIFIED})
 endif()

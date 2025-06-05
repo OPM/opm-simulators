@@ -20,6 +20,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <fmt/core.h>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cublas_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cublas_wrapper.hpp>
@@ -276,6 +277,7 @@ GpuVector<T>::copyFromHost(const T* dataPointer, size_t numberOfElements, cudaSt
                               dim(),
                               numberOfElements));
     }
+    // Asynchronous copy. CUDA runtime will use pinned memory if dataPointer is in a registered region.
     OPM_GPU_SAFE_CALL(cudaMemcpyAsync(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice, stream));
 }
 
@@ -283,8 +285,18 @@ template <class T>
 void
 GpuVector<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
+    // Synchronous version: use stream 0 and then synchronize.
+    copyToHost(dataPointer, numberOfElements, 0);
+    OPM_GPU_SAFE_CALL(cudaStreamSynchronize(0));
+}
+
+template <class T>
+void
+GpuVector<T>::copyToHost(T* dataPointer, size_t numberOfElements, cudaStream_t stream) const
+{
     assertSameSize(detail::to_int(numberOfElements));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
+    // Asynchronous copy. CUDA runtime will use pinned memory if dataPointer is in a registered region.
+    OPM_GPU_SAFE_CALL(cudaMemcpyAsync(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost, stream));
 }
 
 template <class T>
@@ -297,7 +309,16 @@ template <class T>
 void
 GpuVector<T>::copyToHost(std::vector<T>& data) const
 {
-    copyToHost(data.data(), data.size());
+    // Synchronous version: use stream 0 and then synchronize.
+    copyToHost(data.data(), data.size(), 0);
+    OPM_GPU_SAFE_CALL(cudaStreamSynchronize(0));
+}
+
+template <class T>
+void
+GpuVector<T>::copyToHost(std::vector<T>& data, cudaStream_t stream) const
+{
+    copyToHost(data.data(), data.size(), stream);
 }
 
 template <class T>

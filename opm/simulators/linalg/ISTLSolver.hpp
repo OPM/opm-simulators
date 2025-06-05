@@ -30,6 +30,8 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/grid/utility/ElementChunks.hpp>
+
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/utils/parametersystem.hpp>
@@ -47,6 +49,7 @@
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
+#include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 
 #include <any>
 #include <cstddef>
@@ -141,7 +144,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
     /// as a block-structured matrix (one block for all cell variables) for a fixed
     /// number of cell variables np .
     template <class TypeTag>
-    class ISTLSolver
+    class ISTLSolver : public AbstractISTLSolver<TypeTag>
     {
     protected:
         using GridView = GetPropType<TypeTag, Properties::GridView>;
@@ -159,6 +162,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         using AbstractPreconditionerType = Dune::PreconditionerWithUpdate<Vector, Vector>;
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+        using ElementChunksType = ElementChunks<GridView, Dune::Partitions::All>;
+
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
         enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
@@ -311,14 +316,16 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 }
                 OpmLog::note(os.str());
             }
+
+            element_chunks_ = std::make_unique<ElementChunksType>(simulator_.vanguard().gridView(), Dune::Partitions::all, ThreadManager::maxThreads());
         }
 
         // nothing to clean here
-        void eraseMatrix()
+        void eraseMatrix() override
         {
         }
 
-        void setActiveSolver(const int num)
+        void setActiveSolver(const int num) override
         {
             if (num > static_cast<int>(prm_.size()) - 1) {
                 OPM_THROW(std::logic_error, "Solver number " + std::to_string(num) + " not available.");
@@ -330,7 +337,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
         }
 
-        int numAvailableSolvers()
+        int numAvailableSolvers() const override
         {
             return flexibleSolver_.size();
         }
@@ -358,17 +365,20 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             rhs_ = &b;
 
             // TODO: check all solvers, not just one.
-            if (isParallel() && prm_[activeSolverNum_].template get<std::string>("preconditioner.type") != "ParOverILU0") {
+            // We use lower case as the internal canonical representation of solver names
+            std::string type = prm_[activeSolverNum_].template get<std::string>("preconditioner.type", "paroverilu0");
+            std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+            if (isParallel() && type != "paroverilu0") {
                 detail::makeOverlapRowsInvalid(getMatrix(), overlapRows_);
             }
         }
 
-        void prepare(const SparseMatrixAdapter& M, Vector& b)
+        void prepare(const SparseMatrixAdapter& M, Vector& b) override
         {
             prepare(M.istlMatrix(), b);
         }
 
-        void prepare(const Matrix& M, Vector& b)
+        void prepare(const Matrix& M, Vector& b) override
         {
             OPM_TIMEBLOCK(istlSolverPrepare);
             try {
@@ -379,22 +389,22 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         }
 
 
-        void setResidual(Vector& /* b */)
+        void setResidual(Vector& /* b */) override
         {
             // rhs_ = &b; // Must be handled in prepare() instead.
         }
 
-        void getResidual(Vector& b) const
+        void getResidual(Vector& b) const override
         {
             b = *rhs_;
         }
 
-        void setMatrix(const SparseMatrixAdapter& /* M */)
+        void setMatrix(const SparseMatrixAdapter& /* M */) override
         {
             // matrix_ = &M.istlMatrix(); // Must be handled in prepare() instead.
         }
 
-        int getSolveCount() const {
+        int getSolveCount() const override {
             return solveCount_;
         }
 
@@ -402,7 +412,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             solveCount_ = 0;
         }
 
-        bool solve(Vector& x)
+        bool solve(Vector& x) override
         {
             OPM_TIMEBLOCK(istlSolverSolve);
             ++solveCount_;
@@ -438,7 +448,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         /// \return               the solution x
 
         /// \copydoc NewtonIterationBlackoilInterface::iterations
-        int iterations () const { return iterations_; }
+        int iterations () const override { return iterations_; }
 
         /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
         const std::any& parallelInformation() const { return parallelInformation_; }
@@ -590,6 +600,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             using namespace std::string_literals;
 
             auto preconditionerType = prm.get("preconditioner.type"s, "cpr"s);
+            // We use lower case as the internal canonical representation of solver names
+            std::transform(preconditionerType.begin(), preconditionerType.end(), preconditionerType.begin(), ::tolower);
             if (preconditionerType == "cpr" || preconditionerType == "cprt"
                 || preconditionerType == "cprw" || preconditionerType == "cprwt") {
                 const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
@@ -610,9 +622,9 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                             Vector weights(rhs_->size());
                             ElementContext elemCtx(simulator_);
                             Amg::getTrueImpesWeights(pressIndex, weights,
-                                                             simulator_.vanguard().gridView(),
-                                                             elemCtx, simulator_.model(),
-                                                             ThreadManager::threadId());
+                                                    elemCtx, simulator_.model(),
+                                                    *element_chunks_,
+                                                    ThreadManager::threadId());
                             return weights;
                         };
                 } else if  (weightsType == "trueimpesanalytic" ) {
@@ -622,9 +634,9 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                             Vector weights(rhs_->size());
                             ElementContext elemCtx(simulator_);
                             Amg::getTrueImpesWeightsAnalytic(pressIndex, weights,
-                                                             simulator_.vanguard().gridView(),
-                                                             elemCtx, simulator_.model(),
-                                                             ThreadManager::threadId());
+                                                            elemCtx, simulator_.model(),
+                                                            *element_chunks_,
+                                                            ThreadManager::threadId());
                             return weights;
                         };
                 } else {
@@ -672,6 +684,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         std::vector<PropertyTree> prm_;
 
         std::shared_ptr< CommunicationType > comm_;
+        std::unique_ptr<ElementChunksType> element_chunks_;
     }; // end ISTLSolver
 
 } // namespace Opm

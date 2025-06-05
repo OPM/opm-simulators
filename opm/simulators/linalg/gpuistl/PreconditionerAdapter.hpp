@@ -62,12 +62,18 @@ public:
 
 
     //! \brief Prepare the preconditioner.
-    //!
-    //! Currently not supported.
-    virtual void pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b) override
+    virtual void pre(X& x, Y& b) override
     {
-        static_assert(!detail::shouldCallPreconditionerPre<CudaPreconditionerType>(),
-                      "We currently do not support Preconditioner::pre().");
+        if (detail::shouldCallPreconditionerPre<CudaPreconditionerType>()) {
+            if (!m_inputBuffer) {
+                m_inputBuffer.reset(new GpuVector<field_type>(x.dim()));
+                m_outputBuffer.reset(new GpuVector<field_type>(x.dim()));
+            }
+            m_inputBuffer->copyFromHost(b);
+            m_outputBuffer->copyFromHost(x);
+            m_underlyingPreconditioner->pre(*m_outputBuffer, *m_inputBuffer);
+            m_outputBuffer->copyToHost(x);
+        }
     }
 
 
@@ -87,12 +93,16 @@ public:
 
 
     //! \brief Clean up.
-    //!
-    //! Currently not supported.
-    virtual void post([[maybe_unused]] X& x) override
+    virtual void post(X& x) override
     {
-        static_assert(!detail::shouldCallPreconditionerPost<CudaPreconditionerType>(),
-                      "We currently do not support Preconditioner::post().");
+        if (detail::shouldCallPreconditionerPost<CudaPreconditionerType>()) {
+            if (!m_outputBuffer) {
+                m_outputBuffer.reset(new GpuVector<field_type>(x.dim()));
+            }
+            m_outputBuffer->copyFromHost(x);
+            m_underlyingPreconditioner->post(*m_outputBuffer);
+            m_outputBuffer->copyToHost(x);
+        }
     }
 
 
@@ -110,11 +120,11 @@ public:
 
     static constexpr bool shouldCallPre()
     {
-        return detail::shouldCallPreconditionerPost<CudaPreconditionerType>();
+        return detail::shouldCallPreconditionerPre<CudaPreconditionerType>();
     }
     static constexpr bool shouldCallPost()
     {
-        return detail::shouldCallPreconditionerPre<CudaPreconditionerType>();
+        return detail::shouldCallPreconditionerPost<CudaPreconditionerType>();
     }
 
     virtual std::shared_ptr<Dune::PreconditionerWithUpdate<GpuVector<field_type>, GpuVector<field_type>>>
