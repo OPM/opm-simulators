@@ -93,7 +93,7 @@ namespace Opm
         }
 
         if( verbose_ )
-            OpmLog::info(fmt::format("Suggested next time step size: {} days", unit::convert::to( dtEstimate, unit::day )));
+            OpmLog::info(fmt::format("Suggested next time step size (from controller): {} days", unit::convert::to( dtEstimate, unit::day )));
 
         return dtEstimate;
     }
@@ -397,7 +397,7 @@ namespace Opm
 
         if (verbose_)
         {
-            OpmLog::info(fmt::format("Suggested next time step size: {} days", unit::convert::to( newDt, unit::day )));
+            OpmLog::info(fmt::format("Suggested next time step size (from controller): {} days", unit::convert::to( newDt, unit::day )));
             OpmLog::info(fmt::format("Most recent relative change: {}", errors_[2]));
         }
         return newDt;
