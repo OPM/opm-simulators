@@ -28,7 +28,7 @@ jobs:
 
       - name: Install Python packages
         run: |
-          pip install sphinx==7.2.6 breathe==4.35.0 furo
+          pip install "sphinx<8" "breathe>=4.35.0" furo
 
       - name: Generate Doxyfile
         run: |
