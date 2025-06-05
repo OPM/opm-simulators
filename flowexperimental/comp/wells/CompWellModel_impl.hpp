@@ -62,9 +62,8 @@ beginReportStep(unsigned report_step)
 }
 
 template <typename TypeTag>
-void
-CompWellModel<TypeTag>::
-beginTimeStep()
+void CompWellModel<TypeTag>::
+beginTimeStep(bool /*lastStepFailed*/)
 {
     createWellContainer();
     initWellContainer();
