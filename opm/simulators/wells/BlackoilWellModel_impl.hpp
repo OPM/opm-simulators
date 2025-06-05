@@ -263,7 +263,7 @@ namespace Opm {
         // scope a bit.
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         {
-            this->initializeWellPerfData();
+            this->initializeWellPerfData(reportStepIdx);
             this->initializeWellState(reportStepIdx);
             this->wbp_.initializeWBPCalculationService();
 
