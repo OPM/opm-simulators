@@ -243,12 +243,14 @@ public:
         this->updateCellThickness_();
 
 #if HAVE_MPI
+        ///    if(this->eclState().getLgrs().size()==0) {
         this->distributeFieldProps_(this->eclState());
+        //   }
 #endif
     }
 
     /*!
-     * \brief Add LGRs and update Leaf Grid View in the simulation grid.
+     * \brief Add LGRs and update Leaf Grid View in the simulation grid. 
      */
     void addLgrs()
     {
@@ -264,7 +266,49 @@ public:
             this->updateCellThickness_();
         }
         else if (this->grid_->comm().size() > 1) {
-            OpmLog::warning("Adding LGRs in parallel run is not supported yet.\n");
+            OpmLog::warning("Adding LGRs in parallel run is on-the-way.\n");
+            this->addLgrsParallel();
+        }
+
+    }
+
+    /*!
+     * \brief Add LGRs and update Leaf Grid View in the simulation grid. PARALLEL
+     */
+    void addLgrsParallel()
+    {
+        if (this->grid_->comm().size() > 1) {
+            // Add LGRs and update Leaf Grid View in the global view of simulation grid.
+            this->grid_->switchToGlobalView();
+
+            if (const auto& lgrs = this->eclState().getLgrs(); lgrs.size() > 0) {
+                OpmLog::info("\nAdding LGRs to the global view and updating its leaf grid view");
+                this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
+
+                this->updateGridView_();
+                this->updateCellDepths_();
+                this->updateCellThickness_();
+            }
+
+
+            // Add LGRs and update Leaf Grid View in the distributed view of simulation grid.
+            this->grid_->switchToDistributedView();
+
+            if (const auto& lgrs = this->eclState().getLgrs(); lgrs.size() > 0) {
+                OpmLog::info("\nAdding LGRs to the distributed view and updating its leaf grid view");
+                this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
+
+                this->updateGridView_();
+                this->updateCellDepths_();
+                this->updateCellThickness_();
+            }
+
+            // Synchronize cell ids, if LGRs were added before/after loadBalance.
+            this->grid_->syncDistributedGlobalCellIds();
+            this->updateGridView_();
+            //  #if HAVE_MPI
+            // this->distributeFieldProps_(this->eclState());
+            //#endif
         }
     }
 
