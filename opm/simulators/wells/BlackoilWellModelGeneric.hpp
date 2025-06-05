@@ -300,6 +300,9 @@ public:
             (wname, [](const auto& pwInfo) { return pwInfo.hasLocalCells(); });
     }
 
+    const auto& parallelWellInfo() const
+    { return parallel_well_info_; }
+
     const ConnectionIndexMap& connectionIndexMap(const std::size_t idx)
     { return conn_idx_map_[idx]; }
 
