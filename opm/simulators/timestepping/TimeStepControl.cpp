@@ -93,7 +93,7 @@ namespace Opm
         }
 
         if( verbose_ )
-            OpmLog::info(fmt::format("Computed time step size: {} days", unit::convert::to( dtEstimate, unit::day )));
+            OpmLog::info(fmt::format("Suggested next time step size: {} days", unit::convert::to( dtEstimate, unit::day )));
 
         return dtEstimate;
     }
@@ -195,7 +195,7 @@ namespace Opm
             // adjust dt by given tolerance
             const double newDt = dt * tol_ / error;
             if ( verbose_ )
-                    OpmLog::info(fmt::format("Computed time step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
+                    OpmLog::info(fmt::format("Suggested next time step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
         }
         else if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
@@ -214,7 +214,7 @@ namespace Opm
                                  std::pow( tol_         / errors_[ 2 ], kI ) *
                                  std::pow( errors_[1]*errors_[1]/errors_[ 0 ]/errors_[ 2 ], kD ));
             if( verbose_ )
-                OpmLog::info(fmt::format("Computed time step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
+                OpmLog::info(fmt::format("Suggested next time step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
         }
     }
@@ -275,7 +275,7 @@ namespace Opm
         }
 
         if( verbose_ )
-            OpmLog::info(fmt::format("Computed time step size (from iteration target): {} days", unit::convert::to( dtEstimateIter, unit::day )));
+            OpmLog::info(fmt::format("Suggested next time step size (from iteration target): {} days", unit::convert::to( dtEstimateIter, unit::day )));
 
         return std::min(dtEstimatePID, dtEstimateIter);
     }
@@ -351,7 +351,7 @@ namespace Opm
     }
 
     double General3rdOrderController::
-    computeTimeStepSize(const double dt, const int /* iterations */, const RelativeChangeInterface& relChange, const AdaptiveSimulatorTimer& substepTimer) const
+    computeTimeStepSize(const double dt, const int /* iterations */, const RelativeChangeInterface& /* relChange */, const AdaptiveSimulatorTimer& substepTimer) const
     {
         for( int i = 0; i < 2; ++i )
         {
@@ -397,8 +397,8 @@ namespace Opm
 
         if (verbose_)
         {
-            OpmLog::info(fmt::format("Computed time step size: {} days", unit::convert::to( newDt, unit::day )));
-            OpmLog::info(fmt::format("Time step based on relative change: {}", relChange.relativeChange()));
+            OpmLog::info(fmt::format("Suggested next time step size: {} days", unit::convert::to( newDt, unit::day )));
+            OpmLog::info(fmt::format("Most recent relative change: {}", errors_[2]));
         }
         return newDt;
     }

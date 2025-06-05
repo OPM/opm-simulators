@@ -248,7 +248,7 @@ namespace Opm
 
         double computeTimeStepSize(const double dt,
                                    const int /* iterations */,
-                                   const RelativeChangeInterface& relativeChange,
+                                   const RelativeChangeInterface& /* relativeChange */,
                                    const AdaptiveSimulatorTimer& substepTimer) const override;
 
         double timeStepFactor(const std::array<double, 3>& errors, const std::array<double, 3>& timeSteps) const;
