@@ -24,7 +24,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.11"
 
       - name: Install Python packages
         run: |
@@ -60,6 +60,7 @@ jobs:
 
       - name: Overwrite conf.py with custom config
         run: |
+          rm -f docs/sphinx/source/conf.py
           echo "import os" >> docs/sphinx/source/conf.py
           echo "import sys" >> docs/sphinx/source/conf.py
           echo "from pathlib import Path" >> docs/sphinx/source/conf.py
@@ -75,6 +76,7 @@ jobs:
 
       - name: Create index.rst with Breathe directives
         run: |
+          rm -f docs/sphinx/source/index.rst
           echo "opm-simulators documentation" >> docs/sphinx/source/index.rst
           echo "============================" >> docs/sphinx/source/index.rst
           echo "" >> docs/sphinx/source/index.rst
