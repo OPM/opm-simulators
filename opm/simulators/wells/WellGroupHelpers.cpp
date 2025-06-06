@@ -1539,31 +1539,28 @@ checkGroupConstraintsProd(const std::string& name,
 template<class Scalar>
 Scalar
 WellGroupHelpers<Scalar>::
-getGroupTargetProd(const std::string& name,
-                          const std::string& parent,
-                          const Group& group,
-                          const WellState<Scalar>& wellState,
-                          const GroupState<Scalar>& group_state,
-                          const int reportStepIdx,
-                          const GuideRate* guideRate,
-                          const Scalar* rates,
-                          const PhaseUsage& pu,
-                          const Scalar efficiencyFactor,
-                          const Schedule& schedule,
-                          const SummaryState& summaryState,
-                          const std::vector<Scalar>& resv_coeff,
-                          DeferredLogger& deferred_logger)
+getWellGroupTargetProducer(const std::string& name,
+                           const std::string& parent,
+                           const Group& group,
+                           const WellState<Scalar>& wellState,
+                           const GroupState<Scalar>& group_state,
+                           const int reportStepIdx,
+                           const GuideRate* guideRate,
+                           const Scalar* rates,
+                           const PhaseUsage& pu,
+                           const Scalar efficiencyFactor,
+                           const Schedule& schedule,
+                           const SummaryState& summaryState,
+                           const std::vector<Scalar>& resv_coeff,
+                           DeferredLogger& deferred_logger)
 {
-    // When called for a well ('name' is a well name), 'parent'
-    // will be the name of 'group'. But if we recurse, 'name' and
+    // This function computes a wells group target. 
+    // 'parent' will be the name of 'group'. But if we recurse, 'name' and
     // 'parent' will stay fixed while 'group' will be higher up
-    // in the group tree.
-    // efficiencyfactor is the well efficiency factor for the first group the well is
+    // in the group tree. 
+    // Eficiencyfactor is the well efficiency factor for the first group the well is
     // part of. Later it is the accumulated factor including the group efficiency factor
     // of the child of group.
-
-    // NOTE: if name is a group, the rates-argument is the portion of the 'full' group rates that
-    // is potentially available for control by an ancestor, i.e. full rates minus reduction rates
     OPM_TIMEFUNCTION();
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
 
@@ -1574,20 +1571,20 @@ getGroupTargetProd(const std::string& name,
         }
         // Otherwise: check production share of parent's control.
         const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
-        return getGroupTargetProd(name,
-                                         parent,
-                                         parentGroup,
-                                         wellState,
-                                         group_state,
-                                         reportStepIdx,
-                                         guideRate,
-                                         rates,
-                                         pu,
-                                         efficiencyFactor * group.getGroupEfficiencyFactor(),
-                                         schedule,
-                                         summaryState,
-                                         resv_coeff,
-                                         deferred_logger);
+        return getWellGroupTargetProducer(name,
+                                          parent,
+                                          parentGroup,
+                                          wellState,
+                                          group_state,
+                                          reportStepIdx,
+                                          guideRate,
+                                          rates,
+                                          pu,
+                                          efficiencyFactor * group.getGroupEfficiencyFactor(),
+                                          schedule,
+                                          summaryState,
+                                          resv_coeff,
+                                          deferred_logger);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -1645,27 +1642,23 @@ getGroupTargetProd(const std::string& name,
     const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
-    // we need to find out the level where the current well is applied to the local reduction
-    std::size_t local_reduction_level = 99;
-    if (!wellState.isProductionGrup(name)) {
-        local_reduction_level = 0;
-        for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-            const int num_gr_ctrl = groupControlledWells(schedule,
-                                                        wellState,
-                                                        group_state,
-                                                        summaryState,
-                                                        guideRate,
-                                                        reportStepIdx,
-                                                        chain[ii],
-                                                        "",
-                                                        /*is_producer*/ true,
-                                                        /*injectionPhaseNotUsed*/ Phase::OIL);
-            if (guideRate->has(chain[ii]) && num_gr_ctrl > 0) {
-                local_reduction_level = ii;
-            }
+    // we need to find out the level where the local reduction is applied
+    std::size_t local_reduction_level = 0;
+    for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
+        const int num_gr_ctrl = groupControlledWells(schedule,
+                                                    wellState,
+                                                    group_state,
+                                                    summaryState,
+                                                    guideRate,
+                                                    reportStepIdx,
+                                                    chain[ii],
+                                                    "",
+                                                    /*is_producer*/ true,
+                                                    /*injectionPhaseNotUsed*/ Phase::OIL);
+        if (guideRate->has(chain[ii]) && num_gr_ctrl > 0) {
+            local_reduction_level = ii;
         }
-    }
-
+    }   
     // Compute portion of target corresponding to current_rate_available
     Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
@@ -1676,8 +1669,8 @@ getGroupTargetProd(const std::string& name,
             if (local_reduction_level >= ii) {
                 target -= localReduction(chain[ii]);
             }
-            // Add my reduction back at the level where it is included in the local reduction
-            if (local_reduction_level == ii) {
+            // If we are under individual control we need to add the wells rate back at the level where it is included in the local reduction
+            if (local_reduction_level == ii && !wellState.isProductionGrup(name)) {
                 target += current_rate_available * efficiencyFactor;
             }
         }
@@ -1887,35 +1880,30 @@ checkGroupConstraintsInj(const std::string& name,
 template<class Scalar>
 Scalar
 WellGroupHelpers<Scalar>::
-getGroupTargetInj(const std::string& name,
-                         const std::string& parent,
-                         const Group& group,
-                         const WellState<Scalar>& wellState,
-                         const GroupState<Scalar>& group_state,
-                         const int reportStepIdx,
-                         const GuideRate* guideRate,
-                         const Scalar* rates,
-                         Phase injectionPhase,
-                         const PhaseUsage& pu,
-                         const Scalar efficiencyFactor,
-                         const Schedule& schedule,
-                         const SummaryState& summaryState,
-                         const std::vector<Scalar>& resv_coeff,
-                         DeferredLogger& deferred_logger)
+getWellGroupTargetInjector(const std::string& name,
+                           const std::string& parent,
+                           const Group& group,
+                           const WellState<Scalar>& wellState,
+                           const GroupState<Scalar>& group_state,
+                           const int reportStepIdx,
+                           const GuideRate* guideRate,
+                           const Scalar* rates,
+                           Phase injectionPhase,
+                           const PhaseUsage& pu,
+                           const Scalar efficiencyFactor,
+                           const Schedule& schedule,
+                           const SummaryState& summaryState,
+                           const std::vector<Scalar>& resv_coeff,
+                           DeferredLogger& deferred_logger)
 {
-    // When called for a well ('name' is a well name), 'parent'
-    // will be the name of 'group'. But if we recurse, 'name' and
+    // This function computes a wells group target. 
+    // 'parent' will be the name of 'group'. But if we recurse, 'name' and
     // 'parent' will stay fixed while 'group' will be higher up
-    // in the group tree.
-    // efficiencyfactor is the well efficiency factor for the first group the well is
+    // in the group tree. 
+    // Eficiencyfactor is the well efficiency factor for the first group the well is
     // part of. Later it is the accumulated factor including the group efficiency factor
-    // of the child of group.
-
-    // NOTE: if name is a group, the rates-argument is the portion of the 'full' group rates that
-    // is potentially available for control by an ancestor, i.e. full rates minus reduction rates
-
+    // of the child of group.    
     auto currentGroupControl = group_state.injection_control(group.name(), injectionPhase);
-
     if (currentGroupControl == Group::InjectionCMode::FLD || currentGroupControl == Group::InjectionCMode::NONE) {
         // Return if we are not available for parent group.
         if (!group.injectionGroupControlAvailable(injectionPhase)) {
@@ -1923,21 +1911,21 @@ getGroupTargetInj(const std::string& name,
         }
         // Otherwise: check production share of parent's control.
         const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
-        return getGroupTargetInj(name,
-                                        parent,
-                                        parentGroup,
-                                        wellState,
-                                        group_state,
-                                        reportStepIdx,
-                                        guideRate,
-                                        rates,
-                                        injectionPhase,
-                                        pu,
-                                        efficiencyFactor * group.getGroupEfficiencyFactor(),
-                                        schedule,
-                                        summaryState,
-                                        resv_coeff,
-                                        deferred_logger);
+        return getWellGroupTargetInjector(name,
+                                         parent,
+                                         parentGroup,
+                                         wellState,
+                                         group_state,
+                                         reportStepIdx,
+                                         guideRate,
+                                         rates,
+                                         injectionPhase,
+                                         pu,
+                                         efficiencyFactor * group.getGroupEfficiencyFactor(),
+                                         schedule,
+                                         summaryState,
+                                         resv_coeff,
+                                         deferred_logger);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -1998,27 +1986,23 @@ getGroupTargetInj(const std::string& name,
     const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
-    // we need to find out the level where the current well is applied to the local reduction
-    std::size_t local_reduction_level = num_ancestors + 100;
-
-    if (!wellState.isInjectionGrup(name)) {
-        local_reduction_level = 0;
-        for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-            const int num_gr_ctrl = groupControlledWells(schedule,
-                                                        wellState,
-                                                        group_state,
-                                                        summaryState,
-                                                        guideRate,
-                                                        reportStepIdx,
-                                                        chain[ii],
-                                                        "",
-                                                        /*is_producer*/ false,
-                                                        injectionPhase);
-            if (guideRate->has(chain[ii], injectionPhase) && num_gr_ctrl > 0) {
-                local_reduction_level = ii;
-            }
+    // we need to find out the level where the local reduction is applied
+    std::size_t local_reduction_level = 0;
+    for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
+        const int num_gr_ctrl = groupControlledWells(schedule,
+                                                    wellState,
+                                                    group_state,
+                                                    summaryState,
+                                                    guideRate,
+                                                    reportStepIdx,
+                                                    chain[ii],
+                                                    "",
+                                                    /*is_producer*/ false,
+                                                    injectionPhase);
+        if (guideRate->has(chain[ii], injectionPhase) && num_gr_ctrl > 0) {
+            local_reduction_level = ii;
         }
-    }
+    }    
 
     // Compute portion of target corresponding to current_rate_available
     Scalar target = orig_target;
@@ -2031,8 +2015,8 @@ getGroupTargetInj(const std::string& name,
                 target -= localReduction(chain[ii]);
             }
 
-            // Add my reduction back at the level where it is included in the local reduction
-            if (local_reduction_level == ii ) {
+            // If we are under individual control we need to add the wells rate back at the level where it is included in the local reduction
+            if (local_reduction_level == ii && !wellState.isInjectionGrup(name)) {
                 target += current_rate_available * efficiencyFactor;
             }
         }

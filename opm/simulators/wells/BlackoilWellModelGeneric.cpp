@@ -1438,7 +1438,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             // Translate injector type from control to Phase.
             Scalar group_target = std::numeric_limits<Scalar>::max();
             if (well->isProducer()) {
-                group_target = WellGroupHelpers<Scalar>::getGroupTargetProd(well->name(),
+                group_target = WellGroupHelpers<Scalar>::getWellGroupTargetProducer(well->name(),
                                             well->wellEcl().groupName(),
                                             group,
                                             this->wellState(),
@@ -1475,7 +1475,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                 default:
                     throw("Expected WATER, OIL or GAS as type for injector " + well->name());
                 }
-                group_target = WellGroupHelpers<Scalar>::getGroupTargetInj(well->name(),
+                group_target = WellGroupHelpers<Scalar>::getWellGroupTargetInjector(well->name(),
                                             well->wellEcl().groupName(),
                                             group,
                                             this->wellState(),

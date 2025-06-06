@@ -291,21 +291,21 @@ public:
                              DeferredLogger& deferred_logger);
 
     static Scalar
-    getGroupTargetInj(const std::string& name,
-                             const std::string& parent,
-                             const Group& group,
-                             const WellState<Scalar>& wellState,
-                             const GroupState<Scalar>& group_state,
-                             const int reportStepIdx,
-                             const GuideRate* guideRate,
-                             const Scalar* rates,
-                             Phase injectionPhase,
-                             const PhaseUsage& pu,
-                             const Scalar efficiencyFactor,
-                             const Schedule& schedule,
-                             const SummaryState& summaryState,
-                             const std::vector<Scalar>& resv_coeff,
-                             DeferredLogger& deferred_logger);
+    getWellGroupTargetInjector(const std::string& name,
+                               const std::string& parent,
+                               const Group& group,
+                               const WellState<Scalar>& wellState,
+                               const GroupState<Scalar>& group_state,
+                               const int reportStepIdx,
+                               const GuideRate* guideRate,
+                               const Scalar* rates,
+                               Phase injectionPhase,
+                               const PhaseUsage& pu,
+                               const Scalar efficiencyFactor,
+                               const Schedule& schedule,
+                               const SummaryState& summaryState,
+                               const std::vector<Scalar>& resv_coeff,
+                               DeferredLogger& deferred_logger);
 
     static std::vector<std::string>
     groupChainTopBot(const std::string& bottom,
@@ -335,20 +335,20 @@ public:
                               const std::vector<Scalar>& resv_coeff,
                               DeferredLogger& deferred_logger);
     static Scalar
-    getGroupTargetProd(const std::string& name,
-                              const std::string& parent,
-                              const Group& group,
-                              const WellState<Scalar>& wellState,
-                              const GroupState<Scalar>& group_state,
-                              const int reportStepIdx,
-                              const GuideRate* guideRate,
-                              const Scalar* rates,
-                              const PhaseUsage& pu,
-                              const Scalar efficiencyFactor,
-                              const Schedule& schedule,
-                              const SummaryState& summaryState,
-                              const std::vector<Scalar>& resv_coeff,
-                              DeferredLogger& deferred_logger);
+    getWellGroupTargetProducer(const std::string& name,
+                               const std::string& parent,
+                               const Group& group,
+                               const WellState<Scalar>& wellState,
+                               const GroupState<Scalar>& group_state,
+                               const int reportStepIdx,
+                               const GuideRate* guideRate,
+                               const Scalar* rates,
+                               const PhaseUsage& pu,
+                               const Scalar efficiencyFactor,
+                               const Schedule& schedule,
+                               const SummaryState& summaryState,
+                               const std::vector<Scalar>& resv_coeff,
+                               DeferredLogger& deferred_logger);
 
     template <class AverageRegionalPressureType>
     static void setRegionAveragePressureCalculator(const Group& group,
