@@ -105,8 +105,8 @@ BlackoilWellModelGeneric(Schedule& schedule,
                        Parameters::Get<Parameters::EnableTerminalOutput>())
     , guideRate_(schedule)
     , active_wgstate_()
-    , last_valid_wgstate_(phase_usage)
-    , nupcol_wgstate_(phase_usage)
+    , last_valid_wgstate_()
+    , nupcol_wgstate_()
 {
 
     const auto numProcs = comm_.size();
