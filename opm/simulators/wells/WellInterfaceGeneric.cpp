@@ -699,22 +699,9 @@ void WellInterfaceGeneric<Scalar, IndexTraits>::addPerforations(const std::vecto
             this->well_index_[ind] += static_cast<Scalar>(perf.ctf);
         }
         else {
-            assert(false);
-            this->well_cells_.push_back(perf.cell);
-            this->well_index_.push_back(static_cast<Scalar>(perf.ctf));
-            this->perf_depth_.push_back(static_cast<Scalar>(perf.depth));
-
-            // Not strictly needed.
-            const double nan = std::nan("1");
-            this->perf_rep_radius_.push_back(nan);
-            this->perf_length_.push_back(nan);
-            this->bore_diameters_.push_back(nan);
-
-            // For now use the saturation table for the first cell.
-            this->saturation_table_number_
-                .push_back(this->saturation_table_number_.front());
-
-            ++this->number_of_local_perforations_;
+            std::cout << "Perforation to cell " << perf.cell
+                      << " does not exist in well " << this->name()
+                      << ", skip it. TimeStep cuts do to error in fracture solve?" << std::endl;
         }
     }
 }
