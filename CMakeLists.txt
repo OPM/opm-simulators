@@ -544,6 +544,14 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
 set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+# We only wait for the hipification process if we are compiling HIP.
+# That is, we need to wait for the HIP header files to be generated 
+# before the rest of the code can compile. HIP header file includes
+# anything in gpuistl, say.
+if (CONVERT_CUDA_TO_HIP)
+  add_dependencies(MainDispatchDynamic hipified_headers)
+endif()
+
 if(TARGET fmt::fmt)
   target_link_libraries(MainDispatchDynamic fmt::fmt)
 endif()
@@ -582,6 +590,15 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   if(USE_TRACY_PROFILER AND Tracy_FOUND)
     target_link_libraries(flow_lib${OBJ} Tracy::TracyClient)
   endif()
+
+  # We only wait for the hipification process if we are compiling HIP.
+  # That is, we need to wait for the HIP header files to be generated 
+  # before the rest of the code can compile. HIP header file includes
+  # anything in gpuistl, say.
+  if(CONVERT_CUDA_TO_HIP)
+    add_dependencies(flow_lib${OBJ} hipified_headers)
+  endif()
+  
   opm_add_test(flow_${OBJ}
                ONLY_COMPILE
                SOURCES
