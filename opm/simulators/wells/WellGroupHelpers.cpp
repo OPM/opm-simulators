@@ -523,12 +523,12 @@ updateGroupTargetReduction(const Group& group,
                 }
         } else {
                 if ((ws.production_cmode != Well::ProducerCMode::GRUP)){
-                    if (!group.as_choke()) {
+                    // if (!group.as_choke()) {
                         for (int phase = 0; phase < np; phase++) {
                             groupTargetReduction[phase] -= ws.surface_rates[phase] * efficiency;
                         }
+                    // }
                 }
-            }
         }
     }
     if (isInjector)
