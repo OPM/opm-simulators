@@ -32,12 +32,16 @@
 
 #include <dune/common/parallel/mpitraits.hh>
 
+#include <algorithm>
 #include <filesystem>
 #include <vector>
 
 #include <fmt/format.h>
 
 namespace Opm {
+// NOTE: All slave-master communicators have set a custom error handler, which eventually
+//   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+//   or MPI_Send() calls below.
 
 // ------------------
 // Public methods
@@ -63,15 +67,67 @@ spawn()
     this->spawnSlaveProcesses_();
     this->receiveActivationDateFromSlaves_();
     this->receiveSimulationStartDateFromSlaves_();
+    this->sendSlaveNamesToSlaves_();
+    this->createMasterGroupNameOrder_();
+    this->createMasterGroupToSlaveNameMap_();
     this->sendMasterGroupNamesToSlaves_();
     this->prepareTimeStepping_();
-    OpmLog::info("Reservoir coupling slave processes was spawned successfully");
+    this->logger_.info("Reservoir coupling slave processes was spawned successfully");
 }
 
 
 // ------------------
 // Private methods
 // ------------------
+
+void
+ReservoirCouplingSpawnSlaves::
+createMasterGroupNameOrder_()
+{
+    // When the slaves send master/slave group potentials to us, we need to know
+    // which master group corresponds to which potentials. We will use the convention
+    // that the slaves will send the potentials in the order of lexicographically sorted
+    // slave group names
+    auto num_slaves = this->master_.numSlavesStarted();
+    const auto& master_groups = this->rescoup_.masterGroups();
+    for (unsigned int i = 0; i < num_slaves; i++) {
+        auto slave_name = this->master_.getSlaveName(i);
+        std::vector<std::pair<std::string, std::string>> slave_group_names;
+        for (const auto& [master_group_name, master_group] : master_groups) {
+            if (master_group.slaveName() == slave_name) {
+                slave_group_names.push_back({master_group_name, master_group.slaveGroupName()});
+            }
+        }
+        // Sort the vector based on the slave group names in lexicographical order
+        std::sort(
+            slave_group_names.begin(),
+            slave_group_names.end(),
+            [](const auto &lhs, const auto &rhs) {
+                return lhs.second < rhs.second;
+            }
+        );
+        // Create a map from the master group name to the index in the vector
+        // This is used to determine the order in which the slaves will send the potentials
+        std::map<std::string, std::size_t> master_group_map;
+        for (std::size_t j = 0; j < slave_group_names.size(); ++j) {
+            master_group_map[slave_group_names[j].first] = j;
+        }
+        this->master_.updateMasterGroupNameOrderMap(slave_name, master_group_map);
+    }
+}
+void
+ReservoirCouplingSpawnSlaves::
+createMasterGroupToSlaveNameMap_()
+{
+    // When the slaves send master/slave group potentials to us, we need to know
+    // which master group corresponds to which potentials. The potentials are associated
+    // with a slave name. So we make lookup table: master_group_name -> slave_name.
+    const auto& master_groups = this->rescoup_.masterGroups();
+    auto& master_group_slave_names = this->master_.getMasterGroupToSlaveNameMap();
+    for (const auto& [master_group_name, master_group] : master_groups) {
+        master_group_slave_names[master_group_name] = master_group.slaveName();
+    }
+}
 
 std::vector<char *> ReservoirCouplingSpawnSlaves::
 getSlaveArgv_(
@@ -129,7 +185,7 @@ getMasterGroupNamesForSlave_(const std::string &slave_name) const
     }
     assert(data.size() % 2 == 0);
     assert(data.size() > 0);
-    return this->serializeStrings_(std::move(data));
+    return ReservoirCoupling::serializeStrings(data);
 }
 
 void
@@ -153,9 +209,7 @@ receiveActivationDateFromSlaves_()
     if (this->comm_.rank() == 0) {
         for (unsigned int i = 0; i < num_slaves; i++) {
             double slave_activation_date;
-            // NOTE: All slave-master communicators have set a custom error handler, which eventually
-            //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
-            //   or MPI_Send() calls.
+            // NOTE: See comment about error handling at the top of this file.
             MPI_Recv(
                 &slave_activation_date,
                 /*count=*/1,
@@ -169,7 +223,7 @@ receiveActivationDateFromSlaves_()
                 OPM_THROW(std::runtime_error, "Slave process start date is earlier than "
                                               "the master process' activation date");
             }
-            OpmLog::info(
+            this->logger_.info(
                 fmt::format(
                     "Received activation date from slave process with name: {}. "
                     "Activation date: {}", this->master_.getSlaveName(i), slave_activation_date
@@ -187,9 +241,7 @@ receiveSimulationStartDateFromSlaves_()
     if (this->comm_.rank() == 0) {
         for (unsigned int i = 0; i < num_slaves; i++) {
             double slave_start_date;
-            // NOTE: All slave-master communicators have set a custom error handler, which eventually
-            //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
-            //   or MPI_Send() calls.
+            // NOTE: See comment about error handling at the top of this file.
             MPI_Recv(
                 &slave_start_date,
                 /*count=*/1,
@@ -200,7 +252,7 @@ receiveSimulationStartDateFromSlaves_()
                 MPI_STATUS_IGNORE
             );
             this->master_.addSlaveStartDate(slave_start_date);
-            OpmLog::info(
+            this->logger_.info(
                 fmt::format(
                     "Received start date from slave process with name: {}. "
                     "Start date: {}", this->master_.getSlaveName(i), slave_start_date
@@ -214,7 +266,7 @@ receiveSimulationStartDateFromSlaves_()
     }
     const double* data = this->master_.getSlaveStartDates();
     this->comm_.broadcast(const_cast<double *>(data), /*count=*/num_slaves, /*emitter_rank=*/0);
-    OpmLog::info("Broadcasted slave start dates to all ranks");
+    this->logger_.info("Broadcasted slave start dates to all ranks");
 }
 
 void
@@ -226,11 +278,9 @@ sendMasterGroupNamesToSlaves_()
         for (unsigned int i = 0; i < num_slaves; i++) {
             auto slave_name = this->master_.getSlaveName(i);
             auto [group_names, size] = this->getMasterGroupNamesForSlave_(slave_name);
-            // NOTE: All slave-master communicators have set a custom error handler, which eventually
-            //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
-            //   or MPI_Send() calls.
             static_assert(std::is_same_v<decltype(size), std::size_t>, "size must be of type std::size_t");
             auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
+            // NOTE: See comment about error handling at the top of this file.
             MPI_Send(
                 &size,
                 /*count=*/1,
@@ -247,26 +297,47 @@ sendMasterGroupNamesToSlaves_()
                 /*tag=*/static_cast<int>(MessageTag::MasterGroupNames),
                 this->master_.getSlaveComm(i)
             );
-            OpmLog::info(fmt::format(
+            this->logger_.info(fmt::format(
                 "Sent master group names to slave process rank 0 with name: {}", slave_name)
             );
         }
    }
 }
 
-std::pair<std::vector<char>, std::size_t>
+void
 ReservoirCouplingSpawnSlaves::
-serializeStrings_(std::vector<std::string> data) const
+sendSlaveNamesToSlaves_()
 {
-    std::size_t total_size = 0;
-    std::vector<char> serialized_data;
-    for (const auto& str: data) {
-        std::copy(str.begin(), str.end(), std::back_inserter(serialized_data));
-        serialized_data.push_back('\0');
-        total_size += str.size() + 1;
+    if (this->comm_.rank() == 0) {
+        auto num_slaves = this->master_.numSlavesStarted();
+        for (unsigned int i = 0; i < num_slaves; i++) {
+            const auto& slave_name = this->master_.getSlaveName(i);
+            auto slave_name_size = slave_name.size();
+            auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
+            // NOTE: See comment about error handling at the top of this file.
+            MPI_Send(
+                &slave_name_size,
+                /*count=*/1,
+                /*datatype=*/MPI_SIZE_T_TYPE,
+                /*dest_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SlaveNameSize),
+                this->master_.getSlaveComm(i)
+            );
+            MPI_Send(
+                slave_name.c_str(),
+                /*count=*/slave_name_size,
+                /*datatype=*/MPI_CHAR,
+                /*dest_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SlaveName),
+                this->master_.getSlaveComm(i)
+            );
+            this->logger_.info(fmt::format(
+                "Sent slave name to slave process rank 0 with name: {}", slave_name)
+            );
+        }
     }
-    return {serialized_data, total_size};
 }
+
 
 // NOTE: This functions is executed for all ranks, but only rank 0 will spawn
 //   the slave processes
@@ -308,7 +379,7 @@ spawnSlaveProcesses_()
                     char error_string[MPI_MAX_ERROR_STRING];
                     int length_of_error_string;
                     MPI_Error_string(errcodes[i], error_string, &length_of_error_string);
-                    OpmLog::info(fmt::format("Error spawning process {}: {}", i, error_string));
+                    this->logger_.info(fmt::format("Error spawning process {}: {}", i, error_string));
                 }
             }
             OPM_THROW(std::runtime_error, "Failed to spawn slave process");
@@ -317,7 +388,7 @@ spawnSlaveProcesses_()
         //   eventually will call MPI_Abort(), there is no need to check the return value of any
         //   MPI_Recv() or MPI_Send() calls as errors will be caught by the error handler.
         ReservoirCoupling::setErrhandler(master_slave_comm, /*is_master=*/true);
-        OpmLog::info(
+        this->logger_.info(
             fmt::format(
                 "Spawned reservoir coupling slave simulation for slave with name: "
                 "{}. Standard output logfile name: {}.log", slave_name, slave_name
