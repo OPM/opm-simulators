@@ -1427,14 +1427,14 @@ checkGroupConstraintsProd(const std::string& name,
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    WGHelpers::TargetCalculator tcalc(currentGroupControl,
+    WGHelpers::TargetCalculator<FluidSystem, Indices> tcalc(currentGroupControl,
                                       resv_coeff,
                                       gratTargetFromSales,
                                       group.name(),
                                       group_state,
                                       group.has_gpmaint_control(currentGroupControl));
 
-    WGHelpers::FractionCalculator fcalc(schedule,
+    WGHelpers::FractionCalculator<FluidSystem, Indices> fcalc(schedule,
                                         wellState,
                                         group_state,
                                         summaryState,

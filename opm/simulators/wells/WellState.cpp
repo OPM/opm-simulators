@@ -621,12 +621,12 @@ report(const int* globalCellIdxMap,
         if (const auto& pwinfo = ws.parallel_info.get();
             pwinfo.communication().size() == 1)
         {
-            reportConnections(well.connections, pu, well_index, globalCellIdxMap);
+            reportConnections(well.connections, well_index, globalCellIdxMap);
         }
         else {
             std::vector<data::Connection> connections;
 
-            reportConnections(connections, pu, well_index, globalCellIdxMap);
+            reportConnections(connections, well_index, globalCellIdxMap);
             gatherVectorsOnRoot(connections, well.connections, pwinfo.communication());
         }
 
@@ -643,7 +643,6 @@ report(const int* globalCellIdxMap,
 template<typename FluidSystem, typename Indices>
 void WellState<FluidSystem, Indices>::
 reportConnections(std::vector<data::Connection>& connections,
-                  const PhaseUsage& pu,
                   const std::size_t well_index,
                   const int* globalCellIdxMap) const
 {
@@ -659,7 +658,7 @@ reportConnections(std::vector<data::Connection>& connections,
     }
 
     this->reportConnectionFactors(well_index, connections);
-    this->reportConnectionPressuresAndRates(well_index, pu, connections);
+    this->reportConnectionPressuresAndRates(well_index, connections);
 
     if (! ws.producer) {
         this->reportConnectionFilterCake(well_index, connections);
@@ -681,8 +680,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
     if (nw == 0) {
         return;
     }
-    const auto& pu = this->phaseUsage();
-    const int np = pu.num_phases;
+    const int np = Indices::numPhases;
 
     std::optional<std::string> distributedMSWellLocalErrorMessage;
     std::optional<std::string> connectionWithoutAssociatedSegmentsLocalErrorMessage;
@@ -776,9 +774,9 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
             auto& perf_data = ws.perf_data;
             // for the seg_rates_, now it becomes a recursive solution procedure.
-            if (pu.phase_used[Gas]) {
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 auto& perf_rates = perf_data.phase_rates;
-                const int gaspos = pu.phase_pos[Gas];
+                const int gaspos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
                 // scale the phase rates for Gas to avoid too bad initial guess for gas fraction
                 // it will probably benefit the standard well too, while it needs to be justified
                 // TODO: to see if this strategy can benefit StandardWell too
@@ -1145,28 +1143,30 @@ reportConnectionFactors(const std::size_t well_index,
 template<typename FluidSystem, typename Indices>
 void WellState<FluidSystem, Indices>::
 reportConnectionPressuresAndRates(const std::size_t well_index,
-                                  const PhaseUsage& pu,
                                   std::vector<data::Connection>& connections) const
 {
     using rt = data::Rates::opt;
 
-    const int np = pu.num_phases;
+    const int np = Indices::numPhases;
     std::vector<rt> phs(np);
     std::vector<rt> pi(np);
 
-    if (pu.phase_used[Water]) {
-        phs.at(pu.phase_pos[Water]) = rt::wat;
-        pi .at(pu.phase_pos[Water]) = rt::productivity_index_water;
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        const int phasepos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+        phs.at(phasepos) = rt::wat;
+        pi .at(phasepos) = rt::productivity_index_water;
     }
 
-    if (pu.phase_used[Oil]) {
-        phs.at(pu.phase_pos[Oil]) = rt::oil;
-        pi .at(pu.phase_pos[Oil]) = rt::productivity_index_oil;
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const int phasepos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+        phs.at(phasepos) = rt::oil;
+        pi .at(phasepos) = rt::productivity_index_oil;
     }
 
-    if (pu.phase_used[Gas]) {
-        phs.at(pu.phase_pos[Gas]) = rt::gas;
-        pi .at(pu.phase_pos[Gas]) = rt::productivity_index_gas;
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const int phasepos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+        phs.at(phasepos) = rt::gas;
+        pi .at(phasepos) = rt::productivity_index_gas;
     }
 
     const auto& ws = this->well(well_index);
@@ -1199,19 +1199,19 @@ reportConnectionPressuresAndRates(const std::size_t well_index,
         }
     }
 
-    if (pu.has_brine) {
+    if (Indices::enableBrine) {
         for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
             connections[i].rates.set(rt::brine, perf_data.brine_rates[i]);
         }
     }
 
-    if (pu.has_solvent) {
+    if (Indices::enableSolvent) {
         for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
             connections[i].rates.set(rt::solvent, perf_data.solvent_rates[i]);
         }
     }
 
-    if (pu.has_micp) {
+    if (Indices::enableMICP) {
         for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
             connections[i].rates.set(rt::microbial, perf_data.microbial_rates[i]);
             connections[i].rates.set(rt::oxygen, perf_data.oxygen_rates[i]);
@@ -1225,7 +1225,7 @@ reportConnectionPressuresAndRates(const std::size_t well_index,
         }
     }
 
-    if (pu.phase_used[Water]) {
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
         for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
             connections[i].rates.set(rt::mass_wat, perf_data.wat_mass_rates[i]);
         }

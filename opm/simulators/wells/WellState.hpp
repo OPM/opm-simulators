@@ -71,9 +71,9 @@ public:
         | ScheduleEvents::INJECTION_UPDATE;
 
     // TODO: same definition with WellInterface, eventually they should go to a common header file.
-    static const int Water = BlackoilPhases::Aqua;
-    static const int Oil = BlackoilPhases::Liquid;
-    static const int Gas = BlackoilPhases::Vapour;
+//    static const int Water = BlackoilPhases::Aqua;
+//    static const int Oil = BlackoilPhases::Liquid;
+//    static const int Gas = BlackoilPhases::Vapour;
 
     // Only usable for testing purposes
     explicit WellState(const ParallelWellInfo<Scalar>& pinfo);
@@ -155,7 +155,6 @@ public:
            const std::function<bool(const int)>& wasDynamicallyClosed) const;
 
     void reportConnections(std::vector<data::Connection>& connections,
-                           const PhaseUsage &pu,
                            std::size_t well_index,
                            const int* globalCellIdxMap) const;
 
@@ -412,7 +411,6 @@ private:
                                  std::vector<data::Connection>& connections) const;
 
     void reportConnectionPressuresAndRates(const std::size_t well_index,
-                                           const PhaseUsage& pu,
                                            std::vector<data::Connection>& connections) const;
 
     void reportConnectionFilterCake(const std::size_t well_index,
