@@ -29,6 +29,12 @@
 #include <opm/output/data/Groups.hpp>
 #include <opm/output/data/GuideRateValue.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
@@ -283,8 +289,8 @@ const Opm::Well& GroupTreeWalker::getWell(std::string_view well) const
 
 namespace Opm {
 
-template<class Scalar>
-void BlackoilWellModelGuideRates<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelGuideRates<FluidSystem, Indices>::
 getGuideRateValues(const GuideRate::RateVector& qs,
                    const bool                   is_inj,
                    const std::string&           wgname,
@@ -309,9 +315,9 @@ getGuideRateValues(const GuideRate::RateVector& qs,
     }
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 data::GuideRateValue
-BlackoilWellModelGuideRates<Scalar>::
+BlackoilWellModelGuideRates<FluidSystem, Indices>::
 getGuideRateValues(const Well& well) const
 {
     auto grval = data::GuideRateValue{};
@@ -329,17 +335,17 @@ getGuideRateValues(const Well& well) const
         return grval;
     }
 
-    const auto qs = WellGroupHelpers<Scalar>::
-        getWellRateVector(wellModel_.wellState(), wellModel_.phaseUsage(), wname);
+    const auto qs = WellGroupHelpers<FluidSystem, Indices>::
+        getWellRateVector(wellModel_.wellState(), wname);
 
     this->getGuideRateValues(qs, well.isInjector(), wname, grval);
 
     return grval;
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 data::GuideRateValue
-BlackoilWellModelGuideRates<Scalar>::
+BlackoilWellModelGuideRates<FluidSystem, Indices>::
 getGuideRateValues(const Group& group) const
 {
     auto grval = data::GuideRateValue{};
@@ -357,7 +363,7 @@ getGuideRateValues(const Group& group) const
         return grval;
     }
 
-    const auto qs = WellGroupHelpers<Scalar>::
+    const auto qs = WellGroupHelpers<FluidSystem, Indices>::
         getProductionGroupRateVector(wellModel_.groupState(), wellModel_.phaseUsage(), gname);
 
     const auto is_inj = false; // This procedure only applies to G*PGR.
@@ -366,9 +372,9 @@ getGuideRateValues(const Group& group) const
     return grval;
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 data::GuideRateValue
-BlackoilWellModelGuideRates<Scalar>::
+BlackoilWellModelGuideRates<FluidSystem, Indices>::
 getGuideRateInjectionGroupValues(const Group& group) const
 {
     auto grval = data::GuideRateValue{};
@@ -387,8 +393,8 @@ getGuideRateInjectionGroupValues(const Group& group) const
     return grval;
 }
 
-template<class Scalar>
-void BlackoilWellModelGuideRates<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelGuideRates<FluidSystem, Indices>::
 assignWellGuideRates(data::Wells& wsrpt,
                      const int    reportStepIdx) const
 {
@@ -437,8 +443,8 @@ assignWellGuideRates(data::Wells& wsrpt,
         const auto get_gr = parent
             || RetrieveWellGuideRate{wellModel_.guideRate(), wname};
 
-        const auto qs = WellGroupHelpers<Scalar>::
-            getWellRateVector(wellModel_.wellState(), wellModel_.phaseUsage(), wname);
+        const auto qs = WellGroupHelpers<FluidSystem, Indices>::
+            getWellRateVector(wellModel_.wellState(), wname);
 
         auto getGR = [this, &wname, &qs](const GuideRateModel::Target t)
         {
@@ -486,9 +492,9 @@ assignWellGuideRates(data::Wells& wsrpt,
     }
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 std::unordered_map<std::string, data::GroupGuideRates>
-BlackoilWellModelGuideRates<Scalar>::
+BlackoilWellModelGuideRates<FluidSystem, Indices>::
 calculateAllGroupGuideRates(const int reportStepIdx) const
 {
     auto gr = std::unordered_map<std::string, data::GroupGuideRates>{};
@@ -547,8 +553,8 @@ calculateAllGroupGuideRates(const int reportStepIdx) const
     return gr;
 }
 
-template<class Scalar>
-void BlackoilWellModelGuideRates<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelGuideRates<FluidSystem, Indices>::
 assignGroupGuideRates(const Group& group,
                       const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
                       data::GroupData& gdata) const
@@ -575,14 +581,14 @@ assignGroupGuideRates(const Group& group,
     }
 }
 
-template<class Scalar>
-bool BlackoilWellModelGuideRates<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool BlackoilWellModelGuideRates<FluidSystem, Indices>::
 guideRateUpdateIsNeeded(const int reportStepIdx) const
 {
     const auto& genWells = wellModel_.genericWells();
     auto need_update =
     std::any_of(genWells.begin(), genWells.end(),
-                [](const WellInterfaceGeneric<Scalar>* well)
+                [](const WellInterfaceGeneric<FluidSystem, Indices>* well)
     {
         return well->changedToOpenThisStep();
     });
@@ -594,7 +600,7 @@ guideRateUpdateIsNeeded(const int reportStepIdx) const
             + ScheduleEvents::NEW_WELL;
 
         need_update = std::any_of(genWells.begin(), genWells.end(),
-            [&events](const WellInterfaceGeneric<Scalar>* well)
+            [&events](const WellInterfaceGeneric<FluidSystem, Indices>* well)
         {
             return events.hasEvent(well->name(), effective_events_mask);
         });
@@ -602,10 +608,12 @@ guideRateUpdateIsNeeded(const int reportStepIdx) const
     return wellModel_.comm().max(static_cast<int>(need_update));
 }
 
-template class BlackoilWellModelGuideRates<double>;
+#include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
+
+INSTANTIATE_TYPE_INDICES(BlackoilWellModelGuideRates, double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class BlackoilWellModelGuideRates<float>;
+INSTANTIATE_TYPE_INDICES(BlackoilWellModelGuideRates, float)
 #endif
 
 } // namespace Opm

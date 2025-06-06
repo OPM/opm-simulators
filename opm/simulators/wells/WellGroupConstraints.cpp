@@ -25,6 +25,12 @@
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -34,11 +40,11 @@
 namespace Opm
 {
 
-template<class Scalar>
-std::pair<bool, Scalar>
-WellGroupConstraints<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::pair<bool, typename FluidSystem::Scalar>
+WellGroupConstraints<FluidSystem, Indices>::
 checkGroupConstraintsInj(const Group& group,
-                         const WellState<Scalar>& well_state,
+                         const WellState<FluidSystem, Indices>& well_state,
                          const GroupState<Scalar>& group_state,
                          const Scalar efficiencyFactor,
                          const Schedule& schedule,
@@ -76,7 +82,7 @@ checkGroupConstraintsInj(const Group& group,
 
     const auto& ws = well_state.well(well_.indexOfWell());
     // Call check for the well's injection phase.
-    return WellGroupHelpers<Scalar>::checkGroupConstraintsInj(well_.name(),
+    return WellGroupHelpers<FluidSystem, Indices>::checkGroupConstraintsInj(well_.name(),
                                                               well_.wellEcl().groupName(),
                                                               group,
                                                               well_state,
@@ -93,11 +99,11 @@ checkGroupConstraintsInj(const Group& group,
                                                               deferred_logger);
 }
 
-template<class Scalar>
-std::pair<bool, Scalar>
-WellGroupConstraints<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::pair<bool, typename FluidSystem::Scalar>
+WellGroupConstraints<FluidSystem, Indices>::
 checkGroupConstraintsProd(const Group& group,
-                          const WellState<Scalar>& well_state,
+                          const WellState<FluidSystem, Indices>& well_state,
                           const GroupState<Scalar>& group_state,
                           const Scalar efficiencyFactor,
                           const Schedule& schedule,
@@ -110,7 +116,7 @@ checkGroupConstraintsProd(const Group& group,
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
-    return WellGroupHelpers<Scalar>::checkGroupConstraintsProd(well_.name(),
+    return WellGroupHelpers<FluidSystem, Indices>::checkGroupConstraintsProd(well_.name(),
                                                                well_.wellEcl().groupName(),
                                                                group,
                                                                well_state,
@@ -126,9 +132,9 @@ checkGroupConstraintsProd(const Group& group,
                                                                deferred_logger);
 }
 
-template<class Scalar>
-bool WellGroupConstraints<Scalar>::
-checkGroupConstraints(WellState<Scalar>& well_state,
+template<typename FluidSystem, typename Indices>
+bool WellGroupConstraints<FluidSystem, Indices>::
+checkGroupConstraints(WellState<FluidSystem, Indices>& well_state,
                       const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
@@ -205,10 +211,13 @@ checkGroupConstraints(WellState<Scalar>& well_state,
     return false;
 }
 
-template class WellGroupConstraints<double>;
+
+#include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
+
+INSTANTIATE_TYPE_INDICES(WellGroupConstraints, double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class WellGroupConstraints<float>;
+INSTANTIATE_TYPE_INDICES(WellGroupConstraints, float)
 #endif
 
 } // namespace Opm

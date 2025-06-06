@@ -41,22 +41,23 @@ using RegionId = int;
 struct PhaseUsage;
 class Schedule;
 class SummaryState;
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
+template<typename FluidSystem, typename Indices> class WellState;
 
 //! \brief Class for computing well group controls.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class WellGroupControls {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     //! \brief Constructor sets reference to well.
-    explicit WellGroupControls(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
+    explicit WellGroupControls(const WellInterfaceGeneric<FluidSystem, Indices>& well) : well_(well) {}
 
     using RateConvFunc = std::function<void(const RegionId, const int,
                                             const std::optional<std::string>&, std::vector<Scalar>&)>;
 
     template<class EvalWell>
     void getGroupInjectionControl(const Group& group,
-                                  const WellState<Scalar>& well_state,
+                                  const WellState<FluidSystem, Indices>& well_state,
                                   const GroupState<Scalar>& group_state,
                                   const Schedule& schedule,
                                   const SummaryState& summaryState,
@@ -70,7 +71,7 @@ public:
 
     std::optional<Scalar>
     getGroupInjectionTargetRate(const Group& group,
-                                const WellState<Scalar>& well_state,
+                                const WellState<FluidSystem, Indices>& well_state,
                                 const GroupState<Scalar>& group_state,
                                 const Schedule& schedule,
                                 const SummaryState& summaryState,
@@ -81,7 +82,7 @@ public:
 
     template<class EvalWell>
     void getGroupProductionControl(const Group& group,
-                                   const WellState<Scalar>& well_state,
+                                   const WellState<FluidSystem, Indices>& well_state,
                                    const GroupState<Scalar>& group_state,
                                    const Schedule& schedule,
                                    const SummaryState& summaryState,
@@ -93,7 +94,7 @@ public:
                                    DeferredLogger& deferred_logger) const;
 
     Scalar getGroupProductionTargetRate(const Group& group,
-                                        const WellState<Scalar>& well_state,
+                                        const WellState<FluidSystem, Indices>& well_state,
                                         const GroupState<Scalar>& group_state,
                                         const Schedule& schedule,
                                         const SummaryState& summaryState,
@@ -103,7 +104,7 @@ public:
 
     static std::pair<Scalar, Group::ProductionCMode> getAutoChokeGroupProductionTargetRate(const std::string& name,
                                                         const Group& parent,
-                                                        const WellState<Scalar>& well_state,
+                                                        const WellState<FluidSystem, Indices>& well_state,
                                                         const GroupState<Scalar>& group_state,
                                                         const Schedule& schedule,
                                                         const SummaryState& summaryState,
@@ -115,9 +116,11 @@ public:
                                                         DeferredLogger& deferred_logger);
 
 private:
-    const WellInterfaceGeneric<Scalar>& well_; //!< Reference to well interface
+    const WellInterfaceGeneric<FluidSystem, Indices>& well_; //!< Reference to well interface
 };
 
 }
 
 #endif // OPM_WELL_GROUP_CONTROLS_HEADER_INCLUDED
+
+#include "WellGroupControls.cpp" // need to be checked how to do this

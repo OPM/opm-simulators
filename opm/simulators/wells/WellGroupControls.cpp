@@ -18,6 +18,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_WELL_GROUP_CONTROLS_CPP_INCLUDED
+#define OPM_WELL_GROUP_CONTROLS_CPP_INCLUDED
 
 #include <config.h>
 #include <opm/simulators/wells/WellGroupControls.hpp>
@@ -43,11 +45,11 @@
 
 namespace Opm {
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template<class EvalWell>
-void WellGroupControls<Scalar>::
+void WellGroupControls<FluidSystem, Indices>::
 getGroupInjectionControl(const Group& group,
-                         const WellState<Scalar>& well_state,
+                         const WellState<FluidSystem, Indices>& well_state,
                          const GroupState<Scalar>& group_state,
                          const Schedule& schedule,
                          const SummaryState& summaryState,
@@ -173,7 +175,7 @@ getGroupInjectionControl(const Group& group,
         ctrl = group.injectionControls(injectionPhase, summaryState);
 
     const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(), group.name(),
+    const auto chain =WellGroupHelpers<FluidSystem, Indices>::groupChainTopBot(well_.name(), group.name(),
                                                                   schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
@@ -194,11 +196,11 @@ getGroupInjectionControl(const Group& group,
     control_eq = current_rate - target_rate;
 }
 
-template<class Scalar>
-std::optional<Scalar>
-WellGroupControls<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename FluidSystem::Scalar>
+WellGroupControls<FluidSystem, Indices>::
 getGroupInjectionTargetRate(const Group& group,
-                            const WellState<Scalar>& well_state,
+                            const WellState<FluidSystem, Indices>& well_state,
                             const GroupState<Scalar>& group_state,
                             const Schedule& schedule,
                             const SummaryState& summaryState,
@@ -308,7 +310,7 @@ getGroupInjectionTargetRate(const Group& group,
 
     const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
 
-    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(),
+    const auto chain =WellGroupHelpers<FluidSystem, Indices>::groupChainTopBot(well_.name(),
                                                                   group.name(),
                                                                   schedule,
                                                                   well_.currentStep());
@@ -327,11 +329,11 @@ getGroupInjectionTargetRate(const Group& group,
     return std::max(Scalar(0.0), target / efficiencyFactor);
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template<class EvalWell>
-void WellGroupControls<Scalar>::
+void WellGroupControls<FluidSystem, Indices>::
 getGroupProductionControl(const Group& group,
-                          const WellState<Scalar>& well_state,
+                          const WellState<FluidSystem, Indices>& well_state,
                           const GroupState<Scalar>& group_state,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
@@ -425,7 +427,7 @@ getGroupProductionControl(const Group& group,
         ctrl = group.productionControls(summaryState);
 
     const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(), group.name(),
+    const auto chain = WellGroupHelpers<FluidSystem, Indices>::groupChainTopBot(well_.name(), group.name(),
                                                                   schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
@@ -445,10 +447,11 @@ getGroupProductionControl(const Group& group,
     control_eq = current_rate - target_rate;
 }
 
-template<class Scalar>
-Scalar WellGroupControls<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar
+WellGroupControls<FluidSystem, Indices>::
 getGroupProductionTargetRate(const Group& group,
-                             const WellState<Scalar>& well_state,
+                             const WellState<FluidSystem, Indices>& well_state,
                              const GroupState<Scalar>& group_state,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
@@ -524,7 +527,7 @@ getGroupProductionTargetRate(const Group& group,
         ctrl = group.productionControls(summaryState);
 
     const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(), group.name(),
+    const auto chain = WellGroupHelpers<FluidSystem, Indices>::groupChainTopBot(well_.name(), group.name(),
                                                                   schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
@@ -553,11 +556,11 @@ getGroupProductionTargetRate(const Group& group,
     return scale;
 }
 
-template<class Scalar>
-std::pair<Scalar, Group::ProductionCMode> WellGroupControls<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::pair<typename FluidSystem::Scalar, Group::ProductionCMode> WellGroupControls<FluidSystem, Indices>::
 getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       const Group& group,
-                                      const WellState<Scalar>& well_state,
+                                      const WellState<FluidSystem, Indices>& well_state,
                                       const GroupState<Scalar>& group_state,
                                       const Schedule& schedule,
                                       const SummaryState& summaryState,
@@ -634,7 +637,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
         ctrl = group.productionControls(summaryState);
 
     const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(name, group.name(),
+    const auto chain = WellGroupHelpers<FluidSystem, Indices>::groupChainTopBot(name, group.name(),
                                                                   schedule, reportStepIdx);
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
@@ -654,7 +657,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     return std::make_pair(target_rate, currentGroupControl);
 }
 
-#define INSTANTIATE(T,...)                                               \
+/* #define INSTANTIATE(T,...)                                               \
     template void WellGroupControls<T>::                                 \
         getGroupInjectionControl(const Group&,                           \
                                  const WellState<T>&,                    \
@@ -704,6 +707,8 @@ INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
-#endif
+#endif */
 
 } // namespace Opm
+
+#endif

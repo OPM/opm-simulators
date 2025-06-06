@@ -462,7 +462,7 @@ computeDensitiesForStoppedProducer(const DensityPropertyFunctions& prop_func)
 template<class FluidSystem, class Indices>
 typename StandardWellConnections<FluidSystem, Indices>::Properties
 StandardWellConnections<FluidSystem,Indices>::
-computePropertiesForPressures(const WellState<Scalar>&         well_state,
+computePropertiesForPressures(const WellState<FluidSystem, Indices>&         well_state,
                               const PressurePropertyFunctions& prop_func) const
 {
     auto props = Properties{};
@@ -666,7 +666,7 @@ copyInPerforationRates(const Properties&       props,
 template<class FluidSystem, class Indices>
 void StandardWellConnections<FluidSystem,Indices>::
 computeProperties(const bool                      stopped_or_zero_rate_target,
-                  const WellState<Scalar>&        well_state,
+                  const WellState<FluidSystem, Indices>&        well_state,
                   const DensityPropertyFunctions& prop_func,
                   const Properties&               props,
                   DeferredLogger&                 deferred_logger)

@@ -36,9 +36,11 @@ class VFPProdTable;
  * A thin wrapper class that holds one VFPProdProperties and one
  * VFPInjProperties object.
  */
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class VFPProperties {
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     /**
      * Constructor
      * Takes *no* ownership of data.
@@ -48,7 +50,7 @@ public:
 
     VFPProperties(const std::vector<std::reference_wrapper<const VFPInjTable>>& inj_tables,
                   const std::vector<std::reference_wrapper<const VFPProdTable>>& prod_tables,
-                  const WellState<Scalar>& well_state)
+                  const WellState<FluidSystem, Indices>& well_state)
         : well_state_(well_state)
     {
         for (const auto& vfpinj : inj_tables)
@@ -76,11 +78,13 @@ public:
 
     Scalar getExplicitWFR(const int table_id, const std::size_t well_index) const
     {
+        const bool has_water = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        const bool has_oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+        const bool has_gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
         const auto& rates = well_state_.well(well_index).prev_surface_rates;
-        const auto& pu = well_state_.phaseUsage();
-        const auto& aqua = pu.phase_used[BlackoilPhases::Aqua]? rates[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
-        const auto& liquid = pu.phase_used[BlackoilPhases::Liquid]? rates[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
-        const auto& vapour = pu.phase_used[BlackoilPhases::Vapour]? rates[pu.phase_pos[BlackoilPhases::Vapour]]:0.0;
+        const auto& aqua = has_water ? rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)] : 0.0;
+        const auto& liquid = has_oil ? rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] : 0.0;
+        const auto& vapour = has_gas ? rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] : 0.0;
         const VFPProdTable& table = this->m_prod.getTable(table_id);
         return detail::getWFR(table, aqua, liquid, vapour);
     }
@@ -88,10 +92,12 @@ public:
     Scalar getExplicitGFR(const int table_id, const std::size_t well_index) const
     {
         const auto& rates = well_state_.well(well_index).prev_surface_rates;
-        const auto& pu = well_state_.phaseUsage();
-        const auto& aqua = pu.phase_used[BlackoilPhases::Aqua]? rates[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
-        const auto& liquid = pu.phase_used[BlackoilPhases::Liquid]? rates[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
-        const auto& vapour = pu.phase_used[BlackoilPhases::Vapour]? rates[pu.phase_pos[BlackoilPhases::Vapour]]:0.0;
+        const bool has_water = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        const bool has_oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+        const bool has_gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        const auto& aqua = has_water ? rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)] : 0.0;
+        const auto& liquid = has_oil ? rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] : 0.0;
+        const auto& vapour = has_gas ? rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] : 0.0;
         const VFPProdTable& table = this->m_prod.getTable(table_id);
         return detail::getGFR(table, aqua, liquid, vapour);
     }
@@ -99,7 +105,7 @@ public:
 private:
     VFPInjProperties<Scalar> m_inj;
     VFPProdProperties<Scalar> m_prod;
-    const WellState<Scalar>& well_state_;
+    const WellState<FluidSystem, Indices>& well_state_;
 };
 
 } // namespace Opm

@@ -25,6 +25,12 @@
 
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
@@ -33,9 +39,9 @@
 
 namespace Opm {
 
-template<class Scalar>
-bool WellConstraints<Scalar>::
-checkIndividualConstraints(SingleWellState<Scalar>& ws,
+template<typename FluidSystem, typename Indices>
+bool WellConstraints<FluidSystem, Indices>::
+checkIndividualConstraints(SingleWellState<FluidSystem, Indices>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,
@@ -69,9 +75,10 @@ checkIndividualConstraints(SingleWellState<Scalar>& ws,
     return false;
 }
 
-template<class Scalar>
-Well::InjectorCMode WellConstraints<Scalar>::
-activeInjectionConstraint(const SingleWellState<Scalar>& ws,
+template<typename FluidSystem, typename Indices>
+Well::InjectorCMode
+WellConstraints<FluidSystem, Indices>::
+activeInjectionConstraint(const SingleWellState<FluidSystem, Indices>& ws,
                           const SummaryState& summaryState,
                           bool& thp_limit_violated_but_not_switched,
                           DeferredLogger& deferred_logger,
@@ -167,9 +174,10 @@ activeInjectionConstraint(const SingleWellState<Scalar>& ws,
     return currentControl;
 }
 
-template<class Scalar>
-Well::ProducerCMode WellConstraints<Scalar>::
-activeProductionConstraint(const SingleWellState<Scalar>& ws,
+template<typename FluidSystem, typename Indices>
+Well::ProducerCMode
+WellConstraints<FluidSystem, Indices>::
+activeProductionConstraint(const SingleWellState<FluidSystem, Indices>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,
@@ -295,10 +303,12 @@ activeProductionConstraint(const SingleWellState<Scalar>& ws,
     return currentControl;
 }
 
-template class WellConstraints<double>;
+#include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
+
+INSTANTIATE_TYPE_INDICES(WellConstraints, double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class WellConstraints<float>;
+INSTANTIATE_TYPE_INDICES(WellConstraints, float)
 #endif
 
 } // namespace Opm

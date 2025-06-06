@@ -44,15 +44,15 @@ GasLiftSingleWell(const WellInterface<TypeTag>& well,
                   const Simulator& simulator,
                   const SummaryState& summary_state,
                   DeferredLogger& deferred_logger,
-                  WellState<Scalar>& well_state,
+                  WellState<FluidSystem, Indices>& well_state,
                   const GroupState<Scalar>& group_state,
-                  GasLiftGroupInfo<Scalar>& group_info,
+                  GasLiftGroupInfo<FluidSystem, Indices>& group_info,
                   GLiftSyncGroups &sync_groups,
                   const Parallel::Communication& comm,
                   bool glift_debug)
     // The parent class GasLiftSingleWellGeneric contains all stuff
     //   that is not dependent on TypeTag
-    : GasLiftSingleWellGeneric<Scalar>(deferred_logger,
+    : GasLiftSingleWellGeneric<FluidSystem, Indices>(deferred_logger,
                                        well_state,
                                        group_state,
                                        well.wellEcl(),
