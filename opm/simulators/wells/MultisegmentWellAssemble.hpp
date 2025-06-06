@@ -42,18 +42,18 @@ template<class Scalar> class WellState;
 template<class FluidSystem, class Indices>
 class MultisegmentWellAssemble
 {
-    static constexpr int WQTotal = 0;
-    static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;
-    static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
-    static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
-    static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
-    static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1;
+    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
+    static constexpr int WQTotal = PrimaryVariables::WQTotal;
+    static constexpr bool has_wfrac_variable = PrimaryVariables::has_wfrac_variable;
+    static constexpr bool has_gfrac_variable = PrimaryVariables::has_gfrac_variable;
+    static constexpr int WFrac = PrimaryVariables::WFrac;
+    static constexpr int GFrac = PrimaryVariables::GFrac;
+    static constexpr int SPres = PrimaryVariables::SPres;
 
 public:
     static constexpr int numWellEq = Indices::numPhases+1;
     using Scalar = typename FluidSystem::Scalar;
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
-    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq+Indices::numEq>;
 
     //! \brief Constructor initializes reference to well.
