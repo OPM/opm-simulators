@@ -399,7 +399,9 @@ bool SingleWellState<Scalar>::operator==(const SingleWellState& rhs) const
            this->events == rhs.events &&
            this->injection_cmode == rhs.injection_cmode &&
            this->production_cmode == rhs.production_cmode &&
-           this->alq_state == rhs.alq_state;
+           this->alq_state == rhs.alq_state &&
+           this->primaryvar == rhs.primaryvar &&
+           this->group_target == rhs.group_target;
 }
 
 template class SingleWellState<double>;

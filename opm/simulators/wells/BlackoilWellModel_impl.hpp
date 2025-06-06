@@ -371,7 +371,7 @@ namespace Opm {
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             simulator_.model().newtonMethod().numIterations(),
                                             param_.nupcol_group_rate_tolerance_,
-                                            local_deferredLogger);
+                                            local_deferredLogger, false);
 
         this->wellState().updateWellsDefaultALQ(this->schedule(), reportStepIdx, this->summaryState());
         this->wellState().gliftTimeStepInit();
@@ -411,6 +411,7 @@ namespace Opm {
             }
 
         }
+
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "beginTimeStep() failed: ",
                                         this->terminal_output_, simulator_.vanguard().grid().comm());
 
@@ -490,6 +491,11 @@ namespace Opm {
                                                                    this->wellState(),
                                                                    this->groupState());
         }
+
+        this->updateAndCommunicateGroupData(reportStepIdx,
+                                    simulator_.model().newtonMethod().numIterations(),
+                                    param_.nupcol_group_rate_tolerance_,
+                                    local_deferredLogger);
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -1763,7 +1769,6 @@ namespace Opm {
         const int episodeIdx = simulator_.episodeIndex();
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const auto& comm = simulator_.vanguard().grid().comm();
-
         size_t iter = 0;
         bool changed_well_group = false;
         const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);

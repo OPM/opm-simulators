@@ -412,6 +412,7 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
             new_well.prev_surface_rates = prev_well.prev_surface_rates;
             new_well.reservoir_rates = prev_well.reservoir_rates;
             new_well.well_potentials = prev_well.well_potentials;
+            new_well.group_target = prev_well.group_target;
 
             // perfPhaseRates
             //

@@ -321,11 +321,11 @@ namespace Opm
                     if (changed) {
                         const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
                                                                         ws.production_cmode == Well::ProducerCMode::THP;
-                        if (!thp_controlled){
+                        if (thp_controlled){
+                             ws.thp = this->getTHPConstraint(summary_state);
+                        } else {
                             // don't call for thp since this might trigger additional local solve
                             updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
-                        } else {
-                            ws.thp = this->getTHPConstraint(summary_state);
                         }
                         updatePrimaryVariables(simulator, well_state, deferred_logger);
                     }
@@ -644,6 +644,8 @@ namespace Opm
                                             static_cast<Scalar>(prod_controls.bhp_limit));
                 solveWellWithBhp(simulator, dt, bhp, well_state, deferred_logger);
                 ws.thp = this->getTHPConstraint(summary_state);
+                const auto msg = fmt::format("Well {} try with explicit fractions, re-solving", this->name());
+                deferred_logger.debug(msg);
                 converged = this->iterateWellEqWithSwitching(simulator, dt,
                                                              inj_controls,
                                                              prod_controls,
@@ -900,8 +902,9 @@ namespace Opm
                 }
             } else {
                 // unsolvable wells are treated as not operable and will not be solved for in this iteration.
-                if (this->param_.shut_unsolvable_wells_)
+                if (this->param_.shut_unsolvable_wells_) {
                     this->operability_status_.solvable = false;
+                }
             }
         }
         if (this->operability_status_.has_negative_potentials) {
