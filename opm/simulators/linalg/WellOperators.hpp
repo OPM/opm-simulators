@@ -63,6 +63,7 @@ public:
                                           const bool use_well_weights) const = 0;
     virtual void addWellPressureEquationsStruct(PressureMatrix& jacobian) const = 0;
     virtual int getNumberOfExtraEquations() const = 0;
+    virtual std::vector<std::pair<std::size_t, bool>> getLocalWellIDsAndOwnership() const = 0;
 };
 
 template <class WellModel, class X, class Y>
@@ -135,6 +136,31 @@ public:
     int getNumberOfExtraEquations() const override
     {
         return wellMod_.numLocalWellsEnd();
+    }
+
+    /* \brief Get local wells' indices and ownership
+     *
+     * @return vector of pairs of IDs and isOwner for each well on this rank.
+     *
+     * Creates a vector that for each well on this rank contains
+     * the index of the well and whether this rank owns it.
+     * The index is the position of the well in the parallel_well_info_
+     * which is consistent across processes.
+     */
+    std::vector<std::pair<std::size_t, bool>> getLocalWellIDsAndOwnership() const
+    {
+        const auto& paWellI = wellMod_.parallelWellInfo();
+        std::vector<std::pair<std::size_t, bool>> localWells;
+        localWells.reserve(paWellI.size());
+        std::size_t i = 0;
+        for (const auto& well : paWellI) {
+            if (well.hasLocalCells()) {
+                localWells.push_back(std::make_pair(i, well.isOwner()));
+            }
+            ++i;
+        }
+        localWells.shrink_to_fit();
+        return localWells;
     }
 
 protected:
@@ -374,6 +400,11 @@ public:
     int getNumberOfExtraEquations() const
     {
         return wellOper_.getNumberOfExtraEquations();
+    }
+
+    std::vector<std::pair<std::size_t, bool>> getLocalWellIDsAndOwnership() const
+    {
+        return wellOper_.getLocalWellIDsAndOwnership();
     }
 
 protected:
