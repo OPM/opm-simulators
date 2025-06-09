@@ -392,6 +392,42 @@ fipResv(const Inplace& inplace, const std::string& name) const
     OpmLog::note(fmt::format(" {:=^91}", ""));
 }
 
+
+template<class Scalar>
+void LogOutputHelper<Scalar>::
+csv_header(std::ostringstream& ss) const
+{
+    ss << "RegName,RegNum"
+       << ",OilLiquid,OilVapour,Oil,GasFree,GasDissolved,Gas,Water"
+       << ",TotalPoreVolume,PoreVolumeOil,PoreVolumeWater,PoreVolumeGas,PoreVolumeHC"
+       << "\n";
+}
+
+template<class Scalar>
+void LogOutputHelper<Scalar>::
+fip_csv(std::ostringstream& ss, const Inplace& initial_inplace, const std::string& name) const
+{
+    for (size_t n = 0; n < initial_inplace.max_region(name); n++) {
+        ss << name << "," << n+1
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::OilInLiquidPhase, n+1))
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::OilInGasPhase, n+1))
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::OIL, n+1))
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::GasInGasPhase, n+1))
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::GasInLiquidPhase, n+1))
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::GAS, n+1))
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::WATER, n+1))
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::DynamicPoreVolume, n+1))
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::OilResVolume, n+1))
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::WaterResVolume, n+1))
+           << fmt::format(",{:4.2f}", initial_inplace.get(name, Inplace::Phase::GasResVolume, n+1));
+
+        auto hvpv = initial_inplace.get(name, Inplace::Phase::OilResVolume, n+1) +
+                    initial_inplace.get(name, Inplace::Phase::GasResVolume, n+1);
+
+        ss << fmt::format(",{:4.2f}", hvpv) << "\n";
+    }
+}
+
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate) const

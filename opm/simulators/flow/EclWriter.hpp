@@ -385,6 +385,8 @@ public:
                                                   false, simulator_.gridView().comm());
             }
         }
+
+        outputModule_->outputFipAndResvLogToCSV(0, false, simulator_.gridView().comm());
     }
 
     void writeReports(const SimulatorTimer& timer)

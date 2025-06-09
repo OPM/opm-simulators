@@ -372,6 +372,43 @@ public:
         }
     }
 
+    void outputFipAndResvLogToCSV(const std::size_t reportStepNum,
+                                  const bool substep,
+                                  const Parallel::Communication& comm)
+    {
+        if (comm.rank() != 0) {
+            return;
+        }
+
+        if ((reportStepNum == 0) && (!substep) &&
+            (this->schedule_.initialReportConfiguration().has_value()) &&
+            (this->schedule_.initialReportConfiguration()->contains("CSVFIP"))) {
+
+            std::ostringstream csv_stream;
+
+            this->logOutput_.csv_header(csv_stream);
+
+            const auto& initial_inplace = this->initialInplace().value();
+
+            this->logOutput_.fip_csv(csv_stream, initial_inplace, "FIPNUM");
+
+            for (const auto& reg : this->regions_) {
+                if (reg.first != "FIPNUM") {
+                    this->logOutput_.fip_csv(csv_stream, initial_inplace, reg.first);
+                }
+            }
+
+            const IOConfig& io =  this->eclState_.getIOConfig();
+            auto csv_fname = io.getOutputDir() + "/" + io.getBaseName() + ".CSV";
+
+            std::ofstream outputFile(csv_fname);
+
+            outputFile <<  csv_stream.str();
+
+            outputFile.close();
+        }
+    }
+
     /*!
      * \brief Capture connection fluxes, particularly to account for inter-region flows.
      *
