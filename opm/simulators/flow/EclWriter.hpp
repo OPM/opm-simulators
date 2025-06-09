@@ -63,6 +63,7 @@
 #include <utility>
 #include <vector>
 
+
 namespace Opm::Parameters {
 
 // If available, write the ECL output in a non-blocking manner
@@ -383,6 +384,16 @@ public:
                 inplace_ = outputModule_->initialInplace().value();
                 outputModule_->outputFipAndResvLog(inplace_, 0, 0.0, start_time,
                                                   false, simulator_.gridView().comm());
+            }
+        }
+
+        if (this->schedule_.initialReportConfiguration().has_value() &&
+            this->schedule_.initialReportConfiguration()->contains("CSVFIP")){
+
+            OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
+
+            if (this->collectOnIORank_.isIORank()) {
+                outputModule_->outputFipAndResvLogToCSV(0, false, simulator_.gridView().comm());
             }
         }
     }
