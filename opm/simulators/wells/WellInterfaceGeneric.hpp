@@ -89,7 +89,6 @@ public:
 
     const Well& wellEcl() const;
     Well& wellEcl();
-    const PhaseUsage& phaseUsage() const;
 
     /// Returns true if the well is currently in prediction mode (i.e. not history mode).
     bool underPredictionMode() const;
@@ -370,7 +369,7 @@ protected:
 
     Well::Status wellStatus_;
 
-    const PhaseUsage* phase_usage_;
+    // const PhaseUsage* phase_usage_;
 
     Scalar gravity_;
     Scalar wsolvent_;

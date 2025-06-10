@@ -1143,7 +1143,6 @@ namespace Opm
         const auto& well = this->well_ecl_;
         const int well_index = this->index_of_well_;
         auto& ws = well_state.well(well_index);
-        const auto& pu = this->phaseUsage();
         const int np = well_state.numPhases();
         const auto& summaryState = simulator.vanguard().summaryState();
         const auto& schedule = simulator.vanguard().schedule();
@@ -1169,17 +1168,17 @@ namespace Opm
             switch (injectorType) {
             case InjectorType::WATER:
             {
-                phasePos = pu.phase_pos[BlackoilPhases::Aqua];
+                phasePos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
                 break;
             }
             case InjectorType::OIL:
             {
-                phasePos = pu.phase_pos[BlackoilPhases::Liquid];
+                phasePos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
                 break;
             }
             case InjectorType::GAS:
             {
-                phasePos = pu.phase_pos[BlackoilPhases::Vapour];
+                phasePos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
                 break;
             }
             default:
@@ -1194,9 +1193,11 @@ namespace Opm
                 ws.surface_rates[phasePos] = (1.0 - this->rsRvInj()) * controls.surface_rate;
                 if(this->rsRvInj() > 0) {
                     if (injectorType == InjectorType::OIL && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                        ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = controls.surface_rate * this->rsRvInj();
+                        const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                        ws.surface_rates[gas_pos] = controls.surface_rate * this->rsRvInj();
                     } else if (injectorType == InjectorType::GAS && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                        ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = controls.surface_rate * this->rsRvInj();
+                        const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                        ws.surface_rates[oil_pos] = controls.surface_rate * this->rsRvInj();
                     } else {
                         OPM_DEFLOG_THROW(std::runtime_error, "Expected OIL or GAS as type for injectors when RS/RV (item 10) is non-zero "  + this->name(), deferred_logger );
                     }
@@ -1294,7 +1295,8 @@ namespace Opm
             switch (current) {
             case Well::ProducerCMode::ORAT:
             {
-                Scalar current_rate = -ws.surface_rates[ pu.phase_pos[Oil] ];
+                const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                Scalar current_rate = -ws.surface_rates[oil_pos];
                 // for trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
@@ -1303,7 +1305,7 @@ namespace Opm
                     }
                 } else {
                     const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
-                    double control_fraction = fractions[pu.phase_pos[Oil]];
+                    double control_fraction = fractions[oil_pos];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
                             ws.surface_rates[p] = - fractions[p] * controls.oil_rate/control_fraction;
@@ -1314,7 +1316,8 @@ namespace Opm
             }
             case Well::ProducerCMode::WRAT:
             {
-                Scalar current_rate = -ws.surface_rates[ pu.phase_pos[Water] ];
+                const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                Scalar current_rate = -ws.surface_rates[water_pos];
                 // for trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
@@ -1323,7 +1326,7 @@ namespace Opm
                     }
                 } else {
                     const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
-                    const Scalar control_fraction = fractions[pu.phase_pos[Water]];
+                    const Scalar control_fraction = fractions[water_pos];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
                             ws.surface_rates[p] = - fractions[p] * controls.water_rate / control_fraction;
@@ -1334,7 +1337,8 @@ namespace Opm
             }
             case Well::ProducerCMode::GRAT:
             {
-                Scalar current_rate = -ws.surface_rates[pu.phase_pos[Gas] ];
+                const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                Scalar current_rate = -ws.surface_rates[gas_pos];
                 // or trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
@@ -1343,7 +1347,7 @@ namespace Opm
                     }
                 } else {
                     const std::vector<Scalar > fractions = initialWellRateFractions(simulator, well_state);
-                    const Scalar control_fraction = fractions[pu.phase_pos[Gas]];
+                    const Scalar control_fraction = fractions[gas_pos];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
                             ws.surface_rates[p] = - fractions[p] * controls.gas_rate / control_fraction;
@@ -1356,8 +1360,10 @@ namespace Opm
             }
             case Well::ProducerCMode::LRAT:
             {
-                Scalar current_rate = - ws.surface_rates[ pu.phase_pos[Water] ]
-                                      - ws.surface_rates[ pu.phase_pos[Oil] ];
+                const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                Scalar current_rate = - ws.surface_rates[water_pos]
+                                      - ws.surface_rates[oil_pos];
                 // or trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
@@ -1366,7 +1372,7 @@ namespace Opm
                     }
                 } else {
                     const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
-                    const Scalar control_fraction = fractions[pu.phase_pos[Water]] + fractions[pu.phase_pos[Oil]];
+                    const Scalar control_fraction = fractions[water_pos] + fractions[oil_pos];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
                             ws.surface_rates[p] = - fractions[p] * controls.liquid_rate / control_fraction;
@@ -1405,13 +1411,16 @@ namespace Opm
                 } else {
                     std::vector<Scalar> hrates(this->number_of_phases_,0.);
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                        hrates[pu.phase_pos[Water]] = controls.water_rate;
+                        const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                        hrates[phase_pos] = controls.water_rate;
                     }
                     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                        hrates[pu.phase_pos[Oil]] = controls.oil_rate;
+                        const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                        hrates[phase_pos] = controls.oil_rate;
                     }
                     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                        hrates[pu.phase_pos[Gas]] = controls.gas_rate;
+                        const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                        hrates[phase_pos] = controls.gas_rate;
                     }
                     std::vector<Scalar> hrates_resv(this->number_of_phases_,0.);
                     this->rateConverter_.calcReservoirVoidageRates(/*fipreg*/ 0, this->pvtRegionIdx_, hrates, hrates_resv);
