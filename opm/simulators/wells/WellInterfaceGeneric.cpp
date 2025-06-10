@@ -210,14 +210,6 @@ Well& WellInterfaceGeneric<FluidSystem, Indices>::wellEcl()
 }
 
 template<typename FluidSystem, typename Indices>
-const PhaseUsage& WellInterfaceGeneric<FluidSystem, Indices>::phaseUsage() const
-{
-    assert(phase_usage_ != nullptr);
-
-    return *phase_usage_;
-}
-
-template<typename FluidSystem, typename Indices>
 typename FluidSystem::Scalar
 WellInterfaceGeneric<FluidSystem, Indices>::wsolvent() const
 {

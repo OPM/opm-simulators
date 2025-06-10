@@ -19,6 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "RegionAttributeHelpers.hpp"
+
 #include <config.h>
 
 #include <opm/simulators/wells/StandardWellConnections.hpp>
@@ -468,16 +470,11 @@ computePropertiesForPressures(const WellState<FluidSystem, Indices>&         wel
     auto props = Properties{};
 
     const int nperf = well_.numLocalPerfs();
-    const PhaseUsage& pu = well_.phaseUsage();
 
     props.b_perf        .resize(nperf * this->well_.numComponents());
     props.surf_dens_perf.resize(nperf * this->well_.numComponents());
 
     const auto& ws = well_state.well(this->well_.indexOfWell());
-
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
 
     const bool waterPresent = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
     const bool oilPresent = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
@@ -514,10 +511,12 @@ computePropertiesForPressures(const WellState<FluidSystem, Indices>&         wel
             if (FluidSystem::enableDissolvedGasInWater()) {
                 // TODO support mutual solubility in water and oil
                 assert(!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-                const Scalar waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]);
+                const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                const Scalar waterrate = std::abs(ws.surface_rates[water_pos]);
                 props.rswmax_perf[perf] = FluidSystem::waterPvt().saturatedGasDissolutionFactor(region_idx, temperature, p_avg, saltConcentration);
                 if (waterrate > 0) {
-                    const Scalar gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
+                    const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                    const Scalar gasrate = std::abs(ws.surface_rates[gas_pos]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
                     if (gasrate > 0) {
                         rsw = gasrate / waterrate;
                     }
@@ -537,12 +536,14 @@ computePropertiesForPressures(const WellState<FluidSystem, Indices>&         wel
             Scalar rv = 0.0;
             if (oilPresent) {
                 // in order to handle negative rates in producers
-                const Scalar oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]);
+                const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                const Scalar oilrate = std::abs(ws.surface_rates[oil_pos]);
                 props.rvmax_perf[perf] = FluidSystem::gasPvt()
                     .saturatedOilVaporizationFactor(region_idx, temperature, p_avg);
 
                 if (oilrate > 0) {
-                    const Scalar gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
+                    const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                    const Scalar gasrate = std::abs(ws.surface_rates[gas_pos]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
                     if (gasrate > 0) {
                         rv = oilrate / gasrate;
                     }
@@ -552,12 +553,14 @@ computePropertiesForPressures(const WellState<FluidSystem, Indices>&         wel
 
             if (waterPresent) {
                 // in order to handle negative rates in producers
-                const Scalar waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]);
+                const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                const Scalar waterrate = std::abs(ws.surface_rates[water_pos]);
                 props.rvwmax_perf[perf] = FluidSystem::gasPvt()
                     .saturatedWaterVaporizationFactor(region_idx, temperature, p_avg);
 
                 if (waterrate > 0) {
-                    const Scalar gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]])
+                    const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                    const Scalar gasrate = std::abs(ws.surface_rates[gas_pos]);
                         - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
 
                     if (gasrate > 0) {
@@ -581,11 +584,13 @@ computePropertiesForPressures(const WellState<FluidSystem, Indices>&         wel
                 props.rsmax_perf[perf] = FluidSystem::oilPvt()
                     .saturatedGasDissolutionFactor(region_idx, temperature, p_avg);
 
-                const Scalar gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]])
+                const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                const Scalar gasrate = std::abs(ws.surface_rates[gas_pos])
                     - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
 
                 if (gasrate > 0) {
-                    const Scalar oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]);
+                    const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                    const Scalar oilrate = std::abs(ws.surface_rates[oil_pos]);
                     if (oilrate > 0) {
                         rs = gasrate / oilrate;
                     }

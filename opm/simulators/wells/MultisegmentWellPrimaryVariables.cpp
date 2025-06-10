@@ -87,7 +87,6 @@ update(const WellState<FluidSystem, Indices>& well_state,
     assert(segments.size() == value_.size());
     const auto& segment_rates = segments.rates;
     const auto& segment_pressure = segments.pressure;
-    const PhaseUsage& pu = well_.phaseUsage();
 
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         // calculate the total rate for each segment
@@ -122,11 +121,11 @@ update(const WellState<FluidSystem, Indices>& well_state,
             }
         } else if (std::abs(total_seg_rate) > 0.) {
             if (has_wfrac_variable) {
-                const int water_pos = pu.phase_pos[Water];
+                const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
                 value_[seg][WFrac] = well_.scalingFactor(water_pos) * segment_rates[well_.numPhases() * seg + water_pos] / total_seg_rate;
             }
             if (has_gfrac_variable) {
-                const int gas_pos = pu.phase_pos[Gas];
+                const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
                 value_[seg][GFrac] = well_.scalingFactor(gas_pos) * segment_rates[well_.numPhases() * seg + gas_pos] / total_seg_rate;
             }
         } else { // total_seg_rate == 0
@@ -235,8 +234,7 @@ copyToWellState(const  MultisegmentWellGeneric<FluidSystem, Indices>& mswell,
 
     const auto pvtReg = std::max(well_.wellEcl().pvt_table_number() - 1, 0);
 
-    const PhaseUsage& pu = well_.phaseUsage();
-    const int oil_pos = pu.phase_pos[Oil];
+    const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
 
     auto& ws = well_state.well(well_.indexOfWell());
 
@@ -259,29 +257,29 @@ copyToWellState(const  MultisegmentWellGeneric<FluidSystem, Indices>& mswell,
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             fractions[oil_pos] = 1.0;
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                const int water_pos = pu.phase_pos[Water];
+                const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
                 fractions[water_pos] = value_[seg][WFrac];
                 fractions[oil_pos] -= fractions[water_pos];
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                const int gas_pos = pu.phase_pos[Gas];
+                const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
                 fractions[gas_pos] = value_[seg][GFrac];
                 fractions[oil_pos] -= fractions[gas_pos];
             }
         }
         else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            const int water_pos = pu.phase_pos[Water];
+            const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
             fractions[water_pos] = 1.0;
 
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                const int gas_pos = pu.phase_pos[Gas];
+                const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
                 fractions[gas_pos] = value_[seg][GFrac];
                 fractions[water_pos] -= fractions[gas_pos];
             }
         }
         else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            const int gas_pos = pu.phase_pos[Gas];
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
             fractions[gas_pos] = 1.0;
         }
 
@@ -342,8 +340,8 @@ copyToWellState(const  MultisegmentWellGeneric<FluidSystem, Indices>& mswell,
         else {
             const auto* qs = &segment_rates[seg * well_.numPhases()];
             const auto denom = 1.0 - (Rs * Rv);
-            const auto io = pu.phase_pos[Oil];
-            const auto ig = pu.phase_pos[Gas];
+            const auto io = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+            const auto ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
             disgas[seg] = Rs * (qs[io] - Rv*qs[ig]) / denom;
             vapoil[seg] = Rv * (qs[ig] - Rs*qs[io]) / denom;
         }
@@ -392,19 +390,22 @@ copyToWellState(const  MultisegmentWellGeneric<FluidSystem, Indices>& mswell,
 
         // 5) Local condition phase viscosities.
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            segments.phase_viscosity[seg * well_.numPhases() + pu.phase_pos[Oil]] =
+            // const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+            segments.phase_viscosity[seg * well_.numPhases() + oil_pos] =
                     FluidSystem::oilPvt().viscosity(pvtReg, temperature, segment_pressure[seg], Rs);
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            segments.phase_viscosity[seg * well_.numPhases() + pu.phase_pos[Water]] =
+            const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            segments.phase_viscosity[seg * well_.numPhases() + water_pos] =
                 FluidSystem::waterPvt().viscosity(pvtReg, temperature,
                                                   segment_pressure[seg],
                                                   Scalar{0.0} /*Rsw*/, saltConc);
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            segments.phase_viscosity[seg * well_.numPhases() + pu.phase_pos[Gas]] =
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            segments.phase_viscosity[seg * well_.numPhases() + gas_pos] =
                 FluidSystem::gasPvt().viscosity(pvtReg, temperature, segment_pressure[seg], Rv, Rvw);
         }
     }
@@ -458,19 +459,20 @@ processFractions(const int seg)
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
 
-    const PhaseUsage& pu = well_.phaseUsage();
-
     std::vector<Scalar> fractions(well_.numPhases(), 0.0);
 
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        fractions[pu.phase_pos[Oil]] = 1.0;
+        const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+        fractions[oil_pos] = 1.0;
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            fractions[pu.phase_pos[Water]] = value_[seg][WFrac];
-            fractions[pu.phase_pos[Oil]] -= fractions[pu.phase_pos[Water]];
+            const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            fractions[water_pos] = value_[seg][WFrac];
+            fractions[oil_pos] -= fractions[water_pos];
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
             fractions[pu.phase_pos[Gas]] = value_[seg][GFrac];
             fractions[pu.phase_pos[Oil]] -= fractions[pu.phase_pos[Gas]];
         }
