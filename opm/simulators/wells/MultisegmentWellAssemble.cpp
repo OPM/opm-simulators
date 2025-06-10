@@ -129,21 +129,23 @@ assembleControlEq(const WellState<FluidSystem, Indices>& well_state,
         // Find scaling factor to get injection rate,
         const InjectorType injectorType = inj_controls.injector_type;
         Scalar scaling;
-        const auto& pu = well_.phaseUsage();
         switch (injectorType) {
         case InjectorType::WATER:
         {
-            scaling = well_.scalingFactor(pu.phase_pos[BlackoilPhases::Aqua]);
+            const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            scaling = well_.scalingFactor(phase_pos);
             break;
         }
         case InjectorType::OIL:
         {
-            scaling = well_.scalingFactor(pu.phase_pos[BlackoilPhases::Liquid]);
+            const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+            scaling = well_.scalingFactor(phase_pos);
             break;
         }
         case InjectorType::GAS:
         {
-            scaling = well_.scalingFactor(pu.phase_pos[BlackoilPhases::Vapour]);
+            const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            scaling = well_.scalingFactor(phase_pos);
             break;
         }
         default:
