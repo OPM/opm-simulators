@@ -47,7 +47,6 @@ template <class T>
 GpuBuffer<T>::GpuBuffer(const T* dataOnHost, const size_t numberOfElements)
     : GpuBuffer(numberOfElements)
 {
-
     OPM_GPU_SAFE_CALL(cudaMemcpy(
         m_dataOnDevice, dataOnHost, m_numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
 }
@@ -196,6 +195,7 @@ GpuBuffer<T>::copyToHost(std::vector<T>& data) const
     copyToHost(data.data(), data.size());
 }
 
+template class GpuBuffer<size_t>;
 template class GpuBuffer<double>;
 template class GpuBuffer<float>;
 template class GpuBuffer<int>;

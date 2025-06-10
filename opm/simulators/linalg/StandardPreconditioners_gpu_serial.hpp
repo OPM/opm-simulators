@@ -82,10 +82,11 @@ struct StandardPreconditioners<Operator,
                 const bool split_matrix = prm.get<bool>("split_matrix", true);
                 const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
                 const int mixed_precision_scheme = prm.get<int>("mixed_precision_scheme", 0);
+                const bool reorder = prm.get<bool>("reorder", true);
                 using CPUMatrixType = std::remove_const_t<std::remove_reference_t<decltype(cpuMatrix)>>;
                 using GPUDILU =
                     typename gpuistl::GpuDILU<CPUMatrixType, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-                return std::make_shared<GPUDILU>(op.getmat(), cpuMatrix, split_matrix, tune_gpu_kernels, mixed_precision_scheme);
+                return std::make_shared<GPUDILU>(op.getmat(), cpuMatrix, split_matrix, tune_gpu_kernels, mixed_precision_scheme, reorder);
             });
         });
     }
