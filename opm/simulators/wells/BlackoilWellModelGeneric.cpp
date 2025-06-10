@@ -26,7 +26,6 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
-
 #include <opm/output/data/GuideRateValue.hpp>
 #include <opm/output/data/Groups.hpp>
 #include <opm/output/data/Wells.hpp>
@@ -342,6 +341,7 @@ initializeWellPerfData()
     this->conn_idx_map_.reserve(wells_ecl_.size());
 
     int well_index = 0;
+
     for (const auto& well : wells_ecl_) {
         int connection_index = 0;
 
@@ -364,10 +364,12 @@ initializeWellPerfData()
         auto& parallelWellInfo = this->local_parallel_well_info_[well_index].get();
         parallelWellInfo.beginReset();
 
-        for (const auto& connection : well.getConnections()) {
-            const auto active_index =
-                this->compressedIndexForInterior(connection.global_index());
 
+        for (const auto& connection : well.getConnections()) {
+    
+            const int active_index = well.is_lgr_well()
+                ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
+                : this->compressedIndexForInterior(connection.global_index());       
             const auto connIsOpen =
                 connection.state() == Connection::State::OPEN;
 
@@ -1832,7 +1834,10 @@ getCellsForConnections(const Well& well) const
 
     for (const auto& connection : connectionSet)
     {
-        int compressed_idx = compressedIndexForInterior(connection.global_index());
+        int compressed_idx = well.is_lgr_well()
+            ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)    
+            : this->compressedIndexForInterior(connection.global_index());     
+        
         if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
             wellCells.push_back(compressed_idx);
         }
@@ -1943,7 +1948,10 @@ getMaxWellConnections() const
         const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
         if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
             for (const auto& global_index : possibleFutureConnectionSetIt->second) {
+                // THIS NEEDS TO BE UPDATED TO USE LGR
+                
                 int compressed_idx = compressedIndexForInterior(global_index);
+        
                 if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
                     compressed_well_perforations.push_back(compressed_idx);
                 }
