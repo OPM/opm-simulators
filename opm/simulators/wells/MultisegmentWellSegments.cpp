@@ -890,7 +890,8 @@ copyPhaseDensities(SegmentState<Scalar>& segSol) const
     //  ...
     //  { p0, p1, ..., (np - 1), mixture, mixture_with_exponents }]
     // Stride is np + 2.
-    constexpr int num_phases = FluidSystem::numPhases;
+    // here it has to be number of active phases
+    constexpr int num_phases = Indices::numPhases;
     for (const auto& fsPhaseIdx : phaseMap) {
         if (FluidSystem::phaseIsActive(fsPhaseIdx)) {
             const auto phase_active_index = FluidSystem::canonicalToActivePhaseIdx(fsPhaseIdx);

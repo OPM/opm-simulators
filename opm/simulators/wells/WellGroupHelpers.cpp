@@ -774,7 +774,6 @@ updateGpMaintTargetForGroups(const Group& group,
     const auto [name, number] = *region;
     const Scalar error = gpm->pressure_target() - regional_values.at(name)->pressure(number);
     Scalar current_rate = 0.0;
-    const auto& pu = well_state.phaseUsage();
     bool injection = true;
     Scalar sign = 1.0;
     switch (gpm->flow_target()) {
@@ -787,43 +786,50 @@ updateGpMaintTargetForGroups(const Group& group,
         }
         case GPMaint::FlowTarget::RESV_OINJ:
         {
-            if (pu.phase_used[BlackoilPhases::Liquid])
-                current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Liquid]];
-
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const auto io = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                current_rate = group_state.injection_reservoir_rates(group.name())[io];
+            }
             break;
         }
         case GPMaint::FlowTarget::RESV_WINJ:
         {
-            if (pu.phase_used[BlackoilPhases::Aqua])
-                current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Aqua]];
-
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const auto iw = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                current_rate = group_state.injection_reservoir_rates(group.name())[iw];
+            }
             break;
         }
         case GPMaint::FlowTarget::RESV_GINJ:
         {
-            if (pu.phase_used[BlackoilPhases::Vapour])
-                current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Vapour]];
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const auto ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                current_rate = group_state.injection_reservoir_rates(group.name())[ig];
+            }
             break;
         }
         case GPMaint::FlowTarget::SURF_OINJ:
         {
-            if (pu.phase_used[BlackoilPhases::Liquid])
-                current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Liquid]];
-
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const auto io = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                current_rate = group_state.injection_surface_rates(group.name())[io];
+            }
             break;
         }
         case GPMaint::FlowTarget::SURF_WINJ:
         {
-            if (pu.phase_used[BlackoilPhases::Aqua])
-                current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Aqua]];
-
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const auto iw = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                current_rate = group_state.injection_surface_rates(group.name())[iw];
+            }
             break;
         }
         case GPMaint::FlowTarget::SURF_GINJ:
         {
-            if (pu.phase_used[BlackoilPhases::Vapour])
-                current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Vapour]];
-
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const auto ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                current_rate = group_state.injection_surface_rates(group.name())[ig];
+            }
             break;
         }
         default:
@@ -1781,7 +1787,6 @@ checkGroupConstraintsInj(const std::string& name,
                                         reportStepIdx,
                                         guideRate,
                                         tcalc.guideTargetMode(),
-                                        pu,
                                         false,
                                         injectionPhase);
 

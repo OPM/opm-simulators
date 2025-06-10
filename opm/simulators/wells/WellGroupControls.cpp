@@ -244,7 +244,6 @@ getGroupProductionControl(const Group& group,
     }
 
     const auto& well = well_.wellEcl();
-    const auto pu = well_.phaseUsage();
 
     if (!group.isProductionGroup()) {
         // use bhp as control eq and let the updateControl code find a valid control
@@ -266,8 +265,7 @@ getGroupProductionControl(const Group& group,
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    WGHelpers::TargetCalculator tcalc(currentGroupControl,
-                                      pu,
+    WGHelpers::TargetCalculator<FluidSystem, Indices> tcalc(currentGroupControl,
                                       resv_coeff,
                                       gratTargetFromSales,
                                       group.name(),
@@ -313,8 +311,6 @@ getGroupProductionTargetRate(const Group& group,
         }
     }
 
-    const auto pu = well_.phaseUsage();
-
     if (!group.isProductionGroup()) {
         return 1.0;
     }
@@ -332,8 +328,7 @@ getGroupProductionTargetRate(const Group& group,
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    WGHelpers::TargetCalculator tcalc(currentGroupControl,
-                                      pu,
+    WGHelpers::TargetCalculator<FluidSystem, Indices> tcalc(currentGroupControl,
                                       resv_coeff,
                                       gratTargetFromSales,
                                       group.name(),
@@ -406,22 +401,20 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    WGHelpers::TargetCalculator tcalc(currentGroupControl,
-                                      pu,
+    WGHelpers::TargetCalculator<FluidSystem, Indices> tcalc(currentGroupControl,
                                       resv_coeff,
                                       gratTargetFromSales,
                                       group.name(),
                                       group_state,
                                       group.has_gpmaint_control(currentGroupControl));
 
-    WGHelpers::FractionCalculator fcalc(schedule,
+    WGHelpers::FractionCalculator<FluidSystem, Indices> fcalc(schedule,
                                         well_state,
                                         group_state,
                                         summaryState,
                                         reportStepIdx,
                                         guideRate,
                                         tcalc.guideTargetMode(),
-                                        pu,
                                         true,
                                         Phase::OIL);
 
