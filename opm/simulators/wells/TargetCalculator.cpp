@@ -81,7 +81,7 @@ RateType TargetCalculator<FluidSystem, Indices>::calcModeRateFromRates(const Rat
     }
     case Group::ProductionCMode::RESV: {
         auto mode_rate = rates[0] * resv_coeff_[0];
-        const int num_phases = FluidSystem::numPhases;
+        const int num_phases = Indices::numPhases;
         for (int phase = 1; phase < num_phases; ++phase) {
             mode_rate += rates[phase] * resv_coeff_[phase];
         }

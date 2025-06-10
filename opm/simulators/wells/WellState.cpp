@@ -1069,16 +1069,16 @@ reportSegmentResults(const int well_id,
         segpress[Value::PDropAccel] = segments.pressure_drop_accel[seg_ix];
     }
 
-    const auto& pu = this->phaseUsage();
-    const auto* rate = &segments.rates[seg_ix * pu.num_phases];
-    const auto* resv = &segments.phase_resv_rates[seg_ix * pu.num_phases];
-    const auto* velocity = &segments.phase_velocity[seg_ix * pu.num_phases];
-    const auto* holdup = &segments.phase_holdup[seg_ix * pu.num_phases];
-    const auto* viscosity = &segments.phase_viscosity[seg_ix * pu.num_phases];
-    const auto* density = &segments.phase_density[seg_ix * (pu.num_phases + 2)]; // +2 for mixture densities
+    const int num_phases = Indices::numPhases;
+    const auto* rate = &segments.rates[seg_ix * num_phases];
+    const auto* resv = &segments.phase_resv_rates[seg_ix * num_phases];
+    const auto* velocity = &segments.phase_velocity[seg_ix * num_phases];
+    const auto* holdup = &segments.phase_holdup[seg_ix * num_phases];
+    const auto* viscosity = &segments.phase_viscosity[seg_ix * num_phases];
+    const auto* density = &segments.phase_density[seg_ix * (num_phases + 2)]; // +2 for mixture densities
 
-    if (pu.phase_used[Water]) {
-        const auto iw = pu.phase_pos[Water];
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))  {
+        const auto iw = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
 
         seg_res.rates.set(data::Rates::opt::wat, rate[iw]);
         seg_res.rates.set(data::Rates::opt::reservoir_water, resv[iw]);
@@ -1088,8 +1088,8 @@ reportSegmentResults(const int well_id,
         seg_res.density.set(PhaseDensity::Water, density[iw]);
     }
 
-    if (pu.phase_used[Oil]) {
-        const auto io = pu.phase_pos[Oil];
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))  {
+        const auto io = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
 
         seg_res.rates.set(data::Rates::opt::oil, rate[io]);
         seg_res.rates.set(data::Rates::opt::vaporized_oil, segments.vaporized_oil_rate[seg_ix]);
@@ -1100,8 +1100,8 @@ reportSegmentResults(const int well_id,
         seg_res.density.set(PhaseDensity::Oil, density[io]);
     }
 
-    if (pu.phase_used[Gas]) {
-        const auto ig = pu.phase_pos[Gas];
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))  {
+        const auto ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
 
         seg_res.rates.set(data::Rates::opt::gas, rate[ig]);
         seg_res.rates.set(data::Rates::opt::dissolved_gas, segments.dissolved_gas_rate[seg_ix]);
@@ -1117,8 +1117,8 @@ reportSegmentResults(const int well_id,
     // Recall: The mixture density *without* exponents is stored at offset
     // 'num_phases' and the mixture density *with* exponents is stored at
     // offset 'num_phases + 1'.
-    seg_res.density.set(PhaseDensity::Mixture, density[pu.num_phases]);
-    seg_res.density.set(PhaseDensity::MixtureWithExponents, density[pu.num_phases + 1]);
+    seg_res.density.set(PhaseDensity::Mixture, density[num_phases]);
+    seg_res.density.set(PhaseDensity::MixtureWithExponents, density[num_phases + 1]);
 
     return seg_res;
 }
@@ -1193,7 +1193,7 @@ reportConnectionPressuresAndRates(const std::size_t well_index,
         connection.rates.set(rt::vaporized_oil, perf_data.phase_mixing_rates[i][ws.vaporized_oil]);
     }
 
-    if (pu.has_polymer) {
+    if (Indices::enablePolymer) {
         for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
             connections[i].rates.set(rt::polymer, perf_data.polymer_rates[i]);
         }
@@ -1218,12 +1218,13 @@ reportConnectionPressuresAndRates(const std::size_t well_index,
             connections[i].rates.set(rt::urea, perf_data.urea_rates[i]);
         }
     }
-    
-    if (pu.has_co2_or_h2store) {
-        for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
-            connections[i].rates.set(rt::mass_gas, perf_data.gas_mass_rates[i]);
-        }
-    }
+
+    // TODO: adding flags for CO2STORE and H2STORE in FluidSystem?
+    // if (pu.has_co2_or_h2store) {
+    //     for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
+    //         connections[i].rates.set(rt::mass_gas, perf_data.gas_mass_rates[i]);
+    //     }
+    // }
 
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
         for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {

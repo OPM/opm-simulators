@@ -47,7 +47,6 @@ FractionCalculator(const Schedule& schedule,
                    const int report_step,
                    const GuideRate* guide_rate,
                    const GuideRateModel::Target target,
-                   const PhaseUsage& pu,
                    const bool is_producer,
                    const Phase injection_phase)
     : schedule_(schedule)
@@ -57,7 +56,6 @@ FractionCalculator(const Schedule& schedule,
     , report_step_(report_step)
     , guide_rate_(guide_rate)
     , target_(target)
-    , pu_(pu)
     , is_producer_(is_producer)
     , injection_phase_(injection_phase)
 {
