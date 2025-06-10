@@ -720,7 +720,7 @@ namespace Opm
 
         {
             auto& ws = well_state.well(this->index_of_well_);
-            this->segments_.copyPhaseDensities(well_state.phaseUsage(), ws.segments);
+            this->segments_.copyPhaseDensities(ws.segments);
         }
 
         Base::calculateReservoirRates(simulator.vanguard().eclState().runspec().co2Storage(), well_state.well(this->index_of_well_));

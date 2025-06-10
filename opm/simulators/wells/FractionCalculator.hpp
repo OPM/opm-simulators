@@ -46,7 +46,6 @@ public:
                        const int report_step,
                        const GuideRate* guide_rate,
                        const GuideRateModel::Target target,
-                       const PhaseUsage& pu,
                        const bool is_producer,
                        const Phase injection_phase);
     Scalar fraction(const std::string& name,
@@ -76,7 +75,7 @@ private:
     int report_step_;
     const GuideRate* guide_rate_;
     GuideRateModel::Target target_;
-    const PhaseUsage& pu_;
+//    const PhaseUsage& pu_;
     bool is_producer_;
     Phase injection_phase_;
 };
