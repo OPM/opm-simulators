@@ -242,20 +242,19 @@ loadRestartData(const data::Wells&                 rst_wells,
                 GroupState<Scalar>&                grpState) const
 {
     using rt = data::Rates::opt;
-    const auto& phases = wellModel_.phaseUsage();
-    const auto np = phases.num_phases;
+    const auto np = Indices::numPhases;
 
     std::vector<rt> phs(np);
-    if (phases.phase_used[BlackoilPhases::Aqua]) {
-        phs.at(phases.phase_pos[BlackoilPhases::Aqua]) = rt::wat;
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        phs.at(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)) = rt::wat;
     }
 
-    if (phases.phase_used[BlackoilPhases::Liquid]) {
-        phs.at( phases.phase_pos[BlackoilPhases::Liquid] ) = rt::oil;
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        phs.at(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)) = rt::oil;
     }
 
-    if (phases.phase_used[BlackoilPhases::Vapour]) {
-        phs.at( phases.phase_pos[BlackoilPhases::Vapour] ) = rt::gas;
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        phs.at(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)) = rt::gas;
     }
 
     for (auto well_index = 0*well_state.size();

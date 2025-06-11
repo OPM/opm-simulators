@@ -1476,9 +1476,9 @@ namespace Opm
 
             // the solvent contribution is added to the gas potentials
             if constexpr (has_solvent) {
-                const auto& pu = this->phaseUsage();
-                assert(pu.phase_used[Gas]);
-                const int gas_pos = pu.phase_pos[Gas];
+                assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+                // TODO: should we use compIdx here?
+                const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
                 well_flux[gas_pos] += cq_s[Indices::contiSolventEqIdx];
             }
         }
@@ -1655,9 +1655,9 @@ namespace Opm
 
         // the solvent contribution is added to the gas potentials
         if constexpr (has_solvent) {
-            const auto& pu = this->phaseUsage();
-            assert(pu.phase_used[Gas]);
-            const int gas_pos = pu.phase_pos[Gas];
+            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+            // TODO: should we use compIdx here?
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
             const EvalWell rate = well_copy.primary_variables_.getQs(Indices::contiSolventEqIdx);
             well_potentials[gas_pos] += rate.value();
         }

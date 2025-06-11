@@ -92,7 +92,6 @@ BlackoilWellModelGeneric(Schedule& schedule,
                          BlackoilWellModelGasLiftGeneric<FluidSystem, Indices>& gaslift,
                          const SummaryState& summaryState,
                          const EclipseState& eclState,
-                         const PhaseUsage& phase_usage,
                          const Parallel::Communication& comm)
     : schedule_(schedule)
     , summaryState_(summaryState)
@@ -100,7 +99,6 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , comm_(comm)
     , gen_gaslift_(gaslift)
     , wbp_(*this)
-    , phase_usage_(phase_usage)
     , terminal_output_(comm_.rank() == 0 &&
                        Parameters::Get<Parameters::EnableTerminalOutput>())
     , guideRate_(schedule)

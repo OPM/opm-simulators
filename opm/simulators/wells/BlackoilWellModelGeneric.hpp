@@ -98,7 +98,6 @@ public:
                              BlackoilWellModelGasLiftGeneric<FluidSystem, Indices>& gaslift,
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
-                             const PhaseUsage& phase_usage,
                              const Parallel::Communication& comm);
 
     virtual ~BlackoilWellModelGeneric() = default;
@@ -137,7 +136,6 @@ public:
     const Well& getWellEcl(const std::string& well_name) const;
     std::vector<Well> getLocalWells(const int timeStepIdx) const;
     const Schedule& schedule() const { return schedule_; }
-    const PhaseUsage& phaseUsage() const { return phase_usage_; }
     const GroupState<Scalar>& groupState() const { return this->active_wgstate_.group_state; }
     std::vector<const WellInterfaceGeneric<FluidSystem, Indices>*> genericWells() const
     { return {well_container_generic_.begin(), well_container_generic_.end()}; }
@@ -517,7 +515,6 @@ protected:
     BlackoilWellModelWBP<FluidSystem, Indices> wbp_;
 
 
-    PhaseUsage phase_usage_;
     bool terminal_output_{false};
     bool wells_active_{false};
     bool network_active_{false};
