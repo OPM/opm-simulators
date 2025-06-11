@@ -117,7 +117,6 @@ getGroupInjectionControl(const Group& group,
     }
 
     const auto& well = well_.wellEcl();
-    const auto pu = well_.phaseUsage();
 
     if (!group.isInjectionGroup()) {
         // use bhp as control eq and let the updateControl code find a valid control
@@ -130,7 +129,7 @@ getGroupInjectionControl(const Group& group,
     // This is the group containing the control we will check against.
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), std::nullopt, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     Scalar sales_target = 0;
@@ -253,8 +252,6 @@ getGroupInjectionTargetRate(const Group& group,
         }
     }
 
-    const auto pu = well_.phaseUsage();
-
     if (!group.isInjectionGroup()) {
         return std::nullopt;
     }
@@ -263,7 +260,7 @@ getGroupInjectionTargetRate(const Group& group,
     // This is the group containing the control we will check against.
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), std::nullopt, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     Scalar sales_target = 0;
@@ -380,7 +377,7 @@ getGroupProductionControl(const Group& group,
     // This is the group containing the control we will check against.
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     // gconsale may adjust the grat target.
@@ -476,7 +473,7 @@ getGroupProductionTargetRate(const Group& group,
     // This is the group containing the control we will check against.
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     // gconsale may adjust the grat target.

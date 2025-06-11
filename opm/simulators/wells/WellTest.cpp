@@ -55,7 +55,7 @@ checkMaxRatioLimitWell(const SingleWellState<FluidSystem, Indices>& ws,
         well_rates[p] = ws.surface_rates[p];
     }
 
-    const Scalar well_ratio = ratioFunc(well_rates, well_.phaseUsage());
+    const Scalar well_ratio = ratioFunc(well_rates);
     return (well_ratio > max_ratio_limit);
 }
 
@@ -90,7 +90,7 @@ checkMaxRatioLimitCompletions(const SingleWellState<FluidSystem, Indices>& ws,
         } // end of for (const int c : conns)
 
         well_.parallelWellInfo().communication().sum(completion_rates.data(), completion_rates.size());
-        const Scalar ratio_completion = ratioFunc(completion_rates, well_.phaseUsage());
+        const Scalar ratio_completion = ratioFunc(completion_rates);
 
         if (ratio_completion > max_ratio_completion) {
             worst_offending_completion = completion.first;
@@ -116,11 +116,10 @@ checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
     static constexpr int Gas = BlackoilPhases::Vapour;
 
     // function to calculate gor based on rates
-    auto gor = [](const std::vector<Scalar>& rates,
-                  const PhaseUsage& pu)
+    auto gor = [](const std::vector<Scalar>& rates)
     {
-        const Scalar oil_rate = -rates[pu.phase_pos[Oil]];
-        const Scalar gas_rate = -rates[pu.phase_pos[Gas]];
+        const Scalar oil_rate = -rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)];
+        const Scalar gas_rate = -rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)];
         if (gas_rate <= 0.)
             return Scalar{0};
         else if (oil_rate <= 0.)
@@ -150,11 +149,10 @@ checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
     static constexpr int Water = BlackoilPhases::Aqua;
 
     // function to calculate wgr based on rates
-    auto wgr = [](const std::vector<Scalar>& rates,
-                  const PhaseUsage& pu)
+    auto wgr = [](const std::vector<Scalar>& rates)
     {
-        const Scalar water_rate = -rates[pu.phase_pos[Water]];
-        const Scalar gas_rate = -rates[pu.phase_pos[Gas]];
+        const Scalar water_rate = -rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)];
+        const Scalar gas_rate = -rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)];
         if (water_rate <= 0.)
             return Scalar{0};
         else if (gas_rate <= 0.)
@@ -184,11 +182,10 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
     static constexpr int Water = BlackoilPhases::Aqua;
 
     // function to calculate water cut based on rates
-    auto waterCut = [](const std::vector<Scalar>& rates,
-                       const PhaseUsage& pu)
+    auto waterCut = [](const std::vector<Scalar>& rates)
     {
-        const Scalar oil_rate = -rates[pu.phase_pos[Oil]];
-        const Scalar water_rate = -rates[pu.phase_pos[Water]];
+        const Scalar oil_rate = -rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)];
+        const Scalar water_rate = -rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)];
         const Scalar liquid_rate = oil_rate + water_rate;
         if (liquid_rate <= 0.)
             return Scalar{0};
@@ -220,14 +217,9 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                     const std::vector<Scalar>& rates_or_potentials,
                     DeferredLogger& deferred_logger) const
 {
-    static constexpr int Gas = BlackoilPhases::Vapour;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Water = BlackoilPhases::Aqua;
-
-    const PhaseUsage& pu = well_.phaseUsage();
-
     if (econ_production_limits.onMinOilRate()) {
-        const Scalar oil_rate = rates_or_potentials[pu.phase_pos[Oil]];
+        const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+        const Scalar oil_rate = rates_or_potentials[oil_pos];
         const Scalar min_oil_rate = econ_production_limits.minOilRate();
         if (std::abs(oil_rate) < min_oil_rate) {
             return true;
@@ -235,7 +227,8 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
     }
 
     if (econ_production_limits.onMinGasRate() ) {
-        const Scalar gas_rate = rates_or_potentials[pu.phase_pos[Gas]];
+        const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+        const Scalar gas_rate = rates_or_potentials[gas_pos];
         const Scalar min_gas_rate = econ_production_limits.minGasRate();
         if (std::abs(gas_rate) < min_gas_rate) {
             return true;
@@ -243,8 +236,10 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
     }
 
     if (econ_production_limits.onMinLiquidRate() ) {
-        const Scalar oil_rate = rates_or_potentials[pu.phase_pos[Oil]];
-        const Scalar water_rate = rates_or_potentials[pu.phase_pos[Water]];
+        const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+        const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+        const Scalar oil_rate = rates_or_potentials[oil_pos];
+        const Scalar water_rate = rates_or_potentials[water_pos];
         const Scalar liquid_rate = oil_rate + water_rate;
         const Scalar min_liquid_rate = econ_production_limits.minLiquidRate();
         if (std::abs(liquid_rate) < min_liquid_rate) {
