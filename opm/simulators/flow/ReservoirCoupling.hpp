@@ -60,28 +60,12 @@ enum class MessageTag : int {
 
 // Used to communicate potentials for oil, gas, and water rates between slave and master processes
 struct Potentials {
-    // Define a num_fields constant to be used in MPI communication to simplify serialization
-    // and deserialization of the struct. Note that sizeof(Potentials)/sizeof(double) is not
-    // guaranteed to be equal to num_fields due to padding.
-    static constexpr std::size_t num_fields = 3;
-    // These indices are used to access the oil, gas, and water rates when deserializing
-    // IMPORTANT: They must correspond to the order of the fields in the struct below
-    static constexpr std::size_t OIL_IDX = 0;
-    static constexpr std::size_t GAS_IDX = 1;
-    static constexpr std::size_t WATER_IDX = 2;
-    // Disallow construction by {x, y, z} or Potentials(x, y, z) to prevent accidental
-    // construction with the wrong order of arguments
-    Potentials(double, double, double) = delete;
-    // In the case a master group does not have potentials (i.e. for injection groups),
-    // we will send dummy values (0.0) for the potentials.
-    Potentials() {
-        oil_rate = 0.0;
-        gas_rate = 0.0;
-        water_rate = 0.0;
-    };
-    double oil_rate;
-    double gas_rate;
-    double water_rate;
+    enum class Phase : std::size_t { Oil = 0, Gas, Water, Count };
+
+    std::array<double, static_cast<std::size_t>(Phase::Count)> rate{};
+
+    [[nodiscard]] double& operator[](Phase p)       noexcept { return rate[static_cast<std::size_t>(p)]; }
+    [[nodiscard]] double  operator[](Phase p) const noexcept { return rate[static_cast<std::size_t>(p)]; }
 };
 
 
