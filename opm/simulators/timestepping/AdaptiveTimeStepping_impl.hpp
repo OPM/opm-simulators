@@ -455,7 +455,6 @@ SubStepper(AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping,
     , solver_{solver}
     , is_event_{is_event}
     , tuning_updater_{tuning_updater}
-    , simulator_{solver.model().simulator()}
 {
 }
 
@@ -500,7 +499,7 @@ bool
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 isReservoirCouplingMaster_() const
 {
-    return this->simulator_.reservoirCouplingMaster() != nullptr;
+    return this->solver_.model().simulator().reservoirCouplingMaster() != nullptr;
 }
 
 template<class TypeTag>
@@ -509,7 +508,7 @@ bool
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 isReservoirCouplingSlave_() const
 {
-    return this->simulator_.reservoirCouplingSlave() != nullptr;
+    return this->solver_.model().simulator().reservoirCouplingSlave() != nullptr;
 }
 #endif
 
@@ -576,7 +575,7 @@ ReservoirCouplingMaster&
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 reservoirCouplingMaster_()
 {
-    return *(this->simulator_.reservoirCouplingMaster());
+    return *(this->solver_.model().simulator().reservoirCouplingMaster());
 }
 #endif
 
@@ -587,7 +586,7 @@ ReservoirCouplingSlave&
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 reservoirCouplingSlave_()
 {
-    return *(this->simulator_.reservoirCouplingSlave());
+    return *(this->solver_.model().simulator().reservoirCouplingSlave());
 }
 #endif
 
