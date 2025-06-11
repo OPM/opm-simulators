@@ -2049,7 +2049,6 @@ worstOffendingWell(const Group& group,
                    const Schedule& schedule,
                    const int reportStepIdx,
                    const Group::ProductionCMode& offendedControl,
-                   const PhaseUsage& pu,
                    const Parallel::Communication& comm,
                    const WellState<FluidSystem, Indices>& wellState,
                    DeferredLogger& deferred_logger)
@@ -2061,7 +2060,6 @@ worstOffendingWell(const Group& group,
                                                              schedule,
                                                              reportStepIdx,
                                                              offendedControl,
-                                                             pu,
                                                              comm,
                                                              wellState,
                                                              deferred_logger);
@@ -2079,23 +2077,32 @@ worstOffendingWell(const Group& group,
         {
             const auto& ws = wellState.well(child_well);
             switch (offendedControl){
-                case Group::ProductionCMode::ORAT:
-                    violating_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
+                case Group::ProductionCMode::ORAT: {
+                    const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                    violating_rate = ws.surface_rates[oil_pos];
                     break;
-                case Group::ProductionCMode::GRAT:
-                    violating_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]];
+                }
+                case Group::ProductionCMode::GRAT: {
+                    const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                    violating_rate = ws.surface_rates[gas_pos];
                     break;
-                case Group::ProductionCMode::WRAT:
-                    violating_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+                }
+                case Group::ProductionCMode::WRAT: {
+                    const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                    violating_rate = ws.surface_rates[water_pos];
                     break;
-                case Group::ProductionCMode::LRAT:
-                    assert(pu.phase_used[BlackoilPhases::Liquid]);
-                    assert(pu.phase_used[BlackoilPhases::Aqua]);
-                    violating_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] +
-                                     ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+                }
+                case Group::ProductionCMode::LRAT: {
+                    assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+                    assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+                    const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                    const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                    violating_rate = ws.surface_rates[oil_pos] +
+                                     ws.surface_rates[water_pos];
                     break;
+                }
                 case Group::ProductionCMode::RESV:
-                    for (int p = 0; p < pu.num_phases; ++p) {
+                    for (int p = 0; p < Indices::numPhases; ++p) {
                         violating_rate += ws.reservoir_rates[p];
                     }
                     break;
@@ -2116,15 +2123,21 @@ worstOffendingWell(const Group& group,
             }
             const auto preferred_phase = schedule.getWell(child_well, reportStepIdx).getPreferredPhase();
              switch (preferred_phase) {
-                case Phase::OIL:
-                    prefered_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
+                case Phase::OIL: {
+                    const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                    prefered_rate = ws.surface_rates[oil_pos];
                     break;
-                case Phase::GAS:
-                    prefered_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]];
+                }
+                case Phase::GAS: {
+                    const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                    prefered_rate = ws.surface_rates[gas_pos];
                     break;
-                case Phase::WATER:
-                    prefered_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+                }
+                case Phase::WATER: {
+                    const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                    prefered_rate = ws.surface_rates[water_pos];
                     break;
+                }
                 default:
                     // No others supported.
                     break;

@@ -93,7 +93,6 @@ public:
                        const Schedule& schedule,
                        const int reportStepIdx,
                        const Group::ProductionCMode& offendedControl,
-                       const PhaseUsage& pu,
                        const Parallel::Communication& comm,
                        const WellStateType& wellState,
                        DeferredLogger& deferred_logger);

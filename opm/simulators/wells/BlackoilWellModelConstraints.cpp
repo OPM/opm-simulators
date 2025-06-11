@@ -531,7 +531,7 @@ actionOnBrokenConstraints(const Group& group,
     case Group::ExceedAction::WELL: {
         std::tie(worst_offending_well, std::ignore) =
             WellGroupHelpers<FluidSystem, Indices>::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
-                                                         newControl, wellModel_.phaseUsage(),
+                                                         newControl,
                                                          wellModel_.comm(), well_state, deferred_logger);
         break;
     }
