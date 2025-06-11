@@ -73,13 +73,12 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    init(const PhaseUsage* phase_usage_arg,
-         const std::vector<Scalar>& depth_arg,
+    init(const std::vector<Scalar>& depth_arg,
          const Scalar gravity_arg,
          const std::vector< Scalar >& B_avg,
          const bool changed_to_open_this_step)
     {
-        Base::init(phase_usage_arg, depth_arg, gravity_arg, B_avg, changed_to_open_this_step);
+        Base::init(depth_arg, gravity_arg, B_avg, changed_to_open_this_step);
         this->StdWellEval::init(this->perf_depth_, depth_arg, Base::has_polymermw);
     }
 

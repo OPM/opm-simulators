@@ -85,7 +85,6 @@ public:
     //! \brief Update THP.
     void updateThp(const Scalar rho,
                    const std::function<Scalar()>& alq_value,
-                   const std::array<unsigned,3>& active,
                    WellState<FluidSystem, Indices>& well_state,
                    const SummaryState& summary_state,
                    DeferredLogger& deferred_logger) const;

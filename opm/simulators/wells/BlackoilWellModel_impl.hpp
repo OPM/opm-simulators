@@ -190,7 +190,7 @@ namespace Opm {
             const bool well_opened_this_step = this->report_step_starts_ &&
                                                events.hasEvent(wellPtr->name(),
                                                                effective_events_mask);
-            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
+            wellPtr->init(this->depth_, this->gravity_,
                           this->B_avg_, well_opened_this_step);
         }
     }
@@ -553,7 +553,7 @@ namespace Opm {
 
             WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
             // some preparation before the well can be used
-            well->init(&this->phase_usage_, depth_, gravity_, B_avg_, true);
+            well->init(depth_, gravity_, B_avg_, true);
 
             Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor() *
                                             this->wellState().getGlobalEfficiencyScalingFactor(well_name);
@@ -2099,7 +2099,7 @@ namespace Opm {
             auto wellPtr = this->template createTypedWellPointer
                 <StandardWell<TypeTag>>(shutWell, reportStepIdx);
 
-            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_, this->B_avg_, true);
+            wellPtr->init(this->depth_, this->gravity_, this->B_avg_, true);
 
             this->calculateProductivityIndexValues(wellPtr.get(), deferred_logger);
         }
