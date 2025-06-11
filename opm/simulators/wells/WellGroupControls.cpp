@@ -123,9 +123,9 @@ getGroupInjectionControl(const Group& group,
         return;
     }
 
-    Scalar target_rate = well_state.well(well_.indexOfWell()).group_target;
-    if (target_rate < std::numeric_limits<Scalar>::max()) {
-        control_eq = injection_rate - target_rate;
+    const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
+    if (target_rate) {
+        control_eq = injection_rate - *target_rate;
     } else {
         const auto& controls = well.injectionControls(summaryState);
         control_eq = bhp - controls.bhp_limit;
@@ -196,12 +196,7 @@ getGroupInjectionTargetRate(const Group& group,
         return std::nullopt;
     }
 
-    Scalar group_target = well_state.well(well_.indexOfWell()).group_target;
-    if ( group_target < std::numeric_limits<Scalar>::max()) {
-        return group_target;
-    } else {
-        return std::nullopt;
-    }
+    return well_state.well(well_.indexOfWell()).group_target;
 }
 
 template<class Scalar>
@@ -277,10 +272,10 @@ getGroupProductionControl(const Group& group,
                                       group_state,
                                       group.has_gpmaint_control(currentGroupControl));
 
-    Scalar target_rate = well_state.well(well_.indexOfWell()).group_target;
-    if (target_rate < std::numeric_limits<Scalar>::max()) {
+    const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
+    if (target_rate) {
         const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-        control_eq = current_rate - target_rate;
+        control_eq = current_rate - *target_rate;
     } else {
         const auto& controls = well.productionControls(summaryState);
         control_eq = bhp - controls.bhp_limit;
@@ -343,11 +338,11 @@ getGroupProductionTargetRate(const Group& group,
                                       group.has_gpmaint_control(currentGroupControl));
 
 
-    Scalar target_rate = well_state.well(well_.indexOfWell()).group_target;
-    if (target_rate == std::numeric_limits<Scalar>::max()) {
+    const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
+    if (!target_rate) {
         return 1.0;
     }
-    if (target_rate == 0.0) {
+    if (*target_rate == 0.0) {
         return 0.0;
     }
     const auto& ws = well_state.well(well_.indexOfWell());
@@ -355,7 +350,7 @@ getGroupProductionTargetRate(const Group& group,
     const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     Scalar scale = 1.0;
     if (current_rate > 1e-14)
-        scale = target_rate / current_rate;
+        scale = *target_rate / current_rate;
 
     return scale;
 }

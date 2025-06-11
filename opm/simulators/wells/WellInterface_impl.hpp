@@ -644,7 +644,7 @@ namespace Opm
                                             static_cast<Scalar>(prod_controls.bhp_limit));
                 solveWellWithBhp(simulator, dt, bhp, well_state, deferred_logger);
                 ws.thp = this->getTHPConstraint(summary_state);
-                const auto msg = fmt::format("Well {} try with explicit fractions, re-solving", this->name());
+                const auto msg = fmt::format("Well {} did not converge, re-solving with explicit fractions for VFP caculations.", this->name());
                 deferred_logger.debug(msg);
                 converged = this->iterateWellEqWithSwitching(simulator, dt,
                                                              inj_controls,

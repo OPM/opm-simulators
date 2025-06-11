@@ -1288,8 +1288,8 @@ void BlackoilWellModelGeneric<Scalar>::
 updateAndCommunicateGroupData(const int reportStepIdx,
                               const int iterationIdx,
                               const Scalar tol_nupcol,
-                              DeferredLogger& deferred_logger,
-                              bool update_wellgrouptarget)
+                              const bool update_wellgrouptarget,
+                              DeferredLogger& deferred_logger)
 {
     OPM_TIMEFUNCTION();
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
@@ -1475,7 +1475,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     break;
                 }
                 default:
-                    throw("Expected WATER, OIL or GAS as type for injector " + well->name());
+                    assert(false); //programming error
                 }
                 group_target = WellGroupHelpers<Scalar>::getWellGroupTargetInjector(well->name(),
                                             well->wellEcl().groupName(),

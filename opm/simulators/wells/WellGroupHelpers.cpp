@@ -1488,12 +1488,13 @@ checkGroupConstraintsProd(const std::string& name,
         }
     }
 
-    if (schedule.hasWell(name)) { // for wells we already have computed the target
+    if (schedule.hasWell(name) && wellState.well(name).group_target) { // for wells we already have computed the target
         const Scalar current_well_rate_available = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-        Scalar group_target_rate_available = wellState.well(name).group_target;
+        const Scalar group_target_rate_available = *wellState.well(name).group_target;
         Scalar scale = 1.0;
-        if (current_well_rate_available > 1e-12)
+        if (current_well_rate_available > 1e-12) {
             scale = group_target_rate_available / current_well_rate_available;
+        }
 
         return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
     }
@@ -1534,7 +1535,7 @@ checkGroupConstraintsProd(const std::string& name,
         target *= localFraction(chain[ii + 1]);
     }
     // Avoid negative target rates comming from too large local reductions.
-    Scalar target_rate_available = std::max(Scalar(1e-12), target / efficiencyFactor);
+    const Scalar target_rate_available = std::max(Scalar(1e-12), target / efficiencyFactor);
 
     Scalar scale = 1.0;
     if (current_rate_available > 1e-12)
@@ -1841,14 +1842,14 @@ checkGroupConstraintsInj(const std::string& name,
         }
     }
 
-    if (schedule.hasWell(name)) {  // for wells we already have computed the target
+    if (schedule.hasWell(name) && wellState.well(name).group_target) {  // for wells we already have computed the target
         Scalar scale = 1.0;
-        Scalar target_rate_available = wellState.well(name).group_target;
-            const Scalar current_rate_available
-        = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-        if (current_rate_available > 1e-12)
-            scale = target_rate_available / current_rate_available;
-        return std::make_pair(current_rate_available > target_rate_available, scale);
+        const Scalar group_target_rate_available = *wellState.well(name).group_target;
+        const Scalar current_well_rate_available = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
+        if (current_well_rate_available > 1e-12) {
+            scale = group_target_rate_available / current_well_rate_available;
+        }
+        return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
     }    
 
     std::optional<Group::InjectionControls> ctrl;
@@ -1882,7 +1883,7 @@ checkGroupConstraintsInj(const std::string& name,
         target *= localFraction(chain[ii + 1]);
     }
     // Avoid negative target rates comming from too large local reductions.
-    Scalar target_rate_available = std::max(Scalar(1e-12), target / efficiencyFactor);
+    const Scalar target_rate_available = std::max(Scalar(1e-12), target / efficiencyFactor);
     Scalar scale = 1.0;
     if (current_rate_available > 1e-12)
         scale = target_rate_available / current_rate_available;
