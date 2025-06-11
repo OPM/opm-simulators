@@ -102,9 +102,8 @@ public:
     template<class T>
     void resetCartesianMapper(const T* mapper)
     {
-        m_activeSize = std::bind(&T::compressedSize, mapper);
-        m_local2Global = std::bind(&T::cartesianIndex, mapper,
-                                   std::placeholders::_1);
+        m_activeSize = std::bind(&T::compressedSize, mapper, /* level = */ 0);
+        m_local2Global = std::bind(&T::cartesianIndex, mapper,  std::placeholders::_1, /* level = */ 0);
     }
 
     bool tran_active(const std::string& keyword) const override;
