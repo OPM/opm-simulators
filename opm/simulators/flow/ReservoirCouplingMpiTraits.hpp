@@ -24,55 +24,130 @@
 
 #include <opm/simulators/flow/ReservoirCoupling.hpp>
 
+#include <tuple>   // for std::tuple_size
+
 #include <mpi.h>
 
 namespace Dune {
 
-template <>
-struct MPITraits<::Opm::ReservoirCoupling::Potentials> {
-    using Potentials = ::Opm::ReservoirCoupling::Potentials;
-    constexpr static std::size_t num_fields = Potentials::num_fields;
-public:
-    static inline MPI_Datatype getType() {
-        if (type == MPI_DATATYPE_NULL) { // Will be NULL only once (the first time)
+namespace detail {
+
+// -----------------------------------------------------------------------
+//  StructMPITraitsImpl  --  generic MPI traits implementation for structs
+//
+// Assumes that each field of the struct is either
+//   - an already defined MPI type, or
+//   - is an array or std::array of an already defined MPI type, or
+//   - is an enum with underlying type that is an already defined MPI type
+// ------------------------------------------------------------------------
+template<class Struct, auto... Members>
+struct StructMPITraitsImpl
+{
+    static MPI_Datatype getType()
+    {
+        // One-time, thread-safe construction: As a precaution, in case this code will be
+        //   run by threads in the future, we want to prevent threads entering the code below
+        //   simultaneously to build the datatype. This is done by using std::call_once() with
+        //   a static flag.
+        std::call_once(flag_, [] {
+
+            constexpr std::size_t N = sizeof...(Members);
+
             // Array of block lengths (number of elements per field)
-            int block_lengths[num_fields] = {1, 1, 1};
-
+            //  NOTE: The block length is set to 1 for each field (blk.fill(1)),
+            //        but is strictly not necessary currently, as the processMember()
+            //        function will always set the block length anyway.
+            //        However, it is kept here for clarity and future-proofing.
+            std::array<int,      N> blk{};           blk.fill(1);
             // Array of displacements for each field
-            MPI_Aint displacements[num_fields];
-            Potentials dummy;
-            MPI_Aint base;
-            MPI_Get_address(&dummy, &base);
-            MPI_Get_address(&dummy.oil_rate, &displacements[Potentials::OIL_IDX]);
-            MPI_Get_address(&dummy.gas_rate, &displacements[Potentials::GAS_IDX]);
-            MPI_Get_address(&dummy.water_rate, &displacements[Potentials::WATER_IDX]);
-
-            // Adjust displacements relative to the base
-            for (std::size_t i = 0; i < num_fields; ++i) {
-                displacements[i] -= base;
-            }
-
+            std::array<MPI_Aint, N> disp{};
             // Array of MPI data types for each field
-            MPI_Datatype types[num_fields] = {MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
+            std::array<MPI_Datatype, N> types{};
 
+            // Create a dummy instance of the struct to get the base address
+            Struct dummy{};
+            // Get the base address of the dummy instance
+            MPI_Aint base{};
+            MPI_Get_address(&dummy, &base);
+
+            std::size_t i = 0;
+            // fold expression over the member pointer pack
+            ( processMember<Members>(dummy, base, disp, blk, types, i++), ... );
+
+            MPI_Datatype tmp;
             // Create the MPI datatype
-            MPI_Datatype tmp_type;
-            MPI_Type_create_struct(num_fields, block_lengths, displacements, types, &tmp_type);
-
+            MPI_Type_create_struct(N, blk.data(), disp.data(), types.data(), &tmp);
             // Resize the datatype to account for possible padding issues
-            MPI_Type_create_resized(tmp_type, 0, sizeof(Potentials), &type);
-
-            MPI_Type_commit(&type);
-            MPI_Type_free(&tmp_type);
-        }
-        return type;
+            MPI_Type_create_resized(tmp, 0, sizeof(Struct), &type_);
+            MPI_Type_commit(&type_);
+            // Free the temporary datatype
+            // Note: This is necessary to avoid memory leaks, as the temporary datatype
+            //       created by MPI_Type_create_struct is not automatically freed.
+            MPI_Type_free(&tmp);
+        });
+        return type_;
     }
 
-private:
+    static constexpr bool is_intrinsic = false;
+
+  private:
+    // --- helper to recognise std::array ----------------------------------------
+    template<class T> struct is_std_array : std::false_type {};
+    template<class T, std::size_t N>
+    struct is_std_array<std::array<T, N>> : std::true_type {};
+
+    template<auto Member, class Dummy>
+    static void processMember(Dummy& d, MPI_Aint base,
+                              std::array<MPI_Aint,     sizeof...(Members)>& disp,
+                              std::array<int,          sizeof...(Members)>& blk,
+                              std::array<MPI_Datatype, sizeof...(Members)>& types,
+                              std::size_t idx)
+    {
+        using MemberT = std::remove_reference_t<decltype(d.*Member)>;
+
+        MPI_Get_address(&(d.*Member), &disp[idx]);
+        disp[idx] -= base;
+
+        if constexpr (std::is_array_v<MemberT>) {
+            // C array  T[N]
+            using Elem = std::remove_extent_t<MemberT>;
+            blk  [idx] = std::extent_v<MemberT>;
+            types[idx] = MPITraits<Elem>::getType();
+        }
+        else if constexpr (is_std_array<MemberT>::value) {
+            // std::array<T,N>
+            using Elem = typename MemberT::value_type;
+            blk [idx]  = std::tuple_size<MemberT>::value;
+            types[idx] = MPITraits<Elem>::getType();
+        }
+        else {
+            // scalar or enum
+            blk  [idx] = 1;
+            types[idx] = MPITraits<
+                std::conditional_t<std::is_enum_v<MemberT>,
+                                   std::underlying_type_t<MemberT>,
+                                   MemberT>>::getType();
+        }
+    }
+
     // Initial value of MPI_DATATYPE_NULL is used to indicate that the type
     //  has not been created yet
-    static inline MPI_Datatype type = MPI_DATATYPE_NULL;
+    static inline MPI_Datatype type_ = MPI_DATATYPE_NULL;
+    static inline std::once_flag flag_;
 };
+
+// Convenience alias for StructMPITraitsImpl
+template<class Struct, auto... Members>
+using StructMPITraits = StructMPITraitsImpl<Struct, Members...>;
+
+} // namespace Dune::detail
+
+// Trait for Potentials
+template<>
+struct MPITraits<::Opm::ReservoirCoupling::Potentials>
+    : detail::StructMPITraits<
+          ::Opm::ReservoirCoupling::Potentials,
+          &::Opm::ReservoirCoupling::Potentials::rate>  { };
 
 } // namespace Dune
 

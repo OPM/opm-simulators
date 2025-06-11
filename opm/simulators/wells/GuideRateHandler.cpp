@@ -125,9 +125,9 @@ sendSlaveGroupPotentialsToMaster()
             //  we will send dummy values (0.0) for the potentials.
             if (this->guide_rate_.hasPotentials(slave_group_name)) {
                 const auto& gr_pot = this->guide_rate_.getPotentials(slave_group_name);
-                pot.oil_rate = gr_pot.oil_rat;
-                pot.gas_rate = gr_pot.gas_rat;
-                pot.water_rate = gr_pot.wat_rat;
+                pot[Potentials::Phase::Oil] = gr_pot.oil_rat;
+                pot[Potentials::Phase::Gas] = gr_pot.gas_rat;
+                pot[Potentials::Phase::Water] = gr_pot.wat_rat;
             }
             potentials.push_back(pot);
         }
@@ -656,9 +656,9 @@ updateProductionGroupPotentialFromSlaveGroup_(const Group& group, std::vector<Sc
     auto& pu = this->phaseUsage();
     // TODO: Here we should check that the master uses the same phases as the
     //   slave.
-    pot[pu.phase_pos[BlackoilPhases::Liquid]] = slave_pot.oil_rate;
-    pot[pu.phase_pos[BlackoilPhases::Vapour]] = slave_pot.gas_rate;
-    pot[pu.phase_pos[BlackoilPhases::Aqua]] = slave_pot.water_rate;
+    pot[pu.phase_pos[BlackoilPhases::Liquid]] = slave_pot[Potentials::Phase::Oil];
+    pot[pu.phase_pos[BlackoilPhases::Vapour]] = slave_pot[Potentials::Phase::Gas];
+    pot[pu.phase_pos[BlackoilPhases::Aqua]] = slave_pot[Potentials::Phase::Water];
 }
 #endif
 
