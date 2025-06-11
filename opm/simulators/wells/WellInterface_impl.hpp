@@ -92,13 +92,11 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    init(const PhaseUsage* phase_usage_arg,
-         const std::vector<Scalar>& /* depth_arg */,
+    init(const std::vector<Scalar>& /* depth_arg */,
          const Scalar gravity_arg,
          const std::vector<Scalar>& B_avg,
          const bool changed_to_open_this_step)
     {
-        this->phase_usage_ = phase_usage_arg;
         this->gravity_ = gravity_arg;
         B_avg_ = B_avg;
         this->changed_to_open_this_step_ = changed_to_open_this_step;
@@ -2016,7 +2014,6 @@ namespace Opm
                             const std::vector<Scalar>& mobility,
                             Scalar* connPI) const
     {
-        const auto& pu = this->phaseUsage();
         const int   np = this->number_of_phases_;
         for (int p = 0; p < np; ++p) {
             // Note: E100's notion of PI value phase mobility includes
@@ -2031,8 +2028,8 @@ namespace Opm
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
         {
-            const auto io = pu.phase_pos[Oil];
-            const auto ig = pu.phase_pos[Gas];
+            const auto io = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+            const auto ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
 
             const auto vapoil = connPI[ig] * fs.Rv().value();
             const auto disgas = connPI[io] * fs.Rs().value();
@@ -2053,18 +2050,15 @@ namespace Opm
                            Scalar* connII,
                            DeferredLogger& deferred_logger) const
     {
-        // Assumes single phase injection
-        const auto& pu = this->phaseUsage();
-
         auto phase_pos = 0;
         if (preferred_phase == Phase::GAS) {
-            phase_pos = pu.phase_pos[Gas];
+            phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
         }
         else if (preferred_phase == Phase::OIL) {
-            phase_pos = pu.phase_pos[Oil];
+            phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
         }
         else if (preferred_phase == Phase::WATER) {
-            phase_pos = pu.phase_pos[Water];
+            phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
         }
         else {
             OPM_DEFLOG_THROW(NotImplemented,

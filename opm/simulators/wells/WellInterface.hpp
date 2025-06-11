@@ -147,8 +147,7 @@ public:
     /// Virtual destructor
     virtual ~WellInterface() = default;
 
-    virtual void init(const PhaseUsage* phase_usage_arg,
-                      const std::vector<Scalar>& depth_arg,
+    virtual void init(const std::vector<Scalar>& depth_arg,
                       const Scalar gravity_arg,
                       const std::vector<Scalar>& B_avg,
                       const bool changed_to_open_this_step);
