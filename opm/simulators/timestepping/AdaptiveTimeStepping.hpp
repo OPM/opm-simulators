@@ -130,7 +130,6 @@ private:
         Solver& solver_;
         const bool is_event_;
         const TuningUpdateCallback& tuning_updater_;
-        Simulator& simulator_;
     };
 
     template <class Solver>
