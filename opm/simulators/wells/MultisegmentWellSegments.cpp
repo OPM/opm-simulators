@@ -601,7 +601,7 @@ pressureDropSpiralICD(const int seg,
     // For reference: the pressure equation assumes pressure/flow derivatives are given 
     // at segment node while fraction derivatives are given at upwind node.   
     if (seg != seg_upwind) {
-        constexpr int nvar = FluidSystem::numPhases + 1;
+        constexpr int nvar = PrimaryVariables::numWellEq;
         std::vector<bool> zero_mask(nvar, false);
         if (!extra_reverse_flow_derivatives){
             zero_mask[PrimaryVariables::WQTotal] = true;
@@ -713,7 +713,7 @@ pressureDropAutoICD(const int seg,
     // For reference: the pressure equation assumes pressure/flow derivatives are given 
     // at segment node while fraction derivatives are given at upwind node.   
     if (seg != seg_upwind) {
-        constexpr int nvar = FluidSystem::numPhases + 1;
+        constexpr int nvar = PrimaryVariables::numWellEq;
         std::vector<bool> zero_mask(nvar, false);
         if (!extra_reverse_flow_derivatives){
             zero_mask[PrimaryVariables::WQTotal] = true;
