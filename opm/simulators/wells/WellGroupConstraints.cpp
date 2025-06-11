@@ -44,6 +44,7 @@ checkGroupConstraintsInj(const Group& group,
                          const Schedule& schedule,
                          const SummaryState& summaryState,
                          const RateConvFunc& rateConverter,
+                         const bool check_guide_rate,
                          DeferredLogger& deferred_logger) const
 {
     // Translate injector type from control to Phase.
@@ -90,6 +91,7 @@ checkGroupConstraintsInj(const Group& group,
                                                               schedule,
                                                               summaryState,
                                                               resv_coeff,
+                                                              check_guide_rate,
                                                               deferred_logger);
 }
 
@@ -103,6 +105,7 @@ checkGroupConstraintsProd(const Group& group,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
                           const RateConvFunc& rateConverter,
+                          const bool check_guide_rate,
                           DeferredLogger& deferred_logger) const
 {
     // Make conversion factors for RESV <-> surface rates.
@@ -123,6 +126,7 @@ checkGroupConstraintsProd(const Group& group,
                                                                schedule,
                                                                summaryState,
                                                                resv_coeff,
+                                                               check_guide_rate,
                                                                deferred_logger);
 }
 
@@ -133,6 +137,7 @@ checkGroupConstraints(WellState<Scalar>& well_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const RateConvFunc& rateConverter,
+                      const bool check_guide_rate,
                       DeferredLogger& deferred_logger) const
 {
     const auto& well = well_.wellEcl();
@@ -157,6 +162,7 @@ checkGroupConstraints(WellState<Scalar>& well_state,
                                                group_state, efficiencyFactor,
                                                schedule, summaryState,
                                                rateConverter,
+                                               check_guide_rate,
                                                deferred_logger);
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
@@ -188,7 +194,7 @@ checkGroupConstraints(WellState<Scalar>& well_state,
                 this->checkGroupConstraintsProd(group, well_state,
                                                 group_state, efficiencyFactor,
                                                 schedule, summaryState,
-                                                rateConverter, deferred_logger);
+                                                rateConverter, check_guide_rate, deferred_logger);
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
             if (group_constraint.first) {

@@ -1366,6 +1366,7 @@ checkGroupConstraintsProd(const std::string& name,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
                           const std::vector<Scalar>& resv_coeff,
+                          const bool check_guide_rate,
                           DeferredLogger& deferred_logger)
 {
     // When called for a well ('name' is a well name), 'parent'
@@ -1401,6 +1402,7 @@ checkGroupConstraintsProd(const std::string& name,
                                          schedule,
                                          summaryState,
                                          resv_coeff,
+                                         check_guide_rate,
                                          deferred_logger);
     }
 
@@ -1426,16 +1428,6 @@ checkGroupConstraintsProd(const std::string& name,
                                       group.name(),
                                       group_state,
                                       group.has_gpmaint_control(currentGroupControl));
-
-    if (schedule.hasWell(name)) { // for wells we already have computed the target
-        const Scalar current_rate_available = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-        Scalar target_rate_available = wellState.well(name).group_target;
-        Scalar scale = 1.0;
-        if (current_rate_available > 1e-12)
-            scale = target_rate_available / current_rate_available;
-
-        return std::make_pair(current_rate_available > target_rate_available, scale);
-    }
 
     WGHelpers::FractionCalculator fcalc(schedule,
                                         wellState,
@@ -1477,6 +1469,35 @@ checkGroupConstraintsProd(const std::string& name,
     const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
+
+    // check whether guide rate is violated
+    if (check_guide_rate) {
+        for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
+            if (guideRate->has(chain[ii])) {
+                const auto& guided_group = chain[ii];
+                const Scalar grefficiency
+                            = schedule.getGroup(guided_group, reportStepIdx).getGroupEfficiencyFactor();
+                const Scalar currentRateFraction = grefficiency * localCurrentRate(guided_group) / (localCurrentRate(chain[ii-1]));
+                const Scalar guiderateFraction = localFraction(guided_group);
+                // we add a factor here to avoid switching due to numerical instability
+                const Scalar factor = 1.01;
+                if (currentRateFraction > (guiderateFraction * factor)) {
+                    return std::make_pair(true, guiderateFraction / currentRateFraction);
+                }
+            }
+        }
+    }
+
+    if (schedule.hasWell(name)) { // for wells we already have computed the target
+        const Scalar current_well_rate_available = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
+        Scalar group_target_rate_available = wellState.well(name).group_target;
+        Scalar scale = 1.0;
+        if (current_well_rate_available > 1e-12)
+            scale = group_target_rate_available / current_well_rate_available;
+
+        return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
+    }
+
     // we need to find out the level where the current well is applied to the local reduction
     std::size_t local_reduction_level = 0;
     for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
@@ -1494,21 +1515,7 @@ checkGroupConstraintsProd(const std::string& name,
             local_reduction_level = ii;
         }
     }
-    // check whether guide rate is violated
-    for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-        if (guideRate->has(chain[ii])) {
-            const auto& guided_group = chain[ii];
-            const Scalar grefficiency
-                        = schedule.getGroup(guided_group, reportStepIdx).getGroupEfficiencyFactor();
-            const Scalar currentRateFraction = grefficiency * localCurrentRate(guided_group) / (localCurrentRate(chain[ii-1]));
-            const Scalar guiderateFraction = localFraction(guided_group);
-            // we add a factor here to avoid switching due to numerical instability
-            const Scalar factor = 1.01;
-            if (currentRateFraction > (guiderateFraction * factor)) {
-                return std::make_pair(true, guiderateFraction / currentRateFraction);
-            }
-        }
-    }
+
     // Compute portion of target corresponding to current_rate_available
     Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
@@ -1528,6 +1535,7 @@ checkGroupConstraintsProd(const std::string& name,
     }
     // Avoid negative target rates comming from too large local reductions.
     Scalar target_rate_available = std::max(Scalar(1e-12), target / efficiencyFactor);
+
     Scalar scale = 1.0;
     if (current_rate_available > 1e-12)
         scale = target_rate_available / current_rate_available;
@@ -1701,6 +1709,7 @@ checkGroupConstraintsInj(const std::string& name,
                          const Schedule& schedule,
                          const SummaryState& summaryState,
                          const std::vector<Scalar>& resv_coeff,
+                         const bool check_guide_rate,
                          DeferredLogger& deferred_logger)
 {
     // When called for a well ('name' is a well name), 'parent'
@@ -1737,6 +1746,7 @@ checkGroupConstraintsInj(const std::string& name,
                                         schedule,
                                         summaryState,
                                         resv_coeff,
+                                        check_guide_rate,
                                         deferred_logger);
     }
 
@@ -1763,15 +1773,6 @@ checkGroupConstraintsInj(const std::string& name,
                                                group.has_gpmaint_control(injectionPhase,
                                                                          currentGroupControl),
                                                deferred_logger);
-    if (schedule.hasWell(name)) {  // for wells we already have computed the target
-        Scalar scale = 1.0;
-        Scalar target_rate_available = wellState.well(name).group_target;
-            const Scalar current_rate_available
-        = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-        if (current_rate_available > 1e-12)
-            scale = target_rate_available / current_rate_available;
-        return std::make_pair(current_rate_available > target_rate_available, scale);
-    }
 
     WGHelpers::FractionCalculator fcalc(schedule,
                                         wellState,
@@ -1800,17 +1801,6 @@ checkGroupConstraintsInj(const std::string& name,
         return tcalc.calcModeRateFromRates(groupSurfaceRates);
     };
 
-    std::optional<Group::InjectionControls> ctrl;
-    if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
-        ctrl = group.injectionControls(injectionPhase, summaryState);
-
-
-    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
-    // Then ...
-    // TODO finish explanation.
-    const Scalar current_rate_available
-        = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
@@ -1833,21 +1823,45 @@ checkGroupConstraintsInj(const std::string& name,
     }
 
     // check whether guide rate is violated
-    for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-        if (guideRate->has(chain[ii], injectionPhase)) {
-            const auto& guided_group = chain[ii];
-            const Scalar grefficiency
-                        = schedule.getGroup(guided_group, reportStepIdx).getGroupEfficiencyFactor();
-            const Scalar currentRateFraction = grefficiency * localCurrentRate(guided_group) /
-                                               localCurrentRate(chain[ii-1]);
-            const Scalar guiderateFraction = localFraction(guided_group);
-            // we add a factor here to avoid switching due to numerical instability
-            const Scalar factor = 1.01;
-            if (currentRateFraction > (guiderateFraction * factor)) {
-                return std::make_pair(true, guiderateFraction / currentRateFraction);
+    if (check_guide_rate) {
+        for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
+            if (guideRate->has(chain[ii], injectionPhase)) {
+                const auto& guided_group = chain[ii];
+                const Scalar grefficiency
+                            = schedule.getGroup(guided_group, reportStepIdx).getGroupEfficiencyFactor();
+                const Scalar currentRateFraction = grefficiency * localCurrentRate(guided_group) /
+                                                localCurrentRate(chain[ii-1]);
+                const Scalar guiderateFraction = localFraction(guided_group);
+                // we add a factor here to avoid switching due to numerical instability
+                const Scalar factor = 1.01;
+                if (currentRateFraction > (guiderateFraction * factor)) {
+                    return std::make_pair(true, guiderateFraction / currentRateFraction);
+                }
             }
         }
     }
+
+    if (schedule.hasWell(name)) {  // for wells we already have computed the target
+        Scalar scale = 1.0;
+        Scalar target_rate_available = wellState.well(name).group_target;
+            const Scalar current_rate_available
+        = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
+        if (current_rate_available > 1e-12)
+            scale = target_rate_available / current_rate_available;
+        return std::make_pair(current_rate_available > target_rate_available, scale);
+    }    
+
+    std::optional<Group::InjectionControls> ctrl;
+    if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
+        ctrl = group.injectionControls(injectionPhase, summaryState);
+
+
+    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
+    // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
+    // Then ...
+    // TODO finish explanation.
+    const Scalar current_rate_available
+        = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
 
     // Compute portion of target corresponding to current_rate_available
     Scalar target = orig_target;

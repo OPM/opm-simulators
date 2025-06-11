@@ -288,6 +288,7 @@ public:
                              const Schedule& schedule,
                              const SummaryState& summaryState,
                              const std::vector<Scalar>& resv_coeff,
+                             const bool check_guide_rate,
                              DeferredLogger& deferred_logger);
 
     static Scalar
@@ -333,6 +334,7 @@ public:
                               const Schedule& schedule,
                               const SummaryState& summaryState,
                               const std::vector<Scalar>& resv_coeff,
+                              const bool check_guide_rate,
                               DeferredLogger& deferred_logger);
     static Scalar
     getWellGroupTargetProducer(const std::string& name,

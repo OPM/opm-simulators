@@ -183,6 +183,7 @@ checkGroupConstraints(WellState<Scalar>& well_state,
                       const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
+                      const bool check_guide_rate,
                       DeferredLogger& deferred_logger) const
 {
     if (!this->wellEcl().isAvailableForGroupControl())
@@ -202,7 +203,7 @@ checkGroupConstraints(WellState<Scalar>& well_state,
 
     return WellGroupConstraints(*this).checkGroupConstraints(well_state, group_state,
                                                              schedule, summaryState,
-                                                             rCoeff, deferred_logger);
+                                                             rCoeff, check_guide_rate, deferred_logger);
 }
 
 template <typename FluidSystem>
@@ -220,7 +221,7 @@ checkConstraints(WellState<Scalar>& well_state,
         return true;
     } else {
         return checkGroupConstraints(well_state, group_state, schedule,
-                                     summaryState, deferred_logger);
+                                     summaryState, true, deferred_logger);
     }
 }
 

@@ -692,6 +692,7 @@ checkGroupHigherConstraints(const Group& group,
                                                                        schedule(),
                                                                        summaryState_,
                                                                        resv_coeff_inj,
+                                                                       /*check_guide_rate*/true,
                                                                        deferred_logger);
                 if (is_changed) {
                     switched_inj_groups_[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)].push_back(Group::InjectionCMode::FLD);
@@ -768,6 +769,7 @@ checkGroupHigherConstraints(const Group& group,
                                                                     schedule(),
                                                                     summaryState_,
                                                                     resv_coeff,
+                                                                    /*check_guide_rate*/true,
                                                                     deferred_logger);
             if (is_changed) {
                 const auto group_limit_action = group.productionControls(summaryState_).group_limit_action;
