@@ -22,6 +22,7 @@
 */
 
 #include <config.h>
+#include <filesystem>
 #include <opm/simulators/flow/GenericCpGridVanguard.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
@@ -71,6 +72,12 @@ namespace details {
 std::vector<int>
 MPIPartitionFromFile::operator()(const Dune::CpGrid& grid) const
 {
+    // Check if the external partition file exists
+    if (!std::filesystem::exists(this->partitionFile_)) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("External partition file '{}' does not exist.", this->partitionFile_.string()));
+    }
+
     std::ifstream pfile { this->partitionFile_ };
 
     auto partition = std::vector<int> {
