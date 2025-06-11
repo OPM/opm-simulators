@@ -119,13 +119,12 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    init(const PhaseUsage* phase_usage_arg,
-         const std::vector<Scalar>& depth_arg,
+    init(const std::vector<Scalar>& depth_arg,
          const Scalar gravity_arg,
          const std::vector< Scalar >& B_avg,
          const bool changed_to_open_this_step)
     {
-        Base::init(phase_usage_arg, depth_arg, gravity_arg, B_avg, changed_to_open_this_step);
+        Base::init(depth_arg, gravity_arg, B_avg, changed_to_open_this_step);
 
         // TODO: for StandardWell, we need to update the perf depth here using depth_arg.
         // for MultisegmentWell, it is much more complicated.
@@ -634,23 +633,22 @@ namespace Opm
 
             Scalar sum_kr = 0.;
 
-            const PhaseUsage& pu = this->phaseUsage();
-            if (pu.phase_used[Water]) {
-                const int water_pos = pu.phase_pos[Water];
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
                 kr[water_pos] = intQuants.relativePermeability(FluidSystem::waterPhaseIdx).value();
                 sum_kr += kr[water_pos];
                 density[water_pos] = fs.density(FluidSystem::waterPhaseIdx).value();
             }
 
-            if (pu.phase_used[Oil]) {
-                const int oil_pos = pu.phase_pos[Oil];
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
                 kr[oil_pos] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
                 sum_kr += kr[oil_pos];
                 density[oil_pos] = fs.density(FluidSystem::oilPhaseIdx).value();
             }
 
-            if (pu.phase_used[Gas]) {
-                const int gas_pos = pu.phase_pos[Gas];
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
                 kr[gas_pos] = intQuants.relativePermeability(FluidSystem::gasPhaseIdx).value();
                 sum_kr += kr[gas_pos];
                 density[gas_pos] = fs.density(FluidSystem::gasPhaseIdx).value();

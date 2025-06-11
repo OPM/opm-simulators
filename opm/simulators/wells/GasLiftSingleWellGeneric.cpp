@@ -51,7 +51,6 @@ GasLiftSingleWellGeneric(DeferredLogger& deferred_logger,
                          const Well& ecl_well,
                          const SummaryState& summary_state,
                          GasLiftGroupInfo<FluidSystem, Indices>& group_info,
-                         const PhaseUsage& phase_usage,
                          const Schedule& schedule,
                          const int report_step_idx,
                          GLiftSyncGroups& sync_groups,
@@ -61,7 +60,6 @@ GasLiftSingleWellGeneric(DeferredLogger& deferred_logger,
     , ecl_well_ {ecl_well}
     , summary_state_ {summary_state}
     , group_info_ {group_info}
-    , phase_usage_ {phase_usage}
     , sync_groups_ {sync_groups}
     , controls_ {ecl_well_.productionControls(summary_state_)}
     , debug_limit_increase_decrease_ {false}
@@ -162,14 +160,19 @@ runOptimize(const int iteration_idx)
                 if (this->debug)
                     logSuccess_(alq, iteration_idx);
                 this->well_state_.well(this->well_name_).alq_state.set(alq);
-                const auto& pu = this->phase_usage_;
-                std::vector<Scalar> well_pot(pu.num_phases, 0.0);
-                if (pu.phase_used[BlackoilPhases::PhaseIndex::Liquid])
-                    well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Liquid]] = state->oilRate();
-                if (pu.phase_used[BlackoilPhases::PhaseIndex::Aqua])
-                    well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Aqua]] = state->waterRate();
-                if (pu.phase_used[BlackoilPhases::PhaseIndex::Vapour])
-                    well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Vapour]] = state->gasRate();
+                std::vector<Scalar> well_pot(Indices::numPhases, 0.0);
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                    well_pot[oil_pos] = state->oilRate();
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                    well_pot[water_pos] = state->waterRate();
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                    well_pot[gas_pos] = state->gasRate();
+                }
 
                 this->well_state_[this->well_name_].well_potentials = well_pot;
             }
@@ -1021,15 +1024,17 @@ GasLiftSingleWellGeneric<FluidSystem, Indices>::
 getWellStateRates_() const
 {
     const int well_index = this->well_state_.index(this->well_name_).value();
-    const auto& pu = this->phase_usage_;
     const auto& ws = this->well_state_.well(well_index);
     const auto& wrate = ws.well_potentials;
 
-    const auto oil_rate = pu.phase_used[Oil] ? wrate[pu.phase_pos[Oil]] : Scalar{0.0};
+    const auto oil_rate = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ?
+                         wrate[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] : Scalar{0.0};
 
-    const auto gas_rate = pu.phase_used[Gas] ? wrate[pu.phase_pos[Gas]] : Scalar{0.0};
+    const auto gas_rate = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ?
+                          wrate[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] : Scalar{0.0};
 
-    const auto water_rate = pu.phase_used[Water] ? wrate[pu.phase_pos[Water]] : Scalar{0.0};
+    const auto water_rate = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ?
+                          wrate[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)] : Scalar{0.0};
     if (this->debug) {
         const std::string msg = fmt::format("Initial surface rates: oil : {}, "
                                             "gas : {}, water : {}",

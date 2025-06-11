@@ -81,8 +81,7 @@ namespace Opm {
                          const int index_of_well,
                          const std::vector<PerforationData<Scalar>>& perf_data);
 
-        void init(const PhaseUsage* phase_usage_arg,
-                  const std::vector<Scalar>& depth_arg,
+        void init(const std::vector<Scalar>& depth_arg,
                   const Scalar gravity_arg,
                   const std::vector<Scalar>& B_avg,
                   const bool changed_to_open_this_step) override;

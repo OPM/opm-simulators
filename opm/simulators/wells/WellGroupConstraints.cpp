@@ -78,7 +78,7 @@ checkGroupConstraintsInj(const Group& group,
     }
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
@@ -92,7 +92,6 @@ checkGroupConstraintsInj(const Group& group,
                                                               well_.guideRate(),
                                                               ws.surface_rates.data(),
                                                               injectionPhase,
-                                                              well_.phaseUsage(),
                                                               efficiencyFactor,
                                                               schedule,
                                                               summaryState,
@@ -115,7 +114,7 @@ checkGroupConstraintsProd(const Group& group,
                           DeferredLogger& deferred_logger) const
 {
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
@@ -127,7 +126,6 @@ checkGroupConstraintsProd(const Group& group,
                                                                well_.currentStep(),
                                                                well_.guideRate(),
                                                                ws.surface_rates.data(),
-                                                               well_.phaseUsage(),
                                                                efficiencyFactor,
                                                                schedule,
                                                                summaryState,

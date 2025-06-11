@@ -130,8 +130,7 @@ namespace Opm
                      const int index_of_well,
                      const std::vector<PerforationData<Scalar>>& perf_data);
 
-        virtual void init(const PhaseUsage* phase_usage_arg,
-                          const std::vector<Scalar>& depth_arg,
+        virtual void init(const std::vector<Scalar>& depth_arg,
                           const Scalar gravity_arg,
                           const std::vector<Scalar>& B_avg,
                           const bool changed_to_open_this_step) override;
@@ -239,7 +238,6 @@ namespace Opm
                                      DeferredLogger& deferred_logger) const override;
 
         // NOTE: These cannot be protected since they are used by GasLiftRuntime
-        using Base::phaseUsage;
         using Base::vfp_properties_;
 
         std::vector<Scalar>

@@ -72,9 +72,8 @@ WellInterfaceFluidSystem<FluidSystem, Indices>::
 calculateReservoirRates(const bool co2store, SingleWellState<FluidSystem, Indices>& ws) const
 {
     const int np = this->number_of_phases_;
-    const auto& pu = this->phaseUsage();
     // Calculate reservoir rates from average pressure and temperature
-    if ( !(co2store || pu.has_energy) || this->wellEcl().isProducer()) {
+    if ( !(co2store || Indices::enableEnergy) || this->wellEcl().isProducer()) {
         const int fipreg = 0; // not considering the region for now
         this->rateConverter_
             .calcReservoirVoidageRates(fipreg,
