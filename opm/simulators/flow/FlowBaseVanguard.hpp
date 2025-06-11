@@ -345,8 +345,11 @@ protected:
         for (const auto& element : elements(this->gridView()))
         {
             const auto elemIdx = elemMapper.index(element);
-            unsigned cartesianCellIdx = cartesianIndex(elemIdx);
-            cartesianToCompressed_[cartesianCellIdx] = elemIdx;
+            // With this change, the name "cartesianToCompressed" does not
+            // make any sense. It should be "globalIdToCompressed"
+            unsigned cartesianCellIdx = this->gridView().grid().globalIdSet().id(element); //cartesianIndex(elemIdx);
+            cartesianToCompressed_[cartesianCellIdx] = elemIdx; // old code rewrites entry for children same parent
+           
             if (element.partitionType() == Dune::InteriorEntity)
             {
                 is_interior_[elemIdx] = 1;

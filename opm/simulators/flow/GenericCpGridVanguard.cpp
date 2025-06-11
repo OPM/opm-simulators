@@ -32,6 +32,7 @@
 #include <opm/common/utility/ActiveGridCells.hpp>
 
 #include <opm/grid/cpgrid/GridHelpers.hpp>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
@@ -299,7 +300,8 @@ distributeFieldProps_(EclipseState& eclState1)
     {
         // Reset Cartesian index mapper for automatic creation of field
         // properties
-        parallelEclState->resetCartesianMapper(this->cartesianIndexMapper_.get());
+        std::cout<< "Actually use LevelCartesianIndexMapper in ParallelEclState " <<std::endl;
+        parallelEclState->resetCartesianMapper(this->levelCartesianIndexMapper_.get());
         parallelEclState->switchToDistributedProps();
     }
     else {
@@ -493,6 +495,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     }
 
     cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
+    levelCartesianIndexMapper_ = std::make_unique<LevelCartesianIndexMapper>(*grid_);
 
 #if HAVE_MPI
     if (this->grid_->comm().size() > 1) {
@@ -537,6 +540,8 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
         this->equilGrid_ = std::make_unique<Dune::CpGrid>(*this->grid_);
         this->equilCartesianIndexMapper_ =
             std::make_unique<CartesianIndexMapper>(*this->equilGrid_);
+        this->equilLevelCartesianIndexMapper_ =
+            std::make_unique<LevelCartesianIndexMapper>(*this->equilGrid_);
 
         eclState.reset_actnum(UgGridHelpers::createACTNUM(*this->grid_));
         eclState.set_active_indices(this->grid_->globalCell());
@@ -633,7 +638,7 @@ template<class ElementMapper, class GridView, class Scalar>
 const LevelCartesianIndexMapper<Dune::CpGrid>
 GenericCpGridVanguard<ElementMapper,GridView,Scalar>::levelCartesianIndexMapper() const
 {
-    return LevelCartesianIndexMapper(*grid_);
+    return *levelCartesianIndexMapper_;
 }
 
 template<class ElementMapper, class GridView, class Scalar>
