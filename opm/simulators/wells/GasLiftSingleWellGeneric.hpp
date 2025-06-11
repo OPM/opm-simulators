@@ -125,7 +125,6 @@ protected:
                              const Well& ecl_well,
                              const SummaryState& summary_state,
                              GasLiftGroupInfo<FluidSystem, Indices>& group_info,
-                             const PhaseUsage& phase_usage,
                              const Schedule& schedule,
                              const int report_step_idx,
                              GLiftSyncGroups& sync_groups,
@@ -436,7 +435,6 @@ protected:
     const Well& ecl_well_;
     const SummaryState& summary_state_;
     GasLiftGroupInfo<FluidSystem, Indices>& group_info_;
-    const PhaseUsage& phase_usage_;
     GLiftSyncGroups& sync_groups_;
     const WellProductionControls controls_;
 

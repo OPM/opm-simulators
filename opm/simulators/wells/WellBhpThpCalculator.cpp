@@ -307,14 +307,10 @@ template<typename FluidSystem, typename Indices>
 void WellBhpThpCalculator<FluidSystem, Indices>::
 updateThp(const Scalar rho,
           const std::function<Scalar()>& alq_value,
-          const std::array<unsigned,3>& active,
           WellState<FluidSystem, Indices>& well_state,
           const SummaryState& summary_state,
           DeferredLogger& deferred_logger) const
 {
-    static constexpr int Gas = BlackoilPhases::Vapour;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Water = BlackoilPhases::Aqua;
     auto& ws = well_state.well(well_.indexOfWell());
 
     // When there is no vaild VFP table provided, we set the thp to be zero.
@@ -332,15 +328,18 @@ updateThp(const Scalar rho,
     // the well is under other control types, we calculate the thp based on bhp and rates
     std::vector<Scalar> rates(3, 0.0);
 
-    const PhaseUsage& pu = well_.phaseUsage();
-    if (active[Water]) {
-        rates[ Water ] = ws.surface_rates[pu.phase_pos[ Water ] ];
+    //TODO: the following code should be able to make a for loop
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+        rates[FluidSystem::waterPhaseIdx] = ws.surface_rates[water_pos];
     }
-    if (active[Oil]) {
-        rates[ Oil ] = ws.surface_rates[pu.phase_pos[ Oil ] ];
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+        rates[FluidSystem::oilPhaseIdx] = ws.surface_rates[oil_pos];
     }
-    if (active[Gas]) {
-        rates[ Gas ] = ws.surface_rates[pu.phase_pos[ Gas ] ];
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+        rates[FluidSystem::gasPhaseIdx] = ws.surface_rates[gas_pos];
     }
     const std::optional<Scalar> alq = this->well_.isProducer() ? std::optional<Scalar>(alq_value()) : std::nullopt;
     const Scalar thp_limit = well_.getTHPConstraint(summary_state);
@@ -991,16 +990,21 @@ getFloIPR(const WellState<FluidSystem, Indices>& well_state,
     // Convert ipr_a's and ipr_b's to our particular choice of FLO 
     const auto& controls = well.productionControls(summary_state);
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
-    const auto& pu = well_.phaseUsage();
     const auto& ipr_a = well_state.well(well_.indexOfWell()).implicit_ipr_a;
-    const Scalar& aqua_a = pu.phase_used[BlackoilPhases::Aqua]? ipr_a[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
-    const Scalar& liquid_a = pu.phase_used[BlackoilPhases::Liquid]? ipr_a[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
-    const Scalar& vapour_a = pu.phase_used[BlackoilPhases::Vapour]? ipr_a[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
+    const Scalar& aqua_a = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ?
+                       ipr_a[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)] : 0.0;
+    const Scalar& liquid_a = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ?
+                           ipr_a[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] : 0.0;
+    const Scalar& vapour_a = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ?
+                             ipr_a[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] : 0.0;
     const auto& ipr_b = well_state.well(well_.indexOfWell()).implicit_ipr_b;
-    const Scalar& aqua_b = pu.phase_used[BlackoilPhases::Aqua]? ipr_b[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
-    const Scalar& liquid_b = pu.phase_used[BlackoilPhases::Liquid]? ipr_b[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
-    const Scalar& vapour_b = pu.phase_used[BlackoilPhases::Vapour]? ipr_b[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
-    // The getFlo helper is indended to pick one or add two of the phase rates (depending on FLO-type), 
+    const Scalar& aqua_b = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ?
+                           ipr_b[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)] : 0.0;
+    const Scalar& liquid_b = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ?
+                           ipr_b[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] : 0.0;
+    const Scalar& vapour_b = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ?
+                             ipr_b[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] : 0.0;
+    // The getFlo helper is indended to pick one or add two of the phase rates (depending on FLO-type),
     // but we can equally use it to pick/add the corresponding ipr_a, ipr_b  
     return std::make_pair(detail::getFlo(table, aqua_a, liquid_a, vapour_a), 
                           detail::getFlo(table, aqua_b, liquid_b, vapour_b));

@@ -79,9 +79,6 @@ updateWellStateFromPrimaryVariables(WellState<FluidSystem, Indices>& well_state,
     WellBhpThpCalculator(baseif_).
             updateThp(connections_.rho(),
                       [this,&well_state]() { return this->baseif_.getALQ(well_state); },
-                      {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
-                       FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
-                       FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
                       well_state, summary_state, deferred_logger);
 }
 

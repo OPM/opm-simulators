@@ -143,11 +143,10 @@ template<typename FluidSystem, typename Indices>
 void WellInterfaceGeneric<FluidSystem, Indices>::
 adaptRatesForVFP(std::vector<Scalar>& rates) const
 {
-    const auto& pu = this->phaseUsage();
-    if (pu.num_phases == 2) {
-        if (    pu.phase_used[BlackoilPhases::Aqua] == 1
-             && pu.phase_used[BlackoilPhases::Liquid] == 1
-             && pu.phase_used[BlackoilPhases::Vapour] == 0)
+    if (Indices::numPhases == 2) {
+        if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+             && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+             && !FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
         {
             assert(rates.size() == 2);
             rates.push_back(0.0);  // set gas rate to zero
