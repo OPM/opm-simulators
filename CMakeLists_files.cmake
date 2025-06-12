@@ -224,7 +224,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/ParallelWBPCalculation.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/PerfData.cpp
-  opm/simulators/wells/RateConverter.cpp
+#   opm/simulators/wells/RateConverter.cpp
   opm/simulators/wells/RatioCalculator.cpp
   opm/simulators/wells/SegmentState.cpp
   opm/simulators/wells/SingleWellState.cpp

@@ -112,9 +112,6 @@ checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
                  const SingleWellState<FluidSystem, Indices>& ws,
                  RatioLimitCheckReport& report) const
 {
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
-
     // function to calculate gor based on rates
     auto gor = [](const std::vector<Scalar>& rates)
     {
@@ -145,9 +142,6 @@ checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
                  const SingleWellState<FluidSystem, Indices>& ws,
                  RatioLimitCheckReport& report) const
 {
-    static constexpr int Gas = BlackoilPhases::Vapour;
-    static constexpr int Water = BlackoilPhases::Aqua;
-
     // function to calculate wgr based on rates
     auto wgr = [](const std::vector<Scalar>& rates)
     {
@@ -178,9 +172,6 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                       const SingleWellState<FluidSystem, Indices>& ws,
                       RatioLimitCheckReport& report) const
 {
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Water = BlackoilPhases::Aqua;
-
     // function to calculate water cut based on rates
     auto waterCut = [](const std::vector<Scalar>& rates)
     {

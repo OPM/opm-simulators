@@ -146,7 +146,7 @@ template<typename FluidSystem, typename Indices>
 int BlackoilWellModelGeneric<FluidSystem, Indices>::
 numPhases() const
 {
-    return phase_usage_.num_phases;
+    return Indices::numPhases;
 }
 
 template<typename FluidSystem, typename Indices>
@@ -500,7 +500,7 @@ checkGconsaleLimits(const Group& group,
     const auto& gconsale = schedule()[reportStepIdx].gconsale().get(group.name(), summaryState_);
     const Group::ProductionCMode& oldProductionControl = this->groupState().production_control(group.name());
 
-    int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
+    const int gasPos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
     Scalar production_rate = WellGroupHelpers<FluidSystem, Indices>::sumWellSurfaceRates(group,
                                                                            schedule(),
                                                                            well_state,
@@ -521,7 +521,7 @@ checkGconsaleLimits(const Group& group,
     Scalar production_target = gconsale.sales_target + injection_rate;
 
     // add import rate and subtract consumption rate for group for gas
-    if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
         const auto& [consumption_rate, import_rate] = this->groupState().gconsump_rates(group.name());
         sales_rate += import_rate;
         sales_rate -= consumption_rate;
@@ -635,19 +635,19 @@ checkGroupHigherConstraints(const Group& group,
             ->first;
     }
 
-    std::vector<Scalar> rates(phase_usage_.num_phases, 0.0);
+    std::vector<Scalar> rates(Indices::numPhases, 0.0);
 
     bool isField = group.name() == "FIELD";
     if (!isField && group.isInjectionGroup()) {
         // Obtain rates for group.
-        std::vector<Scalar> resv_coeff_inj(phase_usage_.num_phases, 0.0);
+        std::vector<Scalar> resv_coeff_inj(Indices::numPhases, 0.0);
         calcInjResvCoeff(fipnum, pvtreg, resv_coeff_inj);
 
         // checkGroupConstraintsInj considers 'available' rates (e.g., group rates minus reduction rates).
         // So when checking constraints, current groups rate must also be subtracted it's reduction rate
         const std::vector<Scalar> reduction_rates = this->groupState().injection_reduction_rates(group.name());
 
-        for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
+        for (int phasePos = 0; phasePos < Indices::numPhases; ++phasePos) {
             const Scalar local_current_rate = WellGroupHelpers<FluidSystem, Indices>::sumWellSurfaceRates(group,
                                                                                             schedule(),
                                                                                             this->wellState(),
@@ -754,7 +754,7 @@ checkGroupHigherConstraints(const Group& group,
                 return false;
             }
         }
-        for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
+        for (int phasePos = 0; phasePos < Indices::numPhases; ++phasePos) {
             const Scalar local_current_rate = WellGroupHelpers<FluidSystem, Indices>::sumWellSurfaceRates(group,
                                                                                             schedule(),
                                                                                             this->wellState(),
@@ -764,7 +764,7 @@ checkGroupHigherConstraints(const Group& group,
             // Sum over all processes
             rates[phasePos] = -comm_.sum(local_current_rate) - reduction_rates[phasePos];
         }
-        std::vector<Scalar> resv_coeff(phase_usage_.num_phases, 0.0);
+        std::vector<Scalar> resv_coeff(Indices::numPhases, 0.0);
         calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
         // Check higher up only if under individual (not FLD) control.
         const Group::ProductionCMode& currentControl = this->groupState().production_control(group.name());
@@ -916,24 +916,23 @@ typename FluidSystem::Scalar
 BlackoilWellModelGeneric<FluidSystem, Indices>::
 wellPI(const int well_index) const
 {
-    const auto& pu = this->phase_usage_;
     const auto& pi = this->wellState().well(well_index).productivity_index;
 
     const auto preferred = this->wells_ecl_[well_index].getPreferredPhase();
     switch (preferred) { // Should really have LIQUID = OIL + WATER here too...
     case Phase::WATER:
-        return pu.phase_used[BlackoilPhases::PhaseIndex::Aqua]
-            ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Aqua]]
+        return FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+            ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)
             : 0.0;
 
     case Phase::OIL:
-        return pu.phase_used[BlackoilPhases::PhaseIndex::Liquid]
-            ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Liquid]]
+        return FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+            ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)
             : 0.0;
 
     case Phase::GAS:
-        return pu.phase_used[BlackoilPhases::PhaseIndex::Vapour]
-            ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Vapour]]
+        return FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+            ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)
             : 0.0;
 
     default:
@@ -995,7 +994,7 @@ updateWsolvent(const Group& group,
 
     auto currentGroupControl = this->groupState().injection_control(group.name(), Phase::GAS);
     if( currentGroupControl == Group::InjectionCMode::REIN ) {
-        int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
+        const int gasPos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
         const auto& controls = group.injectionControls(Phase::GAS, summaryState_);
         const Group& groupRein = schedule_.getGroup(controls.reinj_group, reportStepIdx);
         Scalar gasProductionRate = WellGroupHelpers<FluidSystem, Indices>::sumWellSurfaceRates(groupRein,
@@ -1395,7 +1394,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                          schedule(),
                                                          reportStepIdx,
                                                          /*isInjector*/ false,
-                                                         phase_usage_,
                                                          guideRate_,
                                                          well_state,
                                                          summaryState_,
@@ -1406,7 +1404,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                          schedule(),
                                                          reportStepIdx,
                                                          /*isInjector*/ true,
-                                                         phase_usage_,
                                                          guideRate_,
                                                          well_state,
                                                          summaryState_,
@@ -1416,7 +1413,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     WellGroupHelpers<FluidSystem, Indices>::updateREINForGroups(fieldGroup,
                                                   schedule(),
                                                   reportStepIdx,
-                                                  phase_usage_,
                                                   summaryState_,
                                                   well_state_nupcol,
                                                   this->groupState(),
