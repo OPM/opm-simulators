@@ -1285,6 +1285,9 @@ namespace Opm {
         if (alq_updated || BlackoilWellModelGuideRates(*this).
                               guideRateUpdateIsNeeded(reportStepIdx)) {
             const double simulationTime = simulator_.time();
+            // NOTE: For reservoir coupling: Slave group potentials are only communicated
+            //    at the start of the time step, see beginTimeStep(). Here, we assume those
+            //    potentials remain unchanged during the time step when updating guide rates below.
             this->guide_rate_handler_.updateGuideRates(
                 reportStepIdx, simulationTime, this->wellState(), this->groupState()
             );
