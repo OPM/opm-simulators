@@ -67,7 +67,7 @@ namespace Opm {
          *    well as inner types \c value_type, \c size_type, and \c
          *    const_iterator.  Typically \code std::vector<int> \endcode.
          */
-        template <class FluidSystem, class Region>
+        template <class FluidSystem, class Indices, class Region>
         class SurfaceToReservoirVoidage {
         public:
             using Scalar = typename FluidSystem::Scalar;
@@ -78,10 +78,8 @@ namespace Opm {
              * \param[in] region Forward region mapping.  Often corresponds
              * to the "FIPNUM" mapping of an ECLIPSE input deck.
              */
-            SurfaceToReservoirVoidage(const PhaseUsage& phaseUsage,
-                                      const Region&     region)
-                : phaseUsage_(phaseUsage)
-                , rmap_      (region)
+            SurfaceToReservoirVoidage(const Region&     region)
+                : rmap_      (region)
                 , attr_      (rmap_, Attributes())
             {}
 
@@ -139,8 +137,8 @@ namespace Opm {
 
                     // only count oil and gas filled parts of the domain
                     Scalar hydrocarbon = 1.0;
-                    const auto& pu = phaseUsage_;
-                    if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
+                    // if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
+                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
                     }
 
@@ -152,15 +150,18 @@ namespace Opm {
                     if (hydrocarbonPV > 0.) {
                         auto& attr = attributes_hpv[reg];
                         attr.pv += hydrocarbonPV;
-                        if (RegionAttributeHelpers::PhaseUsed::oil(pu) && RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+                        // if (RegionAttributeHelpers::PhaseUsed::oil(pu) && RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+                        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                             attr.rs += fs.Rs().value() * hydrocarbonPV;
                             attr.rv += fs.Rv().value() * hydrocarbonPV;
                         }
-                        if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
+                        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                        // if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
                             attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
                         } else {
-                            assert(RegionAttributeHelpers::PhaseUsed::gas(pu));
+                            // assert(RegionAttributeHelpers::PhaseUsed::gas(pu));
+                            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
                             attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
                             attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
                         }
@@ -176,18 +177,18 @@ namespace Opm {
                     if (pv_cell > 0.) {
                         auto& attr = attributes_pv[reg];
                         attr.pv += pv_cell;
-                        if (RegionAttributeHelpers::PhaseUsed::oil(pu) && RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+                        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                             attr.rs += fs.Rs().value() * pv_cell;
                             attr.rv += fs.Rv().value() * pv_cell;
                         }
-                        if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
+                        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
                             attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * pv_cell;
-                        } else if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+                        } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                              attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * pv_cell;
                              attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * pv_cell;
                         } else {
-                            assert(RegionAttributeHelpers::PhaseUsed::water(pu));
+                            assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
                             attr.pressure += fs.pressure(FluidSystem::waterPhaseIdx).value() * pv_cell;
                             attr.temperature += fs.temperature(FluidSystem::waterPhaseIdx).value() * pv_cell;
                         }
@@ -372,11 +373,6 @@ namespace Opm {
 
         private:
             /**
-             * Fluid property object.
-             */
-            const PhaseUsage phaseUsage_;
-
-            /**
              * "Fluid-in-place" region mapping (forward and reverse).
              */
             const RegionMapping<Region> rmap_;
@@ -431,3 +427,4 @@ namespace Opm {
 } // namespace Opm
 
 #endif  /* OPM_RATECONVERTER_HPP_HEADER_INCLUDED */
+#include "RateConverter.cpp"

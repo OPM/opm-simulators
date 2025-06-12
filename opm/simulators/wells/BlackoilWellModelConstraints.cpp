@@ -52,15 +52,14 @@ checkGroupInjectionConstraints(const Group& group,
                                const Phase& phase) const
 {
     const auto& well_state = wellModel_.wellState();
-    const auto& pu = wellModel_.phaseUsage();
 
     int phasePos;
-    if (phase == Phase::GAS && pu.phase_used[BlackoilPhases::Vapour] )
-        phasePos = pu.phase_pos[BlackoilPhases::Vapour];
-    else if (phase == Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
-        phasePos = pu.phase_pos[BlackoilPhases::Liquid];
-    else if (phase == Phase::WATER && pu.phase_used[BlackoilPhases::Aqua] )
-        phasePos = pu.phase_pos[BlackoilPhases::Aqua];
+    if (phase == Phase::GAS && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) )
+        phasePos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+    else if (phase == Phase::OIL && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) )
+        phasePos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+    else if (phase == Phase::WATER && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) )
+        phasePos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
     else
         OPM_THROW(std::runtime_error, "Unknown phase" );
 
@@ -169,18 +168,18 @@ checkGroupInjectionConstraints(const Group& group,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
-                                                                      pu.phase_pos[BlackoilPhases::Aqua],
+                                                                      FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx),
                                                                       false);
             voidage_rate += WellGroupHelpers<FluidSystem, Indices>::sumWellResRates(groupVoidage,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
-                                                                      pu.phase_pos[BlackoilPhases::Liquid],
+                                                                      FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx),
                                                                       false);
             voidage_rate += WellGroupHelpers<FluidSystem, Indices>::sumWellResRates(groupVoidage,
                                                                       wellModel_.schedule(),
                                                                       well_state, reportStepIdx,
-                                                                      pu.phase_pos[BlackoilPhases::Vapour],
+                                                                      FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx),
                                                                       false);
 
             // sum over all nodes
@@ -191,19 +190,19 @@ checkGroupInjectionConstraints(const Group& group,
                                                                     wellModel_.schedule(),
                                                                     well_state,
                                                                     reportStepIdx,
-                                                                    pu.phase_pos[BlackoilPhases::Aqua],
+                                                                    FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx),
                                                                     true);
             total_rate += WellGroupHelpers<FluidSystem, Indices>::sumWellResRates(group,
                                                                     wellModel_.schedule(),
                                                                     well_state,
                                                                     reportStepIdx,
-                                                                    pu.phase_pos[BlackoilPhases::Liquid],
+                                                                    FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx),
                                                                     true);
             total_rate += WellGroupHelpers<FluidSystem, Indices>::sumWellResRates(group,
                                                                     wellModel_.schedule(),
                                                                     well_state,
                                                                     reportStepIdx,
-                                                                    pu.phase_pos[BlackoilPhases::Vapour],
+                                                                    FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx),
                                                                     true);
 
             // sum over all nodes
@@ -228,7 +227,6 @@ checkGroupProductionConstraints(const Group& group,
                                 DeferredLogger& deferred_logger) const
 {
     const auto& well_state = wellModel_.wellState();
-    const auto& pu = wellModel_.phaseUsage();
 
     const auto controls = group.productionControls(wellModel_.summaryState());
     const Group::ProductionCMode& currentControl = wellModel_.groupState().production_control(group.name());
@@ -241,7 +239,7 @@ checkGroupProductionConstraints(const Group& group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
-                                                                          pu.phase_pos[BlackoilPhases::Liquid],
+                                                                          FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx),
                                                                           false);
 
             // sum over all nodes
@@ -265,7 +263,7 @@ checkGroupProductionConstraints(const Group& group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
-                                                                          pu.phase_pos[BlackoilPhases::Aqua],
+                                                                          FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx),
                                                                           false);
 
             // sum over all nodes
@@ -288,7 +286,7 @@ checkGroupProductionConstraints(const Group& group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
-                                                                          pu.phase_pos[BlackoilPhases::Vapour],
+                                                                          FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx),
                                                                           false);
 
             // sum over all nodes
@@ -310,13 +308,13 @@ checkGroupProductionConstraints(const Group& group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
-                                                                          pu.phase_pos[BlackoilPhases::Liquid],
+                                                                          FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx),
                                                                           false);
             current_rate += WellGroupHelpers<FluidSystem, Indices>::sumWellSurfaceRates(group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
-                                                                          pu.phase_pos[BlackoilPhases::Aqua],
+                                                                          FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx),
                                                                           false);
 
             // sum over all nodes
@@ -328,7 +326,7 @@ checkGroupProductionConstraints(const Group& group,
                                                                                           wellModel_.schedule(),
                                                                                           well_state,
                                                                                           reportStepIdx,
-                                                                                          pu.phase_pos[BlackoilPhases::Aqua],
+                                                                                          FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx),
                                                                                           false);
                 current_water_rate = wellModel_.comm().sum(current_water_rate);
                 if (std::abs(current_water_rate) < 1e-12) {
@@ -359,19 +357,19 @@ checkGroupProductionConstraints(const Group& group,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
-                                                                      pu.phase_pos[BlackoilPhases::Aqua],
+                                                                      FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx),
                                                                       false);
             current_rate += WellGroupHelpers<FluidSystem, Indices>::sumWellResRates(group,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
-                                                                      pu.phase_pos[BlackoilPhases::Liquid],
+                                                                      FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx),
                                                                       false);
             current_rate += WellGroupHelpers<FluidSystem, Indices>::sumWellResRates(group,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
-                                                                      pu.phase_pos[BlackoilPhases::Vapour],
+                                                                      FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx),
                                                                       false);
 
             // sum over all nodes
