@@ -165,7 +165,7 @@ public:
                    Parameters::Get<Parameters::EnableEsmry>())
         , simulator_(simulator)
     {
-#if HAVE_MPI
+#if HAVE_MPI 
         if (this->simulator_.vanguard().grid().comm().size() > 1) {
             auto smryCfg = (this->simulator_.vanguard().grid().comm().rank() == 0)
                 ? this->eclIO_->finalSummaryConfig()
@@ -184,7 +184,7 @@ public:
         }
 
         this->rank_ = this->simulator_.vanguard().grid().comm().rank();
-
+        
         this->simulator_.vanguard().eclState().computeFipRegionStatistics();
     }
 
