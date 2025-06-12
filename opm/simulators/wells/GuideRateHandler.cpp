@@ -174,6 +174,9 @@ updateGuideRates(
 // Inner class GuideRateDumper constructor
 // ------------------------------------------
 
+// NOTE: See debugDumpGuideRates() above for more information on the
+//       purpose of this class. It is used to dump the guide rates
+//       to the terminal in a human-readable format.
 template <class Scalar>
 GuideRateHandler<Scalar>::GuideRateDumper::
 GuideRateDumper(
