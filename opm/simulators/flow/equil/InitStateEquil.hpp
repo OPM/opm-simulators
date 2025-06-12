@@ -727,6 +727,9 @@ private:
     void updateCellProps_(const GridView& gridView,
                           const NumericalAquifers& aquifer);
 
+    void getCellCentroids_(const EclipseState& eclState,
+                  const GridView& gridView);
+
     void applyNumericalAquifers_(const GridView& gridView,
                                  const NumericalAquifers& aquifer,
                                  const bool co2store_or_h2store);
@@ -738,6 +741,7 @@ private:
     void calcPressSatRsRv(const RMap& reg,
                           const std::vector<EquilRecord>& rec,
                           MaterialLawManager& materialLawManager,
+                          const GridView& gridView,
                           const Comm& comm,
                           const Scalar grav);
 
@@ -758,6 +762,25 @@ private:
                                const PressTable&       ptable,
                                PhaseSat&               psat);
 
+    template <class CellRange, class PressTable, class PhaseSat>
+    void equilibrateHorizontalVertical(const CellRange&        cells,
+                                       const EquilReg<Scalar>& eqreg,
+                                       const int               acc,
+                                       const PressTable&      ptable,
+                                       PhaseSat&              psat);
+
+     template<class CellRange, class PressTable, class PhaseSat>
+     void equilibrateTiltedFaultBlockSimple(const CellRange& cells, 
+                            const EquilReg<Scalar>& eqreg,
+                            const GridView& gridView, const int numLevels,
+                            const PressTable& ptable, PhaseSat& psat);
+
+     template<class CellRange, class PressTable, class PhaseSat>
+     void equilibrateTiltedFaultBlockComplex(const CellRange& cells,
+                           const EquilReg<Scalar>& eqreg,
+                           const GridView& gridView, const int numLevels,
+                           const PressTable& ptable, PhaseSat& psat);
+
     std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rvFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rvwFunc_;
@@ -777,9 +800,13 @@ private:
     const CartesianIndexMapper& cartesianIndexMapper_;
     Vec swatInit_;
     Vec cellCenterDepth_;
+    std::vector<std::pair<Scalar,Scalar>> cellCenterXY_;
     std::vector<std::pair<Scalar,Scalar>> cellZSpan_;
     std::vector<std::pair<Scalar,Scalar>> cellZMinMax_;
+    std::vector<std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>>> cellCornersXY_;
     int num_pressure_points_;
+    static const int dimensionworld = Grid::dimensionworld;
+    std::vector<std::array<double, 3>> centroids_;
 };
 
 } // namespace DeckDependent
