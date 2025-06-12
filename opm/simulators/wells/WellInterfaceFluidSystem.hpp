@@ -36,7 +36,7 @@ namespace Opm
 {
 namespace RateConverter
 {
-  template <class FluidSystem, class Region> class SurfaceToReservoirVoidage;
+  template <class FluidSystem, class Indices, class Region> class SurfaceToReservoirVoidage;
 }
 
 class Group;
@@ -51,7 +51,7 @@ class WellInterfaceFluidSystem : public WellInterfaceGeneric<FluidSystem, Indice
 {
 protected:
     using RateConverterType = RateConverter::
-    SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
+    SurfaceToReservoirVoidage<FluidSystem, Indices, std::vector<int>>;
     // to indicate a invalid completion
     static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
 

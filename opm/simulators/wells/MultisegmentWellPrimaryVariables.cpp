@@ -225,10 +225,6 @@ copyToWellState(const  MultisegmentWellGeneric<FluidSystem, Indices>& mswell,
                 const SummaryState& summary_state,
                 DeferredLogger& deferred_logger) const
 {
-    static constexpr int Gas = BlackoilPhases::Vapour;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Water = BlackoilPhases::Aqua;
-
     const auto pvtReg = std::max(well_.wellEcl().pvt_table_number() - 1, 0);
 
     const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
