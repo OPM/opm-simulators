@@ -481,32 +481,31 @@ actionOnBrokenConstraints(const Group& group,
         return true;
     }
 
+    const auto action = [&group_limit_action](Group::ProductionCMode control) {
+        switch (control) {
+            case Group::ProductionCMode::ORAT: return group_limit_action.allRates;
+            case Group::ProductionCMode::WRAT: return group_limit_action.water;
+            case Group::ProductionCMode::GRAT: return group_limit_action.gas;
+            case Group::ProductionCMode::LRAT: return group_limit_action.liquid;
+            default: return Group::ExceedAction::RATE;
+        };
+    };
+
     bool changed = false;
     std::string ss;
-    switch (group_limit_action.allRates) {
+    switch (action(newControl)) {
     case Group::ExceedAction::NONE: {
-        if (oldControl != newControl) {
-            if ((group_limit_action.water == Group::ExceedAction::RATE &&
-                 newControl == Group::ProductionCMode::WRAT) ||
-                (group_limit_action.gas == Group::ExceedAction::RATE &&
-                 newControl == Group::ProductionCMode::GRAT) ||
-                (group_limit_action.liquid == Group::ExceedAction::RATE &&
-                 newControl == Group::ProductionCMode::LRAT)) {
-                group_state.production_control(group.name(), newControl);
-                ss = fmt::format("Switching production control mode for group {} from {} to {}",
-                                 group.name(),
-                                 Group::ProductionCMode2String(oldControl),
-                                 Group::ProductionCMode2String(newControl));
-
-                changed = true;
-            }
-            else {
-                ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. "
-                                 "Nothing is done.",
-                                 Group::ProductionCMode2String(oldControl),
-                                 group.name());
-            }
-        }
+        // In GroupKeywordHandlers::handleGCONPROD(), if an action is NONE
+        // we do not add the associated control (ORAT, WRAT, GRAT or LRAT) to
+        // the set of production controls, so Group::has_control() will return
+        // false for such controls.
+        // Therefore we should never be here!
+        // Nevertheless, to guard somewhat against future changes, we will keep the
+        // message here.
+        ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. "
+                         "Nothing is done.",
+                         Group::ProductionCMode2String(newControl),
+                         group.name());
         break;
     }
     case Group::ExceedAction::CON: {
