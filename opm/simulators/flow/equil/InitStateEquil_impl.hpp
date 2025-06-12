@@ -55,6 +55,7 @@
 #include <limits>
 #include <stdexcept>
 
+
 namespace Opm {
 namespace EQUIL {
 
@@ -175,6 +176,102 @@ std::pair<Scalar,Scalar> cellZMinMax(const Element& element)
         max = std::max(max, static_cast<Scalar>(geometry.corner(i)[zCoord]));
     }
     return std::make_pair(min, max);
+}
+
+template<class Scalar>
+void computeBlockDip(const std::array<Scalar, 8>& cornerDepths,
+                    Scalar& dipAngle, Scalar& dipAzimuth)
+{
+    // Calculate top face dip
+    Scalar top_dx1 = cornerDepths[1] - cornerDepths[0]; // x-difference along y=0
+    Scalar top_dx2 = cornerDepths[3] - cornerDepths[2]; // x-difference along y=1
+    Scalar top_dy1 = cornerDepths[2] - cornerDepths[0]; // y-difference along x=0
+    Scalar top_dy2 = cornerDepths[3] - cornerDepths[1]; // y-difference along x=1
+
+    Scalar top_dx = (top_dx1 + top_dx2) / 2;
+    Scalar top_dy = (top_dy1 + top_dy2) / 2;
+
+    // Calculate bottom face dip
+    Scalar bot_dx1 = cornerDepths[5] - cornerDepths[4];
+    Scalar bot_dx2 = cornerDepths[7] - cornerDepths[6];
+    Scalar bot_dy1 = cornerDepths[6] - cornerDepths[4];
+    Scalar bot_dy2 = cornerDepths[7] - cornerDepths[5];
+
+    Scalar bot_dx = (bot_dx1 + bot_dx2) / 2;
+    Scalar bot_dy = (bot_dy1 + bot_dy2) / 2;
+
+    // Average top and bottom dips
+    Scalar dx = (top_dx + bot_dx) / 2;
+    Scalar dy = (top_dy + bot_dy) / 2;
+
+    // Compute dip parameters
+    const Scalar lateralDist = std::sqrt(dx*dx + dy*dy);
+    if (lateralDist > 1e-3) {
+        dipAngle = std::atan2(lateralDist, 1.0); // Using 1.0 as reference thickness
+        dipAzimuth = std::atan2(dy, dx);
+        const Scalar maxDip = M_PI/2 - 1e-4;
+        dipAngle = std::clamp(dipAngle, -maxDip, maxDip);
+    } else {
+        dipAngle = 0.0;
+        dipAzimuth = 0.0;
+    };
+}
+
+template <class Scalar, class Element>
+std::array<Scalar, 8> getCellCornerDepths(const Element& element)
+{
+    typedef typename Element::Geometry Geometry;
+    const Geometry& geometry = element.geometry();
+    static constexpr int zCoord = Element::dimension - 1;
+    const int corners = geometry.corners();
+    assert(corners == 8);
+    std::array<Scalar, 8> depths {};
+    // Get all 8 corners of the hexahedral cell
+    for (int i = 0; i < corners; ++i) {
+         auto corner = geometry.corner(i);
+         depths[i] = corner[zCoord];
+    }
+
+    return depths;
+}
+
+template <class Scalar, class Element>
+std::pair<std::array<Scalar, 8>, std::array<Scalar, 8>> getCellCornerXY(const Element& element)
+{
+    typedef typename Element::Geometry Geometry;
+    const Geometry& geometry = element.geometry();
+    static constexpr int yCoord = Element::dimension - 2;
+        static constexpr int xCoord = Element::dimension - 3;
+    const int corners = geometry.corners();
+    assert(corners == 8);
+    std::array<Scalar, 8> X {};
+    std::array<Scalar, 8> Y {};
+    // Get all 8 corners of the hexahedral cell (maybe expensive)
+    for (int i = 0; i < corners; ++i) {
+         auto corner = geometry.corner(i);
+         X[i] = corner[xCoord];
+         Y[i] = corner[yCoord];
+    }
+
+    return {X, Y};
+}
+template<class Scalar>
+Scalar calculateTrueVerticalDepth(Scalar z, Scalar x, Scalar y,
+                                Scalar dipAngle, Scalar dipAzimuth,
+                                const std::array<Scalar, 3>& referencePoint)
+{
+    // Calculate dist from a reference point (we need to check if im correct)
+    const Scalar dx = x - referencePoint[0];
+    const Scalar dy = y - referencePoint[1];
+    const Scalar dz = z - referencePoint[2];
+
+    // Project along dip direction
+    const Scalar lateral = dx*std::cos(dipAzimuth) + dy*std::sin(dipAzimuth);
+
+    // Tune Vertical Depth calculation
+    const Scalar costheta = std::cos(dipAngle);
+    const Scalar sintheta = std::sin(dipAngle);
+    return referencePoint[2] + dz*costheta + lateral*sintheta;
 }
 
 template<class Scalar, class RHS>
@@ -1373,6 +1470,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     // numerical aquifer cells might be specified with different depths.
     const auto& num_aquifers = eclipseState.aquifer().numericalAquifers();
     updateCellProps_(gridView, num_aquifers);
+    getCellCentroids_(eclipseState, gridView);
 
     // Get the equilibration records.
     const std::vector<EquilRecord> rec = getEquil(eclipseState);
@@ -1566,7 +1664,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
 
     // Compute pressures, saturations, rs and rv factors.
     const auto& comm = grid.comm();
-    calcPressSatRsRv(eqlmap, rec, materialLawManager, comm, grav);
+    calcPressSatRsRv(eqlmap, rec, materialLawManager, gridView, comm, grav);
 
     // modify the pressure and saturation for numerical aquifer cells
     applyNumericalAquifers_(gridView, num_aquifers, eclipseState.runspec().co2Storage() || eclipseState.runspec().h2Storage());
@@ -1681,6 +1779,32 @@ updateInitialSaltSaturation_(const EclipseState& eclState, const RMap& reg)
     }
 }
 
+template<class FluidSystem,
+         class Grid,
+         class GridView,
+         class ElementMapper,
+         class CartesianIndexMapper>
+void InitialStateComputer<FluidSystem,
+                          Grid,
+                          GridView,
+                          ElementMapper,
+                          CartesianIndexMapper>::
+getCellCentroids_(const EclipseState& eclState,
+                  const GridView& gridView)
+{
+    ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+    auto elemIt = gridView.template begin</*codim=*/0>();
+    const auto& elemEndIt = gridView.template end</*codim=*/0>();
+    centroids_.resize(gridView.size(0));
+    for (; elemIt != elemEndIt; ++elemIt) {
+        const Element& element = *elemIt;
+        const unsigned int elemIdx = elemMapper.index(element);
+        const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
+        centroids_[elemIdx] = eclState.getInputGrid().getCellCenter(cartIx);
+    }
+}
+
+
 
 template<class FluidSystem,
          class Grid,
@@ -1698,6 +1822,8 @@ updateCellProps_(const GridView& gridView,
     ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
     int numElements = gridView.size(/*codim=*/0);
     cellCenterDepth_.resize(numElements);
+    cellCornersDepth_.resize(numElements);
+    cellCornersXY_.resize(numElements);
     cellZSpan_.resize(numElements);
     cellZMinMax_.resize(numElements);
 
@@ -1708,6 +1834,8 @@ updateCellProps_(const GridView& gridView,
         const Element& element = *elemIt;
         const unsigned int elemIdx = elemMapper.index(element);
         cellCenterDepth_[elemIdx] = Details::cellCenterDepth<Scalar>(element);
+        cellCornersDepth_[elemIdx] = Details::getCellCornerDepths<Scalar>(element);
+        cellCornersXY_[elemIdx] = Details::getCellCornerXY<Scalar>(element);
         const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
         cellZSpan_[elemIdx] = Details::cellZSpan<Scalar>(element);
         cellZMinMax_[elemIdx] = Details::cellZMinMax<Scalar>(element);
@@ -1828,60 +1956,70 @@ void InitialStateComputer<FluidSystem,
 calcPressSatRsRv(const RMap& reg,
                  const std::vector<EquilRecord>& rec,
                  MaterialLawManager& materialLawManager,
+                 const GridView& gridView,
                  const Comm& comm,
                  const Scalar grav)
 {
     using PhaseSat = Details::PhaseSaturations<
         MaterialLawManager, FluidSystem, EquilReg<Scalar>, typename RMap::CellId
     >;
-    
     auto ptable = Details::PressureTable<FluidSystem, EquilReg<Scalar>>{ grav, this->num_pressure_points_ };
     auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
     auto vspan  = std::array<Scalar, 2>{};
-
     std::vector<int> regionIsEmpty(rec.size(), 0);
     for (std::size_t r = 0; r < rec.size(); ++r) {
         const auto& cells = reg.cells(r);
-
         Details::verticalExtent(cells, cellZMinMax_, comm, vspan);
-
         const auto acc = rec[r].initializationTargetAccuracy();
         if (acc > 0) {
-            throw std::runtime_error {
-                "Cannot initialise model: Positive item 9 is not supported "
-                "in EQUIL keyword, record " + std::to_string(r + 1)
+            // For titled fault blocks, we'll use a combination of vertical and horizontal subdivision
+            // with the given accuracy value determining the number of subdivisions (not sure if it is valuable)
+            // First check if the region has cells
+            if (cells.empty()) {
+                regionIsEmpty[r] = 1;
+                continue;
+            }
+            const auto eqreg = EquilReg {
+                rec[r], this->rsFunc_[r], this->rvFunc_[r], this->rvwFunc_[r],
+                this->tempVdTable_[r], this->saltVdTable_[r], this->regionPvtIdx_[r]
             };
+            // Ensure contacts are within the span
+            vspan[0] = std::min(vspan[0], std::min(eqreg.zgoc(), eqreg.zwoc()));
+            vspan[1] = std::max(vspan[1], std::max(eqreg.zgoc(), eqreg.zwoc()));
+            ptable.equilibrate(eqreg, vspan);
+            // For titled blocks, we use both vertical and horizontal subdivision
+            // The accuracy value determines the number of subdivisions in each direction
+            this->equilibrateTitledBlocks(cells, eqreg, gridView, acc, ptable, psat);
         }
-
-        if (cells.empty()) {
-            regionIsEmpty[r] = 1;
-            continue;
-        }
-
-        const auto eqreg = EquilReg {
-            rec[r], this->rsFunc_[r], this->rvFunc_[r], this->rvwFunc_[r], this->tempVdTable_[r], this->saltVdTable_[r], this->regionPvtIdx_[r]
-        };
-
-        // Ensure gas/oil and oil/water contacts are within the span for the
-        // phase pressure calculation.
-        vspan[0] = std::min(vspan[0], std::min(eqreg.zgoc(), eqreg.zwoc()));
-        vspan[1] = std::max(vspan[1], std::max(eqreg.zgoc(), eqreg.zwoc()));
-
-        ptable.equilibrate(eqreg, vspan);
-
-        if (acc == 0) {
+        else if (acc == 0) {
+            if (cells.empty()) {
+                regionIsEmpty[r] = 1;
+                continue;
+            }
+            const auto eqreg = EquilReg {
+                rec[r], this->rsFunc_[r], this->rvFunc_[r], this->rvwFunc_[r],
+                this->tempVdTable_[r], this->saltVdTable_[r], this->regionPvtIdx_[r]
+            };
+            vspan[0] = std::min(vspan[0], std::min(eqreg.zgoc(), eqreg.zwoc()));
+            vspan[1] = std::max(vspan[1], std::max(eqreg.zgoc(), eqreg.zwoc()));
+            ptable.equilibrate(eqreg, vspan);
             // Centre-point method
             this->equilibrateCellCentres(cells, eqreg, ptable, psat);
         }
         else if (acc < 0) {
+            if (cells.empty()) {
+                regionIsEmpty[r] = 1;
+                continue;
+            }
+            const auto eqreg = EquilReg {
+                rec[r], this->rsFunc_[r], this->rvFunc_[r], this->rvwFunc_[r],
+                this->tempVdTable_[r], this->saltVdTable_[r], this->regionPvtIdx_[r]
+            };
+            vspan[0] = std::min(vspan[0], std::min(eqreg.zgoc(), eqreg.zwoc()));
+            vspan[1] = std::max(vspan[1], std::max(eqreg.zgoc(), eqreg.zwoc()));
+            ptable.equilibrate(eqreg, vspan);
             // Horizontal subdivision
-            this->equilibrateHorizontal(cells, eqreg, -acc,
-                                        ptable, psat);
-        } else {
-            // Horizontal subdivision with titled fault blocks
-            // the simulator throw a few line above for the acc > 0 case
-            // i.e. we should not reach here.
-            assert(false);
+            this->equilibrateHorizontal(cells, eqreg, -acc, ptable, psat);
         }
     }
     comm.min(regionIsEmpty.data(),regionIsEmpty.size());
@@ -2064,6 +2202,205 @@ equilibrateHorizontal(const CellRange&        cells,
 
         Rvw = eqreg.waterEvaporationCalculator()
             (cz, pressures.gas, temp, saturations.water);
+    });
+}
+
+template<class FluidSystem,
+         class Grid,
+         class GridView,
+         class ElementMapper,
+         class CartesianIndexMapper>
+template<class CellRange, class PressTable, class PhaseSat>
+void InitialStateComputer<FluidSystem,
+                          Grid,
+                          GridView,
+                          ElementMapper,
+                          CartesianIndexMapper>::
+equilibrateHorizontalVertical(const CellRange&        cells,
+                        const EquilReg<Scalar>& eqreg,
+                        const int               acc,
+                        const PressTable&      ptable,
+                        PhaseSat&              psat)
+{
+    using CellPos = typename PhaseSat::Position;
+    using CellID  = std::remove_cv_t<std::remove_reference_t<
+        decltype(std::declval<CellPos>().cell)>>;
+    this->cellLoop(cells, [this, acc, &eqreg, &ptable, &psat]
+        (const CellID                 cell,
+         Details::PhaseQuantityValue<Scalar>& pressures,
+         Details::PhaseQuantityValue<Scalar>& saturations,
+         Scalar&                      Rs,
+         Scalar&                      Rv,
+         Scalar&                      Rvw) -> void
+    {
+        pressures  .reset();
+        saturations.reset();
+        const auto& zSpan = cellZSpan_[cell];
+        const Scalar zMin = zSpan.first;
+        const Scalar zMax = zSpan.second;
+        const Scalar zThickness = zMax - zMin;
+        // For titled blocks, we subdivide both vertically and horizontally
+        const int numVerticalSubdiv = acc;
+        const int numHorizontalSubdiv = acc;
+        const Scalar dz = zThickness / numVerticalSubdiv;
+        Scalar totfrac = 0.0;
+        // Vertical subdivision
+        for (int vz = 0; vz < numVerticalSubdiv; ++vz) {
+            const Scalar zStart = zMin + vz * dz;
+            const Scalar zEnd = zStart + dz;
+            const std::pair<Scalar, Scalar> vertSegment{zStart, zEnd};
+            // Horizontal subdivision within this vertical segment
+            for (const auto& [depth, frac] : Details::horizontalSubdivision(cell, vertSegment, numHorizontalSubdiv)) {
+                const auto pos = CellPos { cell, depth };
+                saturations.axpy(psat.deriveSaturations(pos, eqreg, ptable), frac);
+                pressures.axpy(psat.correctedPhasePressures(), frac);
+                totfrac += frac;
+            }
+        }
+        if (totfrac > 0.) {
+            saturations /= totfrac;
+            pressures /= totfrac;
+        } else {
+            // Fall back to centre point method for zero-thickness cells
+            const auto pos = CellPos {
+                cell, cellCenterDepth_[cell]
+            };
+            saturations = psat.deriveSaturations(pos, eqreg, ptable);
+            pressures   = psat.correctedPhasePressures();
+        }
+        const auto temp = this->temperature_[cell];
+        const auto cz   = cellCenterDepth_[cell];
+        Rs = eqreg.dissolutionCalculator()
+            (cz, pressures.oil, temp, saturations.gas);
+        Rv = eqreg.evaporationCalculator()
+            (cz, pressures.gas, temp, saturations.oil);
+        Rvw = eqreg.waterEvaporationCalculator()
+            (cz, pressures.gas, temp, saturations.water);
+    });
+}
+
+
+
+template<class FluidSystem, class Grid, class GridView, class ElementMapper, class CartesianIndexMapper>
+template<class CellRange, class PressTable, class PhaseSat>
+void InitialStateComputer<FluidSystem, Grid, GridView, ElementMapper, CartesianIndexMapper>::
+equilibrateTitledBlocks(const CellRange& cells, const EquilReg<Scalar>& eqreg,
+                       const GridView& gridView, const int numLevels,
+                       const PressTable& ptable, PhaseSat& psat)
+{
+    using CellPos = typename PhaseSat::Position;
+    using CellID  = std::remove_cv_t<std::remove_reference_t<
+    decltype(std::declval<CellPos>().cell)>>;
+    // Element mapper setup
+    ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+    std::unordered_map<unsigned int, const Element*> elementsByIndex;
+    for (const auto& element : elements(gridView)) {
+        elementsByIndex[elemMapper.index(element)] = &element;
+    }
+
+    // Main equilibration loop
+    this->cellLoop(cells, [this, numLevels, &eqreg, &ptable, &psat, &elementsByIndex]
+        (const CellID                 cell,
+         Details::PhaseQuantityValue<Scalar>& pressures,
+         Details::PhaseQuantityValue<Scalar>& saturations,
+         Scalar&                      Rs,
+         Scalar&                      Rv,
+         Scalar&                      Rvw) -> void
+    {
+        pressures.reset();
+        saturations.reset();
+        Scalar totfrac = 0.0;
+
+        // Get cell geometry data
+        const auto& element = *(elementsByIndex[cell]);
+        const auto& [zmin, zmax] = cellZMinMax_[cell];
+        const auto& topbot = cellZSpan_[cell];
+        const Scalar cellHeight = zmax - zmin;
+
+        // 1. Compute cross-sectional areas at N levels
+        std::vector<Scalar> areas(2*numLevels);
+        for (int half = 0; half < 2; ++half) {
+            Scalar z0 = (half == 0) ? zmin : (zmin + zmax)/2;
+            Scalar z1 = (half == 0) ? (zmin + zmax)/2 : zmax;
+
+            for (int i = 0; i < numLevels; ++i) {
+                Scalar z = z0 + i*(z1 - z0)/(numLevels - 1);
+
+                // Interpolate corner points at this z-level
+                std::array<std::array<Scalar,2>,4> polygon;
+                for (int c = 0; c < 4; ++c) {
+                    // Bottom (c) to top (c+4) edge interpolation
+                    Scalar t = (z - cellCornersDepth_[cell][c]) /
+                              (cellCornersDepth_[cell][c+4] - cellCornersDepth_[cell][c]);
+                    t = std::clamp(t, 0.0, 1.0);
+                    polygon[c][0] = (1-t)*cellCornersXY_[cell].first[c] + t*cellCornersXY_[cell].first[c+4];
+                    polygon[c][1] = (1-t)*cellCornersXY_[cell].second[c] + t*cellCornersXY_[cell].second[c+4];
+                }
+
+                // Compute area using shoelace formula
+                std::array<int, 4> idx = {0, 1, 3, 2};  // reordered traversal
+
+               Scalar area = 0.0;
+               for (int j = 0; j < 4; ++j) {
+                   int k = (j + 1) % 4;
+               area += polygon[idx[j]][0] * polygon[idx[k]][1]
+                       - polygon[idx[k]][0] * polygon[idx[j]][1];
+               }
+               area = 0.5 * std::abs(area);
+
+               areas[half*numLevels + i] = std::abs(area)/2.0;
+            }
+        }
+
+        // 2. Compute block dip from corner points
+        Scalar dipAngle, dipAzimuth;
+        Details::computeBlockDip(cellCornersDepth_[cell], dipAngle, dipAzimuth);
+
+        // 3. Reference point at cell center (ECLIPSE convention)
+        std::array<Scalar, 3> referencePoint = {
+            centroids_[cell][0],
+            centroids_[cell][1],
+            (zmin + zmax)/2
+        };
+
+        // 4. N-level integration with area weighting
+        for (int half = 0; half < 2; ++half) {
+            Scalar z0 = (half == 0) ? topbot.first : (topbot.first + topbot.second)/2;
+            Scalar z1 = (half == 0) ? (topbot.first + topbot.second)/2 : topbot.second;
+
+            for (int i = 0; i < numLevels; ++i) {
+                Scalar z = z0 + (i + 0.5)*(z1 - z0)/numLevels;
+                Scalar weight = areas[half*numLevels + i];
+
+                // Calculate TVD with dip correction
+                Scalar tvd = Details::calculateTrueVerticalDepth(
+                    z, centroids_[cell][0], centroids_[cell][1],
+                    dipAngle, dipAzimuth, referencePoint);
+
+                // Accumulate weighted properties
+                const auto pos = CellPos{cell, tvd};
+                saturations.axpy(psat.deriveSaturations(pos, eqreg, ptable), weight);
+                pressures.axpy(psat.correctedPhasePressures(), weight);
+                totfrac += weight;
+            }
+        }
+
+        // Normalization
+        if (totfrac > 0.) {
+            saturations /= totfrac;
+            pressures /= totfrac;
+        } else {
+            const auto pos = CellPos{cell, cellCenterDepth_[cell]};
+            saturations = psat.deriveSaturations(pos, eqreg, ptable);
+            pressures = psat.correctedPhasePressures();
+        }
+
+        // Compute solution ratios
+        const auto temp = this->temperature_[cell];
+        const auto cz = cellCenterDepth_[cell];
+        Rs = eqreg.dissolutionCalculator()(cz, pressures.oil, temp, saturations.gas);
+        Rv = eqreg.evaporationCalculator()(cz, pressures.gas, temp, saturations.oil);
+        Rvw = eqreg.waterEvaporationCalculator()(cz, pressures.gas, temp, saturations.water);
     });
 }
 
