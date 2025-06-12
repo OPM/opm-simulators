@@ -108,7 +108,7 @@ receiveMasterGroupPotentialsFromSlaves()
 template<class Scalar>
 void
 GuideRateHandler<Scalar>::
-sendSlaveGroupPotentialsToMaster()
+sendSlaveGroupPotentialsToMaster(const GroupState<Scalar>& group_state)
 {
     assert(this->isReservoirCouplingSlave());
     auto& rescoup_slave = this->reservoirCouplingSlave();
@@ -124,10 +124,10 @@ sendSlaveGroupPotentialsToMaster()
             // For injection groups, we do not have potentials. In that case,
             //  we will send dummy values (0.0) for the potentials.
             if (this->guide_rate_.hasPotentials(slave_group_name)) {
-                const auto& gr_pot = this->guide_rate_.getPotentials(slave_group_name);
-                pot[Potentials::Phase::Oil] = gr_pot.oil_rat;
-                pot[Potentials::Phase::Gas] = gr_pot.gas_rat;
-                pot[Potentials::Phase::Water] = gr_pot.wat_rat;
+                const auto& gr_pot = group_state.get_production_group_potential(slave_group_name);
+                pot[Potentials::Phase::Oil] = gr_pot.oil_rate;
+                pot[Potentials::Phase::Gas] = gr_pot.gas_rate;
+                pot[Potentials::Phase::Water] = gr_pot.water_rate;
             }
             potentials.push_back(pot);
         }
@@ -444,7 +444,7 @@ UpdateGuideRates(
     const int report_step_idx,
     const double sim_time,
     const WellState<Scalar>& well_state,
-    const GroupState<Scalar>& group_state,
+    GroupState<Scalar>& group_state,
     const int num_phases
 ) : parent_{parent}
   , report_step_idx_{report_step_idx}
@@ -608,6 +608,14 @@ updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& po
     gas_pot = this->unit_system_.from_si(UnitSystem::measure::gas_surface_rate, gas_pot);
     this->guideRate().compute(
         group.name(), this->report_step_idx_, this->sim_time_, oil_pot, gas_pot, water_pot
+    );
+    // NOTE: For reservoir coupling: We will later need to send the slave group potentials
+    //   to the master. The above call to GuideRate::compute() will as a side-effect store
+    //   them in the GuideRate object. But those potentials are meant to be internal to the
+    //   GuideRate object, so we choose to store the potentials in the GroupState object
+    //   below for this reason.
+    this->group_state_.update_group_production_potential(
+        group.name(), oil_pot, gas_pot, water_pot
     );
 }
 

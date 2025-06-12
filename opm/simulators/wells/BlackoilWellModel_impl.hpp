@@ -475,7 +475,7 @@ namespace Opm {
         );
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingSlave()) {
-            this->guide_rate_handler_.sendSlaveGroupPotentialsToMaster();
+            this->guide_rate_handler_.sendSlaveGroupPotentialsToMaster(this->groupState());
         }
 #endif
         std::string exc_msg;
