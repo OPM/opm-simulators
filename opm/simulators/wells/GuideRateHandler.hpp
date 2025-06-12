@@ -88,7 +88,7 @@ public:
             const int report_step_idx,
             const double sim_time,
             const WellState<Scalar> &well_state,
-            const GroupState<Scalar> &group_state,
+            GroupState<Scalar> &group_state,
             const int num_phases
         );
 
@@ -124,7 +124,7 @@ public:
         const int report_step_idx_;
         const double sim_time_;
         const WellState<Scalar> &well_state_;
-        const GroupState<Scalar> &group_state_;
+        GroupState<Scalar> &group_state_;
         const int num_phases_;
         const UnitSystem& unit_system_;
     };
@@ -146,7 +146,7 @@ public:
     void receiveMasterGroupPotentialsFromSlaves();
     ReservoirCouplingMaster& reservoirCouplingMaster() { return *(this->reservoir_coupling_master_); }
     ReservoirCouplingSlave& reservoirCouplingSlave() { return *(this->reservoir_coupling_slave_); }
-    void sendSlaveGroupPotentialsToMaster();
+    void sendSlaveGroupPotentialsToMaster(const GroupState<Scalar>& group_state);
     void setReservoirCouplingMaster(ReservoirCouplingMaster *reservoir_coupling_master) {
         this->reservoir_coupling_master_ = reservoir_coupling_master;
     }
