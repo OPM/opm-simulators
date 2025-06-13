@@ -66,8 +66,6 @@ namespace {
     {
         using Scalar = typename FluidSystem::Scalar;
 
-        using Opm::BlackoilPhases;
-
         Scalar oilRate = 0.0;
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))  {
             const int pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
@@ -916,7 +914,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                     }
                 }
                 alq = comm.sum(alq);
-                node_inflows[node][BlackoilPhases::Vapour] +=  alq;
+                node_inflows[node][FluidSystem::gasPhaseIdx] +=  alq;
             }
         }
 
@@ -972,9 +970,9 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                     // @TODO: Standard network
                     Scalar alq = (*upbranch).alq_value().value_or(0.0);
                     node_pressures[node] = vfp_prod_props.bhp(*vfp_table,
-                                                            rates[BlackoilPhases::Aqua],
-                                                            rates[BlackoilPhases::Liquid],
-                                                            rates[BlackoilPhases::Vapour],
+                                                            rates[FluidSystem::waterPhaseIdx],
+                                                            rates[FluidSystem::oilPhaseIdx],
+                                                            rates[FluidSystem::gasPhaseIdx],
                                                             up_press,
                                                             alq,
                                                             0.0, //explicit_wfr
