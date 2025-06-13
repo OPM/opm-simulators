@@ -111,10 +111,8 @@ public:
     using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag>>;
     using WellStateType = WellState<FluidSystem, Indices>;
 
-    BlackoilWellModelGasLift(bool terminal_output,
-                             const PhaseUsage& phase_usage)
+    explicit BlackoilWellModelGasLift(bool terminal_output)
         : Base(terminal_output)
-        , phase_usage_(phase_usage)
     {}
 
     static void initGliftEclWellMap(const std::vector<WellInterfacePtr>& well_container,
@@ -148,8 +146,6 @@ private:
                                              GLiftWellStateMap& state_map,
                                              GLiftSyncGroups& groups_to_sync,
                                              DeferredLogger& deferred_logger);
-
-    const PhaseUsage& phase_usage_;
 };
 
 } // namespace Opm

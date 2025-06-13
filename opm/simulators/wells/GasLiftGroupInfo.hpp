@@ -75,7 +75,6 @@ public:
                      const SummaryState& summary_state,
                      const int report_step_idx,
                      const int iteration_idx,
-                     const PhaseUsage& phase_usage,
                      DeferredLogger& deferred_logger,
                      WellState<FluidSystem, Indices>& well_state,
                      const GroupState<Scalar>& group_state,
@@ -244,7 +243,6 @@ protected:
     const SummaryState& summary_state_;
     const int report_step_idx_;
     const int iteration_idx_;
-    const PhaseUsage& phase_usage_;
     const GasLiftOpt& glo_;
     GroupRateMap group_rate_map_;
     Well2GroupMap well_group_map_;

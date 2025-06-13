@@ -347,7 +347,6 @@ updateGroupTargetReduction(const Group& group,
                            const Schedule& schedule,
                            const int reportStepIdx,
                            const bool isInjector,
-                           const PhaseUsage& pu,
                            const GuideRate& guide_rate,
                            const WellState<FluidSystem, Indices>& wellState,
                            const SummaryState& summaryState,
@@ -363,7 +362,6 @@ updateGroupTargetReduction(const Group& group,
                                    schedule,
                                    reportStepIdx,
                                    isInjector,
-                                   pu,
                                    guide_rate,
                                    wellState,
                                    summaryState,
@@ -380,18 +378,18 @@ updateGroupTargetReduction(const Group& group,
                 int phase_pos = -1;
                 switch (phase) {
                 case Phase::GAS:
-                    if (pu.phase_used[BlackoilPhases::Vapour]) {
-                        phase_pos = pu.phase_pos[BlackoilPhases::Vapour];
+                    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                        phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
                     }
                     break;
                 case Phase::OIL:
-                    if (pu.phase_used[BlackoilPhases::Liquid]) {
-                        phase_pos = pu.phase_pos[BlackoilPhases::Liquid];
+                    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                        phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
                     }
                     break;
                 case Phase::WATER:
-                    if (pu.phase_used[BlackoilPhases::Aqua]) {
-                        phase_pos = pu.phase_pos[BlackoilPhases::Aqua];
+                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                        phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
                     }
                     break;
                 default:
@@ -717,7 +715,6 @@ void WellGroupHelpers<FluidSystem, Indices>::
 updateREINForGroups(const Group& group,
                     const Schedule& schedule,
                     const int reportStepIdx,
-                    const PhaseUsage& pu,
                     const SummaryState& st,
                     const WellState<FluidSystem, Indices>& wellState,
                     GroupState<Scalar>& group_state,
@@ -727,7 +724,7 @@ updateREINForGroups(const Group& group,
     const int np = wellState.numPhases();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-        updateREINForGroups(groupTmp, schedule, reportStepIdx, pu, st, wellState, group_state, sum_rank);
+        updateREINForGroups(groupTmp, schedule, reportStepIdx, st, wellState, group_state, sum_rank);
     }
 
     std::vector<Scalar> rein(np, 0.0);
@@ -737,10 +734,11 @@ updateREINForGroups(const Group& group,
 
     // add import rate and subtract consumption rate for group for gas
     if (sum_rank) {
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const auto& [consumption_rate, import_rate] = group_state.gconsump_rates(group.name());
-            rein[pu.phase_pos[BlackoilPhases::Vapour]] += import_rate;
-            rein[pu.phase_pos[BlackoilPhases::Vapour]] -= consumption_rate;
+            const auto ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            rein[ig] += import_rate;
+            rein[ig] -= consumption_rate;
         }
     }
 
@@ -1088,8 +1086,7 @@ getGuideRateInj(const std::string& name,
                 const int reportStepIdx,
                 const GuideRate* guideRate,
                 const GuideRateModel::Target target,
-                const Phase& injectionPhase,
-                const PhaseUsage& pu)
+                const Phase& injectionPhase)
 {
     if (schedule.hasWell(name, reportStepIdx)) {
         return getGuideRate(name, schedule, wellState, group_state,
@@ -1109,7 +1106,7 @@ getGuideRateInj(const std::string& name,
         if (currentGroupControl == Group::InjectionCMode::FLD
             || currentGroupControl == Group::InjectionCMode::NONE) {
             // accumulate from sub wells/groups
-            totalGuideRate += getGuideRateInj(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, injectionPhase, pu);
+            totalGuideRate += getGuideRateInj(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, injectionPhase);
         }
     }
 
@@ -2162,12 +2159,11 @@ setRegionAveragePressureCalculator(const Group& group,
                                    const Schedule& schedule,
                                    const int reportStepIdx,
                                    const FieldPropsManager& fp,
-                                   const PhaseUsage& pu,
                                    std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regionalAveragePressureCalculator)
 {
     for (const std::string& groupName : group.groups()) {
         setRegionAveragePressureCalculator( schedule.getGroup(groupName, reportStepIdx), schedule,
-                                            reportStepIdx, fp, pu, regionalAveragePressureCalculator);
+                                            reportStepIdx, fp, regionalAveragePressureCalculator);
     }
     const auto& gpm = group.gpmaint();
     if (!gpm)
@@ -2180,7 +2176,7 @@ setRegionAveragePressureCalculator(const Group& group,
     if (regionalAveragePressureCalculator.count(reg->first) == 0) {
         const std::string name = (reg->first.rfind("FIP", 0) == 0) ? reg->first : "FIP" + reg->first;
         const auto& fipnum = fp.get_int(name);
-        regionalAveragePressureCalculator[reg->first] = std::make_unique<AverageRegionalPressureType>(pu,fipnum);
+        regionalAveragePressureCalculator[reg->first] = std::make_unique<AverageRegionalPressureType>(fipnum);
     }
 }
 
@@ -2209,7 +2205,6 @@ using AvgPMap = std::map<std::string, std::unique_ptr<AvgP<Scalar>>>;
                                                     const Schedule&,          \
                                                     const int,                \
                                                     const FieldPropsManager&, \
-                                                    const PhaseUsage&,        \
                                                     AvgPMap<T>&);
 #define INSTANTIATE_TYPE(T)                                                  \
     INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \

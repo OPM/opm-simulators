@@ -70,13 +70,12 @@
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
-    BlackoilWellModel(Simulator& simulator, const PhaseUsage& phase_usage)
+    BlackoilWellModel(Simulator& simulator)
         : WellConnectionModule(*this, simulator.gridView().comm())
         , BlackoilWellModelGeneric<FluidSystem, Indices>(simulator.vanguard().schedule(),
                                            gaslift_,
                                            simulator.vanguard().summaryState(),
                                            simulator.vanguard().eclState(),
-                                           phase_usage,
                                            simulator.gridView().comm())
         , simulator_(simulator)
         , guide_rate_handler_{
@@ -85,7 +84,7 @@ namespace Opm {
             simulator.vanguard().summaryState(),
             simulator.vanguard().grid().comm()
         }
-        , gaslift_(this->terminal_output_, this->phase_usage_)
+        , gaslift_(this->terminal_output_)
     {
         local_num_cells_ = simulator_.gridView().size(0);
 
@@ -152,11 +151,11 @@ namespace Opm {
         );
     }
 
-    template<typename TypeTag>
-    BlackoilWellModel<TypeTag>::
-    BlackoilWellModel(Simulator& simulator) :
-        BlackoilWellModel(simulator, phaseUsageFromDeck(simulator.vanguard().eclState()))
-    {}
+    // template<typename TypeTag>
+    // BlackoilWellModel<TypeTag>::
+    // BlackoilWellModel(Simulator& simulator) :
+    //     BlackoilWellModel(simulator)
+    // {}
 
 
     template<typename TypeTag>
@@ -320,7 +319,6 @@ namespace Opm {
                      this->schedule(),
                      reportStepIdx,
                      this->eclState_.fieldProps(),
-                     this->phase_usage_,
                      this->regionalAveragePressureCalculator_);
             }
         }
@@ -596,7 +594,6 @@ namespace Opm {
                                   this->wellState(),
                                   this->groupState(),
                                   this->wellTestState(),
-                                  this->phase_usage_,
                                   ecl_well_map,
                                   this->well_open_times_,
                                   deferred_logger);
@@ -1327,9 +1324,8 @@ namespace Opm {
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
 
-                const auto pu = this->phase_usage_;
                 //TODO: Auto choke combined with RESV control is not supported
-                std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
+                std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
                 Scalar gratTargetFromSales = 0.0;
                 if (group_state.has_grat_sales_target(group.name()))
                     gratTargetFromSales = group_state.grat_sales_target(group.name());
@@ -1354,7 +1350,6 @@ namespace Opm {
                                                             resv_coeff,
                                                             efficiencyFactor,
                                                             reportStepIdx,
-                                                            pu,
                                                             &this->guideRate_,
                                                             local_deferredLogger);
                     target_tmp = target.first;

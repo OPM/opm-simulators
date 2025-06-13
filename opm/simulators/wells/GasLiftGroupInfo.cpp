@@ -45,7 +45,6 @@ GasLiftGroupInfo(GLiftEclWells& ecl_wells,
                  const SummaryState& summary_state,
                  const int report_step_idx,
                  const int iteration_idx,
-                 const PhaseUsage& phase_usage,
                  DeferredLogger& deferred_logger,
                  WellState<FluidSystem, Indices>& well_state,
                  const GroupState<Scalar>& group_state,
@@ -57,7 +56,6 @@ GasLiftGroupInfo(GLiftEclWells& ecl_wells,
     , summary_state_{summary_state}
     , report_step_idx_{report_step_idx}
     , iteration_idx_{iteration_idx}
-    , phase_usage_{phase_usage}
     , glo_{schedule_.glo(report_step_idx_)}
 {}
 
@@ -539,20 +537,19 @@ std::tuple<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
 GasLiftGroupInfo<FluidSystem, Indices>::
 getProducerWellRates_(const Well* well, int well_index)
 {
-    const auto& pu = this->phase_usage_;
     const auto& ws= this->well_state_.well(well_index);
     const auto& wrate = ws.well_potentials;
 
-    const auto oil_pot = pu.phase_used[Oil]
-        ? wrate[pu.phase_pos[Oil]]
+    const auto oil_pot = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+        ? wrate[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)]
         : 0.0;
 
-    const auto gas_pot = pu.phase_used[Gas]
-        ? wrate[pu.phase_pos[Gas]]
+    const auto gas_pot = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+        ? wrate[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)]
         : 0.0;
 
-    const auto water_pot = pu.phase_used[Water]
-        ? wrate[pu.phase_pos[Water]]
+    const auto water_pot = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+        ? wrate[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)]
         : 0.0;
 
     const auto controls = well->productionControls(this->summary_state_);

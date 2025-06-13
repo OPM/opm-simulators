@@ -37,7 +37,6 @@ class DeferredLogger;
 class Group;
 template<class Scalar> class GroupState;
 namespace Network { class ExtNetwork; }
-struct PhaseUsage;
 class Schedule;
 template<class Scalar> class VFPProdProperties;
 template<typename FluidSystem, typename Indices> class WellState;
@@ -114,7 +113,6 @@ public:
                                            const Schedule& schedule,
                                            const int reportStepIdx,
                                            const bool isInjector,
-                                           const PhaseUsage& pu,
                                            const GuideRate& guide_rate,
                                            const WellStateType& wellState,
                                            const SummaryState& summaryState,
@@ -124,7 +122,6 @@ public:
     static void updateGuideRates(const Group& group,
                                  const Schedule& schedule,
                                  const SummaryState& summary_state,
-                                 const PhaseUsage& pu,
                                  int report_step,
                                  double sim_time,
                                  WellStateType& well_state,
@@ -136,7 +133,6 @@ public:
 
     static void updateGuideRateForProductionGroups(const Group& group,
                                                    const Schedule& schedule,
-                                                   const PhaseUsage& pu,
                                                    const int reportStepIdx,
                                                    const double& simTime,
                                                    WellStateType& wellState,
@@ -146,7 +142,6 @@ public:
                                                    std::vector<Scalar>& pot);
 
     static void updateGuideRatesForWells(const Schedule& schedule,
-                                         const PhaseUsage& pu,
                                          const int reportStepIdx,
                                          const double& simTime,
                                          const WellStateType& wellState,
@@ -156,7 +151,6 @@ public:
     static void updateGuideRatesForInjectionGroups(const Group& group,
                                                    const Schedule& schedule,
                                                    const SummaryState& summaryState,
-                                                   const PhaseUsage& pu,
                                                    const int reportStepIdx,
                                                    const WellStateType& wellState,
                                                    const GroupState<Scalar>& group_state,
@@ -219,7 +213,6 @@ public:
     static void updateREINForGroups(const Group& group,
                                     const Schedule& schedule,
                                     const int reportStepIdx,
-                                    const PhaseUsage& pu,
                                     const SummaryState& st,
                                     const WellStateType& wellState,
                                     GroupState<Scalar>& group_state,
@@ -258,8 +251,7 @@ public:
                                   const int reportStepIdx,
                                   const GuideRate* guideRate,
                                   const GuideRateModel::Target target,
-                                  const Phase& injectionPhase,
-                                  const PhaseUsage& pu);
+                                  const Phase& injectionPhase);
 
     /// update the number of wells that are actively under group control for a given group with name given by group_name
     /// its main usage is to detect cases where there is no wells under group control
@@ -373,7 +365,6 @@ public:
                                                    const Schedule& schedule,
                                                    const int reportStepIdx,
                                                    const FieldPropsManager& fp,
-                                                   const PhaseUsage& pu,
                                                    std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regionalAveragePressureCalculator);
 };
 

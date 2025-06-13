@@ -560,7 +560,7 @@ computePropertiesForPressures(const WellState<FluidSystem, Indices>&         wel
 
                 if (waterrate > 0) {
                     const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-                    const Scalar gasrate = std::abs(ws.surface_rates[gas_pos]);
+                    const Scalar gasrate = std::abs(ws.surface_rates[gas_pos])
                         - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
 
                     if (gasrate > 0) {
