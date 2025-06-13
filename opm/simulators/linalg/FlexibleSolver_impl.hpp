@@ -169,7 +169,10 @@ namespace Dune
         const std::string solver_type = prm.get<std::string>("solver", "bicgstab");
 
         
-        // make sure it is nullptr at the start (used for error checking in the end)
+        // make sure it is nullptr at the start (used for error checking in the end). 
+        // while the linSolver_ is initalized as a nullptr, we want to make sure it is reset here,
+        // simply because we will check if it is at the end of this function and need to keep this invariant
+        // (that it is nullptr at the start of this function).
         linsolver_.reset();
         if (solver_type == "bicgstab") {
             linsolver_ = std::make_shared<Dune::BiCGSTABSolver<VectorType>>(*linearoperator_for_solver_,
