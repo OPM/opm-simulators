@@ -26,8 +26,6 @@
 
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <limits>
 #include <optional>
 #include <vector>
@@ -59,9 +57,9 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     using ModelParameters = typename WellInterfaceGeneric<FluidSystem, Indices>::ModelParameters;
 
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
 
     const RateConverterType& rateConverter() const
     {

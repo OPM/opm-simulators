@@ -29,8 +29,6 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 #include <opm/simulators/wells/WellAssemble.hpp>
@@ -101,9 +99,9 @@ assembleControlEq(const WellState<FluidSystem, Indices>& well_state,
         This function assembles the control equation, similar as for StandardWells.
         It does *not* need communication.
     */
-    static constexpr int Gas = BlackoilPhases::Vapour;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Water = BlackoilPhases::Aqua;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
 
     EvalWell control_eq(0.0);
 
