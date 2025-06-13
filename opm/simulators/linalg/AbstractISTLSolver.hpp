@@ -161,7 +161,7 @@ public:
      * \note This value is only valid after a call to solve().
      *
      * \note If the solver does not support iteration counting, it may return 0 or throw an exception.
-     *       ISTLSolver and ISTLSolverGPUISTL does *not* support iteration counting and will return 0.
+     *       ISTLSolver does *not* support iteration counting and will return 0.
      */
     virtual int iterations() const = 0;
 
