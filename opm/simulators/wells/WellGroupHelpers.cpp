@@ -345,7 +345,6 @@ void WellGroupHelpers<FluidSystem, Indices>::
 updateGuideRatesForInjectionGroups(const Group& group,
                                    const Schedule& schedule,
                                    const SummaryState& summaryState,
-                                   const PhaseUsage& pu,
                                    const int reportStepIdx,
                                    const WellState<FluidSystem, Indices>& wellState,
                                    const GroupState<Scalar>& group_state,
@@ -355,7 +354,7 @@ updateGuideRatesForInjectionGroups(const Group& group,
     OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-        updateGuideRatesForInjectionGroups(groupTmp, schedule, summaryState, pu, reportStepIdx, wellState, group_state, guideRate, deferred_logger);
+        updateGuideRatesForInjectionGroups(groupTmp, schedule, summaryState, reportStepIdx, wellState, group_state, guideRate, deferred_logger);
     }
     const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
     for (Phase phase : all) {
@@ -377,12 +376,18 @@ updateGuideRatesForInjectionGroups(const Group& group,
         {
             guideRateValue = group_state.injection_vrep_rate(group.name());
             const std::vector<Scalar>& injRES = group_state.injection_reservoir_rates(group.name());
-            if (phase != Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
-                guideRateValue = *guideRateValue - injRES[pu.phase_pos[BlackoilPhases::Liquid]];
-            if (phase != Phase::GAS && pu.phase_used[BlackoilPhases::Vapour])
-                guideRateValue = *guideRateValue - injRES[pu.phase_pos[BlackoilPhases::Vapour]];
-            if (phase != Phase::WATER && pu.phase_used[BlackoilPhases::Aqua])
-                guideRateValue = *guideRateValue - injRES[pu.phase_pos[BlackoilPhases::Aqua]];
+            if (phase != Phase::OIL && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                guideRateValue = *guideRateValue - injRES[phase_pos];
+            }
+            if (phase != Phase::GAS && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                guideRateValue = *guideRateValue - injRES[phase_pos];
+            }
+            if (phase != Phase::WATER && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                guideRateValue = *guideRateValue - injRES[phase_pos];
+            }
 
             guideRateValue = std::max(Scalar(0.0), *guideRateValue);
             break;
@@ -411,7 +416,6 @@ updateGroupTargetReduction(const Group& group,
                            const Schedule& schedule,
                            const int reportStepIdx,
                            const bool isInjector,
-                           const PhaseUsage& pu,
                            const GuideRate& guide_rate,
                            const WellState<FluidSystem, Indices>& wellState,
                            const SummaryState& summaryState,
@@ -427,7 +431,6 @@ updateGroupTargetReduction(const Group& group,
                                    schedule,
                                    reportStepIdx,
                                    isInjector,
-                                   pu,
                                    guide_rate,
                                    wellState,
                                    summaryState,
@@ -444,18 +447,18 @@ updateGroupTargetReduction(const Group& group,
                 int phase_pos = -1;
                 switch (phase) {
                 case Phase::GAS:
-                    if (pu.phase_used[BlackoilPhases::Vapour]) {
-                        phase_pos = pu.phase_pos[BlackoilPhases::Vapour];
+                    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                        phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
                     }
                     break;
                 case Phase::OIL:
-                    if (pu.phase_used[BlackoilPhases::Liquid]) {
-                        phase_pos = pu.phase_pos[BlackoilPhases::Liquid];
+                    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                        phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
                     }
                     break;
                 case Phase::WATER:
-                    if (pu.phase_used[BlackoilPhases::Aqua]) {
-                        phase_pos = pu.phase_pos[BlackoilPhases::Aqua];
+                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                        phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
                     }
                     break;
                 default:
@@ -791,7 +794,6 @@ void WellGroupHelpers<FluidSystem, Indices>::
 updateREINForGroups(const Group& group,
                     const Schedule& schedule,
                     const int reportStepIdx,
-                    const PhaseUsage& pu,
                     const SummaryState& st,
                     const WellState<FluidSystem, Indices>& wellState,
                     GroupState<Scalar>& group_state,
@@ -801,7 +803,7 @@ updateREINForGroups(const Group& group,
     const int np = wellState.numPhases();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-        updateREINForGroups(groupTmp, schedule, reportStepIdx, pu, st, wellState, group_state, sum_rank);
+        updateREINForGroups(groupTmp, schedule, reportStepIdx, st, wellState, group_state, sum_rank);
     }
 
     std::vector<Scalar> rein(np, 0.0);
@@ -811,10 +813,11 @@ updateREINForGroups(const Group& group,
 
     // add import rate and subtract consumption rate for group for gas
     if (sum_rank) {
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const auto& [consumption_rate, import_rate] = group_state.gconsump_rates(group.name());
-            rein[pu.phase_pos[BlackoilPhases::Vapour]] += import_rate;
-            rein[pu.phase_pos[BlackoilPhases::Vapour]] -= consumption_rate;
+            const auto ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            rein[ig] += import_rate;
+            rein[ig] -= consumption_rate;
         }
     }
 
@@ -1162,8 +1165,7 @@ getGuideRateInj(const std::string& name,
                 const int reportStepIdx,
                 const GuideRate* guideRate,
                 const GuideRateModel::Target target,
-                const Phase& injectionPhase,
-                const PhaseUsage& pu)
+                const Phase& injectionPhase)
 {
     if (schedule.hasWell(name, reportStepIdx)) {
         return getGuideRate(name, schedule, wellState, group_state,
@@ -1183,7 +1185,7 @@ getGuideRateInj(const std::string& name,
         if (currentGroupControl == Group::InjectionCMode::FLD
             || currentGroupControl == Group::InjectionCMode::NONE) {
             // accumulate from sub wells/groups
-            totalGuideRate += getGuideRateInj(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, injectionPhase, pu);
+            totalGuideRate += getGuideRateInj(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, injectionPhase);
         }
     }
 
@@ -1839,12 +1841,11 @@ setRegionAveragePressureCalculator(const Group& group,
                                    const Schedule& schedule,
                                    const int reportStepIdx,
                                    const FieldPropsManager& fp,
-                                   const PhaseUsage& pu,
                                    std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regionalAveragePressureCalculator)
 {
     for (const std::string& groupName : group.groups()) {
         setRegionAveragePressureCalculator( schedule.getGroup(groupName, reportStepIdx), schedule,
-                                            reportStepIdx, fp, pu, regionalAveragePressureCalculator);
+                                            reportStepIdx, fp, regionalAveragePressureCalculator);
     }
     const auto& gpm = group.gpmaint();
     if (!gpm)
@@ -1857,7 +1858,7 @@ setRegionAveragePressureCalculator(const Group& group,
     if (regionalAveragePressureCalculator.count(reg->first) == 0) {
         const std::string name = (reg->first.rfind("FIP", 0) == 0) ? reg->first : "FIP" + reg->first;
         const auto& fipnum = fp.get_int(name);
-        regionalAveragePressureCalculator[reg->first] = std::make_unique<AverageRegionalPressureType>(pu,fipnum);
+        regionalAveragePressureCalculator[reg->first] = std::make_unique<AverageRegionalPressureType>(fipnum);
     }
 }
 
@@ -1866,7 +1867,6 @@ void WellGroupHelpers<FluidSystem, Indices>::
 updateGuideRates(const Group& group,
                  const Schedule& schedule,
                  const SummaryState& summary_state,
-                 const PhaseUsage& pu,
                  const int report_step,
                  const double sim_time,
                  WellState<FluidSystem, Indices>& well_state,
@@ -1878,16 +1878,15 @@ updateGuideRates(const Group& group,
 {
     OPM_TIMEFUNCTION();
     guide_rate->updateGuideRateExpiration(sim_time, report_step);
-    updateGuideRateForProductionGroups(group, schedule, pu, report_step, sim_time, well_state, group_state, comm, guide_rate, pot);
-    updateGuideRatesForInjectionGroups(group, schedule, summary_state, pu, report_step, well_state, group_state, guide_rate, deferred_logger);
-    updateGuideRatesForWells(schedule, pu, report_step, sim_time, well_state, comm, guide_rate);
+    updateGuideRateForProductionGroups(group, schedule, report_step, sim_time, well_state, group_state, comm, guide_rate, pot);
+    updateGuideRatesForInjectionGroups(group, schedule, summary_state, report_step, well_state, group_state, guide_rate, deferred_logger);
+    updateGuideRatesForWells(schedule, report_step, sim_time, well_state, comm, guide_rate);
 }
 
 template<typename FluidSystem, typename Indices>
 void WellGroupHelpers<FluidSystem, Indices>::
 updateGuideRateForProductionGroups(const Group& group,
                                    const Schedule& schedule,
-                                   const PhaseUsage& pu,
                                    const int reportStepIdx,
                                    const double& simTime,
                                    WellState<FluidSystem, Indices>& wellState,
@@ -1897,13 +1896,13 @@ updateGuideRateForProductionGroups(const Group& group,
                                    std::vector<Scalar>& pot)
 {
     OPM_TIMEFUNCTION();
-    const int np = pu.num_phases;
+    const int np = Indices::numPhases;
     for (const std::string& groupName : group.groups()) {
         std::vector<Scalar> thisPot(np, 0.0);
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
 
         // Note that group effiency factors for groupTmp are applied in updateGuideRateForGroups
-        updateGuideRateForProductionGroups(groupTmp, schedule, pu, reportStepIdx, simTime, wellState, group_state, comm, guideRate, thisPot);
+        updateGuideRateForProductionGroups(groupTmp, schedule, reportStepIdx, simTime, wellState, group_state, comm, guideRate, thisPot);
 
         // accumulate group contribution from sub group unconditionally
         const auto currentGroupControl = group_state.production_control(groupName);
@@ -1947,14 +1946,14 @@ updateGuideRateForProductionGroups(const Group& group,
 
     std::array<Scalar,3> potentials{};
     auto& [oilPot, gasPot, waterPot] = potentials;
-    if (pu.phase_used[BlackoilPhases::Liquid])
-        oilPot = pot[pu.phase_pos[BlackoilPhases::Liquid]];
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
+        oilPot = pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)];
 
-    if (pu.phase_used[BlackoilPhases::Vapour])
-        gasPot = pot[pu.phase_pos[BlackoilPhases::Vapour]];
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+        gasPot = pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)];
 
-    if (pu.phase_used[BlackoilPhases::Aqua])
-        waterPot = pot[pu.phase_pos[BlackoilPhases::Aqua]];
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
+        waterPot = pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)];
 
     comm.sum(potentials.data(), potentials.size());
     const UnitSystem& unit_system = schedule.getUnits();
@@ -1967,7 +1966,6 @@ updateGuideRateForProductionGroups(const Group& group,
 template<typename FluidSystem, typename Indices>
 void WellGroupHelpers<FluidSystem, Indices>::
 updateGuideRatesForWells(const Schedule& schedule,
-                         const PhaseUsage& pu,
                          const int reportStepIdx,
                          const double& simTime,
                          const WellState<FluidSystem, Indices>& wellState,
@@ -1985,14 +1983,14 @@ updateGuideRatesForWells(const Schedule& schedule,
             // the well is found and owned
             const auto& ws = wellState.well(well_index.value());
             const auto& wpot = ws.well_potentials;
-            if (pu.phase_used[BlackoilPhases::Liquid] > 0)
-                oilpot = wpot[pu.phase_pos[BlackoilPhases::Liquid]];
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
+                oilpot = wpot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)];
 
-            if (pu.phase_used[BlackoilPhases::Vapour] > 0)
-                gaspot = wpot[pu.phase_pos[BlackoilPhases::Vapour]];
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+                gaspot = wpot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)];
 
-            if (pu.phase_used[BlackoilPhases::Aqua] > 0)
-                waterpot = wpot[pu.phase_pos[BlackoilPhases::Aqua]];
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
+                waterpot = wpot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)];
         }
         comm.sum(potentials.data(), potentials.size());
         const UnitSystem& unit_system = schedule.getUnits();
@@ -2028,7 +2026,6 @@ using AvgPMap = std::map<std::string, std::unique_ptr<AvgP<Scalar>>>;
                                                     const Schedule&,          \
                                                     const int,                \
                                                     const FieldPropsManager&, \
-                                                    const PhaseUsage&,        \
                                                     AvgPMap<T>&);
 #define INSTANTIATE_TYPE(T)                                                  \
     INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
