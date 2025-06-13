@@ -17,6 +17,9 @@
 #ifndef OPM_ABSTRACTISTLSOLVER_HEADER_INCLUDED
 #define OPM_ABSTRACTISTLSOLVER_HEADER_INCLUDED
 
+#include <opm/common/Exceptions.hpp>
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 
 namespace Opm
 {
@@ -29,16 +32,15 @@ namespace Opm
  * residuals, solving the system, and managing communication.
  *
  * \note This class is used in the ISTLSolverRuntimeOptionProxy which we
- *       where we can set the solver type at runtime, and this proxy holds a 
+ *       where we can set the solver type at runtime, and this proxy holds a
  *       pointer to an instance of this class.
  */
 template <class TypeTag>
 class AbstractISTLSolver
 {
 public:
-
 #if HAVE_MPI
-    using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
+    using CommunicationType = Dune::OwnerOverlapCopyCommunication<int, int>;
 #else
     using CommunicationType = Dune::Communication<int>;
 #endif
@@ -48,7 +50,7 @@ public:
     using Matrix = typename SparseMatrixAdapter::IstlMatrix;
 
     virtual ~AbstractISTLSolver() = default;
-    
+
     virtual void eraseMatrix() = 0;
 
     virtual void setActiveSolver(int num) = 0;
@@ -74,7 +76,27 @@ public:
 
     virtual int getSolveCount() const = 0;
 
+protected:
+    static bool checkConvergence(const Dune::InverseOperatorResult& result,
+                                 const FlowLinearSolverParameters& parameters)
+    {
+        if (!result.converged) {
+            if (result.reduction < parameters.relaxed_linear_solver_reduction_) {
+                std::stringstream ss;
+                ss << "Full linear solver tolerance not achieved. The reduction is:" << result.reduction << " after "
+                   << result.iterations << " iterations ";
+                OpmLog::warning(ss.str());
+                return true;
+            }
+        }
+        // Check for failure of linear solver.
+        if (!parameters.ignoreConvergenceFailure_ && !result.converged) {
+            const std::string msg("Convergence failure for linear solver.");
+            OPM_THROW_NOLOG(NumericalProblem, msg);
+        }
 
+        return result.converged;
+    }
 };
 } // namespace Opm
 
