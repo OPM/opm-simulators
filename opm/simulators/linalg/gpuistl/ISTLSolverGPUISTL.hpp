@@ -36,7 +36,18 @@
 namespace Opm::gpuistl
 {
 
-
+/**
+* \brief ISTL solver for GPU using the GPU ISTL backend.
+*
+* This class implements the AbstractISTLSolver interface and provides
+* methods to prepare the solver, set and get residuals, solve the system,
+* and manage communication.
+*
+* \tparam TypeTag The type tag for the properties used in this solver.
+*
+* \note This solver takes CPU matrices and vectors, but uses GPU
+*       matrices and vectors internally for computations.
+*/
 template <class TypeTag>
 class ISTLSolverGPUISTL : public AbstractISTLSolver<TypeTag>
 {
@@ -90,13 +101,22 @@ public:
     {
     }
 
-
-
+    /**
+     * \copydoc AbstractISTLSolver::eraseMatrix
+     * 
+     * \note This method will not do anything.
+     */
     void eraseMatrix() override
     {
         // Nothing, this is the same as the ISTLSolver
     }
 
+    /**
+     * \copydoc AbstractISTLSolver::setActiveSolver
+     * 
+     * \note This method will throw an exception if the solver number is not 0,
+     *       as only one solver is available for the GPU backend.
+     */
     void setActiveSolver(int num) override
     {
         if (num != 0) {
@@ -104,16 +124,39 @@ public:
         }
     }
 
+    /**
+     * \copydoc AbstractISTLSolver::numAvailableSolvers
+     * 
+     * \note This method always returns 1, as only one solver is available for the GPU backend.
+     */
     int numAvailableSolvers() const override
     {
         return 1;
     }
 
+    /**
+     * \brief Prepare the solver with the given matrix and right-hand side vector.
+     *
+     * This method initializes the solver with the provided matrix and right-hand side vector.
+     * It updates the internal GPU matrix and right-hand side vector.
+     *
+     * \param M The matrix to be used in the solver.
+     * \param b The right-hand side vector.
+     */
     void prepare(const SparseMatrixAdapter& M, Vector& b) override
     {
         prepare(M.istlMatrix(), b);
     }
 
+    /**
+     * \brief Prepare the solver with the given matrix and right-hand side vector.
+     *
+     * This method initializes the solver with the provided matrix and right-hand side vector.
+     * It updates the internal GPU matrix and right-hand side vector.
+     *
+     * \param M The matrix to be used in the solver.
+     * \param b The right-hand side vector.
+     */
     void prepare(const Matrix& M, Vector& b) override
     {
         try {
@@ -124,11 +167,24 @@ public:
                                                 "Check for errors related to missing nodes.");
     }
 
+    /** 
+     * \copydoc AbstractISTLSolver::setResidual
+     *
+     * \note Unused in this implementation.
+     */
     void setResidual(Vector&) override
     {
         // Should be handled in prepare() instead.
     }
 
+    /**
+     * \brief Get the residual vector.
+     *
+     * This method retrieves the current residual vector from the solver.
+     * It copies the data from the internal GPU vector to the provided vector.
+     *
+     * \param b The vector to store the residual.
+     */
     void getResidual(Vector& b) const override
     {
         if (!m_rhs) {
@@ -137,11 +193,27 @@ public:
         m_rhs->copyToHost(b);
     }
 
+    /**
+     * \copydoc AbstractISTLSolver::setMatrix
+     * 
+     * \note This method does not set the matrix directly, as it should be handled in prepare().
+     */
     void setMatrix(const SparseMatrixAdapter&) override
     {
         // Should be handled in prepare() instead.
     }
 
+    /**
+     * \brief Solve the system of linear equations Ax = b.
+     *
+     * This method solves the linear system represented by the matrix A and the right-hand side vector b,
+     * storing the solution in vector x.
+     *
+     * \param x The vector to store the solution.
+     * \return true if the solver converged, false otherwise.
+     *
+     * Before this function is called, prepare() should have been called with a valid matrix and right-hand side vector.
+     */
     bool solve(Vector& x) override
     {
         // TODO: Write matrix to disk if needed
@@ -172,17 +244,28 @@ public:
         return checkConvergence(result);
     }
 
+    /**
+     * \copydoc AbstractISTLSolver::post
+     *
+     * Returns the actual number of iterations used in the last solve.
+     */
     int iterations() const override
     {
         return m_lastSeenIterations;
     }
 
+    /**
+     * \copydoc AbstractISTLSolver::comm
+     */
     const CommunicationType* comm() const override
     {
         // TODO: Implement this if needed
         return nullptr;
     }
 
+    /**
+     * \copydoc AbstractISTLSolver::getSolveCount
+     */
     int getSolveCount() const override
     {
         return m_solveCount;
