@@ -563,7 +563,7 @@ namespace Opm
                                   const double dt,
                                   const Well::InjectionControls& inj_controls,
                                   const Well::ProductionControls& prod_controls,
-                                  WellState<Scalar>& well_state,
+                                  WellStateType& well_state,
                                   const GroupState<Scalar>& group_state,
                                   DeferredLogger& deferred_logger)
     {

@@ -31,8 +31,6 @@
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -57,9 +55,9 @@ class GasLiftSingleWellGeneric : public GasLiftCommon<FluidSystem, Indices>
 protected:
     using Scalar = typename FluidSystem::Scalar;
 
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
     static constexpr int NUM_PHASES = 3;
     static constexpr Scalar ALQ_EPSILON = 1e-8;
 

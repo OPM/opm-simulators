@@ -134,8 +134,8 @@ template<typename FluidSystem, typename Indices>
 bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 GOR()
 {
-    auto oil_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Liquid];
-    auto gas_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Vapour];
+    auto oil_phase_idx = this->phase_idx_reverse_map_[FluidSystem::oilPhaseIdx];
+    auto gas_phase_idx = this->phase_idx_reverse_map_[FluidSystem::gasPhaseIdx];
     auto oil_rate = this->production_rates_[oil_phase_idx];
     auto gas_rate = this->production_rates_[gas_phase_idx];
     Scalar gor;
@@ -168,7 +168,7 @@ template<typename FluidSystem, typename Indices>
 bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 minGasRate()
 {
-    auto phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Vapour];
+    auto phase_idx = this->phase_idx_reverse_map_[FluidSystem::gasPhaseIdx];
     auto gas_production_rate = this->production_rates_[phase_idx];
     if (this->debug_) {
         const std::string msg = fmt::format(
@@ -195,7 +195,7 @@ template<typename FluidSystem, typename Indices>
 bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 minOilRate()
 {
-    auto phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Liquid];
+    auto phase_idx = this->phase_idx_reverse_map_[FluidSystem::oilPhaseIdx];
     auto oil_production_rate = this->production_rates_[phase_idx];
     if (this->debug_) {
         const std::string msg = fmt::format(
@@ -236,8 +236,8 @@ template<typename FluidSystem, typename Indices>
 bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 waterCut()
 {
-    auto oil_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Liquid];
-    auto water_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Aqua];
+    auto oil_phase_idx = this->phase_idx_reverse_map_[FluidSystem::oilPhaseIdx];
+    auto water_phase_idx = this->phase_idx_reverse_map_[FluidSystem::waterPhaseIdx];
     auto oil_rate = this->production_rates_[oil_phase_idx];
     auto water_rate = this->production_rates_[water_phase_idx];
     auto liquid_rate = oil_rate + water_rate;
@@ -276,8 +276,8 @@ template<typename FluidSystem, typename Indices>
 bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 WGR()
 {
-    auto water_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Aqua];
-    auto gas_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Vapour];
+    auto water_phase_idx = this->phase_idx_reverse_map_[FluidSystem::waterPhaseIdx];
+    auto gas_phase_idx = this->phase_idx_reverse_map_[FluidSystem::gasPhaseIdx];
     auto water_rate = this->production_rates_[water_phase_idx];
     auto gas_rate = this->production_rates_[gas_phase_idx];
     Scalar wgr;
