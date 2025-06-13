@@ -121,7 +121,6 @@ public:
             updateGridView_();
         }
     }
-
 protected:
     // this method should be called after the grid has been allocated
     void finalizeInit_()
