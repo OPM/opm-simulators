@@ -364,7 +364,6 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       const std::vector<Scalar>& resv_coeff,
                                       Scalar efficiencyFactor,
                                       const int reportStepIdx,
-                                      const PhaseUsage& pu,
                                       const GuideRate* guideRate,
                                       DeferredLogger& deferred_logger)
 {
@@ -379,7 +378,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
             efficiencyFactor *= group.getGroupEfficiencyFactor();
             return getAutoChokeGroupProductionTargetRate(name, parent, well_state, group_state,
                                                 schedule, summaryState,
-                                                resv_coeff, efficiencyFactor, reportStepIdx, pu,
+                                                resv_coeff, efficiencyFactor, reportStepIdx,
                                                 guideRate, deferred_logger);
         }
     }

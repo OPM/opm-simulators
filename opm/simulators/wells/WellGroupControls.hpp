@@ -38,7 +38,6 @@ class Group;
 template<class Scalar> class GroupState;
 enum class InjectorType;
 using RegionId = int;
-struct PhaseUsage;
 class Schedule;
 class SummaryState;
 template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
@@ -111,7 +110,6 @@ public:
                                                         const std::vector<Scalar>& resv_coeff,
                                                         Scalar efficiencyFactor,
                                                         const int reportStepIdx,
-                                                        const PhaseUsage& pu,
                                                         const GuideRate* guideRate,
                                                         DeferredLogger& deferred_logger);
 
