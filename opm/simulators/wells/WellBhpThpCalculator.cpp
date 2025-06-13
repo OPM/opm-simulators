@@ -35,7 +35,6 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -120,13 +119,9 @@ calculateThpFromBhp(const std::vector<Scalar>& rates,
 {
     assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
 
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
-
-    const Scalar aqua = rates[Water];
-    const Scalar liquid = rates[Oil];
-    const Scalar vapour = rates[Gas];
+    const Scalar aqua = rates[FluidSystem::waterPhaseIdx];
+    const Scalar liquid = rates[FluidSystem::oilPhaseIdx];
+    const Scalar vapour = rates[FluidSystem::gasPhaseIdx];
 
     // pick the density in the top layer
     Scalar thp = 0.0;
@@ -225,9 +220,9 @@ computeBhpAtThpLimitProd(const std::function<std::vector<Scalar>(const Scalar)>&
     // the one corresponding to the lowest bhp (and therefore
     // highest rate) should be returned.
 
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
 
     // Make the fbhp() function.
     const auto& controls = well_.wellEcl().productionControls(summary_state);
@@ -364,9 +359,9 @@ calculateBhpFromThp(const WellState<FluidSystem, Indices>& well_state,
 
     assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
 
-    static constexpr int Gas = BlackoilPhases::Vapour;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Water = BlackoilPhases::Aqua;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
 
     const EvalWell aqua = rates[Water];
     const EvalWell liquid = rates[Oil];
@@ -495,9 +490,9 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
     // in which to solve for the solution we want (with highest
     // flow in case of 2 solutions).
 
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
 
     // Make the fbhp() function.
     const auto& controls = well_.wellEcl().injectionControls(summary_state);
@@ -906,9 +901,9 @@ isStableSolution(const WellState<FluidSystem, Indices>& well_state,
     assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
     assert(well_.isProducer()); // only valid for producers 
 
-    static constexpr int Gas = BlackoilPhases::Vapour;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Water = BlackoilPhases::Aqua;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
 
     const Scalar aqua = rates[Water];
     const Scalar liquid = rates[Oil];
@@ -947,9 +942,9 @@ estimateStableBhp(const WellState<FluidSystem, Indices>& well_state,
     const Scalar thp = well_.getTHPConstraint(summaryState);
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
 
-    const Scalar aqua = rates[BlackoilPhases::Aqua];
-    const Scalar liquid = rates[BlackoilPhases::Liquid];
-    const Scalar vapour = rates[BlackoilPhases::Vapour];
+    const Scalar aqua = rates[FluidSystem::waterPhaseIdx];
+    const Scalar liquid = rates[FluidSystem::oilPhaseIdx];
+    const Scalar vapour = rates[FluidSystem::gasPhaseIdx];
     Scalar flo = detail::getFlo(table, aqua, liquid, vapour);
     Scalar wfr, gfr;
     if (well_.useVfpExplicit() || -flo < table.getFloAxis().front()) {
