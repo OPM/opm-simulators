@@ -35,8 +35,6 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 namespace Opm
 {
 

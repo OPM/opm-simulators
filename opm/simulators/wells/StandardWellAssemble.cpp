@@ -36,8 +36,6 @@
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 namespace Opm {
 
 //! \brief Class administering assembler access to equation system.
@@ -98,9 +96,9 @@ assembleControlEq(const WellState<FluidSystem, Indices>& well_state,
                   const bool stopped_or_zero_target,
                   DeferredLogger& deferred_logger) const
 {
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
     EvalWell control_eq(primary_variables.numWellEq() + Indices::numEq, 0.0);
 
     const auto& well = well_.wellEcl();

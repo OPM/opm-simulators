@@ -38,7 +38,6 @@
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/ComponentName.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModel.hpp>

@@ -41,8 +41,6 @@
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <fmt/format.h>
 
 #include <array>
