@@ -188,12 +188,12 @@ namespace Dune
         } else if (solver_type == "gmres") {
             int restart = prm.get<int>("restart", 15);
             linsolver_ = std::make_shared<Dune::RestartedGMResSolver<VectorType>>(*linearoperator_for_solver_,
-                                                                            *scalarproduct_,
-                                                                            *preconditioner_,
-                                                                            tol,// desired residual reduction factor
-                                                                            restart,
-                                                                            maxiter, // maximum number of iterations
-                                                                            verbosity);
+                                                                                  *scalarproduct_,
+                                                                                  *preconditioner_,
+                                                                                  tol,// desired residual reduction factor
+                                                                                  restart,
+                                                                                  maxiter, // maximum number of iterations
+                                                                                  verbosity);
          
         } else {
             if constexpr (!Opm::is_gpu_operator_v<Operator>) {
@@ -232,7 +232,7 @@ namespace Dune
         #endif
         if (!linsolver_) {
             OPM_THROW(std::invalid_argument,
-                    "Properties: Solver " + solver_type + " not known.");
+                      "Properties: Solver " + solver_type + " not known.");
         }
     }
     
