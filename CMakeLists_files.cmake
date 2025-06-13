@@ -985,6 +985,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/istlsparsematrixadapter.hh
   opm/simulators/linalg/linalgparameters.hh
   opm/simulators/linalg/linalgproperties.hh
+  opm/simulators/linalg/LinearSolverAcceleratorType.hpp
   opm/simulators/linalg/linearsolverreport.hh
   opm/simulators/linalg/matrixblock.hh
   opm/simulators/linalg/MatrixMarketSpecializations.hpp
