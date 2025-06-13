@@ -23,11 +23,11 @@
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
 #if USE_HIP
-#include <opm/simulators/linalg/gpuistl_hip/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuVector.hpp>
 #else
-#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #endif
 
 #include <opm/simulators/linalg/gpuistl/detail/FlexibleSolverWrapper.hpp>
@@ -72,16 +72,15 @@ public:
     ISTLSolverGPUISTL(const Simulator& simulator,
                       const FlowLinearSolverParameters& parameters,
                       bool forceSerial = false)
-        : m_parameters(parameters), m_forceSerial(forceSerial)
+        : m_parameters(parameters)
+        , m_forceSerial(forceSerial)
     {
         m_parameters.init(simulator.vanguard().eclState().getSimulationConfig().useCPR());
         m_propertyTree = setupPropertyTree(m_parameters,
                                            Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
                                            Parameters::IsSet<Parameters::LinearSolverReduction>());
 
-        Opm::detail::printLinearSolverParameters(m_parameters,
-                                                 m_propertyTree, 
-                                                 simulator.gridView().comm());
+        Opm::detail::printLinearSolverParameters(m_parameters, m_propertyTree, simulator.gridView().comm());
     }
 
     /// Construct a system solver.
@@ -154,20 +153,20 @@ public:
             OPM_THROW(std::runtime_error, "m_rhs not initialized, prepare(matrix, rhs); needs to be called");
         }
         if (!m_gpuSolver) {
-            OPM_THROW(std::runtime_error, "m_gpuFlexibleSolver not initialized, prepare(matrix, rhs); needs to be called");
+            OPM_THROW(std::runtime_error,
+                      "m_gpuFlexibleSolver not initialized, prepare(matrix, rhs); needs to be called");
         }
-    
+
         if (!m_x) {
             m_x = std::make_unique<GpuVector<real_type>>(x);
         } else {
             m_x->copyFromHost(x);
         }
         m_gpuSolver->apply(*m_x, *m_rhs, result);
-    
+
         m_x->copyToHost(x);
 
         ++m_solveCount;
-
 
         m_lastSeenIterations = result.iterations;
         return checkConvergence(result);
@@ -192,7 +191,7 @@ public:
 private:
     bool checkConvergence(const Dune::InverseOperatorResult& result) const
     {
-       if (!result.converged) {
+        if (!result.converged) {
             if (result.reduction < m_parameters.relaxed_linear_solver_reduction_) {
                 std::stringstream ss;
                 ss << "Full linear solver tolerance not achieved. The reduction is:" << result.reduction << " after "
@@ -210,7 +209,8 @@ private:
         return result.converged;
     }
 
-    void updateMatrix(const Matrix& M) {
+    void updateMatrix(const Matrix& M)
+    {
         if (!m_matrix) {
 
             m_matrix.reset(new auto(GPUMatrix::fromMatrix(M)));
@@ -221,11 +221,12 @@ private:
         } else {
             m_matrix->updateNonzeroValues(M);
         }
-    
+
         m_gpuSolver->update();
     }
 
-    void updateRhs(const Vector& b) {
+    void updateRhs(const Vector& b)
+    {
         if (!m_rhs) {
             m_rhs = std::make_unique<GPUVector>(b);
         } else {
