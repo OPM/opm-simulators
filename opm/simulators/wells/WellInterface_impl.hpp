@@ -381,7 +381,6 @@ namespace Opm
                 /* const */ WellStateType& well_state,
                 const GroupState<Scalar>& group_state,
                 WellTestState& well_test_state,
-                const PhaseUsage& phase_usage,
                 GLiftEclWells& ecl_well_map,
                 std::map<std::string, double>& open_times,
                 DeferredLogger& deferred_logger)
@@ -413,8 +412,7 @@ namespace Opm
                 gliftBeginTimeStepWellTestUpdateALQ(simulator, 
                                                     well_state_copy, 
                                                     group_state,
-                                                    phase_usage, 
-                                                    ecl_well_map, 
+                                                    ecl_well_map,
                                                     deferred_logger);
             }
         }
@@ -1015,7 +1013,6 @@ namespace Opm
     gliftBeginTimeStepWellTestUpdateALQ(const Simulator& simulator,
                                         WellStateType& well_state,
                                         const GroupState<Scalar>& group_state,
-                                        const PhaseUsage& phase_usage,
                                         GLiftEclWells& ecl_well_map,
                                         DeferredLogger& deferred_logger)
     {
@@ -1044,7 +1041,6 @@ namespace Opm
             initializeGliftWellTest_<GasLiftSingleWell>(simulator,
                                                         well_state,
                                                         group_state,
-                                                        phase_usage,
                                                         ecl_well_map,
                                                         deferred_logger);
         auto [wtest_alq, success] = glift->wellTestALQ();
@@ -2079,7 +2075,6 @@ namespace Opm
     initializeGliftWellTest_(const Simulator& simulator,
                              WellStateType& well_state,
                              const GroupState<Scalar>& group_state,
-                             const PhaseUsage& phase_usage,
                              GLiftEclWells& ecl_well_map,
                              DeferredLogger& deferred_logger)
     {
@@ -2092,7 +2087,6 @@ namespace Opm
                 simulator.vanguard().summaryState(),
                 simulator.episodeIndex(),
                 simulator.model().newtonMethod().numIterations(),
-                phase_usage,
                 deferred_logger,
                 well_state,
                 group_state,
