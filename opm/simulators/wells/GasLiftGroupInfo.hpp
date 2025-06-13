@@ -22,8 +22,6 @@
 
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <map>
 #include <optional>
 #include <string>
@@ -62,9 +60,9 @@ protected:
 
     // TODO: same definition with WellInterface, and
     //   WellState eventually they should go to a common header file.
-    static const int Water = BlackoilPhases::Aqua;
-    static const int Oil = BlackoilPhases::Liquid;
-    static const int Gas = BlackoilPhases::Vapour;
+    static const int Water = FluidSystem::waterPhaseIdx;
+    static const int Oil = FluidSystem::oilPhaseIdx;
+    static const int Gas = FluidSystem::gasPhaseIdx;
 
 public:
     enum class Rate {oil, gas, water, liquid};
