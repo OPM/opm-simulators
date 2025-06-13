@@ -422,13 +422,13 @@ protected:
                               const GroupState<Scalar>& group_state,
                               DeferredLogger& deferred_logger);
 
-    bool solveWellWithTHPConstraint(const Simulator& simulator,
-                                    const double dt,
-                                    const Well::InjectionControls& inj_controls,
-                                    const Well::ProductionControls& prod_controls,
-                                    WellState<Scalar>& well_state,
-                                    const GroupState<Scalar>& group_state,
-                                    DeferredLogger& deferred_logger);
+    bool solveWellWithOperabilityCheck(const Simulator& simulator,
+                                       const double dt,
+                                       const Well::InjectionControls& inj_controls,
+                                       const Well::ProductionControls& prod_controls,
+                                       WellState<Scalar>& well_state,
+                                       const GroupState<Scalar>& group_state,
+                                       DeferredLogger& deferred_logger);
 
     std::optional<Scalar>
     estimateOperableBhp(const Simulator& ebos_simulator,
