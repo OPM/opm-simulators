@@ -145,8 +145,8 @@ private:
     template <class... Args>
     void createSolver(const Simulator& simulator, Args&&... args)
     {
-        const auto backend = Parameters::Get<Parameters::LinearSolverAccelerator>();
-        if (backend == "cpu") {
+        const auto backend = Parameters::linearSolverAcceleratorTypeFromCLI();
+        if (backend == Parameters::LinearSolverAcceleratorType::CPU) {
         // Note that for now we keep the old behavior of using the bridge solver if it is available.
 #if COMPILE_GPU_BRIDGE
             istlSolver_ = std::make_unique<ISTLSolverGpuBridge<TypeTag>>(simulator, std::forward<Args>(args)...);
@@ -155,12 +155,14 @@ private:
 #endif
         } 
 #if HAVE_CUDA
-        else if (backend == "gpu") {
+        else if (backend == Parameters::LinearSolverAcceleratorType::CPU) {
             istlSolver_ = std::make_unique<gpuistl::ISTLSolverGPUISTL<TypeTag>>(simulator, std::forward<Args>(args)...);
         } 
 #endif
         else {
-            OPM_THROW(std::invalid_argument, "Unknown backend: " + backend);
+            // If we reach here, it means the backend is not supported. This could be because we have added a third backend
+            // that we need to handle. A user error would be handled in the linearSolverAcceleratorTypeFromString function called above. 
+            OPM_THROW(std::invalid_argument, fmt::format("Unknown backend: {}", Parameters::toString(backend)));
         }
     }
 };

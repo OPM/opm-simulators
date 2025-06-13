@@ -70,9 +70,9 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
     gpu_device_id_ = Parameters::Get<Parameters::GpuDeviceId>();
     opencl_platform_id_ = Parameters::Get<Parameters::OpenclPlatformId>();
     opencl_ilu_parallel_ = Parameters::Get<Parameters::OpenclIluParallel>();
-    linear_solver_accelerator_ = Parameters::Get<Parameters::LinearSolverAccelerator>();
+    linear_solver_accelerator_ = Parameters::linearSolverAcceleratorTypeFromCLI();
 
-    if (linear_solver_accelerator_ == "gpu") {
+    if (linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU) {
         if (!Parameters::IsSet<Parameters::LinearSolver>()) {
             // TODO: Once CPRW/CPR is implemented for GPU, we can remove this
             // and use the same default as for CPU
@@ -190,7 +190,7 @@ void FlowLinearSolverParameters::reset()
     gpu_device_id_            = 0;
     opencl_platform_id_       = 0;
     opencl_ilu_parallel_      = true;
-    linear_solver_accelerator_ = "cpu";
+    linear_solver_accelerator_ = Parameters::LinearSolverAcceleratorType::CPU;
 }
 
 } // namespace Opm
