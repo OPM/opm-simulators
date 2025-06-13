@@ -290,7 +290,6 @@ public:
                      /* const */ WellStateType& well_state,
                      const GroupState<Scalar>& group_state,
                      WellTestState& welltest_state,
-                     const PhaseUsage& phase_usage,
                      GLiftEclWells& ecl_well_map,
                      std::map<std::string, double>& open_times,
                      DeferredLogger& deferred_logger);
@@ -302,7 +301,6 @@ public:
     void gliftBeginTimeStepWellTestUpdateALQ(const Simulator& simulator,
                                              WellStateType& well_state,
                                              const GroupState<Scalar>& group_state,
-                                             const PhaseUsage& phase_usage,
                                              GLiftEclWells& ecl_well_map,
                                              DeferredLogger& deferred_logger);
 
@@ -459,7 +457,6 @@ protected:
     std::unique_ptr<GasLiftSingleWell> initializeGliftWellTest_(const Simulator& simulator,
                                                                 WellStateType& well_state,
                                                                 const GroupState<Scalar>& group_state,
-                                                                const PhaseUsage& phase_usage,
                                                                 GLiftEclWells& ecl_well_map,
                                                                 DeferredLogger& deferred_logger);
 
