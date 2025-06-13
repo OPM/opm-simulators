@@ -36,7 +36,6 @@
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <algorithm>
@@ -71,9 +70,6 @@ public:
         | ScheduleEvents::INJECTION_UPDATE;
 
     // TODO: same definition with WellInterface, eventually they should go to a common header file.
-//    static const int Water = BlackoilPhases::Aqua;
-//    static const int Oil = BlackoilPhases::Liquid;
-//    static const int Gas = BlackoilPhases::Vapour;
 
     // Only usable for testing purposes
     explicit WellState(const ParallelWellInfo<Scalar>& pinfo);

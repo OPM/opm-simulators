@@ -20,8 +20,6 @@
 #ifndef OPM_GROUP_ECONOMIC_LIMITS_CHECKER_HEADER_INCLUDED
 #define OPM_GROUP_ECONOMIC_LIMITS_CHECKER_HEADER_INCLUDED
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
@@ -89,12 +87,12 @@ private:
     GroupEconProductionLimits::GEconGroupProp gecon_props_;
     bool debug_ = true;
     std::array<Scalar,NUM_PHASES> production_rates_;
-    std::map<int, BlackoilPhases::PhaseIndex> phase_idx_map_ = {
-        {0, BlackoilPhases::Liquid},
-        {1, BlackoilPhases::Vapour},
-        {2, BlackoilPhases::Aqua}
+    std::map<int, unsigned> phase_idx_map_ = {
+        {0, FluidSystem::oilPhaseIdx},
+        {1, FluidSystem::gasPhaseIdx},
+        {2, FluidSystem::waterPhaseIdx}
     };
-    std::map<BlackoilPhases::PhaseIndex, int> phase_idx_reverse_map_;
+    std::map<unsigned, int> phase_idx_reverse_map_;
     std::string message_;
 };
 

@@ -24,8 +24,6 @@
 #ifndef OPM_WELL_ASSEMBLE_HEADER_INCLUDED
 #define OPM_WELL_ASSEMBLE_HEADER_INCLUDED
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
@@ -46,9 +44,9 @@ struct WellProductionControls;
 
 template<typename FluidSystem, typename Indices>
 class WellAssemble {
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
     using Scalar = typename FluidSystem::Scalar;
 
 public:

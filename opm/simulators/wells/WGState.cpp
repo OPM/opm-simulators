@@ -29,8 +29,6 @@
 
 #include <opm/simulators/wells/WGState.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 namespace Opm {
 
 template<typename FluidSystem, typename Indices>

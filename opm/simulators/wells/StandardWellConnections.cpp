@@ -31,7 +31,6 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/ParallelWellInfo.hpp>

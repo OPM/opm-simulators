@@ -26,7 +26,6 @@
 
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 

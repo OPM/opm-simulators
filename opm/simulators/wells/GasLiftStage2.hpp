@@ -22,8 +22,6 @@
 
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <map>
 #include <memory>
 #include <optional>
@@ -56,9 +54,9 @@ class GasLiftStage2 : public GasLiftCommon<FluidSystem, Indices>
     using GradMap = std::map<std::string, GradInfo>;
     using MessageType = typename GasLiftCommon<FluidSystem, Indices>::MessageType;
 
-    static const int Water = BlackoilPhases::Aqua;
-    static const int Oil = BlackoilPhases::Liquid;
-    static const int Gas = BlackoilPhases::Vapour;
+    static const int Water = FluidSystem::waterPhaseIdx;
+    static const int Oil = FluidSystem::oilPhaseIdx;
+    static const int Gas = FluidSystem::gasPhaseIdx;
 
 public:
     GasLiftStage2(const int report_step_idx,
