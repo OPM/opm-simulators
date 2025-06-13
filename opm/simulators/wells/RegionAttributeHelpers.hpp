@@ -23,8 +23,6 @@
 #ifndef OPM_REGIONATTRIBUTEHELPERS_HPP_HEADER_INCLUDED
 #define OPM_REGIONATTRIBUTEHELPERS_HPP_HEADER_INCLUDED
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <opm/grid/utility/RegionMapping.hpp>
 
 #include <dune/grid/common/gridenums.hh>
@@ -292,118 +290,6 @@ namespace Opm {
                     return *i->second;
                 }
             };
-
-            /**
-             * Convenience functions for querying presence/absence of
-             * active phases.
-             */
-            namespace PhaseUsed {
-                /**
-                 * Active water predicate.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Whether or not water is an active phase.
-                 */
-                inline bool
-                water(const PhaseUsage& pu)
-                {
-                    return pu.phase_used[ BlackoilPhases::Aqua ] != 0;
-                }
-
-                /**
-                 * Active oil predicate.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Whether or not oil is an active phase.
-                 */
-                inline bool
-                oil(const PhaseUsage& pu)
-                {
-                    return pu.phase_used[ BlackoilPhases::Liquid ] != 0;
-                }
-
-                /**
-                 * Active gas predicate.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Whether or not gas is an active phase.
-                 */
-                inline bool
-                gas(const PhaseUsage& pu)
-                {
-                    return pu.phase_used[ BlackoilPhases::Vapour ] != 0;
-                }
-            } // namespace PhaseUsed
-
-            /**
-             * Convenience functions for querying numerical IDs
-             * ("positions") of active phases.
-             */
-            namespace PhasePos {
-                /**
-                 * Numerical ID of active water phase.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Non-negative index/position of water if
-                 * active, -1 if not.
-                 */
-                inline int
-                water(const PhaseUsage& pu)
-                {
-                    int p = -1;
-
-                    if (PhaseUsed::water(pu)) {
-                        p = pu.phase_pos[ BlackoilPhases::Aqua ];
-                    }
-
-                    return p;
-                }
-
-                /**
-                 * Numerical ID of active oil phase.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Non-negative index/position of oil if
-                 * active, -1 if not.
-                 */
-                inline int
-                oil(const PhaseUsage& pu)
-                {
-                    int p = -1;
-
-                    if (PhaseUsed::oil(pu)) {
-                        p = pu.phase_pos[ BlackoilPhases::Liquid ];
-                    }
-
-                    return p;
-                }
-
-                /**
-                 * Numerical ID of active gas phase.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Non-negative index/position of gas if
-                 * active, -1 if not.
-                 */
-                inline int
-                gas(const PhaseUsage& pu)
-                {
-                    int p = -1;
-
-                    if (PhaseUsed::gas(pu)) {
-                        p = pu.phase_pos[ BlackoilPhases::Vapour ];
-                    }
-
-                    return p;
-                }
-            } // namespace PhasePos
-
     } // namespace RegionAttributesHelpers
 } // namespace Opm
 

@@ -69,16 +69,15 @@
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
-    BlackoilWellModel(Simulator& simulator, const PhaseUsage& phase_usage)
+    BlackoilWellModel(Simulator& simulator)
         : WellConnectionModule(*this, simulator.gridView().comm())
-        , BlackoilWellModelGeneric<Scalar>(simulator.vanguard().schedule(),
+        , BlackoilWellModelGeneric<FluidSystem, Indices>(simulator.vanguard().schedule(),
                                            gaslift_,
                                            simulator.vanguard().summaryState(),
                                            simulator.vanguard().eclState(),
-                                           phase_usage,
                                            simulator.gridView().comm())
         , simulator_(simulator)
-        , gaslift_(this->terminal_output_, this->phase_usage_)
+        , gaslift_(this->terminal_output_)
     {
         local_num_cells_ = simulator_.gridView().size(0);
 
@@ -145,11 +144,11 @@ namespace Opm {
         );
     }
 
-    template<typename TypeTag>
-    BlackoilWellModel<TypeTag>::
-    BlackoilWellModel(Simulator& simulator) :
-        BlackoilWellModel(simulator, phaseUsageFromDeck(simulator.vanguard().eclState()))
-    {}
+    // template<typename TypeTag>
+    // BlackoilWellModel<TypeTag>::
+    // BlackoilWellModel(Simulator& simulator) :
+    //     BlackoilWellModel(simulator)
+    // {}
 
 
     template<typename TypeTag>
@@ -183,7 +182,7 @@ namespace Opm {
             const bool well_opened_this_step = this->report_step_starts_ &&
                                                events.hasEvent(wellPtr->name(),
                                                                effective_events_mask);
-            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
+            wellPtr->init(this->depth_, this->gravity_,
                           this->B_avg_, well_opened_this_step);
         }
     }
@@ -199,7 +198,7 @@ namespace Opm {
         this->report_step_start_events_ = this->schedule()[timeStepIdx].wellgroup_events();
 
         this->rateConverter_ = std::make_unique<RateConverterType>
-            (this->phase_usage_, std::vector<int>(this->local_num_cells_, 0));
+            (std::vector<int>(this->local_num_cells_, 0));
 
         {
             // WELPI scaling runs at start of report step.
@@ -221,7 +220,7 @@ namespace Opm {
             {
                 const auto& sched_state = this->schedule()[timeStepIdx];
 
-                this->vfp_properties_ = std::make_unique<VFPProperties<Scalar>>
+                this->vfp_properties_ = std::make_unique<VFPProperties<FluidSystem, Indices>>
                     (sched_state.vfpinj(), sched_state.vfpprod(), this->wellState());
             }
         }
@@ -299,7 +298,7 @@ namespace Opm {
             const auto& fieldGroup =
                 this->schedule().getGroup("FIELD", reportStepIdx);
 
-            WellGroupHelpers<Scalar>::setCmodeGroup(fieldGroup,
+            WellGroupHelpers<FluidSystem, Indices>::setCmodeGroup(fieldGroup,
                                                     this->schedule(),
                                                     this->summaryState(),
                                                     reportStepIdx,
@@ -308,12 +307,11 @@ namespace Opm {
             // Define per region average pressure calculators for use by
             // pressure maintenance groups (GPMAINT keyword).
             if (this->schedule()[reportStepIdx].has_gpmaint()) {
-                WellGroupHelpers<Scalar>::setRegionAveragePressureCalculator
+                WellGroupHelpers<FluidSystem, Indices>::setRegionAveragePressureCalculator
                     (fieldGroup,
                      this->schedule(),
                      reportStepIdx,
                      this->eclState_.fieldProps(),
-                     this->phase_usage_,
                      this->regionalAveragePressureCalculator_);
             }
         }
@@ -462,10 +460,9 @@ namespace Opm {
         const auto& comm = simulator_.vanguard().grid().comm();
         std::vector<Scalar> pot(this->numPhases(), 0.0);
         const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
-        WellGroupHelpers<Scalar>::updateGuideRates(fieldGroup,
+        WellGroupHelpers<FluidSystem, Indices>::updateGuideRates(fieldGroup,
                                                    this->schedule(),
                                                    this->summaryState(),
-                                                   this->phase_usage_,
                                                    reportStepIdx,
                                                    simulationTime,
                                                    this->wellState(),
@@ -482,7 +479,7 @@ namespace Opm {
                 calculator.second->template defineState<ElementContext>(simulator_);
             }
             const double dt = simulator_.timeStepSize();
-            WellGroupHelpers<Scalar>::updateGpMaintTargetForGroups(fieldGroup,
+            WellGroupHelpers<FluidSystem, Indices>::updateGpMaintTargetForGroups(fieldGroup,
                                                                    this->schedule_,
                                                                    regionalAveragePressureCalculator_,
                                                                    reportStepIdx,
@@ -541,11 +538,11 @@ namespace Opm {
 
             WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
             // some preparation before the well can be used
-            well->init(&this->phase_usage_, depth_, gravity_, B_avg_, true);
+            well->init(depth_, gravity_, B_avg_, true);
 
             Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor() *
                                             this->wellState().getGlobalEfficiencyScalingFactor(well_name);
-            WellGroupHelpers<Scalar>::accumulateGroupEfficiencyFactor(this->schedule().getGroup(wellEcl.groupName(),
+            WellGroupHelpers<FluidSystem, Indices>::accumulateGroupEfficiencyFactor(this->schedule().getGroup(wellEcl.groupName(),
                                                                                                 timeStepIdx),
                                                                       this->schedule(),
                                                                       timeStepIdx,
@@ -576,7 +573,7 @@ namespace Opm {
                 }
             }
             try {
-                using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
+                using GLiftEclWells = typename GasLiftGroupInfo<FluidSystem, Indices>::GLiftEclWells;
                 GLiftEclWells ecl_well_map;
                 gaslift_.initGliftEclWellMap(well_container_, ecl_well_map);
                 well->wellTesting(simulator_,
@@ -584,7 +581,6 @@ namespace Opm {
                                   this->wellState(),
                                   this->groupState(),
                                   this->wellTestState(),
-                                  this->phase_usage_,
                                   ecl_well_map,
                                   this->well_open_times_,
                                   deferred_logger);
@@ -1275,10 +1271,9 @@ namespace Opm {
             const auto& summaryState = simulator_.vanguard().summaryState();
             std::vector<Scalar> pot(this->numPhases(), 0.0);
             const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
-            WellGroupHelpers<Scalar>::updateGuideRates(fieldGroup,
+            WellGroupHelpers<FluidSystem, Indices>::updateGuideRates(fieldGroup,
                                                        this->schedule(),
                                                        summaryState,
-                                                       this->phase_usage_,
                                                        reportStepIdx,
                                                        simulationTime,
                                                        this->wellState(),
@@ -1323,9 +1318,8 @@ namespace Opm {
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
 
-                const auto pu = this->phase_usage_;
                 //TODO: Auto choke combined with RESV control is not supported
-                std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
+                std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
                 Scalar gratTargetFromSales = 0.0;
                 if (group_state.has_grat_sales_target(group.name()))
                     gratTargetFromSales = group_state.grat_sales_target(group.name());
@@ -1340,7 +1334,7 @@ namespace Opm {
                     // derived via group guide rates
                     const Scalar efficiencyFactor = 1.0;
                     const Group& parentGroup = this->schedule().getGroup(group.parent(), reportStepIdx);
-                    auto target = WellGroupControls<Scalar>::getAutoChokeGroupProductionTargetRate(
+                    auto target = WellGroupControls<FluidSystem, Indices>::getAutoChokeGroupProductionTargetRate(
                                                             group.name(),
                                                             parentGroup,
                                                             well_state,
@@ -1350,14 +1344,13 @@ namespace Opm {
                                                             resv_coeff,
                                                             efficiencyFactor,
                                                             reportStepIdx,
-                                                            pu,
                                                             &this->guideRate_,
                                                             local_deferredLogger);
                     target_tmp = target.first;
                     cmode_tmp = target.second;
                 }
                 const auto cmode = cmode_tmp;
-                WGHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
+                WGHelpers::TargetCalculator<FluidSystem, Indices> tcalc(cmode, resv_coeff,
                                                   gratTargetFromSales, nodeName, group_state,
                                                   group.has_gpmaint_control(cmode));
                 if (!fld_none)
@@ -1408,12 +1401,12 @@ namespace Opm {
                         node_name = branch.uptree_node();
                     }
                     min_thp = network.node(node_name).terminal_pressure().value();
-                    WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
+                    WellBhpThpCalculator<FluidSystem, Indices>::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
                     // Narrow down the bracket
                     Scalar low1, high1;
                     std::array<Scalar, 2> range = {Scalar{0.9}*min_thp, Scalar{1.1}*max_thp};
                     std::optional<Scalar> appr_sol;
-                    WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
+                    WellBhpThpCalculator<FluidSystem, Indices>::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
                     min_thp = low1;
                     max_thp = high1;
                     range_initial = {min_thp, max_thp};
@@ -1428,7 +1421,7 @@ namespace Opm {
                     std::optional<Scalar> approximate_solution;
                     const Scalar tolerance1 = thp_tolerance;
                     local_deferredLogger.debug("Using brute force search to bracket the group THP");
-                    const bool finding_bracket = WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
+                    const bool finding_bracket = WellBhpThpCalculator<FluidSystem, Indices>::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
 
                     if (approximate_solution.has_value()) {
                         autochoke_thp = *approximate_solution;
@@ -2027,7 +2020,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::computePotentials(const std::size_t widx,
-                                                  const WellState<Scalar>& well_state_copy,
+                                                  const WellState<FluidSystem, Indices>& well_state_copy,
                                                   std::string& exc_msg,
                                                   ExceptionType::ExcEnum& exc_type,
                                                   DeferredLogger& deferred_logger)
@@ -2093,7 +2086,7 @@ namespace Opm {
             auto wellPtr = this->template createTypedWellPointer
                 <StandardWell<TypeTag>>(shutWell, reportStepIdx);
 
-            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_, this->B_avg_, true);
+            wellPtr->init(this->depth_, this->gravity_, this->B_avg_, true);
 
             this->calculateProductivityIndexValues(wellPtr.get(), deferred_logger);
         }
@@ -2132,12 +2125,12 @@ namespace Opm {
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
-            if (events.hasEvent(WellState<Scalar>::event_mask)) {
+            if (events.hasEvent(WellState<FluidSystem, Indices>::event_mask)) {
                 well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger);
                 well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
-                events.clearEvent(WellState<Scalar>::event_mask);
+                events.clearEvent(WellState<FluidSystem, Indices>::event_mask);
             }
             // these events only work for the first time step within the report step
             if (events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL)) {
@@ -2383,9 +2376,9 @@ namespace Opm {
         const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
         const auto& trMod = this->simulator_.problem().tracerModel();
 
-        BlackoilWellModelGeneric<Scalar>::assignWellTracerRates(wsrpt, trMod.getWellTracerRates(), reportStepIdx);
-        BlackoilWellModelGeneric<Scalar>::assignWellTracerRates(wsrpt, trMod.getWellFreeTracerRates(), reportStepIdx);
-        BlackoilWellModelGeneric<Scalar>::assignWellTracerRates(wsrpt, trMod.getWellSolTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<FluidSystem, Indices>::assignWellTracerRates(wsrpt, trMod.getWellTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<FluidSystem, Indices>::assignWellTracerRates(wsrpt, trMod.getWellFreeTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<FluidSystem, Indices>::assignWellTracerRates(wsrpt, trMod.getWellSolTracerRates(), reportStepIdx);
 
         this->assignMswTracerRates(wsrpt, trMod.getMswTracerRates(), reportStepIdx);
     }

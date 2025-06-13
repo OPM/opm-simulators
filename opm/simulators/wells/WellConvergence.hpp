@@ -30,14 +30,16 @@ namespace Opm
 
 class ConvergenceReport;
 class DeferredLogger;
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
+template<typename FluidSystem, typename Indices> class WellState;
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class WellConvergence
 {
 public:
-    explicit WellConvergence(const WellInterfaceGeneric<Scalar>& well)
+    using Scalar = typename FluidSystem::Scalar;
+
+    explicit WellConvergence(const WellInterfaceGeneric<FluidSystem, Indices>& well)
         : well_(well)
     {}
 
@@ -50,7 +52,7 @@ public:
     };
 
     // checking the convergence of the well control equations
-    void checkConvergenceControlEq(const WellState<Scalar>& well_state,
+    void checkConvergenceControlEq(const WellState<FluidSystem, Indices>& well_state,
                                    const Tolerances& tolerances,
                                    const Scalar well_control_residual,
                                    const bool well_is_stopped, 
@@ -63,7 +65,7 @@ public:
                                 ConvergenceReport& report) const;
 
 private:
-    const WellInterfaceGeneric<Scalar>& well_;
+    const WellInterfaceGeneric<FluidSystem, Indices>& well_;
 };
 
 }
