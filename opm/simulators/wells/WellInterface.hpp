@@ -54,7 +54,6 @@ namespace Opm {
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <dune/common/fmatrix.hh>
