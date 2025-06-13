@@ -225,7 +225,6 @@ checkGroupProductionConstraints(const Group& group,
 
     const auto controls = group.productionControls(wellModel_.summaryState());
     const Group::ProductionCMode& currentControl = wellModel_.groupState().production_control(group.name());
-
     if (group.has_control(Group::ProductionCMode::ORAT))
     {
         if (currentControl != Group::ProductionCMode::ORAT)

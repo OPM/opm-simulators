@@ -446,6 +446,7 @@ protected:
     void updateAndCommunicateGroupData(const int reportStepIdx,
                                        const int iterationIdx,
                                        const Scalar tol_nupcol,
+                                       const bool update_wellgrouptarget, // we only want to update the wellgrouptarget after the groups have found their controls
                                        DeferredLogger& deferred_logger);
 
     void inferLocalShutWells();

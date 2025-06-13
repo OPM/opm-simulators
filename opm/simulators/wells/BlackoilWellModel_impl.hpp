@@ -370,7 +370,7 @@ namespace Opm {
         const int reportStepIdx = simulator_.episodeIndex();
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             simulator_.model().newtonMethod().numIterations(),
-                                            param_.nupcol_group_rate_tolerance_,
+                                            param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false,
                                             local_deferredLogger);
 
         this->wellState().updateWellsDefaultALQ(this->schedule(), reportStepIdx, this->summaryState());
@@ -411,6 +411,7 @@ namespace Opm {
             }
 
         }
+
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "beginTimeStep() failed: ",
                                         this->terminal_output_, simulator_.vanguard().grid().comm());
 
@@ -490,6 +491,12 @@ namespace Opm {
                                                                    this->wellState(),
                                                                    this->groupState());
         }
+
+        this->updateAndCommunicateGroupData(reportStepIdx,
+                                    simulator_.model().newtonMethod().numIterations(),
+                                    param_.nupcol_group_rate_tolerance_,
+                                    /*update_wellgrouptarget*/ true,
+                                    local_deferredLogger);
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -1244,7 +1251,8 @@ namespace Opm {
         OPM_TIMEFUNCTION();
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const int reportStepIdx = simulator_.episodeIndex();
-        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, param_.nupcol_group_rate_tolerance_, local_deferredLogger);
+        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, 
+            param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ true, local_deferredLogger);
         const auto [more_inner_network_update, network_imbalance] =
                 updateNetworks(mandatory_network_balance,
                                local_deferredLogger,
@@ -1763,7 +1771,6 @@ namespace Opm {
         const int episodeIdx = simulator_.episodeIndex();
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const auto& comm = simulator_.vanguard().grid().comm();
-
         size_t iter = 0;
         bool changed_well_group = false;
         const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
@@ -1881,7 +1888,8 @@ namespace Opm {
                         }
                     }
                 }
-                this->updateAndCommunicateGroupData(episodeIdx, iterationIdx, param_.nupcol_group_rate_tolerance_, deferred_logger);
+                this->updateAndCommunicateGroupData(episodeIdx, iterationIdx, param_.nupcol_group_rate_tolerance_,
+                                                    /*update_wellgrouptarget*/ true, deferred_logger);
             }
             more_network_update = more_network_sub_update || well_group_thp_updated;
         }
@@ -1899,6 +1907,7 @@ namespace Opm {
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             iterationIdx,
                                             param_.nupcol_group_rate_tolerance_,
+                                            /*update_wellgrouptarget*/ true,
                                             deferred_logger);
 
         // updateWellStateWithTarget might throw for multisegment wells hence we
@@ -1920,6 +1929,7 @@ namespace Opm {
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             iterationIdx,
                                             param_.nupcol_group_rate_tolerance_,
+                                            /*update_wellgrouptarget*/ true,
                                             deferred_logger);
     }
 
