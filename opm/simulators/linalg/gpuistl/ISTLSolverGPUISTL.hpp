@@ -260,7 +260,7 @@ public:
     const CommunicationType* comm() const override
     {
         // TODO: Implement this if needed
-        return nullptr;
+        OPM_THROW(std::logic_error, "Communication not implemented for GPU ISTL solver.");
     }
 
     /**
