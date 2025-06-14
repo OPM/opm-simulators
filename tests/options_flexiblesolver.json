@@ -4,7 +4,7 @@
     "preconditioner": {
         "type": "cpr",
         "finesmoother": {
-            "type": "ILU0",
+            "type": "ilu0",
             "relaxation": "1.0"
         },
         "coarsesolver": {
@@ -14,7 +14,7 @@
                 "type": "amg",
                 "maxlevel": "5",
                 "coarsenTarget": "1000",
-                "smoother": "ILU0",
+                "smoother": "ilu0",
                 "alpha": "0.2",
                 "beta": "0.0001",
                 "verbosity": "0",

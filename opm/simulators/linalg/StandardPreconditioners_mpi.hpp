@@ -135,43 +135,43 @@ struct StandardPreconditioners
         using M = typename F::Matrix;
         using V = typename F::Vector;
         using P = PropertyTree;
-        F::addCreator("ILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             return createParILU(op, prm, comm, 0);
         });
-        F::addCreator("ParOverILU0",
+        F::addCreator("paroverilu0",
                       [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
                           return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
                       });
-        F::addCreator("ILUn", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("ilun", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
         });
-        F::addCreator("DuneILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("duneilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const int n = prm.get<int>("ilulevel", 0);
             const double w = prm.get<double>("relaxation", 1.0);
             const bool resort = prm.get<bool>("resort", false);
             return wrapBlockPreconditioner<RebuildOnUpdatePreconditioner<Dune::SeqILU<M, V, V>>>(
                 comm, op.getmat(), n, w, resort);
         });
-        F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             DUNE_UNUSED_PARAMETER(prm);
             return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
         });
-        F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqJac<M, V, V>>>(comm, op.getmat(), n, w);
         });
-        F::addCreator("GS", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("gs", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqGS<M, V, V>>>(comm, op.getmat(), n, w);
         });
-        F::addCreator("SOR", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("sor", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSOR<M, V, V>>>(comm, op.getmat(), n, w);
         });
-        F::addCreator("SSOR", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("ssor", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSSOR<M, V, V>>>(comm, op.getmat(), n, w);
@@ -185,15 +185,17 @@ struct StandardPreconditioners
                       std::is_same_v<O, Opm::GhostLastMatrixAdapter<M, V, V, C>>) {
             F::addCreator("amg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
                 using PrecPtr = std::shared_ptr<Dune::PreconditionerWithUpdate<V, V>>;
-                const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+                std::string smoother = prm.get<std::string>("smoother", "paroverilu0");
+                // Make the smoother type lowercase for internal canonical representation
+                std::transform(smoother.begin(), smoother.end(), smoother.begin(), ::tolower);
                 // TODO: merge this with ILUn, and possibly simplify the factory to only work with ILU?
-                if (smoother == "ILU0" || smoother == "ParOverILU0") {
+                if (smoother == "ilu0" || smoother == "paroverilu0") {
                     using Smoother = ParallelOverlappingILU0<M, V, V, C>;
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
                     auto sargs = AMGSmootherArgsHelper<Smoother>::args(prm);
                     PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
                     return prec;
-                } else if (smoother == "DILU") {
+                } else if (smoother == "dilu") {
                     using SeqSmoother = Dune::MultithreadDILU<M, V, V>;
                     using Smoother = Dune::BlockPreconditioner<V, V, C, SeqSmoother>;
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
@@ -201,7 +203,7 @@ struct StandardPreconditioners
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
                     PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
                     return prec;
-                } else if (smoother == "Jac") {
+                } else if (smoother == "jac") {
                     using SeqSmoother = SeqJac<M, V, V>;
                     using Smoother = Dune::BlockPreconditioner<V, V, C, SeqSmoother>;
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
@@ -209,7 +211,7 @@ struct StandardPreconditioners
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
                     PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
                     return prec;
-                } else if (smoother == "GS") {
+                } else if (smoother == "gs") {
                     using SeqSmoother = SeqGS<M, V, V>;
                     using Smoother = Dune::BlockPreconditioner<V, V, C, SeqSmoother>;
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
@@ -217,7 +219,7 @@ struct StandardPreconditioners
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
                     PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
                     return prec;
-                } else if (smoother == "SOR") {
+                } else if (smoother == "sor") {
                     using SeqSmoother = SeqSOR<M, V, V>;
                     using Smoother = Dune::BlockPreconditioner<V, V, C, SeqSmoother>;
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
@@ -225,7 +227,7 @@ struct StandardPreconditioners
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
                     PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
                     return prec;
-                } else if (smoother == "SSOR") {
+                } else if (smoother == "ssor") {
                     using SeqSmoother = SeqSSOR<M, V, V>;
                     using Smoother = Dune::BlockPreconditioner<V, V, C, SeqSmoother>;
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
@@ -233,7 +235,7 @@ struct StandardPreconditioners
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
                     PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
                     return prec;
-                } else if (smoother == "ILUn") {
+                } else if (smoother == "ilun") {
                     using SeqSmoother = SeqILU<M, V, V>;
                     using Smoother = Dune::BlockPreconditioner<V, V, C, SeqSmoother>;
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
@@ -310,7 +312,7 @@ struct StandardPreconditioners
         // but copy data back and forth to the GPU as needed.
 
         // TODO: Make this use the GPU preconditioner factory once that is up and running.
-        F::addCreator("GPUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("gpuilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
             using GpuILU0 = typename gpuistl::
@@ -322,7 +324,7 @@ struct StandardPreconditioners
             return wrapped;
         });
 
-        F::addCreator("GPUJAC", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("gpujac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
             using GpuJac =
@@ -338,7 +340,7 @@ struct StandardPreconditioners
             return wrapped;
         });
 
-        F::addCreator("GPUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("gpudilu", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             const int mixed_precision_scheme = prm.get<int>("mixed_precision_scheme", 0);
@@ -356,7 +358,7 @@ struct StandardPreconditioners
             return wrapped;
         });
 
-        F::addCreator("OPMGPUILU0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("opmgpuilu0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             const int mixed_precision_scheme = prm.get<int>("mixed_precision_scheme", 0);
