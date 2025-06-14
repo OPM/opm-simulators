@@ -232,6 +232,7 @@ public:
     const SummaryState& summaryState() const { return summaryState_; }
 
     const GuideRate& guideRate() const { return guideRate_; }
+    GuideRate& guideRate() { return guideRate_; }
 
     const std::map<std::string, double>& wellOpenTimes() const { return well_open_times_; }
     const std::map<std::string, double>& wellCloseTimes() const { return well_close_times_; }
