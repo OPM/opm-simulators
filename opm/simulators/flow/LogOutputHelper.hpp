@@ -65,6 +65,12 @@ public:
     //! \brief Write fluid-in-place reservoir reports to output.
     void fipResv(const Inplace& inplace, const std::string& name) const;
 
+    //! \brief Write fluid-in-place reservoir reports to csv file.
+    void fip_csv(std::ostringstream& ss,const Inplace& inplace, const std::string& name) const;
+
+    //! \brief Write fluid-in-place reservoir reports to csv file.
+    void csv_header(std::ostringstream& ss) const;
+
     //! \brief Write injection report to output.
     void injection(const std::size_t reportStepNum,
                    const std::map<std::pair<std::string,int>, double>& block_pressures) const;
@@ -209,6 +215,7 @@ private:
     const Schedule& schedule_;
     const SummaryState& summaryState_;
     std::string flowVersionName_;
+
 };
 
 } // namespace Opm
