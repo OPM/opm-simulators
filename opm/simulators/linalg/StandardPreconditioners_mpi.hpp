@@ -342,6 +342,7 @@ struct StandardPreconditioners
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             const int mixed_precision_scheme = prm.get<int>("mixed_precision_scheme", 0);
+            const bool reorder = prm.get<bool>("reorder", true);
             using field_type = typename V::field_type;
             using GpuDILU = typename gpuistl::GpuDILU<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
             using MatrixOwner = Opm::gpuistl::PreconditionerCPUMatrixToGPUMatrix<gpuistl::GpuVector<field_type>, 
@@ -349,7 +350,7 @@ struct StandardPreconditioners
         
             // Note: op.getmat() is passed twice, because the GpuDILU needs both the CPU and GPU matrix.
             // The first argument will be converted to a GPU matrix, and the second one is used as a CPU matrix.
-            auto gpuDILU = std::make_shared<MatrixOwner>(op.getmat(), op.getmat(), split_matrix, tune_gpu_kernels, mixed_precision_scheme);
+            auto gpuDILU = std::make_shared<MatrixOwner>(op.getmat(), op.getmat(), split_matrix, tune_gpu_kernels, mixed_precision_scheme, reorder);
 
             auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, MatrixOwner>>(gpuDILU);
             auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
