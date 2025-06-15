@@ -115,7 +115,6 @@ getGroupInjectionControl(const Group& group,
     }
 
     const auto& well = well_.wellEcl();
-    const auto pu = well_.phaseUsage();
 
     if (!group.isInjectionGroup()) {
         // use bhp as control eq and let the updateControl code find a valid control
@@ -124,74 +123,14 @@ getGroupInjectionControl(const Group& group,
         return;
     }
 
-    // If we are here, we are at the topmost group to be visited in the recursion.
-    // This is the group containing the control we will check against.
-
-    // Make conversion factors for RESV <-> surface rates.
-    std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
-    rateConverter(0, well_.pvtRegionIdx(), std::nullopt, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
-
-    Scalar sales_target = 0;
-    if (schedule[well_.currentStep()].gconsale().has(group.name())) {
-        const auto& gconsale = schedule[well_.currentStep()].gconsale().get(group.name(), summaryState);
-        sales_target = gconsale.sales_target;
+    const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
+    if (target_rate) {
+        control_eq = injection_rate - *target_rate;
+    } else {
+        const auto& controls = well.injectionControls(summaryState);
+        control_eq = bhp - controls.bhp_limit;
     }
-
-    WGHelpers::InjectionTargetCalculator tcalc(currentGroupControl,
-                                               pu,
-                                               resv_coeff,
-                                               group.name(),
-                                               sales_target,
-                                               group_state,
-                                               injectionPhase,
-                                               group.has_gpmaint_control(injectionPhase,
-                                                                         currentGroupControl),
-                                               deferred_logger);
-
-    WGHelpers::FractionCalculator fcalc(schedule,
-                                        well_state,
-                                        group_state,
-                                        summaryState,
-                                        well_.currentStep(),
-                                        well_.guideRate(),
-                                        tcalc.guideTargetMode(),
-                                        pu,
-                                        false,
-                                        injectionPhase);
-
-    auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, child);
-    };
-
-    auto localReduction = [&](const std::string& group_name) {
-        const std::vector<Scalar>& groupTargetReductions = group_state.injection_reduction_rates(group_name);
-        return tcalc.calcModeRateFromRates(groupTargetReductions);
-    };
-
-    std::optional<Group::InjectionControls> ctrl;
-    if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
-        ctrl = group.injectionControls(injectionPhase, summaryState);
-
-    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(), group.name(),
-                                                                  schedule, well_.currentStep());
-    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const std::size_t num_ancestors = chain.size() - 1;
-    Scalar target = orig_target;
-    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
-        if ((ii == 0) || well_.guideRate()->has(chain[ii], injectionPhase)) {
-            // Apply local reductions only at the control level
-            // (top) and for levels where we have a specified
-            // group guide rate.
-            target -= localReduction(chain[ii]);
-        }
-        target *= localFraction(chain[ii+1]);
-    }
-    // Avoid negative target rates coming from too large local reductions.
-    const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
-    const auto current_rate = injection_rate;
-
-    control_eq = current_rate - target_rate;
+    return;
 }
 
 template<class Scalar>
@@ -253,78 +192,11 @@ getGroupInjectionTargetRate(const Group& group,
         }
     }
 
-    const auto pu = well_.phaseUsage();
-
     if (!group.isInjectionGroup()) {
         return std::nullopt;
     }
 
-    // If we are here, we are at the topmost group to be visited in the recursion.
-    // This is the group containing the control we will check against.
-
-    // Make conversion factors for RESV <-> surface rates.
-    std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
-    rateConverter(0, well_.pvtRegionIdx(), std::nullopt, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
-
-    Scalar sales_target = 0;
-    if (schedule[well_.currentStep()].gconsale().has(group.name())) {
-        const auto& gconsale = schedule[well_.currentStep()].gconsale().get(group.name(), summaryState);
-        sales_target = gconsale.sales_target;
-    }
-    WGHelpers::InjectionTargetCalculator tcalc(currentGroupControl,
-                                               pu,
-                                               resv_coeff,
-                                               group.name(),
-                                               sales_target,
-                                               group_state,
-                                               injectionPhase,
-                                               group.has_gpmaint_control(injectionPhase,
-                                                                         currentGroupControl),
-                                               deferred_logger);
-
-    WGHelpers::FractionCalculator fcalc(schedule,
-                                        well_state,
-                                        group_state,
-                                        summaryState,
-                                        well_.currentStep(),
-                                        well_.guideRate(),
-                                        tcalc.guideTargetMode(),
-                                        pu,
-                                        false,
-                                        injectionPhase);
-
-    auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
-    };
-
-    auto localReduction = [&](const std::string& group_name) {
-        const std::vector<Scalar>& groupTargetReductions = group_state.injection_reduction_rates(group_name);
-        return tcalc.calcModeRateFromRates(groupTargetReductions);
-    };
-
-    std::optional<Group::InjectionControls> ctrl;
-    if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
-        ctrl = group.injectionControls(injectionPhase, summaryState);
-
-    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-
-    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(),
-                                                                  group.name(),
-                                                                  schedule,
-                                                                  well_.currentStep());
-    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const std::size_t num_ancestors = chain.size() - 1;
-    Scalar target = orig_target;
-    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
-        if ((ii == 0) || well_.guideRate()->has(chain[ii], injectionPhase)) {
-            // Apply local reductions only at the control level
-            // (top) and for levels where we have a specified
-            // group guide rate.
-            target -= localReduction(chain[ii]);
-        }
-        target *= localFraction(chain[ii+1]);
-    }
-    return std::max(Scalar(0.0), target / efficiencyFactor);
+    return well_state.well(well_.indexOfWell()).group_target;
 }
 
 template<class Scalar>
@@ -400,49 +272,15 @@ getGroupProductionControl(const Group& group,
                                       group_state,
                                       group.has_gpmaint_control(currentGroupControl));
 
-    WGHelpers::FractionCalculator fcalc(schedule,
-                                        well_state,
-                                        group_state,
-                                        summaryState,
-                                        well_.currentStep(),
-                                        well_.guideRate(),
-                                        tcalc.guideTargetMode(),
-                                        pu,
-                                        true,
-                                        Phase::OIL);
-
-    auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, child);
-    };
-
-    auto localReduction = [&](const std::string& group_name) {
-        const std::vector<Scalar>& groupTargetReductions = group_state.production_reduction_rates(group_name);
-        return tcalc.calcModeRateFromRates(groupTargetReductions);
-    };
-
-    std::optional<Group::ProductionControls> ctrl;
-    if (!group.has_gpmaint_control(currentGroupControl))
-        ctrl = group.productionControls(summaryState);
-
-    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(), group.name(),
-                                                                  schedule, well_.currentStep());
-    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const std::size_t num_ancestors = chain.size() - 1;
-    Scalar target = orig_target;
-    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
-        if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
-            // Apply local reductions only at the control level
-            // (top) and for levels where we have a specified
-            // group guide rate.
-            target -= localReduction(chain[ii]);
-        }
-        target *= localFraction(chain[ii+1]);
+    const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
+    if (target_rate) {
+        const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
+        control_eq = current_rate - *target_rate;
+    } else {
+        const auto& controls = well.productionControls(summaryState);
+        control_eq = bhp - controls.bhp_limit;
     }
-    // Avoid negative target rates coming from too large local reductions.
-    const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
-    const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-    control_eq = current_rate - target_rate;
+    return;
 }
 
 template<class Scalar>
@@ -499,57 +337,21 @@ getGroupProductionTargetRate(const Group& group,
                                       group_state,
                                       group.has_gpmaint_control(currentGroupControl));
 
-    WGHelpers::FractionCalculator fcalc(schedule,
-                                        well_state,
-                                        group_state,
-                                        summaryState,
-                                        well_.currentStep(),
-                                        well_.guideRate(),
-                                        tcalc.guideTargetMode(),
-                                        pu,
-                                        true,
-                                        Phase::OIL);
 
-    auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
-    };
-
-    auto localReduction = [&](const std::string& group_name) {
-        const std::vector<Scalar>& groupTargetReductions = group_state.production_reduction_rates(group_name);
-        return tcalc.calcModeRateFromRates(groupTargetReductions);
-    };
-
-    std::optional<Group::ProductionControls> ctrl;
-    if (!group.has_gpmaint_control(currentGroupControl))
-        ctrl = group.productionControls(summaryState);
-
-    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(), group.name(),
-                                                                  schedule, well_.currentStep());
-    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const std::size_t num_ancestors = chain.size() - 1;
-    Scalar target = orig_target;
-    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
-        if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
-            // Apply local reductions only at the control level
-            // (top) and for levels where we have a specified
-            // group guide rate.
-            target -= localReduction(chain[ii]);
-        }
-        target *= localFraction(chain[ii+1]);
+    const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
+    if (!target_rate) {
+        return 1.0;
     }
-    // Avoid negative target rates coming from too large local reductions.
-    const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
+    if (*target_rate == 0.0) {
+        return 0.0;
+    }
     const auto& ws = well_state.well(well_.indexOfWell());
     const auto& rates = ws.surface_rates;
     const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     Scalar scale = 1.0;
-    if (target_rate == 0.0) {
-        return 0.0;
-    }
-
     if (current_rate > 1e-14)
-        scale = target_rate / current_rate;
+        scale = *target_rate / current_rate;
+
     return scale;
 }
 
@@ -633,12 +435,12 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     if (!group.has_gpmaint_control(currentGroupControl))
         ctrl = group.productionControls(summaryState);
 
-    const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
+    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
     const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(name, group.name(),
                                                                   schedule, reportStepIdx);
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
-    double target = orig_target;
+    Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || guideRate->has(chain[ii])) {
         //     Apply local reductions only at the control level
@@ -649,7 +451,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
         target *= localFraction(chain[ii+1]);
     }
     // Avoid negative target rates coming from too large local reductions.
-    const double target_rate = std::max(0.0, target / efficiencyFactor);
+    const double target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
 
     return std::make_pair(target_rate, currentGroupControl);
 }
