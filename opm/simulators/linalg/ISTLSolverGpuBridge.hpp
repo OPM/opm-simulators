@@ -271,9 +271,7 @@ public:
         }
 
         // Check convergence, iterations etc.
-        this->checkConvergence(result);
-
-        return this->converged_;
+        return this->checkConvergence(result);
     }
 
 protected:
