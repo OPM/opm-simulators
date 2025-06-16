@@ -417,6 +417,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 flexibleSolver_[activeSolverNum_].solver_->apply(x, *rhs_, result);
             }
 
+            iterations_ = result.iterations;
+
             // Check convergence, iterations etc.
             return checkConvergence(result);
         }

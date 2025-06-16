@@ -159,9 +159,6 @@ public:
      * \return The number of iterations.
      *
      * \note This value is only valid after a call to solve().
-     *
-     * \note If the solver does not support iteration counting, it may return 0 or throw an exception.
-     *       ISTLSolver does *not* support iteration counting and will return 0.
      */
     virtual int iterations() const = 0;
 
