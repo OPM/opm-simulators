@@ -823,7 +823,7 @@ private:
 
         const auto cartesianIndex = [this](const int elemIndex)
         {
-            return this->cartMapper_.cartesianIndex(elemIndex);
+            return this->cartMapper_.cartesianIndex(elemIndex); // lookupdata? 
         };
 
         this->outputModule_->initializeFluxData();
@@ -835,7 +835,9 @@ private:
             elemCtx.updateIntensiveQuantities(timeIdx);
             elemCtx.updateExtensiveQuantities(timeIdx);
 
+            if (this->simulator_.vanguard().grid().maxLevel() == 0)  {
             this->outputModule_->processFluxes(elemCtx, activeIndex, cartesianIndex);
+            }
         }
 
         OPM_END_PARALLEL_TRY_CATCH("EclWriter::captureLocalFluxData() failed: ",
