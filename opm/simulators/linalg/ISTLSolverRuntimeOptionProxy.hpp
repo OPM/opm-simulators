@@ -155,7 +155,7 @@ private:
 #endif
         } 
 #if HAVE_CUDA
-        else if (backend == Parameters::LinearSolverAcceleratorType::CPU) {
+        else if (backend == Parameters::LinearSolverAcceleratorType::GPU) {
             istlSolver_ = std::make_unique<gpuistl::ISTLSolverGPUISTL<TypeTag>>(simulator, std::forward<Args>(args)...);
         } 
 #endif
