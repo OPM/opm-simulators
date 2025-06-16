@@ -185,7 +185,9 @@ public:
 
         this->rank_ = this->simulator_.vanguard().grid().comm().rank();
         
-        this->simulator_.vanguard().eclState().computeFipRegionStatistics();
+        if (this->simulator_.vanguard().grid().maxLevel()==0) {
+            this->simulator_.vanguard().eclState().computeFipRegionStatistics();
+        }
     }
 
     ~EclWriter()
