@@ -1455,7 +1455,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
         for (const auto& well : well_container_generic_) {
             const auto& ws = this->wellState().well(well->indexOfWell());
             const auto& group = this->schedule().getGroup(well->wellEcl().groupName(), well->currentStep());
-            std::vector<Scalar> resv_coeff(well->phaseUsage().num_phases, 0.0);
+            std::vector<Scalar> resv_coeff(Indices::numPhases, 0.0);
             const int fipnum = 0;
             int pvtreg = well->pvtRegionIdx();
             calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
@@ -1464,7 +1464,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             // Translate injector type from control to Phase.
             Scalar group_target = std::numeric_limits<Scalar>::max();
             if (well->isProducer()) {
-                group_target = WellGroupHelpers<Scalar>::getWellGroupTargetProducer(well->name(),
+                group_target = WellGroupHelpers<FluidSystem, Indices>::getWellGroupTargetProducer(well->name(),
                                             well->wellEcl().groupName(),
                                             group,
                                             this->wellState(),
@@ -1472,7 +1472,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                             well->currentStep(),
                                             well->guideRate(),
                                             ws.surface_rates.data(),
-                                            well->phaseUsage(),
                                             efficiencyFactor,
                                             this->schedule(),
                                             summaryState_,
@@ -1501,7 +1500,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                 default:
                     assert(false); //programming error
                 }
-                group_target = WellGroupHelpers<Scalar>::getWellGroupTargetInjector(well->name(),
+                group_target = WellGroupHelpers<FluidSystem, Indices>::getWellGroupTargetInjector(well->name(),
                                             well->wellEcl().groupName(),
                                             group,
                                             this->wellState(),
@@ -1510,7 +1509,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                             well->guideRate(),
                                             ws.surface_rates.data(),
                                             injectionPhase,
-                                            well->phaseUsage(),
                                             efficiencyFactor,
                                             this->schedule(),
                                             summaryState_,
