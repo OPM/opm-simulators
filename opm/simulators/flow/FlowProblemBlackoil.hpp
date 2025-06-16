@@ -273,9 +273,16 @@ public:
         {
             if (updated) { return; }
 
+            if (this->simulator().vanguard().grid().maxLevel()==0) {
             this->transmissibilities_.finishInit([&vg = this->simulator().vanguard()](const unsigned int it) {
                 return vg.gridIdxToEquilGridIdx(it);
             });
+            }
+            else {
+                std::cout<< "finisInit without args, if grid maxLevel>0"<<std::endl;
+                this->transmissibilities_.finishInit();
+            }
+            
 
             updated = true;
         };
