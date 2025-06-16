@@ -60,6 +60,7 @@ public:
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const RateConvFunc& rateConverter,
+                               const bool check_guide_rate,
                                DeferredLogger& deferred_logger) const;
 
 private:
@@ -71,6 +72,7 @@ private:
                              const Schedule& schedule,
                              const SummaryState& summaryState,
                              const RateConvFunc& rateConverter,
+                             const bool check_guide_rate,
                              DeferredLogger& deferred_logger) const;
 
     std::pair<bool, Scalar>
@@ -81,6 +83,7 @@ private:
                               const Schedule& schedule,
                               const SummaryState& summaryState,
                               const RateConvFunc& rateConverter,
+                              const bool check_guide_rate,
                               DeferredLogger& deferred_logger) const;
 
     const WellInterfaceGeneric<Scalar>& well_; //!< Reference to well interface

@@ -93,6 +93,7 @@ protected:
                                const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
+                               const bool check_guide_rate,
                                DeferredLogger& deferred_logger) const;
 
     bool checkConstraints(WellState<Scalar>& well_state,
