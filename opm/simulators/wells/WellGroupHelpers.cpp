@@ -1481,18 +1481,17 @@ checkGroupConstraintsProd(const std::string& name,
 }
 
 
-template<class Scalar>
-Scalar
-WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar
+WellGroupHelpers<FluidSystem, Indices>::
 getWellGroupTargetProducer(const std::string& name,
                            const std::string& parent,
                            const Group& group,
-                           const WellState<Scalar>& wellState,
+                           const WellStateType& wellState,
                            const GroupState<Scalar>& group_state,
                            const int reportStepIdx,
                            const GuideRate* guideRate,
                            const Scalar* rates,
-                           const PhaseUsage& pu,
                            const Scalar efficiencyFactor,
                            const Schedule& schedule,
                            const SummaryState& summaryState,
@@ -1524,7 +1523,6 @@ getWellGroupTargetProducer(const std::string& name,
                                           reportStepIdx,
                                           guideRate,
                                           rates,
-                                          pu,
                                           efficiencyFactor * group.getGroupEfficiencyFactor(),
                                           schedule,
                                           summaryState,
@@ -1547,22 +1545,20 @@ getWellGroupTargetProducer(const std::string& name,
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    WGHelpers::TargetCalculator tcalc(currentGroupControl,
-                                      pu,
+    WGHelpers::TargetCalculator<FluidSystem, Indices> tcalc(currentGroupControl,
                                       resv_coeff,
                                       gratTargetFromSales,
                                       group.name(),
                                       group_state,
                                       group.has_gpmaint_control(currentGroupControl));
 
-    WGHelpers::FractionCalculator fcalc(schedule,
+    WGHelpers::FractionCalculator<FluidSystem, Indices> fcalc(schedule,
                                         wellState,
                                         group_state,
                                         summaryState,
                                         reportStepIdx,
                                         guideRate,
                                         tcalc.guideTargetMode(),
-                                        pu,
                                         true,
                                         Phase::OIL);
     auto localFraction = [&](const std::string& child, const std::string& always_incluced_name) { return fcalc.localFraction(child, always_incluced_name); };
@@ -1824,19 +1820,18 @@ checkGroupConstraintsInj(const std::string& name,
 }
 
 
-template<class Scalar>
-Scalar
-WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar
+WellGroupHelpers<FluidSystem, Indices>::
 getWellGroupTargetInjector(const std::string& name,
                            const std::string& parent,
                            const Group& group,
-                           const WellState<Scalar>& wellState,
+                           const WellStateType& wellState,
                            const GroupState<Scalar>& group_state,
                            const int reportStepIdx,
                            const GuideRate* guideRate,
                            const Scalar* rates,
                            Phase injectionPhase,
-                           const PhaseUsage& pu,
                            const Scalar efficiencyFactor,
                            const Schedule& schedule,
                            const SummaryState& summaryState,
@@ -1867,7 +1862,6 @@ getWellGroupTargetInjector(const std::string& name,
                                          guideRate,
                                          rates,
                                          injectionPhase,
-                                         pu,
                                          efficiencyFactor * group.getGroupEfficiencyFactor(),
                                          schedule,
                                          summaryState,
@@ -1888,8 +1882,7 @@ getWellGroupTargetInjector(const std::string& name,
         const auto& gconsale = schedule[reportStepIdx].gconsale().get(group.name(), summaryState);
         sales_target = gconsale.sales_target;
     }
-    WGHelpers::InjectionTargetCalculator tcalc(currentGroupControl,
-                                               pu,
+    WGHelpers::InjectionTargetCalculator<FluidSystem, Indices> tcalc(currentGroupControl,
                                                resv_coeff,
                                                group.name(),
                                                sales_target,
@@ -1899,14 +1892,13 @@ getWellGroupTargetInjector(const std::string& name,
                                                                          currentGroupControl),
                                                deferred_logger);
 
-    WGHelpers::FractionCalculator fcalc(schedule,
+    WGHelpers::FractionCalculator<FluidSystem, Indices> fcalc(schedule,
                                         wellState,
                                         group_state,
                                         summaryState,
                                         reportStepIdx,
                                         guideRate,
                                         tcalc.guideTargetMode(),
-                                        pu,
                                         false,
                                         injectionPhase);
 
