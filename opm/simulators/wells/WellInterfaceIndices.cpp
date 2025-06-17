@@ -63,8 +63,8 @@ int
 WellInterfaceIndices<FluidSystem,Indices>::
 flowPhaseToModelCompIdx(const int phaseIdx) const
 {
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx &&
-            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx) == phaseIdx)) {
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
+            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx) == phaseIdx) {
             return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
     }
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
