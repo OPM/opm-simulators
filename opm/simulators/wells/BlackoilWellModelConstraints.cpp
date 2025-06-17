@@ -482,7 +482,7 @@ actionOnBrokenConstraints(const Group& group,
 
     const auto action = [&group_limit_action](Group::ProductionCMode control) {
         switch (control) {
-            case Group::ProductionCMode::ORAT: return group_limit_action.allRates;
+            case Group::ProductionCMode::ORAT: return group_limit_action.oil;
             case Group::ProductionCMode::WRAT: return group_limit_action.water;
             case Group::ProductionCMode::GRAT: return group_limit_action.gas;
             case Group::ProductionCMode::LRAT: return group_limit_action.liquid;
