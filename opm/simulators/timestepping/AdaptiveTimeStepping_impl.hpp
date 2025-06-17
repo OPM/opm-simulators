@@ -111,7 +111,7 @@ AdaptiveTimeStepping(double max_next_tstep,
     , growth_factor_{tuning.TFDIFF}
     , max_growth_{tuning.TSFMAX}
     , max_time_step_{tuning.TSMAXZ} // 365.25
-    , min_time_step_{tuning.TSFMIN} // 0.1;
+    , min_time_step_{tuning.TSMINZ} // 0.1;
     , ignore_convergence_failure_{true}
     , solver_restart_max_{Parameters::Get<Parameters::SolverMaxRestarts>()} // 10
     , solver_verbose_{Parameters::Get<Parameters::SolverVerbosity>() > 0 && terminal_output} // 2
@@ -905,14 +905,25 @@ void
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
 checkTimeStepMinLimit_(const double new_time_step) const
 {
+    using Meas = UnitSystem::measure;
     // If we have restarted (i.e. cut the timestep) too
     // much, we have failed and throw an exception.
     if (new_time_step < minTimeStep_()) {
-        const auto msg = fmt::format(
-            "Solver failed to converge after cutting timestep to {}\n"
-            "which is the minimum threshold given by option --solver-min-time-step\n",
-            minTimeStep_()
-        );
+        auto msg = fmt::format("Solver failed to converge after cutting timestep to ");
+        if (Parameters::Get<Parameters::EnableTuning>()) {
+            const UnitSystem& unit_system = solver_().model().simulator().vanguard().eclState().getDeckUnitSystem();
+            msg += fmt::format(
+                "{:.3E} {}\nwhich is the minimum threshold given by the TUNING keyword\n",
+                unit_system.from_si(Meas::time, minTimeStep_()),
+                unit_system.name(Meas::time)
+            );
+        }
+        else {
+            msg += fmt::format(
+                "{:.3E} DAYS\nwhich is the minimum threshold given by option --solver-min-time-step\n",
+                minTimeStep_() / 86400.0
+            );
+        }
         if (solverVerbose_()) {
             OpmLog::error(msg);
         }
