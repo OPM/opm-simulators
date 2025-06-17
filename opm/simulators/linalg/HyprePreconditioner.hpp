@@ -97,14 +97,41 @@ public:
         HYPRE_BoomerAMGCreate(&solver_);
 
         // Set parameters from property tree with defaults
-        HYPRE_BoomerAMGSetPrintLevel(solver_, prm.get<int>("print_level", 0));
+        /* HYPRE_BoomerAMGSetPrintLevel(solver_, prm.get<int>("print_level", 0));
         HYPRE_BoomerAMGSetMaxIter(solver_, prm.get<int>("max_iter", 1));
         HYPRE_BoomerAMGSetStrongThreshold(solver_, prm.get<double>("strong_threshold", 0.5));
         HYPRE_BoomerAMGSetAggTruncFactor(solver_, prm.get<double>("agg_trunc_factor", 0.3));
         HYPRE_BoomerAMGSetInterpType(solver_, prm.get<int>("interp_type", 6));
         HYPRE_BoomerAMGSetMaxLevels(solver_, prm.get<int>("max_levels", 15));
         HYPRE_BoomerAMGSetTol(solver_, prm.get<double>("tolerance", 0.0));
+ */
 
+        HYPRE_BoomerAMGSetPrintLevel(solver_, prm.get<int>("print_level", 0));
+        HYPRE_BoomerAMGSetMaxIter(solver_, prm.get<int>("max_iter", 1));
+        HYPRE_BoomerAMGSetTol(solver_, prm.get<double>("tolerance", 0.0));
+        HYPRE_BoomerAMGSetMaxLevels(solver_, prm.get<int>("max_levels", 25));
+        HYPRE_BoomerAMGSetStrongThreshold(solver_, prm.get<double>("strong_threshold", 0.25));
+        HYPRE_BoomerAMGSetAggTruncFactor(solver_, prm.get<double>("agg_trunc_factor", 0.0));
+        HYPRE_BoomerAMGSetInterpType(solver_, prm.get<int>("interp_type", 0)); // classical
+
+        HYPRE_BoomerAMGSetPMaxElmts(solver_, prm.get<int>("P_max_elmts", 0));
+        HYPRE_BoomerAMGSetAggNumLevels(solver_, prm.get<int>("agg_num_levels", 0));
+        HYPRE_BoomerAMGSetNumPaths(solver_, prm.get<int>("num_paths", 1));
+        HYPRE_BoomerAMGSetMaxRowSum(solver_, prm.get<double>("max_row_sum", 0.9));
+        HYPRE_BoomerAMGSetNumSweeps(solver_, prm.get<int>("num_sweeps_down", 1)); // down
+        HYPRE_BoomerAMGSetNumSweepsUp(solver_, prm.get<int>("num_sweeps_up", 1)); // up
+        HYPRE_BoomerAMGSetNumSweepsCoarse(solver_, prm.get<int>("num_sweeps_coarse", 1)); // coarse
+        HYPRE_BoomerAMGSetRelaxType(solver_, prm.get<int>("relax_type", 6)); // symmetric-SOR/Jacobi
+        HYPRE_BoomerAMGSetRelaxTypeUp(solver_, prm.get<int>("relax_type_up", 6));
+        HYPRE_BoomerAMGSetRelaxTypeCoarse(solver_, prm.get<int>("relax_type_coarse", 9)); // Gaussian-elimination
+        HYPRE_BoomerAMGSetRelaxWeight(solver_, prm.get<double>("relax_weight", 1.0));
+        HYPRE_BoomerAMGSetOuterWt(solver_, prm.get<double>("outer_relax_weight", 1.0));
+        HYPRE_BoomerAMGSetMaxCoarseSize(solver_, prm.get<int>("max_coarse_size", 9));
+        HYPRE_BoomerAMGSetMinCoarseSize(solver_, prm.get<int>("min_coarse_size", 1));
+        HYPRE_BoomerAMGSetMeasureType(solver_, prm.get<int>("measure_type", 1)); // local
+        HYPRE_BoomerAMGSetCoarsenType(solver_, prm.get<int>("coarsen_type", 6)); // Falgout
+        HYPRE_BoomerAMGSetCycleType(solver_, prm.get<int>("cycle_type", 1)); // V-cycle
+        HYPRE_BoomerAMGSetSpGemmUseVendor(solver_, false); // hypre SpGE
         if (use_gpu_) {
             HYPRE_BoomerAMGSetRelaxType(solver_, 16);
             HYPRE_BoomerAMGSetCoarsenType(solver_, 8);
