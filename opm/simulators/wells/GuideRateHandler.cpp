@@ -25,6 +25,9 @@
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/common/TimingMacros.hpp>
 
+#include <array>
+#include <string_view>
+#include <tuple>
 #include <utility>
 
 #include <fmt/format.h>
@@ -248,19 +251,20 @@ getGroupGuideRatesInjection_(
     const auto& wm_guide_rate = this->well_model_.guideRate();
     const auto& name = group.name();
     using Value = data::GuideRateValue::Item;
-    constexpr std::pair<Phase, Value> phase_value_pairs[] = {
-        {Phase::OIL, Value::Oil},
-        {Phase::GAS, Value::Gas},
-        {Phase::WATER, Value::Water}
-    };
+    static const std::array<std::tuple<Phase, Value, std::string_view>, 3> items = {{
+        {Phase::OIL, Value::Oil, "oil"},
+        {Phase::GAS, Value::Gas, "gas"},
+        {Phase::WATER, Value::Water, "water"},
+    }};
     const auto& guide_rate_value = group_guide_rate.production;
-    for (const auto& [phase, value] : phase_value_pairs) {
+    for (const auto& [phase, value, phase_str] : items) {
         if (wm_guide_rate.has(name, phase)) {
             if (guide_rate_value.has(value)) {
                 msg_items.push_back(
                     fmt::format(
                         "{}(Group Inj, {}): {}",
-                        guide_rate_value.itemName(value),
+                        name,
+                        phase_str,
                         guide_rate_value.get(value)
                     )
                 );
@@ -305,20 +309,21 @@ getGroupGuideRatesProduction_(
     const auto& wm_guide_rate = this->well_model_.guideRate();
     const auto& name = group.name();
     if (wm_guide_rate.has(name)) {  // Check if group has production guiderates
-        constexpr data::GuideRateValue::Item value_types[] = {
-            data::GuideRateValue::Item::Oil,
-            data::GuideRateValue::Item::Gas,
-            data::GuideRateValue::Item::Water,
-            data::GuideRateValue::Item::ResV
-        };
+        using Value = data::GuideRateValue::Item;
+        static const std::array<std::tuple<Value, std::string_view>, 4> value_types = {{
+            {Value::Oil, "oil"},
+            {Value::Gas, "gas"},
+            {Value::Water, "water"},
+            {Value::ResV, "resv"}
+        }};
         const auto& guide_rate_value = group_guide_rate.production;
-        for (const auto& value_type : value_types) {
+        for (const auto& [value_type, phase_str] : value_types) {
             if (guide_rate_value.has(value_type)) {
                 msg_items.push_back(
                     fmt::format(
                         "{}(Group Prod, {}): {}",
                         name,
-                        guide_rate_value.itemName(value_type),
+                        phase_str,
                         guide_rate_value.get(value_type)
                     )
                 );
@@ -326,7 +331,6 @@ getGroupGuideRatesProduction_(
         }
     }
 }
-
 
 template <class Scalar>
 void
@@ -403,20 +407,21 @@ printWellGuideRates_(const Well& well, int level)
     }
     const auto& guide_rate_value = gr_itr->second;
     std::vector<std::string> msg_items;
-    constexpr data::GuideRateValue::Item value_types[] = {
-        data::GuideRateValue::Item::Oil,
-        data::GuideRateValue::Item::Gas,
-        data::GuideRateValue::Item::Water
-    };
+    using Value = data::GuideRateValue::Item;
+    static const std::array<std::tuple<Value, std::string_view>, 3> value_types = {{
+        {Value::Oil, "oil"},
+        {Value::Gas, "gas"},
+        {Value::Water, "water"}
+    }};
     const std::string well_type = well.isInjector() ? "Inj" : "Prod";
-    for (const auto& value_type : value_types) {
+    for (const auto& [value_type, phase_str] : value_types) {
         if (guide_rate_value.has(value_type)) {
             msg_items.push_back(
                 fmt::format(
                     "{}(Well {}, {}): {}",
                     name,
                     well_type,
-                    guide_rate_value.itemName(value_type),
+                    phase_str,
                     guide_rate_value.get(value_type)
                 )
             );
