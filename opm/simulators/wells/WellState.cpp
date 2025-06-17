@@ -573,10 +573,10 @@ report(const int* globalCellIdxMap,
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            well.rates.set(rt::oil, wv[phase_pos]);
-            well.rates.set(rt::reservoir_oil, reservoir_rates[phase_pos]);
-            well.rates.set(rt::productivity_index_oil, wpi[phase_pos]);
-            well.rates.set(rt::well_potential_oil, well_potentials[phase_pos]);
+            well.rates.set(rt::gas, wv[phase_pos]);
+            well.rates.set(rt::reservoir_gas, reservoir_rates[phase_pos]);
+            well.rates.set(rt::productivity_index_gas, wpi[phase_pos]);
+            well.rates.set(rt::well_potential_gas, well_potentials[phase_pos]);
         }
 
         if (Indices::enableSolvent || Indices::enableExtbo) {
