@@ -388,9 +388,9 @@ getGuideRateInjectionGroupValues(const Group& group) const
 }
 
 template<class Scalar>
-void BlackoilWellModelGuideRates<Scalar>::
-assignWellGuideRates(data::Wells& wsrpt,
-                     const int    reportStepIdx) const
+std::unordered_map<std::string, data::GuideRateValue>
+BlackoilWellModelGuideRates<Scalar>::
+calculateWellGuideRates(const int reportStepIdx) const
 {
     auto all = std::unordered_map<std::string, data::GuideRateValue>{};
     auto retrieve = std::unordered_map<std::string, RetrieveWellGuideRate>{};
@@ -470,7 +470,15 @@ assignWellGuideRates(data::Wells& wsrpt,
     // Upon completion, 'all' contains guide rate values for all wells
     // reachable from 'FIELD' at this time/report step.
     walker.traversePreOrder();
+    return all;
+}
 
+template<class Scalar>
+void BlackoilWellModelGuideRates<Scalar>::
+assignWellGuideRates(data::Wells& wsrpt,
+                     const int    reportStepIdx) const
+{
+    auto all = calculateWellGuideRates(reportStepIdx);
     for (const auto* well : wellModel_.genericWells()) {
         auto xwPos = wsrpt.find(well->name());
         if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
