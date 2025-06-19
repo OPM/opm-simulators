@@ -76,7 +76,10 @@ namespace Opm
         }
 
         setCurrentStepNum(report_step);
-        start_date_ = boost::posix_time::from_time_t(schedule.getStartTime()).date();
+        if ((boost::posix_time::from_time_t(schedule.getStartTime()) <= boost::posix_time::ptime(boost::posix_time::max_date_time)) &&
+            (boost::posix_time::ptime(boost::posix_time::min_date_time) <= boost::posix_time::from_time_t(schedule.getStartTime()))) {
+            start_date_ = boost::posix_time::from_time_t(schedule.getStartTime()).date();
+        }
     }
 
     /// Whether the current step is the first step.
