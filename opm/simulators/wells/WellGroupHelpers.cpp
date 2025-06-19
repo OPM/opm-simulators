@@ -54,6 +54,7 @@
 #include <set>
 #include <stack>
 #include <stdexcept>
+#include <vector>
 
 namespace {
     template<class Scalar>
@@ -2290,31 +2291,56 @@ updateGuideRatesForWells(const Schedule& schedule,
                          GuideRate* guideRate)
 {
     OPM_TIMEFUNCTION();
-    for (const auto& wname : schedule[reportStepIdx].well_order()) {
-        std::array<Scalar,3> potentials{};
-        auto& [oilpot, gaspot, waterpot] = potentials;
 
-        const auto& well_index = wellState.index(wname);
-        if (well_index.has_value() && wellState.wellIsOwned(well_index.value(), wname))
-        {
+    const auto o_pos = (pu.phase_used[BlackoilPhases::Liquid] > 0)
+        ? pu.phase_pos[BlackoilPhases::Liquid] : -1;
+
+    const auto g_pos = (pu.phase_used[BlackoilPhases::Vapour] > 0)
+        ? pu.phase_pos[BlackoilPhases::Vapour] : -1;
+
+    const auto w_pos = (pu.phase_used[BlackoilPhases::Aqua] > 0)
+        ? pu.phase_pos[BlackoilPhases::Aqua] : -1;
+
+    const auto o_ix = std::size_t{0};
+    const auto g_ix = o_ix + 1;
+    const auto w_ix = g_ix + 1;
+    const auto npot = w_ix + 1;
+
+    const auto& wnames = schedule[reportStepIdx].well_order();
+
+    auto all_well_pot = std::vector<double>(npot * wnames.size());
+    auto well_pot = all_well_pot.begin();
+
+    for (const auto& wname : wnames) {
+        const auto well_index = wellState.index(wname);
+
+        if (well_index.has_value() && wellState.wellIsOwned(*well_index, wname)) {
             // the well is found and owned
-            const auto& ws = wellState.well(well_index.value());
-            const auto& wpot = ws.well_potentials;
-            if (pu.phase_used[BlackoilPhases::Liquid] > 0)
-                oilpot = wpot[pu.phase_pos[BlackoilPhases::Liquid]];
+            const auto& wpot = wellState.well(*well_index).well_potentials;
 
-            if (pu.phase_used[BlackoilPhases::Vapour] > 0)
-                gaspot = wpot[pu.phase_pos[BlackoilPhases::Vapour]];
-
-            if (pu.phase_used[BlackoilPhases::Aqua] > 0)
-                waterpot = wpot[pu.phase_pos[BlackoilPhases::Aqua]];
+            if (o_pos >= 0) { well_pot[o_ix] = static_cast<double>(wpot[o_pos]); }
+            if (g_pos >= 0) { well_pot[g_ix] = static_cast<double>(wpot[g_pos]); }
+            if (w_pos >= 0) { well_pot[w_ix] = static_cast<double>(wpot[w_pos]); }
         }
-        comm.sum(potentials.data(), potentials.size());
-        const UnitSystem& unit_system = schedule.getUnits();
-        oilpot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, oilpot);
-        waterpot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, waterpot);
-        gaspot = unit_system.from_si(UnitSystem::measure::gas_surface_rate, gaspot);
-        guideRate->compute(wname, reportStepIdx, simTime, oilpot, gaspot, waterpot);
+
+        well_pot += npot;
+    }
+
+    comm.sum(all_well_pot.data(), all_well_pot.size());
+
+    using M = UnitSystem::measure;
+
+    const auto& usys = schedule.getUnits();
+
+    well_pot = all_well_pot.begin();
+    for (const auto& wname : wnames) {
+        const auto o_pot = usys.from_si(M::liquid_surface_rate, well_pot[o_ix]);
+        const auto g_pot = usys.from_si(M::gas_surface_rate   , well_pot[g_ix]);
+        const auto w_pot = usys.from_si(M::liquid_surface_rate, well_pot[w_ix]);
+
+        guideRate->compute(wname, reportStepIdx, simTime, o_pot, g_pot, w_pot);
+
+        well_pot += npot;
     }
 }
 
