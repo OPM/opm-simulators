@@ -29,6 +29,7 @@
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/Well/NameOrder.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
@@ -2289,12 +2290,12 @@ updateGuideRatesForWells(const Schedule& schedule,
                          GuideRate* guideRate)
 {
     OPM_TIMEFUNCTION();
-    for (const auto& well : schedule.getWells(reportStepIdx)) {
+    for (const auto& wname : schedule[reportStepIdx].well_order()) {
         std::array<Scalar,3> potentials{};
         auto& [oilpot, gaspot, waterpot] = potentials;
 
-        const auto& well_index = wellState.index(well.name());
-        if (well_index.has_value() && wellState.wellIsOwned(well_index.value(), well.name()))
+        const auto& well_index = wellState.index(wname);
+        if (well_index.has_value() && wellState.wellIsOwned(well_index.value(), wname))
         {
             // the well is found and owned
             const auto& ws = wellState.well(well_index.value());
@@ -2313,7 +2314,7 @@ updateGuideRatesForWells(const Schedule& schedule,
         oilpot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, oilpot);
         waterpot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, waterpot);
         gaspot = unit_system.from_si(UnitSystem::measure::gas_surface_rate, gaspot);
-        guideRate->compute(well.name(), reportStepIdx, simTime, oilpot, gaspot, waterpot);
+        guideRate->compute(wname, reportStepIdx, simTime, oilpot, gaspot, waterpot);
     }
 }
 

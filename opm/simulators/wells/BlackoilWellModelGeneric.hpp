@@ -536,7 +536,7 @@ protected:
     std::map<std::string, double> well_close_times_;
 
     std::vector<ConnectionIndexMap> conn_idx_map_{};
-    std::function<bool(const Well&)> not_on_process_{};
+    std::function<bool(const std::string&)> not_on_process_{};
 
     // a vector of all the wells.
     std::vector<WellInterfaceGeneric<Scalar>*> well_container_generic_{};
