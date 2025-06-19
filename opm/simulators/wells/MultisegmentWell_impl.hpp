@@ -1633,11 +1633,15 @@ namespace Opm
         // The optimal number here is subject to further investigation, but it has been observerved 
         // that unless this number is >1, we may get stuck in a cycle 
         const int min_its_after_switch = 3;
+        // We also want to restrict the number of status switches to avoid oscillation between STOP<->OPEN
+        const int max_status_switch = this->param_.max_well_status_switch_;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
+        int status_switch_count = 0;
         // if we fail to solve eqs, we reset status/operability before leaving
         const auto well_status_orig = this->wellStatus_;
         const auto operability_orig = this->operability_status_;
+        auto well_status_cur = well_status_orig;
         // don't allow opening wells that has a stopped well status
         const bool allow_open = well_state.well(this->index_of_well_).status == WellStatus::OPEN;
         // don't allow switcing for wells under zero rate target or requested fixed status and control
@@ -1650,7 +1654,7 @@ namespace Opm
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             ++its_since_last_switch;
-            if (allow_switching && its_since_last_switch >= min_its_after_switch){
+            if (allow_switching && its_since_last_switch >= min_its_after_switch && status_switch_count < max_status_switch){
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
                 bool changed = this->updateWellControlAndStatusLocalIteration(simulator, well_state, group_state,
                                                                               inj_controls, prod_controls, wqTotal,
@@ -1659,11 +1663,18 @@ namespace Opm
                 if (changed) {
                     its_since_last_switch = 0;
                     ++switch_count;
+                    if (well_status_cur != this->wellStatus_) {
+                        well_status_cur = this->wellStatus_;
+                        status_switch_count++;
+                    }
                 }
                 if (!changed && final_check) {
                     break;
                 } else {
                     final_check = false;
+                }
+                if (status_switch_count == max_status_switch) {
+                    this->wellStatus_ = well_status_orig;
                 }
             }
 
@@ -1750,7 +1761,7 @@ namespace Opm
             this->wellStatus_ = well_status_orig;
             this->operability_status_ = operability_orig;            
             const std::string message = fmt::format("   Well {} did not converge in {} inner iterations ("
-                                                    "{} control/status switches).", this->name(), it, switch_count);
+                "{} switches, {} status changes).", this->name(), it, switch_count, status_switch_count);
             deferred_logger.debug(message);
             this->primary_variables_.outputLowLimitPressureSegments(deferred_logger);
         }
