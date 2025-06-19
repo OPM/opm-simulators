@@ -95,7 +95,7 @@ CuSparseResource<T>::CuSparseResource()
 
 template <class T>
 CuSparseResource<T>::CuSparseResource(const CuSparseResource& other)
-    : CuSparseResource<T>(other.m_creator, other.m_deleter)
+    : m_deleter(other.m_deleter)
 {
     *m_resource = other.m_resource;
 }
