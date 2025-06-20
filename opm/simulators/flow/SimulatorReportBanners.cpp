@@ -41,8 +41,11 @@ void outputReportStep(const SimulatorTimer& timer)
     stepMsg << "\nReport step " << std::setw(2) << timer.currentStepNum()
             << "/" << timer.numSteps()
             << " at day " << unit::convert::to(timer.simulationTimeElapsed(), unit::day)
-            << "/" << unit::convert::to(timer.totalTime(), unit::day)
-            << ", date = " << timer.currentDateTime();
+            << "/" << unit::convert::to(timer.totalTime(), unit::day);
+    if ((timer.currentDateTime() <= boost::posix_time::ptime(boost::posix_time::max_date_time)) &&
+        (boost::posix_time::ptime(boost::posix_time::min_date_time) <= timer.currentDateTime())) {
+        stepMsg << ", date = " << timer.currentDateTime();
+    }
     OpmLog::info(stepMsg.str());
 }
 
