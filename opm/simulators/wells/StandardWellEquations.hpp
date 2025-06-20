@@ -35,17 +35,18 @@ namespace Opm
 {
 
 template<class Scalar> class ParallelWellInfo;
-template<class Scalar, int numEq> class StandardWellEquationAccess;
+template<typename FluidSystem, typename Indices> class StandardWellEquationAccess;
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
 #endif
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
+template<typename FluidSystem, typename Indices> class WellState;
 
-template<class Scalar, int numEq>
+template<typename FluidSystem, typename Indices>
 class StandardWellEquations
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     // sparsity pattern for the matrices
     //[A C^T    [x       =  [ res
     // B  D ]   x_well]      res_well]
@@ -61,6 +62,8 @@ public:
     // the matrix type for the non-diagonal matrix B and C^T
     using OffDiagMatrixBlockWellType = Dune::DynamicMatrix<Scalar>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
+
+    static constexpr int numEq = Indices::numEq;
 
     // block vector type
     using BVector = Dune::BlockVector<Dune::FieldVector<Scalar,numEq>>;
@@ -113,9 +116,9 @@ public:
                                   const BVector& weights,
                                   const int pressureVarIndex,
                                   const bool use_well_weights,
-                                  const WellInterfaceGeneric<Scalar>& well,
+                                  const WellInterfaceGeneric<FluidSystem, Indices>& well,
                                   const int bhp_var_index,
-                                  const WellState<Scalar>& well_state) const;
+                                  const WellState<FluidSystem, Indices>& well_state) const;
 
     //! \brief Get the number of blocks of the C and B matrices.
     unsigned int getNumBlocks() const;
@@ -130,7 +133,7 @@ public:
     }
 
 private:
-    friend class StandardWellEquationAccess<Scalar,numEq>;
+    friend class StandardWellEquationAccess<FluidSystem, Indices>;
 
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
