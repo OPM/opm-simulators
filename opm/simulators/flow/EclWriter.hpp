@@ -165,7 +165,7 @@ public:
                    Parameters::Get<Parameters::EnableEsmry>())
         , simulator_(simulator)
     {
-#if HAVE_MPI
+#if HAVE_MPI 
         if (this->simulator_.vanguard().grid().comm().size() > 1) {
             auto smryCfg = (this->simulator_.vanguard().grid().comm().rank() == 0)
                 ? this->eclIO_->finalSummaryConfig()
@@ -184,8 +184,10 @@ public:
         }
 
         this->rank_ = this->simulator_.vanguard().grid().comm().rank();
-
-        this->simulator_.vanguard().eclState().computeFipRegionStatistics();
+        
+        if (this->simulator_.vanguard().grid().maxLevel()==0) {
+            this->simulator_.vanguard().eclState().computeFipRegionStatistics();
+        }
     }
 
     ~EclWriter()
@@ -823,7 +825,7 @@ private:
 
         const auto cartesianIndex = [this](const int elemIndex)
         {
-            return this->cartMapper_.cartesianIndex(elemIndex);
+            return this->cartMapper_.cartesianIndex(elemIndex); // lookupdata? 
         };
 
         this->outputModule_->initializeFluxData();
@@ -835,7 +837,9 @@ private:
             elemCtx.updateIntensiveQuantities(timeIdx);
             elemCtx.updateExtensiveQuantities(timeIdx);
 
+            //if (this->simulator_.vanguard().grid().maxLevel() == 0)  {
             this->outputModule_->processFluxes(elemCtx, activeIndex, cartesianIndex);
+            //}
         }
 
         OPM_END_PARALLEL_TRY_CATCH("EclWriter::captureLocalFluxData() failed: ",

@@ -472,9 +472,12 @@ public:
         dofTotalVolume_.resize(numDof);
         std::fill(dofTotalVolume_.begin(), dofTotalVolume_.end(), 0.0);
 
+        std::cout<< "finishInit() from fvbasediscretization "<< numDof << " numDof" <<std::endl;
+
         ElementContext elemCtx(simulator_);
         gridTotalVolume_ = 0.0;
 
+        std::cout<< gridView_.size(0) << " gridView_.size(0)" <<std::endl;
         // iterate through the grid and evaluate the initial condition
         for (const auto& elem : elements(gridView_)) {
             // ignore everything which is not in the interior if the
@@ -503,13 +506,18 @@ public:
         // before taking the peer processes into account...
         isLocalDof_.resize(numDof);
         for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-            isLocalDof_[dofIdx] = (dofTotalVolume_[dofIdx] != 0.0);
+            if (dofTotalVolume_[dofIdx]<=0.0) {
+                std::cout<< "dofTotalVolume_[dofIdx]<=0 for dofIdx " << dofIdx << " and numDof " << numDof  <<std::endl;
+            }
+            isLocalDof_[dofIdx] =  (dofTotalVolume_[dofIdx] > 0.0); // (dofTotalVolume_[dofIdx] != 0.0);
         }
 
         // add the volumes of the DOFs on the process boundaries
         const auto sumHandle =
             GridCommHandleFactory::template sumHandle<Scalar>(dofTotalVolume_,
-                                                              asImp_().dofMapper());
+                                                              asImp_().dofMapper()); // dofMapper??? is this cartesianMapper?
+        
+        // Here the gridView_ has LGRs and uses "dofMapper" to communicate... that might be an issue
         gridView_.communicate(*sumHandle,
                               Dune::InteriorBorder_All_Interface,
                               Dune::ForwardCommunication);

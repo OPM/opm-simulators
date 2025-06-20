@@ -273,9 +273,16 @@ public:
         {
             if (updated) { return; }
 
+            if (this->simulator().vanguard().grid().maxLevel()==0) {
             this->transmissibilities_.finishInit([&vg = this->simulator().vanguard()](const unsigned int it) {
                 return vg.gridIdxToEquilGridIdx(it);
             });
+            }
+            else {
+                std::cout<< "finisInit without args, if grid maxLevel>0"<<std::endl;
+                this->transmissibilities_.finishInit();
+            }
+            
 
             updated = true;
         };
@@ -1009,14 +1016,19 @@ public:
         this->mixControls_.init(numElems, restart_step, eclState.runspec().tabdims().getNumPVTTables());
 
         if constexpr (enableMICP) {
-            this->micp_ = this->eclWriter_->outputModule().getMICP().getSolution();
+            if (enableEclOutput_) {
+                this->micp_ = this->eclWriter_->outputModule().getMICP().getSolution();
+            }
         }
 
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = this->initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
-            this->eclWriter_->outputModule().initHysteresisParams(simulator, elemIdx);
-            this->eclWriter_->outputModule().assignToFluidState(elemFluidState, elemIdx);
+            if (enableEclOutput_) {
+                this->eclWriter_->outputModule().initHysteresisParams(simulator, elemIdx);
+                this->eclWriter_->outputModule().assignToFluidState(elemFluidState, elemIdx);
+            }
+
 
             // Note: Function processRestartSaturations_() mutates the
             // 'ssol' argument--the value from the restart file--if solvent
@@ -1025,15 +1037,20 @@ public:
             // the function and discard the unchanged result.  Do not index
             // into 'solventSaturation_' unless solvent is enabled.
             {
-                auto ssol = enableSolvent
-                            ? this->eclWriter_->outputModule().getSolventSaturation(elemIdx)
-                            : Scalar(0);
+                auto ssol = Scalar(0); // This looks bad...
+                if (enableEclOutput_) {
+                    ssol = enableSolvent
+                        ?  this->eclWriter_->outputModule().getSolventSaturation(elemIdx)
+                        : Scalar(0);
+                }
 
                 this->processRestartSaturations_(elemFluidState, ssol);
 
                 if constexpr (enableSolvent) {
                     this->solventSaturation_[elemIdx] = ssol;
-                    this->solventRsw_[elemIdx] = this->eclWriter_->outputModule().getSolventRsw(elemIdx);
+                    if (enableEclOutput_) {
+                        this->solventRsw_[elemIdx] = this->eclWriter_->outputModule().getSolventRsw(elemIdx);
+                    }
                 }
             }
 
@@ -1047,8 +1064,11 @@ public:
 
             this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
 
-            if constexpr (enablePolymer)
-                this->polymer_.concentration[elemIdx] = this->eclWriter_->outputModule().getPolymerConcentration(elemIdx);
+            if constexpr (enablePolymer) {
+                if (enableEclOutput_) {
+                    this->polymer_.concentration[elemIdx] = this->eclWriter_->outputModule().getPolymerConcentration(elemIdx);
+                }
+            }
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
 

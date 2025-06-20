@@ -70,6 +70,7 @@ namespace {
 
     std::size_t numCells(const Opm::EclipseState& eclState)
     {
+        std::cout<< eclState.fieldProps().get_int("FIPNUM").size() << " numCells from annonym namespace GenericOutputBlackoil..." <<std::endl;
         return eclState.fieldProps().get_int("FIPNUM").size();
     }
 
