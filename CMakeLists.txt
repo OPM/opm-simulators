@@ -433,6 +433,7 @@ macro (tests_hook)
     endif()
   endif()
   if(AMGX_FOUND)
+    list(APPEND tests_SOURCES tests/gpuistl/test_AmgxInterface.cpp)
     list(APPEND tests_SOURCES tests/test_AmgxPreconditioner.cpp)
   endif()
 endmacro (tests_hook)
@@ -544,6 +545,10 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
 set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+if (CONVERT_CUDA_TO_HIP)
+  add_dependencies(MainDispatchDynamic hipified_headers)
+endif()
+
 if(TARGET fmt::fmt)
   target_link_libraries(MainDispatchDynamic fmt::fmt)
 endif()
@@ -581,6 +586,9 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   endif()
   if(USE_TRACY_PROFILER AND Tracy_FOUND)
     target_link_libraries(flow_lib${OBJ} Tracy::TracyClient)
+  endif()
+  if(CONVERT_CUDA_TO_HIP)
+    add_dependencies(flow_lib${OBJ} hipified_headers)
   endif()
   opm_add_test(flow_${OBJ}
                ONLY_COMPILE
@@ -757,6 +765,7 @@ if(CUDA_FOUND)
                        is_gpu_pointer
                        throw_macros_on_gpu
                        preconditioner_factory_gpu
+                       GpuPressureTransferPolicy
                        PROPERTIES LABELS ${gpu_label})
   if(MPI_FOUND)
     set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
@@ -772,6 +781,7 @@ if(HYPRE_FOUND)
 endif()
 
 if(AMGX_FOUND)
+  set_tests_properties(AmgxInterface PROPERTIES LABELS gpu_cuda)
   set_tests_properties(AmgxPreconditioner PROPERTIES LABELS gpu_cuda)
 endif()
 
