@@ -59,6 +59,7 @@ private:
 
     bool analysis_done = false;
     std::shared_ptr<BlockedMatrix<Scalar>> mat{};                 // original matrix
+    std::shared_ptr<BlockedMatrix<Scalar>> jacMat{};                 // jacobi matrix
 
     rocsparse_direction dir = rocsparse_direction_row;
     rocsparse_operation operation = rocsparse_operation_none;
@@ -96,7 +97,7 @@ private:
 
     /// Update linear system to GPU
     /// \param[in] b              input vector, contains N values
-    void update_system_on_gpu(Scalar* b);
+    void update_system_on_gpu(Scalar* vals, Scalar* b);
 
     /// Analyze sparsity pattern to extract parallelism
     /// \return true iff analysis was successful

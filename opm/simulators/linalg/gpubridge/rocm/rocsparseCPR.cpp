@@ -35,6 +35,8 @@
 
 #include <opm/simulators/linalg/gpubridge/Misc.hpp>
 
+#include <opm/simulators/linalg/gpubridge/rocm/rocsparseWellContributions.hpp>
+
 #include <type_traits>
 
 namespace Opm::Accelerator {
@@ -47,6 +49,7 @@ rocsparseCPR<Scalar, block_size>::rocsparseCPR(int verbosity_) :
     rocsparsePreconditioner<Scalar, block_size>(verbosity_)
 {
     bilu0 = std::make_unique<rocsparseBILU0<Scalar, block_size> >(verbosity_);
+    createfirsttime = true;
 }
 
 template <class Scalar, unsigned int block_size>
@@ -56,12 +59,14 @@ initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
            rocsparse_int *d_Arows,
            rocsparse_int *d_Acols)
 {
+    h_mat = matrix;
+
     this->Nb = matrix->Nb;
     this->nnzb = matrix->nnzbs;
     this->N = Nb * block_size;
     this->nnz = nnzb * block_size * block_size;
 
-    bilu0->set_context(this->handle, this->dir, this->operation, this->stream);
+    bilu0->set_context(this->handle, this->blas_handle, this->dir, this->operation, this->stream);
     bilu0->setJacMat(*this->jacMat.get());
     bilu0->initialize(matrix,jacMatrix,d_Arows,d_Acols);
     return true;
@@ -69,19 +74,23 @@ initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
 
 template <class Scalar, unsigned int block_size>
 void rocsparseCPR<Scalar, block_size>::
-copy_system_to_gpu(Scalar *b) {
+copy_system_to_gpu(Scalar *b)
+{
     bilu0->copy_system_to_gpu(b);
 }
 
 template <class Scalar, unsigned int block_size>
 void rocsparseCPR<Scalar, block_size>::
-update_system_on_gpu(Scalar *vals) {
-    bilu0->update_system_on_gpu(vals);
+update_system_on_gpu(Scalar* h_vals, Scalar *vals) 
+{
+    bilu0->update_system_on_gpu(h_vals, vals);
+    this->mat->nnzValues = h_vals;
 }
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseCPR<Scalar, block_size>::
-analyze_matrix(BlockedMatrix<Scalar> *mat_) {
+analyze_matrix(BlockedMatrix<Scalar> *mat_) 
+{
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
     this->N = Nb * block_size;
@@ -115,67 +124,83 @@ bool rocsparseCPR<Scalar, block_size>::
 create_preconditioner(BlockedMatrix<Scalar> *mat_,
                       BlockedMatrix<Scalar> *jacMat_)
 {
-    Dune::Timer t_bilu0;
-    bool result = bilu0->create_preconditioner(mat_, jacMat_);
-    if (verbosity >= 3) {
-        std::ostringstream out;
-        out << "rocsparseCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
-        OpmLog::info(out.str());
-    }
-    
-    Dune::Timer t_amg;
-    this->create_preconditioner_amg(this->mat);
-
-    if (verbosity >= 3) {
-        std::ostringstream out;
-        out << "rocsparseCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
-        OpmLog::info(out.str());
-    }
-    
-    auto init_func = std::bind(&rocsparseCPR::init_rocm_buffers, this);
-    std::call_once(rocm_buffers_allocated, init_func);
-
-    // upload matrices and vectors to GPU
-    rocm_upload();
-
-    return result;
+    return create_preconditioner(jacMat_);
 }
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseCPR<Scalar, block_size>::
 create_preconditioner(BlockedMatrix<Scalar> *mat_) {
-    Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_);
-    if (verbosity >= 3) {
-        std::ostringstream out;
-        out << "rocsparseCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
-        OpmLog::info(out.str());
+    bool amgcreated = this->create_preconditioner_amg(this->mat);
+    
+    if(amgcreated)
+    {
+        smootherilu0s.clear();
     }
+ 
+    for (int i=0; i<this->num_levels-1; i++) {
+        std::shared_ptr<rocsparseBILU0<Scalar,1>> smoother; 
+         
+        //convert Matrix to BlockMatrix
+        auto mat = std::make_shared<BlockedMatrix<Scalar>>(this->Amatrices[i].N, this->Amatrices[i].nnzs, 1, &(this->Amatrices[i].nnzValues[0]), &(this->Amatrices[i].colIndices[0]), &(this->Amatrices[i].rowPointers[0]));   
 
-    Dune::Timer t_amg;
-    this->create_preconditioner_amg(this->mat); 
-    
-    if (verbosity >= 3) {
-        std::ostringstream out;
-        out << "rocsparseCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
-        OpmLog::info(out.str());
-    }
-    
-    auto init_func = std::bind(&rocsparseCPR::init_rocm_buffers, this);
-    std::call_once(rocm_buffers_allocated, init_func);
+        if(amgcreated)
+        {
+            smoother = std::make_shared<rocsparseBILU0<Scalar,1>>(verbosity);
+            smootherilu0s.push_back(smoother);
+            smoother->set_context(this->handle, this->blas_handle, this->dir, this->operation, this->stream);
+             
+            smoother->initialize(mat,mat,0,0); 
+            smoother->copy_values_to_gpu(&(this->Amatrices[i].nnzValues[0]), &(this->Amatrices[i].rowPointers[0]), &(this->Amatrices[i].colIndices[0]), false);
+            smoother->analyze_matrix(mat.get());
+         }
+         else {
+             smoother = smootherilu0s[i];
 
-    // upload matrices and vectors to GPU
-    rocm_upload();
-    
-    return result;
+             smoother->copy_values_to_gpu(&(this->Amatrices[i].nnzValues[0]), 0, 0, true);
+             smoother->analyze_matrix();
+         }
+
+         smoother->create_preconditioner(mat.get());
+     }
+
+     auto init_func = std::bind(&rocsparseCPR::init_rocm_buffers_fineMatrix, this);
+     std::call_once(rocm_buffers_allocated, init_func);
+
+     if(amgcreated) {
+         if(!createfirsttime) clear_rocm_buffers();
+         init_rocm_buffers();
+         HIP_CHECK(hipMemcpyAsync(d_weights.data()->nnzValues, this->weights.data(), sizeof(Scalar) * this->N, hipMemcpyHostToDevice, this->stream));
+         createfirsttime = false;
+     }
+
+     // upload matrices and vectors to GPU
+     rocm_upload();
+
+     return result;
 }
 
 template <class Scalar, unsigned int block_size>
 void rocsparseCPR<Scalar, block_size>::
-init_rocm_buffers() {
+init_rocm_buffers_fineMatrix() 
+{
+    d_mat = std::make_unique<RocmMatrix<Scalar>>(h_mat.get()->Nb, h_mat.get()->Nb, h_mat.get()->nnzbs, block_size);
+    d_weights.emplace_back(this->N);
+}
+
+template <class Scalar, unsigned int block_size>
+void rocsparseCPR<Scalar, block_size>::
+init_rocm_buffers() 
+{
     d_Amatrices.reserve(this->num_levels);
     d_Rmatrices.reserve(this->num_levels - 1);
     d_invDiags.reserve(this->num_levels - 1);
+    d_f.reserve(this->num_levels - 1);
+    d_u.reserve(this->num_levels - 1);
+    d_PcolIndices.reserve(this->num_levels - 1);
+    d_invDiags.reserve(this->num_levels - 1);
+    d_t.reserve(this->num_levels - 1);
+    
     for (Matrix<Scalar>& m : this->Amatrices) {
         d_Amatrices.emplace_back(m.N, m.M, m.nnzs, 1);
     }
@@ -189,46 +214,73 @@ init_rocm_buffers() {
         d_t.emplace_back(m.M);
     }
     
-    d_weights.emplace_back(this->N);
+    HIP_CHECK(hipMalloc((void**)&d_tmp, sizeof(Scalar) * this->N));
+    HIP_CHECK(hipMalloc((void**)&d_yamg, sizeof(Scalar) * this->N));
+    HIP_CHECK(hipMalloc((void**)&d_ywell, sizeof(Scalar) * this->N));
+
     d_rs.emplace_back(this->N);
-    d_mat = std::make_unique<RocmMatrix<Scalar>>(this->Nb, this->Nb, this->nnzb, block_size);
     
     d_coarse_y.emplace_back(this->Nb);
     d_coarse_x.emplace_back(this->Nb);
+    d_yinput.emplace_back(this->Nb);
 }
 
 template <class Scalar, unsigned int block_size>
 void rocsparseCPR<Scalar, block_size>::
-rocm_upload() {
-     d_mat->upload(this->mat, this->stream);
-     
-     HIP_CHECK(hipMemcpyAsync(d_weights.data()->nnzValues, this->weights.data(), sizeof(Scalar) * this->N, hipMemcpyHostToDevice, this->stream));
+clear_rocm_buffers() 
+{
+    d_Amatrices.clear();
+    d_Rmatrices.clear();
+    d_invDiags.clear();
+    d_f.clear();
+    d_u.clear();
+    d_PcolIndices.clear();
+    d_t.clear();
     
-    for (unsigned int i = 0; i < this->Rmatrices.size(); ++i) {
-        d_Amatrices[i].upload(&this->Amatrices[i], this->stream);
+    HIP_CHECK(hipFree(d_tmp));
+    HIP_CHECK(hipFree(d_yamg));
+    HIP_CHECK(hipFree(d_ywell));
+
+    d_rs.clear();
+    
+    d_coarse_y.clear();
+    d_coarse_x.clear();
+    d_yinput.clear();
+}
+
+template <class Scalar, unsigned int block_size>
+void rocsparseCPR<Scalar, block_size>::
+rocm_upload() 
+{
+     d_mat->upload(h_mat.get(), this->stream);
+
+     for (unsigned int i = 0; i < this->Rmatrices.size(); ++i) {
+         d_Amatrices[i].upload(&this->Amatrices[i], this->stream);
+         d_Rmatrices[i].upload(&this->Rmatrices[i], this->stream);
         
-        HIP_CHECK(hipMemcpyAsync(d_invDiags[i].nnzValues, this->invDiags[i].data(), sizeof(Scalar) * this->Amatrices[i].N, hipMemcpyHostToDevice, this->stream));
-        HIP_CHECK(hipMemcpyAsync(d_PcolIndices[i].nnzValues, this->PcolIndices[i].data(), sizeof(int) * this->Amatrices[i].N, hipMemcpyHostToDevice, this->stream));
-    }
-    
-    for (unsigned int i = 0; i < this->Rmatrices.size(); ++i) {
-        d_Rmatrices[i].upload(&this->Rmatrices[i], this->stream);
-    }
+         HIP_CHECK(hipMemcpyAsync(d_invDiags[i].nnzValues, this->invDiags[i].data(), sizeof(Scalar) * this->Amatrices[i].N, hipMemcpyHostToDevice, this->stream));
+         HIP_CHECK(hipMemcpyAsync(d_PcolIndices[i].nnzValues, this->PcolIndices[i].data(), sizeof(int) * this->Amatrices[i].N, hipMemcpyHostToDevice, this->stream));
+     }
 }
 
 template <class Scalar, unsigned int block_size>
 void rocsparseCPR<Scalar, block_size>::
 amg_cycle_gpu(const int level,
               Scalar &y,
-              Scalar &x)
+              Scalar &x,
+              [[maybe_unused]] WellContributions<Scalar>& wellContribs)
 {
+    Scalar one  = 1.0;
+    Scalar mone = -1.0;
+    Scalar zero = 0.0;
     RocmMatrix<Scalar> *A = &d_Amatrices[level];
     RocmMatrix<Scalar> *R = &d_Rmatrices[level];
+    
+    std::shared_ptr<rocsparseBILU0<Scalar,1>> S; 
+ 
     int Ncur = A->Nb;
     
-    rocsparse_mat_info spmv_info;
     rocsparse_mat_descr descr_R;
-    ROCSPARSE_CHECK(rocsparse_create_mat_info(&spmv_info));
     ROCSPARSE_CHECK(rocsparse_create_mat_descr(&descr_R));
 
     if (level == this->num_levels - 1) {
@@ -249,37 +301,67 @@ amg_cycle_gpu(const int level,
         
         return;
     }
-    
+    else
+        S = smootherilu0s[level];
+
     int Nnext = d_Amatrices[level+1].Nb;
 
-    RocmVector<Scalar>& t = d_t[level];
-    RocmVector<Scalar>& f = d_f[level];
-    RocmVector<Scalar>& u = d_u[level]; // u was 0-initialized earlier
+    RocmVector<Scalar>& t = d_t[level]; // this is y hierarchy ==> this vector needs to be the updated
+    RocmVector<Scalar>& f = d_f[level]; // this is x=lhs hierarchy starting from the first level
+    RocmVector<Scalar>& u = d_u[level]; // u was 0-initialized earlier : this is y=rhs from the first level
 
     // presmooth
-    Scalar jacobi_damping = 0.65; // default value in amgcl: 0.72
+    Scalar jacobi_damping = 1;//OLD OPM VALUE: 0.65; // default value in amgcl: 0.72 , BUT IN OPM is NOW 1
     for (unsigned i = 0; i < this->num_pre_smooth_steps; ++i){
-        HipKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, &x, &y, t.nnzValues, Ncur, 1, this->stream);
-        HipKernels<Scalar>::vmul(jacobi_damping, d_invDiags[level].nnzValues, t.nnzValues, &x, Ncur, this->stream);
+        S->apply(y, x, wellContribs);
+        
+        ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1)); //t is output, x input
+
+        HipKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, &x, &y, &y, Ncur, 1, this->stream);
     }
 
     // move to coarser level
-    HipKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, &x, &y, t.nnzValues, Ncur, 1, this->stream);
+    ROCSPARSE_CHECK(rocsparse_create_mat_info(&spmv_info));
+    ROCSPARSE_CHECK(rocsparse_dcsrmv_analysis(this->handle, this->operation, R->Nb, R->Mb, R->nnzbs, descr_R, R->nnzValues, R->rowPointers, R->colIndices, spmv_info));
+    
+    if constexpr (std::is_same_v<Scalar,float>) {
+            ROCSPARSE_CHECK(rocsparse_scsrmv(this->handle, this->operation,
+                                                R->Nb, R->Mb, R->nnzbs, &one, descr_R,
+                                                R->nnzValues, R->rowPointers, R->colIndices, spmv_info,
+                                                &y/*t.nnzValues*/, &zero, f.nnzValues));
+    } else {
+            ROCSPARSE_CHECK(rocsparse_dcsrmv(this->handle, this->operation,
+                                                R->Nb, R->Mb, R->nnzbs, &one, descr_R,
+                                                R->nnzValues, R->rowPointers, R->colIndices, spmv_info,
+                                                &y/*t.nnzValues*/, &zero, f.nnzValues));
+    }
 
-// TODO: understand why rocsparse spmv library function does not here. 
-//     ROCSPARSE_CHECK(rocsparse_dbsrmv(this->handle, this->dir, this->operation,
-//                                          R->Nb, R->Mb, R->nnzbs, &one, descr_R,
-//                                          R->nnzValues, R->rowPointers, R->colIndices, 1,
-//                                          t.nnzValues, &zero, f.nnzValues));
-    HipKernels<Scalar>::spmv(R->nnzValues, R->colIndices, R->rowPointers, t.nnzValues, f.nnzValues, Nnext, 1, this->stream);
+    ROCSPARSE_CHECK(rocsparse_destroy_mat_info(spmv_info));
 
-    amg_cycle_gpu(level + 1, *f.nnzValues, *u.nnzValues);
-    HipKernels<Scalar>::prolongate_vector(u.nnzValues, &x, d_PcolIndices[level].nnzValues, Ncur, this->stream);
-
+    amg_cycle_gpu(level + 1, *f.nnzValues, *u.nnzValues, wellContribs);//f is input = y, u is output = x!
+    
+    HIP_CHECK(hipMemsetAsync(&x, 0, sizeof(Scalar) * Ncur, this->stream));
+    if(level < this->num_levels - 2)
+    {
+        HipKernels<Scalar>::prolongate_vector(d_t[level+1].nnzValues, &x, d_PcolIndices[level].nnzValues, Ncur, this->stream);
+    }
+    else {
+        HipKernels<Scalar>::prolongate_vector(u.nnzValues, &x, d_PcolIndices[level].nnzValues, Ncur, this->stream);
+    }
+  
+    // accumulate update    
+    ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1));
+    
     // postsmooth
     for (unsigned i = 0; i < this->num_post_smooth_steps; ++i){
-        HipKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, &x, &y, t.nnzValues, Ncur, 1, this->stream);
-        HipKernels<Scalar>::vmul(jacobi_damping, d_invDiags[level].nnzValues, t.nnzValues, &x, Ncur, this->stream);
+        // update defect
+        HipKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, &x, &y, &y, Ncur, 1, this->stream); // params: x@in, y@in, y@out = (A.., x, rhs, out, Nb, block_size, stream) -> computes out = rhs - A * x <==> y -= Ax
+
+        //smoother applier
+        S->apply(y, x, wellContribs);
+
+        // accumulate update    
+        ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1));
     }
 }
 
@@ -287,46 +369,128 @@ amg_cycle_gpu(const int level,
 template <class Scalar, unsigned int block_size>
 void rocsparseCPR<Scalar, block_size>::
 apply_amg(const Scalar& y, 
-          Scalar& x)
+          Scalar& x,
+          [[maybe_unused]] WellContributions<Scalar>& wellContribs)
 {
     HIP_CHECK(hipMemsetAsync(d_coarse_x.data()->nnzValues, 0, sizeof(Scalar) * this->Nb, this->stream));
     
-    for (unsigned int i = 0; i < d_u.size(); ++i) {
-        d_u[i].upload(this->Rmatrices[i].nnzValues.data(), this->stream);
+    for (unsigned int i = 0; i < d_t.size(); ++i) { 
+        HIP_CHECK(hipMemsetAsync(d_t[i].nnzValues, 0, sizeof(Scalar) * d_t[i].size, this->stream));
     }
     
-    HipKernels<Scalar>::residual(d_mat->nnzValues, d_mat->colIndices, d_mat->rowPointers, &x, &y, d_rs.data()->nnzValues, this->Nb, block_size, this->stream);
+    HipKernels<Scalar>::full_to_pressure_restriction(&y, d_weights.data()->nnzValues, d_coarse_y.data()->nnzValues, Nb, this->stream);
     
-    HipKernels<Scalar>::full_to_pressure_restriction(d_rs.data()->nnzValues, d_weights.data()->nnzValues, d_coarse_y.data()->nnzValues, Nb, this->stream);
+    //NOTE: input b=y is is overwritten, so duplicate into d_yinput
+    HIP_CHECK(hipMemcpyAsync(d_yinput.data()->nnzValues, d_coarse_y.data()->nnzValues, sizeof(Scalar) * d_coarse_y.data()->size, hipMemcpyDeviceToDevice, this->stream));
     
-    amg_cycle_gpu(0, *(d_coarse_y.data()->nnzValues), *(d_coarse_x.data()->nnzValues));
+    amg_cycle_gpu(0, *(d_coarse_y.data()->nnzValues), *(d_coarse_x.data()->nnzValues), wellContribs);
+ 
+    RocmMatrix<Scalar> *A = &d_Amatrices[0];
+    
+    // update defect
+    HipKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, d_t[0].nnzValues, d_yinput.data()->nnzValues, d_yinput.data()->nnzValues, d_yinput.data()->size, 1, this->stream); // params: x@in, y@in, y@out = (A.., x, rhs, out, Nb, block_size, stream) 
 
-    HipKernels<Scalar>::add_coarse_pressure_correction(d_coarse_x.data()->nnzValues, &x, this->pressure_idx, Nb, this->stream);
+    //NOTE: this initialization is required to get mathcing result with spmv in applyscaleadd of the well operator
+    HIP_CHECK(hipMemsetAsync(&x, 0,  sizeof(Scalar) *N, this->stream));
+    HIP_CHECK(hipStreamSynchronize(this->stream));
+
+    HipKernels<Scalar>::add_coarse_pressure_correction(d_t[0].nnzValues, &x, this->pressure_idx, Nb, this->stream);
 }
 
 template <class Scalar, unsigned int block_size>
 void rocsparseCPR<Scalar, block_size>::
-apply(const Scalar &y,
-      Scalar& x)
+apply(const Scalar& y,
+      Scalar& x,
+      [[maybe_unused]] WellContributions<Scalar>& wellContribs)
 {
-    Dune::Timer t_bilu0;
+    Scalar one  = 1.0;
+    Scalar mone = -1.0;
+    Scalar zero = 0.0;
+    rocsparse_mat_descr descr_mat;
+    
+    HIP_CHECK(hipMemsetAsync(&x, 0,  sizeof(Scalar) *N, this->stream));
+    HIP_CHECK(hipMemcpyAsync(d_yamg, &y, sizeof(Scalar) * this->N, hipMemcpyDeviceToDevice, this->stream));
+    HIP_CHECK(hipStreamSynchronize(this->stream));
+    
+    apply_amg(*d_yamg, x, wellContribs); 
+    
+    ROCSPARSE_CHECK(rocsparse_create_mat_descr(&descr_mat));
+    
+#if HIP_VERSION >= 50400000
+    ROCSPARSE_CHECK(rocsparse_create_mat_info(&spmv_info));
+#endif
+    
+#if HIP_VERSION >= 60000000
+    if constexpr (std::is_same_v<Scalar,float>) {
+        ROCSPARSE_CHECK(rocsparse_sbsrmv_analysis(this->handle, this->dir, this->operation, Nb, Nb, N, descr_mat, d_mat->nnzValues, d_mat->rowPointers, d_mat->colIndices, block_size, spmv_info));
+    } else {
+        ROCSPARSE_CHECK(rocsparse_dbsrmv_analysis(this->handle, this->dir, this->operation, Nb, Nb, N, descr_mat, d_mat->nnzValues, d_mat->rowPointers, d_mat->colIndices, block_size, spmv_info));
+    }
+#elif HIP_VERSION >= 50400000
+    if constexpr (std::is_same_v<Scalar,float>) {
+        ROCSPARSE_CHECK(rocsparse_sbsrmv_ex_analysis(this->handle, this->dir, this->operation, Nb, Nb, N, descr_mat, d_mat->nnzValues, d_mat->rowPointers, d_mat->colIndices, block_size, spmv_info));
+    } else {
+        ROCSPARSE_CHECK(rocsparse_dbsrmv_ex_analysis(this->handle, this->dir, this->operation, Nb, Nb, N, descr_mat, d_mat->nnzValues, d_mat->rowPointers, d_mat->colIndices, block_size, spmv_info));
+    }
+#endif
+    
+    //NOTE: below is the correct y -= AX but it is curretly not working so I am debugging spmv = Ax above alone!
+#if HIP_VERSION >= 60000000
+    if constexpr (std::is_same_v<Scalar,float>) {
+            ROCSPARSE_CHECK(rocsparse_sbsrmv(this->handle, this->dir, this->operation,
+                                                Nb, Nb, d_mat->nnzbs /*N*/, &mone, descr_mat,
+                                                d_mat->nnzValues, d_mat->rowPointers, d_mat->colIndices, block_size, spmv_info, &x, &one, d_yamg));
+    } else {
+            ROCSPARSE_CHECK(rocsparse_dbsrmv(this->handle, this->dir, this->operation,
+                                                Nb, Nb, d_mat->nnzbs /*N*/, &mone, descr_mat,
+                                                d_mat->nnzValues, d_mat->rowPointers, d_mat->colIndices, block_size, spmv_info, &x, &one, d_yamg));
+    }
+#elif HIP_VERSION >= 50400000
+    if constexpr (std::is_same_v<Scalar,float>) {
+            ROCSPARSE_CHECK(rocsparse_sbsrmv_ex(this->handle, this->dir, this->operation,
+                                                Nb, Nb, d_mat->nnzbs /*N*/, &mone, descr_mat,
+                                                d_mat->nnzValues, d_mat->rowPointers, d_mat->colIndices, block_size, spmv_info, &x, &one, d_yamg));
+    } else {
+            ROCSPARSE_CHECK(rocsparse_dbsrmv_ex(this->handle, this->dir, this->operation,
+                                                Nb, Nb, d_mat->nnzbs /*N*/, &mone, descr_mat,
+                                                d_mat->nnzValues, d_mat->rowPointers, d_mat->colIndices, block_size, spmv_info, &x, &one, d_yamg));
+    }
+#else
+    if constexpr (std::is_same_v<Scalar,float>) {
+            ROCSPARSE_CHECK(rocsparse_sbsrmv(this->handle, this->dir, this->operation,
+                                                Nb, Nb, d_mat->nnzbs /*N*/, &mone, descr_mat,
+                                                d_mat->nnzValues, d_mat->rowPointers, d_mat->colIndices, block_size, &x, &one, d_yamg));
+    } else {
+            ROCSPARSE_CHECK(rocsparse_dbsrmv(this->handle, this->dir, this->operation,
+                                                Nb, Nb, d_mat->nnzbs /*N*/, &mone, descr_mat,
+                                                d_mat->nnzValues, d_mat->rowPointers, d_mat->colIndices, block_size, &x, &one, d_yamg));
+    }
+#endif
 
-    bilu0->apply(y, x);
-
-    if (verbosity >= 3) {
-        HIP_CHECK(hipStreamSynchronize(this->stream));
-        std::ostringstream out;
-        out << "rocsparseCPR apply bilu0(): " << t_bilu0.stop() << " s";
-        OpmLog::info(out.str());
+#if HIP_VERSION >= 50400000
+    ROCSPARSE_CHECK(rocsparse_destroy_mat_info(spmv_info));
+#endif
+    
+    ROCSPARSE_CHECK(rocsparse_destroy_mat_descr(descr_mat));
+      
+    HIP_CHECK(hipMemsetAsync(d_ywell, 0,  sizeof(Scalar) *N, this->stream));
+    // NOTE: we need to also apply the wells to the defect!!! 
+    // apply wellContributions
+    if (wellContribs.getNumWells() > 0) {
+        static_cast<WellContributionsRocsparse<Scalar>&>(wellContribs).apply(&x, d_ywell);
     }
 
-    Dune::Timer t_amg;
-    apply_amg(y, x);
-    if (verbosity >= 3) {
-        std::ostringstream out;
-        out << "rocsparseCPR apply amg(): " << t_amg.stop() << " s";
-        OpmLog::info(out.str());
-    }
+    // add contrib of wells to y: Ax = Ax + alpha * scaleAddRes_ <==> Ax.axpy( alpha, scaleAddRes_ )
+    ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, N, &mone, d_ywell, 1, d_yamg, 1));
+    
+    HIP_CHECK(hipMemsetAsync(d_tmp, 0, N * sizeof(Scalar), this->stream));
+   
+    bilu0->apply(*d_yamg, *d_tmp, wellContribs);
+    
+    HIP_CHECK(hipStreamSynchronize(this->stream));
+
+    // Accumulate update:  *levelContext.update += *levelContext.lhs;
+    ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, N, &one, d_tmp, 1, &x, 1)); 
 }
 
 #define INSTANTIATE_TYPE(T)           \

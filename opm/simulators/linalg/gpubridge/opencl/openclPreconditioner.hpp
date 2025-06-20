@@ -42,10 +42,15 @@ protected:
     {}
 
 public:
-    static std::unique_ptr<openclPreconditioner<Scalar, block_size>> create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel);
+    virtual ~openclPreconditioner() = default;
+
+    static std::unique_ptr<openclPreconditioner<Scalar, block_size>> create(PreconditionerType type,
+           int verbosity,
+           bool opencl_ilu_parallel);
 
     // nested Preconditioners might need to override this
-    virtual void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue);
+    virtual void setOpencl(std::shared_ptr<cl::Context>& context,
+                           std::shared_ptr<cl::CommandQueue>& queue);
 };
 } //namespace Opm
 

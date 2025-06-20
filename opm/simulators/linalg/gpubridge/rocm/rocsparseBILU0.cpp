@@ -51,6 +51,26 @@ rocsparseBILU0(int verbosity_) :
 }
 
 template <class Scalar, unsigned int block_size>
+rocsparseBILU0<Scalar, block_size>::
+~rocsparseBILU0()
+{
+    HIP_CHECK(hipFree(d_t));
+    HIP_CHECK(hipFree(d_Mrows));
+    HIP_CHECK(hipFree(d_Mcols));
+    HIP_CHECK(hipFree(d_Mvals));
+    HIP_CHECK(hipFree(d_buffer));
+
+    ROCSPARSE_CHECK(rocsparse_destroy_mat_descr(descr_M));
+    ROCSPARSE_CHECK(rocsparse_destroy_mat_descr(descr_L));
+    ROCSPARSE_CHECK(rocsparse_destroy_mat_descr(descr_U));
+
+    ROCSPARSE_CHECK(rocsparse_destroy_mat_info(ilu_info));
+#if HIP_VERSION >= 50400000
+    ROCSPARSE_CHECK(rocsparse_destroy_mat_info(spmv_info));
+#endif
+}
+
+template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
 initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
            std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
@@ -80,25 +100,7 @@ initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
         d_Mcols = d_Acols;
         d_Mrows = d_Arows;
     }
-    
-    return true;
-} // end initialize()
 
-template <class Scalar, unsigned int block_size>
-bool rocsparseBILU0<Scalar, block_size>::
-analyze_matrix(BlockedMatrix<Scalar> *mat) {
-    return analyze_matrix(mat, &(*this->jacMat));
-}
-
-
-template <class Scalar, unsigned int block_size>
-bool rocsparseBILU0<Scalar, block_size>::
-analyze_matrix(BlockedMatrix<Scalar>*,
-               BlockedMatrix<Scalar>*)
-{
-    std::size_t d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
-    Timer t;
-    
     ROCSPARSE_CHECK(rocsparse_create_mat_info(&ilu_info));
 #if HIP_VERSION >= 50400000
     ROCSPARSE_CHECK(rocsparse_create_mat_info(&spmv_info));
@@ -114,6 +116,117 @@ analyze_matrix(BlockedMatrix<Scalar>*,
     ROCSPARSE_CHECK(rocsparse_set_mat_fill_mode(descr_U, rocsparse_fill_mode_upper));
     ROCSPARSE_CHECK(rocsparse_set_mat_diag_type(descr_U, rocsparse_diag_type_non_unit));
 
+    return true;
+} // end initialize()
+
+template <class Scalar, unsigned int block_size>
+bool rocsparseBILU0<Scalar, block_size>::
+analyze_matrix()
+{
+    if constexpr (std::is_same_v<Scalar,float>) {
+        ROCSPARSE_CHECK(rocsparse_sbsrilu0_buffer_size(this->handle, this->dir, Nb,
+                                                       this->nnzbs_prec, descr_M,
+                                                       d_Mvals, d_Mrows, d_Mcols,
+                                                       block_size, ilu_info, &d_bufferSize_M));
+
+        ROCSPARSE_CHECK(rocsparse_sbsrsv_buffer_size(this->handle, this->dir,
+                                                     this->operation, Nb,
+                                                     this->nnzbs_prec, descr_L,
+                                                     d_Mvals, d_Mrows, d_Mcols,
+                                                     block_size, ilu_info, &d_bufferSize_L));
+
+        ROCSPARSE_CHECK(rocsparse_sbsrsv_buffer_size(this->handle, this->dir,
+                                                     this->operation, Nb,
+                                                     this->nnzbs_prec, descr_U,
+                                                     d_Mvals, d_Mrows, d_Mcols,
+                                                     block_size, ilu_info, &d_bufferSize_U));
+    } else {
+        ROCSPARSE_CHECK(rocsparse_dbsrilu0_buffer_size(this->handle, this->dir, Nb,
+                                                       this->nnzbs_prec, descr_M,
+                                                       d_Mvals, d_Mrows, d_Mcols,
+                                                       block_size, ilu_info, &d_bufferSize_M));
+
+        ROCSPARSE_CHECK(rocsparse_dbsrsv_buffer_size(this->handle, this->dir,
+                                                     this->operation, Nb,
+                                                     this->nnzbs_prec, descr_L,
+                                                     d_Mvals, d_Mrows, d_Mcols,
+                                                     block_size, ilu_info, &d_bufferSize_L));
+
+        ROCSPARSE_CHECK(rocsparse_dbsrsv_buffer_size(this->handle, this->dir,
+                                                     this->operation, Nb,
+                                                     this->nnzbs_prec, descr_U,
+                                                     d_Mvals, d_Mrows, d_Mcols,
+                                                     block_size, ilu_info, &d_bufferSize_U));
+    }
+
+    // analysis of ilu LU decomposition
+    if constexpr (std::is_same_v<Scalar,float>) {
+        ROCSPARSE_CHECK(rocsparse_sbsrilu0_analysis(this->handle, this->dir,
+                                                    Nb, this->nnzbs_prec, descr_M,
+                                                    d_Mvals, d_Mrows, d_Mcols,
+                                                    block_size, ilu_info,
+                                                    rocsparse_analysis_policy_reuse,
+                                                    rocsparse_solve_policy_auto, d_buffer));
+    } else {
+        ROCSPARSE_CHECK(rocsparse_dbsrilu0_analysis(this->handle, this->dir,
+                                                    Nb, this->nnzbs_prec, descr_M,
+                                                    d_Mvals, d_Mrows, d_Mcols,
+                                                    block_size, ilu_info,
+                                                    rocsparse_analysis_policy_reuse,
+                                                    rocsparse_solve_policy_auto, d_buffer));
+    }
+
+    int zero_position = 0;
+    rocsparse_status status = rocsparse_bsrilu0_zero_pivot(this->handle, ilu_info, &zero_position);
+    if (rocsparse_status_success != status) {
+        printf("L has structural and/or numerical zero at L(%d,%d)\n", zero_position, zero_position);
+        return false;
+    }
+
+    // analysis of ilu apply
+    if constexpr (std::is_same_v<Scalar,float>) {
+        ROCSPARSE_CHECK(rocsparse_sbsrsv_analysis(this->handle, this->dir, this->operation,
+                                                  Nb, this->nnzbs_prec, descr_L,
+                                                  d_Mvals, d_Mrows, d_Mcols,
+                                                  block_size, ilu_info,
+                                                  rocsparse_analysis_policy_reuse,
+                                                  rocsparse_solve_policy_auto, d_buffer));
+        ROCSPARSE_CHECK(rocsparse_sbsrsv_analysis(this->handle, this->dir, this->operation,
+                                                  Nb, this->nnzbs_prec, descr_U, d_Mvals,
+                                                  d_Mrows, d_Mcols,
+                                                  block_size, ilu_info,
+                                                  rocsparse_analysis_policy_reuse,
+                                                  rocsparse_solve_policy_auto, d_buffer));
+    } else {
+        ROCSPARSE_CHECK(rocsparse_dbsrsv_analysis(this->handle, this->dir, this->operation,
+                                                  Nb, this->nnzbs_prec, descr_L,
+                                                  d_Mvals, d_Mrows, d_Mcols,
+                                                  block_size, ilu_info,
+                                                  rocsparse_analysis_policy_reuse,
+                                                  rocsparse_solve_policy_auto, d_buffer));
+        ROCSPARSE_CHECK(rocsparse_dbsrsv_analysis(this->handle, this->dir, this->operation,
+                                                  Nb, this->nnzbs_prec, descr_U, d_Mvals,
+                                                  d_Mrows, d_Mcols,
+                                                  block_size, ilu_info,
+                                                  rocsparse_analysis_policy_reuse,
+                                                  rocsparse_solve_policy_auto, d_buffer));
+    }
+
+    return true;
+}
+
+template <class Scalar, unsigned int block_size>
+bool rocsparseBILU0<Scalar, block_size>::
+analyze_matrix(BlockedMatrix<Scalar> *mat) 
+{
+    return analyze_matrix(mat, &(*this->jacMat));
+}
+
+template <class Scalar, unsigned int block_size>
+bool rocsparseBILU0<Scalar, block_size>::
+analyze_matrix(BlockedMatrix<Scalar>*,
+               BlockedMatrix<Scalar>*)
+{
     if constexpr (std::is_same_v<Scalar,float>) {
         ROCSPARSE_CHECK(rocsparse_sbsrilu0_buffer_size(this->handle, this->dir, Nb,
                                                        this->nnzbs_prec, descr_M,
@@ -207,19 +320,13 @@ analyze_matrix(BlockedMatrix<Scalar>*,
                                                   rocsparse_solve_policy_auto, d_buffer));
     }
 
-    if (verbosity >= 3) {
-    	HIP_CHECK(hipStreamSynchronize(this->stream));
-        std::ostringstream out;
-        out << "rocsparseBILU0::analyze_matrix(): " << t.stop() << " s";
-        OpmLog::info(out.str());
-    }
-
     return true;
 }
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
-create_preconditioner(BlockedMatrix<Scalar> *mat) {
+create_preconditioner(BlockedMatrix<Scalar> *mat) 
+{
     return create_preconditioner(mat, &*this->jacMat);
 }
 
@@ -228,7 +335,6 @@ bool rocsparseBILU0<Scalar, block_size>::
 create_preconditioner(BlockedMatrix<Scalar>*,
                       BlockedMatrix<Scalar>*)
 {
-    Timer t;
     bool result = true;
 
     if constexpr (std::is_same_v<Scalar,float>) {
@@ -248,34 +354,29 @@ create_preconditioner(BlockedMatrix<Scalar>*,
     // Check for zero pivot
     int zero_position = 0;
     rocsparse_status status = rocsparse_bsrilu0_zero_pivot(this->handle, ilu_info, &zero_position);
+    
     if (rocsparse_status_success != status)
     {
         printf("L has structural and/or numerical zero at L(%d,%d)\n", zero_position, zero_position);
         return false;
     }
 
-    if (verbosity >= 3) {
-        HIP_CHECK(hipStreamSynchronize(this->stream));
-        std::ostringstream out;
-        out << "rocsparseBILU0::create_preconditioner(): " << t.stop() << " s";
-        OpmLog::info(out.str());
-    }
     return result;
 } // end create_preconditioner()
 
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-copy_system_to_gpu(Scalar *d_Avals) {
-    Timer t;
+copy_system_to_gpu(Scalar *d_Avals) 
+{
     bool use_multithreading = true;
 
 #if HAVE_OPENMP
     if (omp_get_max_threads() == 1)
         use_multithreading = false;
 #endif
-
-    if (this->useJacMatrix) {
-        if (use_multithreading) {
+    
+    if (this->useJacMatrix){
+        if (use_multithreading && copyThread) {
             copyThread->join();
         }
 
@@ -285,20 +386,25 @@ copy_system_to_gpu(Scalar *d_Avals) {
     } else {
         HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(Scalar) * nnz, hipMemcpyDeviceToDevice, this->stream));
     }
+} // end copy_system_to_gpu()
 
-    if (verbosity >= 3) {
-        HIP_CHECK(hipStreamSynchronize(this->stream));
-        std::ostringstream out;
-        out << "rocsparseBILU0::copy_system_to_gpu(): " << t.stop() << " s";
-        OpmLog::info(out.str());
+template <class Scalar, unsigned int block_size>
+void rocsparseBILU0<Scalar, block_size>::
+copy_values_to_gpu(Scalar *h_vals, int *h_rows, int *h_cols, bool reuse)
+{
+    if (!reuse) {
+        HIP_CHECK(hipMemcpyAsync(d_Mrows, h_rows, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, this->stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mcols, h_cols, sizeof(rocsparse_int) * this->nnzbs_prec, hipMemcpyHostToDevice, this->stream));
     }
+
+    HIP_CHECK(hipMemcpyAsync(d_Mvals, h_vals, sizeof(Scalar) * nnz, hipMemcpyHostToDevice, this->stream));
 } // end copy_system_to_gpu()
 
 // don't copy rowpointers and colindices, they stay the same
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-update_system_on_gpu(Scalar *d_Avals) {
-    Timer t;
+update_system_on_gpu(Scalar* vals, Scalar *d_Avals) 
+{
     bool use_multithreading = true;
 
 #if HAVE_OPENMP
@@ -315,22 +421,15 @@ update_system_on_gpu(Scalar *d_Avals) {
     } else {
         HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(Scalar) * nnz, hipMemcpyDeviceToDevice, this->stream));
     }
-
-    if (verbosity >= 3) {
-        HIP_CHECK(hipStreamSynchronize(this->stream));
-        std::ostringstream out;
-        out << "rocsparseSolver::update_system_on_gpu(): " << t.stop() << " s";
-        OpmLog::info(out.str());
-    }
 } // end update_system_on_gpu()
 
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-apply(const Scalar& y, Scalar& x)
+apply(const Scalar& y, Scalar& x, [[maybe_unused]] WellContributions<Scalar>& wellContribs) 
 {
     Scalar one  = 1.0;
 
-    Timer t_apply;
+    HIP_CHECK(hipMemsetAsync(d_t, 0, N * sizeof(Scalar), this->stream)); 
 
     if constexpr (std::is_same_v<Scalar,float>) {
         ROCSPARSE_CHECK(rocsparse_sbsrsv_solve(this->handle, this->dir,
@@ -364,13 +463,6 @@ apply(const Scalar& y, Scalar& x)
                                                d_Mcols, block_size, ilu_info,
                                                d_t, &x, rocsparse_solve_policy_auto,
                                                d_buffer));
-    }
-        
-    if (verbosity >= 3) {
-        std::ostringstream out;
-        HIP_CHECK(hipStreamSynchronize(this->stream));
-        out << "rocsparseBILU0 apply: " << t_apply.stop() << " s";
-        OpmLog::info(out.str());
     }
 }
 
