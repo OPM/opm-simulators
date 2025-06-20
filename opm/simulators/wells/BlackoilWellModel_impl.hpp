@@ -324,30 +324,29 @@ namespace Opm {
 
 
 
-
-
     // called at the beginning of a time step
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    beginTimeStep()
+    beginTimeStep(bool lastStepFailed)
     {
         OPM_TIMEBLOCK(beginTimeStep);
-
-        this->updateAverageFormationFactor();
 
         DeferredLogger local_deferredLogger;
 
         this->switched_prod_groups_.clear();
         this->switched_inj_groups_.clear();
 
+        const auto reportStepIdx =
+        this->simulator_.episodeIndex();
+        const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
+
         if (this->wellStructureChangedDynamically_) {
             // Something altered the well structure/topology.  Possibly
             // WELSPECS/COMPDAT and/or WELOPEN run from an ACTIONX block.
             // Reconstruct the local wells to account for the new well
             // structure.
-            const auto reportStepIdx =
-                this->simulator_.episodeIndex();
+
 
             // Disable WELPI scaling when well structure is updated in the
             // middle of a report step.
@@ -367,7 +366,42 @@ namespace Opm {
 
         this->resetWGState();
 
-        const int reportStepIdx = simulator_.episodeIndex();
+        if (lastStepFailed) {
+            // if wells are recently shut we need to do the
+            // full beginTimeStep() if not we skip and
+            // use the well solution from before the first
+            // newton iteration
+            bool any_closed_wells_this_step = false;
+            const int nw = this->numLocalWells();
+            int w = 0;
+            while (!any_closed_wells_this_step && w < nw) {
+                const Well& well_ecl = this->wells_ecl_[w];
+                const std::string& well_name = well_ecl.name();
+                if (this->wellTestState().well_is_closed(well_name)) {
+                    const bool closed_this_step = (this->wellTestState().lastTestTime(well_name) == simulator_.time());
+                    any_closed_wells_this_step = closed_this_step;
+                }
+                w += 1;
+            }
+            const auto& comm = simulator_.vanguard().grid().comm();
+            any_closed_wells_this_step = comm.sum(static_cast<int>(any_closed_wells_this_step));
+            if (!any_closed_wells_this_step) {
+                if (this->schedule_[reportStepIdx].has_gpmaint()) {
+                    const double dt = simulator_.timeStepSize();
+                    WellGroupHelpers<Scalar>::updateGpMaintTargetForGroups(fieldGroup,
+                                                                        this->schedule_,
+                                                                        regionalAveragePressureCalculator_,
+                                                                        reportStepIdx,
+                                                                        dt,
+                                                                        this->wellState(),
+                                                                        this->groupState());
+                }
+                return;
+            }
+        }
+
+        this->updateAverageFormationFactor();
+
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             simulator_.model().newtonMethod().numIterations(),
                                             param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false,
@@ -462,7 +496,6 @@ namespace Opm {
         //update guide rates
         const auto& comm = simulator_.vanguard().grid().comm();
         std::vector<Scalar> pot(this->numPhases(), 0.0);
-        const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
         WellGroupHelpers<Scalar>::updateGuideRates(fieldGroup,
                                                    this->schedule(),
                                                    this->summaryState(),
@@ -1168,6 +1201,9 @@ namespace Opm {
         }
 
         const bool well_group_control_changed = updateWellControlsAndNetwork(false, dt, local_deferredLogger);
+        if (iterationIdx == 0)
+            this->commitWGState();
+
 
         // even when there is no wells active, the network nodal pressure still need to be updated through updateWellControlsAndNetwork()
         // but there is no need to assemble the well equations
