@@ -641,10 +641,12 @@ public:
         }
         if constexpr (enableConvectiveMixing) {
             // The ifs are here is to avoid extra calculations for
-            // cases without CO2STORE and DRSDTCON.
-            if (problem.simulator().vanguard().eclState().runspec().co2Storage()) {
-                if (problem.drsdtconIsActive(globalSpaceIdx, problem.simulator().episodeIndex())) {
-                    asImp_().updateSaturatedDissolutionFactor_();
+            // cases with dry runs and without CO2STORE and DRSDTCON.
+            if (!problem.simulator().vanguard().eclState().getIOConfig().initOnly()) {
+                if (problem.simulator().vanguard().eclState().runspec().co2Storage()) {
+                    if (problem.drsdtconIsActive(globalSpaceIdx, problem.simulator().episodeIndex())) {
+                        asImp_().updateSaturatedDissolutionFactor_();
+                    }
                 }
             }
         }
