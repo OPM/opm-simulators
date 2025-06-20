@@ -110,7 +110,7 @@ public:
         HYPRE_BoomerAMGSetMaxIter(solver_, prm.get<int>("max_iter", 1));
         HYPRE_BoomerAMGSetTol(solver_, prm.get<double>("tolerance", 0.0));
         HYPRE_BoomerAMGSetMaxLevels(solver_, prm.get<int>("max_levels", 25));
-        HYPRE_BoomerAMGSetStrongThreshold(solver_, prm.get<double>("strong_threshold", 0.25));
+        HYPRE_BoomerAMGSetStrongThreshold(solver_, prm.get<double>("strong_threshold", 0.5));
         HYPRE_BoomerAMGSetAggTruncFactor(solver_, prm.get<double>("agg_trunc_factor", 0.0));
         HYPRE_BoomerAMGSetInterpType(solver_, prm.get<int>("interp_type", 0)); // classical
 
