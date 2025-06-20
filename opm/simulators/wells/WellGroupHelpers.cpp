@@ -126,11 +126,11 @@ namespace Opm {
             if ((wellEcl.isProducer() && injector) || (wellEcl.isInjector() && !injector))
                 continue;
 
-            if (wellEcl.getStatus() == Opm::Well::Status::SHUT)
+            const auto& ws = wellState.well(well_index.value());
+            if (ws.status == Opm::Well::Status::SHUT)
                 continue;
 
             const Scalar factor = wellEcl.getEfficiencyFactor(network) * wellState[wellEcl.name()].efficiency_scaling_factor;
-            const auto& ws = wellState.well(well_index.value());
             if (res_rates) {
                 const auto& well_rates = ws.reservoir_rates;
                 if (injector)
@@ -311,10 +311,11 @@ sumSolventRates(const Group& group,
         if ((wellEcl.isProducer() && injector) || (wellEcl.isInjector() && !injector))
             continue;
 
-        if (wellEcl.getStatus() == Well::Status::SHUT)
+        const auto& ws = wellState.well(well_index.value());
+
+        if (ws.status == Well::Status::SHUT)
             continue;
 
-        const auto& ws = wellState.well(well_index.value());
         const Scalar factor = wellEcl.getEfficiencyFactor() *
                               wellState[wellEcl.name()].efficiency_scaling_factor;
         if (injector)
@@ -500,9 +501,6 @@ updateGroupTargetReduction(const Group& group,
         if (wellTmp.isInjector() && !isInjector)
             continue;
 
-        if (wellTmp.getStatus() == Well::Status::SHUT)
-            continue;
-
         const auto& well_index = wellState.index(wellName);
         if (!well_index.has_value())
             continue;
@@ -512,11 +510,14 @@ updateGroupTargetReduction(const Group& group,
             continue;
         }
 
+        const auto& ws = wellState.well(well_index.value());
+        if (ws.status == Well::Status::SHUT)
+            continue;
+
         const Scalar efficiency = wellTmp.getEfficiencyFactor() *
                                   wellState[wellTmp.name()].efficiency_scaling_factor;
 
         // add contribution from wells not under group control
-        const auto& ws = wellState.well(well_index.value());
         if (isInjector) {
             if (ws.injection_cmode != Well::InjectorCMode::GRUP)
                 for (int phase = 0; phase < np; phase++) {
@@ -580,9 +581,6 @@ updateWellRatesFromGroupTargetScale(const Scalar scale,
         if (wellTmp.isInjector() && !isInjector)
             continue;
 
-        if (wellTmp.getStatus() == Well::Status::SHUT)
-            continue;
-
         const auto& well_index = wellState.index(wellName);
         if (!well_index.has_value())
             continue;
@@ -592,8 +590,11 @@ updateWellRatesFromGroupTargetScale(const Scalar scale,
             continue;
         }
 
-        // scale rates
         auto& ws = wellState.well(well_index.value());
+        if (ws.status == Well::Status::SHUT)
+            continue;
+
+        // scale rates
         if (isInjector) {
             if (ws.injection_cmode == Well::InjectorCMode::GRUP)
                 for (int phase = 0; phase < np; phase++) {
@@ -1119,7 +1120,17 @@ getGuideRate(const std::string& name,
         if (wellTmp.isInjector())
             continue;
 
-        if (wellTmp.getStatus() == Well::Status::SHUT)
+        const auto& well_index = wellState.index(wellName);
+        if (!well_index.has_value())
+            continue;
+
+        if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
+        {
+            continue;
+        }
+
+        const auto& ws = wellState.well(well_index.value());
+        if (ws.status == Well::Status::SHUT)
             continue;
 
         // Only count wells under group control or the ru
@@ -1173,7 +1184,17 @@ getGuideRateInj(const std::string& name,
         if (!wellTmp.isInjector())
             continue;
 
-        if (wellTmp.getStatus() == Well::Status::SHUT)
+        const auto& well_index = wellState.index(wellName);
+        if (!well_index.has_value())
+            continue;
+
+        if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
+        {
+            continue;
+        }
+
+        const auto& ws = wellState.well(well_index.value());
+        if (ws.status == Well::Status::SHUT)
             continue;
 
         // Only count wells under group control or the ru
@@ -2242,10 +2263,8 @@ updateGuideRateForProductionGroups(const Group& group,
         if (wellTmp.isInjector())
             continue;
 
-        if (wellTmp.getStatus() == Well::Status::SHUT)
-            continue;
         const auto& well_index = wellState.index(wellName);
-        if (!well_index.has_value()) // the well is not found
+        if (!well_index.has_value())
             continue;
 
         if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
@@ -2254,6 +2273,9 @@ updateGuideRateForProductionGroups(const Group& group,
         }
 
         const auto& ws = wellState.well(well_index.value());
+        if (ws.status == Well::Status::SHUT)
+            continue;
+
         // add contribution from wells unconditionally
         for (int phase = 0; phase < np; phase++) {
             pot[phase] += wefac * ws.well_potentials[phase];
