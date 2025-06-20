@@ -79,7 +79,7 @@ protected:
     // These can be reused, so only use when recalculate_aggregates is true
     void analyzeAggregateMaps();
 
-    void create_preconditioner_amg(BlockedMatrix<Scalar> *mat);
+    bool create_preconditioner_amg(BlockedMatrix<Scalar> *mat);
 };
 
 } // namespace Opm

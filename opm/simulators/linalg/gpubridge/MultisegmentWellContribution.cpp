@@ -23,9 +23,9 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 
-#if HAVE_SUITESPARSE_UMFPACK
+#if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
-#endif // HAVE_SUITESPARSE_UMFPACK
+#endif // HAVE_UMFPACK
 
 namespace Opm {
 
