@@ -102,7 +102,9 @@ public:
     // apply preconditioner, x = prec(y)
     // via Lz = y
     // and Ux = z
-    void apply(const cl::Buffer& y, cl::Buffer& x) override;
+    void apply(const cl::Buffer& y,
+               cl::Buffer& x,
+               WellContributions<Scalar>& wellContribs) override;
 
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>>
     get_preconditioner_structure()

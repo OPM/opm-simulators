@@ -56,11 +56,13 @@ set_matrix_analysis(rocsparse_mat_descr desc_L,
 template <class Scalar, unsigned int block_size>
 void rocsparsePreconditioner<Scalar, block_size>::
 set_context(rocsparse_handle handle_,
+            rocblas_handle blas_handle_,
             rocsparse_direction dir_,
             rocsparse_operation operation_,
             hipStream_t stream_)
 {
     this->handle = handle_;
+    this->blas_handle = blas_handle_;
     this->dir = dir_;
     this->operation = operation_;
     this->stream = stream_;
@@ -72,6 +74,8 @@ setJacMat(const BlockedMatrix<Scalar>& jMat)
 {
     this->jacMat = std::make_shared<BlockedMatrix<Scalar>>(jMat);
 }
+
+
 
 #define INSTANTIATE_TYPE(T)                      \
     template class rocsparsePreconditioner<T,1>; \
