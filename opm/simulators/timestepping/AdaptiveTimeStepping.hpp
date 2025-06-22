@@ -81,7 +81,6 @@ public:
 
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
     template <class Solver>
     class SolutionTimeErrorSolverWrapper : public RelativeChangeInterface
