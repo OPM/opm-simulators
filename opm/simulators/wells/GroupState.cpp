@@ -514,9 +514,12 @@ void GroupState<Scalar>::
 update_group_production_potential(const std::string& gname, Scalar oil_rate,
                                   Scalar gas_rate, Scalar water_rate)
 {
-    this->production_group_potentials.emplace(
-        gname, GroupPotential{oil_rate, gas_rate, water_rate}
+    auto [it, inserted] = production_group_potentials.try_emplace(
+        gname, oil_rate, gas_rate, water_rate
     );
+    if (!inserted) {
+        it->second = GroupPotential{oil_rate, gas_rate, water_rate};
+    }
 }
 
 template<class Scalar>
