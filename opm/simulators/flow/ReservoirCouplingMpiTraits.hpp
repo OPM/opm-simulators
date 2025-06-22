@@ -24,6 +24,8 @@
 
 #include <opm/simulators/flow/ReservoirCoupling.hpp>
 
+#include <array>
+#include <mutex>  // For std::call_once
 #include <tuple>   // for std::tuple_size
 
 #include <mpi.h>
@@ -95,6 +97,16 @@ struct StructMPITraitsImpl
     template<class T> struct is_std_array : std::false_type {};
     template<class T, std::size_t N>
     struct is_std_array<std::array<T, N>> : std::true_type {};
+    // Default case: not an enum
+    template <typename T, typename Enable = void>
+    struct MpiDispatch {
+        using Type = MPITraits<T>;
+    };
+    // Specialization for enums
+    template <typename T>
+    struct MpiDispatch<T, typename std::enable_if<std::is_enum<T>::value>::type> {
+        using Type = MPITraits<typename std::underlying_type<T>::type>;
+    };
 
     template<auto Member, class Dummy>
     static void processMember(Dummy& d, MPI_Aint base,
@@ -123,10 +135,8 @@ struct StructMPITraitsImpl
         else {
             // scalar or enum
             blk  [idx] = 1;
-            types[idx] = MPITraits<
-                std::conditional_t<std::is_enum_v<MemberT>,
-                                   std::underlying_type_t<MemberT>,
-                                   MemberT>>::getType();
+            using MPIType = typename MpiDispatch<MemberT>::Type;
+            types[idx] = MPIType::getType();
         }
     }
 
