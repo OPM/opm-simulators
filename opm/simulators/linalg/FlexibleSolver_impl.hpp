@@ -29,6 +29,8 @@
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
+#include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
+#include <opm/simulators/linalg/is_gpu_operator.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -36,6 +38,7 @@
 #include <dune/istl/umfpack.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/paamg/pinfo.hh>
+#include <type_traits>
 
 #if HAVE_CUDA
 #if USE_HIP
@@ -152,6 +155,7 @@ namespace Dune
         scalarproduct_ = std::make_shared<Dune::SeqScalarProduct<VectorType>>();
     }
 
+
     template <class Operator>
     template <class Comm>
     void
@@ -163,6 +167,13 @@ namespace Dune
         const int maxiter = prm.get<int>("maxiter", 200);
         const int verbosity = is_iorank ? prm.get<int>("verbosity", 0) : 0;
         const std::string solver_type = prm.get<std::string>("solver", "bicgstab");
+
+        
+        // make sure it is nullptr at the start (used for error checking in the end). 
+        // while the linSolver_ is initalized as a nullptr, we want to make sure it is reset here,
+        // simply because we will check if it is at the end of this function and need to keep this invariant
+        // (that it is nullptr at the start of this function).
+        linsolver_.reset();
         if (solver_type == "bicgstab") {
             linsolver_ = std::make_shared<Dune::BiCGSTABSolver<VectorType>>(*linearoperator_for_solver_,
                                                                             *scalarproduct_,
@@ -186,41 +197,48 @@ namespace Dune
                                                                                   restart,
                                                                                   maxiter, // maximum number of iterations
                                                                                   verbosity);
-        } else if (solver_type == "flexgmres") {
-            int restart = prm.get<int>("restart", 15);
-            linsolver_ = std::make_shared<Dune::RestartedFlexibleGMResSolver<VectorType>>(*linearoperator_for_solver_,
-                                                                                          *scalarproduct_,
-                                                                                          *preconditioner_,
-                                                                                          tol,// desired residual reduction factor
-                                                                                          restart,
-                                                                                          maxiter, // maximum number of iterations
-                                                                                          verbosity);
+         
+        } else {
+            if constexpr (!Opm::is_gpu_operator_v<Operator>) {
+                if (solver_type == "flexgmres") {
+                    int restart = prm.get<int>("restart", 15);
+                    linsolver_ = std::make_shared<Dune::RestartedFlexibleGMResSolver<VectorType>>(*linearoperator_for_solver_,
+                                                                                            *scalarproduct_,
+                                                                                            *preconditioner_,
+                                                                                            tol,// desired residual reduction factor
+                                                                                            restart,
+                                                                                            maxiter, // maximum number of iterations
+                                                                                            verbosity);
 #if HAVE_SUITESPARSE_UMFPACK
-        } else if (solver_type == "umfpack") {
-            if constexpr (std::is_same_v<typename VectorType::field_type,float>) {
-                OPM_THROW(std::invalid_argument, "UMFPack cannot be used with floats");
-            } else {
-            using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
-            linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), verbosity, false);
-            direct_solver_ = true;
-            }
+                } else if (solver_type == "umfpack") {
+                    if constexpr (std::is_same_v<typename VectorType::field_type,float>) {
+                        OPM_THROW(std::invalid_argument, "UMFPack cannot be used with floats");
+                    } else {
+                        using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
+                        linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), verbosity, false);
+                        direct_solver_ = true;
+                    }
 #endif
 #if HAVE_CUDA
-        } else if (solver_type == "gpubicgstab") {
-            linsolver_.reset(new Opm::gpuistl::SolverAdapter<Operator, Dune::BiCGSTABSolver, VectorType>(
-                *linearoperator_for_solver_,
-                *scalarproduct_,
-                preconditioner_,
-                tol, // desired residual reduction factor
-                maxiter, // maximum number of iterations
-                verbosity,
-                comm));
-#endif
-        } else {
+                } else if (solver_type == "gpubicgstab") {
+                    linsolver_.reset(new Opm::gpuistl::SolverAdapter<Operator, Dune::BiCGSTABSolver, VectorType>(
+                        *linearoperator_for_solver_,
+                        *scalarproduct_,
+                        preconditioner_,
+                        tol, // desired residual reduction factor
+                        maxiter, // maximum number of iterations
+                        verbosity,
+                        comm));
+                }
+            }
+        }
+        #endif
+        if (!linsolver_) {
             OPM_THROW(std::invalid_argument,
                       "Properties: Solver " + solver_type + " not known.");
         }
     }
+    
 
 
     // For now, the only direct solver we support is UMFPACK from SuiteSparse.
@@ -234,11 +252,13 @@ namespace Dune
     recreateDirectSolver()
     {
 #if HAVE_SUITESPARSE_UMFPACK
-        if constexpr (std::is_same_v<typename VectorType::field_type, float>) {
-            OPM_THROW(std::invalid_argument, "UMFPack cannot be used with floats");
-        } else {
-        using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
-        linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), 0, false);
+        if constexpr (!Opm::is_gpu_operator_v<Operator>) {
+            if constexpr (std::is_same_v<typename VectorType::field_type, float>) {
+                OPM_THROW(std::invalid_argument, "UMFPack cannot be used with floats");
+            } else {
+                using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
+                linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), 0, false);
+            }
         }
 #else
         OPM_THROW(std::logic_error, "Direct solver specified, but the FlexibleSolver class was not compiled with SuiteSparse support.");

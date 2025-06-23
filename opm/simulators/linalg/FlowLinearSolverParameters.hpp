@@ -28,6 +28,8 @@
 
 #include <opm/simulators/linalg/linalgparameters.hh>
 #include <opm/simulators/linalg/linalgproperties.hh>
+#include <opm/simulators/linalg/LinearSolverAcceleratorType.hpp>
+#include <string>
 
 namespace Opm {
 
@@ -36,6 +38,9 @@ class ISTLSolverGpuBridge;
 
 template <class TypeTag>
 class ISTLSolver;
+
+template<class TypeTag>
+class ISTLSolverRuntimeOptionProxy;
 
 }
 
@@ -51,11 +56,7 @@ struct FlowIstlSolverParams {};
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams>
 {
-#if COMPILE_GPU_BRIDGE
-    using type = ISTLSolverGpuBridge<TypeTag>;
-#else
-    using type = ISTLSolver<TypeTag>;
-#endif
+    using type = ISTLSolverRuntimeOptionProxy<TypeTag>;
 };
 
 }
@@ -85,7 +86,6 @@ struct AcceleratorMode { static constexpr auto value = "none"; };
 struct GpuDeviceId { static constexpr int value = 0; };
 struct OpenclPlatformId { static constexpr int value = 0; };
 struct OpenclIluParallel { static constexpr bool value = true; }; // note: false should only be used in debug
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -115,6 +115,7 @@ struct FlowLinearSolverParameters
     int gpu_device_id_;
     int opencl_platform_id_;
     bool opencl_ilu_parallel_;
+    Parameters::LinearSolverAcceleratorType linear_solver_accelerator_;
 
     FlowLinearSolverParameters() { reset(); }
 

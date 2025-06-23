@@ -49,6 +49,7 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
 
     # set_source_files_properties(${relpath} PROPERTIES LANGUAGE HIP)
     list(APPEND ${LIST} ${relpath})
+    list(APPEND ${LIST}_HIPIFIED ${hip_file_path})
   endif()
 endmacro()
 
@@ -303,6 +304,10 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuJac.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuSeqILU0.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg set_device.cpp)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/FlexibleSolverWrapper.cpp)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg FlexibleSolver_gpu_instantiate.cpp)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg PreconditionerFactory_gpu_instantiate.cpp)
+
 
   # HEADERS
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/autotuner.hpp)
@@ -348,6 +353,9 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg gpu_resources.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/is_gpu_pointer.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg PreconditionerCPUMatrixToGPUMatrix.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg ISTLSolverGPUISTL.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/FlexibleSolverWrapper.hpp)
+
   
   if(MPI_FOUND)
     ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuOwnerOverlapCopy.hpp)
@@ -948,6 +956,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/BlackoilAquiferModel.hpp
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
   opm/simulators/aquifers/SupportsFaceTag.hpp
+  opm/simulators/linalg/AbstractISTLSolver.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/bicgstabsolver.hh
   opm/simulators/linalg/blacklist.hh
@@ -971,11 +980,13 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/ilufirstelement.hh
   opm/simulators/linalg/is_gpu_operator.hpp
   opm/simulators/linalg/ISTLSolver.hpp
+  opm/simulators/linalg/ISTLSolverRuntimeOptionProxy.hpp
   opm/simulators/linalg/istlpreconditionerwrappers.hh
   opm/simulators/linalg/istlsolverwrappers.hh
   opm/simulators/linalg/istlsparsematrixadapter.hh
   opm/simulators/linalg/linalgparameters.hh
   opm/simulators/linalg/linalgproperties.hh
+  opm/simulators/linalg/LinearSolverAcceleratorType.hpp
   opm/simulators/linalg/linearsolverreport.hh
   opm/simulators/linalg/matrixblock.hh
   opm/simulators/linalg/MatrixMarketSpecializations.hpp
@@ -999,6 +1010,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp
   opm/simulators/linalg/PreconditionerFactory.hpp
   opm/simulators/linalg/PreconditionerFactory_impl.hpp
+  opm/simulators/linalg/printlinearsolverparameter.hpp
   opm/simulators/linalg/StandardPreconditioners.hpp
   opm/simulators/linalg/StandardPreconditioners_mpi.hpp
   opm/simulators/linalg/StandardPreconditioners_serial.hpp
@@ -1296,4 +1308,8 @@ if(AMGX_FOUND)
   list(APPEND PUBLIC_HEADER_FILES
     opm/simulators/linalg/AmgxPreconditioner.hpp
   )
+endif()
+
+if (CONVERT_CUDA_TO_HIP)
+  add_custom_target(hipified_headers  DEPENDS ${PUBLIC_HEADER_FILES_HIPIFIED})
 endif()

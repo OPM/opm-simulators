@@ -270,7 +270,12 @@ setupILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
     prm.put("solver", getSolverString(p));
-    prm.put("preconditioner.type", "ParOverILU0"s);
+    if (p.linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU && !p.is_nldd_local_solver_) {
+        // TODO: We could add ParOverILU0 as an alias in the GPU path to simplify this.
+        prm.put("preconditioner.type", "OPMILU0"s);
+    } else {
+        prm.put("preconditioner.type", "ParOverILU0"s);
+    }
     prm.put("preconditioner.relaxation", p.ilu_relaxation_);
     prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
     return prm;
