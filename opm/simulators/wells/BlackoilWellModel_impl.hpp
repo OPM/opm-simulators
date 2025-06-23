@@ -42,6 +42,7 @@
 
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/BlackoilWellModelNldd.hpp>
+#include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -78,6 +79,12 @@ namespace Opm {
                                            phase_usage,
                                            simulator.gridView().comm())
         , simulator_(simulator)
+        , guide_rate_handler_{
+            *this,
+            simulator.vanguard().schedule(),
+            simulator.vanguard().summaryState(),
+            simulator.vanguard().grid().comm()
+        }
         , gaslift_(this->terminal_output_, this->phase_usage_)
     {
         local_num_cells_ = simulator_.gridView().size(0);
@@ -447,8 +454,6 @@ namespace Opm {
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
         }
-
-        // calculate the well potentials
         try {
             this->updateWellPotentials(reportStepIdx,
                                        /*onlyAfterEvent*/true,
@@ -458,23 +463,21 @@ namespace Opm {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
-
+        this->guide_rate_handler_.setLogger(&local_deferredLogger);
+#ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isReservoirCouplingMaster()) {
+            this->guide_rate_handler_.receiveMasterGroupPotentialsFromSlaves();
+        }
+#endif
         //update guide rates
-        const auto& comm = simulator_.vanguard().grid().comm();
-        std::vector<Scalar> pot(this->numPhases(), 0.0);
-        const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
-        WellGroupHelpers<Scalar>::updateGuideRates(fieldGroup,
-                                                   this->schedule(),
-                                                   this->summaryState(),
-                                                   this->phase_usage_,
-                                                   reportStepIdx,
-                                                   simulationTime,
-                                                   this->wellState(),
-                                                   this->groupState(),
-                                                   comm,
-                                                   &this->guideRate_,
-                                                   pot,
-                                                   local_deferredLogger);
+        this->guide_rate_handler_.updateGuideRates(
+            reportStepIdx, simulationTime, this->wellState(), this->groupState()
+        );
+#ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isReservoirCouplingSlave()) {
+            this->guide_rate_handler_.sendSlaveGroupPotentialsToMaster(this->groupState());
+        }
+#endif
         std::string exc_msg;
         auto exc_type = ExceptionType::NONE;
         // update gpmaint targets
@@ -483,6 +486,7 @@ namespace Opm {
                 calculator.second->template defineState<ElementContext>(simulator_);
             }
             const double dt = simulator_.timeStepSize();
+            const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
             WellGroupHelpers<Scalar>::updateGpMaintTargetForGroups(fieldGroup,
                                                                    this->schedule_,
                                                                    regionalAveragePressureCalculator_,
@@ -530,6 +534,7 @@ namespace Opm {
             local_deferredLogger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
         }
 
+        const auto& comm = simulator_.vanguard().grid().comm();
         logAndCheckForExceptionsAndThrow(local_deferredLogger,
                                          exc_type, "beginTimeStep() failed: " + exc_msg, this->terminal_output_, comm);
 
@@ -1131,6 +1136,7 @@ namespace Opm {
         OPM_TIMEFUNCTION();
         DeferredLogger local_deferredLogger;
 
+        this->guide_rate_handler_.setLogger(&local_deferredLogger);
         if constexpr (BlackoilWellModelGasLift<TypeTag>::glift_debug) {
             if (gaslift_.terminalOutput()) {
                 const std::string msg =
@@ -1279,22 +1285,12 @@ namespace Opm {
         if (alq_updated || BlackoilWellModelGuideRates(*this).
                               guideRateUpdateIsNeeded(reportStepIdx)) {
             const double simulationTime = simulator_.time();
-            const auto& comm = simulator_.vanguard().grid().comm();
-            const auto& summaryState = simulator_.vanguard().summaryState();
-            std::vector<Scalar> pot(this->numPhases(), 0.0);
-            const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
-            WellGroupHelpers<Scalar>::updateGuideRates(fieldGroup,
-                                                       this->schedule(),
-                                                       summaryState,
-                                                       this->phase_usage_,
-                                                       reportStepIdx,
-                                                       simulationTime,
-                                                       this->wellState(),
-                                                       this->groupState(),
-                                                       comm,
-                                                       &this->guideRate_,
-                                                       pot,
-                                                       local_deferredLogger);
+            // NOTE: For reservoir coupling: Slave group potentials are only communicated
+            //    at the start of the time step, see beginTimeStep(). Here, we assume those
+            //    potentials remain unchanged during the time step when updating guide rates below.
+            this->guide_rate_handler_.updateGuideRates(
+                reportStepIdx, simulationTime, this->wellState(), this->groupState()
+            );
         }
         // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
         // the inner iterations are did not converge

@@ -28,6 +28,9 @@
 namespace Opm {
 namespace ReservoirCoupling {
 
+// free functions alphabetically
+// -----------------------------
+
 void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg)
 {
     // It can be useful to have a custom error handler for debugging purposes.
@@ -59,6 +62,18 @@ void custom_error_handler_master_(MPI_Comm* comm, int* err, ...)
     custom_error_handler_(comm, err, "master");
 }
 
+std::pair<std::vector<char>, std::size_t> serializeStrings(const std::vector<std::string>& data)
+{
+    std::size_t total_size = 0;
+    std::vector<char> serialized_data;
+    for (const auto& str: data) {
+        std::copy(str.begin(), str.end(), std::back_inserter(serialized_data));
+        serialized_data.push_back('\0');
+        total_size += str.size() + 1;
+    }
+    return {serialized_data, total_size};
+}
+
 void setErrhandler(MPI_Comm comm, bool is_master)
 {
     MPI_Errhandler errhandler;
@@ -81,6 +96,20 @@ void setErrhandler(MPI_Comm comm, bool is_master)
     // deallocated.
     MPI_Errhandler_free(&errhandler);
 }
+
+// Logger class alphabetically
+// ---------------------------
+
+void Logger::info(const std::string &msg) const {
+    if (haveDeferredLogger()) {
+        this->deferred_logger_->info(msg);
+    } else {
+        OpmLog::info(msg);
+    }
+}
+
+// Seconds class alphabetically
+// ----------------------------
 
 bool Seconds::compare_eq(double a, double b)
 {
@@ -111,6 +140,7 @@ bool Seconds::compare_lt_or_eq(double a, double b)
     }
     return a < b;
 }
+
 
 } // namespace ReservoirCoupling
 } // namespace Opm

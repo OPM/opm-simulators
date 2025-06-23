@@ -509,6 +509,26 @@ gconsump_rates(const std::string& gname) const {
     return zero_pair;
 }
 
+template<class Scalar>
+void GroupState<Scalar>::
+update_group_production_potential(const std::string& gname, Scalar oil_rate,
+                                  Scalar gas_rate, Scalar water_rate)
+{
+    auto [it, inserted] = production_group_potentials.try_emplace(
+        gname, oil_rate, gas_rate, water_rate
+    );
+    if (!inserted) {
+        it->second = GroupPotential{oil_rate, gas_rate, water_rate};
+    }
+}
+
+template<class Scalar>
+const typename GroupState<Scalar>::GroupPotential&
+GroupState<Scalar>::
+get_production_group_potential(const std::string& gname) const
+{
+    return this->production_group_potentials.at(gname);
+}
 
 template class GroupState<double>;
 

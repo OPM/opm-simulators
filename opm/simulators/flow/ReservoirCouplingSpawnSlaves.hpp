@@ -47,6 +47,8 @@ public:
     void spawn();
 
 private:
+    void createMasterGroupNameOrder_();
+    void createMasterGroupToSlaveNameMap_();
     std::pair<std::vector<char>, std::size_t>
         getMasterGroupNamesForSlave_(const std::string &slave_name) const;
     std::vector<char *> getSlaveArgv_(
@@ -57,13 +59,13 @@ private:
     void receiveActivationDateFromSlaves_();
     void receiveSimulationStartDateFromSlaves_();
     void sendMasterGroupNamesToSlaves_();
-    std::pair<std::vector<char>, std::size_t>
-        serializeStrings_(std::vector<std::string> data) const;
+    void sendSlaveNamesToSlaves_();
     void spawnSlaveProcesses_();
 
     ReservoirCouplingMaster &master_;
     const ReservoirCoupling::CouplingInfo &rescoup_;
     const Parallel::Communication &comm_;
+    ReservoirCoupling::Logger logger_;
 };
 
 } // namespace Opm

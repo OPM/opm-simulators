@@ -19,27 +19,60 @@
 
 #ifndef OPM_RESERVOIR_COUPLING_HPP
 #define OPM_RESERVOIR_COUPLING_HPP
+#include <opm/simulators/utils/DeferredLogger.hpp>
+
+#include <dune/common/parallel/mpitraits.hh>
+
 #include <mpi.h>
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 namespace Opm {
 namespace ReservoirCoupling {
 
+class Logger {
+public:
+    Logger() = default;
+    void clearDeferredLogger() { deferred_logger_ = nullptr; }
+    bool haveDeferredLogger() const { return deferred_logger_ != nullptr; }
+    void info(const std::string &msg) const;
+    void setDeferredLogger(DeferredLogger *deferred_logger) { deferred_logger_ = deferred_logger; }
+
+private:
+    DeferredLogger *deferred_logger_ = nullptr;
+};
+
 enum class MessageTag : int {
+    MasterGroupNames,
+    MasterGroupNamesSize,
+    Potentials,
+    PotentialsSize,
     SlaveSimulationStartDate,
     SlaveActivationDate,
     SlaveProcessTermination,
+    SlaveName,
+    SlaveNameSize,
     SlaveNextReportDate,
     SlaveNextTimeStep,
-    MasterGroupNames,
-    MasterGroupNamesSize,
 };
+
+// Used to communicate potentials for oil, gas, and water rates between slave and master processes
+struct Potentials {
+    enum class Phase : std::size_t { Oil = 0, Gas, Water, Count };
+
+    std::array<double, static_cast<std::size_t>(Phase::Count)> rate{};
+
+    [[nodiscard]] double& operator[](Phase p)       noexcept { return rate[static_cast<std::size_t>(p)]; }
+    [[nodiscard]] double  operator[](Phase p) const noexcept { return rate[static_cast<std::size_t>(p)]; }
+};
+
 
 // Helper functions
 void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg);
 void setErrhandler(MPI_Comm comm, bool is_master);
+std::pair<std::vector<char>, std::size_t> serializeStrings(const std::vector<std::string>& data);
 
 /// \brief Utility class for comparing double values representing epoch dates or elapsed time.
 ///

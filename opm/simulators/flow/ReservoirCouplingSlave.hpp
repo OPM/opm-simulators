@@ -35,30 +35,43 @@ namespace Opm {
 class ReservoirCouplingSlave {
 public:
     using MessageTag = ReservoirCoupling::MessageTag;
+    using Potentials = ReservoirCoupling::Potentials;
 
     ReservoirCouplingSlave(
         const Parallel::Communication &comm, const Schedule &schedule, const SimulatorTimer &timer
     );
     bool activated() const { return activated_; }
+    void clearDeferredLogger() { logger_.clearDeferredLogger(); }
+    const Parallel::Communication& getComm() const { return comm_; }
+    const std::map<std::string, std::string>& getSlaveToMasterGroupNameMap() const {
+        return slave_to_master_group_map_; }
     void maybeActivate(int report_step);
-    void sendActivationDateToMasterProcess() const;
-    void sendNextReportDateToMasterProcess() const;
-    void sendSimulationStartDateToMasterProcess() const;
-    void receiveMasterGroupNamesFromMasterProcess();
     double receiveNextTimeStepFromMaster();
+    void sendAndReceiveInitialData();
+    void sendNextReportDateToMasterProcess() const;
+    void sendPotentialsToMaster(const std::vector<Potentials> &potentials) const;
+    void setDeferredLogger(DeferredLogger *deferred_logger) {
+        this->logger_.setDeferredLogger(deferred_logger);
+    }
 
 private:
     void checkGrupSlavGroupNames_();
     double getGrupSlavActivationDate_() const;
+    void receiveMasterGroupNamesFromMasterProcess_();
+    void receiveSlaveNameFromMasterProcess_();
     void saveMasterGroupNamesAsMap_(const std::vector<char>& group_names);
+    void sendActivationDateToMasterProcess_() const;
+    void sendSimulationStartDateToMasterProcess_() const;
 
     const Parallel::Communication &comm_;
     const Schedule& schedule_;
     const SimulatorTimer &timer_;
     // MPI parent communicator for a slave process
     MPI_Comm slave_master_comm_{MPI_COMM_NULL};
-    std::map<std::string, std::string> master_group_names_;
+    std::map<std::string, std::string> slave_to_master_group_map_;
     bool activated_{false};
+    std::string slave_name_;  // This is the slave name as defined in the master process
+    ReservoirCoupling::Logger logger_;
 };
 
 } // namespace Opm

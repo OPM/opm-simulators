@@ -107,6 +107,19 @@ public:
     void update_gconsump(const Schedule& schedule, const int report_step, const SummaryState& summary_state);
     const std::pair<Scalar, Scalar>& gconsump_rates(const std::string& gname) const;
 
+    struct GroupPotential {
+        Scalar oil_rate;
+        Scalar gas_rate;
+        Scalar water_rate;
+
+        GroupPotential(Scalar oil = 0.0, Scalar gas = 0.0, Scalar water = 0.0)
+            : oil_rate(oil), gas_rate(gas), water_rate(water) {}
+    };
+
+    void update_group_production_potential(
+        const std::string& gname, Scalar oil_rate, Scalar gas_rate, Scalar water_rate
+    );
+    const GroupPotential& get_production_group_potential(const std::string& gname) const;
 
     std::size_t data_size() const;
     std::size_t collect(Scalar* data) const;
@@ -220,6 +233,7 @@ private:
     std::map<std::string, Scalar> m_grat_sales_target;
     std::map<std::string, Scalar> m_gpmaint_target;
     std::map<std::string, Scalar> group_thp;
+    std::map<std::string, GroupPotential> production_group_potentials;
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
     WellContainer<GPMaint::State> gpmaint_state;
