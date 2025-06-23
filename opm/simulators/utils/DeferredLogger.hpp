@@ -56,6 +56,7 @@ enum ExcEnum {
     class DeferredLogger
     {
     public:
+        DeferredLogger();
 
         struct Message
         {
@@ -77,8 +78,11 @@ enum ExcEnum {
         void error(const std::string& message);
         void problem(const std::string& message);
         void bug(const std::string& message);
-        void debug(const std::string& message);
+        void debug(const std::string& message, const int level = 0);
         void note(const std::string& message);
+
+        int getDebugLevel() const  { return this->debug_level_; }
+        void setDebugLevel(const int level) { this->debug_level_ = level; }
 
         /// Log all messages to the OpmLog backends,
         /// and clear the message container.
@@ -89,6 +93,7 @@ enum ExcEnum {
 
     private:
         std::vector<Message> messages_;
+        int debug_level_ {0};
         friend DeferredLogger gatherDeferredLogger(const DeferredLogger& local_deferredlogger,
                                                    Parallel::Communication mpi_communicator);
     };
