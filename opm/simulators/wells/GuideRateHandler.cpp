@@ -31,6 +31,7 @@
 #include <utility>
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace Opm {
 
