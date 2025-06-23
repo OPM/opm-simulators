@@ -229,16 +229,15 @@ namespace Dune
                         maxiter, // maximum number of iterations
                         verbosity,
                         comm));
-                }
+        #endif
+               }
             }
         }
-        #endif
         if (!linsolver_) {
             OPM_THROW(std::invalid_argument,
                       "Properties: Solver " + solver_type + " not known.");
         }
     }
-    
 
 
     // For now, the only direct solver we support is UMFPACK from SuiteSparse.
