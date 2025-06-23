@@ -39,6 +39,17 @@
 #include <opm/simulators/wells/WellState.hpp>
 namespace Opm {
 
+/**
+ * @brief Handles computation and reporting of guide rates for wells and groups.
+ *
+ * This class manages the update and dumping of guide rates, which are used to
+ * control and monitor the production and injection targets for wells and groups.
+ *
+ * It integrates with the well model to compute guide rates and supports optional
+ * reservoir coupling to exchange guide rate information between master and slave models.
+ *
+ * @tparam Scalar The scalar type (e.g., float or double) used in computations.
+ */
 template<class Scalar>
 class GuideRateHandler {
 public:
@@ -46,6 +57,12 @@ public:
     using Potentials = ReservoirCoupling::Potentials;
 #endif
 
+    /**
+     * @brief Responsible for formatting and printing guide rate information to logs.
+     *
+     * Used primarily for debugging and human-readable output. Dumps well and group
+     * guide rates at a given report step and simulation time.
+     */
     class GuideRateDumper {
     public:
         GuideRateDumper(
@@ -53,6 +70,9 @@ public:
         );
 
         DeferredLogger &deferredLogger() { return this->parent_.deferredLogger(); }
+        /**
+         * @brief Dumps guide rates for all wells and groups in a hierarchical structure.
+         */
         void dumpGuideRates();
     private:
         void dumpGuideRatesRecursive_(const Group& group, int level);
@@ -66,6 +86,12 @@ public:
             const data::GroupGuideRates& group_guide_rate,
             std::vector<std::string>& msg_items
         ) const;
+        /**
+         * @brief Helper to print formatted group guide rate values.
+         *
+         * @param group The group to print guide rate info for.
+         * @param level Nesting level in the group hierarchy.
+         */
         void printGroupGuideRates_(const Group& group, int level);
         void printHeader_();
         void printFooter_();
@@ -81,6 +107,13 @@ public:
         std::unordered_map<std::string, data::GroupGuideRates> group_guide_rates_;
     };
 
+    /**
+     * @brief Computes and updates guide rate values for wells and groups.
+     *
+     * Updates are done for a specific report step and simulation time. This class
+     * also handles computation of group potentials and supports reservoir coupling
+     * features if enabled.
+     */
     class UpdateGuideRates {
     public:
         UpdateGuideRates(
@@ -104,6 +137,9 @@ public:
         const PhaseUsage &phaseUsage() const { return this->parent_.phase_usage_; }
         const SummaryState &summaryState() const { return this->parent_.summary_state_; }
         const Schedule &schedule() const { return this->parent_.schedule_; }
+        /**
+         * @brief Triggers the guide rate update process for the current simulation step.
+         */
         void update();
 
     private:
@@ -111,6 +147,12 @@ public:
         bool isMasterGroup_(const Group& group);
 #endif
         void updateGuideRatesForInjectionGroups_(const Group& group);
+        /**
+         * @brief Updates guide rates for all production groups recursively.
+         *
+         * @param group The root group to update.
+         * @param pot Output parameter for the computed production potentials.
+         */
         void updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& pot);
         void updateGuideRatesForWells_();
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -155,10 +197,26 @@ public:
     }
 #endif
     DeferredLogger& deferredLogger();
+    /**
+     * @brief Dumps guide rate information to the logger in a readable format.
+     *
+     * Used mainly for debugging or inspection during simulation development.
+     *
+     * @param report_step_idx Index of the current report step.
+     * @param sim_time Current simulation time.
+     */
     void debugDumpGuideRates(const int report_step_idx, const double sim_time);
     const Parallel::Communication& getComm() const { return comm_; }
     void setLogger(DeferredLogger *deferred_logger);
     const Schedule& schedule() const { return schedule_; }
+    /**
+     * @brief Updates guide rates for the current simulation step.
+     *
+     * @param report_step_idx Index of the current report step.
+     * @param sim_time Simulation time at the current step.
+     * @param well_state Well state object containing current well potentials.
+     * @param group_state Group state object to update with computed guide rates.
+     */
     void updateGuideRates(
         const int report_step_idx,
         const double sim_time,
