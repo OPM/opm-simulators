@@ -16,19 +16,32 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #include <config.h>
-#include <opm/input/eclipse/EclipseState/Phase.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/output/data/GuideRateValue.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <opm/simulators/wells/GuideRateHandler.hpp>
+
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/output/data/GuideRateValue.hpp>
+
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
+
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/NameOrder.hpp>
+
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <array>
+#include <cstddef>
+#include <optional>
+#include <stdexcept>
+#include <string>
 #include <string_view>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -631,33 +644,57 @@ GuideRateHandler<Scalar>::UpdateGuideRates::
 updateGuideRatesForWells_()
 {
     OPM_TIMEFUNCTION();
-    const auto &pu = this->phaseUsage();
-    for (const auto& well : this->schedule().getWells(this->report_step_idx_)) {
-        std::array<Scalar,3> potentials{};
-        auto& [oilpot, gaspot, waterpot] = potentials;
 
-        const auto& well_index = this->well_state_.index(well.name());
-        if (well_index.has_value() && this->well_state_.wellIsOwned(well_index.value(), well.name()))
-        {
+    const auto& pu = this->phaseUsage();
+
+    const auto o_pos = (pu.phase_used[BlackoilPhases::Liquid] > 0)
+        ? pu.phase_pos[BlackoilPhases::Liquid] : -1;
+
+    const auto g_pos = (pu.phase_used[BlackoilPhases::Vapour] > 0)
+        ? pu.phase_pos[BlackoilPhases::Vapour] : -1;
+
+    const auto w_pos = (pu.phase_used[BlackoilPhases::Aqua] > 0)
+        ? pu.phase_pos[BlackoilPhases::Aqua] : -1;
+
+    constexpr auto o_ix = std::size_t{0};
+    constexpr auto g_ix = o_ix + 1;
+    constexpr auto w_ix = g_ix + 1;
+    constexpr auto npot = w_ix + 1;
+
+    const auto& wnames = this->schedule()[this->report_step_idx_].well_order();
+
+    auto all_well_pot = std::vector<double>(npot * wnames.size());
+    auto well_pot = all_well_pot.begin();
+
+    for (const auto& wname : wnames) {
+        const auto well_index = this->well_state_.index(wname);
+
+        if (well_index.has_value() && this->well_state_.wellIsOwned(*well_index, wname)) {
             // the well is found and owned
-            const auto& ws = this->well_state_.well(well_index.value());
-            const auto& wpot = ws.well_potentials;
-            if (pu.phase_used[BlackoilPhases::Liquid] > 0)
-                oilpot = wpot[pu.phase_pos[BlackoilPhases::Liquid]];
+            const auto& wpot = this->well_state_.well(*well_index).well_potentials;
 
-            if (pu.phase_used[BlackoilPhases::Vapour] > 0)
-                gaspot = wpot[pu.phase_pos[BlackoilPhases::Vapour]];
-
-            if (pu.phase_used[BlackoilPhases::Aqua] > 0)
-                waterpot = wpot[pu.phase_pos[BlackoilPhases::Aqua]];
+            if (o_pos >= 0) { well_pot[o_ix] = static_cast<double>(wpot[o_pos]); }
+            if (g_pos >= 0) { well_pot[g_ix] = static_cast<double>(wpot[g_pos]); }
+            if (w_pos >= 0) { well_pot[w_ix] = static_cast<double>(wpot[w_pos]); }
         }
-        this->comm().sum(potentials.data(), potentials.size());
-        oilpot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, oilpot);
-        waterpot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, waterpot);
-        gaspot = this->unit_system_.from_si(UnitSystem::measure::gas_surface_rate, gaspot);
-        this->guideRate().compute(
-            well.name(), this->report_step_idx_, this->sim_time_, oilpot, gaspot, waterpot
-        );
+
+        well_pot += npot;
+    }
+
+    this->comm().sum(all_well_pot.data(), all_well_pot.size());
+
+    using M = UnitSystem::measure;
+
+    well_pot = all_well_pot.begin();
+    for (const auto& wname : wnames) {
+        const auto o_pot = this->unit_system_.from_si(M::liquid_surface_rate, well_pot[o_ix]);
+        const auto g_pot = this->unit_system_.from_si(M::gas_surface_rate   , well_pot[g_ix]);
+        const auto w_pot = this->unit_system_.from_si(M::liquid_surface_rate, well_pot[w_ix]);
+
+        this->guideRate().compute
+            (wname, this->report_step_idx_, this->sim_time_, o_pot, g_pot, w_pot);
+
+        well_pot += npot;
     }
 }
 
