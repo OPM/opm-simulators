@@ -32,6 +32,8 @@
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 
+#include <opm/simulators/utils/DeferredLogger.hpp>
+
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
 #else
@@ -212,6 +214,9 @@ protected:
             exitCode = (status > 0) ? status : EXIT_SUCCESS;
             return false; //  Whether to run the simulator
         }
+        const int debug_level = Parameters::Get<Parameters::DebugLevel>();
+        OpmLog::setDebugLevel(debug_level);
+        DeferredLogger::setGlobalDebugLevel(debug_level);
 
         std::string deckFilename;
         std::string outputDir;

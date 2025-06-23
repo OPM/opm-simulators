@@ -83,6 +83,9 @@ enum ExcEnum {
 
         int getDebugLevel() const  { return this->debug_level_; }
         void setDebugLevel(const int level) { this->debug_level_ = level; }
+        static int getGlobalDebugLevel()  { return global_debug_level_; }
+        static void setGlobalDebugLevel(const int level) { global_debug_level_ = level; }
+
 
         /// Log all messages to the OpmLog backends,
         /// and clear the message container.
@@ -94,6 +97,7 @@ enum ExcEnum {
     private:
         std::vector<Message> messages_;
         int debug_level_ {0};
+        static int global_debug_level_;
         friend DeferredLogger gatherDeferredLogger(const DeferredLogger& local_deferredlogger,
                                                    Parallel::Communication mpi_communicator);
     };

@@ -20,12 +20,13 @@
 #include <config.h>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/simulators/flow/FlowMain.hpp>
 
 namespace Opm
 {
+    int DeferredLogger::global_debug_level_ = 0;
+
     DeferredLogger::DeferredLogger()
-            : debug_level_(Parameters::Get<Parameters::DebugLevel>())
+            : debug_level_(global_debug_level_)
         {}
 
 
