@@ -563,6 +563,9 @@ template <class TypeTag, bool enablePolymerV>
 BlackOilPolymerParams<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
 BlackOilPolymerModule<TypeTag, enablePolymerV>::params_;
 
+template <class TypeTag, bool enablePolymerV>
+class BlackOilPolymerIntensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilPolymerIntensiveQuantities
@@ -570,8 +573,8 @@ BlackOilPolymerModule<TypeTag, enablePolymerV>::params_;
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        polymers extension of the black-oil model.
  */
-template <class TypeTag, bool enablePolymerV = getPropValue<TypeTag, Properties::EnablePolymer>()>
-class BlackOilPolymerIntensiveQuantities
+template <class TypeTag>
+class BlackOilPolymerIntensiveQuantities<TypeTag, /*enablePolymerV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
