@@ -383,6 +383,9 @@ template <class TypeTag, bool enableMICPV>
 BlackOilMICPParams<typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar>
 BlackOilMICPModule<TypeTag, enableMICPV>::params_;
 
+template <class TypeTag, bool enableMICPV>
+class BlackOilMICPIntensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilMICPIntensiveQuantities
@@ -390,8 +393,8 @@ BlackOilMICPModule<TypeTag, enableMICPV>::params_;
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        MICP extension of the black-oil model.
  */
-template <class TypeTag, bool enableMICPV = getPropValue<TypeTag, Properties::EnableMICP>()>
-class BlackOilMICPIntensiveQuantities
+template <class TypeTag>
+class BlackOilMICPIntensiveQuantities<TypeTag, /*enableMICPV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
