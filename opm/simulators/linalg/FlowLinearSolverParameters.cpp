@@ -47,6 +47,7 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
     linear_solver_print_json_definition_ = Parameters::Get<Parameters::LinearSolverPrintJsonDefinition>();
     cpr_reuse_setup_  = Parameters::Get<Parameters::CprReuseSetup>();
     cpr_reuse_interval_  = Parameters::Get<Parameters::CprReuseInterval>();
+    gpu_aware_mpi_ = Parameters::Get<Parameters::GPUAwareMPI>();
 
     if (!Parameters::IsSet<Parameters::LinearSolver>() && cprRequestedInDataFile) {
         linsolver_ = "cpr";
@@ -162,6 +163,13 @@ void FlowLinearSolverParameters::registerParameters()
     Parameters::Register<Parameters::LinearSolverAccelerator>
         ("Choose the backend for the linear solver, usage: "
          "'--linear-solver-accelerator=[cpu|gpu]'.");
+    Parameters::Register<Parameters::GPUAwareMPI>
+        ("MPI communication use GPU aware MPI in the sense that "
+            "it will use GPU direct communication. Setting this to true "
+            " will require that the MPI implementation "
+            "supports GPU direct communication. "
+            "If you are unsure, set this to false. "
+            "Usage: --gpu-aware-mpi=[true|false]. ");
 
     Parameters::SetDefault<Parameters::LinearSolverVerbosity>(0);
 }
@@ -191,6 +199,7 @@ void FlowLinearSolverParameters::reset()
     opencl_platform_id_       = 0;
     opencl_ilu_parallel_      = true;
     linear_solver_accelerator_ = Parameters::LinearSolverAcceleratorType::CPU;
+    gpu_aware_mpi_              = false;
 }
 
 } // namespace Opm
