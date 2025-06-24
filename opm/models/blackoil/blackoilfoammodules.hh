@@ -365,6 +365,9 @@ template <class TypeTag, bool enableFoam>
 BlackOilFoamParams<typename BlackOilFoamModule<TypeTag, enableFoam>::Scalar>
 BlackOilFoamModule<TypeTag, enableFoam>::params_;
 
+template <class TypeTag, bool enableFoam>
+class BlackOilFoamIntensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilFoamIntensiveQuantities
@@ -372,8 +375,8 @@ BlackOilFoamModule<TypeTag, enableFoam>::params_;
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        polymers extension of the black-oil model.
  */
-template <class TypeTag, bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>()>
-class BlackOilFoamIntensiveQuantities
+template <class TypeTag>
+class BlackOilFoamIntensiveQuantities<TypeTag, /*enableFoam=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
