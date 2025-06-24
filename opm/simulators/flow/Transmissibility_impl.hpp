@@ -262,11 +262,11 @@ update(bool global, const TransUpdateQuantities update_quantities,
         centroids_cache_[elemIdx] = centroids_(elemIdx);
     }
 
-    auto harmonicMean = [](const Scalar half1, const Scalar half2)
+    auto harmonicMean = [](const Scalar x1, const Scalar x2)
     {
-        return (std::abs(half1) < 1e-30 || std::abs(half2) < 1e-30)
+        return (std::abs(x1) < 1e-30 || std::abs(x2) < 1e-30)
             ? 0.0
-            : 1.0 / (1.0 / half1 + 1.0 / half2);
+            : 1.0 / (1.0 / x1 + 1.0 / x2);
     };
 
     auto faceIdToDir = [](int insideFaceIdx)
@@ -344,12 +344,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
             auto computeHalfMean = [&inside, &outside, &computeHalf, &ntg, &harmonicMean]
                                    (const auto& halfComputer, const auto& prop)
             {
-                auto half = computeHalf(halfComputer, prop[inside.elemIdx], prop[outside.elemIdx]);
-                applyNtg_(half[0], inside, ntg);
-                applyNtg_(half[1], outside, ntg);
+                auto onesided = computeHalf(halfComputer, prop[inside.elemIdx], prop[outside.elemIdx]);
+                applyNtg_(onesided[0], inside, ntg);
+                applyNtg_(onesided[1], outside, ntg);
 
                 //TODO Add support for multipliers
-                return harmonicMean(half[0], half[1]);
+                return harmonicMean(onesided[0], onesided[1]);
             };
 
             unsigned boundaryIsIdx = 0;
