@@ -755,6 +755,9 @@ public:
     { throw std::runtime_error("waterViscosityCorrection() called but polymers are disabled"); }
 };
 
+template <class TypeTag, bool enablePolymerV>
+class BlackOilPolymerExtensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilPolymerExtensiveQuantities
@@ -762,8 +765,8 @@ public:
  * \brief Provides the polymer specific extensive quantities to the generic black-oil
  *        module's extensive quantities.
  */
-template <class TypeTag, bool enablePolymerV = getPropValue<TypeTag, Properties::EnablePolymer>()>
-class BlackOilPolymerExtensiveQuantities
+template <class TypeTag>
+class BlackOilPolymerExtensiveQuantities<TypeTag, /*enablePolymerV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
