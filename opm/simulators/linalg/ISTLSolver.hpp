@@ -436,7 +436,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
         const std::any& parallelInformation() const { return parallelInformation_; }
 
-        const CommunicationType* comm() const { return comm_.get(); }
+        const CommunicationType* comm() const override { return comm_.get(); }
 
         void setDomainIndex(const int index)
         {
