@@ -55,8 +55,8 @@ namespace Opm::Parameters {
 // Do not merge parallel output files or warn about them
 struct EnableLoggingFalloutWarning { static constexpr bool value = false; };
 struct OutputInterval { static constexpr int value = 1; };
-// Set global debug level
-struct DebugLevel { static constexpr int value = 0; };
+// Set global debug verbostiy level
+struct DebugVerbosityLevel { static constexpr int value = 1; };
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -104,8 +104,8 @@ namespace Opm {
             Parameters::Register<Parameters::EnableLoggingFalloutWarning>
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
-            Parameters::Register<Parameters::DebugLevel>
-                ("Set debug level globally. Default is 0, increasing values give additional output.");
+            Parameters::Register<Parameters::DebugVerbosityLevel>
+                ("Set debug verbosity level globally. Default is 0, increasing values give additional output.");
 
             // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
