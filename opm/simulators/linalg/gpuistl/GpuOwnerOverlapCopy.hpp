@@ -21,8 +21,8 @@
 
 #include <dune/istl/owneroverlapcopy.hh>
 
-#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
 #include <mpi.h>
 
@@ -37,7 +37,8 @@
 #endif
 #endif
 
-namespace Opm::gpuistl {
+namespace Opm::gpuistl
+{
 
 /**
  * @brief GPUSender is a wrapper class for classes which will implement copOwnerToAll
@@ -45,13 +46,17 @@ namespace Opm::gpuistl {
  * To hide implementation that will either use GPU aware MPI or not
  * @tparam field_type is float or double
  * @tparam OwnerOverlapCopyCommunicationType is typically a Dune::LinearOperator::communication_type
-*/
-template<class field_type, class OwnerOverlapCopyCommunicationType>
-class GPUSender {
+ */
+template <class field_type, class OwnerOverlapCopyCommunicationType>
+class GPUSender
+{
 public:
     using X = GpuVector<field_type>;
 
-    GPUSender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy){}
+    GPUSender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
+        : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy)
+    {
+    }
 
     virtual ~GPUSender() = default;
 
@@ -123,7 +128,7 @@ protected:
  * @tparam field_type is float or double
  * @tparam block_size is the blocksize of the blockelements in the matrix
  * @tparam OwnerOverlapCopyCommunicationType is typically a Dune::LinearOperator::communication_type
-*/
+ */
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
 class GPUObliviousMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunicationType>
 {
@@ -179,7 +184,7 @@ private:
  * @tparam field_type is float or double
  * @tparam block_size is the blocksize of the blockelements in the matrix
  * @tparam OwnerOverlapCopyCommunicationType is typically a Dune::LinearOperator::communication_type
-*/
+ */
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
 class GPUAwareMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunicationType>
 {
@@ -193,7 +198,8 @@ public:
 
     void copyOwnerToAll(const X& source, X& dest) const override
     {
-        OPM_ERROR_IF(&source != &dest, "The provided GpuVectors' address did not match"); // In this context, source == dest!!!
+        OPM_ERROR_IF(&source != &dest,
+                     "The provided GpuVectors' address did not match"); // In this context, source == dest!!!
         std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
 
         int rank = this->m_cpuOwnerOverlapCopy.communicator().rank();
@@ -206,24 +212,23 @@ public:
         std::vector<int> processMap(m_messageInformation.size());
         size_t numberOfRealRecvRequests = 0;
 
-        using const_iterator =  typename InformationMap::const_iterator;
+        using const_iterator = typename InformationMap::const_iterator;
         const const_iterator end = m_messageInformation.end();
 
         {
             size_t i = 0;
             for (const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
-                processMap[i]=info->first;
+                processMap[i] = info->first;
                 if (info->second.second.m_size) {
-                    MPI_Irecv(m_GPURecvBuf->data()+info->second.second.m_start,
-                            detail::to_int(info->second.second.m_size),
-                            MPI_BYTE,
-                            info->first,
-                            m_commTag,
-                            this->m_cpuOwnerOverlapCopy.communicator(),
-                            &recvRequests[i]);
+                    MPI_Irecv(m_GPURecvBuf->data() + info->second.second.m_start,
+                              detail::to_int(info->second.second.m_size),
+                              MPI_BYTE,
+                              info->first,
+                              m_commTag,
+                              this->m_cpuOwnerOverlapCopy.communicator(),
+                              &recvRequests[i]);
                     numberOfRealRecvRequests += 1;
-                }
-                else {
+                } else {
                     recvRequests[i] = MPI_REQUEST_NULL;
                 }
             }
@@ -233,13 +238,13 @@ public:
             size_t i = 0;
             for (const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
                 if (info->second.first.m_size) {
-                    MPI_Issend(m_GPUSendBuf->data()+info->second.first.m_start,
-                            detail::to_int(info->second.first.m_size),
-                            MPI_BYTE,
-                            info->first,
-                            m_commTag,
-                            this->m_cpuOwnerOverlapCopy.communicator(),
-                            &sendRequests[i]);
+                    MPI_Issend(m_GPUSendBuf->data() + info->second.first.m_start,
+                               detail::to_int(info->second.first.m_size),
+                               MPI_BYTE,
+                               info->first,
+                               m_commTag,
+                               this->m_cpuOwnerOverlapCopy.communicator(),
+                               &sendRequests[i]);
                 } else {
                     sendRequests[i] = MPI_REQUEST_NULL;
                 }
@@ -248,13 +253,14 @@ public:
         int finished = MPI_UNDEFINED;
         MPI_Status status;
         for (size_t i = 0; i < numberOfRealRecvRequests; i++) {
-            status.MPI_ERROR=MPI_SUCCESS;
+            status.MPI_ERROR = MPI_SUCCESS;
             MPI_Waitany(m_messageInformation.size(), recvRequests.data(), &finished, &status);
 
-            if (status.MPI_ERROR!=MPI_SUCCESS) {
+            if (status.MPI_ERROR != MPI_SUCCESS) {
                 OPM_THROW(std::runtime_error,
                           fmt::format("MPI_Error occurred while rank {} received a message from rank {}",
-                                      rank, processMap[finished]));
+                                      rank,
+                                      processMap[finished]));
             }
         }
         MPI_Status recvStatus;
@@ -262,7 +268,8 @@ public:
             if (MPI_SUCCESS != MPI_Wait(&sendRequests[i], &recvStatus)) {
                 OPM_THROW(std::runtime_error,
                           fmt::format("MPI_Error occurred while rank {} sent a message from rank {}",
-                                      rank, processMap[finished]));
+                                      rank,
+                                      processMap[finished]));
             }
         }
         // ...End of MPI stuff
@@ -276,17 +283,24 @@ private:
     mutable std::unique_ptr<GpuVector<field_type>> m_GPUSendBuf;
     mutable std::unique_ptr<GpuVector<field_type>> m_GPURecvBuf;
 
-    struct MessageInformation
-    {
-        MessageInformation() : m_start(0), m_size(0) {}
-        MessageInformation(size_t start, size_t size) : m_start(start), m_size(size) {}
+    struct MessageInformation {
+        MessageInformation()
+            : m_start(0)
+            , m_size(0)
+        {
+        }
+        MessageInformation(size_t start, size_t size)
+            : m_start(start)
+            , m_size(size)
+        {
+        }
         size_t m_start; // offset in elements of "field_type"
-        size_t m_size;  // size in bytes
+        size_t m_size; // size in bytes
     };
 
-    using InformationMap = std::map<int,std::pair<MessageInformation,MessageInformation> >;
+    using InformationMap = std::map<int, std::pair<MessageInformation, MessageInformation>>;
     mutable InformationMap m_messageInformation;
-    using IM = std::map<int,std::pair<std::vector<int>,std::vector<int> > >;
+    using IM = std::map<int, std::pair<std::vector<int>, std::vector<int>>>;
     mutable IM m_im;
 
     constexpr static int m_commTag = 0; // So says DUNE
@@ -300,18 +314,14 @@ private:
         for (const auto& process : ri) {
             m_im[process.first] = std::pair(std::vector<int>(), std::vector<int>());
             for (int send = 0; send < 2; ++send) {
-                auto remoteEnd = send ? process.second.first->end()
-                                      : process.second.second->end();
-                auto remote = send ? process.second.first->begin()
-                                   : process.second.second->begin();
+                auto remoteEnd = send ? process.second.first->end() : process.second.second->end();
+                auto remote = send ? process.second.first->begin() : process.second.second->begin();
 
                 while (remote != remoteEnd) {
-                    if (send ? (remote->localIndexPair().local().attribute() == 1)
-                             : (remote->attribute() == 1)) {
+                    if (send ? (remote->localIndexPair().local().attribute() == 1) : (remote->attribute() == 1)) {
                         if (send) {
-                            m_im[process.first].first.push_back(remote->localIndexPair().local().local()); 
-                        }
-                        else {
+                            m_im[process.first].first.push_back(remote->localIndexPair().local().local());
+                        } else {
                             m_im[process.first].second.push_back(remote->localIndexPair().local().local());
                         }
                     }
@@ -327,14 +337,11 @@ private:
             int noRecv = it->second.second.size();
 
             if (noSend + noRecv > 0) {
-                m_messageInformation.insert(
-                        std::make_pair(it->first,
-                                       std::make_pair(MessageInformation(
-                                                        sendBufIdx * block_size,
-                                                        noSend * block_size * sizeof(field_type)),
-                                                      MessageInformation(
-                                                        recvBufIdx * block_size,
-                                                        noRecv * block_size * sizeof(field_type)))));
+                m_messageInformation.insert(std::make_pair(
+                    it->first,
+                    std::make_pair(
+                        MessageInformation(sendBufIdx * block_size, noSend * block_size * sizeof(field_type)),
+                        MessageInformation(recvBufIdx * block_size, noRecv * block_size * sizeof(field_type)))));
 
                 for (int x = 0; x < noSend; x++) {
                     for (int bs = 0; bs < block_size; bs++) {
@@ -406,7 +413,8 @@ public:
 
     explicit GpuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender)
         : m_sender(sender)
-    {}
+    {
+    }
 
     void copyOwnerToAll(const X& source, X& dest) const
     {
@@ -432,10 +440,9 @@ private:
     std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> m_sender;
 };
 
-template<class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
+template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
 std::shared_ptr<GpuOwnerOverlapCopy<field_type, block_size, OwnerOverlapCopyCommunicationType>>
-makeGpuOwnerOverlapCopy(
-    const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
+makeGpuOwnerOverlapCopy(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
 {
 
     const auto useGPUAwareMPI = Opm::Parameters::Get<Opm::Parameters::GPUAwareMPI>();
@@ -446,36 +453,35 @@ makeGpuOwnerOverlapCopy(
         bool mpiSupportsCudaAwareAtCompileTime = false;
         bool mpiSupportsCudaAwareAtRunTime = false;
 
-    #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
         mpiSupportsCudaAwareAtCompileTime = true;
-    #endif /* MPIX_CUDA_AWARE_SUPPORT */
+#endif /* MPIX_CUDA_AWARE_SUPPORT */
 
-    #if defined(MPIX_CUDA_AWARE_SUPPORT)
+#if defined(MPIX_CUDA_AWARE_SUPPORT)
         if (1 == MPIX_Query_cuda_support()) {
             mpiSupportsCudaAwareAtRunTime = true;
         }
-    #endif /* MPIX_CUDA_AWARE_SUPPORT */
-        
+#endif /* MPIX_CUDA_AWARE_SUPPORT */
+
         if (!mpiSupportsCudaAwareAtCompileTime || !mpiSupportsCudaAwareAtRunTime) {
             OPM_THROW(std::runtime_error,
                       "The GPU-aware MPI support is not available. "
                       "Please check your MPI installation and the OPM configuration "
                       "or run with --gpu-aware-mpi=false");
-            }
-            gpuComm = std::make_shared<
-                Opm::gpuistl::GPUAwareMPISender<field_type, block_size, OwnerOverlapCopyCommunicationType>>(
-                cpuOwnerOverlapCopy);
+        }
+        gpuComm = std::make_shared<
+            Opm::gpuistl::GPUAwareMPISender<field_type, block_size, OwnerOverlapCopyCommunicationType>>(
+            cpuOwnerOverlapCopy);
 
     } else {
         gpuComm = std::make_shared<
             Opm::gpuistl::GPUObliviousMPISender<field_type, block_size, OwnerOverlapCopyCommunicationType>>(
             cpuOwnerOverlapCopy);
     }
-    
+
     using CudaCommunication = GpuOwnerOverlapCopy<field_type, block_size, OwnerOverlapCopyCommunicationType>;
 
     return std::make_shared<CudaCommunication>(gpuComm);
-
 }
 } // namespace Opm::gpuistl
 
