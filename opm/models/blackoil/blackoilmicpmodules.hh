@@ -518,6 +518,9 @@ public:
     { throw std::logic_error("permFactor() called but MICP is disabled"); }
 };
 
+template <class TypeTag, bool enableMICPV>
+class BlackOilMICPExtensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilMICPExtensiveQuantities
@@ -525,8 +528,8 @@ public:
  * \brief Provides the MICP specific extensive quantities to the generic black-oil
  *        module's extensive quantities.
  */
-template <class TypeTag, bool enableMICPV = getPropValue<TypeTag, Properties::EnableMICP>()>
-class BlackOilMICPExtensiveQuantities
+template <class TypeTag>
+class BlackOilMICPExtensiveQuantities<TypeTag, /*enableMICPV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 };
