@@ -37,11 +37,6 @@
 #include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>
 #endif
 
-#ifdef OPEN_MPI
-#if OPEN_MPI
-#include "mpi-ext.h"
-#endif
-#endif
 
 #include <memory>
 

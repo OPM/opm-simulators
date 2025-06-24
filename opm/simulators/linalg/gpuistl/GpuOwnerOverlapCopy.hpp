@@ -22,12 +22,20 @@
 #include <dune/istl/owneroverlapcopy.hh>
 
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 
 #include <mpi.h>
 
 #include <memory>
 #include <mutex>
 #include <vector>
+
+
+#ifdef OPEN_MPI
+#if OPEN_MPI
+#include "mpi-ext.h"
+#endif
+#endif
 
 namespace Opm::gpuistl {
 
@@ -424,6 +432,51 @@ private:
     std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> m_sender;
 };
 
+template<class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
+std::shared_ptr<GpuOwnerOverlapCopy<field_type, block_size, OwnerOverlapCopyCommunicationType>>
+makeGpuOwnerOverlapCopy(
+    const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
+{
+
+    const auto useGPUAwareMPI = Opm::Parameters::Get<Opm::Parameters::GPUAwareMPI>();
+    std::shared_ptr<Opm::gpuistl::GPUSender<field_type, OwnerOverlapCopyCommunicationType>> gpuComm;
+
+    if (useGPUAwareMPI) {
+        // Temporary solution use the GPU Direct communication solely based on these prepcrosessor statements
+        bool mpiSupportsCudaAwareAtCompileTime = false;
+        bool mpiSupportsCudaAwareAtRunTime = false;
+
+    #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+        mpiSupportsCudaAwareAtCompileTime = true;
+    #endif /* MPIX_CUDA_AWARE_SUPPORT */
+
+    #if defined(MPIX_CUDA_AWARE_SUPPORT)
+        if (1 == MPIX_Query_cuda_support()) {
+            mpiSupportsCudaAwareAtRunTime = true;
+        }
+    #endif /* MPIX_CUDA_AWARE_SUPPORT */
+        
+        if (!mpiSupportsCudaAwareAtCompileTime || !mpiSupportsCudaAwareAtRunTime) {
+            OPM_THROW(std::runtime_error,
+                      "The GPU-aware MPI support is not available. "
+                      "Please check your MPI installation and the OPM configuration "
+                      "or run with --gpu-aware-mpi=false");
+            }
+            gpuComm = std::make_shared<
+                Opm::gpuistl::GPUAwareMPISender<field_type, block_size, OwnerOverlapCopyCommunicationType>>(
+                cpuOwnerOverlapCopy);
+
+    } else {
+        gpuComm = std::make_shared<
+            Opm::gpuistl::GPUObliviousMPISender<field_type, block_size, OwnerOverlapCopyCommunicationType>>(
+            cpuOwnerOverlapCopy);
+    }
+    
+    using CudaCommunication = GpuOwnerOverlapCopy<field_type, block_size, OwnerOverlapCopyCommunicationType>;
+
+    return std::make_shared<CudaCommunication>(gpuComm);
+
+}
 } // namespace Opm::gpuistl
 
 #endif
