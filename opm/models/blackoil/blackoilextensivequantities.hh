@@ -51,7 +51,7 @@ namespace Opm {
 template <class TypeTag>
 class BlackOilExtensiveQuantities
     : public MultiPhaseBaseExtensiveQuantities<TypeTag>
-    , public BlackOilSolventExtensiveQuantities<TypeTag>
+    , public BlackOilSolventExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableSolvent>()>
     , public BlackOilPolymerExtensiveQuantities<TypeTag>
     , public BlackOilEnergyExtensiveQuantities<TypeTag>
     , public BlackOilDiffusionExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>()>
