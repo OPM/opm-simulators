@@ -107,6 +107,12 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
         }
     }
 
+    // Delete the operator and solver here to avoid
+    // a large temporary memory peak from having two
+    // operators and solvers at the same time.
+    this->op_.reset();
+    this->solver_.reset();
+
     if (parallel) {
 #if HAVE_MPI
         if (!wellOperator_) {
