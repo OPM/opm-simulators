@@ -78,7 +78,7 @@ class BlackOilIntensiveQuantitiesGlobalIndex
     , public BlackOilPolymerIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnablePolymer>()>
     , public BlackOilFoamIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableFoam>()>
     , public BlackOilBrineIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableBrine>()>
-    , public BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag>
+    , public BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>
     , public BlackOilMICPIntensiveQuantities<TypeTag>
     , public BlackOilConvectiveMixingIntensiveQuantities<TypeTag>
 {
@@ -529,7 +529,7 @@ private:
     friend BlackOilSolventIntensiveQuantities<TypeTag, enableSolvent>;
     friend BlackOilExtboIntensiveQuantities<TypeTag, enableExtbo>;
     friend BlackOilPolymerIntensiveQuantities<TypeTag, enablePolymer>;
-    friend BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag>;
+    friend BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, enableEnergy>;
     friend BlackOilFoamIntensiveQuantities<TypeTag, enableFoam>;
     friend BlackOilBrineIntensiveQuantities<TypeTag, enableBrine>;
     friend BlackOilMICPIntensiveQuantities<TypeTag>;
