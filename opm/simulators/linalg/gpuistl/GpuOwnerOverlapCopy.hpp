@@ -446,32 +446,38 @@ makeGpuOwnerOverlapCopy(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlap
 {
 
     const auto useGPUAwareMPI = Opm::Parameters::Get<Opm::Parameters::GPUAwareMPI>();
+    const auto verifyGPUAwareMPI = Opm::Parameters::Get<Opm::Parameters::VerifyGPUAwareMPI>();
     std::shared_ptr<Opm::gpuistl::GPUSender<field_type, OwnerOverlapCopyCommunicationType>> gpuComm;
 
     if (useGPUAwareMPI) {
-        // Temporary solution use the GPU Direct communication solely based on these prepcrosessor statements
-        bool mpiSupportsCudaAwareAtCompileTime = false;
-        bool mpiSupportsCudaAwareAtRunTime = false;
+        if (verifyGPUAwareMPI) {
+           
+            // Temporary solution use the GPU Direct communication solely based on these prepcrosessor statements
+            bool mpiSupportsCudaAwareAtCompileTime = false;
+            bool mpiSupportsCudaAwareAtRunTime = false;
 
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-        mpiSupportsCudaAwareAtCompileTime = true;
+            mpiSupportsCudaAwareAtCompileTime = true;
 #endif /* MPIX_CUDA_AWARE_SUPPORT */
 
 #if defined(MPIX_CUDA_AWARE_SUPPORT)
-        if (1 == MPIX_Query_cuda_support()) {
-            mpiSupportsCudaAwareAtRunTime = true;
-        }
+            if (1 == MPIX_Query_cuda_support()) {
+                mpiSupportsCudaAwareAtRunTime = true;
+            }
 #endif /* MPIX_CUDA_AWARE_SUPPORT */
 
-        if (!mpiSupportsCudaAwareAtCompileTime || !mpiSupportsCudaAwareAtRunTime) {
-            OPM_THROW(std::runtime_error,
-                      fmt::format("The GPU-aware MPI support is not available. "
-                                  "CUDA aware support at compile time: {}, "
-                                  "CUDA aware support at runtime: {}. "
-                                  "Please check your MPI installation and the OPM configuration "
-                                  "or run with --gpu-aware-mpi=false",
-                                  mpiSupportsCudaAwareAtCompileTime ? "yes" : "no",
-                                  mpiSupportsCudaAwareAtRunTime ? "yes" : "no"));
+            if (!mpiSupportsCudaAwareAtCompileTime || !mpiSupportsCudaAwareAtRunTime) {
+                OPM_THROW(std::runtime_error,
+                        fmt::format("The GPU-aware MPI support is not available. "
+                                    "CUDA aware support at compile time: {}, "
+                                    "CUDA aware support at runtime: {}. "
+                                    "Please check your MPI installation and the OPM configuration "
+                                    "or run with --gpu-aware-mpi=false. If you are sure that your MPI "
+                                    "implementation supports GPU aware MPI, you can disable this check "
+                                    "by setting --verify-gpu-aware-mpi=false.",
+                                    mpiSupportsCudaAwareAtCompileTime ? "yes" : "no",
+                                    mpiSupportsCudaAwareAtRunTime ? "yes" : "no"));
+            }
         }
         gpuComm = std::make_shared<
             Opm::gpuistl::GPUAwareMPISender<field_type, block_size, OwnerOverlapCopyCommunicationType>>(
