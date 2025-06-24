@@ -213,6 +213,8 @@ protected:
             return false; //  Whether to run the simulator
         }
 
+        OpmLog::setDebugVerbosityLevel(Parameters::Get<Parameters::DebugVerbosityLevel>());
+
         std::string deckFilename;
         std::string outputDir;
         if ( eclipseState_ ) {

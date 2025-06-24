@@ -78,6 +78,7 @@ enum ExcEnum {
         void problem(const std::string& message);
         void bug(const std::string& message);
         void debug(const std::string& message);
+        void debug(const std::string& message, const int verbosity_level);
         void note(const std::string& message);
 
         /// Log all messages to the OpmLog backends,

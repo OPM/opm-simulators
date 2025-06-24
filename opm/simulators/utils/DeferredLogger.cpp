@@ -18,8 +18,8 @@
 */
 
 #include <config.h>
-#include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/simulators/utils/DeferredLogger.hpp>
 
 namespace Opm
 {
@@ -73,9 +73,16 @@ namespace Opm
     {
         messages_.push_back({Log::MessageType::Bug, "", message});
     }
-    void DeferredLogger::debug(const std::string& message)
+
+    void DeferredLogger::debug(const std::string& message) {
+        this->debug(message, OpmLog::defaultDebugVerbosityLevel);
+    }
+
+    void DeferredLogger::debug(const std::string& message, const int verbosity_level)
     {
-        messages_.push_back({Log::MessageType::Debug, "", message});
+        if (OpmLog::getDebugVerbosityLevel() >= verbosity_level) {
+            messages_.push_back({Log::MessageType::Debug, "", message});
+        }
     }
     void DeferredLogger::note(const std::string& message)
     {
