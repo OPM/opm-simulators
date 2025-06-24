@@ -21,7 +21,6 @@
 #ifndef OPM_DEFERREDLOGGER_HEADER_INCLUDED
 #define OPM_DEFERREDLOGGER_HEADER_INCLUDED
 
-#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <string>
@@ -78,7 +77,8 @@ enum ExcEnum {
         void error(const std::string& message);
         void problem(const std::string& message);
         void bug(const std::string& message);
-        void debug(const std::string& message, const int verbosity_level = OpmLog::DEFAULT_DEBUG_VERBOSITY_LEVEL);
+        void debug(const std::string& message);
+        void debug(const std::string& message, const int verbosity_level);
         void note(const std::string& message);
 
         /// Log all messages to the OpmLog backends,
