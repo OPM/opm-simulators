@@ -511,6 +511,9 @@ protected:
     { return *static_cast<Implementation*>(this); }
 };
 
+template <class TypeTag, bool enableEnergyV>
+class BlackOilEnergyExtensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilEnergyExtensiveQuantities
@@ -518,8 +521,8 @@ protected:
  * \brief Provides the energy specific extensive quantities to the generic black-oil
  *        module's extensive quantities.
  */
-template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
-class BlackOilEnergyExtensiveQuantities
+template <class TypeTag>
+class BlackOilEnergyExtensiveQuantities<TypeTag, /*enableEnergyV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 

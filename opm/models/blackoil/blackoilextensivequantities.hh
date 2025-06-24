@@ -53,7 +53,7 @@ class BlackOilExtensiveQuantities
     : public MultiPhaseBaseExtensiveQuantities<TypeTag>
     , public BlackOilSolventExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableSolvent>()>
     , public BlackOilPolymerExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnablePolymer>()>
-    , public BlackOilEnergyExtensiveQuantities<TypeTag>
+    , public BlackOilEnergyExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>
     , public BlackOilDiffusionExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>()>
     , public BlackOilMICPExtensiveQuantities<TypeTag>
 {
