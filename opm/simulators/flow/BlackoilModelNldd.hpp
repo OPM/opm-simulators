@@ -180,11 +180,12 @@ public:
                                         skip);
         }
 
-        // Initialize storage for previous mobilities per domain
+        // Initialize storage and values for previous mobilities per domain
         domainPreviousMobilities_.resize(domains_.size());
         for (size_t domIdx = 0; domIdx < domains_.size(); ++domIdx) {
             const auto& domain = domains_[domIdx];
             domainPreviousMobilities_[domIdx].resize(domain.cells.size() * numPhases, 0.0);
+            updateMobilities(domain);
         }
 
         // Set up container for the local system matrices.
@@ -269,14 +270,16 @@ public:
         DeferredLogger logger;
         std::vector<SimulatorReportSingle> domain_reports(domains_.size());
         for (const int domain_index : domain_order) {
-            const auto& domain = domains_[domain_index];
+            auto& domain = domains_[domain_index];
             SimulatorReportSingle local_report;
             detailTimer.reset();
             detailTimer.start();
 
-            bool needsSolving = checkIfSubdomainNeedsSolving(domain, iteration);
+            checkIfSubdomainNeedsSolving(domain, iteration);
 
-            if (domain.skip || !needsSolving) {
+            updateMobilities(domain);
+
+            if (domain.skip || !domain.needsSolving) {
                 local_report.skipped_domains = true;
                 local_report.converged = true;
                 domain_reports[domain.index] = local_report;
@@ -328,11 +331,17 @@ public:
             auto step_newtons = 0;
             const auto dr_size = domain_reports.size();
             for (auto i = 0*dr_size; i < dr_size; ++i) {
+                // Reset the needsSolving flag for the next iteration
+                domains_[i].needsSolving = false;
                 const auto& dr = domain_reports[i];
                 if (dr.converged) {
                     ++num_converged;
                     if (dr.total_newton_iterations == 0) {
                         ++num_converged_already;
+                    }
+                    else {
+                        // If we needed to solve the domain, we also solve in next iteration
+                        domains_[i].needsSolving = true;
                     }
                 }
                 if (dr.skipped_domains) {
@@ -386,8 +395,6 @@ public:
         }
 #endif // HAVE_MPI
 
-        // update the mobilities after the local solves
-        updateMobilities();
         const bool is_iorank = this->rank_ == 0;
         if (is_iorank) {
             OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains. {} domains were skipped. {} domains did no work. {} total local Newton iterations.\n",
@@ -1090,12 +1097,10 @@ private:
                                      param.local_domains_partition_well_neighbor_levels_);
     }
 
-    void updateMobilities()
+    void updateMobilities(const Domain& domain)
     {
-    // Store mobility values for all domains
-    for (const auto& domain : domains_) {
-        if (domain.skip) {
-            continue;
+        if (domain.skip || model_.param().nldd_relative_mobility_change_tol_ == 0.0) {
+            return;
         }
 
         for (int cellIdx = 0; cellIdx < domain.cells.size(); ++cellIdx) {
@@ -1110,30 +1115,39 @@ private:
                 domainPreviousMobilities_[domain.index][mobIdx] = getValue(intQuants.mobility(phaseIdx));
             }
         }
-
     }
-}
 
-    bool checkIfSubdomainNeedsSolving(const Domain& domain, const int iteration)
+    void checkIfSubdomainNeedsSolving(Domain& domain, const int iteration)
     {
         if (domain.skip) {
-            return false;
+            domain.needsSolving = false;
+            return;
         }
 
-        // Skip mobility check on first NLDD iteration
-        bool firstNlddIteration = (iteration <= model_.param().nldd_num_initial_newton_iter_);
-        if (firstNlddIteration) {
-            return true;
+        // If we domain was marked as needing solving in previous iterations,
+        // we do not need to check again
+        if (domain.needsSolving) {
+            return;
         }
 
-        return checkSubdomainChangeRelative(domain);
+        // If we do not check for mobility changes, we need to solve the domain
+        if (model_.param().nldd_relative_mobility_change_tol_ == 0.0) {
+            domain.needsSolving = true;
+            return;
+        }
+
+        // Skip mobility check on first iteration
+        if (iteration == 0) {
+            domain.needsSolving = true;
+        } else {
+            domain.needsSolving = checkSubdomainChangeRelative(domain);
+        }
     }
 
     bool checkSubdomainChangeRelative(const Domain& domain)
     {
         int numCells = domain.cells.size();
         auto& prevMobilities = domainPreviousMobilities_[domain.index];
-        bool needsSolving = false;
 
         // Check mobility changes for all cells in the domain
         for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
@@ -1158,11 +1172,11 @@ private:
                 const auto mobility = getValue(intQuants.mobility(phaseIdx));
                 const auto relDiff = std::abs(mobility - prevMobilities[mobIdx]) / cellMob;
                 if (relDiff > model_.param().nldd_relative_mobility_change_tol_) {
-                    needsSolving = true;
+                    return true;
                 }
             }
         }
-        return needsSolving;
+        return false;
     }
 
     BlackoilModel<TypeTag>& model_; //!< Reference to model

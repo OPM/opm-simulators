@@ -71,10 +71,12 @@ namespace Opm
         std::vector<bool> interior;
         // Flag indicating if this domain should be skipped during solves
         bool skip;
+        // Flag indicating if this domain should be solved in the next iteration
+        bool needsSolving;
         // Enables subdomain solves and linearization using the generic linearization
         // approach (i.e. FvBaseLinearizer as opposed to TpfaLinearizer).
-        SubDomainIndices(const int i, std::vector<int>&& c, std::vector<bool>&& in, bool s)
-            : index(i), cells(std::move(c)), interior(std::move(in)), skip(s)
+        SubDomainIndices(const int i, std::vector<int>&& c, std::vector<bool>&& in, bool s, bool n)
+            : index(i), cells(std::move(c)), interior(std::move(in)), skip(s), needsSolving(n)
         {}
     };
 
@@ -86,7 +88,7 @@ namespace Opm
         Dune::SubGridPart<Grid> view;
         // Constructor that moves from its argument.
         SubDomain(const int i, std::vector<int>&& c, std::vector<bool>&& in, Dune::SubGridPart<Grid>&& v, bool s)
-            : SubDomainIndices(i, std::move(c), std::move(in), s)
+            : SubDomainIndices(i, std::move(c), std::move(in), s, true)
             , view(std::move(v))
         {}
     };
