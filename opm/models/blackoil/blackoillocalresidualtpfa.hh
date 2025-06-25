@@ -33,6 +33,7 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
+#include <opm/material/common/ConditionalStorage.hpp>
 
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
@@ -132,10 +133,10 @@ public:
         FaceDir::DirEnum faceDir;
         double Vin;
         double Vex;
-        double inAlpha;
-        double outAlpha;
-        double diffusivity;
-        double dispersivity;
+        ConditionalStorage<enableEnergy, double> inAlpha;
+        ConditionalStorage<enableEnergy, double> outAlpha;
+        ConditionalStorage<enableDiffusion, double> diffusivity;
+        ConditionalStorage<enableDispersion, double> dispersivity;
     };
 
     struct ModuleParams
