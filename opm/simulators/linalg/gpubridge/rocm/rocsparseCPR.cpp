@@ -315,15 +315,23 @@ amg_cycle_gpu(const int level,
     for (unsigned i = 0; i < this->num_pre_smooth_steps; ++i){
         S->apply(y, x, wellContribs);
         
-        ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1)); //t is output, x input
+        if constexpr (std::is_same_v<Scalar,float>) {
+            ROCBLAS_CHECK(rocblas_saxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1)); //t is output, x input
+        } else {
+            ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1)); //t is output, x input
+        }
 
         HipKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, &x, &y, &y, Ncur, 1, this->stream);
     }
 
     // move to coarser level
     ROCSPARSE_CHECK(rocsparse_create_mat_info(&spmv_info));
-    ROCSPARSE_CHECK(rocsparse_dcsrmv_analysis(this->handle, this->operation, R->Nb, R->Mb, R->nnzbs, descr_R, R->nnzValues, R->rowPointers, R->colIndices, spmv_info));
-    
+    if constexpr (std::is_same_v<Scalar,float>) {
+        ROCSPARSE_CHECK(rocsparse_scsrmv_analysis(this->handle, this->operation, R->Nb, R->Mb, R->nnzbs, descr_R, R->nnzValues, R->rowPointers, R->colIndices, spmv_info));
+    } else {
+        ROCSPARSE_CHECK(rocsparse_dcsrmv_analysis(this->handle, this->operation, R->Nb, R->Mb, R->nnzbs, descr_R, R->nnzValues, R->rowPointers, R->colIndices, spmv_info));
+    }
+
     if constexpr (std::is_same_v<Scalar,float>) {
             ROCSPARSE_CHECK(rocsparse_scsrmv(this->handle, this->operation,
                                                 R->Nb, R->Mb, R->nnzbs, &one, descr_R,
@@ -350,7 +358,11 @@ amg_cycle_gpu(const int level,
     }
   
     // accumulate update    
-    ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1));
+    if constexpr (std::is_same_v<Scalar,float>) {
+        ROCBLAS_CHECK(rocblas_saxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1));
+    } else {
+        ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1));
+    }
     
     // postsmooth
     for (unsigned i = 0; i < this->num_post_smooth_steps; ++i){
@@ -361,7 +373,11 @@ amg_cycle_gpu(const int level,
         S->apply(y, x, wellContribs);
 
         // accumulate update    
-        ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1));
+        if constexpr (std::is_same_v<Scalar,float>) {
+            ROCBLAS_CHECK(rocblas_saxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1));
+        } else {
+            ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, Ncur, &one, &x, 1, t.nnzValues, 1));
+        }            
     }
 }
 
@@ -481,8 +497,12 @@ apply(const Scalar& y,
     }
 
     // add contrib of wells to y: Ax = Ax + alpha * scaleAddRes_ <==> Ax.axpy( alpha, scaleAddRes_ )
-    ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, N, &mone, d_ywell, 1, d_yamg, 1));
-    
+    if constexpr (std::is_same_v<Scalar,float>) {
+        ROCBLAS_CHECK(rocblas_saxpy(this->blas_handle, N, &mone, d_ywell, 1, d_yamg, 1));
+    } else {
+        ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, N, &mone, d_ywell, 1, d_yamg, 1));
+    }
+
     HIP_CHECK(hipMemsetAsync(d_tmp, 0, N * sizeof(Scalar), this->stream));
    
     bilu0->apply(*d_yamg, *d_tmp, wellContribs);
@@ -490,7 +510,11 @@ apply(const Scalar& y,
     HIP_CHECK(hipStreamSynchronize(this->stream));
 
     // Accumulate update:  *levelContext.update += *levelContext.lhs;
-    ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, N, &one, d_tmp, 1, &x, 1)); 
+    if constexpr (std::is_same_v<Scalar,float>) {
+        ROCBLAS_CHECK(rocblas_saxpy(this->blas_handle, N, &one, d_tmp, 1, &x, 1)); 
+    } else {
+        ROCBLAS_CHECK(rocblas_daxpy(this->blas_handle, N, &one, d_tmp, 1, &x, 1)); 
+    }
 }
 
 #define INSTANTIATE_TYPE(T)           \
