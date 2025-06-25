@@ -439,7 +439,7 @@ actionOnBrokenConstraints(const Group& group,
 
     if (oldControl != newControl) {
         const std::string from = Group::InjectionCMode2String(oldControl);
-        group_state.injection_control(group.name(), controlPhase, newControl);
+        group_state.set_injection_control(group.name(), controlPhase, newControl);
         if (wellModel_.comm().rank() == 0) {
             auto msg = fmt::format("Switching injection control mode for group {} from {} to {}",
                                    group.name(),
