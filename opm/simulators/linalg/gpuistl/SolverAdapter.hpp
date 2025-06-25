@@ -175,37 +175,11 @@ private:
         // We need to get the underlying preconditioner:
         auto preconditionerReallyOnGPU = preconditionerAdapterAsHolder->getUnderlyingPreconditioner();
 
-        // Temporary solution use the GPU Direct communication solely based on these prepcrosessor statements
-        bool mpiSupportsCudaAwareAtCompileTime = false;
-        bool mpiSupportsCudaAwareAtRunTime = false;
-
-#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-        mpiSupportsCudaAwareAtCompileTime = true;
-#endif /* MPIX_CUDA_AWARE_SUPPORT */
-
-#if defined(MPIX_CUDA_AWARE_SUPPORT)
-        if (1 == MPIX_Query_cuda_support()) {
-            mpiSupportsCudaAwareAtRunTime = true;
-        }
-#endif /* MPIX_CUDA_AWARE_SUPPORT */
-
-
-        // TODO add typename Operator communication type as a named type with using
-        std::shared_ptr<Opm::gpuistl::GPUSender<real_type, Comm>> gpuComm;
-        if (mpiSupportsCudaAwareAtCompileTime && mpiSupportsCudaAwareAtRunTime) {
-            gpuComm = std::make_shared<
-                Opm::gpuistl::GPUAwareMPISender<real_type, block_size, Comm>>(
-                communication);
-        } else {
-            gpuComm = std::make_shared<
-                Opm::gpuistl::GPUObliviousMPISender<real_type, block_size, Comm>>(
-                communication);
-        }
 
         using CudaCommunication = GpuOwnerOverlapCopy<real_type, block_size, Comm>;
         using SchwarzOperator
             = Dune::OverlappingSchwarzOperator<GpuSparseMatrix<real_type>, XGPU, XGPU, CudaCommunication>;
-        auto cudaCommunication = std::make_shared<CudaCommunication>(gpuComm);
+        auto cudaCommunication = makeGpuOwnerOverlapCopy<real_type, block_size, Comm>(communication);
 
         auto mpiPreconditioner = std::make_shared<GpuBlockPreconditioner<XGPU, XGPU, CudaCommunication>>(
             preconditionerReallyOnGPU, cudaCommunication);
