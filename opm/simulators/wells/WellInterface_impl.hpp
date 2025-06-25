@@ -402,6 +402,8 @@ namespace Opm
         else {
             ws.production_cmode = Well::ProducerCMode::BHP;
         }
+        // We will try to open the well
+        ws.open();
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
@@ -488,8 +490,6 @@ namespace Opm
                 if (!welltest_state_temp.completion_is_closed(this->name(), completion.first))
                     well_test_state.open_completion(this->name(), completion.first);
             }
-            // set the status of the well_state to open
-            ws.open();
             well_state = well_state_copy;
             open_times.try_emplace(this->name(), well_test_state.lastTestTime(this->name()));
         }
