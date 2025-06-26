@@ -396,13 +396,12 @@ namespace Opm
 
         const auto& summary_state = simulator.vanguard().summaryState();
         const bool has_thp_limit = this->wellHasTHPConstraints(summary_state);
-        if (has_thp_limit) {
-            ws.production_cmode = Well::ProducerCMode::THP;
+        if (this->isProducer()) {
+            ws.production_cmode = has_thp_limit ? Well::ProducerCMode::THP : Well::ProducerCMode::BHP;
+        } else {
+            ws.injection_cmode = has_thp_limit ? Well::InjectorCMode::THP : Well::InjectorCMode::BHP;
         }
-        else {
-            ws.production_cmode = Well::ProducerCMode::BHP;
-        }
-        // We will try to open the well
+        // We test the well as an open well during the well testing
         ws.open();
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
