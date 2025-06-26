@@ -839,6 +839,7 @@ public:
     const EqVector& cachedStorage(unsigned globalIdx, unsigned timeIdx) const
     {
         assert(enableStorageCache_);
+        assert(storageCacheUpToDate_[timeIdx][globalIdx] != 0);
         return storageCache_[timeIdx][globalIdx];
     }
 
@@ -857,6 +858,72 @@ public:
     {
         assert(enableStorageCache_);
         storageCache_[timeIdx][globalIdx] = value;
+        storageCacheUpToDate_[timeIdx][globalIdx] = 1;
+    }
+
+    /*!
+     * \brief Returns true if the storage cache entry for a given DOF and time index is up to date.
+     *
+     * \param globalIdx The global space index for the entity
+     * \param timeIdx The index used by the time discretization
+     */
+    bool storageCacheIsUpToDate(unsigned globalIdx, unsigned timeIdx) const
+    {
+        if (!enableStorageCache_) {
+            return false;
+        }
+        return storageCacheUpToDate_[timeIdx][globalIdx] != 0;
+    }
+
+    /*!
+     * \brief Invalidate the storage cache for a given DOF and time index.
+     *
+     * \param globalIdx The global space index for the entity
+     * \param timeIdx The index used by the time discretization
+     */
+    void invalidateStorageCacheEntry(unsigned globalIdx, unsigned timeIdx) const
+    {
+        if (enableStorageCache_) {
+            storageCacheUpToDate_[timeIdx][globalIdx] = 0;
+        }
+    }
+
+    /*!
+     * \brief Invalidate the whole storage cache for a given time index.
+     *
+     * \param timeIdx The index used by the time discretization
+     */
+    void invalidateStorageCache(unsigned timeIdx) const
+    {
+        if (enableStorageCache_) {
+            std::fill(storageCacheUpToDate_[timeIdx].begin(),
+                      storageCacheUpToDate_[timeIdx].end(),
+                      /*value=*/0);
+        }
+    }
+
+    /*!
+     * \brief Shift storage cache by a given number of time step slots.
+     *
+     * This should be called at the end of each time step to move the storage cache
+     * for timeIdx=0 (current time) to timeIdx=1 (previous time) and so on.
+     *
+     * This method should only be called by the time discretization.
+     *
+     * \param numSlots The number of time step slots for which the
+     *                 storage cache should be shifted.
+     */
+    void shiftStorageCache(unsigned numSlots = 1) const
+    {
+        // If we cannot recycle first iteration storage, it does not make sense to shift the storage cache.
+        if (enableStorageCache_ && !simulator_.problem().recycleFirstIterationStorage()) {
+            for (unsigned timeIdx = 0; timeIdx < historySize - numSlots; ++timeIdx) {
+                storageCache_[timeIdx + numSlots] = storageCache_[timeIdx];
+                storageCacheUpToDate_[timeIdx + numSlots] = storageCacheUpToDate_[timeIdx];
+            }
+
+             // should we invalidate the cache for the most recent time indices? (see shiftIntensiveQuantityCache)
+        }
     }
 
     /*!
@@ -1407,6 +1474,9 @@ public:
         // make the current solution the previous one.
         solution(/*timeIdx=*/1) = solution(/*timeIdx=*/0);
 
+        // shift the storage cache by one position in the history
+        asImp_().shiftStorageCache(/*numSlots=*/1);
+
         // shift the intensive quantities cache by one position in the
         // history
         asImp_().shiftIntensiveQuantityCache(/*numSlots=*/1);
@@ -1840,6 +1910,7 @@ protected:
             const std::size_t numDof = asImp_().numGridDof();
             for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
                 storageCache_[timeIdx].resize(numDof);
+                storageCacheUpToDate_[timeIdx].resize(numDof, /*value=*/0);
             }
         }
 
@@ -1935,6 +2006,9 @@ protected:
     std::vector<bool> isLocalDof_;
 
     mutable std::array<GlobalEqVector, historySize> storageCache_;
+
+    // while these are logically bools, concurrent writes to vector<bool> are not thread safe.
+    mutable std::array<std::vector<unsigned char>, historySize> storageCacheUpToDate_;
 
     bool enableGridAdaptation_;
     bool enableIntensiveQuantityCache_;
