@@ -1568,7 +1568,10 @@ namespace Opm
             sstr << "     Well " << this->name() << " converged in " << it << " inner iterations.";
             if (relax_convergence)
                 sstr << "      (A relaxed tolerance was used after "<< this->param_.strict_inner_iter_wells_ << " iterations)";
-            deferred_logger.debug(sstr.str());
+
+            // Output "converged in 0 inner iterations" messages only at
+            // elevated verbosity levels.
+            deferred_logger.debug(sstr.str(), OpmLog::defaultDebugVerbosityLevel + (it == 0));
         } else {
             std::ostringstream sstr;
             sstr << "     Well " << this->name() << " did not converge in " << it << " inner iterations.";
