@@ -33,6 +33,12 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <array>
 #include <cstddef>
 #include <optional>
@@ -51,9 +57,9 @@ namespace Opm {
 // ---------------------------------------------
 // Constructor for the GuideRateHandler class
 // ---------------------------------------------
-template <class Scalar>
-GuideRateHandler<Scalar>::GuideRateHandler(
-    BlackoilWellModelGeneric<Scalar>& well_model,
+template<typename FluidSystem, typename Indices>
+GuideRateHandler<FluidSystem, Indices>::GuideRateHandler(
+    BlackoilWellModelGeneric<FluidSystem, Indices>& well_model,
     const Schedule& schedule,
     const SummaryState& summary_state,
     const Parallel::Communication& comm
@@ -62,7 +68,6 @@ GuideRateHandler<Scalar>::GuideRateHandler(
         , schedule_{schedule}
         , summary_state_{summary_state}
         , comm_{comm}
-        , phase_usage_{well_model_.phaseUsage()}
         , guide_rate_{well_model_.guideRate()}
 {
 }
@@ -72,9 +77,9 @@ GuideRateHandler<Scalar>::GuideRateHandler(
 // Public methods for GuideRateHandler sorted alphabetically
 // -----------------------------------------------------------
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 DeferredLogger&
-GuideRateHandler<Scalar>::
+GuideRateHandler<FluidSystem, Indices>::
 deferredLogger()
 {
     assert(this->deferred_logger_ != nullptr);
@@ -94,9 +99,9 @@ deferredLogger()
 // - WWIGR (well water injection guide rate),
 // - GVPGR (group reservoir volume production guide rate),
 // - WVPGR (well reservoir volume production guide rate),
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::
+GuideRateHandler<FluidSystem, Indices>::
 debugDumpGuideRates(const int report_step_idx, const double sim_time)
 {
     if (this->comm_.rank() == 0) {
@@ -107,9 +112,9 @@ debugDumpGuideRates(const int report_step_idx, const double sim_time)
 
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::
+GuideRateHandler<FluidSystem, Indices>::
 receiveMasterGroupPotentialsFromSlaves()
 {
     assert(this->isReservoirCouplingMaster());
@@ -122,9 +127,9 @@ receiveMasterGroupPotentialsFromSlaves()
 #endif
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::
+GuideRateHandler<FluidSystem, Indices>::
 sendSlaveGroupPotentialsToMaster(const GroupState<Scalar>& group_state)
 {
     assert(this->isReservoirCouplingSlave());
@@ -153,9 +158,9 @@ sendSlaveGroupPotentialsToMaster(const GroupState<Scalar>& group_state)
 }
 #endif
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::setLogger(DeferredLogger *deferred_logger)
+GuideRateHandler<FluidSystem, Indices>::setLogger(DeferredLogger *deferred_logger)
 {
     deferred_logger_ = deferred_logger;
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -168,18 +173,18 @@ GuideRateHandler<Scalar>::setLogger(DeferredLogger *deferred_logger)
 #endif
 }
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::
+GuideRateHandler<FluidSystem, Indices>::
 updateGuideRates(
     const int report_step_idx,
     const double sim_time,
-    WellState<Scalar> &well_state,
+    WellState<FluidSystem, Indices> &well_state,
     GroupState<Scalar> &group_state
 )
 {
     OPM_TIMEFUNCTION();
-    auto num_phases = this->phase_usage_.num_phases;
+    auto num_phases = Indices::numPhases;
     UpdateGuideRates updater {
         *this, report_step_idx, sim_time, well_state, group_state, num_phases
     };
@@ -194,10 +199,10 @@ updateGuideRates(
 // NOTE: See debugDumpGuideRates() above for more information on the
 //       purpose of this class. It is used to dump the guide rates
 //       to the terminal in a human-readable format.
-template <class Scalar>
-GuideRateHandler<Scalar>::GuideRateDumper::
+template<typename FluidSystem, typename Indices>
+GuideRateHandler<FluidSystem, Indices>::GuideRateDumper::
 GuideRateDumper(
-    GuideRateHandler<Scalar> &parent, const int report_step_idx, const double sim_time
+    GuideRateHandler<FluidSystem, Indices> &parent, const int report_step_idx, const double sim_time
 ) : parent_{parent}
   , report_step_idx_{report_step_idx}
   , sim_time_{sim_time}
@@ -211,9 +216,9 @@ GuideRateDumper(
 // Public methods for inner class GuideRateDumper sorted alphabetically
 // ---------------------------------------------------------------------
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::GuideRateDumper::
+GuideRateHandler<FluidSystem, Indices>::GuideRateDumper::
 dumpGuideRates()
 {
     if (this->comm_.rank() == 0) {
@@ -233,9 +238,9 @@ dumpGuideRates()
 // -----------------------------------------------------------
 
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::GuideRateDumper::
+GuideRateHandler<FluidSystem, Indices>::GuideRateDumper::
 dumpGuideRatesRecursive_(const Group& group, int level)
 {
     if (group.name() != "FIELD") {
@@ -251,9 +256,9 @@ dumpGuideRatesRecursive_(const Group& group, int level)
     }
 }
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::GuideRateDumper::
+GuideRateHandler<FluidSystem, Indices>::GuideRateDumper::
 getGroupGuideRatesInjection_(
     const Group& group,
     const data::GroupGuideRates& group_guide_rate,
@@ -287,9 +292,9 @@ getGroupGuideRatesInjection_(
     }
 }
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::GuideRateDumper::
+GuideRateHandler<FluidSystem, Indices>::GuideRateDumper::
 getGroupGuideRatesProduction_(
     const Group& group,
     const data::GroupGuideRates& group_guide_rate,
@@ -346,9 +351,9 @@ getGroupGuideRatesProduction_(
     }
 }
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::GuideRateDumper::
+GuideRateHandler<FluidSystem, Indices>::GuideRateDumper::
 printGroupGuideRates_(const Group& group, int level)
 {
     const auto& name = group.name();
@@ -376,9 +381,9 @@ printGroupGuideRates_(const Group& group, int level)
     );
 }
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::GuideRateDumper::
+GuideRateHandler<FluidSystem, Indices>::GuideRateDumper::
 printHeader_()
 {
     this->deferredLogger().debug(
@@ -390,9 +395,9 @@ printHeader_()
     );
 }
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::GuideRateDumper::
+GuideRateHandler<FluidSystem, Indices>::GuideRateDumper::
 printFooter_()
 {
     this->deferredLogger().debug(
@@ -404,9 +409,9 @@ printFooter_()
     );
 }
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::GuideRateDumper::
+GuideRateHandler<FluidSystem, Indices>::GuideRateDumper::
 printWellGuideRates_(const Well& well, int level)
 {
     const auto& name = well.name();
@@ -456,13 +461,13 @@ printWellGuideRates_(const Well& well, int level)
 // Inner class UpdateGuideRates constructor
 // ------------------------------------------
 
-template <class Scalar>
-GuideRateHandler<Scalar>::UpdateGuideRates::
+template<typename FluidSystem, typename Indices>
+GuideRateHandler<FluidSystem, Indices>::UpdateGuideRates::
 UpdateGuideRates(
-    GuideRateHandler<Scalar>& parent,
+    GuideRateHandler<FluidSystem, Indices>& parent,
     const int report_step_idx,
     const double sim_time,
-    const WellState<Scalar>& well_state,
+    const WellState<FluidSystem, Indices>& well_state,
     GroupState<Scalar>& group_state,
     const int num_phases
 ) : parent_{parent}
@@ -480,9 +485,9 @@ UpdateGuideRates(
 // ------------------------------------------------------------------
 
 
-template <class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::UpdateGuideRates::
+GuideRateHandler<FluidSystem, Indices>::UpdateGuideRates::
 update()
 {
     this->guideRate().updateGuideRateExpiration(this->sim_time_, this->report_step_idx_);
@@ -498,9 +503,9 @@ update()
 // --------------------------------------------------------------------
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 bool
-GuideRateHandler<Scalar>::UpdateGuideRates::
+GuideRateHandler<FluidSystem, Indices>::UpdateGuideRates::
 isMasterGroup_(const Group& group)
 {
     if (this->isReservoirCouplingMaster()) {
@@ -512,9 +517,9 @@ isMasterGroup_(const Group& group)
 }
 #endif
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::UpdateGuideRates::
+GuideRateHandler<FluidSystem, Indices>::UpdateGuideRates::
 updateGuideRatesForInjectionGroups_(const Group& group)
 {
     OPM_TIMEFUNCTION();
@@ -527,7 +532,6 @@ updateGuideRatesForInjectionGroups_(const Group& group)
         this->updateGuideRatesForInjectionGroups_(group_tmp);
     }
     const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-    const auto &pu = this->phaseUsage();
     for (Phase phase : all) {
         if(!group.hasInjectionControl(phase))
             continue;
@@ -549,12 +553,18 @@ updateGuideRatesForInjectionGroups_(const Group& group)
             guide_rate_value = this->group_state_.injection_vrep_rate(group.name());
             const std::vector<Scalar>& injRES
                                 = this->group_state_.injection_reservoir_rates(group.name());
-            if (phase != Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
-                guide_rate_value = *guide_rate_value - injRES[pu.phase_pos[BlackoilPhases::Liquid]];
-            if (phase != Phase::GAS && pu.phase_used[BlackoilPhases::Vapour])
-                guide_rate_value = *guide_rate_value - injRES[pu.phase_pos[BlackoilPhases::Vapour]];
-            if (phase != Phase::WATER && pu.phase_used[BlackoilPhases::Aqua])
-                guide_rate_value = *guide_rate_value - injRES[pu.phase_pos[BlackoilPhases::Aqua]];
+            if (phase != Phase::OIL && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                guide_rate_value = *guide_rate_value - injRES[phase_pos];
+            }
+            if (phase != Phase::GAS && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                guide_rate_value = *guide_rate_value - injRES[phase_pos];
+            }
+            if (phase != Phase::WATER && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                guide_rate_value = *guide_rate_value - injRES[phase_pos];
+            }
 
             guide_rate_value = std::max(Scalar(0.0), *guide_rate_value);
             break;
@@ -586,9 +596,9 @@ updateGuideRatesForInjectionGroups_(const Group& group)
     }
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::UpdateGuideRates::
+GuideRateHandler<FluidSystem, Indices>::UpdateGuideRates::
 updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& pot)
 {
     OPM_TIMEFUNCTION();
@@ -609,16 +619,18 @@ updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& po
     this->updateProductionGroupPotentialFromSubGroups(group, pot);
 #endif
     std::array<Scalar,3> potentials{};
-    const auto &pu = this->phaseUsage();
     auto& [oil_pot, gas_pot, water_pot] = potentials;
-    if (pu.phase_used[BlackoilPhases::Liquid])
-        oil_pot = pot[pu.phase_pos[BlackoilPhases::Liquid]];
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        oil_pot = pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)];
+    }
 
-    if (pu.phase_used[BlackoilPhases::Vapour])
-        gas_pot = pot[pu.phase_pos[BlackoilPhases::Vapour]];
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        gas_pot = pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)];
+    }
 
-    if (pu.phase_used[BlackoilPhases::Aqua])
-        water_pot = pot[pu.phase_pos[BlackoilPhases::Aqua]];
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        water_pot = pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)];
+    }
 
     // Synchronize potentials across all ranks
     this->comm().sum(potentials.data(), potentials.size());
@@ -638,23 +650,21 @@ updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& po
     );
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::UpdateGuideRates::
+GuideRateHandler<FluidSystem, Indices>::UpdateGuideRates::
 updateGuideRatesForWells_()
 {
     OPM_TIMEFUNCTION();
 
-    const auto& pu = this->phaseUsage();
+    const auto o_pos = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+        ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx) : -1;
 
-    const auto o_pos = (pu.phase_used[BlackoilPhases::Liquid] > 0)
-        ? pu.phase_pos[BlackoilPhases::Liquid] : -1;
+    const auto g_pos = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+        ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx) : -1;
 
-    const auto g_pos = (pu.phase_used[BlackoilPhases::Vapour] > 0)
-        ? pu.phase_pos[BlackoilPhases::Vapour] : -1;
-
-    const auto w_pos = (pu.phase_used[BlackoilPhases::Aqua] > 0)
-        ? pu.phase_pos[BlackoilPhases::Aqua] : -1;
+    const auto w_pos = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+        ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx) : -1;
 
     constexpr auto o_ix = std::size_t{0};
     constexpr auto g_ix = o_ix + 1;
@@ -699,26 +709,25 @@ updateGuideRatesForWells_()
 }
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::UpdateGuideRates::
+GuideRateHandler<FluidSystem, Indices>::UpdateGuideRates::
 updateProductionGroupPotentialFromSlaveGroup_(const Group& group, std::vector<Scalar>& pot)
 {
     assert(this->isReservoirCouplingMaster());
     auto& rescoup_master = this->reservoirCouplingMaster();
     const auto& slave_pot = rescoup_master.getSlaveGroupPotentials(group.name());
-    auto& pu = this->phaseUsage();
     // TODO: Here we should check that the master uses the same phases as the
     //   slave.
-    pot[pu.phase_pos[BlackoilPhases::Liquid]] = slave_pot[Potentials::Phase::Oil];
-    pot[pu.phase_pos[BlackoilPhases::Vapour]] = slave_pot[Potentials::Phase::Gas];
-    pot[pu.phase_pos[BlackoilPhases::Aqua]] = slave_pot[Potentials::Phase::Water];
+    pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] = slave_pot[Potentials::Phase::Oil];
+    pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)] = slave_pot[Potentials::Phase::Gas];
+    pot[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)] = slave_pot[Potentials::Phase::Water];
 }
 #endif
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 void
-GuideRateHandler<Scalar>::UpdateGuideRates::
+GuideRateHandler<FluidSystem, Indices>::UpdateGuideRates::
 updateProductionGroupPotentialFromSubGroups(const Group& group, std::vector<Scalar>& pot)
 {
     for (const std::string& group_name : group.groups()) {
@@ -773,10 +782,12 @@ updateProductionGroupPotentialFromSubGroups(const Group& group, std::vector<Scal
 }
 
 
-template class GuideRateHandler<double>;
+#include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
+
+INSTANTIATE_TYPE_INDICES(GuideRateHandler, double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class GuideRateHandler<float>;
+INSTANTIATE_TYPE_INDICES(GuideRateHandler, float)
 #endif
 
 } // namespace Opm
