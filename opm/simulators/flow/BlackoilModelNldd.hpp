@@ -1102,7 +1102,7 @@ private:
         }
         const auto numActivePhases = FluidSystem::numActivePhases();
         for (const auto globalDofIdx : domain.cells) {
-            const auto& intQuants = *model_.simulator().model().cachedIntensiveQuantities(globalDofIdx, /*timeIdx=*/0);
+            const auto& intQuants = model_.simulator().model().intensiveQuantities(globalDofIdx, /* time_idx = */ 0);
 
             for (unsigned activePhaseIdx = 0; activePhaseIdx < numActivePhases; ++activePhaseIdx) {
                 const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
@@ -1145,7 +1145,7 @@ private:
 
         // Check mobility changes for all cells in the domain
         for (const auto globalDofIdx : domain.cells) {
-            const auto& intQuants = *model_.simulator().model().cachedIntensiveQuantities(globalDofIdx, /*timeIdx=*/0);
+            const auto& intQuants = model_.simulator().model().intensiveQuantities(globalDofIdx, /* time_idx = */ 0);
 
             // Calculate average previous mobility for normalization
             Scalar cellMob = 0.0;
