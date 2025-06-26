@@ -288,10 +288,6 @@ public:
         return grid.comm().sum(local_cells);
     }
 
-    void setupCartesianToCompressed_() {
-          this->updateCartesianToCompressedMapping_();
-    }
-
 protected:
     /*!
      * \brief Get function to query cell centroids for a distributed grid.
