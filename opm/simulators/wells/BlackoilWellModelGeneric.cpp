@@ -2202,9 +2202,12 @@ reportGroupSwitching(DeferredLogger& local_deferredLogger) const
             const Group::InjectionCMode& oldControl =
                 this->prevWGState().group_state.injection_control(grname, phase);
             if (ctrls.back() != oldControl) {
+                std::ostringstream ss;
+                ss << phase;
                 const std::string msg =
-                    fmt::format("    Injection Group {} control model changed from {} to {}",
+                    fmt::format("    Injection Group {} (phase = {}) control model changed from {} to {}",
                                 grname,
+                                ss.str(),
                                 Group::InjectionCMode2String(oldControl),
                                 Group::InjectionCMode2String(ctrls.back()));
                 local_deferredLogger.info(msg);
