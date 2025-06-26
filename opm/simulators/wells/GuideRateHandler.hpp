@@ -50,9 +50,11 @@ namespace Opm {
  *
  * @tparam Scalar The scalar type (e.g., float or double) used in computations.
  */
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class GuideRateHandler {
 public:
+        using Scalar = typename FluidSystem::Scalar;
+
 #ifdef RESERVOIR_COUPLING_ENABLED
     using Potentials = ReservoirCoupling::Potentials;
 #endif
@@ -66,7 +68,7 @@ public:
     class GuideRateDumper {
     public:
         GuideRateDumper(
-            GuideRateHandler<Scalar> &parent, const int report_step_idx, const double sim_time
+            GuideRateHandler<FluidSystem, Indices> &parent, const int report_step_idx, const double sim_time
         );
 
         DeferredLogger &deferredLogger() { return this->parent_.deferredLogger(); }
@@ -97,10 +99,10 @@ public:
         void printFooter_();
         void printWellGuideRates_(const Well& well, int level);
 
-        GuideRateHandler<Scalar> &parent_;
+        GuideRateHandler<FluidSystem, Indices> &parent_;
         const int report_step_idx_;
         const double sim_time_;
-        const BlackoilWellModelGeneric<Scalar>& well_model_;
+        const BlackoilWellModelGeneric<FluidSystem, Indices>& well_model_;
         const Schedule& schedule_;
         const Parallel::Communication& comm_;
         std::unordered_map<std::string, data::GuideRateValue> well_guide_rates_;
@@ -117,10 +119,10 @@ public:
     class UpdateGuideRates {
     public:
         UpdateGuideRates(
-            GuideRateHandler<Scalar> &parent,
+            GuideRateHandler<FluidSystem, Indices> &parent,
             const int report_step_idx,
             const double sim_time,
-            const WellState<Scalar> &well_state,
+            const WellState<FluidSystem, Indices> &well_state,
             GroupState<Scalar> &group_state,
             const int num_phases
         );
@@ -134,7 +136,6 @@ public:
        const Parallel::Communication &comm() const { return this->parent_.comm_; }
         DeferredLogger &deferredLogger() { return this->parent_.deferredLogger(); }
         GuideRate &guideRate() { return this->parent_.guide_rate_; }
-        const PhaseUsage &phaseUsage() const { return this->parent_.phase_usage_; }
         const SummaryState &summaryState() const { return this->parent_.summary_state_; }
         const Schedule &schedule() const { return this->parent_.schedule_; }
         /**
@@ -162,17 +163,17 @@ public:
         void updateProductionGroupPotentialFromSubGroups(
             const Group& group, std::vector<Scalar>& pot);
 
-        GuideRateHandler<Scalar> &parent_;
+        GuideRateHandler<FluidSystem, Indices> &parent_;
         const int report_step_idx_;
         const double sim_time_;
-        const WellState<Scalar> &well_state_;
+        const WellState<FluidSystem, Indices> &well_state_;
         GroupState<Scalar> &group_state_;
         const int num_phases_;
         const UnitSystem& unit_system_;
     };
 
     GuideRateHandler(
-        BlackoilWellModelGeneric<Scalar>& well_model,
+        BlackoilWellModelGeneric<FluidSystem, Indices>& well_model,
         const Schedule& schedule,
         const SummaryState& summary_state,
         const Parallel::Communication& comm
@@ -219,18 +220,16 @@ public:
      */
     void updateGuideRates(const int report_step_idx,
                           const double sim_time,
-                          const WellState<Scalar>& well_state,
+                          const WellState<FluidSystem, Indices>& well_state,
                           GroupState<Scalar>& group_state);
 
-    const BlackoilWellModelGeneric<Scalar>& wellModel() const { return well_model_; }
-
+    const BlackoilWellModelGeneric<FluidSystem, Indices>& wellModel() const { return well_model_; }
 private:
     void debugDumpGuideRatesRecursive_(const Group& group) const;
-    BlackoilWellModelGeneric<Scalar>& well_model_;
+    BlackoilWellModelGeneric<FluidSystem, Indices>& well_model_;
     const Schedule& schedule_;
     const SummaryState& summary_state_;
     const Parallel::Communication& comm_;
-    const PhaseUsage& phase_usage_;
     GuideRate& guide_rate_;
     DeferredLogger *deferred_logger_ = nullptr;
 #ifdef RESERVOIR_COUPLING_ENABLED
