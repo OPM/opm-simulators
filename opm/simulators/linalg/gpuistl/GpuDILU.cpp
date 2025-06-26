@@ -83,28 +83,30 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
         OPM_THROW(std::runtime_error,
                   "Reordering is only supported for full precision matrices without matrix splitting.");
     }
-    if (m_splitMatrix) {
-        m_gpuMatrixReorderedDiag = std::make_unique<GpuVector<field_type>>(blocksize_ * blocksize_ * cpuMatrix.N());
-        std::tie(m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper)
-            = detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrix<field_type>>(cpuMatrix,
-                                                                                               m_reorderedToNatural);
-    } else {
-        m_gpuMatrixReordered = detail::createReorderedMatrix<M, field_type, GpuSparseMatrix<field_type>>(
-            cpuMatrix, m_reorderedToNatural);
-    }
-
-    if (m_mixedPrecisionScheme != MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG) {
-        if (!m_splitMatrix) {
-            OPM_THROW(std::runtime_error, "Matrix must be split when storing as float.");
+    if (m_reorder) {
+        if (m_splitMatrix) {
+            m_gpuMatrixReorderedDiag = std::make_unique<GpuVector<field_type>>(blocksize_ * blocksize_ * cpuMatrix.N());
+            std::tie(m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper)
+                = detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrix<field_type>>(cpuMatrix,
+                                                                                                m_reorderedToNatural);
+        } else {
+            m_gpuMatrixReordered = detail::createReorderedMatrix<M, field_type, GpuSparseMatrix<field_type>>(
+                cpuMatrix, m_reorderedToNatural);
         }
-        m_gpuMatrixReorderedLowerFloat = std::make_unique<FloatMat>(
-            m_gpuMatrixReorderedLower->getRowIndices(), m_gpuMatrixReorderedLower->getColumnIndices(), blocksize_);
-        m_gpuMatrixReorderedUpperFloat = std::make_unique<FloatMat>(
-            m_gpuMatrixReorderedUpper->getRowIndices(), m_gpuMatrixReorderedUpper->getColumnIndices(), blocksize_);
 
-        if (m_mixedPrecisionScheme == MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG) {
-            m_gpuDInvFloat
-                = std::make_unique<FloatVec>(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize());
+        if (m_mixedPrecisionScheme != MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG) {
+            if (!m_splitMatrix) {
+                OPM_THROW(std::runtime_error, "Matrix must be split when storing as float.");
+            }
+            m_gpuMatrixReorderedLowerFloat = std::make_unique<FloatMat>(
+                m_gpuMatrixReorderedLower->getRowIndices(), m_gpuMatrixReorderedLower->getColumnIndices(), blocksize_);
+            m_gpuMatrixReorderedUpperFloat = std::make_unique<FloatMat>(
+                m_gpuMatrixReorderedUpper->getRowIndices(), m_gpuMatrixReorderedUpper->getColumnIndices(), blocksize_);
+
+            if (m_mixedPrecisionScheme == MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG) {
+                m_gpuDInvFloat
+                    = std::make_unique<FloatVec>(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize());
+            }
         }
     }
 
