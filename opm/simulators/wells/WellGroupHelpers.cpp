@@ -1146,10 +1146,18 @@ updateGroupControlledWells(const Schedule& schedule,
     }
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
-        if (is_production_group) {
+        const Well& well = schedule.getWell(child_well, report_step);
+        if (is_production_group && well.isProducer()) {
                 included = included || well_state.isProductionGrup(child_well) || group.as_choke();
-        } else {
-            included = included || well_state.isInjectionGrup(child_well);
+        } else if (!is_production_group && !well.isProducer()) {
+            const auto& well_controls = well.injectionControls(summary_state);
+            auto injectorType = well_controls.injector_type;
+            if (  (injection_phase == Phase::WATER && injectorType == InjectorType::WATER ) ||
+                  (injection_phase == Phase::OIL && injectorType == InjectorType::OIL ) ||
+                  (injection_phase == Phase::GAS && injectorType == InjectorType::GAS ))
+                {
+                    included = included || well_state.isInjectionGrup(child_well);
+                }
         }
         const auto ctrl1 = group_state.production_control(group.name());
         if (group.as_choke() && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))){
