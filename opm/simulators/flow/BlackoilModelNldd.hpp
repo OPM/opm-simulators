@@ -95,8 +95,6 @@ public:
 
     static constexpr int numEq = Indices::numEq;
 
-    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-
     //! \brief The constructor sets up the subdomains.
     //! \param model BlackOil model to solve for
     //! \param param param Model parameters
@@ -180,11 +178,10 @@ public:
                                         skip);
         }
 
-        // Initialize storage and values for previous mobilities per domain
-        domainPreviousMobilities_.resize(domains_.size());
-        for (size_t domIdx = 0; domIdx < domains_.size(); ++domIdx) {
-            const auto& domain = domains_[domIdx];
-            domainPreviousMobilities_[domIdx].resize(domain.cells.size() * numPhases, 0.0);
+        // Initialize storage for previous mobilities in a single flat vector
+        const auto numCells = grid.size(0);
+        previousMobilities_.resize(numCells * FluidSystem::numActivePhases(), 0.0);
+        for (const auto& domain : domains_) {
             updateMobilities(domain);
         }
 
@@ -604,7 +601,8 @@ private:
             if (!convreport.converged() && !convreport.wellFailed()) {
                 bool oscillate = false;
                 bool stagnate = false;
-                detail::detectOscillations(convergence_history, iter, numPhases,
+                const auto num_residuals = convergence_history.front().size();
+                detail::detectOscillations(convergence_history, iter, num_residuals,
                                            Scalar{0.2}, 1, oscillate, stagnate);
                 if (oscillate) {
                     damping_factor *= 0.85;
@@ -1102,17 +1100,14 @@ private:
         if (domain.skip || model_.param().nldd_relative_mobility_change_tol_ == 0.0) {
             return;
         }
-
-        for (int cellIdx = 0; cellIdx < domain.cells.size(); ++cellIdx) {
-            unsigned globalDofIdx = domain.cells[cellIdx];
+        const auto numActivePhases = FluidSystem::numActivePhases();
+        for (const auto globalDofIdx : domain.cells) {
             const auto& intQuants = *model_.simulator().model().cachedIntensiveQuantities(globalDofIdx, /*timeIdx=*/0);
 
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-                unsigned mobIdx = cellIdx * numPhases + phaseIdx;
-                domainPreviousMobilities_[domain.index][mobIdx] = getValue(intQuants.mobility(phaseIdx));
+            for (unsigned activePhaseIdx = 0; activePhaseIdx < numActivePhases; ++activePhaseIdx) {
+                const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
+                const auto mobIdx = globalDofIdx * numActivePhases + activePhaseIdx;
+                previousMobilities_[mobIdx] = getValue(intQuants.mobility(phaseIdx));
             }
         }
     }
@@ -1146,31 +1141,25 @@ private:
 
     bool checkSubdomainChangeRelative(const Domain& domain)
     {
-        int numCells = domain.cells.size();
-        auto& prevMobilities = domainPreviousMobilities_[domain.index];
+        const auto numActivePhases = FluidSystem::numActivePhases();
 
         // Check mobility changes for all cells in the domain
-        for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            unsigned globalDofIdx = domain.cells[cellIdx];
+        for (const auto globalDofIdx : domain.cells) {
             const auto& intQuants = *model_.simulator().model().cachedIntensiveQuantities(globalDofIdx, /*timeIdx=*/0);
 
             // Calculate average previous mobility for normalization
             Scalar cellMob = 0.0;
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-                cellMob += prevMobilities[cellIdx * numPhases + phaseIdx] / numPhases;
+            for (unsigned activePhaseIdx = 0; activePhaseIdx < numActivePhases; ++activePhaseIdx) {
+                const auto mobIdx = globalDofIdx * numActivePhases + activePhaseIdx;
+                cellMob += previousMobilities_[mobIdx] / numActivePhases;
             }
 
             // Check relative changes for each phase
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-                unsigned mobIdx = cellIdx * numPhases + phaseIdx;
+            for (unsigned activePhaseIdx = 0; activePhaseIdx < numActivePhases; ++activePhaseIdx) {
+                const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
+                const auto mobIdx = globalDofIdx * numActivePhases + activePhaseIdx;
                 const auto mobility = getValue(intQuants.mobility(phaseIdx));
-                const auto relDiff = std::abs(mobility - prevMobilities[mobIdx]) / cellMob;
+                const auto relDiff = std::abs(mobility - previousMobilities_[mobIdx]) / cellMob;
                 if (relDiff > model_.param().nldd_relative_mobility_change_tol_) {
                     return true;
                 }
@@ -1188,8 +1177,8 @@ private:
     // mutable because we need to update the number of wells for each domain in getDomainAccumulatedReports()
     mutable std::vector<SimulatorReport> domain_reports_accumulated_; //!< Accumulated convergence reports per domain
     int rank_ = 0; //!< MPI rank of this process
-    // Store previous mobilities to check for changes
-    std::vector<std::vector<Scalar>> domainPreviousMobilities_;
+    // Store previous mobilities to check for changes - single flat vector indexed by (globalCellIdx * numActivePhases + activePhaseIdx)
+    std::vector<Scalar> previousMobilities_;
 };
 
 } // namespace Opm
