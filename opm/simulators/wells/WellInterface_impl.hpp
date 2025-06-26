@@ -370,15 +370,18 @@ namespace Opm
                     if (this->isProducer() && thp_controlled) {
                         std::vector<Scalar> ipr_rates(3, 0.0);
                         this->computeRatesFromBhpAndIPR(well_state, prod_limit, ipr_rates);
-                        this->adaptRatesForVFP(ipr_rates);
-                        const auto stable_bhp = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, ipr_rates, this->getRefDensity(), summary_state);
-                        if (!stable_bhp) {
-                            deferred_logger.debug(fmt::format("Well {} local iteration {}: Not opening THP-controlled producer at estimated BHP limit = {:.2f} bar - unable to estimate stable BHP.",
-                                                              this->name(),
-                                                              it,
-                                                              prod_limit/unit::barsa),
-                                                  /*debug_verbosity_level*/ 4);
-                            return false;
+                        const bool zero_ipr = std::all_of(ipr_rates.begin(), ipr_rates.end(), [](const Scalar x){ return std::abs(x) < 1.0e-15; });
+                        if (!zero_ipr) {
+                            this->adaptRatesForVFP(ipr_rates);
+                            const auto stable_bhp = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, ipr_rates, this->getRefDensity(), summary_state);
+                            if (!stable_bhp) {
+                                deferred_logger.debug(fmt::format("Well {} local iteration {}: Not opening THP-controlled producer at estimated BHP limit = {:.2f} bar - unable to estimate stable BHP.",
+                                                                this->name(),
+                                                                it,
+                                                                prod_limit/unit::barsa),
+                                                    /*debug_verbosity_level*/ 4);
+                                return false;
+                            }
                         }
                     }
                 }
