@@ -44,8 +44,7 @@ namespace Opm::gpuistl::detail
  * @param[out] diagIndices Array to store the indices of diagonal elements
  */
 template <class T>
-void computeDiagIndicesNoReorder(const T* mat,
-                                 const int* rowIndices,
+void computeDiagIndicesNoReorder(const int* rowIndices,
                                  const int* colIndices,
                                  const size_t* indexConversion,
                                  int rows,
@@ -63,8 +62,7 @@ void computeDiagIndicesNoReorder(const T* mat,
  * @param[out] diagIndices Array to store the indices of diagonal elements
  */
 template <class T>
-void computeDiagIndices(const T* mat,
-                        const int* rowIndices,
+void computeDiagIndices(const int* rowIndices,
                         const int* colIndices,
                         const int* reorderedToNatural,
                         int rows,

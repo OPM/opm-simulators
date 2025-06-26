@@ -113,8 +113,7 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
     // Precompute diagaonal block element indices and handle the actual reordering if that is enabled.
     if (m_reorder) {
         if (!m_splitMatrix) {
-            detail::computeDiagIndices<field_type>(m_gpuMatrixReordered->getNonZeroValues().data(),
-                                                m_gpuMatrixReordered->getRowIndices().data(),
+            detail::computeDiagIndices<field_type>(m_gpuMatrixReordered->getRowIndices().data(),
                                                 m_gpuMatrixReordered->getColumnIndices().data(),
                                                 m_gpuReorderToNatural.data(),
                                                 m_gpuMatrix.N(),
@@ -122,8 +121,7 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
         }
         reorderAndSplitMatrix(m_moveThreadBlockSize);
     } else {
-        detail::computeDiagIndicesNoReorder<field_type>(m_gpuMatrix.getNonZeroValues().data(),
-                                                        m_gpuMatrix.getRowIndices().data(),
+        detail::computeDiagIndicesNoReorder<field_type>(m_gpuMatrix.getRowIndices().data(),
                                                         m_gpuMatrix.getColumnIndices().data(),
                                                         m_gpuLevelSets.data(),
                                                         m_gpuMatrix.N(),

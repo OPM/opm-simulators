@@ -30,8 +30,7 @@ namespace
     // Instead it represents what the j'th rows in the k'th levelset
     // correspons to via the indexConversion array.
     template <class T>
-    __global__ void cuComputeDiagIndicesNoReorder(const T* mat,
-                                                  const int* rowIndices,
+    __global__ void cuComputeDiagIndicesNoReorder(const int* rowIndices,
                                                   const int* colIndices,
                                                   const size_t* indexConversion,
                                                   int rows,
@@ -56,8 +55,7 @@ namespace
     // we convert from the reordered index (i) to the natural index (j) which
     // will give us the diagonal element index as the row and column indices match there
     template <class T>
-    __global__ void cuComputeDiagIndices(const T* mat,
-                                         const int* rowIndices,
+    __global__ void cuComputeDiagIndices(const int* rowIndices,
                                          const int* colIndices,
                                          const int* reorderedToNatural,
                                          int rows,
@@ -84,8 +82,7 @@ namespace
 
 template <class T>
 void
-computeDiagIndicesNoReorder(const T* mat,
-                            const int* rowIndices,
+computeDiagIndicesNoReorder(const int* rowIndices,
                             const int* colIndices,
                             const size_t* indexConversion,
                             int rows,
@@ -99,13 +96,12 @@ computeDiagIndicesNoReorder(const T* mat,
 
     // launch kernel
     cuComputeDiagIndicesNoReorder<T>
-        <<<nThreadBlocks, threadBlockSize>>>(mat, rowIndices, colIndices, indexConversion, rows, diagIndices);
+        <<<nThreadBlocks, threadBlockSize>>>(rowIndices, colIndices, indexConversion, rows, diagIndices);
 }
 
 template <class T>
 void
-computeDiagIndices(const T* mat,
-                   const int* rowIndices,
+computeDiagIndices(const int* rowIndices,
                    const int* colIndices,
                    const int* reorderedToNatural,
                    int rows,
@@ -119,7 +115,7 @@ computeDiagIndices(const T* mat,
 
     // launch kernel
     cuComputeDiagIndices<T>
-        <<<nThreadBlocks, threadBlockSize>>>(mat, rowIndices, colIndices, reorderedToNatural, rows, diagIndices);
+        <<<nThreadBlocks, threadBlockSize>>>(rowIndices, colIndices, reorderedToNatural, rows, diagIndices);
 }
 
 
@@ -127,9 +123,9 @@ computeDiagIndices(const T* mat,
 
 #define DEFINE_KERNEL_WRAPPERS_FOR_TYPES(T)                                                                            \
     template void Opm::gpuistl::detail::computeDiagIndicesNoReorder<T>(                                                \
-        const T*, const int*, const int*, const size_t*, int, size_t*);                                                \
+        const int*, const int*, const size_t*, int, size_t*);                                                \
     template void Opm::gpuistl::detail::computeDiagIndices<T>(                                                         \
-        const T*, const int*, const int*, const int*, int, size_t*);
+        const int*, const int*, const int*, int, size_t*);
 
 DEFINE_KERNEL_WRAPPERS_FOR_TYPES(float)
 DEFINE_KERNEL_WRAPPERS_FOR_TYPES(double)
