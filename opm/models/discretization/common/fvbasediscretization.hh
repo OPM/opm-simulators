@@ -330,6 +330,7 @@ class FvBaseDiscretization
     enum {
         numEq = getPropValue<TypeTag, Properties::NumEq>(),
         historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>(),
+        intensiveCacheSize = 1,
     };
 
     using IntensiveQuantitiesVector = std::vector<IntensiveQuantities,
@@ -413,14 +414,16 @@ public:
 
         PrimaryVariables::init();
         const std::size_t numDof = asImp_().numGridDof();
-        for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
+        for (unsigned timeIdx = 0; timeIdx < intensiveCacheSize; ++timeIdx) {
             if (storeIntensiveQuantities()) {
                 intensiveQuantityCache_[timeIdx].resize(numDof);
                 intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof, /*value=*/false);
             }
-
+        }
+        for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
             if (enableStorageCache_) {
                 storageCache_[timeIdx].resize(numDof);
+                storageCacheUpToDate_[timeIdx].resize(numDof, /*value=*/false);
             }
         }
 
@@ -525,7 +528,7 @@ public:
         resizeAndResetIntensiveQuantitiesCache_();
         if (storeIntensiveQuantities()) {
             // invalidate all cached intensive quantities
-            for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
+            for (unsigned timeIdx = 0; timeIdx < intensiveCacheSize; ++timeIdx) {
                 invalidateIntensiveQuantitiesCache(timeIdx);
             }
         }
@@ -658,6 +661,8 @@ public:
             return nullptr;
         }
 
+        assert(timeIdx == 0);
+
         // With the storage cache enabled, usually only the
         // intensive quantities for the most recent time step are
         // cached. However, this may be false for some Problem
@@ -685,6 +690,8 @@ public:
         if (!storeIntensiveQuantities()) {
             return;
         }
+
+        assert(timeIdx == 0);
 
         intensiveQuantityCache_[timeIdx][globalIdx] = intQuants;
         intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = 1;
@@ -715,6 +722,8 @@ public:
      */
     void invalidateIntensiveQuantitiesCache(unsigned timeIdx) const
     {
+        assert(timeIdx == 0);
+
         if (storeIntensiveQuantities()) {
             std::fill(intensiveQuantityCacheUpToDate_[timeIdx].begin(),
                       intensiveQuantityCacheUpToDate_[timeIdx].end(),
@@ -782,6 +791,7 @@ public:
      */
     void shiftIntensiveQuantityCache(unsigned numSlots = 1)
     {
+        // TODO: Consider removing this method as it i not needed when we only have one time step in the cache.
         if (!storeIntensiveQuantities()) {
             return;
         }
@@ -797,8 +807,7 @@ public:
         }
 
         assert(numSlots > 0);
-
-        for (unsigned timeIdx = 0; timeIdx < historySize - numSlots; ++timeIdx) {
+        for (unsigned timeIdx = 0; timeIdx < intensiveCacheSize - numSlots; ++timeIdx) {
             intensiveQuantityCache_[timeIdx + numSlots] = intensiveQuantityCache_[timeIdx];
             intensiveQuantityCacheUpToDate_[timeIdx + numSlots] = intensiveQuantityCacheUpToDate_[timeIdx];
         }
@@ -1917,7 +1926,7 @@ protected:
         // allocate the intensive quantities cache
         if (storeIntensiveQuantities()) {
             const std::size_t numDof = asImp_().numGridDof();
-            for(unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
+            for(unsigned timeIdx = 0; timeIdx < intensiveCacheSize; ++timeIdx) {
                 intensiveQuantityCache_[timeIdx].resize(numDof);
                 intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof);
                 invalidateIntensiveQuantitiesCache(timeIdx);
@@ -1992,10 +2001,10 @@ protected:
 
     // cur is the current iterative solution, prev the converged
     // solution of the previous time step
-    mutable std::array<IntensiveQuantitiesVector, historySize> intensiveQuantityCache_;
+    mutable std::array<IntensiveQuantitiesVector, intensiveCacheSize> intensiveQuantityCache_;
 
     // while these are logically bools, concurrent writes to vector<bool> are not thread safe.
-    mutable std::array<std::vector<unsigned char>, historySize> intensiveQuantityCacheUpToDate_;
+    mutable std::array<std::vector<unsigned char>, intensiveCacheSize> intensiveQuantityCacheUpToDate_;
 
     mutable std::array<std::unique_ptr<DiscreteFunction>, historySize> solution_;
 
