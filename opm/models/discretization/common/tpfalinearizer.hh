@@ -37,6 +37,8 @@
 
 #include <opm/grid/utility/SparseTable.hpp>
 
+#include <opm/material/common/ConditionalStorage.hpp>
+
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/Schedule/BCProp.hpp>
 
@@ -116,6 +118,7 @@ class TpfaLinearizer
         getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
     static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
+    static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static constexpr bool enableMICP = getPropValue<TypeTag, Properties::EnableMICP>();
 
     // copying the linearizer is not a good idea
@@ -453,27 +456,21 @@ private:
                         const Scalar zEx = problem_().dofCenterDepth(neighborIdx);
                         const Scalar dZg = (zIn - zEx)*gravity;
                         const Scalar thpres = problem_().thresholdPressure(myIdx, neighborIdx);
-                        Scalar inAlpha {};
-                        Scalar outAlpha {};
-                        Scalar diffusivity{};
-                        Scalar dispersivity{};
-                        if constexpr (enableEnergy) {
-                            inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
-                            outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);
-                        }
-                        if constexpr (enableDiffusion) {
-                            diffusivity = problem_().diffusivity(myIdx, neighborIdx);
-                        }
-                        if (simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion()) {
-                            dispersivity = problem_().dispersivity(myIdx, neighborIdx);
-                        }
                         const auto dirId = scvf.dirId();
                         auto faceDir = dirId < 0 ? FaceDir::DirEnum::Unknown
                                                  : FaceDir::FromIntersectionIndex(dirId);
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres,
-                                                                            dZg, faceDir, Vin, Vex,
-                                                                            inAlpha, outAlpha,
-                                                                            diffusivity, dispersivity}, nullptr};
+                        ResidualNBInfo nbinfo{trans, area, thpres, dZg, faceDir, Vin, Vex, {}, {}, {}, {}};
+                        if constexpr (enableEnergy) {
+                            nbinfo.inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
+                            nbinfo.outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);
+                        }
+                        if constexpr (enableDiffusion) {
+                            nbinfo.diffusivity = problem_().diffusivity(myIdx, neighborIdx);
+                        }
+                        if constexpr (enableDispersion) {
+                            nbinfo.dispersivity = problem_().dispersivity(myIdx, neighborIdx);
+                        }
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, nbinfo, nullptr};
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
@@ -548,8 +545,8 @@ private:
         const bool anyFlows = simulator_().problem().eclWriter().outputModule().getFlows().anyFlows() ||
                               simulator_().problem().eclWriter().outputModule().getFlows().hasBlockFlows();
         const bool anyFlores = simulator_().problem().eclWriter().outputModule().getFlows().anyFlores();
-        const bool enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
-        if (((!anyFlows || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && (!enableDispersion && !enableMICP)) {
+        const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
+        if (((!anyFlows || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && (!dispersionActive && !enableMICP)) {
             return;
         }
         const auto& model = model_();
@@ -575,7 +572,7 @@ private:
         if (anyFlores) {
             floresInfo_.reserve(numCells, 6 * numCells);
         }
-        if (enableDispersion || enableMICP) {
+        if (dispersionActive || enableMICP) {
             velocityInfo_.reserve(numCells, 6 * numCells);
         }
 
@@ -621,7 +618,7 @@ private:
                 if (anyFlores) {
                     floresInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.end());
                 }
-                if (enableDispersion || enableMICP) {
+                if (dispersionActive || enableMICP) {
                     velocityInfo_.appendRow(loc_vlinfo.begin(), loc_vlinfo.end());
                 }
             }
@@ -734,7 +731,7 @@ private:
         // We do not call resetSystem_() here, since that will set
         // the full system to zero, not just our part.
         // Instead, that must be called before starting the linearization.
-        const bool enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
+        const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         const unsigned int numCells = domain.cells.size();
         const bool on_full_domain = (numCells == model_().numTotalDof());
 
@@ -767,7 +764,7 @@ private:
                     LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
                                                nbInfo.res_nbinfo,  problem_().moduleParams());
                     adres *= nbInfo.res_nbinfo.faceArea;
-                    if (enableDispersion || enableMICP) {
+                    if (dispersionActive || enableMICP) {
                         for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
                             velocityInfo_[globI][loc].velocity[phaseIdx] =
                                 darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
