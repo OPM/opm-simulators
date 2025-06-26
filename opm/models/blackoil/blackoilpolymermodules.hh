@@ -563,6 +563,9 @@ template <class TypeTag, bool enablePolymerV>
 BlackOilPolymerParams<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
 BlackOilPolymerModule<TypeTag, enablePolymerV>::params_;
 
+template <class TypeTag, bool enablePolymerV>
+class BlackOilPolymerIntensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilPolymerIntensiveQuantities
@@ -570,8 +573,8 @@ BlackOilPolymerModule<TypeTag, enablePolymerV>::params_;
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        polymers extension of the black-oil model.
  */
-template <class TypeTag, bool enablePolymerV = getPropValue<TypeTag, Properties::EnablePolymer>()>
-class BlackOilPolymerIntensiveQuantities
+template <class TypeTag>
+class BlackOilPolymerIntensiveQuantities<TypeTag, /*enablePolymerV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
@@ -752,6 +755,9 @@ public:
     { throw std::runtime_error("waterViscosityCorrection() called but polymers are disabled"); }
 };
 
+template <class TypeTag, bool enablePolymerV>
+class BlackOilPolymerExtensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilPolymerExtensiveQuantities
@@ -759,8 +765,8 @@ public:
  * \brief Provides the polymer specific extensive quantities to the generic black-oil
  *        module's extensive quantities.
  */
-template <class TypeTag, bool enablePolymerV = getPropValue<TypeTag, Properties::EnablePolymer>()>
-class BlackOilPolymerExtensiveQuantities
+template <class TypeTag>
+class BlackOilPolymerExtensiveQuantities<TypeTag, /*enablePolymerV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 

@@ -522,6 +522,9 @@ template <class TypeTag, bool enableSolventV>
 BlackOilSolventParams<typename BlackOilSolventModule<TypeTag, enableSolventV>::Scalar>
 BlackOilSolventModule<TypeTag, enableSolventV>::params_;
 
+template <class TypeTag, bool enableSolventV>
+class BlackOilSolventIntensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilSolventIntensiveQuantities
@@ -529,8 +532,8 @@ BlackOilSolventModule<TypeTag, enableSolventV>::params_;
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        solvents extension of the black-oil model.
  */
-template <class TypeTag, bool enableSolventV = getPropValue<TypeTag, Properties::EnableSolvent>()>
-class BlackOilSolventIntensiveQuantities
+template <class TypeTag>
+class BlackOilSolventIntensiveQuantities<TypeTag, /*enableSolventV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 

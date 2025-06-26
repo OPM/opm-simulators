@@ -380,6 +380,9 @@ template <class TypeTag, bool enableExtboV>
 BlackOilExtboParams<typename BlackOilExtboModule<TypeTag, enableExtboV>::Scalar>
 BlackOilExtboModule<TypeTag, enableExtboV>::params_;
 
+template <class TypeTag, bool enableExtboV>
+class BlackOilExtboIntensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilExtboIntensiveQuantities
@@ -387,8 +390,8 @@ BlackOilExtboModule<TypeTag, enableExtboV>::params_;
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        solvents extension of the black-oil model.
  */
-template <class TypeTag, bool enableExtboV = getPropValue<TypeTag, Properties::EnableExtbo>()>
-class BlackOilExtboIntensiveQuantities
+template <class TypeTag>
+class BlackOilExtboIntensiveQuantities<TypeTag, /*enableExtboV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 

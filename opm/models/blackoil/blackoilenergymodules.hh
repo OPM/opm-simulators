@@ -328,6 +328,9 @@ public:
     }
 };
 
+template <class TypeTag, bool enableEnergyV>
+class BlackOilEnergyIntensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilEnergyIntensiveQuantities
@@ -335,8 +338,8 @@ public:
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        energys extension of the black-oil model.
  */
-template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
-class BlackOilEnergyIntensiveQuantities
+template <class TypeTag>
+class BlackOilEnergyIntensiveQuantities<TypeTag, /*enableEnergyV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
@@ -508,6 +511,9 @@ protected:
     { return *static_cast<Implementation*>(this); }
 };
 
+template <class TypeTag, bool enableEnergyV>
+class BlackOilEnergyExtensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilEnergyExtensiveQuantities
@@ -515,8 +521,8 @@ protected:
  * \brief Provides the energy specific extensive quantities to the generic black-oil
  *        module's extensive quantities.
  */
-template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
-class BlackOilEnergyExtensiveQuantities
+template <class TypeTag>
+class BlackOilEnergyExtensiveQuantities<TypeTag, /*enableEnergyV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 

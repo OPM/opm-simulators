@@ -32,16 +32,19 @@
 
 namespace Opm {
 
+template <class TypeTag, bool enableEnergyV>
+class BlackOilEnergyIntensiveQuantitiesGlobalIndex;
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
  *        model by energy using global indices.
  */
-template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
-class BlackOilEnergyIntensiveQuantitiesGlobalIndex
-    : public BlackOilEnergyIntensiveQuantities<TypeTag,enableEnergyV>
+template <class TypeTag>
+class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, true>
+    : public BlackOilEnergyIntensiveQuantities<TypeTag,true>
 {
-    using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, enableEnergyV>;
+    using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, true>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;

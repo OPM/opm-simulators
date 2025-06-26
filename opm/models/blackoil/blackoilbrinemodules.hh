@@ -330,6 +330,9 @@ template <class TypeTag, bool enableBrineV>
 BlackOilBrineParams<typename BlackOilBrineModule<TypeTag, enableBrineV>::Scalar>
 BlackOilBrineModule<TypeTag, enableBrineV>::params_;
 
+template <class TypeTag, bool enableBrineV>
+class BlackOilBrineIntensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Ewoms::BlackOilBrineIntensiveQuantities
@@ -337,8 +340,8 @@ BlackOilBrineModule<TypeTag, enableBrineV>::params_;
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        brine extension of the black-oil model.
  */
-template <class TypeTag, bool enableBrineV = getPropValue<TypeTag, Properties::EnableBrine>()>
-class BlackOilBrineIntensiveQuantities
+template <class TypeTag>
+class BlackOilBrineIntensiveQuantities<TypeTag, /*enableBrineV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
@@ -357,7 +360,7 @@ class BlackOilBrineIntensiveQuantities
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
-    static constexpr bool enableBrine = enableBrineV;
+    static constexpr bool enableBrine = true;
     static constexpr bool enableSaltPrecipitation =
         getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
     static constexpr int contiBrineEqIdx = Indices::contiBrineEqIdx;

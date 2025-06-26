@@ -72,15 +72,15 @@ template <class TypeTag>
 class BlackOilIntensiveQuantitiesGlobalIndex
     : public GetPropType<TypeTag, Properties::DiscIntensiveQuantities>
     , public GetPropType<TypeTag, Properties::FluxModule>::FluxIntensiveQuantities
-    , public BlackOilDiffusionIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>() >
-    , public BlackOilSolventIntensiveQuantities<TypeTag>
-    , public BlackOilExtboIntensiveQuantities<TypeTag>
-    , public BlackOilPolymerIntensiveQuantities<TypeTag>
-    , public BlackOilFoamIntensiveQuantities<TypeTag>
-    , public BlackOilBrineIntensiveQuantities<TypeTag>
-    , public BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag>
-    , public BlackOilMICPIntensiveQuantities<TypeTag>
-    , public BlackOilConvectiveMixingIntensiveQuantities<TypeTag>
+    , public BlackOilDiffusionIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>()>
+    , public BlackOilSolventIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableSolvent>()>
+    , public BlackOilExtboIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableExtbo>()>
+    , public BlackOilPolymerIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnablePolymer>()>
+    , public BlackOilFoamIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableFoam>()>
+    , public BlackOilBrineIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableBrine>()>
+    , public BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>
+    , public BlackOilMICPIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableMICP>()>
+    , public BlackOilConvectiveMixingIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableConvectiveMixing>()>
 {
     using ParentType = GetPropType<TypeTag, Properties::DiscIntensiveQuantities>;
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
@@ -526,13 +526,13 @@ public:
     }
 
 private:
-    friend BlackOilSolventIntensiveQuantities<TypeTag>;
-    friend BlackOilExtboIntensiveQuantities<TypeTag>;
-    friend BlackOilPolymerIntensiveQuantities<TypeTag>;
-    friend BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag>;
-    friend BlackOilFoamIntensiveQuantities<TypeTag>;
-    friend BlackOilBrineIntensiveQuantities<TypeTag>;
-    friend BlackOilMICPIntensiveQuantities<TypeTag>;
+    friend BlackOilSolventIntensiveQuantities<TypeTag, enableSolvent>;
+    friend BlackOilExtboIntensiveQuantities<TypeTag, enableExtbo>;
+    friend BlackOilPolymerIntensiveQuantities<TypeTag, enablePolymer>;
+    friend BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, enableEnergy>;
+    friend BlackOilFoamIntensiveQuantities<TypeTag, enableFoam>;
+    friend BlackOilBrineIntensiveQuantities<TypeTag, enableBrine>;
+    friend BlackOilMICPIntensiveQuantities<TypeTag, enableMICP>;
 
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }

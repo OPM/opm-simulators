@@ -403,6 +403,9 @@ public:
     }
 };
 
+template <class TypeTag, bool enableConvectiveMixingV>
+class BlackOilConvectiveMixingIntensiveQuantities;
+
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilConvectiveMixingIntensiveQuantities
@@ -410,8 +413,8 @@ public:
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        convective mixing (DRSDTCON) model.
  */
-template <class TypeTag, bool enableConvectiveMixingV = getPropValue<TypeTag, Properties::EnableConvectiveMixing>()>
-class BlackOilConvectiveMixingIntensiveQuantities
+template <class TypeTag>
+class BlackOilConvectiveMixingIntensiveQuantities<TypeTag, /*enableConvectiveMixingV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
