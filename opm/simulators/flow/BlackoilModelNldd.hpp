@@ -185,6 +185,9 @@ public:
             updateMobilities(domain);
         }
 
+        // Initialize domain_needs_solving_ to true for all domains
+        domain_needs_solving_.resize(num_domains, true);
+
         // Set up container for the local system matrices.
         domain_matrices_.resize(num_domains);
 
@@ -267,16 +270,16 @@ public:
         DeferredLogger logger;
         std::vector<SimulatorReportSingle> domain_reports(domains_.size());
         for (const int domain_index : domain_order) {
-            auto& domain = domains_[domain_index];
+            const auto& domain = domains_[domain_index];
             SimulatorReportSingle local_report;
             detailTimer.reset();
             detailTimer.start();
 
-            checkIfSubdomainNeedsSolving(domain, iteration);
+            domain_needs_solving_[domain_index] = checkIfSubdomainNeedsSolving(domain, iteration);
 
             updateMobilities(domain);
 
-            if (domain.skip || !domain.needsSolving) {
+            if (domain.skip || !domain_needs_solving_[domain_index]) {
                 local_report.skipped_domains = true;
                 local_report.converged = true;
                 domain_reports[domain.index] = local_report;
@@ -329,7 +332,7 @@ public:
             const auto dr_size = domain_reports.size();
             for (auto i = 0*dr_size; i < dr_size; ++i) {
                 // Reset the needsSolving flag for the next iteration
-                domains_[i].needsSolving = false;
+                domain_needs_solving_[i] = false;
                 const auto& dr = domain_reports[i];
                 if (dr.converged) {
                     ++num_converged;
@@ -338,7 +341,7 @@ public:
                     }
                     else {
                         // If we needed to solve the domain, we also solve in next iteration
-                        domains_[i].needsSolving = true;
+                        domain_needs_solving_[i] = true;
                     }
                 }
                 if (dr.skipped_domains) {
@@ -1112,31 +1115,29 @@ private:
         }
     }
 
-    void checkIfSubdomainNeedsSolving(Domain& domain, const int iteration)
+    bool checkIfSubdomainNeedsSolving(const Domain& domain, const int iteration)
     {
         if (domain.skip) {
-            domain.needsSolving = false;
-            return;
+            return false;
         }
 
         // If we domain was marked as needing solving in previous iterations,
         // we do not need to check again
-        if (domain.needsSolving) {
-            return;
+        if (domain_needs_solving_[domain.index]) {
+            return true;
         }
 
         // If we do not check for mobility changes, we need to solve the domain
         if (model_.param().nldd_relative_mobility_change_tol_ == 0.0) {
-            domain.needsSolving = true;
-            return;
+            return true;
         }
 
         // Skip mobility check on first iteration
         if (iteration == 0) {
-            domain.needsSolving = true;
-        } else {
-            domain.needsSolving = checkSubdomainChangeRelative(domain);
+            return true;
         }
+
+        return checkSubdomainChangeRelative(domain);
     }
 
     bool checkSubdomainChangeRelative(const Domain& domain)
@@ -1179,6 +1180,8 @@ private:
     int rank_ = 0; //!< MPI rank of this process
     // Store previous mobilities to check for changes - single flat vector indexed by (globalCellIdx * numActivePhases + activePhaseIdx)
     std::vector<Scalar> previousMobilities_;
+    // Flag indicating if this domain should be solved in the next iteration
+    std::vector<bool> domain_needs_solving_;
 };
 
 } // namespace Opm
