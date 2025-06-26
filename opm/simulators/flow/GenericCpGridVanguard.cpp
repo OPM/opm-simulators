@@ -552,8 +552,6 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
         this->equilGrid_ = std::make_unique<Dune::CpGrid>(*this->grid_);
         this->equilCartesianIndexMapper_ =
             std::make_unique<CartesianIndexMapper>(*this->equilGrid_);
-        this->equilLevelCartesianIndexMapper_ =
-            std::make_unique<LevelCartesianIndexMapper>(*this->equilGrid_);
 
         eclState.reset_actnum(UgGridHelpers::createACTNUM(*this->grid_));
         eclState.set_active_indices(this->grid_->globalCell());

@@ -234,7 +234,6 @@ protected:
     std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
     std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
     std::unique_ptr<LevelCartesianIndexMapper> levelCartesianIndexMapper_;
-    std::unique_ptr<LevelCartesianIndexMapper> equilLevelCartesianIndexMapper_;
 
     int mpiRank;
     std::vector<int> cell_part_{};
