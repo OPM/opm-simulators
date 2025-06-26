@@ -54,7 +54,7 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-#include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGasLift.hpp> // commented out for compilation cause
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
@@ -97,8 +97,8 @@ template<class Scalar> class WellContributions;
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
         class BlackoilWellModel : public WellConnectionAuxiliaryModule<TypeTag, BlackoilWellModel<TypeTag>>
-                                , public BlackoilWellModelGeneric<GetPropType<TypeTag,
-                                                                              Properties::Scalar>>
+                                , public BlackoilWellModelGeneric<GetPropType<TypeTag, Properties::FluidSystem>,
+                                                                     GetPropType<TypeTag, Properties::Indices> >
         {
         public:
             // ---------      Types      ---------
@@ -135,7 +135,7 @@ template<class Scalar> class WellContributions;
 
             // For the conversion between the surface volume rate and reservoir voidage rate
             using RateConverterType = RateConverter::
-                SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
+                SurfaceToReservoirVoidage<FluidSystem, Indices, std::vector<int> >;
 
             // For computing average pressured used by gpmaint
             using AverageRegionalPressureType = RegionAverageCalculator::
@@ -187,7 +187,7 @@ template<class Scalar> class WellContributions;
 
             using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag> >;
 
-            using BlackoilWellModelGeneric<Scalar>::initFromRestartFile;
+            using BlackoilWellModelGeneric<FluidSystem, Indices>::initFromRestartFile;
             void initFromRestartFile(const RestartValue& restartValues)
             {
                 initFromRestartFile(restartValues,
@@ -197,7 +197,7 @@ template<class Scalar> class WellContributions;
                                     this->simulator_.vanguard().enableDistributedWells());
             }
 
-            using BlackoilWellModelGeneric<Scalar>::prepareDeserialize;
+            using BlackoilWellModelGeneric<FluidSystem, Indices>::prepareDeserialize;
             void prepareDeserialize(const int report_step)
             {
                 prepareDeserialize(report_step, grid().size(0),
@@ -433,7 +433,7 @@ template<class Scalar> class WellContributions;
             std::map<std::string, std::unique_ptr<AverageRegionalPressureType>> regionalAveragePressureCalculator_{};
 
             SimulatorReportSingle last_report_{};
-            GuideRateHandler<Scalar> guide_rate_handler_{};
+            GuideRateHandler<FluidSystem, Indices> guide_rate_handler_{};
 
             // Pre-step network solve at static reservoir conditions (group and well states might be updated)
             void doPreStepNetworkRebalance(DeferredLogger& deferred_logger);
@@ -495,7 +495,7 @@ template<class Scalar> class WellContributions;
             void updateAverageFormationFactor();
 
             void computePotentials(const std::size_t widx,
-                                   const WellState<Scalar>& well_state_copy,
+                                   const WellState<FluidSystem, Indices>& well_state_copy,
                                    std::string& exc_msg,
                                    ExceptionType::ExcEnum& exc_type,
                                    DeferredLogger& deferred_logger) override;
