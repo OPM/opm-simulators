@@ -782,8 +782,6 @@ public:
                 Valgrind::CheckDefined(pc);
                 for (unsigned activePhaseIdx = 0; activePhaseIdx < FluidSystem::numActivePhases(); ++activePhaseIdx) {
                     const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
-
-                    fluidState.setPc(phaseIdx, pc[phaseIdx]);
                     if (Indices::oilEnabled)
                         fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
                     else if (Indices::gasEnabled)
