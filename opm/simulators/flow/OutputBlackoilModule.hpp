@@ -673,6 +673,11 @@ private:
 
     void createLocalRegion_(std::vector<int>& region)
     {
+        // For CpGrid with LGRs, where level zero grid has been distributed,
+        // resize region is needed, since in this case the total amount of
+        // element - per process - in level zero grid and leaf grid do not
+        // coincide, in general.
+        region.resize(simulator_.gridView().size(0));
         std::size_t elemIdx = 0;
         for (const auto& elem : elements(simulator_.gridView())) {
             if (elem.partitionType() != Dune::InteriorEntity) {

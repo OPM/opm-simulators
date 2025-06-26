@@ -33,6 +33,7 @@
 #include <opm/common/utility/ActiveGridCells.hpp>
 
 #include <opm/grid/cpgrid/GridHelpers.hpp>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
@@ -306,7 +307,13 @@ distributeFieldProps_(EclipseState& eclState1)
     {
         // Reset Cartesian index mapper for automatic creation of field
         // properties
-        parallelEclState->resetCartesianMapper(this->cartesianIndexMapper_.get());
+        // Note: the previous cartesianIndexMapper_ has been replaces by levelCartesianIndexMapper_
+        // to support also the case of a distributed level zero grid in a CpGrid with LGRs.
+        // This change allows access to the Cartesian indices of the distributed level zero grid,
+        // where the field properties are given - for now.
+        // In case of supporting LGR field properties, this need to be adapted, to access instead
+        // each local/level Cartesian index set.
+        parallelEclState->resetCartesianMapper(this->levelCartesianIndexMapper_.get());
         parallelEclState->switchToDistributedProps();
     }
     else {
@@ -500,6 +507,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     }
 
     cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
+    levelCartesianIndexMapper_ = std::make_unique<LevelCartesianIndexMapper>(*grid_);
 
 #if HAVE_MPI
     if (this->grid_->comm().size() > 1) {
@@ -640,7 +648,7 @@ template<class ElementMapper, class GridView, class Scalar>
 const LevelCartesianIndexMapper<Dune::CpGrid>
 GenericCpGridVanguard<ElementMapper,GridView,Scalar>::levelCartesianIndexMapper() const
 {
-    return LevelCartesianIndexMapper(*grid_);
+    return *levelCartesianIndexMapper_;
 }
 
 template<class ElementMapper, class GridView, class Scalar>

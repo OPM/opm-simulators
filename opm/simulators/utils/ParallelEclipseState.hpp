@@ -102,9 +102,14 @@ public:
     template<class T>
     void resetCartesianMapper(const T* mapper)
     {
-        m_activeSize = std::bind(&T::compressedSize, mapper);
-        m_local2Global = std::bind(&T::cartesianIndex, mapper,
-                                   std::placeholders::_1);
+        // Note: mapper would usually be a CartesianIndexMapper. However, to support also
+        // the case of a distributed level zero grid in a CpGrid with LGRs, mapper will be
+        // Opm::LevelCartesianIndexMapper. This change allows access to the Cartesian indices
+        // of the distributed level zero grid, where the field properties are given - for now.
+        // In case of supporting LGR field properties, this need to be adapted, to access instead
+        // each local/level Cartesian index set.
+        m_activeSize = [mapper]() { return mapper->compressedSize(/*level = */ 0); };
+        m_local2Global = [mapper](int localIdx) { return mapper->cartesianIndex(localIdx, /* level = */ 0); };
     }
 
     bool tran_active(const std::string& keyword) const override;

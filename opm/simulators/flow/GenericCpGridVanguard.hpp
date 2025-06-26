@@ -233,6 +233,7 @@ protected:
     std::unique_ptr<Dune::CpGrid> equilGrid_;
     std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
     std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
+    std::unique_ptr<LevelCartesianIndexMapper> levelCartesianIndexMapper_;
 
     int mpiRank;
     std::vector<int> cell_part_{};

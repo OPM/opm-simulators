@@ -851,8 +851,8 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
     : toIORankComm_(grid.comm())
     , globalInterRegFlows_(InterRegFlowMap::createMapFromNames(toVector(fipRegionsInterregFlow)))
 {
-    // index maps only have to be build when reordering is needed
-    if (!needsReordering && !isParallel())
+    // Build index maps only when reordering is needed; skip in parallel runs for CpGrid with LGRs
+    if ((!needsReordering && !isParallel()) || (isParallel() && (grid.maxLevel()>0)))
         return;
 
     const CollectiveCommunication& comm = grid.comm();
