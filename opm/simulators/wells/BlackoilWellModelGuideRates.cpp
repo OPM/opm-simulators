@@ -479,8 +479,9 @@ calculateWellGuideRates(const int reportStepIdx) const
     return all;
 }
 
-template<class Scalar>
-void BlackoilWellModelGuideRates<Scalar>::
+template<typename FluidSystem, typename Indices>
+void
+BlackoilWellModelGuideRates<FluidSystem, Indices>::
 assignWellGuideRates(data::Wells& wsrpt,
                      const int    reportStepIdx) const
 {

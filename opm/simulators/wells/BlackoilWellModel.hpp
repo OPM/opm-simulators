@@ -433,7 +433,7 @@ template<class Scalar> class WellContributions;
             std::map<std::string, std::unique_ptr<AverageRegionalPressureType>> regionalAveragePressureCalculator_{};
 
             SimulatorReportSingle last_report_{};
-            GuideRateHandler<Scalar> guide_rate_handler_{};
+            GuideRateHandler<FluidSystem, Indices> guide_rate_handler_{};
 
             // Pre-step network solve at static reservoir conditions (group and well states might be updated)
             void doPreStepNetworkRebalance(DeferredLogger& deferred_logger);
