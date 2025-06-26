@@ -277,14 +277,13 @@ public:
             // Add LGRs and update the leaf grid view in the global (undistributed) simulation grid.
             // Purpose: To enable synchronization of cell ids in 'serial mode',
             //          we rely on the "parent-to-children" cell id mapping.
-            this->grid_->switchToGlobalView();
             if (const auto& lgrs = this->eclState().getLgrs(); lgrs.size() > 0) {
                 OpmLog::info("\nAdding LGRs to the global view and updating its leaf grid view");
+                this->grid_->switchToGlobalView();
                 this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
+                this->grid_->switchToDistributedView();
+                this->grid_->syncDistributedGlobalCellIds();
             }
-            this->grid_->switchToDistributedView();
-
-            this->grid_->syncDistributedGlobalCellIds();
         }
     }
 
