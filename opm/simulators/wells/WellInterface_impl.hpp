@@ -272,6 +272,7 @@ namespace Opm
     bool
     WellInterface<TypeTag>::
     updateWellControlAndStatusLocalIteration(const Simulator& simulator,
+                                             const int it,
                                              WellState<Scalar>& well_state,
                                              const GroupState<Scalar>& group_state,
                                              const Well::InjectionControls& inj_controls,
@@ -361,11 +362,30 @@ namespace Opm
             }
             const Scalar bhp_diff = (this->isInjector())? inj_limit - bhp: bhp - prod_limit;
             if (bhp_diff > 0){
-                this->openWell();
                 well_state.well(this->index_of_well_).bhp = (this->isInjector())? inj_limit : prod_limit;
                 if (has_thp) {
                     well_state.well(this->index_of_well_).thp = this->getTHPConstraint(summary_state);
+                    const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
+                                                                    ws.production_cmode == Well::ProducerCMode::THP;
+                    if (this->isProducer() && thp_controlled) {
+                        std::vector<Scalar> ipr_rates(3, 0.0);
+                        this->computeRatesFromBhpAndIPR(well_state, prod_limit, ipr_rates);
+                        const bool zero_ipr = std::all_of(ipr_rates.begin(), ipr_rates.end(), [](const Scalar x){ return std::abs(x) < 1.0e-15; });
+                        if (!zero_ipr) {
+                            this->adaptRatesForVFP(ipr_rates);
+                            const auto stable_bhp = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, ipr_rates, this->getRefDensity(), summary_state);
+                            if (!stable_bhp) {
+                                deferred_logger.debug(fmt::format("Well {} local iteration {}: Not opening THP-controlled producer at estimated BHP limit = {:.2f} bar - unable to estimate stable BHP.",
+                                                                this->name(),
+                                                                it,
+                                                                prod_limit/unit::barsa),
+                                                    /*debug_verbosity_level*/ 4);
+                                return false;
+                            }
+                        }
+                    }
                 }
+                this->openWell();
                 return true;
             } else {
                 return false;
@@ -659,6 +679,22 @@ namespace Opm
         this->operability_status_.obey_thp_limit_under_bhp_limit = is_operable;
         return converged;
     }
+
+    template<typename TypeTag>
+    void WellInterface<TypeTag>::
+    computeRatesFromBhpAndIPR(const WellState<Scalar>& well_state,
+                              const Scalar bhp,
+                              std::vector<Scalar>& rates) const
+    {
+        const auto& ws = well_state.well(this->indexOfWell());
+        const auto& ipr_a = ws.implicit_ipr_a;
+        const auto& ipr_b = ws.implicit_ipr_b;
+
+        for (auto i=0*rates.size(); i<rates.size(); ++i) {
+            rates[i] = -1*(ipr_a[i] - bhp*ipr_b[i]);
+        }
+    }
+
 
     template<typename TypeTag>
     std::optional<typename WellInterface<TypeTag>::Scalar>

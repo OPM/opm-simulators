@@ -2409,7 +2409,7 @@ namespace Opm
             its_since_last_switch++;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const Scalar wqTotal = this->primary_variables_.eval(WQTotal).value();
-                changed = this->updateWellControlAndStatusLocalIteration(simulator, well_state, group_state,
+                changed = this->updateWellControlAndStatusLocalIteration(simulator, it, well_state, group_state,
                                                                          inj_controls, prod_controls, wqTotal,
                                                                          deferred_logger, fixed_control, fixed_status);
                 if (changed){
