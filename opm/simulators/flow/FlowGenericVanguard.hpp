@@ -77,6 +77,7 @@ struct ActionParsingStrictness { static constexpr auto value = "normal"; };
 struct PartitionMethod { static constexpr auto value = "zoltanwell"; };
 struct AddCorners { static constexpr bool value = false; };
 struct NumOverlap { static constexpr int value = 1; };
+struct EdgeConformal { static constexpr bool value = false; };
 
 struct SchedRestart{ static constexpr bool value = false; };
 struct SerialPartitioning{ static constexpr bool value = false; };
@@ -259,6 +260,9 @@ public:
     bool ownersFirst() const
     { return ownersFirst_; }
 
+    bool edgeConformal() const
+    { return edgeConformal_; }
+
 #if HAVE_MPI
     bool addCorners() const
     { return addCorners_; }
@@ -372,6 +376,8 @@ protected:
 #endif // HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
 
     bool ownersFirst_;
+    bool edgeConformal_;
+
 #if HAVE_MPI
     bool addCorners_;
     int numOverlap_;
