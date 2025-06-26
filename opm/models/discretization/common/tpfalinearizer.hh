@@ -816,10 +816,10 @@ private:
                         }
                     }
                     else {
-                        Dune::FieldVector<Scalar, numEq> tmp;
-                        const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                        LocalResidual::computeStorage(tmp, intQuantOld);
-                        model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
+                        // For the current implementation, the storage cache for timeIdx 1 should already be up to date.
+                        // TODO: Check if we need to update the storage cache for timeIdx 1 explicitly somewhere else to
+                        // easier support new models/Newton methods.
+                        assert(model_().storageCacheIsUpToDate(globI, 1));
                     }
                 }
                 res -= model_().cachedStorage(globI, 1);
