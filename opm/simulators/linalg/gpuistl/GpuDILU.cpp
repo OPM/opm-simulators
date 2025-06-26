@@ -79,7 +79,7 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
                  fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
                              m_gpuMatrix.nonzeroes(),
                              cpuMatrix.nonzeroes()));
-    if (m_reorder && (m_splitMatrix || m_mixedPrecisionScheme != MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG)) {
+    if (!m_reorder && (m_splitMatrix || m_mixedPrecisionScheme != MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG)) {
         OPM_THROW(std::runtime_error,
                   "Reordering is only supported for full precision matrices without matrix splitting.");
     }
@@ -112,12 +112,14 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
 
     // Precompute diagaonal block element indices and handle the actual reordering if that is enabled.
     if (m_reorder) {
-        detail::computeDiagIndices<field_type>(m_gpuMatrixReordered->getNonZeroValues().data(),
-                                               m_gpuMatrixReordered->getRowIndices().data(),
-                                               m_gpuMatrixReordered->getColumnIndices().data(),
-                                               m_gpuReorderToNatural.data(),
-                                               m_gpuMatrix.N(),
-                                               m_diagIdxs.data());
+        if (!m_splitMatrix) {
+            detail::computeDiagIndices<field_type>(m_gpuMatrixReordered->getNonZeroValues().data(),
+                                                m_gpuMatrixReordered->getRowIndices().data(),
+                                                m_gpuMatrixReordered->getColumnIndices().data(),
+                                                m_gpuReorderToNatural.data(),
+                                                m_gpuMatrix.N(),
+                                                m_diagIdxs.data());
+        }
         reorderAndSplitMatrix(m_moveThreadBlockSize);
     } else {
         detail::computeDiagIndicesNoReorder<field_type>(m_gpuMatrix.getNonZeroValues().data(),
