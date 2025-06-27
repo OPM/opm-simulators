@@ -178,6 +178,16 @@ public:
                                         skip);
         }
 
+        // Initialize storage for previous mobilities in a single flat vector
+        const auto numCells = grid.size(0);
+        previousMobilities_.resize(numCells * FluidSystem::numActivePhases(), 0.0);
+        for (const auto& domain : domains_) {
+            updateMobilities(domain);
+        }
+
+        // Initialize domain_needs_solving_ to true for all domains
+        domain_needs_solving_.resize(num_domains, true);
+
         // Set up container for the local system matrices.
         domain_matrices_.resize(num_domains);
 
@@ -230,6 +240,13 @@ public:
         // -----------   Set up reports and timer   -----------
         SimulatorReportSingle report;
 
+        if (iteration < model_.param().nldd_num_initial_newton_iter_) {
+            report = model_.nonlinearIterationNewton(iteration,
+                                                     timer,
+                                                     nonlinear_solver);
+            return report;
+        }
+
         model_.initialLinearization(report, iteration, nonlinear_solver.minIter(), nonlinear_solver.maxIter(), timer);
 
         if (report.converged) {
@@ -257,7 +274,13 @@ public:
             SimulatorReportSingle local_report;
             detailTimer.reset();
             detailTimer.start();
-            if (domain.skip) {
+
+            domain_needs_solving_[domain_index] = checkIfSubdomainNeedsSolving(domain, iteration);
+
+            updateMobilities(domain);
+
+            if (domain.skip || !domain_needs_solving_[domain_index]) {
+                local_report.skipped_domains = true;
                 local_report.converged = true;
                 domain_reports[domain.index] = local_report;
                 continue;
@@ -298,21 +321,31 @@ public:
         // Accumulate local solve data.
         // Putting the counts in a single array to avoid multiple
         // comm.sum() calls. Keeping the named vars for readability.
-        std::array<int, 4> counts{ 0, 0, 0, static_cast<int>(domain_reports.size()) };
+        std::array<int, 5> counts{ 0, 0, 0, static_cast<int>(domain_reports.size()), 0 };
         int& num_converged = counts[0];
         int& num_converged_already = counts[1];
         int& num_local_newtons = counts[2];
         int& num_domains = counts[3];
+        int& num_skipped = counts[4];
         {
             auto step_newtons = 0;
             const auto dr_size = domain_reports.size();
             for (auto i = 0*dr_size; i < dr_size; ++i) {
+                // Reset the needsSolving flag for the next iteration
+                domain_needs_solving_[i] = false;
                 const auto& dr = domain_reports[i];
                 if (dr.converged) {
                     ++num_converged;
                     if (dr.total_newton_iterations == 0) {
                         ++num_converged_already;
                     }
+                    else {
+                        // If we needed to solve the domain, we also solve in next iteration
+                        domain_needs_solving_[i] = true;
+                    }
+                }
+                if (dr.skipped_domains) {
+                    ++num_skipped;
                 }
                 step_newtons += dr.total_newton_iterations;
                 // Accumulate local reports per domain
@@ -364,8 +397,8 @@ public:
 
         const bool is_iorank = this->rank_ == 0;
         if (is_iorank) {
-            OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains. {} domains did no work. {} total local Newton iterations.\n",
-                                      num_converged, num_domains, num_converged_already, num_local_newtons));
+            OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains. {} domains were skipped. {} domains did no work. {} total local Newton iterations.\n",
+                                      num_converged, num_domains, num_skipped, num_converged_already, num_local_newtons));
         }
         auto total_local_solve_time = localSolveTimer.stop();
         report.local_solve_time += total_local_solve_time;
@@ -571,8 +604,8 @@ private:
             if (!convreport.converged() && !convreport.wellFailed()) {
                 bool oscillate = false;
                 bool stagnate = false;
-                const int numPhases = convergence_history.front().size();
-                detail::detectOscillations(convergence_history, iter, numPhases,
+                const auto num_residuals = convergence_history.front().size();
+                detail::detectOscillations(convergence_history, iter, num_residuals,
                                            Scalar{0.2}, 1, oscillate, stagnate);
                 if (oscillate) {
                     damping_factor *= 0.85;
@@ -1065,6 +1098,77 @@ private:
                                      param.local_domains_partition_well_neighbor_levels_);
     }
 
+    void updateMobilities(const Domain& domain)
+    {
+        if (domain.skip || model_.param().nldd_relative_mobility_change_tol_ == 0.0) {
+            return;
+        }
+        const auto numActivePhases = FluidSystem::numActivePhases();
+        for (const auto globalDofIdx : domain.cells) {
+            const auto& intQuants = model_.simulator().model().intensiveQuantities(globalDofIdx, /* time_idx = */ 0);
+
+            for (unsigned activePhaseIdx = 0; activePhaseIdx < numActivePhases; ++activePhaseIdx) {
+                const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
+                const auto mobIdx = globalDofIdx * numActivePhases + activePhaseIdx;
+                previousMobilities_[mobIdx] = getValue(intQuants.mobility(phaseIdx));
+            }
+        }
+    }
+
+    bool checkIfSubdomainNeedsSolving(const Domain& domain, const int iteration)
+    {
+        if (domain.skip) {
+            return false;
+        }
+
+        // If we domain was marked as needing solving in previous iterations,
+        // we do not need to check again
+        if (domain_needs_solving_[domain.index]) {
+            return true;
+        }
+
+        // If we do not check for mobility changes, we need to solve the domain
+        if (model_.param().nldd_relative_mobility_change_tol_ == 0.0) {
+            return true;
+        }
+
+        // Skip mobility check on first iteration
+        if (iteration == 0) {
+            return true;
+        }
+
+        return checkSubdomainChangeRelative(domain);
+    }
+
+    bool checkSubdomainChangeRelative(const Domain& domain)
+    {
+        const auto numActivePhases = FluidSystem::numActivePhases();
+
+        // Check mobility changes for all cells in the domain
+        for (const auto globalDofIdx : domain.cells) {
+            const auto& intQuants = model_.simulator().model().intensiveQuantities(globalDofIdx, /* time_idx = */ 0);
+
+            // Calculate average previous mobility for normalization
+            Scalar cellMob = 0.0;
+            for (unsigned activePhaseIdx = 0; activePhaseIdx < numActivePhases; ++activePhaseIdx) {
+                const auto mobIdx = globalDofIdx * numActivePhases + activePhaseIdx;
+                cellMob += previousMobilities_[mobIdx] / numActivePhases;
+            }
+
+            // Check relative changes for each phase
+            for (unsigned activePhaseIdx = 0; activePhaseIdx < numActivePhases; ++activePhaseIdx) {
+                const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
+                const auto mobIdx = globalDofIdx * numActivePhases + activePhaseIdx;
+                const auto mobility = getValue(intQuants.mobility(phaseIdx));
+                const auto relDiff = std::abs(mobility - previousMobilities_[mobIdx]) / cellMob;
+                if (relDiff > model_.param().nldd_relative_mobility_change_tol_) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     BlackoilModel<TypeTag>& model_; //!< Reference to model
     BlackoilWellModelNldd<TypeTag> wellModel_; //!< NLDD well model adapter
     std::vector<Domain> domains_; //!< Vector of subdomains
@@ -1074,6 +1178,10 @@ private:
     // mutable because we need to update the number of wells for each domain in getDomainAccumulatedReports()
     mutable std::vector<SimulatorReport> domain_reports_accumulated_; //!< Accumulated convergence reports per domain
     int rank_ = 0; //!< MPI rank of this process
+    // Store previous mobilities to check for changes - single flat vector indexed by (globalCellIdx * numActivePhases + activePhaseIdx)
+    std::vector<Scalar> previousMobilities_;
+    // Flag indicating if this domain should be solved in the next iteration
+    std::vector<bool> domain_needs_solving_;
 };
 
 } // namespace Opm
