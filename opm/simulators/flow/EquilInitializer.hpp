@@ -80,8 +80,8 @@ class EquilInitializer
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
-    enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
-
+    enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
+    enum { enableDissolvedGas = Indices::compositionSwitchIdx >= 0 };
 
 public:
     // NB: setting the enableEnergy argument to true enables storage of enthalpy and
@@ -94,7 +94,7 @@ public:
                                                 enableVapwat,
                                                 enableBrine,
                                                 enableSaltPrecipitation,
-                                                has_disgas_in_water,
+                                                enableDisgasInWater,
                                                 Indices::numPhases>;
 
 
@@ -141,18 +141,21 @@ public:
                     fluidState.setSaturation(phaseIdx, 0.0);
             }
 
-            if (FluidSystem::enableDissolvedGas())
-                fluidState.setRs(initialState.rs()[elemIdx]);
-            else if (Indices::gasEnabled && Indices::oilEnabled)
-                fluidState.setRs(0.0);
+            if constexpr (enableDissolvedGas) {
+                if (FluidSystem::enableDissolvedGas())
+                    fluidState.setRs(initialState.rs()[elemIdx]);
+                else if (Indices::gasEnabled && Indices::oilEnabled)
+                    fluidState.setRs(0.0);
+                if (FluidSystem::enableVaporizedOil())
+                    fluidState.setRv(initialState.rv()[elemIdx]);
+                else if (Indices::gasEnabled && Indices::oilEnabled)
+                    fluidState.setRv(0.0);
+            }
 
-            if (FluidSystem::enableVaporizedOil())
-                fluidState.setRv(initialState.rv()[elemIdx]);
-            else if (Indices::gasEnabled && Indices::oilEnabled)
-                fluidState.setRv(0.0);
-
-            if (FluidSystem::enableVaporizedWater())
-                fluidState.setRvw(initialState.rvw()[elemIdx]);
+            if constexpr (enableVapwat) {
+                if (FluidSystem::enableVaporizedWater())
+                    fluidState.setRvw(initialState.rvw()[elemIdx]);
+            }
 
             // set the temperature.
             if (enableTemperature || enableEnergy)
@@ -170,7 +173,7 @@ public:
                 const auto& rho = FluidSystem::density(fluidState, phaseIdx, regionIdx);
                 fluidState.setDensity(phaseIdx, rho);
 
-                if (enableEnergy) {
+                if constexpr (enableEnergy) {
                     const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, regionIdx);
                     fluidState.setEnthalpy(phaseIdx, h);
                 }

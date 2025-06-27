@@ -159,11 +159,11 @@ public:
         {
             exteriorIdx_ = static_cast<unsigned short>(localNeighborIdx);
 
-            if (needNormal) {
+            if constexpr (needNormal) {
                 (*normal_) = intersection.centerUnitOuterNormal();
             }
             const auto& geometry = intersection.geometry();
-            if (needIntegrationPos) {
+            if constexpr (needIntegrationPos) {
                 (*integrationPos_) = geometry.center();
             }
             area_ = geometry.volume();

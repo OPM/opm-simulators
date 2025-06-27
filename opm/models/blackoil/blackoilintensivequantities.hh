@@ -103,7 +103,7 @@ class BlackOilIntensiveQuantities
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
-    enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
+    enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
@@ -147,7 +147,7 @@ public:
                                           enableVapwat,
                                           enableBrine,
                                           enableSaltPrecipitation,
-                                          has_disgas_in_water,
+                                          enableDisgasInWater,
                                           Indices::numPhases>;
     using ScalarFluidState = BlackOilFluidState<Scalar,
                                                 FluidSystem,
@@ -157,7 +157,7 @@ public:
                                                 enableVapwat,
                                                 enableBrine,
                                                 enableSaltPrecipitation,
-                                                has_disgas_in_water,
+                                                enableDisgasInWater,
                                                 Indices::numPhases>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
@@ -166,11 +166,11 @@ public:
         if constexpr (compositionSwitchEnabled) {
             fluidState_.setRs(0.0);
             fluidState_.setRv(0.0);
-        }        
+        }
         if constexpr (enableVapwat) {
             fluidState_.setRvw(0.0);
         }
-        if constexpr (has_disgas_in_water) {
+        if constexpr (enableDisgasInWater) {
             fluidState_.setRsw(0.0);
         }
     }
@@ -361,69 +361,72 @@ public:
 
         // take the meaning of the switching primary variable into account for the gas
         // and oil phase compositions
-        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-            const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-            fluidState_.setRs(Rs);
-        }
-        else {
-            if (FluidSystem::enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
-                const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
-                FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                        oilPhaseIdx,
-                                                        pvtRegionIdx,
-                                                        SoMax);
-                fluidState_.setRs(min(RsMax, RsSat));
+
+        if constexpr (compositionSwitchEnabled) {
+            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+                const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
+                fluidState_.setRs(Rs);
             }
             else {
-                if constexpr (compositionSwitchEnabled) {
+                if (FluidSystem::enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
+                    const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
+                        FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                                oilPhaseIdx,
+                                                                pvtRegionIdx,
+                                                                SoMax);
+                    fluidState_.setRs(min(RsMax, RsSat));
+                }
+                else {
                     fluidState_.setRs(0.0);
                 }
             }
-        }
 
-        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-            const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-            fluidState_.setRv(Rv);
-        }
-        else {
-            if (FluidSystem::enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
-                const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
-                    FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            gasPhaseIdx,
-                                                            pvtRegionIdx,
-                                                            SoMax);
-                fluidState_.setRv(min(RvMax, RvSat));
+            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
+                const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
+                fluidState_.setRv(Rv);
             }
             else {
-                if constexpr (compositionSwitchEnabled) {
+                if (FluidSystem::enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
+                    const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
+                        FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                                gasPhaseIdx,
+                                                                pvtRegionIdx,
+                                                                SoMax);
+                    fluidState_.setRv(min(RvMax, RvSat));
+                }
+                else {
                     fluidState_.setRv(0.0);
                 }
             }
         }
 
-        if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rvw) {
-            const auto& Rvw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
-            fluidState_.setRvw(Rvw);
-        }
-        else {
-            if (FluidSystem::enableVaporizedWater()) { // Add Sg > 0? i.e. if only water set rv = 0)
-                const Evaluation& RvwSat = FluidSystem::saturatedVaporizationFactor(fluidState_,
-                                                            gasPhaseIdx,
-                                                            pvtRegionIdx);
-                fluidState_.setRvw(RvwSat);
+        if constexpr (enableVapwat) {
+            if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rvw) {
+                const auto& Rvw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                fluidState_.setRvw(Rvw);
+            }
+            else {
+                if (FluidSystem::enableVaporizedWater()) { // Add Sg > 0? i.e. if only water set rv = 0)
+                    const Evaluation& RvwSat = FluidSystem::saturatedVaporizationFactor(fluidState_,
+                                                                                        gasPhaseIdx,
+                                                                                        pvtRegionIdx);
+                    fluidState_.setRvw(RvwSat);
+                }
             }
         }
 
-        if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rsw) {
-            const auto& Rsw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
-            fluidState_.setRsw(Rsw);
-        }
-        else {
-            if (FluidSystem::enableDissolvedGasInWater()) {
-                const Evaluation& RswSat = FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            waterPhaseIdx,
-                                                            pvtRegionIdx);
-                fluidState_.setRsw(min(RswMax, RswSat));
+        if constexpr (enableDisgasInWater) {
+            if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rsw) {
+                const auto& Rsw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                fluidState_.setRsw(Rsw);
+            }
+            else {
+                if (FluidSystem::enableDissolvedGasInWater()) {
+                    const Evaluation& RswSat = FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                                                       waterPhaseIdx,
+                                                                                       pvtRegionIdx);
+                    fluidState_.setRsw(min(RswMax, RswSat));
+                }
             }
         }
 
