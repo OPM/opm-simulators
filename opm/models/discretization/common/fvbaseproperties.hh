@@ -225,6 +225,12 @@ template<class TypeTag, class MyTypeTag>
 struct TimeDiscHistorySize { using type = UndefinedProperty; };
 
 /*!
+ * \brief The history size required by the intensive quantities
+ */
+template<class TypeTag, class MyTypeTag>
+struct IntensiveQuantityHistorySize { using type = UndefinedProperty; };
+
+/*!
  * \brief Specify whether the storage terms use extensive quantities or not.
  *
  * Most models don't need this, but the (Navier-)Stokes ones do...
