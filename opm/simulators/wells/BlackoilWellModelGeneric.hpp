@@ -439,7 +439,8 @@ protected:
     bool checkGroupHigherConstraints(const Group& group,
                                      DeferredLogger& deferred_logger,
                                      const int reportStepIdx,
-                                     const int max_number_of_group_switch);
+                                     const int max_number_of_group_switch,
+                                     const bool update_group_switching_log);
 
     void updateAndCommunicateGroupData(const int reportStepIdx,
                                        const int iterationIdx,

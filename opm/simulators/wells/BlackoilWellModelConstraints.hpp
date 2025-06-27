@@ -79,6 +79,7 @@ public:
     bool updateGroupIndividualControl(const Group& group,
                                       const int reportStepIdx,
                                       const int max_number_of_group_switch,
+                                      const bool update_group_switching_log,
                                       std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>>& switched_inj,
                                       std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
                                       std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,

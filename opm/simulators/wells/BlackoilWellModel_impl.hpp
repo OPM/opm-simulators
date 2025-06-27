@@ -1936,8 +1936,9 @@ namespace Opm {
         bool changed = false;
         // restrict the number of group switches but only after nupcol iterations.
         const int nupcol = this->schedule()[reportStepIdx].nupcol();
-        const int max_number_of_group_switches = iterationIdx < nupcol ? 9999 : param_.max_number_of_group_switches_;
-        bool changed_hc = this->checkGroupHigherConstraints( group, deferred_logger, reportStepIdx, max_number_of_group_switches);
+        const int max_number_of_group_switches = param_.max_number_of_group_switches_;
+        const bool update_group_switching_log = iterationIdx >= nupcol;
+        const bool changed_hc = this->checkGroupHigherConstraints(group, deferred_logger, reportStepIdx, max_number_of_group_switches, update_group_switching_log);
         if (changed_hc) {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
@@ -1948,6 +1949,7 @@ namespace Opm {
                 updateGroupIndividualControl(group,
                                              reportStepIdx,
                                              max_number_of_group_switches,
+                                             update_group_switching_log,
                                              this->switched_inj_groups_,
                                              this->switched_prod_groups_,
                                              this->closed_offending_wells_,
