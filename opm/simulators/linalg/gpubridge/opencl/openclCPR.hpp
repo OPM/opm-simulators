@@ -32,6 +32,8 @@
 
 #include <opm/simulators/linalg/gpubridge/opencl/openclSolverBackend.hpp>
 
+#include <type_traits>
+
 namespace Opm::Accelerator {
 
 template<class Scalar> class BlockedMatrix;
@@ -92,7 +94,9 @@ public:
 
     // applies blocked ilu0
     // also applies amg for pressure component
-    void apply(const cl::Buffer& y, cl::Buffer& x) override;
+    void apply(const cl::Buffer& y,
+               cl::Buffer& x,
+               WellContributions<Scalar>& wellContribs) override;
 
     bool create_preconditioner(BlockedMatrix<Scalar>* mat) override;
     bool create_preconditioner(BlockedMatrix<Scalar>* mat,
