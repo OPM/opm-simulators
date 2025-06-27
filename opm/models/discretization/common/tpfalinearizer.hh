@@ -813,10 +813,7 @@ private:
                         }
                     }
                     else {
-                        Dune::FieldVector<Scalar, numEq> tmp;
-                        const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                        LocalResidual::computeStorage(tmp, intQuantOld);
-                        model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
+                        assert(model_().storageCacheIsUpToDate(globI, 1));
                     }
                 }
                 res -= model_().cachedStorage(globI, 1);
