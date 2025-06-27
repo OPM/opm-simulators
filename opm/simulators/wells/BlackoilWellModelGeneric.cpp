@@ -609,7 +609,8 @@ bool BlackoilWellModelGeneric<Scalar>::
 checkGroupHigherConstraints(const Group& group,
                             DeferredLogger& deferred_logger,
                             const int reportStepIdx,
-                            const int max_number_of_group_switch)
+                            const int max_number_of_group_switch,
+                            const bool update_group_switching_log)
 {
     // Set up coefficients for RESV <-> surface rate conversion.
     // Use the pvtRegionIdx from the top cell of the first well.
@@ -713,7 +714,9 @@ checkGroupHigherConstraints(const Group& group,
                                                                        /*check_guide_rate*/true,
                                                                        deferred_logger);
                 if (is_changed) {
-                    switched_inj_groups_[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)].push_back(Group::InjectionCMode::FLD);
+                    if (update_group_switching_log) {
+                        switched_inj_groups_[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)].push_back(Group::InjectionCMode::FLD);
+                    }
                     BlackoilWellModelConstraints(*this).
                         actionOnBrokenConstraints(group, Group::InjectionCMode::FLD,
                                                   phase, this->groupState(),
@@ -801,7 +804,9 @@ checkGroupHigherConstraints(const Group& group,
                                                   deferred_logger);
 
                 if (changed) {
-                    switched_prod_groups_[group.name()].push_back(Group::ProductionCMode::FLD);
+                    if (update_group_switching_log) {
+                        switched_prod_groups_[group.name()].push_back(Group::ProductionCMode::FLD);
+                    }
                     WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(scaling_factor,
                                                                                   group,
                                                                                   schedule(),
