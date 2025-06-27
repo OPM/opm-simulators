@@ -165,7 +165,7 @@ struct SimulatorFixture
     OpmSimulatorTestCase simulator_wrapper;
     Simulator *simulator;
     Opm::Schedule& schedule;
-    Opm::ReservoirCouplingMaster rc_master;
+    Opm::ReservoirCouplingMaster<double> rc_master;
     double start_date;
 };
 
