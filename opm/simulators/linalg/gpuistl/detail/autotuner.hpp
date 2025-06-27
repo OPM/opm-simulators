@@ -65,7 +65,7 @@ tuneThreadBlockSize(func& f, std::string descriptionOfFunction)
             OPM_GPU_SAFE_CALL(cudaEventRecord(events[i + 1]));
         }
 
-        // make suret he runs are over
+        // make sure the runs are over
         OPM_GPU_SAFE_CALL(cudaEventSynchronize(events[runs]));
 
         // kernel launch was valid
@@ -80,6 +80,10 @@ tuneThreadBlockSize(func& f, std::string descriptionOfFunction)
                 }
             }
         }
+    }
+
+    for (int i = 0; i < runs + 1; ++i) {
+        OPM_GPU_SAFE_CALL(cudaEventDestroy(events[i]));
     }
 
     OpmLog::info(
