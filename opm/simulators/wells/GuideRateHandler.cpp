@@ -171,12 +171,10 @@ GuideRateHandler<Scalar>::setLogger(DeferredLogger *deferred_logger)
 template <class Scalar>
 void
 GuideRateHandler<Scalar>::
-updateGuideRates(
-    const int report_step_idx,
-    const double sim_time,
-    WellState<Scalar> &well_state,
-    GroupState<Scalar> &group_state
-)
+updateGuideRates(const int report_step_idx,
+                 const double sim_time,
+                 const WellState<Scalar>& well_state,
+                 GroupState<Scalar>& group_state)
 {
     OPM_TIMEFUNCTION();
     auto num_phases = this->phase_usage_.num_phases;
