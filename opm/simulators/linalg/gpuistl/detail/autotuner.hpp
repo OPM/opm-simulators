@@ -44,7 +44,7 @@ tuneThreadBlockSize(func& f, std::string descriptionOfFunction)
 
     // TODO: figure out a more rigorous way of deciding how many runs will suffice?
     constexpr const int runs = 2;
-    GPUEvent events[runs + 1];
+    std::array<GPUEvent, runs+1> events;
 
     // Initialize helper variables
     float bestTime = std::numeric_limits<float>::max();
