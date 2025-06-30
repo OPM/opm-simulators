@@ -22,6 +22,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_resources.hpp>
 #include <string>
 #include <utility>
 
@@ -43,12 +44,7 @@ tuneThreadBlockSize(func& f, std::string descriptionOfFunction)
 
     // TODO: figure out a more rigorous way of deciding how many runs will suffice?
     constexpr const int runs = 2;
-    cudaEvent_t events[runs + 1];
-
-    // create the events
-    for (int i = 0; i < runs + 1; ++i) {
-        OPM_GPU_SAFE_CALL(cudaEventCreate(&events[i]));
-    }
+    GPUEvent events[runs + 1];
 
     // Initialize helper variables
     float bestTime = std::numeric_limits<float>::max();
@@ -59,31 +55,27 @@ tuneThreadBlockSize(func& f, std::string descriptionOfFunction)
     for (int thrBlockSize = interval; thrBlockSize <= 1024; thrBlockSize += interval) {
 
         // record a first event, and then an event after each kernel
-        OPM_GPU_SAFE_CALL(cudaEventRecord(events[0]));
+        OPM_GPU_SAFE_CALL(cudaEventRecord(events[0].get()));
         for (int i = 0; i < runs; ++i) {
             f(thrBlockSize); // runs an arbitrary function with the provided arguments
-            OPM_GPU_SAFE_CALL(cudaEventRecord(events[i + 1]));
+            OPM_GPU_SAFE_CALL(cudaEventRecord(events[i + 1].get()));
         }
 
         // make sure the runs are over
-        OPM_GPU_SAFE_CALL(cudaEventSynchronize(events[runs]));
+        OPM_GPU_SAFE_CALL(cudaEventSynchronize(events[runs].get()));
 
         // kernel launch was valid
         if (cudaSuccess == cudaGetLastError()) {
             // check if we beat the record for the fastest kernel
             for (int i = 0; i < runs; ++i) {
                 float candidateBlockSizeTime;
-                OPM_GPU_SAFE_CALL(cudaEventElapsedTime(&candidateBlockSizeTime, events[i], events[i + 1]));
+                OPM_GPU_SAFE_CALL(cudaEventElapsedTime(&candidateBlockSizeTime, events[i].get(), events[i + 1].get()));
                 if (candidateBlockSizeTime < bestTime) { // checks if this configuration beat the current best
                     bestTime = candidateBlockSizeTime;
                     bestBlockSize = thrBlockSize;
                 }
             }
         }
-    }
-
-    for (int i = 0; i < runs + 1; ++i) {
-        OPM_GPU_SAFE_CALL(cudaEventDestroy(events[i]));
     }
 
     OpmLog::info(
