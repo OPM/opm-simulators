@@ -128,13 +128,13 @@ GuideRateHandler<Scalar>::
 sendSlaveGroupPotentialsToMaster(const GroupState<Scalar>& group_state)
 {
     assert(this->isReservoirCouplingSlave());
-    auto& rescoup_slave = this->reservoirCouplingSlave();
-    const auto& slave_master_group_map = rescoup_slave.getSlaveToMasterGroupNameMap();
-    std::vector<Potentials> potentials;
     if (this->comm_.rank() == 0) {
         // NOTE: Traversing a std::map is guaranteed to iterate the keys in lexical order for
         //   std::string keys, so the master can from this order determine which potentials
         //   correspond to which slave group.
+        auto& rescoup_slave = this->reservoirCouplingSlave();
+        const auto& slave_master_group_map = rescoup_slave.getSlaveToMasterGroupNameMap();
+        std::vector<Potentials> potentials;
         for (const auto& item : slave_master_group_map) {
             const auto& slave_group_name = item.first;
             Potentials pot;
