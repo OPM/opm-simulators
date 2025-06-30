@@ -115,6 +115,9 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
+    enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
+    enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
+    enum { enableDissolvedGas = Indices::compositionSwitchIdx >= 0 };
 
     template<int idx, class VectorType>
     static Scalar value_or_zero(const VectorType& v)
@@ -533,14 +536,20 @@ public:
 
         if (!this->temperature_.empty())
             fs.setTemperature(this->temperature_[elemIdx]);
-        if (!this->rs_.empty())
-            fs.setRs(this->rs_[elemIdx]);
-        if (!this->rsw_.empty())
-            fs.setRsw(this->rsw_[elemIdx]);
-        if (!this->rv_.empty())
-            fs.setRv(this->rv_[elemIdx]);
-        if (!this->rvw_.empty())
-            fs.setRvw(this->rvw_[elemIdx]);
+        if constexpr (enableDissolvedGas) {
+            if (!this->rs_.empty())
+                fs.setRs(this->rs_[elemIdx]);
+            if (!this->rv_.empty())
+                fs.setRv(this->rv_[elemIdx]);
+        }
+        if constexpr (enableDisgasInWater) {
+            if (!this->rsw_.empty())
+                fs.setRsw(this->rsw_[elemIdx]);
+        }
+        if constexpr (enableVapwat) {
+            if (!this->rvw_.empty())
+                fs.setRvw(this->rvw_[elemIdx]);
+        }
     }
 
     void initHysteresisParams(Simulator& simulator, unsigned elemIdx) const

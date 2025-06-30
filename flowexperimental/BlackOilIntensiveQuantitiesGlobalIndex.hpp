@@ -146,11 +146,11 @@ public:
 
     BlackOilIntensiveQuantitiesGlobalIndex()
     {
-        if (compositionSwitchEnabled) {
+        if constexpr (compositionSwitchEnabled) {
             fluidState_.setRs(0.0);
             fluidState_.setRv(0.0);
         }
-        if (enableVapwat) {
+        if constexpr (enableVapwat) {
             fluidState_.setRvw(0.0);
         }
     }
@@ -301,17 +301,19 @@ public:
             }
         }
 
-        if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rvw) {
-            const auto& Rvw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
-            fluidState_.setRvw(Rvw);
-        } else {
-            //NB! should save the indexing for later evaluation
-            if (FluidSystem::enableVaporizedWater()) { // Add Sg > 0? i.e. if only water set rv = 0)
-                OPM_TIMEBLOCK_LOCAL(UpdateSaturatedRv);
-                const Evaluation& RvwSat = FluidSystem::saturatedVaporizationFactor(fluidState_,
-                                                            gasPhaseIdx,
-                                                            pvtRegionIdx);
-                fluidState_.setRvw(RvwSat);
+        if constexpr (enableVapwat) {
+            if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rvw) {
+                const auto& Rvw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                fluidState_.setRvw(Rvw);
+            } else {
+                //NB! should save the indexing for later evaluation
+                if (FluidSystem::enableVaporizedWater()) { // Add Sg > 0? i.e. if only water set rv = 0)
+                    OPM_TIMEBLOCK_LOCAL(UpdateSaturatedRv);
+                    const Evaluation& RvwSat = FluidSystem::saturatedVaporizationFactor(fluidState_,
+                                                                                        gasPhaseIdx,
+                                                                                        pvtRegionIdx);
+                    fluidState_.setRvw(RvwSat);
+                }
             }
         }
 
