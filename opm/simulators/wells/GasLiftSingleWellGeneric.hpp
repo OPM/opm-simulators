@@ -22,10 +22,14 @@
 
 #include <opm/input/eclipse/Schedule/Well/WellProductionControls.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
-
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <optional>
 #include <set>
@@ -41,24 +45,26 @@ class GasLiftWell;
 template<class Scalar> class GasLiftWellState;
 class Schedule;
 class SummaryState;
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
+template<typename FluidSystem, typename Indices> class WellState;
 template<class Scalar> class GroupState;
 
-template<class Scalar>
-class GasLiftSingleWellGeneric : public GasLiftCommon<Scalar>
+template<typename FluidSystem, typename Indices>
+class GasLiftSingleWellGeneric : public GasLiftCommon<FluidSystem, Indices>
 {
 protected:
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
+    using Scalar = typename FluidSystem::Scalar;
+
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
     static constexpr int NUM_PHASES = 3;
     static constexpr Scalar ALQ_EPSILON = 1e-8;
 
 public:
     using GLiftSyncGroups = std::set<int>;
-    using Rate = typename GasLiftGroupInfo<Scalar>::Rate;
-    using MessageType = typename GasLiftCommon<Scalar>::MessageType;
+    using Rate = typename GasLiftGroupInfo<FluidSystem, Indices>::Rate;
+    using MessageType = typename GasLiftCommon<FluidSystem, Indices>::MessageType;
 
     struct GradInfo
     {
@@ -108,16 +114,15 @@ public:
 
     std::pair<Scalar, bool> wellTestALQ();
 
-    virtual const WellInterfaceGeneric<Scalar>& getWell() const = 0;
+    virtual const WellInterfaceGeneric<FluidSystem, Indices>& getWell() const = 0;
 
 protected:
     GasLiftSingleWellGeneric(DeferredLogger& deferred_logger,
-                             WellState<Scalar>& well_state,
+                             WellState<FluidSystem, Indices>& well_state,
                              const GroupState<Scalar>& group_state,
                              const Well& ecl_well,
                              const SummaryState& summary_state,
-                             GasLiftGroupInfo<Scalar>& group_info,
-                             const PhaseUsage& phase_usage,
+                             GasLiftGroupInfo<FluidSystem, Indices>& group_info,
                              const Schedule& schedule,
                              const int report_step_idx,
                              GLiftSyncGroups& sync_groups,
@@ -427,8 +432,7 @@ protected:
 
     const Well& ecl_well_;
     const SummaryState& summary_state_;
-    GasLiftGroupInfo<Scalar>& group_info_;
-    const PhaseUsage& phase_usage_;
+    GasLiftGroupInfo<FluidSystem, Indices>& group_info_;
     GLiftSyncGroups& sync_groups_;
     const WellProductionControls controls_;
 

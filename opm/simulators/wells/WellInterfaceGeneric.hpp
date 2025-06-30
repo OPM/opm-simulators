@@ -42,17 +42,20 @@ template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
 struct PhaseUsage;
 class SummaryState;
-template<class Scalar> class VFPProperties;
+template<typename FluidSystem, typename Indices> class VFPProperties;
 class WellTestState;
-template<class Scalar> class WellState;
-template<class Scalar> class SingleWellState;
+template<typename FluidSystem, typename Indices> class WellState;
+template<typename FluidSystem, typename Indices> class SingleWellState;
 class Group;
 class Schedule;
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class WellInterfaceGeneric {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     using ModelParameters = BlackoilModelParameters<Scalar>;
+
+    using WellStateType = WellState<FluidSystem, Indices>;
 
     WellInterfaceGeneric(const Well& well,
                          const ParallelWellInfo<Scalar>& parallel_well_info,
@@ -86,7 +89,6 @@ public:
 
     const Well& wellEcl() const;
     Well& wellEcl();
-    const PhaseUsage& phaseUsage() const;
 
     /// Returns true if the well is currently in prediction mode (i.e. not history mode).
     bool underPredictionMode() const;
@@ -99,9 +101,9 @@ public:
     void initCompletions();
     void closeCompletions(const WellTestState& wellTestState);
 
-    void setVFPProperties(const VFPProperties<Scalar>* vfp_properties_arg);
-    void setPrevSurfaceRates(WellState<Scalar>& well_state,
-                             const WellState<Scalar>& prev_well_state) const;
+    void setVFPProperties(const VFPProperties<FluidSystem, Indices>* vfp_properties_arg);
+    void setPrevSurfaceRates(WellStateType& well_state,
+                             const WellStateType& prev_well_state) const;
     void setGuideRate(const GuideRate* guide_rate_arg);
     void setWellEfficiencyFactor(const Scalar efficiency_factor);
     void setRepRadiusPerfLength();
@@ -135,7 +137,7 @@ public:
 
     Scalar gravity() const { return gravity_; }
 
-    const VFPProperties<Scalar>* vfpProperties() const { return vfp_properties_; }
+    const VFPProperties<FluidSystem, Indices>* vfpProperties() const { return vfp_properties_; }
 
     const ParallelWellInfo<Scalar>& parallelWellInfo() const { return parallel_well_info_; }
 
@@ -148,7 +150,7 @@ public:
     const std::map<int,std::vector<int>>& getCompletions() const { return completions_; }
 
     Scalar getTHPConstraint(const SummaryState& summaryState) const;
-    Scalar getALQ(const WellState<Scalar>& well_state) const;
+    Scalar getALQ(const WellStateType& well_state) const;
     Scalar wsolvent() const;
     Scalar rsRvInj() const;
 
@@ -166,19 +168,19 @@ public:
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
-    void reportWellSwitching(const SingleWellState<Scalar>& ws,
+    void reportWellSwitching(const SingleWellState<FluidSystem, Indices>& ws,
                              DeferredLogger& deferred_logger) const;
 
     bool changedToOpenThisStep() const { return this->changed_to_open_this_step_; }
 
-    void updateWellTestState(const SingleWellState<Scalar>& ws,
+    void updateWellTestState(const SingleWellState<FluidSystem, Indices>& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,
                              const bool zero_group_target,
                              WellTestState& wellTestState,
                              DeferredLogger& deferred_logger) const;
 
-    bool isPressureControlled(const WellState<Scalar>& well_state) const;
+    bool isPressureControlled(const WellStateType& well_state) const;
 
     Scalar wellEfficiencyFactor() const { return well_efficiency_factor_; }
 
@@ -220,20 +222,20 @@ protected:
     int polymerWaterTable_() const;
 
     bool wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
-                                           const WellState<Scalar>& well_state) const;
+                                           const WellState<FluidSystem, Indices>& well_state) const;
 
-    bool wellUnderGroupControl(const SingleWellState<Scalar>& ws) const;
+    bool wellUnderGroupControl(const SingleWellState<FluidSystem, Indices>& ws) const;
 
     std::pair<bool,bool>
     computeWellPotentials(std::vector<Scalar>& well_potentials,
-                          const WellState<Scalar>& well_state);
+                          const WellStateType& well_state);
 
     void checkNegativeWellPotentials(std::vector<Scalar>& well_potentials,
                                      const bool checkOperability,
                                      DeferredLogger& deferred_logger);
 
     void prepareForPotentialCalculations(const SummaryState& summary_state,
-                                         WellState<Scalar>& well_state,
+                                         WellStateType& well_state,
                                          Well::InjectionControls& inj_controls,
                                          Well::ProductionControls& prod_controls) const;
 
@@ -367,7 +369,7 @@ protected:
 
     Well::Status wellStatus_;
 
-    const PhaseUsage* phase_usage_;
+    // const PhaseUsage* phase_usage_;
 
     Scalar gravity_;
     Scalar wsolvent_;
@@ -389,7 +391,7 @@ protected:
     std::vector<Scalar> inj_fc_multiplier_;
 
     Scalar well_efficiency_factor_;
-    const VFPProperties<Scalar>* vfp_properties_;
+    const VFPProperties<FluidSystem, Indices>* vfp_properties_;
     const GuideRate* guide_rate_;
 
     std::vector<std::string> well_control_log_;

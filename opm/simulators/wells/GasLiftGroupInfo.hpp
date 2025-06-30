@@ -22,8 +22,6 @@
 
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <map>
 #include <optional>
 #include <string>
@@ -39,20 +37,22 @@ template<class Scalar> class GroupState;
 class Schedule;
 class SummaryState;
 class Well;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 
-template<class Scalar>
-class GasLiftGroupInfo : public GasLiftCommon<Scalar>
+
+template<typename FluidSystem, typename Indices>
+class GasLiftGroupInfo : public GasLiftCommon<FluidSystem, Indices>
 {
 protected:
     class GroupRates;
+    using Scalar = typename FluidSystem::Scalar;
     // NOTE: In the Well2GroupMap below, in the std::vector value we store
     //    pairs of group names and efficiency factors. The efficiency factors
     //    are the product of the wells efficiency factor and all the efficiency
     //    factors of the child groups of the group all the way down
     //    to the well group.
     using Well2GroupMap =
-        std::map<std::string, std::vector<std::pair<std::string,Scalar>>>;
+        std::map<std::string, std::vector<std::pair<std::string, Scalar>>>;
     using GroupRateMap =
         std::map<std::string, GroupRates>;
     using GroupIdxMap = std::map<std::string, int>;
@@ -60,9 +60,9 @@ protected:
 
     // TODO: same definition with WellInterface, and
     //   WellState eventually they should go to a common header file.
-    static const int Water = BlackoilPhases::Aqua;
-    static const int Oil = BlackoilPhases::Liquid;
-    static const int Gas = BlackoilPhases::Vapour;
+    static const int Water = FluidSystem::waterPhaseIdx;
+    static const int Oil = FluidSystem::oilPhaseIdx;
+    static const int Gas = FluidSystem::gasPhaseIdx;
 
 public:
     enum class Rate {oil, gas, water, liquid};
@@ -73,9 +73,8 @@ public:
                      const SummaryState& summary_state,
                      const int report_step_idx,
                      const int iteration_idx,
-                     const PhaseUsage& phase_usage,
                      DeferredLogger& deferred_logger,
-                     WellState<Scalar>& well_state,
+                     WellState<FluidSystem, Indices>& well_state,
                      const GroupState<Scalar>& group_state,
                      const Parallel::Communication& comm,
                      bool glift_debug);
@@ -242,7 +241,6 @@ protected:
     const SummaryState& summary_state_;
     const int report_step_idx_;
     const int iteration_idx_;
-    const PhaseUsage& phase_usage_;
     const GasLiftOpt& glo_;
     GroupRateMap group_rate_map_;
     Well2GroupMap well_group_map_;
