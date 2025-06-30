@@ -1746,7 +1746,7 @@ namespace Opm
                 message.append(fmt::format("   (A relaxed tolerance was used after {} iterations)",
                                            this->param_.strict_inner_iter_wells_));
             }
-            deferred_logger.debug(message);
+            deferred_logger.debug(message, OpmLog::defaultDebugVerbosityLevel + ((it == 0) && (switch_count == 0)));
         } else {
             this->wellStatus_ = well_status_orig;
             this->operability_status_ = operability_orig;            
