@@ -32,10 +32,13 @@
 
 namespace Opm {
 
+template <class Scalar>
 class ReservoirCouplingSlave {
 public:
     using MessageTag = ReservoirCoupling::MessageTag;
-    using Potentials = ReservoirCoupling::Potentials;
+    using Potentials = ReservoirCoupling::Potentials<Scalar>;
+    using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
+    using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
 
     ReservoirCouplingSlave(
         const Parallel::Communication &comm, const Schedule &schedule, const SimulatorTimer &timer
@@ -47,6 +50,9 @@ public:
         return slave_to_master_group_map_; }
     void maybeActivate(int report_step);
     double receiveNextTimeStepFromMaster();
+    std::pair<std::size_t, std::size_t> receiveNumGroupTargetsFromMaster() const;
+    void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets) const;
+    void receiveProductionGroupTargetsFromMaster(std::size_t num_targets) const;
     void sendAndReceiveInitialData();
     void sendNextReportDateToMasterProcess() const;
     void sendPotentialsToMaster(const std::vector<Potentials> &potentials) const;
@@ -72,6 +78,12 @@ private:
     bool activated_{false};
     std::string slave_name_;  // This is the slave name as defined in the master process
     ReservoirCoupling::Logger logger_;
+    // Order of the slave groups. A mapping from slave group index to slave group name.
+    // The indices are determined by the order the master process sends us the group names, see
+    // receiveMasterGroupNamesFromMasterProcess_()
+    // Later, the master process will send us group name indices, and not the group names themselves,
+    // so we use this mapping to recover the slave group names from the indices.
+    std::map<std::size_t, std::string> slave_group_order_;
 };
 
 } // namespace Opm

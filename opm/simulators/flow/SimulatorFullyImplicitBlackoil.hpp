@@ -105,6 +105,7 @@ public:
     using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
     using AquiferModel = GetPropType<TypeTag, Properties::AquiferModel>;
     using Model = GetPropType<TypeTag, Properties::NonlinearSystem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     using TimeStepper = AdaptiveTimeStepping<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
@@ -250,7 +251,7 @@ public:
         auto slave_mode = Parameters::Get<Parameters::Slave>();
         if (slave_mode) {
             this->reservoirCouplingSlave_ =
-                std::make_unique<ReservoirCouplingSlave>(
+                std::make_unique<ReservoirCouplingSlave<Scalar>>(
                     FlowGenericVanguard::comm(),
                     this->schedule(), timer
                 );
@@ -262,7 +263,7 @@ public:
             auto master_mode = checkRunningAsReservoirCouplingMaster();
             if (master_mode) {
                 this->reservoirCouplingMaster_ =
-                    std::make_unique<ReservoirCouplingMaster>(
+                    std::make_unique<ReservoirCouplingMaster<Scalar>>(
                         FlowGenericVanguard::comm(),
                         this->schedule(),
                         argc, argv
@@ -648,8 +649,8 @@ protected:
 
 #ifdef RESERVOIR_COUPLING_ENABLED
     bool slaveMode_{false};
-    std::unique_ptr<ReservoirCouplingMaster> reservoirCouplingMaster_{nullptr};
-    std::unique_ptr<ReservoirCouplingSlave> reservoirCouplingSlave_{nullptr};
+    std::unique_ptr<ReservoirCouplingMaster<Scalar>> reservoirCouplingMaster_{nullptr};
+    std::unique_ptr<ReservoirCouplingSlave<Scalar>> reservoirCouplingSlave_{nullptr};
 #endif
 
     SimulatorSerializer serializer_;
