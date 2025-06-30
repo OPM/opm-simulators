@@ -217,13 +217,13 @@ public:
      * @param well_state Well state object containing current well potentials.
      * @param group_state Group state object to update with computed guide rates.
      */
-    void updateGuideRates(
-        const int report_step_idx,
-        const double sim_time,
-        WellState<Scalar> &well_state,
-        GroupState<Scalar> &group_state
-    );
+    void updateGuideRates(const int report_step_idx,
+                          const double sim_time,
+                          const WellState<Scalar>& well_state,
+                          GroupState<Scalar>& group_state);
+
     const BlackoilWellModelGeneric<Scalar>& wellModel() const { return well_model_; }
+
 private:
     void debugDumpGuideRatesRecursive_(const Group& group) const;
     BlackoilWellModelGeneric<Scalar>& well_model_;
