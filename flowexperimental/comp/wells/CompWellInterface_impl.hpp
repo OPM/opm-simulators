@@ -31,6 +31,10 @@ CompWellInterface(const Well& well,
     , reference_depth_(well.getRefDepth())
     , connectionRates_(number_of_connection_)
 {
+    if (FluidSystem::waterEnabled) {
+        throw std::runtime_error("the well model does not support water phase yet");
+    }
+
     {
         well_cells_.resize(number_of_connection_);
         well_index_.resize(number_of_connection_);
