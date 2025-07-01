@@ -179,7 +179,7 @@ public:
         Parameters::Hide<Parameters::EnableTerminalOutput>();
 
         // if openMP is available, set the default the number of threads per process for the main
-        // simulation to 1 (instead of grabbing everything that is available).
+        // simulation to 2 (instead of grabbing everything that is available).
 #if _OPENMP
         Parameters::SetDefault<Parameters::ThreadsPerProcess>(2);
 #endif

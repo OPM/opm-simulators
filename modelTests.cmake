@@ -15,14 +15,14 @@ foreach(tgt lens_immiscible_ecfv_ad
   opm_add_test(${tgt}
                NO_COMPILE
                EXE_NAME $<TARGET_FILE:${tgt}>
-               TEST_ARGS --end-time=3000
+               TEST_ARGS --end-time=3000 --threads-per-process=1
                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 endforeach()
 
 opm_add_test(waterair_pvs_ni
              NO_COMPILE
              EXE_NAME $<TARGET_FILE:waterair_pvs_ni>
-             TEST_ARGS --grid-global-refinements=1
+             TEST_ARGS --grid-global-refinements=1 --threads-per-process=1
              WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 
 set(PLAIN_TGT
@@ -83,7 +83,7 @@ foreach(tgt reservoir_blackoil_ecfv
   opm_add_test(${tgt}
                NO_COMPILE
                EXE_NAME $<TARGET_FILE:${tgt}>
-               TEST_ARGS --end-time=8750000
+               TEST_ARGS --end-time=8750000 --threads-per-process=1
                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 endforeach()
 
@@ -91,7 +91,7 @@ if(dune-alugrid_FOUND)
   opm_add_test(fracture_discretefracture
                NO_COMPILE
                EXE_NAME $<TARGET_FILE:fracture_discretefracture>
-               TEST_ARGS --end-time=400
+               TEST_ARGS --end-time=400 --threads-per-process=1
                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 endif()
 
@@ -99,19 +99,20 @@ if(dune-alugrid_FOUND AND dune-fem_FOUND)
   opm_add_test(finger_immiscible_ecfv_adaptive
                NO_COMPILE
                EXE_NAME $<TARGET_FILE:finger_immiscible_ecfv>
-               TEST_ARGS --enable-grid-adaptation=true --end-time=25e3 --enable-async-vtk-output=false
+               TEST_ARGS --enable-grid-adaptation=true --end-time=25e3 --enable-async-vtk-output=false --threads-per-process=1
                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 endif()
 
 opm_add_test(obstacle_immiscible_parameters
              NO_COMPILE
              EXE_NAME $<TARGET_FILE:obstacle_immiscible>
+             TEST_ARGS --threads-per-process=1
              DRIVER_ARGS --parameters
              WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 
 opm_add_test(obstacle_pvs_restart
              NO_COMPILE
              EXE_NAME $<TARGET_FILE:obstacle_pvs>
-             TEST_ARGS --pvs-verbosity=2 --end-time=30000
+             TEST_ARGS --pvs-verbosity=2 --end-time=30000 --threads-per-process=1
              DRIVER_ARGS --restart
              WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
