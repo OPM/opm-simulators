@@ -25,7 +25,12 @@ setup(
                 'opm',
                 'opm.simulators'
             ],
-    package_data={'opm' : ['$<TARGET_FILE_NAME:simulators>']},
+    package_data={
+        'opm': [
+            '$<TARGET_FILE_NAME:BlackOil>',
+            '$<TARGET_FILE_NAME:GasWater>'
+        ]
+    },
     include_package_data=True,
     license='Open Source',
     test_suite='tests',
