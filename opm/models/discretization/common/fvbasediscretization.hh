@@ -251,9 +251,6 @@ template<class TypeTag>
 struct TimeDiscHistorySize<TypeTag, TTag::FvBaseDiscretization>
 { static constexpr int value = 2; };
 
-template<class TypeTag>
-struct IntensiveQuantityHistorySize<TypeTag, TTag::FvBaseDiscretization>
-{ static constexpr int value = 2; };
 
 //! Most models use extensive quantities for their storage term (so far, only the Stokes
 //! model does), so we disable this by default.
@@ -334,7 +331,6 @@ class FvBaseDiscretization
     enum {
         numEq = getPropValue<TypeTag, Properties::NumEq>(),
         historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>(),
-        intensiveQuantityHistorySize = getPropValue<TypeTag, Properties::IntensiveQuantityHistorySize>(),
     };
 
     using IntensiveQuantitiesVector = std::vector<IntensiveQuantities,
@@ -417,21 +413,7 @@ public:
         }
 
         PrimaryVariables::init();
-        const std::size_t numDof = asImp_().numGridDof();
-        for (unsigned timeIdx = 0; timeIdx < intensiveQuantityHistorySize; ++timeIdx) {
-            if (storeIntensiveQuantities()) {
-                intensiveQuantityCache_[timeIdx].resize(numDof);
-                intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof, /*value=*/false);
-            }
-        }
-        for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
-            if (enableStorageCache_) {
-                storageCache_[timeIdx].resize(numDof);
-                storageCacheUpToDate_[timeIdx].resize(numDof, /*value=*/false);
-            }
-        }
-
-        resizeAndResetIntensiveQuantitiesCache_();
+        // Setting up the intensive quantities cache and storage cache is done in finishInit()
         asImp_().registerOutputModules_();
     }
 
@@ -532,7 +514,8 @@ public:
         resizeAndResetIntensiveQuantitiesCache_();
         if (storeIntensiveQuantities()) {
             // invalidate all cached intensive quantities
-            for (unsigned timeIdx = 0; timeIdx < intensiveQuantityHistorySize; ++timeIdx) {
+            const unsigned intensiveHistorySize = simulator_.problem().intensiveQuantityHistorySize();
+            for (unsigned timeIdx = 0; timeIdx < intensiveHistorySize; ++timeIdx) {
                 invalidateIntensiveQuantitiesCache(timeIdx);
             }
         }
@@ -665,7 +648,7 @@ public:
             return nullptr;
         }
 
-        assert(timeIdx < intensiveQuantityHistorySize);
+        assert(timeIdx < simulator_.problem().intensiveQuantityHistorySize());
 
         // With the storage cache enabled, usually only the
         // intensive quantities for the most recent time step are
@@ -695,7 +678,7 @@ public:
             return;
         }
 
-        assert(timeIdx < intensiveQuantityHistorySize);
+        assert(timeIdx < simulator_.problem().intensiveQuantityHistorySize());
 
         intensiveQuantityCache_[timeIdx][globalIdx] = intQuants;
         intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = true;
@@ -726,7 +709,7 @@ public:
      */
     void invalidateIntensiveQuantitiesCache(unsigned timeIdx) const
     {
-        assert(timeIdx < intensiveQuantityHistorySize);
+        assert(timeIdx < simulator_.problem().intensiveQuantityHistorySize());
 
         if (storeIntensiveQuantities()) {
             std::fill(intensiveQuantityCacheUpToDate_[timeIdx].begin(),
@@ -811,7 +794,8 @@ public:
         }
 
         assert(numSlots > 0);
-        for (unsigned timeIdx = 0; timeIdx < intensiveQuantityHistorySize - numSlots; ++timeIdx) {
+        const unsigned intensiveHistorySize = simulator_.problem().intensiveQuantityHistorySize();
+        for (unsigned timeIdx = 0; timeIdx < intensiveHistorySize - numSlots; ++timeIdx) {
             intensiveQuantityCache_[timeIdx + numSlots] = intensiveQuantityCache_[timeIdx];
             intensiveQuantityCacheUpToDate_[timeIdx + numSlots] = intensiveQuantityCacheUpToDate_[timeIdx];
         }
@@ -1932,7 +1916,13 @@ protected:
         // allocate the intensive quantities cache
         if (storeIntensiveQuantities()) {
             const std::size_t numDof = asImp_().numGridDof();
-            for(unsigned timeIdx = 0; timeIdx < intensiveQuantityHistorySize; ++timeIdx) {
+            const unsigned intensiveHistorySize = simulator_.problem().intensiveQuantityHistorySize();
+
+            // resize the vectors based on runtime history size
+            intensiveQuantityCache_.resize(intensiveHistorySize);
+            intensiveQuantityCacheUpToDate_.resize(intensiveHistorySize);
+
+            for(unsigned timeIdx = 0; timeIdx < intensiveHistorySize; ++timeIdx) {
                 intensiveQuantityCache_[timeIdx].resize(numDof);
                 intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof);
                 invalidateIntensiveQuantitiesCache(timeIdx);
@@ -2007,10 +1997,10 @@ protected:
 
     // cur is the current iterative solution, prev the converged
     // solution of the previous time step
-    mutable std::array<IntensiveQuantitiesVector, intensiveQuantityHistorySize> intensiveQuantityCache_;
+    mutable std::vector<IntensiveQuantitiesVector> intensiveQuantityCache_;
 
     // while these are logically bools, concurrent writes to vector<bool> are not thread safe.
-    mutable std::array<std::vector<unsigned char>, intensiveQuantityHistorySize> intensiveQuantityCacheUpToDate_;
+    mutable std::vector<std::vector<unsigned char>> intensiveQuantityCacheUpToDate_;
 
     mutable std::array<std::unique_ptr<DiscreteFunction>, historySize> solution_;
 
