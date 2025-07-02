@@ -241,9 +241,6 @@ template<class TypeTag>
 struct EnableDebuggingChecks<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
 
-template<class TypeTag>
-struct IntensiveQuantityHistorySize<TypeTag, TTag::FlowBaseProblem>
-{ static constexpr int value = 1; };
 
 } // namespace Opm::Properties
 

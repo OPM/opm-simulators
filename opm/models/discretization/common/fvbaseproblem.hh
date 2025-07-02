@@ -189,8 +189,23 @@ public:
      * This is only relevant if the storage cache is enabled and is usually the case,
      * i.e., this method only needs to be overwritten in rare corner cases.
      */
-    bool recycleFirstIterationStorage() const
+    virtual bool recycleFirstIterationStorage() const
     { return true; }
+
+    /*!
+     * \brief Returns the required history size for intensive quantities cache.
+     *
+     * If recycleFirstIterationStorage() is true and storage cache is enabled, only the current time step intensive
+     * quantities need to be cached (size = 1). Otherwise, both current and previous
+     * time step intensive quantities are needed (size = 2).
+     */
+    unsigned intensiveQuantityHistorySize() const
+    {
+        if (Parameters::Get<Parameters::EnableStorageCache>() && recycleFirstIterationStorage()) {
+            return 1;
+        }
+        return 2;
+    }
 
     /*!
      * \brief Determine the directory for simulation output.

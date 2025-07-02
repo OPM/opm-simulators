@@ -188,7 +188,7 @@ public:
                       "Use --enable-intensive-quantity=true");
         }
 
-        assert(timeIdx == 0);
+        assert(timeIdx < this->simulator_.problem().intensiveQuantityHistorySize());
         const auto* intquant = this->cachedIntensiveQuantities(globalIdx, timeIdx);
         if (!intquant) {
             OPM_THROW(std::logic_error, "Intensive quantites need to be updated in code");
