@@ -562,6 +562,7 @@ bool BlackoilWellModelConstraints<Scalar>::
 updateGroupIndividualControl(const Group& group,
                              const int reportStepIdx,
                              const int max_number_of_group_switch,
+                             const bool update_group_switching_log,
                              std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>>& switched_inj,
                              std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
                              std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
@@ -578,14 +579,13 @@ updateGroupIndividualControl(const Group& group,
                 continue;
             }
             bool group_is_oscillating = false;
+            auto currentControl = group_state.injection_control(group.name(), phase);
             if (auto groupPos = switched_inj.find(group.name()); groupPos != switched_inj.end()) {
                 auto& ctrls = groupPos->second[static_cast<std::underlying_type_t<Phase>>(phase)];
-                for (const auto& ctrl : ctrls) {
-                    if (std::count(ctrls.begin(), ctrls.end(), ctrl) <= max_number_of_group_switch) {
-                        continue;
-                    }
-
-                    if (ctrls.back() != *(ctrls.end() - 2)) {
+                group_is_oscillating = std::count(ctrls.begin(), ctrls.end(), currentControl) >= max_number_of_group_switch;
+                if (group_is_oscillating) {
+                    const bool output_first_time = std::count(ctrls.begin(), ctrls.end(), currentControl) == max_number_of_group_switch;
+                    if (output_first_time) {
                         if (wellModel_.comm().rank() == 0 ) {
                             std::ostringstream os;
                             os << phase;
@@ -593,13 +593,11 @@ updateGroupIndividualControl(const Group& group,
                                 fmt::format("Group control for {} injector group {} is oscillating. Group control kept at {}.",
                                             std::move(os).str(),
                                             group.name(),
-                                            Group::InjectionCMode2String(ctrl));
+                                            Group::InjectionCMode2String(currentControl));
                             deferred_logger.info(msg);
                         }
-                        ctrls.push_back(ctrl);
+                        ctrls.push_back(currentControl);
                     }
-                    group_is_oscillating = true;
-                    break;
                 }
             }
 
@@ -612,9 +610,10 @@ updateGroupIndividualControl(const Group& group,
                                                                             phase);
             if (changed_this.first != Group::InjectionCMode::NONE)
             {
-                switched_inj[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)].push_back(
-                             changed_this.first);
-
+                if (update_group_switching_log || switched_inj[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)].empty()) {
+                    switched_inj[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)].push_back(
+                             currentControl);
+                }
                 this->actionOnBrokenConstraints(group, changed_this.first, phase,
                                                 group_state, deferred_logger);
                 WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(changed_this.second,
@@ -630,22 +629,21 @@ updateGroupIndividualControl(const Group& group,
     }
     if (group.isProductionGroup()) {
 
+        const Group::ProductionCMode currentControl = group_state.production_control(group.name());
         if (auto groupPos = switched_prod.find(group.name()); groupPos != switched_prod.end()) {
             auto& ctrls = groupPos->second;
-            for (const auto& ctrl : ctrls) {
-                if (std::count(ctrls.begin(), ctrls.end(), ctrl) <= max_number_of_group_switch) {
-                    continue;
-                }
-
-                if (ctrls.back() != *(ctrls.end() - 2)) {
+            const bool group_is_oscillating = std::count(ctrls.begin(), ctrls.end(), currentControl) >= max_number_of_group_switch;
+            if (group_is_oscillating) {
+                const bool output_first_time = std::count(ctrls.begin(), ctrls.end(), currentControl) == max_number_of_group_switch;
+                if (output_first_time) {
                     if (wellModel_.comm().rank() == 0) {
                         const std::string msg =
                         fmt::format("Group control for production group {} is oscillating. Group control kept at {}.",
                                     group.name(),
-                                    Group::ProductionCMode2String(ctrl));
+                                    Group::ProductionCMode2String(currentControl));
                         deferred_logger.info(msg);
                     }
-                    ctrls.push_back(ctrl);
+                    ctrls.push_back(currentControl);
                 }
                 return false;
             }
@@ -666,7 +664,10 @@ updateGroupIndividualControl(const Group& group,
                                             group_state, deferred_logger);
 
             if(changed) {
-                switched_prod[group.name()].push_back(changed_this.first);
+                if (update_group_switching_log || switched_prod[group.name()].empty()) {
+                    switched_prod[group.name()].push_back(currentControl);
+                }
+
                 WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(changed_this.second,
                                                                               group,
                                                                               wellModel_.schedule(),
