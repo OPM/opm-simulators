@@ -21,6 +21,8 @@
 #include <cusparse.h>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
+#include <type_traits>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
@@ -45,10 +47,21 @@ namespace Opm::gpuistl
  */
 template <typename T>
 class GpuSparseMatrix
+
 {
 public:
     using field_type = T;
-
+    
+    /**
+    * @brief Maximum block size supported by this implementation.
+    * 
+    * This constant defines an upper bound on the block size to ensure reasonable compilation times.
+    * While this class itself could support larger values, functions that call dispatchOnBlocksize() 
+    * might have limitations. This value can be increased if needed, but will increase compilation time
+    * due to template instantiations.
+    */
+    static constexpr int max_block_size = 6;
+    
     //! Create the sparse matrix specified by the raw data.
     //!
     //! \note Prefer to use the constructor taking a const reference to a matrix instead.
@@ -298,6 +311,33 @@ public:
      */
      void updateNonzeroValues(const GpuSparseMatrix<T>& matrix);
 
+     
+    /**
+     * @brief Dispatches a function based on the block size of the matrix.
+     * 
+     * This method allows executing different code paths depending on the block size
+     * of the matrix, up to the maximum block size specified by max_block_size.
+     *
+     * Use this function if you need the block size to be known at compile time.
+     * 
+     * @tparam FunctionType Type of the function to be dispatched
+     * @param function The function to be executed based on the block size
+     * @return The result of the function execution
+     *
+     * You can use this function as
+     *
+     * \code{.cpp}
+     * matrix.dispatchOnBlocksize([](auto val) {
+     *    constexpr int blockSize = decltype(val)::value;
+     * });
+     * \endcode
+     */
+     template<class FunctionType>
+     auto dispatchOnBlocksize(FunctionType function) const
+     {
+        return dispatchOnBlocksizeImpl<max_block_size>(function);
+     }
+
 private:
     GpuVector<T> m_nonZeroElements;
     GpuVector<int> m_columnIndices;
@@ -316,6 +356,20 @@ private:
 
     template <class VectorType>
     void assertSameSize(const VectorType& vector) const;
+
+    template<int blockSizeCompileTime, class FunctionType>
+    auto dispatchOnBlocksizeImpl(FunctionType function) const
+    {
+        if (blockSizeCompileTime == m_blockSize) {
+            return function(std::integral_constant<int, blockSizeCompileTime>());
+        }
+
+        if constexpr (blockSizeCompileTime > 1) {
+            return dispatchOnBlocksizeImpl<blockSizeCompileTime - 1>(function);
+        } else {
+            OPM_THROW(std::runtime_error, fmt::format("Unsupported block size: {}", m_blockSize));
+        }
+    }
 };
 } // namespace Opm::gpuistl
 #endif

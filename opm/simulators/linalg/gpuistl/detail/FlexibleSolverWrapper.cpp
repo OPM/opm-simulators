@@ -21,9 +21,11 @@
 
 #include <dune/common/parallel/communication.hh>
 #include <dune/istl/owneroverlapcopy.hh>
+#include <dune/istl/schwarz.hh>
 
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>
 
 namespace Opm::gpuistl::detail
 {
@@ -42,16 +44,47 @@ namespace
                             [[maybe_unused]] bool forceSerial,
                             [[maybe_unused]] const Comm* comm)
     {
-        // For now only matrix adapter is supported
-        using OperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
-        using SolverType = Dune::FlexibleSolver<OperatorType>;
+        if (!parallel || forceSerial) {
+            // For now only matrix adapter is supported
+            using OperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
+            using SolverType = Dune::FlexibleSolver<OperatorType>;
 
-        auto operatorPtr = std::make_unique<OperatorType>(matrix);
+            auto operatorPtr = std::make_unique<OperatorType>(matrix);
 
-        auto solverPtr = std::make_unique<SolverType>(*operatorPtr, prm, weightCalculator, pressureIndex);
-        auto preconditioner = std::ref(solverPtr->preconditioner());
+            auto solverPtr = std::make_unique<SolverType>(*operatorPtr, prm, weightCalculator, pressureIndex);
+            auto preconditioner = std::ref(solverPtr->preconditioner());
 
-        return std::make_tuple(std::move(operatorPtr), std::move(solverPtr), preconditioner);
+            return std::make_tuple(std::move(operatorPtr), std::move(solverPtr), preconditioner);
+        } 
+#if HAVE_MPI
+        else {
+            using real_type = typename Matrix::field_type;
+            using return_type = std::tuple<typename FlexibleSolverWrapper<Matrix, Vector, Comm>::AbstractOperatorPtrType,
+               typename FlexibleSolverWrapper<Matrix, Vector, Comm>::AbstractSolverPtrType,
+               std::reference_wrapper<typename FlexibleSolverWrapper<Matrix, Vector, Comm>::AbstractPreconditionerType>>;
+            
+            return matrix.dispatchOnBlocksize([&](auto blockSizeVal) -> return_type {
+                constexpr int block_size = decltype(blockSizeVal)::value;
+                using CudaCommunication = GpuOwnerOverlapCopy<real_type, block_size, Comm>;
+                using SchwarzOperator
+                    = Dune::OverlappingSchwarzOperator<GpuSparseMatrix<real_type>, Vector, Vector, CudaCommunication>;
+                
+                using SolverType = Dune::FlexibleSolver<SchwarzOperator>;
+                
+                auto cudaCommunication = makeGpuOwnerOverlapCopy<real_type, block_size, Comm>(*comm);
+                auto operatorPtr = std::make_unique<SchwarzOperator>(matrix, *cudaCommunication);
+                auto solverPtr = std::make_unique<SolverType>(*operatorPtr, cudaCommunication, prm, weightCalculator, pressureIndex);
+                auto preconditioner = std::ref(solverPtr->preconditioner());
+
+                return std::make_tuple(
+                    std::move(operatorPtr), std::move(solverPtr), preconditioner);
+            });
+        }
+#else
+        else {
+            OPM_THROW(std::logic_error, "Parallel GPU ISTL solver requires MPI support.");
+        }
+#endif
     }
 
 } // namespace
