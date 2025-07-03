@@ -321,7 +321,7 @@ public:
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
-            computeInverseFormationVolumeFactorAndViscosity(fluidState_, phaseIdx, pvtRegionIdx, SoMax);
+            computeInverseFormationVolumeFactorAndViscosity(fluidState_, phaseIdx, pvtRegionIdx);
         }
         Valgrind::CheckDefined(mobility_);
 
@@ -443,8 +443,7 @@ public:
 
     void computeInverseFormationVolumeFactorAndViscosity(FluidState& fluidState,
                                                          unsigned phaseIdx,
-                                                         unsigned pvtRegionIdx,
-                                                         const Evaluation& SoMax){
+                                                         unsigned pvtRegionIdx) {
         OPM_TIMEBLOCK_LOCAL(UpdateInverseFormationFactorAndViscosity);
         {
             OPM_TIMEBLOCK_LOCAL(UpdateFormationFactor);

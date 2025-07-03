@@ -542,8 +542,7 @@ namespace Opm
 
         if constexpr (has_energy) {
             connectionRates[perf][Indices::contiEnergyEqIdx] =
-                connectionRateEnergy(simulator.problem().maxOilSaturation(cell_idx),
-                                     cq_s, intQuants, deferred_logger);
+                connectionRateEnergy(cq_s, intQuants, deferred_logger);
         }
 
         if constexpr (has_polymer) {
@@ -2545,8 +2544,7 @@ namespace Opm
     template <typename TypeTag>
     typename StandardWell<TypeTag>::Eval
     StandardWell<TypeTag>::
-    connectionRateEnergy(const Scalar maxOilSaturation,
-                         const std::vector<EvalWell>& cq_s,
+    connectionRateEnergy(const std::vector<EvalWell>& cq_s,
                          const IntensiveQuantities& intQuants,
                          DeferredLogger& deferred_logger) const
     {

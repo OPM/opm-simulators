@@ -450,8 +450,7 @@ namespace Opm
                                 DeferredLogger& deferred_logger) const;
 
     private:
-        Eval connectionRateEnergy(const Scalar maxOilSaturation,
-                                  const std::vector<EvalWell>& cq_s,
+        Eval connectionRateEnergy(const std::vector<EvalWell>& cq_s,
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
     };
