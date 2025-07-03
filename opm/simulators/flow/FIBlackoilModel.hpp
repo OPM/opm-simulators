@@ -75,6 +75,8 @@ public:
                           ThreadManager::maxThreads())
     {
     }
+        // using Dispatch = EclMultiplexerDispatch<EclMultiplexerApproach::Default>;
+        // dofVars_[dofIdx].intensiveQuantities[timeIdx].template update<Dispatch>(/*context=*/asImp_(), dofIdx, timeIdx);
 
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
