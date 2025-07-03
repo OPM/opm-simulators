@@ -211,7 +211,9 @@ public:
         this->updateSaturations(priVars, timeIdx, lintype);
     }
 
-    void updateSaturations(const PrimaryVariables& priVars, const unsigned timeIdx, const LinearizationType lintype)
+    void updateSaturations(const PrimaryVariables& priVars,
+                           const unsigned timeIdx,
+                           [[maybe_unused]] const LinearizationType lintype)
     {
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
