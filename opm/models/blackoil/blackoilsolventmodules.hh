@@ -622,6 +622,8 @@ public:
         this->solventPostSatFuncUpdate_(elemCtx.problem(), priVars, elemCtx.globalSpaceIndex(dofIdx, timeIdx), timeIdx, elemCtx.linearizationType());
     }
 
+private:
+    // This class is a private implementation detail.
     template <class Problem>
     struct ProblemAndCellIndexOnlyContext
     {
@@ -635,6 +637,7 @@ public:
         }
     };
 
+public:
     void solventPostSatFuncUpdate_(const Problem& problem,
                                    const PrimaryVariables& priVars,
                                    const unsigned globalSpaceIdx,

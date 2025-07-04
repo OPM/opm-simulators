@@ -549,7 +549,6 @@ public:
 
     void updatePorosity(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
-
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
@@ -639,7 +638,7 @@ public:
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        updatePart1(problem, priVars, globalSpaceIdx, timeIdx);
+        updateCommonPart(problem, priVars, globalSpaceIdx, timeIdx);
 
         updatePorosity(elemCtx, dofIdx, timeIdx);
 
@@ -695,6 +694,8 @@ public:
 
     void update(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
     {
+        // This is the version of update() that does not use any ElementContext.
+        // It is limited by some modules that are not yet adapted to that.
         static_assert(!enableSolvent);
         static_assert(!enableExtbo);
         static_assert(!enablePolymer);
@@ -706,14 +707,15 @@ public:
         static_assert(!enableDispersion);
 
         this->extrusionFactor_ = 1.0;// to avoid fixing parent update
-        updatePart1(problem, priVars, globalSpaceIdx, timeIdx);
+        updateCommonPart(problem, priVars, globalSpaceIdx, timeIdx);
         // Porosity requires separate calls so this can be instantiated with ReservoirProblem from the examples/ directory.
         updatePorosity(problem, priVars, globalSpaceIdx, timeIdx);
 
         // TODO: Here we should do the parts for solvent etc. at the bottom of the other update() function.
     }
 
-    void updatePart1(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    // This function updated the parts that are common to the IntensiveQuantities regardless of extensions used.
+    void updateCommonPart(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
     {
         OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
 

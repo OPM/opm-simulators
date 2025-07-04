@@ -258,9 +258,9 @@ public:
         }
     }
 
-    static const Scalar& referencePressure(const ElementContext& elemCtx,
-                                           unsigned scvIdx,
-                                           unsigned timeIdx)
+    static Scalar referencePressure(const ElementContext& elemCtx,
+                                    unsigned scvIdx,
+                                    unsigned timeIdx)
     {
         const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.referencePressure_[pvtnumRegionIdx];
@@ -288,28 +288,28 @@ public:
     static const TabulatedFunction& permfactTable(unsigned satnumRegionIdx)
     { return params_.permfactTable_[satnumRegionIdx]; }
 
-    static const Scalar saltsolTable(const ElementContext& elemCtx,
-                                                  unsigned scvIdx,
-                                                  unsigned timeIdx)
+    static Scalar saltsolTable(const ElementContext& elemCtx,
+                               unsigned scvIdx,
+                               unsigned timeIdx)
     {
         const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.saltsolTable_[pvtnumRegionIdx];
     }
 
-    static const Scalar saltsolTable(const unsigned pvtnumRegionIdx)
+    static Scalar saltsolTable(const unsigned pvtnumRegionIdx)
     {
         return params_.saltsolTable_[pvtnumRegionIdx];
     }
 
-    static const Scalar saltdenTable(const ElementContext& elemCtx,
-                                     unsigned scvIdx,
-                                     unsigned timeIdx)
+    static Scalar saltdenTable(const ElementContext& elemCtx,
+                               unsigned scvIdx,
+                               unsigned timeIdx)
     {
         const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.saltdenTable_[pvtnumRegionIdx];
     }
 
-    static const Scalar saltdenTable(const unsigned pvtnumRegionIdx)
+    static Scalar saltdenTable(const unsigned pvtnumRegionIdx)
     {
         return params_.saltdenTable_[pvtnumRegionIdx];
     }
@@ -399,11 +399,8 @@ public:
         auto& fs = asImp_().fluidState_;
 
         if constexpr (enableSaltPrecipitation) {
-            const auto& saltsolTable = BrineModule::saltsolTable(pvtnumRegionIdx);
-            saltSolubility_ = saltsolTable;
-
-            const auto& saltdenTable = BrineModule::saltdenTable(pvtnumRegionIdx);
-            saltDensity_ = saltdenTable;
+            saltSolubility_ = BrineModule::saltsolTable(pvtnumRegionIdx);
+            saltDensity_ = BrineModule::saltdenTable(pvtnumRegionIdx);
 
             if (priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
                 saltSaturation_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx, lintype);
