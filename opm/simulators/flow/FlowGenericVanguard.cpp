@@ -134,6 +134,7 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
 #endif // HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
 
     ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
+    edgeConformal_ = Parameters::Get<Parameters::EdgeConformal>();
 
 #if HAVE_MPI
     numOverlap_ = Parameters::Get<Parameters::NumOverlap>();
@@ -487,6 +488,9 @@ void FlowGenericVanguard::registerParameters_()
 
     Parameters::Register<Parameters::OwnerCellsFirst>
         ("Order cells owned by rank before ghost/overlap cells.");
+    Parameters::Register<Parameters::EdgeConformal>
+        ("Edge conformal cornerpoint processing.");
+
 #if HAVE_MPI
     Parameters::Register<Parameters::AddCorners>
         ("Add corners to partition.");
