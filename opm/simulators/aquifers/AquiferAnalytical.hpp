@@ -194,7 +194,6 @@ public:
                 typename FluidSystem::template ParameterCache<FsScalar> paramCache;
                 const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
                 paramCache.setRegionIndex(pvtRegionIdx);
-                paramCache.setMaxOilSat(this->simulator_.problem().maxOilSaturation(cellIdx));
                 paramCache.updatePhase(fs, this->phaseIdx_());
                 const auto& h = FluidSystem::enthalpy(fs, paramCache, this->phaseIdx_());
                 fs.setEnthalpy(this->phaseIdx_(), h);

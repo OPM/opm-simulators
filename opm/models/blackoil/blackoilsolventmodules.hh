@@ -42,6 +42,8 @@
 #include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 
+#include <opm/models/discretization/common/linearizationtype.hh>
+
 #include <opm/models/io/vtkblackoilsolventmodule.hpp>
 
 #include <algorithm>
@@ -375,7 +377,8 @@ public:
     static const BrineH2Pvt& brineH2Pvt()
     { return params_.brineH2Pvt_; }
 
-    static const TabulatedFunction& ssfnKrg(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static const TabulatedFunction& ssfnKrg(const ElemContext& elemCtx,
                                             unsigned scvIdx,
                                             unsigned timeIdx)
     {
@@ -384,7 +387,8 @@ public:
         return params_.ssfnKrg_[satnumRegionIdx];
     }
 
-    static const TabulatedFunction& ssfnKrs(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static const TabulatedFunction& ssfnKrs(const ElemContext& elemCtx,
                                             unsigned scvIdx,
                                             unsigned timeIdx)
     {
@@ -393,7 +397,8 @@ public:
         return params_.ssfnKrs_[satnumRegionIdx];
     }
 
-    static const TabulatedFunction& sof2Krn(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static const TabulatedFunction& sof2Krn(const ElemContext& elemCtx,
                                             unsigned scvIdx,
                                             unsigned timeIdx)
     {
@@ -402,7 +407,8 @@ public:
         return params_.sof2Krn_[satnumRegionIdx];
     }
 
-    static const TabulatedFunction& misc(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static const TabulatedFunction& misc(const ElemContext& elemCtx,
                                          unsigned scvIdx,
                                          unsigned timeIdx)
     {
@@ -411,7 +417,8 @@ public:
         return params_.misc_[miscnumRegionIdx];
     }
 
-    static const TabulatedFunction& pmisc(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static const TabulatedFunction& pmisc(const ElemContext& elemCtx,
                                           unsigned scvIdx,
                                           unsigned timeIdx)
     {
@@ -420,7 +427,8 @@ public:
         return params_.pmisc_[miscnumRegionIdx];
     }
 
-    static const TabulatedFunction& msfnKrsg(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static const TabulatedFunction& msfnKrsg(const ElemContext& elemCtx,
                                              unsigned scvIdx,
                                              unsigned timeIdx)
     {
@@ -429,7 +437,8 @@ public:
         return params_.msfnKrsg_[satnumRegionIdx];
     }
 
-    static const TabulatedFunction& msfnKro(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static const TabulatedFunction& msfnKro(const ElemContext& elemCtx,
                                             unsigned scvIdx,
                                             unsigned timeIdx)
     {
@@ -438,7 +447,8 @@ public:
         return params_.msfnKro_[satnumRegionIdx];
     }
 
-    static const TabulatedFunction& sorwmis(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static const TabulatedFunction& sorwmis(const ElemContext& elemCtx,
                                             unsigned scvIdx,
                                             unsigned timeIdx)
     {
@@ -447,7 +457,8 @@ public:
         return params_.sorwmis_[miscnumRegionIdx];
     }
 
-    static const TabulatedFunction& sgcwmis(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static const TabulatedFunction& sgcwmis(const ElemContext& elemCtx,
                                             unsigned scvIdx,
                                             unsigned timeIdx)
     {
@@ -456,7 +467,8 @@ public:
         return params_.sgcwmis_[miscnumRegionIdx];
     }
 
-    static const TabulatedFunction& tlPMixTable(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static const TabulatedFunction& tlPMixTable(const ElemContext& elemCtx,
                                             unsigned scvIdx,
                                             unsigned timeIdx)
     {
@@ -465,7 +477,8 @@ public:
         return params_.tlPMixTable_[miscnumRegionIdx];
     }
 
-    static Scalar tlMixParamViscosity(const ElementContext& elemCtx,
+    template <class ElemContext>
+    static Scalar tlMixParamViscosity(const ElemContext& elemCtx,
                                       unsigned scvIdx,
                                       unsigned timeIdx)
     {
@@ -474,7 +487,9 @@ public:
         return params_.tlMixParamViscosity_[miscnumRegionIdx];
     }
 
-    static Scalar tlMixParamDensity(const ElementContext& elemCtx,
+
+    template <class ElemContext>
+    static Scalar tlMixParamDensity(const ElemContext& elemCtx,
                                     unsigned scvIdx,
                                     unsigned timeIdx)
     {
@@ -543,6 +558,7 @@ class BlackOilSolventIntensiveQuantities<TypeTag, /*enableSolventV=*/true>
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
@@ -566,12 +582,17 @@ public:
                                   unsigned timeIdx)
     {
         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        this->solventPreSatFuncUpdate_(priVars, timeIdx, elemCtx.linearizationType());
+    }
 
+    void solventPreSatFuncUpdate_(const PrimaryVariables& priVars,
+                                  const unsigned timeIdx,
+                                  const LinearizationType linearizationType)
+    {
         auto& fs = asImp_().fluidState_;
         solventSaturation_ = 0.0;
         if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
-            solventSaturation_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx,
-                                                        elemCtx.linearizationType());
+            solventSaturation_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx, linearizationType);
         }
 
         hydrocarbonSaturation_ = fs.saturation(gasPhaseIdx);
@@ -597,22 +618,46 @@ public:
                                    unsigned dofIdx,
                                    unsigned timeIdx)
     {
+        const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        this->solventPostSatFuncUpdate_(elemCtx.problem(), priVars, elemCtx.globalSpaceIndex(dofIdx, timeIdx), timeIdx, elemCtx.linearizationType());
+    }
+
+private:
+    // This class is a private implementation detail.
+    template <class Problem>
+    struct ProblemAndCellIndexOnlyContext
+    {
+        const Problem& problem_;
+        unsigned int index_;
+        const Problem& problem() const { return problem_; }
+        unsigned int globalSpaceIndex([[maybe_unused]] const unsigned int spaceIdx,
+                                      [[maybe_unused]] const unsigned int timeIdx) const
+        {
+            return index_;
+        }
+    };
+
+public:
+    void solventPostSatFuncUpdate_(const Problem& problem,
+                                   const PrimaryVariables& priVars,
+                                   const unsigned globalSpaceIdx,
+                                   const unsigned timeIdx,
+                                   const LinearizationType linearizationType)
+    {
         // revert the gas "saturation" of the fluid state back to the saturation of the
         // hydrocarbon gas.
         auto& fs = asImp_().fluidState_;
         fs.setSaturation(gasPhaseIdx, hydrocarbonSaturation_);
 
-        // update rsSolw. This needs to be done after the pressure is defined in the fluid state. 
+        // update rsSolw. This needs to be done after the pressure is defined in the fluid state.
         rsSolw_ = 0.0;
-        const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
             rsSolw_ = SolventModule::solubilityLimit(asImp_().pvtRegionIndex(),
                                                      fs.temperature(waterPhaseIdx),
                                                      fs.pressure(waterPhaseIdx),
                                                      fs.saltConcentration());
         } else if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Rsolw) {
-            rsSolw_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx,
-                                             elemCtx.linearizationType());
+            rsSolw_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx, linearizationType);
         }
 
         solventMobility_ = 0.0;
@@ -621,6 +666,9 @@ public:
         if (solventSaturation().value() < cutOff) {
             return;
         }
+
+        ProblemAndCellIndexOnlyContext<Problem> elemCtx{problem, globalSpaceIdx};
+        unsigned dofIdx = 0; // Dummy
 
         // Pressure effects on capillary pressure miscibility
         if (SolventModule::isMiscible()) {
@@ -633,14 +681,12 @@ public:
             const Evaluation& pgImisc = fs.pressure(gasPhaseIdx);
 
             // compute capillary pressure for miscible fluid
-            const auto& problem = elemCtx.problem();
             Evaluation pgMisc = 0.0;
             std::array<Evaluation, numPhases> pC;
             const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, timeIdx);
             MaterialLaw::capillaryPressures(pC, materialParams, fs);
 
             // oil is the reference phase for pressure
-            const auto linearizationType = elemCtx.linearizationType();
             if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Pg) {
                 pgMisc = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx,
                                                 linearizationType);

@@ -189,10 +189,32 @@ public:
         }
     }
 
+    void updateTempSalt(const Problem& problem,
+                        const PrimaryVariables& priVars,
+                        const unsigned globalSpaceIdx,
+                        const unsigned timeIdx,
+                        const LinearizationType& lintype)
+    {
+        if constexpr (enableTemperature || enableEnergy) {
+            asImp_().updateTemperature_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
+        }
+
+        if constexpr (enableBrine) {
+            asImp_().updateSaltConcentration_(priVars, timeIdx, lintype);
+        }
+    }
+
     void updateSaturations(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        const LinearizationType lintype = elemCtx.problem().model().linearizer().getLinearizationType();
+        this->updateSaturations(priVars, timeIdx, lintype);
+    }
 
+    void updateSaturations(const PrimaryVariables& priVars,
+                           const unsigned timeIdx,
+                           [[maybe_unused]] const LinearizationType lintype)
+    {
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
         if constexpr (waterEnabled) {
@@ -265,13 +287,22 @@ public:
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        this->updateRelpermAndPressures(problem, priVars, globalSpaceIdx, timeIdx, elemCtx.linearizationType());
+    }
+
+    void updateRelpermAndPressures(const Problem& problem,
+                                   const PrimaryVariables& priVars,
+                                   const unsigned globalSpaceIdx,
+                                   const unsigned timeIdx,
+                                   const LinearizationType& lintype)
+    {
 
         // Solvent saturation manipulation:
         // After this, gas saturation will actually be (gas sat + solvent sat)
         // until set back to just gas saturation in the corresponding call to
         // solventPostSatFuncUpdate_() further down.
         if constexpr (enableSolvent) {
-            asImp_().solventPreSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
+            asImp_().solventPreSatFuncUpdate_(priVars, timeIdx, lintype);
         }
 
         // Phase relperms.
@@ -287,7 +318,7 @@ public:
             if (BrineModule::hasPcfactTables() &&
                 priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp)
             {
-                const unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
+                const unsigned satnumRegionIdx = problem.satnumRegionIndex(globalSpaceIdx);
                 const Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
                 const Evaluation porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
                 const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
@@ -332,15 +363,20 @@ public:
         // Note that this depend on the pressures, so it must be called AFTER the pressures
         // have been updated.
         if constexpr (enableSolvent) {
-            asImp_().solventPostSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
+            asImp_().solventPostSatFuncUpdate_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
         }
     }
 
-    Evaluation updateRsRvRsw(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    void updateRsRvRsw(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        this->updateRsRvRsw(problem, priVars, globalSpaceIdx, timeIdx);
+    }
+
+    void updateRsRvRsw(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    {
         const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
 
         const Scalar RvMax = FluidSystem::enableVaporizedOil()
@@ -429,8 +465,6 @@ public:
                 }
             }
         }
-
-        return SoMax;
     }
 
     void updateMobilityAndInvB()
@@ -517,11 +551,26 @@ public:
     {
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        const auto& linearizationType = problem.model().linearizer().getLinearizationType();
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-
-        // retrieve the porosity from the problem
+        // Retrieve the reference porosity from the problem.
         referencePorosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
+        // Account for other effects.
+        this->updatePorosityImpl(problem, priVars, globalSpaceIdx, timeIdx);
+    }
+
+    void updatePorosity(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    {
+        // Retrieve the reference porosity from the problem.
+        referencePorosity_ = problem.porosity(globalSpaceIdx, timeIdx);
+        // Account for other effects.
+        this->updatePorosityImpl(problem, priVars, globalSpaceIdx, timeIdx);
+    }
+
+    void updatePorosityImpl(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    {
+        const auto& linearizationType = problem.model().linearizer().getLinearizationType();
+
+        // Start from the reference porosity.
         porosity_ = referencePorosity_;
 
         // the porosity must be modified by the compressibility of the
@@ -586,32 +635,14 @@ public:
     void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
-
-        OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
-
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
+        updateCommonPart(problem, priVars, globalSpaceIdx, timeIdx);
 
-        fluidState_.setPvtRegionIndex(pvtRegionIdx);
-
-        updateTempSalt(elemCtx, dofIdx, timeIdx);
-        updateSaturations(elemCtx, dofIdx, timeIdx);
-        updateRelpermAndPressures(elemCtx, dofIdx, timeIdx);
-
-        // update extBO parameters
-        if constexpr (enableExtbo) {
-            asImp_().zFractionUpdate_(elemCtx, dofIdx, timeIdx);
-        }
-
-        const Evaluation SoMax = updateRsRvRsw(elemCtx, dofIdx, timeIdx);
-
-        updateMobilityAndInvB();
-        updatePhaseDensities();
         updatePorosity(elemCtx, dofIdx, timeIdx);
 
-        rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
+        // Below: things I want to move to elemCtx-less versions but have not done yet.
 
         if constexpr (enableSolvent) {
             asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
@@ -622,16 +653,8 @@ public:
         if constexpr (enablePolymer) {
             asImp_().polymerPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
         }
-
-        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
-        paramCache.setRegionIndex(pvtRegionIdx);
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            paramCache.setMaxOilSat(SoMax);
-        }
-        paramCache.updateAll(fluidState_);
-
         if constexpr (enableEnergy) {
-            asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx, paramCache);
+            asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx);
         }
         if constexpr (enableFoam) {
             asImp_().foamPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
@@ -659,10 +682,62 @@ public:
         FluxIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
 
         // update the diffusion specific quantities of the intensive quantities
-        DiffusionIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
+        if constexpr (enableDiffusion) {
+            DiffusionIntensiveQuantities::update_(fluidState_, priVars.pvtRegionIndex(), elemCtx, dofIdx, timeIdx);
+        }
 
         // update the dispersion specific quantities of the intensive quantities
-        DispersionIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
+        if constexpr (enableDispersion) {
+            DispersionIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
+        }
+    }
+
+    void update(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    {
+        // This is the version of update() that does not use any ElementContext.
+        // It is limited by some modules that are not yet adapted to that.
+        static_assert(!enableSolvent);
+        static_assert(!enableExtbo);
+        static_assert(!enablePolymer);
+        static_assert(!enableEnergy);
+        static_assert(!enableFoam);
+        static_assert(!enableMICP);
+        static_assert(!enableBrine);
+        static_assert(!enableDiffusion);
+        static_assert(!enableDispersion);
+
+        this->extrusionFactor_ = 1.0;// to avoid fixing parent update
+        updateCommonPart(problem, priVars, globalSpaceIdx, timeIdx);
+        // Porosity requires separate calls so this can be instantiated with ReservoirProblem from the examples/ directory.
+        updatePorosity(problem, priVars, globalSpaceIdx, timeIdx);
+
+        // TODO: Here we should do the parts for solvent etc. at the bottom of the other update() function.
+    }
+
+    // This function updated the parts that are common to the IntensiveQuantities regardless of extensions used.
+    void updateCommonPart(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    {
+        OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
+
+        const auto& linearizationType = problem.model().linearizer().getLinearizationType();
+        const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
+
+        fluidState_.setPvtRegionIndex(pvtRegionIdx);
+
+        updateTempSalt(problem, priVars, globalSpaceIdx, timeIdx, linearizationType);
+        updateSaturations(priVars, timeIdx, linearizationType);
+        updateRelpermAndPressures(problem, priVars, globalSpaceIdx, timeIdx, linearizationType);
+
+        // update extBO parameters
+        if constexpr (enableExtbo) {
+            asImp_().zFractionUpdate_(priVars, timeIdx);
+        }
+
+        updateRsRvRsw(problem, priVars, globalSpaceIdx, timeIdx);
+        updateMobilityAndInvB();
+        updatePhaseDensities();
+
+        rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
 
 #ifndef NDEBUG
         assertFiniteMembers();

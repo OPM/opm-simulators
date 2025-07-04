@@ -422,7 +422,17 @@ public:
                           unsigned dofIdx,
                           unsigned timeIdx)
     {
-        const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        zFractionUpdate_(elemCtx.primaryVars(dofIdx, timeIdx), timeIdx);
+    }
+
+    /*!
+     * \brief Compute extended pvt properties from table lookups.
+     *
+     *  At this point the pressures of the fluid state are correct.
+     */
+    void zFractionUpdate_(const PrimaryVariables& priVars,
+                          unsigned timeIdx)
+    {
         const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
         const auto& fs = asImp_().fluidState_;
 

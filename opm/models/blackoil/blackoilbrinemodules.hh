@@ -34,6 +34,7 @@
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/linearizationtype.hh>
 
 #include <opm/models/utils/basicproperties.hh>
 
@@ -257,9 +258,9 @@ public:
         }
     }
 
-    static const Scalar& referencePressure(const ElementContext& elemCtx,
-                                           unsigned scvIdx,
-                                           unsigned timeIdx)
+    static Scalar referencePressure(const ElementContext& elemCtx,
+                                    unsigned scvIdx,
+                                    unsigned timeIdx)
     {
         const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.referencePressure_[pvtnumRegionIdx];
@@ -287,19 +288,29 @@ public:
     static const TabulatedFunction& permfactTable(unsigned satnumRegionIdx)
     { return params_.permfactTable_[satnumRegionIdx]; }
 
-    static const Scalar saltsolTable(const ElementContext& elemCtx,
-                                                  unsigned scvIdx,
-                                                  unsigned timeIdx)
+    static Scalar saltsolTable(const ElementContext& elemCtx,
+                               unsigned scvIdx,
+                               unsigned timeIdx)
     {
         const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.saltsolTable_[pvtnumRegionIdx];
     }
 
-    static const Scalar saltdenTable(const ElementContext& elemCtx,
-                                     unsigned scvIdx,
-                                     unsigned timeIdx)
+    static Scalar saltsolTable(const unsigned pvtnumRegionIdx)
+    {
+        return params_.saltsolTable_[pvtnumRegionIdx];
+    }
+
+    static Scalar saltdenTable(const ElementContext& elemCtx,
+                               unsigned scvIdx,
+                               unsigned timeIdx)
     {
         const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        return params_.saltdenTable_[pvtnumRegionIdx];
+    }
+
+    static Scalar saltdenTable(const unsigned pvtnumRegionIdx)
+    {
         return params_.saltdenTable_[pvtnumRegionIdx];
     }
 
@@ -376,29 +387,34 @@ public:
                                   unsigned timeIdx)
     {
         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        const LinearizationType lintype = elemCtx.linearizationType();
+        updateSaltConcentration_(priVars, timeIdx, lintype);
+    }
 
+    void updateSaltConcentration_(const PrimaryVariables& priVars,
+                                  const unsigned timeIdx,
+                                  const LinearizationType lintype)
+    {
+        const unsigned pvtnumRegionIdx = priVars.pvtRegionIndex();
         auto& fs = asImp_().fluidState_;
 
         if constexpr (enableSaltPrecipitation) {
-            const auto& saltsolTable = BrineModule::saltsolTable(elemCtx, dofIdx, timeIdx);
-            saltSolubility_ = saltsolTable;
-
-            const auto& saltdenTable = BrineModule::saltdenTable(elemCtx, dofIdx, timeIdx);
-            saltDensity_ = saltdenTable;
+            saltSolubility_ = BrineModule::saltsolTable(pvtnumRegionIdx);
+            saltDensity_ = BrineModule::saltdenTable(pvtnumRegionIdx);
 
             if (priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
-                saltSaturation_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
+                saltSaturation_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx, lintype);
                 fs.setSaltConcentration(saltSolubility_);
             }
             else {
-                saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
+                saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx, lintype);
                 fs.setSaltConcentration(saltConcentration_);
                 saltSaturation_ = 0.0;
             }
             fs.setSaltSaturation(saltSaturation_);
         }
         else {
-            saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
+            saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx, lintype);
             fs.setSaltConcentration(saltConcentration_);
         }
     }
