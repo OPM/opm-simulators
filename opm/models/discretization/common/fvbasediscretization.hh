@@ -512,13 +512,6 @@ public:
         }
 
         resizeAndResetIntensiveQuantitiesCache_();
-        if (storeIntensiveQuantities()) {
-            // invalidate all cached intensive quantities
-            const unsigned intensiveHistorySize = simulator_.problem().intensiveQuantityHistorySize();
-            for (unsigned timeIdx = 0; timeIdx < intensiveHistorySize; ++timeIdx) {
-                invalidateIntensiveQuantitiesCache(timeIdx);
-            }
-        }
 
         newtonMethod_.finishInit();
     }
@@ -572,6 +565,11 @@ public:
         for (unsigned timeIdx = 1; timeIdx < historySize; ++timeIdx) {
             solution(timeIdx) = solution(/*timeIdx=*/0);
         }
+
+        // Initialize intensive quantities cache now that all problem-specific parameters are available.
+        // This ensures intensiveQuantityHistorySize is correct based on recycleFirstIterationStorage().
+        // TODO: Where this is done should perhaps be changed once finishInit() is refactored.
+        resizeAndResetIntensiveQuantitiesCache_();
 
         simulator_.problem().initialSolutionApplied();
 
