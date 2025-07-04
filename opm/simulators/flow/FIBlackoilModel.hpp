@@ -39,6 +39,8 @@
 #include <opm/models/parallel/threadmanager.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
+
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
@@ -79,16 +81,18 @@ public:
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
         this->invalidateIntensiveQuantitiesCache(timeIdx);
+        const auto& elementMapper = this->simulator_.model().elementMapper();
+
+        using Dispatch = EclMultiplexerDispatch<EclMultiplexerApproach::Default>;
+
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         if constexpr (gridIsUnchanging) {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
             for (const auto& chunk : element_chunks_) {
-                ElementContext elemCtx(this->simulator_);
                 for (const auto& elem : chunk) {
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                    this->template updateSingleCachedIntQuantUnchecked<Dispatch>(elementMapper.index(elem), timeIdx);
                 }
             }
         } else {
@@ -195,6 +199,18 @@ public:
     }
 
 protected:
+
+    template <class ...Args>
+    void updateSingleCachedIntQuantUnchecked(const unsigned globalIdx, const unsigned timeIdx) const
+    {
+        // Get the cached data.
+        auto& intquant = this->intensiveQuantityCache_[timeIdx][globalIdx];
+        // Update it.
+        intquant.template update<Args...>(this->simulator_.problem(), this->solution(timeIdx)[globalIdx], globalIdx, timeIdx);
+        // Set the up-to-date flag.
+        this->intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = 1;
+    }
+
     ElementChunks<GridView, Dune::Partitions::All> element_chunks_;
 };
 
