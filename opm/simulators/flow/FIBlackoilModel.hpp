@@ -32,6 +32,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/utility/ElementChunks.hpp>
@@ -69,6 +70,8 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
     static constexpr bool gridIsUnchanging =
         std::is_same_v<GetPropType<TypeTag, Properties::Grid>, Dune::CpGrid>;
 
+    static constexpr bool avoidElementContext = getPropValue<TypeTag, Properties::AvoidElementContext>();
+
 public:
     explicit FIBlackOilModel(Simulator& simulator)
         : BlackOilModel<TypeTag>(simulator)
@@ -81,20 +84,24 @@ public:
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
         this->invalidateIntensiveQuantitiesCache(timeIdx);
-        const auto& elementMapper = this->simulator_.model().elementMapper();
-
-        using Dispatch = EclMultiplexerDispatch<EclMultiplexerApproach::Default>;
-
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
         if constexpr (gridIsUnchanging) {
+            if constexpr (avoidElementContext) {
+                updateCachedIntQuants(timeIdx);
+                return;
+            }
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
             for (const auto& chunk : element_chunks_) {
+                ElementContext elemCtx(this->simulator_);
                 for (const auto& elem : chunk) {
-                    this->template updateSingleCachedIntQuantUnchecked<Dispatch>(elementMapper.index(elem), timeIdx);
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
                 }
             }
+            OPM_END_PARALLEL_TRY_CATCH("invalidateAndUpdateIntensiveQuantities: state error",
+                                       this->simulator_.vanguard().grid().comm());
         } else {
             // Grid is possibly refined or otherwise changed between calls.
             ElementContext elemCtx(this->simulator_);
@@ -103,8 +110,6 @@ public:
                 elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("InvalideAndUpdateIntensiveQuantities: state error",
-                                   this->simulator_.vanguard().grid().comm());
     }
 
     void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned timeIdx) const
@@ -201,6 +206,24 @@ public:
     }
 
 protected:
+
+
+    void updateCachedIntQuants(const unsigned timeIdx) const
+    {
+        using Dispatch = EclMultiplexerDispatch<EclMultiplexerApproach::Default>;
+        updateCachedIntQuantsLoop<>(timeIdx);
+    }
+
+    template <class ...Args>
+    void updateCachedIntQuantsLoop(const unsigned timeIdx) const
+    {
+        const auto& elementMapper = this->simulator_.model().elementMapper();
+        for (const auto& chunk : element_chunks_) {
+            for (const auto& elem : chunk) {
+                this->template updateSingleCachedIntQuantUnchecked<Args...>(elementMapper.index(elem), timeIdx);
+            }
+        }
+    }
 
     template <class ...Args>
     void updateSingleCachedIntQuantUnchecked(const unsigned globalIdx, const unsigned timeIdx) const
