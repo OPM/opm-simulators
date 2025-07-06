@@ -207,11 +207,34 @@ public:
 
 protected:
 
+    template <EclMultiplexerApproach ApproachArg>
+    using EMD = EclMultiplexerDispatch<ApproachArg>;
 
     void updateCachedIntQuants(const unsigned timeIdx) const
     {
-        using Dispatch = EclMultiplexerDispatch<EclMultiplexerApproach::Default>;
-        updateCachedIntQuantsLoop<>(timeIdx);
+        // Runtime dispatch on three-phase approach into loops with
+        // compile-time fixed approach.
+        switch (this->simulator_.problem().materialLawManager()->threePhaseApproach()) {
+        case EclMultiplexerApproach::Stone1:
+            updateCachedIntQuantsLoop<EclMultiplexerDispatch<EclMultiplexerApproach::Stone1>>(timeIdx);
+            break;
+
+        case EclMultiplexerApproach::Stone2:
+            updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::Stone2>>(timeIdx);
+            break;
+
+        case EclMultiplexerApproach::Default:
+            updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::Default>>(timeIdx);
+            break;
+
+        case EclMultiplexerApproach::TwoPhase:
+            updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::TwoPhase>>(timeIdx);
+            break;
+
+        case EclMultiplexerApproach::OnePhase:
+            updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::OnePhase>>(timeIdx);
+            break;
+        }
     }
 
     template <class ...Args>
