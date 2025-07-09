@@ -245,6 +245,27 @@ nonlinearIteration(const int iteration,
     return result;
 }
 
+/*
+// helper function displaying the firs few elements of a block-vector
+void vec_head(BVector &x)
+{
+    int count = 1;
+    printf("vec =\n[\n");
+    for (auto block = x.begin(); block != x.end(); block++)
+    {
+        for (auto i=block->begin(); i!=block->end(); i++)
+        {
+            printf(" %+.4e",*i);
+        }
+        printf("\n");
+        count++;
+        if(count>32) break;
+    }
+    printf("]\n");
+}
+
+*/
+
 template <class TypeTag>
 template <class NonlinearSolverType>
 SimulatorReportSingle
@@ -288,6 +309,103 @@ nonlinearIterationNewton(const int iteration,
             report.linear_solve_setup_time += linear_solve_setup_time_;
             report.linear_solve_time += perfTimer.stop();
             report.total_linear_iterations += linearIterationsLastSolve();
+
+            // Looks like a good place to export the linear system
+            printf("+++++++++++++++++++++++++++++ BlackOilModel::nonlinearIterationNewton ++++++++++++++++++++++++\n");
+
+            printf("N         = %lu\n",x.N());         //number of blocks
+            printf("dimension = %lu\n",x.dim());       //number of elements
+            printf("blocksize = %lu\n",x.dim()/x.N()); //block size
+
+            printf( "bytes    = %lu\n",sizeof( *(x.begin()->begin()) ) );
+
+            // helper function displaying the firs few elements of a block-vector
+            //void vec_head(BVector &x)
+            {
+            int count = 1;
+            printf("x =\n[\n");
+            for (auto block = x.begin(); block != x.end(); block++)
+            {
+                for (auto i=block->begin(); i!=block->end(); i++)
+                {
+                    printf(" %+.4e",*i);
+                }
+                printf("\n");
+                count++;
+                if(count>16) break;
+            }
+            printf("]\n");
+            }
+
+            auto& r = simulator_.model().linearizer().residual();
+            {
+            int count = 1;
+            printf("r =\n[\n");
+            for (auto block = r.begin(); block != r.end(); block++)
+            {
+                for (auto i=block->begin(); i!=block->end(); i++)
+                {
+                    printf(" %+.4e",*i);
+                }
+                printf("\n");
+                count++;
+                if(count>16) break;
+            }
+            printf("]\n");
+            }
+
+            auto& A = simulator_.model().linearizer().jacobian().istlMatrix();
+            {
+            printf("nrows = %lu\n",A.N());
+            printf("ncols = %lu\n",A.M());
+            printf("nnz   = %lu\n",A.nonzeroes());
+
+            printf("sparsity =\n[\n");
+            int count=1;
+            int offset=0;
+            for(auto row=A.begin(); row!=A.end(); row++)
+            {
+                printf("%4d: ",offset);
+                for(unsigned int i=0;i<row->getsize();i++)
+                {
+                    printf(" %4lu",row->getindexptr()[i]);
+                }
+                printf("\n");
+                offset+=row->getsize();
+                count++;
+                if(count>16) break;
+            }
+            printf("]\n");
+            }
+
+            {
+            printf("data =\n[\n");
+            int count=1;
+            for(auto row=A.begin();row!=A.end();row++)
+            {
+                for(unsigned int j=0;j<row->getsize();j++)
+                {
+                    printf("|");
+                    auto mat = row->getptr()[j];
+                    for(auto vec=mat.begin();vec!=mat.end();vec++)
+                    {
+                        for(auto k=vec->begin();k!=vec->end();k++)
+                        {
+                            printf(" %+.4e",*k);
+                        }
+                        printf(" |");
+                    }
+                    printf("\n");
+                }
+                count++;
+                if(count>6) break;
+                printf("\n");
+            }
+            printf("]\n");
+            }
+
+            getchar();
+
         }
         catch (...) {
             report.linear_solve_setup_time += linear_solve_setup_time_;
