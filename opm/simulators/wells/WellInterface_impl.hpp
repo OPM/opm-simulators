@@ -315,7 +315,12 @@ namespace Opm
                     if (! (isGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
                         changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
                     }
-                    if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
+                    // Disallow THP->GROUP local change for network wells under THP control
+                    const bool networkThpControlled = this->isProducer()
+                                                    && this->getDynamicThpLimit()
+                                                    && ws.production_cmode == Well::ProducerCMode::THP;
+
+                    if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_ && !networkThpControlled) {
                         changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state, false, deferred_logger);
                     }
 
