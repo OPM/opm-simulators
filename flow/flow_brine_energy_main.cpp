@@ -19,5 +19,5 @@
 
 int main(int argc, char** argv)
 {
-    return Opm::flowBrineEnergyMain(argc, argv);
+    return Opm::flowBrineEnergyMainStandalone(argc, argv);
 }
