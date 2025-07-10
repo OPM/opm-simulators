@@ -389,7 +389,7 @@ namespace Opm
                                                 /*debug_verbosity_level*/ 4);
                             return false;
                         } else { // Try to get a better initial guess (quite likely nonsense without resolving for bhp??)
-                            deferred_logger.debug(fmt::format("Well {} local iteration {}: Re-opening with THP constrol (estimated stable BHP) = {:.2f} bar",
+                            deferred_logger.debug(fmt::format("Well {} local iteration {}: Re-opening with THP control (estimated stable BHP = {:.2f} bar)",
                                                     this->name(), it, (*stable_bhp)/unit::barsa),
                                                     /*debug_verbosity_level*/ 4);
                         }
