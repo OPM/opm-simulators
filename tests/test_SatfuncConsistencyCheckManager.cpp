@@ -1539,7 +1539,7 @@ SOWCR
 
     BOOST_CHECK_EQUAL(msg, R"(Consistency Problem:
   Mobile displacing oil in three point horizontally scaled oil/water system
-  SWCR < 1-SOWCR-SGL < SWU
+  SWCR < 1-SOWCR-SGL <= SWU
   Total Violations: 1
 
 List of Violations
@@ -1589,7 +1589,7 @@ SOGCR
 
     BOOST_CHECK_EQUAL(msg, R"(Consistency Problem:
   Mobile displacing oil in three point horizontally scaled gas/oil system
-  SGCR < 1-SOGCR-SWL < SGU
+  SGCR < 1-SOGCR-SWL <= SGU
   Total Violations: 1
 
 List of Violations

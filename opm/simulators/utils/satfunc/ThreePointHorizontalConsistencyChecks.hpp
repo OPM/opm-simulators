@@ -64,7 +64,7 @@ namespace Opm::Satfunc::PhaseChecks::ThreePointHorizontal {
         /// Textual representation of the consistency condition.
         std::string condition() const override
         {
-            return { "SGCR < 1-SOGCR-SWL < SGU" };
+            return { "SGCR < 1-SOGCR-SWL <= SGU" };
         }
 
         /// Retrieve names of the exported check values.
@@ -139,7 +139,7 @@ namespace Opm::Satfunc::PhaseChecks::ThreePointHorizontal {
         /// Textual representation of the consistency condition.
         std::string condition() const override
         {
-            return { "SWCR < 1-SOWCR-SGL < SWU" };
+            return { "SWCR < 1-SOWCR-SGL <= SWU" };
         }
 
         /// Retrieve names of the exported check values.
