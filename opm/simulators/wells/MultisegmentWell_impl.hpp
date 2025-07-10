@@ -1635,9 +1635,16 @@ namespace Opm
         const int min_its_after_switch = 3;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
+
+        // Avoid open/stop oscillations by stopping well after it has stopped 'max_stop_count' times
+        constexpr int max_stop_count = 4;
+        int stop_count = 0;
+
         // if we fail to solve eqs, we reset status/operability before leaving
         const auto well_status_orig = this->wellStatus_;
         const auto operability_orig = this->operability_status_;
+        auto well_status_cur = well_status_orig;
+        int status_switch_count = 0;
         // don't allow opening wells that are stopped from schedule or has a stopped well state
         const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
                                  well_state.well(this->index_of_well_).status == WellStatus::OPEN;
@@ -1651,6 +1658,10 @@ namespace Opm
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             ++its_since_last_switch;
+            const auto stat0 = WellStatus2String(this->wellStatus_);
+            const auto ctrl0 = this->isProducer() ? WellProducerCMode2String(well_state.well(this->indexOfWell()).production_cmode)
+                                                    : WellInjectorCMode2String(well_state.well(this->indexOfWell()).injection_cmode);
+
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
                 bool changed = this->updateWellControlAndStatusLocalIteration(simulator, it, well_state, group_state,
@@ -1660,6 +1671,28 @@ namespace Opm
                 if (changed) {
                     its_since_last_switch = 0;
                     ++switch_count;
+                    if (well_status_cur != this->wellStatus_) {
+                        well_status_cur = this->wellStatus_;
+                        status_switch_count++;
+                        if (this->wellIsStopped()) {
+                            stop_count++;
+                        }
+                    }
+                    const auto stat1 = WellStatus2String(this->wellStatus_);
+                    const auto ctrl1 = this->isProducer() ? WellProducerCMode2String(well_state.well(this->indexOfWell()).production_cmode)
+                                                    : WellInjectorCMode2String(well_state.well(this->indexOfWell()).injection_cmode);
+                    deferred_logger.debug(fmt::format(" WELL {} iteration {}: Change from [{}, {}] to [{}, {}]",
+                                                        this->name(), it, stat0, ctrl0, stat1, ctrl1),
+                                            /*debug_verbosity_level*/ 4);
+
+                    // Exit early if oscillating between open/stop, but not for fixed control (typically potential calculations)
+                    if (!fixed_control && stop_count >= max_stop_count) {
+                        this->stopWell();
+                        deferred_logger.debug(fmt::format("Well {} iteration {}: Stopping well due to open/stop oscillations (converged = {})",
+                                                            this->name(), it, converged),
+                                                /*debug_verbosity_level*/ 4);
+                        break;
+                    }
                 }
                 if (!changed && final_check) {
                     break;

@@ -376,17 +376,22 @@ namespace Opm
                         std::vector<Scalar> ipr_rates(3, 0.0);
                         this->computeRatesFromBhpAndIPR(well_state, prod_limit, ipr_rates);
                         const bool zero_ipr = std::all_of(ipr_rates.begin(), ipr_rates.end(), [](const Scalar x){ return std::abs(x) < 1.0e-15; });
-                        if (!zero_ipr) {
-                            this->adaptRatesForVFP(ipr_rates);
-                            const auto stable_bhp = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, ipr_rates, this->getRefDensity(), summary_state);
-                            if (!stable_bhp) {
-                                deferred_logger.debug(fmt::format("Well {} local iteration {}: Not opening THP-controlled producer at estimated BHP limit = {:.2f} bar - unable to estimate stable BHP.",
-                                                                this->name(),
-                                                                it,
-                                                                prod_limit/unit::barsa),
+                        if (zero_ipr) {
+                            return false;
+                        }
+                        this->adaptRatesForVFP(ipr_rates);
+                        const auto stable_bhp = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, ipr_rates, this->getRefDensity(), summary_state);
+                        if (!stable_bhp) {
+                            deferred_logger.debug(fmt::format("Well {} local iteration {}: Not opening THP-controlled producer at estimated BHP limit = {:.2f} bar - unable to estimate stable BHP.",
+                                                            this->name(),
+                                                            it,
+                                                            prod_limit/unit::barsa),
+                                                /*debug_verbosity_level*/ 4);
+                            return false;
+                        } else { // Try to get a better initial guess (quite likely nonsense without resolving for bhp??)
+                            deferred_logger.debug(fmt::format("Well {} local iteration {}: Re-opening with THP constrol (estimated stable BHP) = {:.2f} bar",
+                                                    this->name(), it, (*stable_bhp)/unit::barsa),
                                                     /*debug_verbosity_level*/ 4);
-                                return false;
-                            }
                         }
                     }
                 }
@@ -529,7 +534,8 @@ namespace Opm
                          const double dt,
                          WellState<Scalar>& well_state,
                          const GroupState<Scalar>& group_state,
-                         DeferredLogger& deferred_logger)
+                         DeferredLogger& deferred_logger,
+                         const bool only_operability_update)
     {
         OPM_TIMEFUNCTION();
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -544,7 +550,7 @@ namespace Opm
             if (!this->param_.local_well_solver_control_switching_){
                 converged = this->iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
             } else {
-                if (this->param_.use_implicit_ipr_ && this->well_ecl_.isProducer() && (this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+                if (this->param_.use_implicit_ipr_ && this->well_ecl_.isProducer() && (this->well_ecl_.getStatus() == WellStatus::OPEN) && !only_operability_update) {
                     converged = solveWellWithOperabilityCheck(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
                 } else {
                     converged = this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
@@ -1167,7 +1173,7 @@ namespace Opm
         const auto& group_state = simulator.problem().wellModel().groupState();
         const double dt = simulator.timeStepSize();
         // equations should be converged at this stage, so only one it is needed
-        bool converged = iterateWellEquations(simulator, dt, well_state_copy, group_state, deferred_logger);
+        bool converged = iterateWellEquations(simulator, dt, well_state_copy, group_state, deferred_logger, /*only_operability_update*/ true);
         return converged;
     }
 

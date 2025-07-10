@@ -421,7 +421,8 @@ protected:
                               const double dt,
                               WellState<Scalar>& well_state,
                               const GroupState<Scalar>& group_state,
-                              DeferredLogger& deferred_logger);
+                              DeferredLogger& deferred_logger,
+                              const bool only_operability_update = false);
 
     bool solveWellWithOperabilityCheck(const Simulator& simulator,
                                        const double dt,
