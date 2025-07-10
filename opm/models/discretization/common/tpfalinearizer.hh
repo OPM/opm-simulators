@@ -307,8 +307,92 @@ public:
     GlobalEqVector& residual()
     { return residual_; }
 
-    void setLinearizationType(LinearizationType linearizationType)
-    { linearizationType_ = linearizationType; }
+    void printVector(GlobalEqVector &x, const char *name="x")
+    {
+        int count = 1;
+        printf("%s =\n[\n",name);
+        for (auto block = x.begin(); block != x.end(); block++)
+        {
+            for (auto i=block->begin(); i!=block->end(); i++)
+            {
+                printf(" %+.4e",*i);
+            }
+            printf("\n");
+            count++;
+            if(count>16) break;
+        }
+        printf("]\n");
+    }
+
+    void printResidual(const char *name="r")
+    {
+        printVector(residual_, name);
+    }
+
+    void printSparsity(const char *name="s")
+    {
+        auto& A = jacobian_->istlMatrix();
+        //{
+        printf("nrows = %lu\n",A.N());
+        printf("ncols = %lu\n",A.M());
+        printf("nnz   = %lu\n",A.nonzeroes());
+
+        printf("%s =\n[\n",name);
+        int count=1;
+        int offset=0;
+        for(auto row=A.begin(); row!=A.end(); row++)
+        {
+            printf("%4d: ",offset);
+            for(unsigned int i=0;i<row->getsize();i++)
+            {
+                printf(" %4lu",row->getindexptr()[i]);
+            }
+            printf("\n");
+            offset+=row->getsize();
+            count++;
+            if(count>16) break;
+        }
+        printf("]\n");
+        //}
+    }
+
+    void printNonzeros(const char *name="d")
+    {
+        auto& A = jacobian_->istlMatrix();
+        printf("%s =\n[\n",name);
+        int count=1;
+        for(auto row=A.begin();row!=A.end();row++)
+        {
+            for(unsigned int j=0;j<row->getsize();j++)
+            {
+                printf("|");
+                auto mat = row->getptr()[j];
+                for(auto vec=mat.begin();vec!=mat.end();vec++)
+                {
+                    for(auto k=vec->begin();k!=vec->end();k++)
+                    {
+                        printf(" %+.4e",*k);
+                    }
+                    printf(" |");
+                }
+                printf("\n");
+            }
+            count++;
+            if(count>6) break;
+            printf("\n");
+        }
+        printf("]\n");
+    }
+
+    void printJacobian()
+    {
+        printSparsity();
+        printNonzeros();
+    }
+
+    void setLinearizationType(LinearizationType linearizationType){
+        linearizationType_ = linearizationType;
+    };
 
     const LinearizationType& getLinearizationType() const
     { return linearizationType_; }
