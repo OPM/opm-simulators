@@ -2389,7 +2389,7 @@ namespace Opm
         int switch_count= 0;
 
         // Avoid open/stop oscillations by stopping well after it has stopped 'max_stop_count' times
-        constexpr int max_stop_count = 4;
+        constexpr int max_stop_count = 3;
         int stop_count = 0;
 
         // if we fail to solve eqs, we reset status/operability before leaving
@@ -2444,6 +2444,7 @@ namespace Opm
                         deferred_logger.debug(fmt::format("Well {} iteration {}: Stopping well due to open/stop oscillations (converged = {})",
                                                             this->name(), it, converged),
                                                 /*debug_verbosity_level*/ 4);
+                        converged = false; // Define as not converged
                         break;
                     }
 
