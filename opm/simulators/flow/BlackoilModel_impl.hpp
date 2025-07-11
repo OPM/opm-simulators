@@ -245,27 +245,6 @@ nonlinearIteration(const int iteration,
     return result;
 }
 
-/*
-// helper function displaying the firs few elements of a block-vector
-void vec_head(BVector &x)
-{
-    int count = 1;
-    printf("vec =\n[\n");
-    for (auto block = x.begin(); block != x.end(); block++)
-    {
-        for (auto i=block->begin(); i!=block->end(); i++)
-        {
-            printf(" %+.4e",*i);
-        }
-        printf("\n");
-        count++;
-        if(count>32) break;
-    }
-    printf("]\n");
-}
-
-*/
-
 template <class TypeTag>
 template <class NonlinearSolverType>
 SimulatorReportSingle
@@ -305,7 +284,7 @@ nonlinearIterationNewton(const int iteration,
 
 
             // Looks like a good place to export the linear system
-            /*
+
             printf("+++++++++++++++++++++++++++++ BlackOilModel::nonlinearIterationNewton ++++++++++++++++++++++++\n");
 
             printf("N         = %lu\n",x.N());         //number of blocks
@@ -313,12 +292,20 @@ nonlinearIterationNewton(const int iteration,
             printf("blocksize = %lu\n",x.dim()/x.N()); //block size
 
             printf( "bytes    = %lu\n",sizeof( *(x.begin()->begin()) ) );
-            */
+            printf( "episode  = %d\n",simulator_.episodeIndex());
+            printf( "newton   = %d\n",report.total_newton_iterations);
+
+            char tag[16];
+            int idx = simulator_.episodeIndex();
+            simulator_.model().linearizer().exportSystem(idx,tag);
+            //if(tag) printf("tag = %s\n",tag);
 
             //simulator_.model().linearizer().printSparsity();
             //simulator_.model().linearizer().printNonzeros();
             //simulator_.model().linearizer().printJacobian();
-            simulator_.model().linearizer().printResidual("r0");
+            //simulator_.model().linearizer().printResidual("r0");
+            //simulator_.model().linearizer().exportSparsity();
+            //simulator_.model().linearizer().exportNonzeros(tag,"export");
 
             // ---- Solve linear system ----
             solveJacobianSystem(x);
@@ -328,7 +315,8 @@ nonlinearIterationNewton(const int iteration,
             report.total_linear_iterations += linearIterationsLastSolve();
 
             // Solution vector must be exported after solver converges
-            simulator_.model().linearizer().printVector(x);
+            simulator_.model().linearizer().exportVector(x,tag);
+            //simulator_.model().linearizer().printVector(x);
             //simulator_.model().linearizer().printResidual();
 
             getchar();
