@@ -236,6 +236,8 @@ public:
     {
         simulatorPtr_ = nullptr;
         separateSparseSourceTerms_ = Parameters::Get<Parameters::SeparateSparseSourceTerms>();
+        exportIndex_=-1;
+        exportCount_=-1;
     }
 
     /*!
@@ -437,7 +439,7 @@ public:
     void printSparsity(const char *name="s")
     {
         auto& A = jacobian_->istlMatrix();
-        //{
+
         printf("nrows = %lu\n",A.N());
         printf("ncols = %lu\n",A.M());
         printf("nnz   = %lu\n",A.nonzeroes());
@@ -458,7 +460,6 @@ public:
             if(count>16) break;
         }
         printf("]\n");
-        //}
     }
 
     void printNonzeros(const char *name="d")
@@ -495,9 +496,96 @@ public:
         printNonzeros();
     }
 
-    void setLinearizationType(LinearizationType linearizationType){
-        linearizationType_ = linearizationType;
-    };
+    void exportSystem(int idx, char *tag, const char *path="export")
+    {
+        // export sparsity only once
+        if(exportIndex_==-1) exportSparsity(path);
+
+        // increment indices and generate tag
+        exportCount_ = exportIndex_==idx ? ++exportCount_ : 0;
+        exportIndex_ = idx;
+        sprintf(tag,"_%03d_%02d",exportIndex_, exportCount_);
+
+        printf("index = %d\n", exportIndex_);
+        printf("count = %d\n", exportCount_);
+
+        // export matrix
+        exportNonzeros(tag,path);
+
+        // export residual
+        char name[256];
+        sprintf(name,"%s/r",path);
+        exportVector(residual_,tag,name);
+    }
+
+    void exportVector(GlobalEqVector &x, const char *tag="", const char *name="export/x")
+    {
+        // assume double precision and contiguous data
+        const double *data = &x[0][0];
+
+        char filename[256];
+        sprintf(filename,"%s%s.f64",name,tag);
+        FILE *out =fopen(filename,"w");
+        fwrite(data, sizeof(double), x.dim(),out);
+        fclose(out);
+    }
+
+    void exportNonzeros(const char *tag="", const char *path=".")
+    {
+        auto& A = jacobian_->istlMatrix();
+
+        // assume double precision and contiguous data
+        const double *data = &A[0][0][0][0];
+        size_t dim = A[0][0].N()*A[0][0].M()*A.nonzeroes();
+
+        char filename[256];
+        sprintf(filename,"%s/data%s.f64",path,tag);
+        FILE *out =fopen(filename,"w");
+        fwrite(data, sizeof(double), dim,out);
+        fclose(out);
+    }
+
+    void exportSparsity(const char *path='.')
+    {
+        //assemble csr graph
+        auto& A = jacobian_->istlMatrix();
+        int *rows = new int[A.N()+1];
+        int *cols = new int[A.nonzeroes()];
+
+        int irow=0;
+        int icol=0;
+        rows[0]=0;
+        for(auto row=A.begin(); row!=A.end(); row++)
+        {
+            for(unsigned int i=0;i<row->getsize();i++)
+            {
+                cols[icol++]=row->getindexptr()[i];
+            }
+            rows[irow+1]= rows[irow]+row->getsize();
+            irow++;
+        }
+
+        //export arrays
+        FILE *out;
+        char filename[256];
+
+        sprintf(filename,"%s/rows.i32",path);
+        out=fopen(filename,"w");
+        fwrite(rows, sizeof(int), A.N()+1,out);
+        fclose(out);
+
+        sprintf(filename,"%s/cols.i32",path);
+        out=fopen(filename,"w");
+        fwrite(cols, sizeof(int), A.nonzeroes(),out);
+        fclose(out);
+
+        // clean-up
+        delete rows;
+        delete cols;
+    }
+
+    void setLinearizationType(LinearizationType linearizationType)
+    { linearizationType_ = linearizationType; }
 
     const LinearizationType& getLinearizationType() const
     { return linearizationType_; }
@@ -1147,6 +1235,9 @@ private:
     bool separateSparseSourceTerms_ = false;
 
     FullDomain<> fullDomain_;
+
+    int exportIndex_;
+    int exportCount_;
 };
 } // namespace Opm
 

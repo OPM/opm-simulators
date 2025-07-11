@@ -313,6 +313,26 @@ public:
         return;
     }
 
+    void exportSystem(int idx, char *tag, const char *path="export")
+    {
+        return;
+    }
+
+    void exportVector(GlobalEqVector &x, const char *tag="", const char *name="export/x")
+    {
+        printf("n = %lu\n",x.dim());
+    }
+
+    void exportSparsity(const char *path='.')
+    {
+        return;
+    }
+
+    void exportNonzeros(const char *tag="", const char *path=".")
+    {
+        return;
+    }
+
 
     void setLinearizationType(LinearizationType linearizationType){
         linearizationType_ = linearizationType;
