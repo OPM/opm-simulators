@@ -442,11 +442,6 @@ updateGroupTargetReduction(const Group& group,
         if (!well_index.has_value())
             continue;
 
-        if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
-        {
-            continue;
-        }
-
         const Scalar efficiency = wellTmp.getEfficiencyFactor() *
                                   wellState[wellTmp.name()].efficiency_scaling_factor;
 
