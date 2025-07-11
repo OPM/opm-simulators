@@ -890,8 +890,8 @@ BOOST_AUTO_TEST_CASE(Sr_Is_Upper_Bound)
         BOOST_CHECK_CLOSE(values[4], 0.7f, 1.0e-6f);
     }
 
-    BOOST_CHECK_MESSAGE(check.isViolated(), "Test must be violated");
-    BOOST_CHECK_MESSAGE(check.isCritical(), "Test must be violated at critical level");
+    BOOST_CHECK_MESSAGE(! check.isViolated(), "Test must NOT be violated");
+    BOOST_CHECK_MESSAGE(! check.isCritical(), "Test must NOT be violated at critical level");
 }
 
 BOOST_AUTO_TEST_SUITE_END() // Displacing_Oil_in_Gas_Oil
@@ -1711,8 +1711,8 @@ BOOST_AUTO_TEST_CASE(Sr_Is_Upper_Bound)
         BOOST_CHECK_CLOSE(values[4], 0.7f, 1.0e-6f);
     }
 
-    BOOST_CHECK_MESSAGE(check.isViolated(), "Test must be violated");
-    BOOST_CHECK_MESSAGE(check.isCritical(), "Test must be violated at critical level");
+    BOOST_CHECK_MESSAGE(! check.isViolated(), "Test must NOT be violated");
+    BOOST_CHECK_MESSAGE(! check.isCritical(), "Test must NOT be violated at critical level");
 }
 
 BOOST_AUTO_TEST_SUITE_END() // Displacing_Oil_in_Oil_Water

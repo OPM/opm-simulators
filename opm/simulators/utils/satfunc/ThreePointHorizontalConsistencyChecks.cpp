@@ -31,7 +31,7 @@ template <typename Scalar>
 void Opm::Satfunc::PhaseChecks::ThreePointHorizontal::DisplacingOil_GO<Scalar>::
 testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
 {
-    // SGCR < 1-SOGCR-SWL < SGU
+    // SGCR < 1-SOGCR-SWL <= SGU
 
     this->swl_   = endPoints.Swl;
     this->sogcr_ = endPoints.Sogcr;
@@ -52,7 +52,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
     const auto sr = Scalar{1} - (this->sogcr_ + this->swl_);
 
     const auto low = ! (this->sgcr_ < sr);
-    const auto high = ! (sr < this->sgu_);
+    const auto high = sr > this->sgu_;
 
     if (low || high) {
         this->setViolated();
@@ -66,7 +66,7 @@ template <typename Scalar>
 void Opm::Satfunc::PhaseChecks::ThreePointHorizontal::DisplacingOil_OW<Scalar>::
 testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
 {
-    // SWCR < 1-SOWCR-SGL < SWU
+    // SWCR < 1-SOWCR-SGL <= SWU
 
     this->sgl_   = endPoints.Sgl;
     this->sowcr_ = endPoints.Sowcr;
@@ -87,7 +87,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
     const auto sr = Scalar{1} - (this->sowcr_ + this->sgl_);
 
     const auto low = ! (this->swcr_ < sr);
-    const auto high = ! (sr < this->swu_);
+    const auto high = sr > this->swu_;
 
     if (low || high) {
         this->setViolated();
