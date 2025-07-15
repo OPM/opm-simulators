@@ -376,8 +376,9 @@ namespace Opm
                         std::vector<Scalar> ipr_rates(3, 0.0);
                         this->computeRatesFromBhpAndIPR(well_state, prod_limit, ipr_rates);
                         const bool zero_ipr = std::all_of(ipr_rates.begin(), ipr_rates.end(), [](const Scalar x){ return std::abs(x) < 1.0e-15; });
-                        if (zero_ipr) {
-                            return false;
+                        if (zero_ipr) { // Cannot estimate a stable bhp from zero IPR, so no indication that it might be unsolvable
+                            this->openWell();
+                            return true;
                         }
                         this->adaptRatesForVFP(ipr_rates);
                         const auto stable_bhp = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, ipr_rates, this->getRefDensity(), summary_state);
@@ -607,6 +608,7 @@ namespace Opm
         bool is_operable = true;
         bool converged = true;
         auto& ws = well_state.well(this->index_of_well_);
+        const bool already_vfpexplicit = this->operability_status_.use_vfpexplicit;
         // if well is stopped, check if we can reopen
         if (this->wellIsStopped()) {
             this->openWell();
@@ -639,7 +641,7 @@ namespace Opm
             this->adaptRatesForVFP(rates);
             this->updateIPRImplicit(simulator, well_state, deferred_logger);
             bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state);
-            if (!is_stable) {
+            if (!is_stable && !already_vfpexplicit) {
                 // solution converged to an unstable point!
                 this->operability_status_.use_vfpexplicit = true;
                 auto bhp_stable = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
@@ -657,7 +659,7 @@ namespace Opm
             }
         }
 
-        if (!converged) {
+        if (!converged && !already_vfpexplicit) {
             // Well did not converge, switch to explicit fractions
             this->operability_status_.use_vfpexplicit = true;
             this->openWell();
@@ -1129,15 +1131,25 @@ namespace Opm
                           DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
+        constexpr bool fallback_to_classical_operability_check = false;
+
         if (this->param_.local_well_solver_control_switching_) {
             const bool success = updateWellOperabilityFromWellEq(simulator, well_state, deferred_logger);
             if (success) {
                 return;
-            } else {
-                deferred_logger.debug("Operability check using well equations did not converge for well "
-                                      + this->name() + ", reverting to classical approach." );
             }
+
+            if (!fallback_to_classical_operability_check) {
+                deferred_logger.debug(fmt::format("Well {} did not converge and is considered inoperable.", this->name());
+                this->operability_status_.operable_under_only_bhp_limit = false;
+                this->operability_status_.obey_thp_limit_under_bhp_limit = false;
+                this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+                this->operability_status_.obey_bhp_limit_with_thp_limit = false;
+            }
+            return;
         }
+
+        deferred_logger.debug(fmt::format("Operability check using well equations did not converge for well {}, reverting to classical approach." this->name());
         this->operability_status_.resetOperability();
 
         bool thp_controlled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::THP:

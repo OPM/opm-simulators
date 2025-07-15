@@ -78,6 +78,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     local_well_solver_control_switching_ = Parameters::Get<Parameters::LocalWellSolveControlSwitching>();
     use_implicit_ipr_ = Parameters::Get<Parameters::UseImplicitIpr>();
     check_group_constraints_inner_well_iterations_ = Parameters::Get<Parameters::CheckGroupConstraintsInnerWellIterations>();
+    max_well_inner_iter_stop_count_ = Parameters::Get<Parameters::MaxWellInnerIterStopCount>();
     nonlinear_solver_ = Parameters::Get<Parameters::NonlinearSolver>();
     const auto approach = Parameters::Get<Parameters::LocalSolveApproach>();
     if (approach == "jacobi") {
@@ -225,6 +226,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Compute implict IPR for stability checks and stable solution search");
     Parameters::Register<Parameters::CheckGroupConstraintsInnerWellIterations>
         ("Allow checking of group constraints during inner well iterations");        
+    Parameters::Register<Parameters::MaxWellInnerIterStopCount>
+        ("Consider well iterations as not converged if open/stop oscillations exceed this number");
     Parameters::Register<Parameters::NetworkMaxStrictOuterIterations>
         ("Maximum outer iterations in network solver before relaxing tolerance");
     Parameters::Register<Parameters::NetworkMaxOuterIterations>
