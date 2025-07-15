@@ -324,11 +324,12 @@ namespace Opm
             }
         }
 
-        deferred_logger.debug(fmt::format("Cost in iterations of finding well potential for well {}: {}", this->name(), debug_cost_counter_))
+        deferred_logger.debug(fmt::format("Cost in iterations of finding well potential for well {}: {}", this->name(), debug_cost_counter_));
         if (check_potentials) {
             this->checkNegativeWellPotentials(well_potentials,
                                             this->param_.check_well_operability_,
                                             deferred_logger);
+        }
     }
 
 

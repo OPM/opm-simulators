@@ -1140,7 +1140,7 @@ namespace Opm
             }
 
             if (!fallback_to_classical_operability_check) {
-                deferred_logger.debug(fmt::format("Well {} did not converge and is considered inoperable.", this->name());
+                deferred_logger.debug(fmt::format("Well {} did not converge and is considered inoperable.", this->name()));
                 this->operability_status_.operable_under_only_bhp_limit = false;
                 this->operability_status_.obey_thp_limit_under_bhp_limit = false;
                 this->operability_status_.can_obtain_bhp_with_thp_limit = false;
@@ -1149,7 +1149,7 @@ namespace Opm
             return;
         }
 
-        deferred_logger.debug(fmt::format("Operability check using well equations did not converge for well {}, reverting to classical approach." this->name());
+        deferred_logger.debug(fmt::format("Operability check using well equations did not converge for well {}, reverting to classical approach.", this->name()));
         this->operability_status_.resetOperability();
 
         bool thp_controlled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::THP:
