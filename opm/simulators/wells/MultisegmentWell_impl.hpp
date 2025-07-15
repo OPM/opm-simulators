@@ -299,29 +299,37 @@ namespace Opm
 
         debug_cost_counter_ = 0;
         bool converged_implicit = false;
+        bool check_potentials = true;
         if (this->param_.local_well_solver_control_switching_) {
             converged_implicit = computeWellPotentialsImplicit(simulator, well_state, well_potentials, deferred_logger);
-            if (!converged_implicit) {
-                deferred_logger.debug("Implicit potential calculations failed for well "
-                                       + this->name() + ",  reverting to original aproach.");
-            }
         }
-        if (!converged_implicit) {
-            // does the well have a THP related constraint?
-            const auto& summaryState = simulator.vanguard().summaryState();
-            if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
-                computeWellRatesAtBhpLimit(simulator, well_potentials, deferred_logger);
-            } else {
-                well_potentials = computeWellPotentialWithTHP(
-                    well_state, simulator, deferred_logger);
-            }
-        }
-        deferred_logger.debug("Cost in iterations of finding well potential for well "
-                              + this->name() + ": " + std::to_string(debug_cost_counter_));
 
-        this->checkNegativeWellPotentials(well_potentials,
-                                          this->param_.check_well_operability_,
-                                          deferred_logger);
+        if (!converged_implicit) {
+            if (this->isInjector() || (false && this->changed_to_open_this_step_ && this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger))) {
+                deferred_logger.debug("Implicit potential calculations failed for well "
+                                        + this->name() + ",  reverting to original aproach.");
+                // does the well have a THP related constraint?
+                const auto& summaryState = simulator.vanguard().summaryState();
+                if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
+                    computeWellRatesAtBhpLimit(simulator, well_potentials, deferred_logger);
+                } else {
+                    well_potentials = computeWellPotentialWithTHP(
+                        well_state, simulator, deferred_logger);
+                }
+            } else {
+                deferred_logger.debug(fmt::format("Implicit potential calculations failed for well {}, setting potentials negative.", this->name()));
+                well_potentials.assign(this->number_of_phases_, -1.0e-12);
+                this->operability_status_.has_negative_potentials = true;
+                check_potentials = false;
+            }
+        }
+
+        deferred_logger.debug(fmt::format("Cost in iterations of finding well potential for well {}: {}", this->name(), debug_cost_counter_));
+        if (check_potentials) {
+            this->checkNegativeWellPotentials(well_potentials,
+                                            this->param_.check_well_operability_,
+                                            deferred_logger);
+        }
     }
 
 
@@ -528,6 +536,7 @@ namespace Opm
         // TODO: check if we can avoid taking multiple copies. Call from updateWellPotentials 
         // is allready a copy, but not from other calls. 
         MultisegmentWell<TypeTag> well_copy(*this);
+        well_copy.operability_status_.use_vfpexplicit = false;
         well_copy.debug_cost_counter_ = 0;
 
         // store a copy of the well state, we don't want to update the real well state
@@ -1635,9 +1644,16 @@ namespace Opm
         const int min_its_after_switch = 3;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
+
+        // Avoid open/stop oscillations by stopping well after it has stopped 'max_stop_count' times
+        const int max_stop_count = this->param_.max_well_inner_iter_stop_count_;
+        int stop_count = 0;
+
         // if we fail to solve eqs, we reset status/operability before leaving
         const auto well_status_orig = this->wellStatus_;
         const auto operability_orig = this->operability_status_;
+        auto well_status_cur = well_status_orig;
+        int status_switch_count = 0;
         // don't allow opening wells that are stopped from schedule or has a stopped well state
         const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
                                  well_state.well(this->index_of_well_).status == WellStatus::OPEN;
@@ -1651,15 +1667,46 @@ namespace Opm
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             ++its_since_last_switch;
+            const auto stat0 = WellStatus2String(this->wellStatus_);
+            const auto ctrl0 = this->isProducer() ? WellProducerCMode2String(well_state.well(this->indexOfWell()).production_cmode)
+                                                    : WellInjectorCMode2String(well_state.well(this->indexOfWell()).injection_cmode);
+
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
-                bool changed = this->updateWellControlAndStatusLocalIteration(simulator, well_state, group_state,
+                bool changed = this->updateWellControlAndStatusLocalIteration(simulator, it, well_state, group_state,
                                                                               inj_controls, prod_controls, wqTotal,
                                                                               deferred_logger, fixed_control,
                                                                               fixed_status);
                 if (changed) {
                     its_since_last_switch = 0;
                     ++switch_count;
+                    if (well_status_cur != this->wellStatus_) {
+                        well_status_cur = this->wellStatus_;
+                        status_switch_count++;
+                        const auto& ws = well_state.well(this->indexOfWell());
+                        const bool isPressureControlled = this->isProducer() ?
+                                                            (ws.production_cmode == Well::ProducerCMode::BHP || ws.production_cmode == Well::ProducerCMode::THP) :
+                                                            (ws.injection_cmode == Well::InjectorCMode::BHP || ws.injection_cmode == Well::InjectorCMode::THP);
+                        if (this->wellIsStopped() && isPressureControlled) {
+                            stop_count++;
+                        }
+                    }
+                    const auto stat1 = WellStatus2String(this->wellStatus_);
+                    const auto ctrl1 = this->isProducer() ? WellProducerCMode2String(well_state.well(this->indexOfWell()).production_cmode)
+                                                    : WellInjectorCMode2String(well_state.well(this->indexOfWell()).injection_cmode);
+                    deferred_logger.debug(fmt::format(" WELL {} iteration {}: Change from [{}, {}] to [{}, {}]",
+                                                        this->name(), it, stat0, ctrl0, stat1, ctrl1),
+                                            /*debug_verbosity_level*/ 4);
+
+                    // Exit early if oscillating between open/stop, but not for fixed control (typically potential calculations)
+                    if (!fixed_control && stop_count >= max_stop_count) {
+                        this->stopWell();
+                        deferred_logger.debug(fmt::format("Well {} iteration {}: Stopping well due to open/stop oscillations (converged = {})",
+                                                            this->name(), it, converged),
+                                                /*debug_verbosity_level*/ 4);
+                        converged = false; // Define as not converged
+                        break;
+                    }
                 }
                 if (!changed && final_check) {
                     break;
@@ -1751,7 +1798,7 @@ namespace Opm
             this->wellStatus_ = well_status_orig;
             this->operability_status_ = operability_orig;            
             const std::string message = fmt::format("   Well {} did not converge in {} inner iterations ("
-                                                    "{} control/status switches).", this->name(), it, switch_count);
+                                                    "{} switches, {} status changes).", this->name(), it, switch_count, status_switch_count);
             deferred_logger.debug(message);
             this->primary_variables_.outputLowLimitPressureSegments(deferred_logger);
         }

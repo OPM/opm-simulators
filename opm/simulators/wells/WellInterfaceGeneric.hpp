@@ -289,7 +289,7 @@ protected:
         //thp limit violated but not switched
         mutable bool thp_limit_violated_but_not_switched = false;
 
-        bool use_vfpexplicit = false;
+        mutable bool use_vfpexplicit = false;
     };
 
     OperabilityStatus operability_status_;

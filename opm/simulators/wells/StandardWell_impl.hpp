@@ -1599,6 +1599,7 @@ namespace Opm
         // TODO: check if we can avoid taking multiple copies. Call from updateWellPotentials
         // is allready a copy, but not from other calls.
         StandardWell<TypeTag> well_copy(*this);
+        well_copy.operability_status_.use_vfpexplicit = false;
 
         // store a copy of the well state, we don't want to update the real well state
         WellState<Scalar> well_state_copy = well_state;
@@ -1662,6 +1663,7 @@ namespace Opm
             const EvalWell rate = well_copy.primary_variables_.getQs(Indices::contiSolventEqIdx);
             well_potentials[gas_pos] += rate.value();
         }
+
         return converged;
     }
 
@@ -1728,6 +1730,7 @@ namespace Opm
         }
 
         bool converged_implicit = false;
+        bool check_potentials = true;
         // for newly opened wells we dont compute the potentials implicit
         // group controlled wells with defaulted guiderates will have zero targets as
         // the potentials are used to compute the well fractions.
@@ -1735,35 +1738,44 @@ namespace Opm
             converged_implicit = computeWellPotentialsImplicit(simulator, well_state, well_potentials, deferred_logger);
         }
         if (!converged_implicit) {
-            // does the well have a THP related constraint?
-            const auto& summaryState = simulator.vanguard().summaryState();
-            if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
-                // get the bhp value based on the bhp constraints
-                Scalar bhp = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summaryState);
+            if (this->isInjector() || (this->changed_to_open_this_step_ && this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger))) {
+                // does the well have a THP related constraint?
+                const auto& summaryState = simulator.vanguard().summaryState();
+                if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
+                    // get the bhp value based on the bhp constraints
+                    Scalar bhp = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summaryState);
 
-                // In some very special cases the bhp pressure target are
-                // temporary violated. This may lead to too small or negative potentials
-                // that could lead to premature shutting of wells.
-                // As a remedy the bhp that gives the largest potential is used.
-                // For converged cases, ws.bhp <=bhp for injectors and ws.bhp >= bhp,
-                // and the potentials will be computed using the limit as expected.
-                const auto& ws = well_state.well(this->index_of_well_);
-                if (this->isInjector())
-                    bhp = std::max(ws.bhp, bhp);
-                else
-                    bhp = std::min(ws.bhp, bhp);
+                    // In some very special cases the bhp pressure target are
+                    // temporary violated. This may lead to too small or negative potentials
+                    // that could lead to premature shutting of wells.
+                    // As a remedy the bhp that gives the largest potential is used.
+                    // For converged cases, ws.bhp <=bhp for injectors and ws.bhp >= bhp,
+                    // and the potentials will be computed using the limit as expected.
+                    const auto& ws = well_state.well(this->index_of_well_);
+                    if (this->isInjector())
+                        bhp = std::max(ws.bhp, bhp);
+                    else
+                        bhp = std::min(ws.bhp, bhp);
 
-                assert(std::abs(bhp) != std::numeric_limits<Scalar>::max());
-                computeWellRatesWithBhpIterations(simulator, bhp, well_potentials, deferred_logger);
+                    assert(std::abs(bhp) != std::numeric_limits<Scalar>::max());
+                    computeWellRatesWithBhpIterations(simulator, bhp, well_potentials, deferred_logger);
+                } else {
+                    // the well has a THP related constraint
+                    well_potentials = computeWellPotentialWithTHP(simulator, deferred_logger, well_state);
+                }
             } else {
-                // the well has a THP related constraint
-                well_potentials = computeWellPotentialWithTHP(simulator, deferred_logger, well_state);
+                deferred_logger.debug(fmt::format("Implicit potential calculations failed for well {}, setting potentials negative.", this->name()));
+                well_potentials.assign(this->number_of_phases_, -1.0e-12);
+                this->operability_status_.has_negative_potentials = true;
+                check_potentials = false;
             }
         }
 
-        this->checkNegativeWellPotentials(well_potentials,
-                                          this->param_.check_well_operability_,
-                                          deferred_logger);
+        if (check_potentials) {
+            this->checkNegativeWellPotentials(well_potentials,
+                                            this->param_.check_well_operability_,
+                                            deferred_logger);
+        }
     }
 
 
@@ -2387,6 +2399,11 @@ namespace Opm
         constexpr int min_its_after_switch = 4;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
+
+        // Avoid open/stop oscillations by stopping well after it has stopped 'max_stop_count' times
+        const int max_stop_count = this->param_.max_well_inner_iter_stop_count_;
+        int stop_count = 0;
+
         // if we fail to solve eqs, we reset status/operability before leaving
         const auto well_status_orig = this->wellStatus_;
         const auto operability_orig = this->operability_status_;
@@ -2407,9 +2424,13 @@ namespace Opm
         this->operability_status_.solvable = true;
         do {
             its_since_last_switch++;
+            const auto stat0 = WellStatus2String(this->wellStatus_);
+            const auto ctrl0 = this->isProducer() ? WellProducerCMode2String(well_state.well(this->indexOfWell()).production_cmode)
+                                                    : WellInjectorCMode2String(well_state.well(this->indexOfWell()).injection_cmode);
+
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const Scalar wqTotal = this->primary_variables_.eval(WQTotal).value();
-                changed = this->updateWellControlAndStatusLocalIteration(simulator, well_state, group_state,
+                changed = this->updateWellControlAndStatusLocalIteration(simulator, it, well_state, group_state,
                                                                          inj_controls, prod_controls, wqTotal,
                                                                          deferred_logger, fixed_control, fixed_status);
                 if (changed){
@@ -2418,7 +2439,32 @@ namespace Opm
                     if (well_status_cur != this->wellStatus_) {
                         well_status_cur = this->wellStatus_;
                         status_switch_count++;
+                        const auto& ws = well_state.well(this->indexOfWell());
+                        const bool isPressureControlled = this->isProducer() ?
+                                    (ws.production_cmode == Well::ProducerCMode::BHP || ws.production_cmode == Well::ProducerCMode::THP) :
+                                    (ws.injection_cmode == Well::InjectorCMode::BHP || ws.injection_cmode == Well::InjectorCMode::THP);
+
+                        if (this->wellIsStopped() && isPressureControlled) {
+                            stop_count++;
+                        }
                     }
+                    const auto stat1 = WellStatus2String(this->wellStatus_);
+                    const auto ctrl1 = this->isProducer() ? WellProducerCMode2String(well_state.well(this->indexOfWell()).production_cmode)
+                                                    : WellInjectorCMode2String(well_state.well(this->indexOfWell()).injection_cmode);
+                    deferred_logger.debug(fmt::format(" WELL {} iteration {}: Change from [{}, {}] to [{}, {}]",
+                                                        this->name(), it, stat0, ctrl0, stat1, ctrl1),
+                                            /*debug_verbosity_level*/ 4);
+
+                    // Exit early if oscillating between open/stop, but not for fixed control (typically potential calculations)
+                    if (!fixed_control && stop_count >= max_stop_count) {
+                        this->stopWell();
+                        deferred_logger.debug(fmt::format("Well {} iteration {}: Stopping well due to open/stop oscillations (converged = {})",
+                                                            this->name(), it, converged),
+                                                /*debug_verbosity_level*/ 4);
+                        converged = false; // Define as not converged
+                        break;
+                    }
+
                 }
                 if (!changed && final_check) {
                     break;

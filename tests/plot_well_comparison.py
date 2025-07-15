@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Generates a PDF with plots of all summary curves from a reference
 # case and a 'new' simulation.
