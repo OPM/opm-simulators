@@ -875,7 +875,7 @@ public:
      * or DRVDT are active. Nor if the porosity is changes between timesteps
      * using a pore volume multiplier (i.e., poreVolumeMultiplier() != 1.0)
      */
-    bool recycleFirstIterationStorage() const
+    bool recycleFirstIterationStorage() const override
     {
         int episodeIdx = this->episodeIndex();
         return !this->mixControls_.drsdtActive(episodeIdx) &&

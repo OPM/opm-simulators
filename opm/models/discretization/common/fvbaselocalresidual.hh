@@ -542,18 +542,11 @@ protected:
             if (elemCtx.enableStorageCache()) {
                 const auto& model = elemCtx.model();
                 const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                if (model.newtonMethod().numIterations() == 0 &&
-                    !elemCtx.haveStashedIntensiveQuantities())
-                {
-                    if (!elemCtx.problem().recycleFirstIterationStorage()) {
-                        // we re-calculate the storage term for the solution of the
-                        // previous time step from scratch instead of using the one of
-                        // the first iteration of the current time step.
-                        tmp2 = 0.0;
-                        elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/1);
-                        asImp_().computeStorage(tmp2, elemCtx,  dofIdx, /*timeIdx=*/1);
-                    }
-                    else {
+                for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                    tmp2[eqIdx] = Toolbox::value(tmp[eqIdx]);
+                }
+                if (elemCtx.problem().recycleFirstIterationStorage()) {
+                    if (model.newtonMethod().numIterations() == 0) {
                         // if the storage term is cached and we're in the first iteration
                         // of the time step, use the storage term of the first iteration
                         // as the one as the solution of the last time step (this assumes
@@ -561,22 +554,18 @@ protected:
                         // step is the same as the solution at the beginning of the time
                         // step. This is usually true, but some fancy preprocessing
                         // scheme might invalidate that assumption.)
-                        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-                            tmp2[eqIdx] = Toolbox::value(tmp[eqIdx]);
-                        }
+                        Valgrind::CheckDefined(tmp2);
+                        model.updateCachedStorage(globalDofIdx, /*timeIdx=*/1, tmp2);
                     }
-
-                    Valgrind::CheckDefined(tmp2);
-
-                    model.updateCachedStorage(globalDofIdx, /*timeIdx=*/1, tmp2);
+                    else {
+                        model.updateCachedStorage(globalDofIdx, /*timeIdx=*/0, tmp2);
+                    }
                 }
-                else {
-                    // if the mass storage at the beginning of the time step is not cached,
-                    // if the storage term is cached and we're not looking at the first
-                    // iteration of the time step, we take the cached data.
-                    tmp2 = model.cachedStorage(globalDofIdx, /*timeIdx=*/1);
-                    Valgrind::CheckDefined(tmp2);
-                }
+                // if the storage term at the beginning of the time step is cached
+                // from the last time step or we're not looking at the first
+                // iteration of the time step, we take the cached data.
+                tmp2 = model.cachedStorage(globalDofIdx, /*timeIdx=*/1);
+                Valgrind::CheckDefined(tmp2);
             }
             else {
                 // if the mass storage at the beginning of the time step is not cached,
