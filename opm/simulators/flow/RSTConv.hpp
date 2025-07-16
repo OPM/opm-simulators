@@ -60,9 +60,22 @@ public:
     template<class ResidualVector>
     void update(const ResidualVector& resid);
 
-    //! \brief Obtain a const-ref to the accumulated data.
+    //! \brief Adds the CONV_NEW output.
+    void updateNewton(const std::vector<int>& convNewt);
+
+    //! \brief Obtain a const-ref to the accumulated data (only used for unit testing).
     const std::vector<std::vector<int>>& getData() const
     { return cnv_X_; }
+
+    //! \brief Obtain a const-ref to the CONV_NEW (only used for unit testing).
+    const std::vector<int>& getConvNew() const
+    { return conv_new_; }
+
+    //! \brief Check if CONV is required.
+    bool hasConv() const;
+
+    //! \brief CONV_NEW is restarted at iteration 0.
+    void prepareConv();
 
 private:
     //! \brief Gathers and accumulates results to the CONV arrays.
@@ -77,6 +90,7 @@ private:
     LocalToGlobalCellFunc globalCell_; //!< Global cell indices
     Parallel::Communication comm_; //!< Communicator
     std::vector<std::vector<int>> cnv_X_{}; //!< Counts of worst cells for RPTRST CONV
+    std::vector<int> conv_new_{}; //!< Number of Newtons by each cell
     std::array<int,6> compIdx_{}; //!< Component indices
     int N_ = 0; //!< Number of cells to consider
 };

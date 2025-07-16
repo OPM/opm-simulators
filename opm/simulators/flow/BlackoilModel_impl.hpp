@@ -894,6 +894,9 @@ getReservoirConvergence(const double reportTime,
         }
     }
 
+    // Compute the Newton convergence per cell.
+    this->convergencePerCell(B_avg, dt, tol_cnv, tol_cnv_energy, iteration);
+
     // Output of residuals.
     if (this->terminal_output_) {
         // Only rank 0 does print to std::cout
@@ -934,6 +937,53 @@ getReservoirConvergence(const double reportTime,
     }
 
     return report;
+}
+
+template <class TypeTag>
+void
+BlackoilModel<TypeTag>::
+convergencePerCell(const std::vector<Scalar>& B_avg,
+                   const double dt,
+                   const double tol_cnv,
+                   const double tol_cnv_energy,
+                   const int iteration)
+{
+    auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
+    if (!rst_conv.hasConv()) {
+        return;
+    }
+
+    if (iteration == 0) {
+        rst_conv.prepareConv();
+    }
+
+    const auto& residual = simulator_.model().linearizer().residual();
+    const auto& gridView = this->simulator().gridView();
+    const IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
+    ElementContext elemCtx(this->simulator());
+    std::vector<int> convNewt(residual.size(), 0);
+    OPM_BEGIN_PARALLEL_TRY_CATCH();
+    unsigned idx = 0;
+    const int numComp = B_avg.size();
+    for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+        elemCtx.updatePrimaryStencil(elem);
+
+        const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+        const auto pvValue = simulator_.problem().referencePorosity(cell_idx, /*timeIdx=*/0) *
+                             simulator_.model().dofTotalVolume(cell_idx);
+        for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+            const auto tol = (has_energy_ && compIdx == contiEnergyEqIdx) ? tol_cnv_energy : tol_cnv;
+            const Scalar cnv = std::abs(B_avg[compIdx] * residual[cell_idx][compIdx]) * dt / pvValue;
+            if (std::isnan(cnv) || cnv > maxResidualAllowed() || cnv < 0.0 || cnv > tol) {
+                convNewt[idx] = 1;
+                break;
+            }
+        }
+        ++idx;
+    }
+    OPM_END_PARALLEL_TRY_CATCH("BlackoilModel::convergencePerCell() failed: ",
+                               this->grid_.comm());
+    rst_conv.updateNewton(convNewt);
 }
 
 template <class TypeTag>
