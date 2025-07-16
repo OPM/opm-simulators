@@ -188,9 +188,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
   opm/simulators/utils/PressureAverage.cpp
   opm/simulators/utils/SerializationPackers.cpp
-  opm/simulators/utils/SymmTensor.cpp
   opm/simulators/utils/UnsupportedFlowKeywords.cpp
-  opm/simulators/utils/VoigtArray.cpp
   opm/simulators/utils/compressPartition.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
   opm/simulators/utils/phaseUsageFromDeck.cpp
@@ -460,10 +458,8 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_RunningStatistics.cpp
   tests/test_rstconv.cpp
   tests/test_stoppedwells.cpp
-  tests/test_SymmTensor.cpp
   tests/test_timer.cpp
   tests/test_vfpproperties.cpp
-  tests/test_VoigtArray.cpp
   tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
   tests/test_wellstate.cpp
@@ -1061,8 +1057,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/ParallelSerialization.hpp
   opm/simulators/utils/readDeck.hpp
   opm/simulators/utils/satfunc/RelpermDiagnostics.hpp
-  opm/simulators/utils/SymmTensor.hpp
-  opm/simulators/utils/VoigtArray.hpp
   opm/simulators/wells/ALQState.hpp
   opm/simulators/wells/BlackoilWellModel.hpp
   opm/simulators/wells/BlackoilWellModel_impl.hpp
