@@ -42,6 +42,7 @@ void RSTConv::init(const std::size_t numCells,
     if (kw == rst_config.keywords.end()) {
         N_ = 0;
         cnv_X_.clear();
+        conv_new_.clear();
         return;
     }
 
@@ -54,6 +55,7 @@ void RSTConv::init(const std::size_t numCells,
             cnv_X_[i].resize(numCells);
         }
     }
+    conv_new_.resize(numCells, 1);
 }
 
 void RSTConv::outputRestart(data::Solution& sol)
@@ -69,6 +71,42 @@ void RSTConv::outputRestart(data::Solution& sol)
                           }
                           ++i;
                       });
+        sol.insert("CONV_NEW", std::move(conv_new_), data::TargetType::RESTART_SOLUTION);
+    }
+}
+
+bool RSTConv::hasConv() const
+{
+    return !conv_new_.empty();
+}
+
+void RSTConv::prepareConv()
+{
+    std::fill(conv_new_.begin(), conv_new_.end(), 1);
+}
+
+void RSTConv::updateNewton(const std::vector<int>& convNewt)
+{
+    const std::size_t numGloCells = conv_new_.size();
+
+    if (comm_.size() == 1) {
+        for (std::size_t n = 0; n < numGloCells; ++n) {
+            conv_new_[n] += convNewt[n];
+        }
+        return;
+    }
+
+    std::vector<int> values(numGloCells, 0);
+    const std::size_t numLocCells = convNewt.size();
+
+    for (std::size_t i = 0; i < numLocCells; ++i) {
+        values[globalCell_(i)] = convNewt[i];
+    }
+
+    comm_.sum(values.data(), numGloCells);
+
+    for (std::size_t n = 0; n < numGloCells; ++n) {
+        conv_new_[n] += values[n];
     }
 }
 
