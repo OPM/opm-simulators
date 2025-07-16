@@ -28,7 +28,7 @@
 
 #include <dune/common/fvector.hh>
 
-#include <opm/simulators/utils/VoigtArray.hpp>
+#include <opm/common/utility/VoigtArray.hpp>
 
 #include <array>
 #include <cstddef>
