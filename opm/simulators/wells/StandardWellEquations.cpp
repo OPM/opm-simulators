@@ -31,6 +31,7 @@
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <algorithm>
@@ -333,10 +334,17 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             nperf += 1;
         }
     }
+
+    // average the cell_weights across the ranks
+    const auto& comm = well.parallelWellInfo().communication();
+    if (comm.size()>1) {
+        nperf = comm.sum(nperf);
+        cell_weights = comm.sum(cell_weights);
+    }
     if (nperf != 0)
         cell_weights /= nperf;
     else {
-        // duneC_.size==0, which can happen e.g. if a well has no active perforations on this rank.
+        // duneC_.size==0, which can happen if a well has no active perforations on any rank.
         // Add positive weight to diagonal to regularize Jacobian (other row entries are 0).
         // Row's variable has no observable effect, since there are no perforations.
         cell_weights = 1.;
