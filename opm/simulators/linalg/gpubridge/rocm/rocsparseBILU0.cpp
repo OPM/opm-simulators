@@ -54,19 +54,19 @@ template <class Scalar, unsigned int block_size>
 rocsparseBILU0<Scalar, block_size>::
 ~rocsparseBILU0()
 {
-    HIP_CHECK(hipFree(d_t));
-    HIP_CHECK(hipFree(d_Mrows));
-    HIP_CHECK(hipFree(d_Mcols));
-    HIP_CHECK(hipFree(d_Mvals));
-    HIP_CHECK(hipFree(d_buffer));
+    HIP_CHECK_NOTHROW(hipFree(d_t));
+    HIP_CHECK_NOTHROW(hipFree(d_Mrows));
+    HIP_CHECK_NOTHROW(hipFree(d_Mcols));
+    HIP_CHECK_NOTHROW(hipFree(d_Mvals));
+    HIP_CHECK_NOTHROW(hipFree(d_buffer));
 
-    ROCSPARSE_CHECK(rocsparse_destroy_mat_descr(descr_M));
-    ROCSPARSE_CHECK(rocsparse_destroy_mat_descr(descr_L));
-    ROCSPARSE_CHECK(rocsparse_destroy_mat_descr(descr_U));
+    ROCSPARSE_CHECK_NOTHROW(rocsparse_destroy_mat_descr(descr_M));
+    ROCSPARSE_CHECK_NOTHROW(rocsparse_destroy_mat_descr(descr_L));
+    ROCSPARSE_CHECK_NOTHROW(rocsparse_destroy_mat_descr(descr_U));
 
-    ROCSPARSE_CHECK(rocsparse_destroy_mat_info(ilu_info));
+    ROCSPARSE_CHECK_NOTHROW(rocsparse_destroy_mat_info(ilu_info));
 #if HIP_VERSION >= 50400000
-    ROCSPARSE_CHECK(rocsparse_destroy_mat_info(spmv_info));
+    ROCSPARSE_CHECK_NOTHROW(rocsparse_destroy_mat_info(spmv_info));
 #endif
 }
 
@@ -403,7 +403,7 @@ copy_values_to_gpu(Scalar *h_vals, int *h_rows, int *h_cols, bool reuse)
 // don't copy rowpointers and colindices, they stay the same
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-update_system_on_gpu(Scalar* vals, Scalar *d_Avals) 
+update_system_on_gpu([[maybe_unused]]Scalar* vals, Scalar *d_Avals) 
 {
     bool use_multithreading = true;
 

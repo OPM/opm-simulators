@@ -5,6 +5,7 @@
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_version.h>
 #include <sstream>
+#include <iostream>
 
 #define HIP_CHECK(STAT)                                  \
     do {                                                 \
@@ -43,6 +44,24 @@
     } while(0)
 #endif
 
+#define HIP_CHECK_NOTHROW(STAT)                          \
+    do {                                                 \
+        const hipError_t stat = (STAT);                  \
+        if(stat != hipSuccess)                           \
+        {                                                \
+            std::cerr << "rocsparseSolverBackend::hip error: " << hipGetErrorString(stat) << std::endl;        \
+        }                                                \
+    } while(0)
+
+#define ROCSPARSE_CHECK_NOTHROW(STAT)                            \
+    do {                                                 \
+        const rocsparse_status stat = (STAT);            \
+        if(stat != rocsparse_status_success)             \
+        {                                                \
+            std::cerr << "rocsparseSolverBackend::rocsparse error: " << stat << std::endl;                        \
+        }                                                \
+    } while(0)
+    
 namespace Opm::Accelerator {
 
 unsigned int ceilDivision(const unsigned int A,
