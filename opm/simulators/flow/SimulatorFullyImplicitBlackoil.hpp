@@ -159,11 +159,13 @@ public:
                 { return std::string_view { compNames.name(compIdx) }; }
             };
 
-            this->convergence_output_.
-                startThread(this->simulator_.vanguard().eclState(),
-                            Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
-                            R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
-                            getPhaseName);
+            if (!simulator_.vanguard().eclState().getIOConfig().initOnly()) {
+                this->convergence_output_.
+                    startThread(this->simulator_.vanguard().eclState(),
+                                Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
+                                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
+                                getPhaseName);
+            }
         }
     }
 
