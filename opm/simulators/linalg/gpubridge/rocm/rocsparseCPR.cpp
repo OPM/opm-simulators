@@ -121,7 +121,7 @@ analyze_matrix(BlockedMatrix<Scalar> *mat_,
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseCPR<Scalar, block_size>::
-create_preconditioner(BlockedMatrix<Scalar> *mat_,
+create_preconditioner([[maybe_unused]] BlockedMatrix<Scalar> *mat_,
                       BlockedMatrix<Scalar> *jacMat_)
 {
     return create_preconditioner(jacMat_);
@@ -142,7 +142,7 @@ create_preconditioner(BlockedMatrix<Scalar> *mat_) {
         std::shared_ptr<rocsparseBILU0<Scalar,1>> smoother; 
          
         //convert Matrix to BlockMatrix
-        auto mat = std::make_shared<BlockedMatrix<Scalar>>(this->Amatrices[i].N, this->Amatrices[i].nnzs, 1, &(this->Amatrices[i].nnzValues[0]), &(this->Amatrices[i].colIndices[0]), &(this->Amatrices[i].rowPointers[0]));   
+        auto levelMat = std::make_shared<BlockedMatrix<Scalar>>(this->Amatrices[i].N, this->Amatrices[i].nnzs, 1, &(this->Amatrices[i].nnzValues[0]), &(this->Amatrices[i].colIndices[0]), &(this->Amatrices[i].rowPointers[0]));   
 
         if(amgcreated)
         {
@@ -150,9 +150,9 @@ create_preconditioner(BlockedMatrix<Scalar> *mat_) {
             smootherilu0s.push_back(smoother);
             smoother->set_context(this->handle, this->blas_handle, this->dir, this->operation, this->stream);
              
-            smoother->initialize(mat,mat,0,0); 
+            smoother->initialize(levelMat,levelMat,0,0); 
             smoother->copy_values_to_gpu(&(this->Amatrices[i].nnzValues[0]), &(this->Amatrices[i].rowPointers[0]), &(this->Amatrices[i].colIndices[0]), false);
-            smoother->analyze_matrix(mat.get());
+            smoother->analyze_matrix(levelMat.get());
          }
          else {
              smoother = smootherilu0s[i];
@@ -161,7 +161,7 @@ create_preconditioner(BlockedMatrix<Scalar> *mat_) {
              smoother->analyze_matrix();
          }
 
-         smoother->create_preconditioner(mat.get());
+         smoother->create_preconditioner(levelMat.get());
      }
 
      auto init_func = std::bind(&rocsparseCPR::init_rocm_buffers_fineMatrix, this);
@@ -271,7 +271,6 @@ amg_cycle_gpu(const int level,
               [[maybe_unused]] WellContributions<Scalar>& wellContribs)
 {
     Scalar one  = 1.0;
-    Scalar mone = -1.0;
     Scalar zero = 0.0;
     RocmMatrix<Scalar> *A = &d_Amatrices[level];
     RocmMatrix<Scalar> *R = &d_Rmatrices[level];
@@ -304,14 +303,11 @@ amg_cycle_gpu(const int level,
     else
         S = smootherilu0s[level];
 
-    int Nnext = d_Amatrices[level+1].Nb;
-
     RocmVector<Scalar>& t = d_t[level]; // this is y hierarchy ==> this vector needs to be the updated
     RocmVector<Scalar>& f = d_f[level]; // this is x=lhs hierarchy starting from the first level
     RocmVector<Scalar>& u = d_u[level]; // u was 0-initialized earlier : this is y=rhs from the first level
 
     // presmooth
-    Scalar jacobi_damping = 1;//OLD OPM VALUE: 0.65; // default value in amgcl: 0.72 , BUT IN OPM is NOW 1
     for (unsigned i = 0; i < this->num_pre_smooth_steps; ++i){
         S->apply(y, x, wellContribs);
         
@@ -421,7 +417,6 @@ apply(const Scalar& y,
 {
     Scalar one  = 1.0;
     Scalar mone = -1.0;
-    Scalar zero = 0.0;
     rocsparse_mat_descr descr_mat;
     
     HIP_CHECK(hipMemsetAsync(&x, 0,  sizeof(Scalar) *N, this->stream));

@@ -53,9 +53,9 @@ RocmMatrix(int Nb_,
 template<class Scalar>
 RocmMatrix<Scalar>::
 ~RocmMatrix() {
-    HIP_CHECK(hipFree(nnzValues));
-    HIP_CHECK(hipFree(colIndices));
-    HIP_CHECK(hipFree(rowPointers));
+    HIP_CHECK_NOTHROW(hipFree(nnzValues));
+    HIP_CHECK_NOTHROW(hipFree(colIndices));
+    HIP_CHECK_NOTHROW(hipFree(rowPointers));
 }
 
 template <class Scalar>
@@ -103,7 +103,7 @@ RocmVector<Scalar>::RocmVector(int N)
 
 template <class Scalar>
 RocmVector<Scalar>::~RocmVector() {
-    HIP_CHECK(hipFree(nnzValues));
+    HIP_CHECK_NOTHROW(hipFree(nnzValues));
 }
 
 template <class Scalar>
