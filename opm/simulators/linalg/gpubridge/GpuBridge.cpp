@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/gpubridge/GpuBridge.hpp>
 #include <opm/simulators/linalg/gpubridge/GpuResult.hpp>
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
+#include <opm/simulators/linalg/gpubridge/Misc.hpp>
 
 #if HAVE_CUDA
 #include <opm/simulators/linalg/gpubridge/cuda/cusparseSolverBackend.hpp>
@@ -132,6 +133,7 @@ GpuBridge(std::string accelerator_mode_,
     }
 }
 
+//TODO: should move this function to misc.cpp!!!
 template <class BridgeMatrix>
 int replaceZeroDiagonal(BridgeMatrix& mat,
                     std::vector<typename BridgeMatrix::size_type>& diag_indices)
@@ -259,7 +261,7 @@ solve_system(BridgeMatrix* bridgeMat,
         }
 
         Dune::Timer t_zeros;
-        int numZeros = replaceZeroDiagonal(*bridgeMat, diagIndices);
+        int numZeros = replaceZeroDiagonal(*bridgeMat, diagIndices); //NOTE-RN: this also initializes the diagindeces!!!
         if (verbosity >= 2) {
             std::ostringstream out;
             out << "Checking zeros took: " << t_zeros.stop() << " s, found "

@@ -21,6 +21,7 @@
 #define OPM_ROCSPARSEBILU0_HPP
 
 #include <opm/simulators/linalg/gpubridge/BlockedMatrix.hpp>
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 
 #include <opm/simulators/linalg/gpubridge/rocm/rocsparsePreconditioner.hpp>
 
@@ -56,11 +57,14 @@ private:
     rocsparse_int *d_Mrows, *d_Mcols; 
     Scalar *d_Mvals, *d_t;
     void *d_buffer; // buffer space, used by rocsparse ilu0 analysis
-    
+
+    std::size_t d_bufferSize_M=0, d_bufferSize_L=0, d_bufferSize_U=0, d_bufferSize=0;
+
 public:
 
     rocsparseBILU0(int verbosity_);
-    
+    ~rocsparseBILU0();
+
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
     /// \param[in] jacMatrix  matrix for preconditioner
@@ -68,6 +72,9 @@ public:
                     std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                     rocsparse_int *d_Arows,
                     rocsparse_int *d_Acols) override;
+
+    /// Analysis, extract parallelism if specified
+    bool analyze_matrix();
 
     /// Analysis, extract parallelism if specified
     /// \param[in] mat     matrix A
@@ -95,20 +102,21 @@ public:
     /// \param[in]  y  Input y vector
     /// \param[out] x  Output x vector
     void apply(const Scalar& y,
-               Scalar& x) override;
+               Scalar& x,
+               WellContributions<Scalar>& wellContribs) override;
 
     /// Copy matrix A values to GPU
     /// \param[in]  mVals  Input values
     void copy_system_to_gpu(Scalar *mVals) override;
 
-    /// Reassign pointers, in case the addresses of the Dune variables have changed --> TODO: check when/if we need this method
-//     /// \param[in]  vals  New values
-//     /// \param[in] b     New b vector
-//     void update_system(Scalar *vals, Scalar *b);
+    /// Copy matrix A values to GPU
+    /// \param[in]  mVals  Input values
+    void copy_values_to_gpu(Scalar *mVals, int *mRows, int *mCols, bool reuse);
     
     /// Update GPU values after a new assembly is done
     /// \param[in] b     New b vector
-    void update_system_on_gpu(Scalar *b) override;
+    void update_system_on_gpu(Scalar* vals, Scalar *b) override;
+
 };
 } // namespace Opm
 

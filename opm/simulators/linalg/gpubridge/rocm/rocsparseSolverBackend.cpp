@@ -106,7 +106,7 @@ rocsparseSolverBackend(int verbosity_, int maxit_, Scalar tolerance_,
         prec = rocsparsePreconditioner<Scalar, block_size>::create(PCType::BILU0, verbosity);
     }
     
-    prec->set_context(handle, dir, operation, stream);
+    prec->set_context(handle, blas_handle, dir, operation, stream);
 }
 
 template<class Scalar, unsigned int block_size>
@@ -150,6 +150,9 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
         static_cast<WellContributionsRocsparse<Scalar>&>(wellContribs).setStream(stream);
     }
 
+    if (verbosity >= 3) {
+        t_spmv.start();
+    }
 // HIP_VERSION is defined as (HIP_VERSION_MAJOR * 10000000 + HIP_VERSION_MINOR * 100000 + HIP_VERSION_PATCH)
 #if HIP_VERSION >= 60000000
     if constexpr (std::is_same_v<Scalar,float>) {
@@ -188,6 +191,12 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
                                             d_x, &zero, d_r));
     }
 #endif
+
+    if (verbosity >= 3) {
+        t_spmv.stop();
+        t_rest.start();
+    }
+
     if constexpr (std::is_same_v<Scalar,float>) {
         ROCBLAS_CHECK(rocblas_sscal(blas_handle, N, &mone, d_r, 1));
         ROCBLAS_CHECK(rocblas_saxpy(blas_handle, N, &one, d_b, 1, d_r, 1));
@@ -202,16 +211,20 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
         ROCBLAS_CHECK(rocblas_dnrm2(blas_handle, N, d_r, 1, &norm_0));
     }
 
-    if (verbosity >= 2) {
+    if (verbosity >= 3) {
+        t_rest.stop();
+    }
+    if (verbosity == 2) {
         std::ostringstream out;
         out << std::scientific << "rocsparseSolver initial norm: " << norm_0;
         OpmLog::info(out.str());
     }
 
-    if (verbosity >= 3) {
-        t_rest.start();
-    }
     for (it = 0.5; it < maxit; it += 0.5) {
+        if (verbosity >= 3) {
+            t_rest.start();
+        }
+
         rhop = rho;
         if constexpr (std::is_same_v<Scalar,float>) {
             ROCBLAS_CHECK(rocblas_sdot(blas_handle, N, d_rw, 1, d_r, 1, &rho));
@@ -237,17 +250,20 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
             t_rest.stop();
             t_prec.start();
         }
+        HIP_CHECK(hipMemsetAsync(d_pw, 0, sizeof(Scalar) * N, this->stream));
 
-        // apply ilu0 
-        prec->apply(*d_p, *d_pw);
-        
+        // apply ilu0/cpr: d_pw = prec(d_p)
+        prec->apply(*d_p, *d_pw, wellContribs);
+
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_prec.stop();
             t_spmv.start();
         }
 
-        // spmv
+        HIP_CHECK(hipMemsetAsync(d_v, 0,  sizeof(Scalar) * N, this->stream));
+
+        // spmv: d_v = A * d_pw
 #if HIP_VERSION >= 60000000
         if constexpr (std::is_same_v<Scalar,float>) {
             ROCSPARSE_CHECK(rocsparse_sbsrmv(handle, dir, operation,
@@ -291,10 +307,11 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
             t_well.start();
         }
 
-        // apply wellContributions
+        // apply wellContributions: d_pw is input, d_v is output
         if (wellContribs.getNumWells() > 0) {
             static_cast<WellContributionsRocsparse<Scalar>&>(wellContribs).apply(d_pw, d_v);
         }
+
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_well.stop();
@@ -308,20 +325,23 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
         }
         alpha = rho / tmp1;
         nalpha = -alpha;
+
         if constexpr (std::is_same_v<Scalar,float>) {
+            // r = r - alpha*v
             ROCBLAS_CHECK(rocblas_saxpy(blas_handle, N, &nalpha, d_v, 1, d_r, 1));
             ROCBLAS_CHECK(rocblas_saxpy(blas_handle, N, &alpha, d_pw, 1, d_x, 1));
             ROCBLAS_CHECK(rocblas_snrm2(blas_handle, N, d_r, 1, &norm));
         } else {
+            // r = r - alpha*v
             ROCBLAS_CHECK(rocblas_daxpy(blas_handle, N, &nalpha, d_v, 1, d_r, 1));
             ROCBLAS_CHECK(rocblas_daxpy(blas_handle, N, &alpha, d_pw, 1, d_x, 1));
             ROCBLAS_CHECK(rocblas_dnrm2(blas_handle, N, d_r, 1, &norm));
         }
+
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_rest.stop();
         }
-
         if (norm < tolerance * norm_0) {
             break;
         }
@@ -332,9 +352,9 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
         if (verbosity >= 3) {
             t_prec.start();
         }
-        
-        prec->apply(*d_r, *d_s);
-       
+
+        prec->apply(*d_r, *d_s, wellContribs);// d_s = W-1 * d_r
+
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_prec.stop();
@@ -389,6 +409,7 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
         if (wellContribs.getNumWells() > 0) {
             static_cast<WellContributionsRocsparse<Scalar>&>(wellContribs).apply(d_s, d_t);
         }
+
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_well.stop();
@@ -423,7 +444,7 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
             break;
         }
 
-        if (verbosity > 1) {
+        if (verbosity == 2) {
             std::ostringstream out;
             out << "it: " << it << std::scientific << ", norm: " << norm;
             OpmLog::info(out.str());
@@ -436,22 +457,11 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
     res.elapsed = t_total.stop();
     res.converged = (it != (maxit + 0.5));
 
-    if (verbosity >= 1) {
+    if (verbosity == 2) {
         std::ostringstream out;
-        out << "=== converged: " << res.converged
-            << ", conv_rate: " << res.conv_rate
-            << ", time: " << res.elapsed << \
-            ", time per iteration: " << res.elapsed / it
-            << ", iterations: " << it;
-        OpmLog::info(out.str());
-    }
-    if (verbosity >= 3) {
-        std::ostringstream out;
-        out << "rocsparseSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
-        out << "rocsparseSolver::spmv:        " << t_spmv.elapsed() << " s\n";
-        out << "rocsparseSolver::well:        " << t_well.elapsed() << " s\n";
-        out << "rocsparseSolver::rest:        " << t_rest.elapsed() << " s\n";
-        out << "rocsparseSolver::total_solve: " << res.elapsed << " s\n";
+        out << "=== converged: " << res.converged << ", conv_rate: " 
+            << res.conv_rate << ", time: " << res.elapsed 
+            << ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
         OpmLog::info(out.str());
     }
 }
@@ -475,11 +485,12 @@ initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
         prec->jacMat = matrix;
         prec->nnzbs_prec = this->nnzb;
     }
+    
 
     std::ostringstream out;
     out << "Initializing GPU, matrix size: "
         << Nb << " blockrows, nnzb: " << nnzb << "\n";
-    if (useJacMatrix) {
+    if (prec->useJacMatrix) {
         out << "Blocks in ILU matrix: " << jacMatrix->nnzbs << "\n";
     }
     out << "Maxit: " << maxit
@@ -490,6 +501,7 @@ initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
     out.clear();
 
     mat = matrix;
+    jacMat = jacMatrix;
 
     HIP_CHECK(hipMalloc((void**)&d_r, sizeof(Scalar) * N));
     HIP_CHECK(hipMalloc((void**)&d_rw, sizeof(Scalar) * N));
@@ -514,8 +526,6 @@ template<class Scalar, unsigned int block_size>
 void rocsparseSolverBackend<Scalar,block_size>::
 copy_system_to_gpu(Scalar *b)
 {
-    Timer t;
-
     HIP_CHECK(hipMemcpyAsync(d_Arows, mat->rowPointers,
                              sizeof(rocsparse_int) * (Nb + 1), 
                              hipMemcpyHostToDevice, stream));
@@ -530,24 +540,14 @@ copy_system_to_gpu(Scalar *b)
                              hipMemcpyHostToDevice, stream));
     
     prec->copy_system_to_gpu(d_Avals); 
-
-    if (verbosity >= 3) {
-        HIP_CHECK(hipStreamSynchronize(stream));
-        
-        c_copy += t.stop();
-        std::ostringstream out;
-        out << "-----rocsparseSolver::copy_system_to_gpu(): " << t.elapsed() << " s\n";
-        out << "---rocsparseSolver::cum copy: " << c_copy << " s";
-        OpmLog::info(out.str());
-    }
 } // end copy_system_to_gpu()
 
 // don't copy rowpointers and colindices, they stay the same
 template<class Scalar, unsigned int block_size>
 void rocsparseSolverBackend<Scalar,block_size>::
-update_system_on_gpu(Scalar* b)
+update_system_on_gpu(Scalar* vals, Scalar* b)
 {
-    Timer t;
+    mat->nnzValues = vals;
 
     HIP_CHECK(hipMemcpyAsync(d_Avals, mat->nnzValues, sizeof(Scalar) * nnz,
                              hipMemcpyHostToDevice, stream));
@@ -555,25 +555,13 @@ update_system_on_gpu(Scalar* b)
     HIP_CHECK(hipMemcpyAsync(d_b, b, N* sizeof(Scalar),
                              hipMemcpyHostToDevice, stream));
     
-    prec->update_system_on_gpu(d_Avals);
-    
-    if (verbosity >= 3) {
-        HIP_CHECK(hipStreamSynchronize(stream));
-
-        c_copy += t.stop();
-        std::ostringstream out;
-        out << "-----rocsparseSolver::update_system_on_gpu(): " << t.elapsed() << " s\n";
-        out << "---rocsparseSolver::cum copy: " << c_copy << " s";
-        OpmLog::info(out.str());
-    }
+    prec->update_system_on_gpu(vals, d_Avals);
 } // end update_system_on_gpu()
 
 template<class Scalar, unsigned int block_size>
 bool rocsparseSolverBackend<Scalar,block_size>::
 analyze_matrix()
 {
-    Timer t;
-
     ROCSPARSE_CHECK(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));
 
 #if HIP_VERSION >= 50400000
@@ -581,7 +569,7 @@ analyze_matrix()
 #endif
 
     ROCSPARSE_CHECK(rocsparse_create_mat_descr(&descr_A));
-
+    
 #if HIP_VERSION >= 60000000
     if constexpr (std::is_same_v<Scalar,float>) {
       ROCSPARSE_CHECK(rocsparse_sbsrmv_analysis(handle, dir, operation,
@@ -610,20 +598,13 @@ analyze_matrix()
     }
 #endif
 
-    if(!prec->analyze_matrix(&*mat)) {
+    if(!prec->analyze_matrix(mat.get())){
         std::ostringstream out;
         out << "Warning: rocsparseSolver matrix analysis failed!";
         OpmLog::info(out.str());
         return false;
     }
     
-    if (verbosity >= 3) {
-        HIP_CHECK(hipStreamSynchronize(stream));
-        std::ostringstream out;
-        out << "rocsparseSolver::analyze_matrix(): " << t.stop() << " s";
-        OpmLog::info(out.str());
-    }
-
     analysis_done = true;
 
     return true;
@@ -633,24 +614,21 @@ template<class Scalar, unsigned int block_size>
 bool rocsparseSolverBackend<Scalar,block_size>::
 create_preconditioner()
 {
-    return prec->create_preconditioner(&*mat);
+    bool result;
+    if (prec->useJacMatrix)
+        result = prec->create_preconditioner(mat.get(), jacMat.get());
+    else 
+        result = prec->create_preconditioner(mat.get());
+    
+    return result;
 } // end create_preconditioner()
 
 template<class Scalar, unsigned int block_size>
 void rocsparseSolverBackend<Scalar,block_size>::
 solve_system(WellContributions<Scalar>& wellContribs, GpuResult& res)
 {
-    Timer t;
-
     // actually solve
     gpu_pbicgstab(wellContribs, res);
-
-    if (verbosity >= 3) {
-        HIP_CHECK(hipStreamSynchronize(stream));
-        std::ostringstream out;
-        out << "rocsparseSolver::solve_system(): " << t.stop() << " s";
-        OpmLog::info(out.str());
-    }
 } // end solve_system()
 
 // copy result to host memory
@@ -659,17 +637,9 @@ template<class Scalar, unsigned int block_size>
 void rocsparseSolverBackend<Scalar,block_size>::
 get_result(Scalar* x)
 {
-    Timer t;
-
     HIP_CHECK(hipMemcpyAsync(x, d_x, sizeof(Scalar) * N,
                              hipMemcpyDeviceToHost, stream));
     HIP_CHECK(hipStreamSynchronize(stream)); // always wait, caller might want to use x immediately
-
-    if (verbosity >= 3) {
-        std::ostringstream out;
-        out << "rocsparseSolver::get_result(): " << t.stop() << " s";
-        OpmLog::info(out.str());
-    }
 } // end get_result()
 
 template<class Scalar, unsigned int block_size>
@@ -692,13 +662,13 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
             return SolverStatus::GPU_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
     } else {
-        update_system_on_gpu(b);
+        update_system_on_gpu(matrix->nnzValues, b);
         if (!create_preconditioner()) {
             return SolverStatus::GPU_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
     }
     solve_system(wellContribs, res);
-
+    
     return SolverStatus::GPU_SOLVER_SUCCESS;
 }
 
