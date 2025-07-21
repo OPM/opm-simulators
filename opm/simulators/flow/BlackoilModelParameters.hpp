@@ -127,6 +127,7 @@ struct UseAverageDensityMsWells { static constexpr bool value = false; };
 struct LocalWellSolveControlSwitching { static constexpr bool value = true; };
 struct UseImplicitIpr { static constexpr bool value = true; };
 struct CheckGroupConstraintsInnerWellIterations { static constexpr bool value = true; };
+struct MaxWellInnerIterStopCount { static constexpr int value = 3; };
 
 // Network solver parameters
 struct NetworkMaxStrictOuterIterations { static constexpr int value = 10; };
@@ -304,6 +305,9 @@ public:
 
     /// Whether to allow checking/changing to group controls during inner well iterations
     bool check_group_constraints_inner_well_iterations_; 
+
+    /// Consider well iterations as not converged if open/stop oscillations exceed this number
+    int max_well_inner_iter_stop_count_;
 
     /// Maximum number of iterations in the network solver before relaxing tolerance
     int network_max_strict_outer_iterations_;
