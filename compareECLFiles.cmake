@@ -404,16 +404,22 @@ add_test_runSimulator(CASENAME norne_parallel
 
 add_test_runSimulator(CASENAME spe1case1_carfin
                       FILENAME SPE1CASE1_CARFIN
-   	              SIMULATOR flow
-		      DIR lgr
-		      TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
+                      SIMULATOR flow
+                      DIR lgr
+                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
 
 add_test_runSimulator(CASENAME spe1case1_carfin_parallel
                       FILENAME SPE1CASE1_CARFIN
-   	              SIMULATOR flow
-		      DIR lgr
-		      PROCS 4
-		      TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
+                      SIMULATOR flow
+                      DIR lgr
+                      PROCS 4
+                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
+
+add_test_runSimulator(CASENAME dryrun
+                      FILENAME CO2STORE_PRECSALT
+                      SIMULATOR flow
+                      DIR co2store
+                      TEST_ARGS --enable-dry-run=true --enable-ecl-output=false --enable-vtk-output=true)
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
 add_test_runSimulator(CASENAME tuning_xxxmbe
