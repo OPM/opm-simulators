@@ -124,7 +124,9 @@ public:
                                BlockedMatrix<Scalar>* jacMat) override;
 
     // apply preconditioner, x = prec(y)
-    void apply(const cl::Buffer& y, cl::Buffer& x) override;
+    void apply(const cl::Buffer& y,
+               cl::Buffer& x,
+               WellContributions<Scalar>& wellContribs) override;
 };
 
 /// Similar function to csrPatternToCsc. It gives an offset map from CSR to CSC instead of the full CSR to CSC conversion.

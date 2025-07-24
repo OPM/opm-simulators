@@ -46,7 +46,7 @@ CprCreation<Scalar, block_size>::CprCreation()
 }
 
 template <class Scalar, unsigned int block_size>
-void CprCreation<Scalar, block_size>::
+bool CprCreation<Scalar, block_size>::
 create_preconditioner_amg(BlockedMatrix<Scalar> *mat_)
 {
     mat = mat_;
@@ -58,34 +58,44 @@ create_preconditioner_amg(BlockedMatrix<Scalar> *mat_)
     coarse_vals.resize(cprnnzb);
     coarse_x.resize(cprNb);
     coarse_y.resize(cprNb);
-    weights.resize(cprN);
 
-    try{
+    static int gpusolves = 0;
+    const int step = 30;//Extracted from OPM: this->parameters_[activeSolverNum_].cpr_reuse_interval_;
+
+    bool create = ((gpusolves % step) == 0);
+
+    if(create) {
+        recalculate_aggregates = true;
+        weights.resize(cprN);
+    }
+
+    try {
         Scalar rhs[] = {0, 0, 0};
         rhs[pressure_idx] = 1;
 
-        // find diagonal index for each row
-        if (diagIndices[0].empty()) {
-            diagIndices[0].resize(cprNb);
-            for (int row = 0; row < cprNb; ++row) {
-                int start = mat->rowPointers[row];
-                int end = mat->rowPointers[row + 1];
-                auto candidate = std::find(mat->colIndices + start, mat->colIndices + end, row);
-                assert(candidate != mat->colIndices + end);
-                diagIndices[0][row] = candidate - mat->colIndices;
+        if(create) {
+            // find diagonal index for each row
+            if (diagIndices[0].empty()) {
+                diagIndices[0].resize(cprNb);
+                for (int row = 0; row < cprNb; ++row) {
+                    int start = mat->rowPointers[row];
+                    int end = mat->rowPointers[row + 1];
+                    auto candidate = std::find(mat->colIndices + start, mat->colIndices + end, row);
+                    assert(candidate != mat->colIndices + end);
+                    diagIndices[0][row] = candidate - mat->colIndices;
+                }
             }
-        }
+            // calculate weights for each row
+            for (int row = 0; row < cprNb; ++row) {
+                // solve to find weights
+                Scalar *row_weights = weights.data() + block_size * row; // weights for this row
+                solve_transposed_3x3(mat->nnzValues + block_size * block_size * diagIndices[0][row], rhs, row_weights);
 
-        // calculate weights for each row
-        for (int row = 0; row < cprNb; ++row) {
-            // solve to find weights
-            Scalar *row_weights = weights.data() + block_size * row; // weights for this row
-            solve_transposed_3x3(mat->nnzValues + block_size * block_size * diagIndices[0][row], rhs, row_weights);
-
-            // normalize weights for this row
-            Scalar abs_max = get_absmax(row_weights, block_size);
-            for(unsigned int i = 0; i < block_size; i++){
-                row_weights[i] /= abs_max;
+                // normalize weights for this row
+                Scalar abs_max = get_absmax(row_weights, block_size);
+                for(unsigned int i = 0; i < block_size; i++){
+                    row_weights[i] /= abs_max;
+                }
             }
         }
 
@@ -111,6 +121,7 @@ create_preconditioner_amg(BlockedMatrix<Scalar> *mat_)
         using Communication = Dune::Amg::SequentialInformation;
 #endif
         using OverlapFlags = Dune::NegateSet<Communication::OwnerSet>;
+
         if (recalculate_aggregates) {
             dune_coarse = std::make_unique<DuneMat>(cprNb, cprNb, cprnnzb, DuneMat::row_wise);
 
@@ -142,7 +153,11 @@ create_preconditioner_amg(BlockedMatrix<Scalar> *mat_)
             dune_amg = std::make_unique<DuneAmg>(dune_op, Dune::stackobject_to_shared_ptr(seqinfo));
 
             Opm::PropertyTree property_tree;
-            property_tree.put("alpha", 0.333333333333);
+
+            //NOTE-RN: FIX-BUG MSW wells not converging similarly with OPM!
+            property_tree.put("beta", 0);
+            property_tree.put("prolongationdamping", 1);
+            property_tree.put("alpha",1.0/3.0);
 
             // The matrix has a symmetric sparsity pattern, but the values are not symmetric
             // Yet a SymmetricDependency is used in AMGCPR
@@ -176,11 +191,12 @@ create_preconditioner_amg(BlockedMatrix<Scalar> *mat_)
             dune_amg->recalculateGalerkin(OverlapFlags());
             analyzeHierarchy();
         }
-
+        gpusolves++;
     } catch (const std::exception& ex) {
         std::cerr << "Caught exception: " << ex.what() << std::endl;
         throw ex;
     }
+    return create;
 }
 
 template <class Scalar, unsigned int block_size>
@@ -195,6 +211,8 @@ analyzeHierarchy()
     } else {
         umfpack.setMatrix((*matrixHierarchy.coarsest()).getmat());
     }
+
+    diagIndices.clear();
 
     num_levels = dune_amg->levels();
     level_sizes.resize(num_levels);
@@ -236,12 +254,12 @@ analyzeHierarchy()
 
         // compute inverse diagonal values for current level
         invDiags.emplace_back(A.N());
+
         for (unsigned int row = 0; row < A.N(); ++row) {
             invDiags.back()[row] = 1 / Amatrices.back().nnzValues[diagIndices[level][row]];
         }
     }
 }
-
 
 template <class Scalar, unsigned int block_size>
 void CprCreation<Scalar, block_size>::

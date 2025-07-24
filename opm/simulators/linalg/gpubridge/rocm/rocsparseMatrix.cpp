@@ -50,6 +50,14 @@ RocmMatrix(int Nb_,
     HIP_CHECK(hipMalloc((void**)&rowPointers, sizeof(int) * (Nb + 1)));
 }
 
+template<class Scalar>
+RocmMatrix<Scalar>::
+~RocmMatrix() {
+    HIP_CHECK_NOTHROW(hipFree(nnzValues));
+    HIP_CHECK_NOTHROW(hipFree(colIndices));
+    HIP_CHECK_NOTHROW(hipFree(rowPointers));
+}
+
 template <class Scalar>
 void RocmMatrix<Scalar>::
 upload(Scalar *vals,
@@ -58,9 +66,7 @@ upload(Scalar *vals,
        hipStream_t stream)
 {
     HIP_CHECK(hipMemcpyAsync(nnzValues, vals, sizeof(Scalar) * block_size * block_size * nnzbs, hipMemcpyHostToDevice, stream));
-    
     HIP_CHECK(hipMemcpyAsync(colIndices, cols, sizeof(int) * nnzbs, hipMemcpyHostToDevice, stream));
-    
     HIP_CHECK(hipMemcpyAsync(rowPointers, rows, sizeof(int) * (Nb + 1), hipMemcpyHostToDevice, stream));
 }
 
@@ -93,6 +99,11 @@ RocmVector<Scalar>::RocmVector(int N)
     : size(N)
 {
     HIP_CHECK(hipMalloc((void**)&nnzValues, sizeof(Scalar) * N));
+}
+
+template <class Scalar>
+RocmVector<Scalar>::~RocmVector() {
+    HIP_CHECK_NOTHROW(hipFree(nnzValues));
 }
 
 template <class Scalar>

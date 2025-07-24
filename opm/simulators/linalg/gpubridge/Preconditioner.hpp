@@ -24,6 +24,8 @@
 #include <opm/simulators/linalg/gpubridge/opencl/opencl.hpp>
 #endif
 
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
+
 #include <memory>
 
 namespace Opm::Accelerator {
@@ -51,6 +53,7 @@ protected:
     {}
 
 public:
+
     virtual ~Preconditioner() = default;
     
     static std::unique_ptr<Preconditioner> create(PreconditionerType type,
@@ -58,7 +61,9 @@ public:
                                                   int verbosity);
 
     // apply preconditioner, x = prec(y)
-    virtual void apply(const ApplyScalar& y, ApplyScalar& x) = 0;
+    virtual void apply(const ApplyScalar& y,
+                       ApplyScalar& x,
+                       WellContributions<Scalar>& wellContribs) = 0;
 
     // analyze matrix, e.g. the sparsity pattern
     // probably only called once

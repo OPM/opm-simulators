@@ -33,6 +33,7 @@ class RocmMatrix {
 public:
 
     RocmMatrix(int Nb_, int Mb_, int nnzbs_, unsigned int block_size_);
+    ~RocmMatrix();
 
     void upload(Scalar *vals,
                 int *cols,
@@ -58,6 +59,7 @@ class RocmVector {
 public:
 
     RocmVector(int N);
+    ~RocmVector();
 
     void upload(Scalar *vals,
                 hipStream_t stream);

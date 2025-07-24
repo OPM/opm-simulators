@@ -306,7 +306,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
         }
 
         // pw = prec(p)
-        prec->apply(d_p, d_pw);
+        prec->apply(d_p, d_pw, wellContribs);
         if (verbosity >= 3) {
             queue->finish();
             t_prec.stop();
@@ -351,7 +351,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
         if (verbosity >= 3) {
             t_prec.start();
         }
-        prec->apply(d_r, d_s);
+        prec->apply(d_r, d_s, wellContribs);
         if (verbosity >= 3) {
             queue->finish();
             t_prec.stop();

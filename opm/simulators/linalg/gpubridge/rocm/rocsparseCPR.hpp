@@ -27,6 +27,7 @@
 #include <opm/simulators/linalg/gpubridge/CprCreation.hpp>
 #include <opm/simulators/linalg/gpubridge/rocm/rocsparseMatrix.hpp>
 #include <opm/simulators/linalg/gpubridge/rocm/rocsparsePreconditioner.hpp>
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 
 #include <opm/simulators/linalg/gpubridge/rocm/rocsparseSolverBackend.hpp>
 
@@ -56,24 +57,42 @@ private:
     std::vector<RocmVector<Scalar>> d_rs;      // use before extracting the pressure
     std::vector<RocmVector<Scalar>> d_weights; // the quasiimpes weights, used to extract pressure
     std::unique_ptr<RocmMatrix<Scalar>> d_mat;   // stores blocked matrix
-    std::vector<RocmVector<Scalar>> d_coarse_y, d_coarse_x; // stores the scalar vectors
+    std::shared_ptr<BlockedMatrix<Scalar>> h_mat;
+
+    std::vector<RocmVector<Scalar>> d_coarse_y, d_coarse_x, d_yinput; // stores the scalar vectors
     std::once_flag rocm_buffers_allocated;  // only allocate OpenCL Buffers once
 
     std::unique_ptr<rocsparseBILU0<Scalar, block_size> > bilu0;                    // Blocked ILU0 preconditioner
 
-    std::unique_ptr<rocsparseSolverBackend<Scalar, 1> > coarse_solver; // coarse solver is scalar
+    std::vector<std::shared_ptr<rocsparseBILU0<Scalar,1>>> smootherilu0s;
+
+    Scalar *d_tmp, *d_yamg, *d_ywell;
+    bool createfirsttime;
+
+    #if HIP_VERSION >= 50400000
+    rocsparse_mat_info spmv_info;
+    #endif
 
     // Initialize and allocate matrices and vectors
     void init_rocm_buffers();
+    void init_rocm_buffers_fineMatrix();
+
+    // Deallocate matrices and vectors
+    void clear_rocm_buffers();
 
     // Copy matrices and vectors to GPU
     void rocm_upload();
 
     // apply pressure correction to vector
-    void apply_amg(const Scalar& y, Scalar& x);
+    void apply_amg(const Scalar& y,
+                   Scalar& x,
+                   WellContributions<Scalar>& wellContribs);
 
     // Apply the AMG preconditioner
-    void amg_cycle_gpu(const int level, Scalar &y, Scalar &x);
+    void amg_cycle_gpu(const int level,
+                       Scalar &y,
+                       Scalar &x,
+                       WellContributions<Scalar>& wellContribs);
     
 public:
 
@@ -114,20 +133,17 @@ public:
     /// \param[in]  y  Input y vector
     /// \param[out] x  Output x vector
     void apply(const Scalar& y,
-               Scalar& x) override;
+               Scalar& x,
+               WellContributions<Scalar>& wellContribs) override;
     
     /// Copy matrix A values to GPU
     /// \param[in]  mVals  Input values
     void copy_system_to_gpu(Scalar *b) override;
 
-    /// Reassign pointers, in case the addresses of the Dune variables have changed --> TODO: check when/if we need this method
-    /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
-    /// \param[in] b              input vector b, contains N values
-//     void update_system(Scalar *vals, Scalar *b);
-
     /// Update linear system to GPU
     /// \param[in] b              input vector, contains N values
-    void update_system_on_gpu(Scalar *b) override;
+    void update_system_on_gpu(Scalar * vals, Scalar *b) override;
+    
 };
 
 } // namespace Opm

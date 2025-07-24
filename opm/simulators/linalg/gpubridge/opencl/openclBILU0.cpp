@@ -294,7 +294,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 // however, if individual kernel calls are timed, waiting for events is needed
 // behavior on other GPUs is untested
 template<class Scalar, unsigned int block_size>
-void openclBILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
+void openclBILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x, [[maybe_unused]] WellContributions<Scalar>& wellContribs)
 {
     const Scalar relaxation = 0.9;
     cl::Event event;

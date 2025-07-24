@@ -295,10 +295,10 @@ void openclCPR<Scalar,block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x)
 }
 
 template<class Scalar, unsigned int block_size>
-void openclCPR<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
+void openclCPR<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x, WellContributions<Scalar>& wellContribs)
 {
     Dune::Timer t_bilu0;
-    bilu0->apply(y, x);
+    bilu0->apply(y, x, wellContribs);
     if (verbosity >= 4) {
         std::ostringstream out;
         out << "openclCPR apply bilu0(): " << t_bilu0.stop() << " s";
