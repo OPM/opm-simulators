@@ -310,8 +310,12 @@ public:
     void updateTUNING(const Tuning& tuning)
     {
         modelParam_.tolerance_mb_ = tuning.XXXMBE;
+        modelParam_.tolerance_cnv_ = tuning.XXXCNV;
         if (terminalOutput_) {
-            OpmLog::debug(fmt::format("Setting SimulatorFullyImplicitBlackoil mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
+            std::string message = "Setting SimulatorFullyImplicitBlackoil tolerances:";
+            message += fmt::format(" MB: {:.2e},", tuning.XXXMBE);
+            message += fmt::format(" CNV: {:.2e}", tuning.XXXCNV);
+            OpmLog::debug(message);
         }
     }
 
