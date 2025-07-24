@@ -424,21 +424,21 @@ add_test_runSimulator(CASENAME dryrun
                       TEST_ARGS --enable-dry-run=true --enable-ecl-output=false --enable-vtk-output=true)
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
-add_test_runSimulator(CASENAME tuning_xxxmbe
-                      FILENAME 01_TUNING_XXXMBE
+add_test_runSimulator(CASENAME tuning_trgmbe
+                      FILENAME 01_TUNING_TRGMBE
                       SIMULATOR flow
 											DIR tuning
                       TEST_ARGS --output-extra-convergence-info=iterations --enable-tuning=true
-                      POST_COMMAND $<TARGET_FILE:test_tuning_xxxMBE>)
+                      POST_COMMAND $<TARGET_FILE:test_tuning_trgmbe>)
 
-add_test_runSimulator(CASENAME notuning_xxxmbe
-                      FILENAME 01_TUNING_XXXMBE
+add_test_runSimulator(CASENAME notuning_trgmbe
+                      FILENAME 01_TUNING_TRGMBE
                       SIMULATOR flow
 											DIR tuning
                       TEST_ARGS --output-extra-convergence-info=iterations --enable-tuning=false
-                      POST_COMMAND $<TARGET_FILE:test_tuning_xxxMBE>)
+                      POST_COMMAND $<TARGET_FILE:test_tuning_trgmbe>)
 
-set_tests_properties(runSimulator/notuning_xxxmbe PROPERTIES WILL_FAIL TRUE)
+set_tests_properties(runSimulator/notuning_trgmbe PROPERTIES WILL_FAIL TRUE)
 
 add_test_runSimulator(CASENAME tuning_tsinit_nextstep
                       FILENAME 02_TUNING_TSINIT_NEXTSTEP
