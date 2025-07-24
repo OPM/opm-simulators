@@ -341,7 +341,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat)
 }
 
 template<class Scalar, unsigned int block_size>
-void openclBISAI<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x, WellContributions<Scalar>& wellContribs)
+void openclBISAI<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x, [[maybe_unused]] WellContributions<Scalar>& wellContribs)
 {
     const unsigned int bs = block_size;
 
