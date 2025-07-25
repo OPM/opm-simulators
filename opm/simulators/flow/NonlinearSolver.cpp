@@ -141,8 +141,6 @@ NonlinearSolverParameters()
 
     // overload with given parameters
     relaxMax_ = Parameters::Get<Parameters::NewtonMaxRelax<Scalar>>();
-    maxIter_ = Parameters::Get<Parameters::NewtonMaxIterations>();
-    minIter_ = Parameters::Get<Parameters::NewtonMinIterations>();
 
     const auto& relaxationTypeString = Parameters::Get<Parameters::NewtonRelaxationType>();
     if (relaxationTypeString == "dampen") {
@@ -164,8 +162,6 @@ reset()
     relaxMax_ = 0.5;
     relaxIncrement_ = 0.1;
     relaxRelTol_ = 0.2;
-    maxIter_ = 10;
-    minIter_ = 1;
 }
 
 template<class Scalar>
@@ -174,14 +170,8 @@ registerParameters()
 {
     Parameters::Register<Parameters::NewtonMaxRelax<Scalar>>
         ("The maximum relaxation factor of a Newton iteration");
-    Parameters::Register<Parameters::NewtonMaxIterations>
-        ("The maximum number of Newton iterations per time step");
-    Parameters::Register<Parameters::NewtonMinIterations>
-        ("The minimum number of Newton iterations per time step");
     Parameters::Register<Parameters::NewtonRelaxationType>
         ("The type of relaxation used by Newton method");
-
-    Parameters::SetDefault<Parameters::NewtonMaxIterations>(20);
 }
 
 template struct NonlinearSolverParameters<double>;
