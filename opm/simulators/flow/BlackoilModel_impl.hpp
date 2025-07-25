@@ -262,8 +262,8 @@ nonlinearIterationNewton(const int iteration,
 
     this->initialLinearization(report,
                                iteration,
-                               nonlinear_solver.minIter(),
-                               nonlinear_solver.maxIter(),
+                               this->param_.newton_min_iter_,
+                               this->param_.newton_max_iter_,
                                timer);
 
     // -----------   If not converged, solve linear system and do Newton update  -----------
@@ -730,6 +730,8 @@ BlackoilModel<TypeTag>::
 updateTUNING(const Tuning& tuning)
 {
     this->param_.tolerance_mb_ = tuning.XXXMBE;
+    this->param_.newton_max_iter_ = tuning.NEWTMX;
+    this->param_.newton_min_iter_ = tuning.NEWTMN;
 
     if (terminal_output_) {
         OpmLog::debug(fmt::format("Setting BlackoilModel mass "
