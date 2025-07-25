@@ -532,6 +532,8 @@ struct AquiferFixture {
             "test_RestartSerialization",
             "--ecl-deck-file-name=GLIFT1.DATA"
         };
+        // Since this parameter is registered in opm/models/nonlinear/newtonmethodparams.cpp but not accessed here
+        Parameters::Register<Parameters::NewtonMaxIterations>("The maximum number of Newton iterations per time step");
         Opm::ThreadManager::registerParameters();
         AdaptiveTimeStepping<TT>::registerParameters();
         BlackoilModelParameters<double>::registerParameters();

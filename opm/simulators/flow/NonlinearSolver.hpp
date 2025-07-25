@@ -44,7 +44,6 @@ namespace Opm::Parameters {
 template<class Scalar>
 struct NewtonMaxRelax { static constexpr Scalar value = 0.5; };
 
-struct NewtonMinIterations { static constexpr int value = 2; };
 struct NewtonRelaxationType { static constexpr auto value = "dampen"; };
 
 } // namespace Opm::Parameters
@@ -82,8 +81,6 @@ struct NonlinearSolverParameters
     Scalar relaxMax_;
     Scalar relaxIncrement_;
     Scalar relaxRelTol_;
-    int maxIter_; // max nonlinear iterations
-    int minIter_; // min nonlinear iterations
 
     NonlinearSolverParameters();
 
@@ -150,7 +147,7 @@ struct NonlinearSolverParameters
                 try {
                     // Do the nonlinear step. If we are in a converged state, the
                     // model will usually do an early return without an expensive
-                    // solve, unless the minIter() count has not been reached yet.
+                    // solve, unless the newton_min_iter_ count has not been reached yet.
                     auto iterReport = model_->nonlinearIteration(iteration, timer, *this);
                     iterReport.global_time = timer.simulationTimeElapsed();
                     report += iterReport;
@@ -167,12 +164,14 @@ struct NonlinearSolverParameters
                     throw;
                 }
             }
-            while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
+            while ( (!converged && (iteration <= this->model().param().newton_max_iter_)) ||
+                    (iteration <= this->model().param().newton_min_iter_));
 
             if (!converged) {
                 failureReport_ = report;
 
-                std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
+                std::string msg = "Solver convergence failure - Failed to complete a time step within ";
+                msg += std::to_string(model().param().newton_max_iter_) + " iterations.";
                 OPM_THROW_NOLOG(TooManyIterations, msg);
             }
             auto relativeChange = model_->relativeChange();
@@ -181,7 +180,8 @@ struct NonlinearSolverParameters
                 report.time_step_rejected = true;
                 failureReport_ = report;
 
-                std::string msg = "Relative change in solution for time step was " + std::to_string(relativeChange) + ", which is larger than the tolerance accepted by the timestepping algorithm.";
+                std::string msg = "Relative change in solution for time step was " + std::to_string(relativeChange);
+                msg += ", which is larger than the tolerance accepted by the timestepping algorithm.";
                 OPM_THROW_NOLOG(TimeSteppingBreakdown, msg);
             }
 
@@ -267,14 +267,6 @@ struct NonlinearSolverParameters
         /// The relaxation relative tolerance.
         Scalar relaxRelTol() const
         { return param_.relaxRelTol_; }
-
-        /// The maximum number of nonlinear iterations allowed.
-        int maxIter() const
-        { return param_.maxIter_; }
-
-        /// The minimum number of nonlinear iterations allowed.
-        int minIter() const
-        { return param_.minIter_; }
 
         /// Set parameters to override those given at construction time.
         void setParameters(const SolverParameters& param)

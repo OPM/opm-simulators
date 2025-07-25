@@ -140,6 +140,7 @@ struct NetworkMaxPressureUpdateInBars { static constexpr Scalar value = 5.0; };
 struct NonlinearSolver { static constexpr auto value = "newton"; };
 struct LocalSolveApproach { static constexpr auto value = "gauss-seidel"; };
 struct MaxLocalSolveIterations { static constexpr int value = 20; };
+struct NewtonMinIterations { static constexpr int value = 2; };
 
 struct WellGroupConstraintsMaxIterations { static constexpr int value = 1; };
 template<class Scalar>
@@ -267,7 +268,7 @@ public:
     /// Update scaling factors for mass balance equations
     bool update_equations_scaling_;
 
-    /// Try to detect oscillation or stagnation.
+    /// Try to detect oscillation or stagnation
     bool use_update_stabilization_;
 
     /// Whether to use MultisegmentWell to handle multisegment wells
@@ -327,10 +328,17 @@ public:
     /// Maximum number of status switches (open<->shut> in local well iterations
     int max_well_status_switch_;
 
-    /// Nonlinear solver type: newton or nldd.
+    /// Nonlinear solver type: newton or nldd
     std::string nonlinear_solver_;
-    /// 'jacobi' and 'gauss-seidel' supported.
+  
+    /// 'jacobi' and 'gauss-seidel' supported
     DomainSolveApproach local_solve_approach_{DomainSolveApproach::Jacobi};
+
+    /// Maximum number of Newton iterations per time step
+    int newton_max_iter_;
+
+    /// Minimum number of Newton iterations per time step
+    int newton_min_iter_;
 
     int max_local_solve_iterations_;
 
