@@ -38,21 +38,22 @@ template class ::Dune::FlexibleSolver<Dune::MatrixAdapter<::Opm::gpuistl::GpuSpa
 #endif
 
 #if HAVE_MPI
-template<class realtype>
+template <class realtype>
 using CommGpu = ::Opm::gpuistl::GpuOwnerOverlapCopy<realtype, Comm>;
 
-template<class Scalar>
-using ParOpGpu = Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatrix<Scalar>, 
-    ::Opm::gpuistl::GpuVector<Scalar>,
-    ::Opm::gpuistl::GpuVector<Scalar>, 
-    CommGpu<Scalar>>;
+template <class Scalar>
+using ParOpGpu = Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatrix<Scalar>,
+                                                  ::Opm::gpuistl::GpuVector<Scalar>,
+                                                  ::Opm::gpuistl::GpuVector<Scalar>,
+                                                  CommGpu<Scalar>>;
 
-#define INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(T)         \
-    template class Dune::FlexibleSolver<ParOpGpu<T>>;                                              \
-    template Dune::FlexibleSolver<ParOpGpu<T>>::FlexibleSolver(ParOpGpu<T>& op, \
-        const CommGpu<T>& comm, \
-        const Opm::PropertyTree& prm, \
-        const std::function<typename ParOpGpu<T>::domain_type()>& weightsCalculator, \
+#define INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(T)                                                                          \
+    template class Dune::FlexibleSolver<ParOpGpu<T>>;                                                                  \
+    template Dune::FlexibleSolver<ParOpGpu<T>>::FlexibleSolver(                                                        \
+        ParOpGpu<T>& op,                                                                                               \
+        const CommGpu<T>& comm,                                                                                        \
+        const Opm::PropertyTree& prm,                                                                                  \
+        const std::function<typename ParOpGpu<T>::domain_type()>& weightsCalculator,                                   \
         std::size_t pressureIndex);
 
 
