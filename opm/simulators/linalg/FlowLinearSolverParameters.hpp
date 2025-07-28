@@ -86,8 +86,8 @@ struct AcceleratorMode { static constexpr auto value = "none"; };
 struct GpuDeviceId { static constexpr int value = 0; };
 struct OpenclPlatformId { static constexpr int value = 0; };
 struct OpenclIluParallel { static constexpr bool value = true; }; // note: false should only be used in debug
-struct GPUAwareMPI { static constexpr bool value = false; };
-struct VerifyGPUAwareMPI { static constexpr bool value = false; };
+struct GpuAwareMpi { static constexpr bool value = false; };
+struct VerifyGpuAwareMpi { static constexpr bool value = false; };
 } // namespace Opm::Parameters
 
 namespace Opm {
