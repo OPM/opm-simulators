@@ -108,8 +108,8 @@ public:
         // of the distributed level zero grid, where the field properties are given - for now.
         // In case of supporting LGR field properties, this need to be adapted, to access instead
         // each local/level Cartesian index set.
-        m_activeSize = [mapper]() { return mapper->compressedSize(/*level = */ 0); };
-        m_local2Global = [mapper](int localIdx) { return mapper->cartesianIndex(localIdx, /* level = */ 0); };
+        m_activeSize = [mapper]() { return mapper->compressedSize(); };
+        m_local2Global = [mapper](int localIdx) { return mapper->cartesianIndex(localIdx); };
     }
 
     bool tran_active(const std::string& keyword) const override;

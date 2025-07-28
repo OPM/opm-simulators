@@ -827,7 +827,7 @@ namespace Opm {
 
     template <class LevelCartesianIndexMapper>
     void RelpermDiagnostics::diagnosis(const EclipseState& eclState,
-                                       const LevelCartesianIndexMapper& levelCartesianIndexMapper)
+                                       const LevelCartesianIndexMapper& levelZeroCartesianIndexMapper)
     {
         OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");
         bool doDiagnostics = phaseCheck_(eclState);
@@ -836,16 +836,16 @@ namespace Opm {
         satFamilyCheck_(eclState);
         tableCheck_(eclState);
         unscaledEndPointsCheck_(eclState);
-        scaledEndPointsCheck_(eclState, levelCartesianIndexMapper);
+        scaledEndPointsCheck_(eclState, levelZeroCartesianIndexMapper);
     }
 
     template <class LevelCartesianIndexMapper>
     void RelpermDiagnostics::scaledEndPointsCheck_(const EclipseState& eclState,
-                                                   const LevelCartesianIndexMapper& levelCartesianIndexMapper)
+                                                   const LevelCartesianIndexMapper& levelZeroCartesianIndexMapper)
     {
         // All end points are subject to round-off errors, checks should account for it
         const float tolerance = 1e-6;
-        const int nc = levelCartesianIndexMapper.compressedSize(0);
+        const int nc = levelZeroCartesianIndexMapper.compressedSize();
         const bool threepoint = eclState.runspec().endpointScaling().threepoint();
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties(eclState, false);
@@ -855,7 +855,7 @@ namespace Opm {
             std::string cellIdx;
             {
                 std::array<int, 3> ijk;
-                levelCartesianIndexMapper.cartesianCoordinate(c, ijk, 0);
+                levelZeroCartesianIndexMapper.cartesianCoordinate(c, ijk);
                 cellIdx = "(" + std::to_string(ijk[0]) + ", " +
                     std::to_string(ijk[1]) + ", " +
                     std::to_string(ijk[2]) + ")";

@@ -65,49 +65,41 @@ class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconform
  public:
     static constexpr int dimension = 3 ;
 
-    explicit LevelCartesianIndexMapper(const Dune::CartesianIndexMapper<Grid>& cartesianIndexMapper)
+    explicit LevelCartesianIndexMapper(const Dune::CartesianIndexMapper<Grid>& cartesianIndexMapper, int level)
         : cartesianIndexMapper_{std::make_unique<Dune::CartesianIndexMapper<Grid>>(cartesianIndexMapper)}
-    {}
-
-    const std::array<int,3>& cartesianDimensions(int level) const
     {
-        throwIfLevelPositive(level);
+        if (level != 0) {
+            throw std::invalid_argument("Invalid level.\n");
+        }
+    }
+
+    const std::array<int,3>& cartesianDimensions() const
+    {
         return cartesianIndexMapper_ ->cartesianDimensions();
     }
 
-    int cartesianSize(int level) const
+    int cartesianSize() const
     {
-        throwIfLevelPositive(level);
         return cartesianIndexMapper_->cartesianSize();
     }
 
-    int compressedSize(int level) const
+    int compressedSize() const
     {
-        throwIfLevelPositive(level);
         return cartesianIndexMapper_-> compressedSize();
     }
 
-    int cartesianIndex( const int compressedElementIndex, const int level) const
+    int cartesianIndex( const int compressedElementIndex) const
     {
-        throwIfLevelPositive(level);;
         return cartesianIndexMapper_->cartesianIndex(compressedElementIndex);
     }
 
-    void cartesianCoordinate(const int compressedElementIndex, std::array<int,dimension>& coords, int level) const
+    void cartesianCoordinate(const int compressedElementIndex, std::array<int,dimension>& coords) const
     {
-        throwIfLevelPositive(level);
         cartesianIndexMapper_->cartesianCoordinate(compressedElementIndex, coords);
     }
 
  private:
     std::unique_ptr<Dune::CartesianIndexMapper<Grid>> cartesianIndexMapper_;
-    
-    void throwIfLevelPositive(int level) const
-    {
-        if (level) {
-            throw std::invalid_argument("Invalid level.\n");
-        }
-    }
 };
 
 }

@@ -245,8 +245,8 @@ public:
      *        to the corresponding element index of the level logically Cartesian index.
      *        No refinement is supported for AluGrid so it coincides with CartesianIndexMapper.
      */
-    const LevelCartesianIndexMapper levelCartesianIndexMapper() const
-    { return LevelCartesianIndexMapper(*cartesianIndexMapper_); }
+    const LevelCartesianIndexMapper levelZeroCartesianIndexMapper() const
+    { return LevelCartesianIndexMapper(*cartesianIndexMapper_, /* level = */ 0); }
 
     /*!
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid

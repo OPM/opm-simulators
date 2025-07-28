@@ -86,11 +86,11 @@ BOOST_AUTO_TEST_CASE(diagnosis)
                                /*clipZ=*/false);
 
     typedef Opm::LevelCartesianIndexMapper<Grid> LevelCartesianIndexMapper;
-    LevelCartesianIndexMapper levelCartesianIndexMapper = LevelCartesianIndexMapper(grid);
+    LevelCartesianIndexMapper levelZeroCartesianIndexMapper = LevelCartesianIndexMapper(grid, /* level = */ 0);
     std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
     OpmLog::addBackend( "COUNTERLOG" , counterLog );
     RelpermDiagnostics diagnostics;
-    diagnostics.diagnosis(eclState, levelCartesianIndexMapper);
+    diagnostics.diagnosis(eclState, levelZeroCartesianIndexMapper);
     BOOST_CHECK_EQUAL(1, counterLog->numMessages(Log::MessageType::Warning));
 }
 BOOST_AUTO_TEST_SUITE_END()
