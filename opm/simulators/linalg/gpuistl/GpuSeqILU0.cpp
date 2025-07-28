@@ -20,6 +20,7 @@
 #include "opm/simulators/linalg/is_gpu_operator.hpp"
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <cusparse.h>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -27,7 +28,6 @@
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/simulators/linalg/gpuistl/detail/cusparse_without_warning.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSeqILU0.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
