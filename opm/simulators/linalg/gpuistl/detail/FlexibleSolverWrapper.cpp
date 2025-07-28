@@ -65,7 +65,7 @@ namespace
             
             return matrix.dispatchOnBlocksize([&](auto blockSizeVal) -> return_type {
                 constexpr int block_size = decltype(blockSizeVal)::value;
-                using CudaCommunication = GpuOwnerOverlapCopy<real_type, block_size, Comm>;
+                using CudaCommunication = GpuOwnerOverlapCopy<real_type, Comm>;
                 using SchwarzOperator
                     = Dune::OverlappingSchwarzOperator<GpuSparseMatrix<real_type>, Vector, Vector, CudaCommunication>;
                 
@@ -73,7 +73,7 @@ namespace
                 
                 auto cudaCommunication = makeGpuOwnerOverlapCopy<real_type, block_size, Comm>(*comm);
                 auto operatorPtr = std::make_unique<SchwarzOperator>(matrix, *cudaCommunication);
-                auto solverPtr = std::make_unique<SolverType>(*operatorPtr, cudaCommunication, prm, weightCalculator, pressureIndex);
+                auto solverPtr = std::make_unique<SolverType>(*operatorPtr, *cudaCommunication, prm, weightCalculator, pressureIndex);
                 auto preconditioner = std::ref(solverPtr->preconditioner());
 
                 return std::make_tuple(
