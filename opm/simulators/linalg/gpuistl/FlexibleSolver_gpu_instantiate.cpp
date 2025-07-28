@@ -19,6 +19,7 @@
 
 #include "config.h"
 #include "dune/istl/schwarz.hh"
+#include "opm/simulators/linalg/FlexibleSolver.hpp"
 #include <dune/istl/operators.hh>
 #include <opm/simulators/linalg/FlexibleSolver_impl.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
@@ -37,37 +38,27 @@ template class ::Dune::FlexibleSolver<Dune::MatrixAdapter<::Opm::gpuistl::GpuSpa
 #endif
 
 #if HAVE_MPI
+template<class realtype>
+using CommGpu = ::Opm::gpuistl::GpuOwnerOverlapCopy<realtype, Comm>;
 
-#define INSTANTIATE_FLEXIBLESOLVER_OP_GPU(COMMTYPE, ...)                                            \
-    template class Dune::FlexibleSolver<__VA_ARGS__>;                                               \
-    template Dune::FlexibleSolver<__VA_ARGS__>::                                                    \
-        FlexibleSolver(__VA_ARGS__& op,                                                             \
-                       const COMMTYPE& comm,                                                            \
-                       const Opm::PropertyTree& prm,                                                \
-                       const std::function<typename __VA_ARGS__::domain_type()>& weightsCalculator, \
-                       std::size_t pressureIndex);
+template<class Scalar>
+using ParOpGpu = Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatrix<Scalar>, 
+    ::Opm::gpuistl::GpuVector<Scalar>,
+    ::Opm::gpuistl::GpuVector<Scalar>, 
+    CommGpu<Scalar>>;
 
-#define INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(realtype, blocksize) \
-    INSTANTIATE_FLEXIBLESOLVER_OP_GPU(::Opm::gpuistl::GpuOwnerOverlapCopy<realtype, blocksize, Comm>, \
-        Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatrix<realtype>, \
-          ::Opm::gpuistl::GpuVector<realtype>, \
-          ::Opm::gpuistl::GpuVector<realtype>, \
-          ::Opm::gpuistl::GpuOwnerOverlapCopy<realtype, blocksize, Comm>>>);
+#define INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(T)         \
+    template class Dune::FlexibleSolver<ParOpGpu<T>>;                                              \
+    template Dune::FlexibleSolver<ParOpGpu<T>>::FlexibleSolver(ParOpGpu<T>& op, \
+        const CommGpu<T>& comm, \
+        const Opm::PropertyTree& prm, \
+        const std::function<typename ParOpGpu<T>::domain_type()>& weightsCalculator, \
+        std::size_t pressureIndex);
 
 
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(double, 1)
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(double, 2)
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(double, 3)
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(double, 4)
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(double, 5)
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(double, 6)
 
+INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(double)
 #if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(float, 1)
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(float, 2)
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(float, 3)
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(float, 4)
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(float, 5)
-INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(float, 6)
+INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(float)
 #endif
 #endif
