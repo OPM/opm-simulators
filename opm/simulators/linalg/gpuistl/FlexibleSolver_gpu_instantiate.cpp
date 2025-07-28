@@ -56,10 +56,10 @@ using ParOpGpu = Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatri
         const std::function<typename ParOpGpu<T>::domain_type()>& weightsCalculator,                                   \
         std::size_t pressureIndex);
 
-
-
 INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(double)
+
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(float)
 #endif
+
 #endif

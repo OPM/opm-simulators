@@ -463,8 +463,8 @@ std::shared_ptr<GpuOwnerOverlapCopy<field_type, OwnerOverlapCopyCommunicationTyp
 makeGpuOwnerOverlapCopy(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
 {
 
-    const auto useGPUAwareMPI = Opm::Parameters::Get<Opm::Parameters::GPUAwareMPI>();
-    const auto verifyGPUAwareMPI = Opm::Parameters::Get<Opm::Parameters::VerifyGPUAwareMPI>();
+    const auto useGPUAwareMPI = Opm::Parameters::Get<Opm::Parameters::GpuAwareMpi>();
+    const auto verifyGPUAwareMPI = Opm::Parameters::Get<Opm::Parameters::VerifyGpuAwareMpi>();
     std::shared_ptr<Opm::gpuistl::GPUSender<field_type, OwnerOverlapCopyCommunicationType>> gpuComm;
 
     if (useGPUAwareMPI) {

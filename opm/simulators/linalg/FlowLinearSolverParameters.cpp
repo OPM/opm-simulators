@@ -47,7 +47,7 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
     linear_solver_print_json_definition_ = Parameters::Get<Parameters::LinearSolverPrintJsonDefinition>();
     cpr_reuse_setup_  = Parameters::Get<Parameters::CprReuseSetup>();
     cpr_reuse_interval_  = Parameters::Get<Parameters::CprReuseInterval>();
-    gpu_aware_mpi_ = Parameters::Get<Parameters::GPUAwareMPI>();
+    gpu_aware_mpi_ = Parameters::Get<Parameters::GpuAwareMpi>();
 
     if (!Parameters::IsSet<Parameters::LinearSolver>() && cprRequestedInDataFile) {
         linsolver_ = "cpr";
@@ -163,14 +163,14 @@ void FlowLinearSolverParameters::registerParameters()
     Parameters::Register<Parameters::LinearSolverAccelerator>
         ("Choose the backend for the linear solver, usage: "
          "'--linear-solver-accelerator=[cpu|gpu]'.");
-    Parameters::Register<Parameters::GPUAwareMPI>
+    Parameters::Register<Parameters::GpuAwareMpi>
         ("MPI communication use GPU aware MPI in the sense that "
             "it will use GPU direct communication. Setting this to true "
             " will require that the MPI implementation "
             "supports GPU direct communication. "
             "If you are unsure, set this to false. "
             "Usage: --gpu-aware-mpi=[true|false]. ");
-    Parameters::Register<Parameters::VerifyGPUAwareMPI>
+    Parameters::Register<Parameters::VerifyGpuAwareMpi>
         ("Verify that the MPI implementation supports GPU aware MPI. "
             "If this is set to true *and* --gpu-aware-mpi=true, the simulation will fail if the "
             "MPI implementation does not support GPU aware MPI. "
