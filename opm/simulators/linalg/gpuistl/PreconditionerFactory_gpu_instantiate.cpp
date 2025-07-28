@@ -22,6 +22,9 @@
 #include <opm/simulators/linalg/PreconditionerFactory_impl.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#if HAVE_MPI
+#include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>
+#endif
 
 // NOTE: This is very rudimentary, and will be improved once we
 // incorporate MPI in the ISTLSolverGPUISTL class.
@@ -35,4 +38,27 @@ template class ::Opm::PreconditionerFactory<Dune::MatrixAdapter<::Opm::gpuistl::
                                                                 ::Opm::gpuistl::GpuVector<float>,
                                                                 ::Opm::gpuistl::GpuVector<float>>,
                                             ::Opm::CommSeq>;
+#endif
+
+#if HAVE_MPI
+template<class realtype>
+using CommGpu = ::Opm::gpuistl::GpuOwnerOverlapCopy<realtype, ::Opm::CommPar>;
+
+template<class Scalar>
+using ParOpGpu = Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatrix<Scalar>, 
+    ::Opm::gpuistl::GpuVector<Scalar>,
+    ::Opm::gpuistl::GpuVector<Scalar>, 
+    CommGpu<Scalar>>;
+
+template class ::Opm::PreconditionerFactory<ParOpGpu<double>,
+                                            CommGpu<double>>;
+template class ::Opm::PreconditionerFactory<ParOpGpu<double>,
+                                            ::Opm::CommSeq>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class ::Opm::PreconditionerFactory<ParOpGpu<float>,
+                                            CommGpu<float>>;
+template class ::Opm::PreconditionerFactory<ParOpGpu<float>,
+                                            ::Opm::CommSeq>;                                            
+#endif
 #endif
