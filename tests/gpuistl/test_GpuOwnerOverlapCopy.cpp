@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(TestProject)
     auto gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
     
     auto GpuOwnerOverlapCopy
-        = Opm::gpuistl::GpuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
+        = Opm::gpuistl::GpuOwnerOverlapCopy<double, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
 
     GpuOwnerOverlapCopy.project(xGPU);
 
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(TestDot)
     auto gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
 
     auto GpuOwnerOverlapCopy
-        = Opm::gpuistl::GpuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
+        = Opm::gpuistl::GpuOwnerOverlapCopy<double, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
 
     double outputDune = -1.0;
     auto xDune = xGPU.asDuneBlockVector<1>();

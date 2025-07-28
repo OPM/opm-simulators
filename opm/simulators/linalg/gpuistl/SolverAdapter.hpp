@@ -176,7 +176,7 @@ private:
         auto preconditionerReallyOnGPU = preconditionerAdapterAsHolder->getUnderlyingPreconditioner();
 
 
-        using CudaCommunication = GpuOwnerOverlapCopy<real_type, block_size, Comm>;
+        using CudaCommunication = GpuOwnerOverlapCopy<real_type, Comm>;
         using SchwarzOperator
             = Dune::OverlappingSchwarzOperator<GpuSparseMatrix<real_type>, XGPU, XGPU, CudaCommunication>;
         auto cudaCommunication = makeGpuOwnerOverlapCopy<real_type, block_size, Comm>(communication);

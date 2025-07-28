@@ -112,6 +112,16 @@ public:
         return std::sqrt(xDotX);
     }
 
+
+    /**
+     * @brief communicator returns the MPI communicator used by this GPUSender
+     * @return the MPI communicator
+     */
+    const ::Dune::Communication<MPI_Comm>& communicator() const
+    {
+        return m_cpuOwnerOverlapCopy.communicator();
+    }
+    
 protected:
     // Used to call the initIndexSet. Note that this is kind of a
     // premature optimization, in the sense that we could just initialize these indices
@@ -402,10 +412,9 @@ private:
  * @note This currently only has the functionality to parallelize the linear solve.
  *
  * @tparam field_type should be a field_type supported by GpuVector (double, float)
- * @tparam block_size the block size used (this is relevant for say figuring out the correct indices)
  * @tparam OwnerOverlapCopyCommunicationType should mimic Dune::OwnerOverlapCopyCommunication.
  */
-template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
+template <class field_type, class OwnerOverlapCopyCommunicationType>
 class GpuOwnerOverlapCopy
 {
 public:
@@ -436,12 +445,21 @@ public:
         m_sender->project(x);
     }
 
+    /**
+     * @brief communicator returns the MPI communicator used by this GpuOwnerOverlapCopy
+     * @return the MPI communicator
+     */
+    const ::Dune::Communication<MPI_Comm>& communicator() const
+    {
+        return m_sender->communicator();
+    }
+    
 private:
     std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> m_sender;
 };
 
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
-std::shared_ptr<GpuOwnerOverlapCopy<field_type, block_size, OwnerOverlapCopyCommunicationType>>
+std::shared_ptr<GpuOwnerOverlapCopy<field_type, OwnerOverlapCopyCommunicationType>>
 makeGpuOwnerOverlapCopy(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
 {
 
@@ -489,7 +507,7 @@ makeGpuOwnerOverlapCopy(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlap
             cpuOwnerOverlapCopy);
     }
 
-    using CudaCommunication = GpuOwnerOverlapCopy<field_type, block_size, OwnerOverlapCopyCommunicationType>;
+    using CudaCommunication = GpuOwnerOverlapCopy<field_type, OwnerOverlapCopyCommunicationType>;
 
     return std::make_shared<CudaCommunication>(gpuComm);
 }
