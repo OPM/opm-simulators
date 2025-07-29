@@ -67,10 +67,10 @@ namespace Opm {
  *
  * \brief Represents the primary variables used by the black-oil model.
  */
-template <class TypeTag>
-class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
+template <class TypeTag, template<class, int> class VectorType = Dune::FieldVector>
+class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorType>
 {
-    using ParentType = FvBasePrimaryVariables<TypeTag>;
+    using ParentType = FvBasePrimaryVariables<TypeTag, VectorType>;
     using Implementation = GetPropType<TypeTag, Properties::PrimaryVariables>;
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
