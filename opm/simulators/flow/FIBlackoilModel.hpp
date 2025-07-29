@@ -224,7 +224,13 @@ protected:
             break;
 
         case EclMultiplexerApproach::Default:
-            updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::Default>>(timeIdx);
+            if (this->simulator_.problem().materialLawManager()->satCurveIsAllPiecewiseLinear()) {
+                using PL = SatCurveMultiplexerDispatch<SatCurveMultiplexerApproach::PiecewiseLinear>;
+                updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::Default>, PL>(timeIdx);
+            } else {
+                // TODO: Might want to set LET here, but need to check if partial use of LET is possible.
+                updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::Default>>(timeIdx);
+            }
             break;
 
         case EclMultiplexerApproach::TwoPhase:
