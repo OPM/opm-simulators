@@ -307,7 +307,7 @@ public:
         }
 
         // Phase relperms.
-        problem.updateRelperms(mobility_, dirMob_, fluidState_, globalSpaceIdx);
+        problem.template updateRelperms<FluidState, Args...>(mobility_, dirMob_, fluidState_, globalSpaceIdx);
 
         // now we compute all phase pressures
         using EvalArr = std::array<Evaluation, numPhases>;
