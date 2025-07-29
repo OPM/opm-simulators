@@ -22,9 +22,9 @@
 #include <dune/istl/owneroverlapcopy.hh>
 
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuAwareMPISender.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuObliviousMPISender.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
 #include <mpi.h>
 
@@ -89,7 +89,7 @@ public:
     {
         return m_sender->communicator();
     }
-    
+
 private:
     std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> m_sender;
 };
@@ -105,7 +105,7 @@ makeGpuOwnerOverlapCopy(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlap
 
     if (useGPUAwareMPI) {
         if (verifyGPUAwareMPI) {
-           
+
             // Temporary solution use the GPU Direct communication solely based on these prepcrosessor statements
             bool mpiSupportsCudaAwareAtCompileTime = false;
             bool mpiSupportsCudaAwareAtRunTime = false;
@@ -122,15 +122,15 @@ makeGpuOwnerOverlapCopy(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlap
 
             if (!mpiSupportsCudaAwareAtCompileTime || !mpiSupportsCudaAwareAtRunTime) {
                 OPM_THROW(std::runtime_error,
-                        fmt::format("The GPU-aware MPI support is not available. "
-                                    "CUDA aware support at compile time: {}, "
-                                    "CUDA aware support at runtime: {}. "
-                                    "Please check your MPI installation and the OPM configuration "
-                                    "or run with --gpu-aware-mpi=false. If you are sure that your MPI "
-                                    "implementation supports GPU aware MPI, you can disable this check "
-                                    "by setting --verify-gpu-aware-mpi=false.",
-                                    mpiSupportsCudaAwareAtCompileTime ? "yes" : "no",
-                                    mpiSupportsCudaAwareAtRunTime ? "yes" : "no"));
+                          fmt::format("The GPU-aware MPI support is not available. "
+                                      "CUDA aware support at compile time: {}, "
+                                      "CUDA aware support at runtime: {}. "
+                                      "Please check your MPI installation and the OPM configuration "
+                                      "or run with --gpu-aware-mpi=false. If you are sure that your MPI "
+                                      "implementation supports GPU aware MPI, you can disable this check "
+                                      "by setting --verify-gpu-aware-mpi=false.",
+                                      mpiSupportsCudaAwareAtCompileTime ? "yes" : "no",
+                                      mpiSupportsCudaAwareAtRunTime ? "yes" : "no"));
             }
         }
         gpuComm = std::make_shared<
