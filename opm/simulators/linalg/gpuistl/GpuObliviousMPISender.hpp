@@ -22,8 +22,8 @@
 #include <dune/istl/owneroverlapcopy.hh>
 
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSender.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
 #include <mpi.h>
 

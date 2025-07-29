@@ -113,7 +113,7 @@ public:
     {
         return m_cpuOwnerOverlapCopy.communicator();
     }
-    
+
 protected:
     // Used to call the initIndexSet. Note that this is kind of a
     // premature optimization, in the sense that we could just initialize these indices
@@ -124,6 +124,6 @@ protected:
     const OwnerOverlapCopyCommunicationType& m_cpuOwnerOverlapCopy;
 };
 
-}
+} // namespace Opm::gpuistl
 
 #endif // OPM_GPUISTL_GPUSENDER_HPP
