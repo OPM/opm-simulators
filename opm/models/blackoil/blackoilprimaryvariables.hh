@@ -1055,26 +1055,6 @@ private:
         }
     }
 
-    Scalar polymerConcentration_() const
-    {
-        if constexpr (enablePolymer) {
-            return (*this)[Indices::polymerConcentrationIdx];
-        }
-        else {
-            return 0.0;
-        }
-    }
-
-    Scalar foamConcentration_() const
-    {
-        if constexpr (enableFoam) {
-            return (*this)[Indices::foamConcentrationIdx];
-        }
-        else {
-            return 0.0;
-        }
-    }
-
     Scalar saltConcentration_() const
     {
         if constexpr (enableBrine) {
@@ -1095,56 +1075,6 @@ private:
         }
         else {
             return FluidSystem::reservoirTemperature();
-        }
-    }
-
-    Scalar microbialConcentration_() const
-    {
-        if constexpr (enableMICP) {
-            return (*this)[Indices::microbialConcentrationIdx];
-        }
-        else {
-            return 0.0;
-        }
-    }
-
-    Scalar oxygenConcentration_() const
-    {
-        if constexpr (enableMICP) {
-            return (*this)[Indices::oxygenConcentrationIdx];
-        }
-        else {
-            return 0.0;
-        }
-    }
-
-    Scalar ureaConcentration_() const
-    {
-        if constexpr (enableMICP) {
-            return (*this)[Indices::ureaConcentrationIdx];
-        }
-        else {
-            return 0.0;
-        }
-    }
-
-    Scalar biofilmConcentration_() const
-    {
-        if constexpr (enableMICP) {
-            return (*this)[Indices::biofilmConcentrationIdx];
-        }
-        else {
-            return 0.0;
-        }
-    }
-
-    Scalar calciteConcentration_() const
-    {
-        if constexpr (enableMICP) {
-            return (*this)[Indices::calciteConcentrationIdx];
-        }
-        else {
-            return 0.0;
         }
     }
 
