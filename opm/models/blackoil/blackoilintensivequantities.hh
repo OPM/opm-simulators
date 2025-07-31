@@ -178,17 +178,6 @@ public:
 
     BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
 
-    void updateTempSalt(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
-    {
-        if constexpr (enableTemperature || enableEnergy) {
-            asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
-        }
-
-        if constexpr (enableBrine) {
-            asImp_().updateSaltConcentration_(elemCtx, dofIdx, timeIdx);
-        }
-    }
-
     void updateTempSalt(const Problem& problem,
                         const PrimaryVariables& priVars,
                         const unsigned globalSpaceIdx,
@@ -202,13 +191,6 @@ public:
         if constexpr (enableBrine) {
             asImp_().updateSaltConcentration_(priVars, timeIdx, lintype);
         }
-    }
-
-    void updateSaturations(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
-    {
-        const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        const LinearizationType lintype = elemCtx.problem().model().linearizer().getLinearizationType();
-        this->updateSaturations(priVars, timeIdx, lintype);
     }
 
     void updateSaturations(const PrimaryVariables& priVars,
@@ -280,14 +262,6 @@ public:
         if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
             fluidState_.setSaturation(oilPhaseIdx, So);
         }
-    }
-
-    void updateRelpermAndPressures(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
-    {
-        const auto& problem = elemCtx.problem();
-        const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        this->updateRelpermAndPressures(problem, priVars, globalSpaceIdx, timeIdx, elemCtx.linearizationType());
     }
 
     template <class ...Args>
@@ -367,14 +341,6 @@ public:
         if constexpr (enableSolvent) {
             asImp_().solventPostSatFuncUpdate_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
         }
-    }
-
-    void updateRsRvRsw(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
-    {
-        const auto& problem = elemCtx.problem();
-        const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        this->updateRsRvRsw(problem, priVars, globalSpaceIdx, timeIdx);
     }
 
     void updateRsRvRsw(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
