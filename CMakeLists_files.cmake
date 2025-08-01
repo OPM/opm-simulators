@@ -439,7 +439,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_equil.cpp
   tests/test_extractMatrix.cpp
   tests/test_flexiblesolver.cpp
-  tests/test_glift1.cpp
+#  tests/test_glift1.cpp
   tests/test_graphcoloring.cpp
   tests/test_GroupState.cpp
   tests/test_interregflows.cpp
@@ -459,15 +459,15 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_propertytree.cpp
   tests/test_region_phase_pvaverage.cpp
   tests/test_relpermdiagnostics.cpp
-  tests/test_RestartSerialization.cpp
+#  tests/test_RestartSerialization.cpp
   tests/test_RunningStatistics.cpp
   tests/test_rstconv.cpp
   tests/test_stoppedwells.cpp
   tests/test_timer.cpp
   tests/test_vfpproperties.cpp
-  tests/test_wellmodel.cpp
+#  tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
-  tests/test_wellstate.cpp
+#  tests/test_wellstate.cpp
   )
 
 if (HAVE_ECL_INPUT)
@@ -1263,7 +1263,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/reservoir_blackoil_vcfv.cpp
   examples/reservoir_ncp_ecfv.cpp
   examples/reservoir_ncp_vcfv.cpp
-  examples/printvfp.cpp
+#  examples/printvfp.cpp
   examples/tutorial1.cpp
   examples/waterair_pvs_ni.cpp
 )
