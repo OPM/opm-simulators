@@ -110,7 +110,7 @@ assembleControlEqProd(const WellState<FluidSystem, Indices>& well_state,
         for (int phase = 0; phase < 3; ++phase) {
             if (FluidSystem::phaseIsActive(phase)) {
                 const int pos = FluidSystem::canonicalToActivePhaseIdx(phase);
-                total_rate += rates[phase] * convert_coeff[pos]; // Note different indices.
+                total_rate -= rates[phase] * convert_coeff[pos]; // Note different indices.
             }
         }
         if (controls.prediction_mode) {
