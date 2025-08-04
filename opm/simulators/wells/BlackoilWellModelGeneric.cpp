@@ -916,21 +916,23 @@ typename FluidSystem::Scalar
 BlackoilWellModelGeneric<FluidSystem, Indices>::
 wellPI(const int well_index) const
 {
+    const auto& pi = this->wellState().well(well_index).productivity_index;
+
     const auto preferred = this->wells_ecl_[well_index].getPreferredPhase();
     switch (preferred) { // Should really have LIQUID = OIL + WATER here too...
     case Phase::WATER:
         return FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
-            ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)
+            ? pi[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)]
             : 0.0;
 
     case Phase::OIL:
         return FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
-            ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)
+            ? pi[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)]
             : 0.0;
 
     case Phase::GAS:
         return FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
-            ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)
+            ? pi[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)]
             : 0.0;
 
     default:

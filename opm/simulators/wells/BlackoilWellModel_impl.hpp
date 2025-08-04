@@ -151,13 +151,6 @@ namespace Opm {
         );
     }
 
-    // template<typename TypeTag>
-    // BlackoilWellModel<TypeTag>::
-    // BlackoilWellModel(Simulator& simulator) :
-    //     BlackoilWellModel(simulator)
-    // {}
-
-
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
