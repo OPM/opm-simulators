@@ -53,7 +53,6 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
-#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
 #if COMPILE_GPU_BRIDGE
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>

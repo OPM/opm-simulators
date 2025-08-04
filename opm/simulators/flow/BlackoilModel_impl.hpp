@@ -36,8 +36,6 @@
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
 
-#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
-
 #include <algorithm>
 #include <iomanip>
 #include <limits>
@@ -56,7 +54,6 @@ BlackoilModel(Simulator& simulator,
               const bool terminal_output)
     : simulator_(simulator)
     , grid_(simulator_.vanguard().grid())
-    , phaseUsage_(phaseUsageFromDeck(eclState()))
     , param_( param )
     , well_model_ (well_model)
     , terminal_output_ (terminal_output)

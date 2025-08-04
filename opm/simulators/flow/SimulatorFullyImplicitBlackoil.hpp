@@ -147,7 +147,7 @@ public:
                       Parameters::Get<Parameters::SaveFile>(),
                       Parameters::Get<Parameters::LoadFile>())
     {
-        phaseUsage_ = phaseUsageFromDeck(eclState());
+        // phaseUsage_ = phaseUsageFromDeck(eclState());
 
         // Only rank 0 does print to std::cout, and only if specifically requested.
         this->terminalOutput_ = false;
@@ -637,7 +637,7 @@ protected:
     std::unique_ptr<Solver> solver_;
 
     // Observed objects.
-    PhaseUsage phaseUsage_;
+    // PhaseUsage phaseUsage_;
     // Misc. data
     bool terminalOutput_;
 
