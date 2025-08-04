@@ -241,7 +241,6 @@ template<class TypeTag>
 struct EnableDebuggingChecks<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
 
-
 } // namespace Opm::Properties
 
 #endif // OPM_BASE_FLOW_PROBLEM_PROPERTIES_HPP

@@ -224,7 +224,6 @@ struct DofMapper { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct TimeDiscHistorySize { using type = UndefinedProperty; };
 
-
 /*!
  * \brief Specify whether the storage terms use extensive quantities or not.
  *

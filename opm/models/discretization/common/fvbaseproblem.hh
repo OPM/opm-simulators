@@ -199,13 +199,13 @@ public:
      * quantities need to be cached (size = 1). Otherwise, both current and previous
      * time step intensive quantities are needed (size = 2).
      */
-    unsigned intensiveQuantityHistorySize() const
-    {
-        if (Parameters::Get<Parameters::EnableStorageCache>() && recycleFirstIterationStorage()) {
-            return 1;
-        }
-        return 2;
-    }
+     unsigned intensiveQuantityHistorySize() const
+     {
+         if (Parameters::Get<Parameters::EnableStorageCache>() && recycleFirstIterationStorage()) {
+             return 1;
+         }
+         return 2;
+     }
 
     /*!
      * \brief Determine the directory for simulation output.

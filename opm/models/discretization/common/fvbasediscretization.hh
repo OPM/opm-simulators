@@ -404,6 +404,7 @@ public:
         , enableIntensiveQuantityCache_(Parameters::Get<Parameters::EnableIntensiveQuantityCache>())
         , enableStorageCache_(Parameters::Get<Parameters::EnableStorageCache>())
         , enableThermodynamicHints_(Parameters::Get<Parameters::EnableThermodynamicHints>())
+        , cachedIntensiveQuantityHistorySize_(-1)
     {
         const bool isEcfv = std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>;
         if (enableGridAdaptation_ && !isEcfv) {
@@ -646,7 +647,7 @@ public:
             return nullptr;
         }
 
-        assert(timeIdx < simulator_.problem().intensiveQuantityHistorySize());
+        assert(timeIdx < cachedIntensiveQuantityHistorySize_);
 
         // With the storage cache enabled, usually only the
         // intensive quantities for the most recent time step are
@@ -676,7 +677,7 @@ public:
             return;
         }
 
-        assert(timeIdx < simulator_.problem().intensiveQuantityHistorySize());
+        assert(timeIdx < cachedIntensiveQuantityHistorySize_);
 
         intensiveQuantityCache_[timeIdx][globalIdx] = intQuants;
         intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = true;
@@ -701,13 +702,19 @@ public:
     }
 
     /*!
+     * \brief Get the cached intensive quantity history size.
+     */
+    unsigned cachedIntensiveQuantityHistorySize() const
+    { return cachedIntensiveQuantityHistorySize_; }
+
+    /*!
      * \brief Invalidate the whole intensive quantity cache for time index.
      *
      * \param timeIdx The index used by the time discretization.
      */
     void invalidateIntensiveQuantitiesCache(unsigned timeIdx) const
     {
-        assert(timeIdx < simulator_.problem().intensiveQuantityHistorySize());
+        assert(timeIdx < cachedIntensiveQuantityHistorySize_);
 
         if (storeIntensiveQuantities()) {
             std::fill(intensiveQuantityCacheUpToDate_[timeIdx].begin(),
@@ -792,7 +799,7 @@ public:
         }
 
         assert(numSlots > 0);
-        const unsigned intensiveHistorySize = simulator_.problem().intensiveQuantityHistorySize();
+        const unsigned intensiveHistorySize = cachedIntensiveQuantityHistorySize_;
         for (unsigned timeIdx = 0; timeIdx < intensiveHistorySize - numSlots; ++timeIdx) {
             intensiveQuantityCache_[timeIdx + numSlots] = intensiveQuantityCache_[timeIdx];
             intensiveQuantityCacheUpToDate_[timeIdx + numSlots] = intensiveQuantityCacheUpToDate_[timeIdx];
@@ -1914,7 +1921,8 @@ protected:
         // allocate the intensive quantities cache
         if (storeIntensiveQuantities()) {
             const std::size_t numDof = asImp_().numGridDof();
-            const unsigned intensiveHistorySize = simulator_.problem().intensiveQuantityHistorySize();
+            cachedIntensiveQuantityHistorySize_ = simulator_.problem().intensiveQuantityHistorySize();
+            const unsigned intensiveHistorySize = cachedIntensiveQuantityHistorySize_;
 
             // resize the vectors based on runtime history size
             intensiveQuantityCache_.resize(intensiveHistorySize);
@@ -2017,6 +2025,8 @@ protected:
     bool enableIntensiveQuantityCache_;
     bool enableStorageCache_;
     bool enableThermodynamicHints_;
+
+    mutable unsigned cachedIntensiveQuantityHistorySize_;
 };
 
 /*!
