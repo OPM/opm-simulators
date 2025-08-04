@@ -120,7 +120,6 @@ namespace Opm {
 
                     // only count oil and gas filled parts of the domain
                     Scalar hydrocarbon = 1.0;
-                    // if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
                     }
@@ -133,7 +132,6 @@ namespace Opm {
                     if (hydrocarbonPV > 0.) {
                         auto& attr = attributes_hpv[reg];
                         attr.pv += hydrocarbonPV;
-                        // if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
                         } else {
