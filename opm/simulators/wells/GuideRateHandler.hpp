@@ -31,7 +31,6 @@
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/output/data/Groups.hpp>
 #include <opm/output/data/GuideRateValue.hpp>
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
