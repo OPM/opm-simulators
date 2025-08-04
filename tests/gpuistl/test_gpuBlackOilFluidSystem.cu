@@ -120,8 +120,8 @@ static constexpr const char* deckString1 =
 
 using GpuB = Opm::gpuistl::GpuBuffer<double>;
 using GpuV = Opm::gpuistl::GpuView<double>;
-using GpuBufCo2Tables = Opm::CO2Tables<double, GpuB>;
-using GpuBufBrineCo2Pvt = Opm::BrineCo2Pvt<double, GpuBufCo2Tables, GpuB>;
+using GpuBufCo2Tables = Opm::CO2Tables<double, Opm::gpuistl::GpuBuffer>;
+using GpuBufBrineCo2Pvt = Opm::BrineCo2Pvt<double, Opm::gpuistl::GpuBuffer>;
 using FluidSystem = Opm::BlackOilFluidSystem<double>;
 using Evaluation = Opm::DenseAd::Evaluation<double,2>;
 using Scalar = typename Opm::MathToolbox<Evaluation>::Scalar;
@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_CASE(BlackOilFluidSystemOnGpu)
 
     // create a parameter cache
     using ParamCache = typename FluidSystem::template ParameterCache<Scalar>;
-    ParamCache paramCache;
+    ParamCache paramCache(1);
     BOOST_CHECK_EQUAL(paramCache.regionIndex(), 1);
     BOOST_CHECK_EQUAL(FluidSystem::numRegions(), 1);
     BOOST_CHECK_EQUAL(FluidSystem::numActivePhases(), 2);
