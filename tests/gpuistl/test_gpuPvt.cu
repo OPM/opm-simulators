@@ -1,4 +1,3 @@
-#include "opm/simulators/linalg/gpuistl_hip/GpuBuffer.hpp"
 #include <config.h>
 
 #define BOOST_TEST_MODULE TestGpuPvt
@@ -173,7 +172,7 @@ BOOST_FIXTURE_TEST_CASE(TestEvaluateUniformTabulated2DFunctionOnGpu, Fixture) {
     Opm::UniformTabulated2DFunction<double> cpuTab(1.0, 6.0, 3, 1.0, 6.0, 2, tabData);
 
     // Move data to GPU buffer and create a view for GPU operations
-    Opm::UniformTabulated2DFunction<double, GpuB> gpuBufTab = Opm::gpuistl::copy_to_gpu(cpuTab);
+    Opm::UniformTabulated2DFunction<double, Opm::gpuistl::GpuBuffer> gpuBufTab = Opm::gpuistl::copy_to_gpu(cpuTab);
     GpuTab gpuViewTab = Opm::gpuistl::make_view(gpuBufTab);
 
     // Evaluation points on the CPU
