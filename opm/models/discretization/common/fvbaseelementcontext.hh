@@ -552,7 +552,7 @@ protected:
         // update the intensive quantities for the whole history
         const SolutionVector& globalSol = model().solution(timeIdx);
 
-        const unsigned intensiveHistorySize = problem().intensiveQuantityHistorySize();
+        const unsigned intensiveHistorySize = model().cachedIntensiveQuantityHistorySize();
 
         // update the non-gradient quantities
         for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
@@ -569,7 +569,7 @@ protected:
                 // If we have a cache for this time index, we can fetch the intensive quantities from the cache.
                 // We can then also fetch the thermodynamic hint from the cache.
                 dofVars_[dofIdx].thermodynamicHint[timeIdx] = model().thermodynamicHint(globalIdx, timeIdx);
-                const auto *cachedIntQuants = model().cachedIntensiveQuantities(globalIdx, timeIdx);
+                const auto* cachedIntQuants = model().cachedIntensiveQuantities(globalIdx, timeIdx);
                 if (cachedIntQuants) {
                     dofVars_[dofIdx].intensiveQuantities[timeIdx] = *cachedIntQuants;
                 }
