@@ -272,6 +272,7 @@ namespace Opm
     bool
     WellInterface<TypeTag>::
     updateWellControlAndStatusLocalIteration(const Simulator& simulator,
+                                             const int it,
                                              WellState<Scalar>& well_state,
                                              const GroupState<Scalar>& group_state,
                                              const Well::InjectionControls& inj_controls,
@@ -314,7 +315,12 @@ namespace Opm
                     if (! (isGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
                         changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
                     }
-                    if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
+                    // Disallow THP->GROUP local change for network wells under THP control
+                    const bool networkThpControlled = this->isProducer()
+                                                    && this->getDynamicThpLimit()
+                                                    && ws.production_cmode == Well::ProducerCMode::THP;
+
+                    if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_ && !networkThpControlled) {
                         changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state, false, deferred_logger);
                     }
 
@@ -361,11 +367,36 @@ namespace Opm
             }
             const Scalar bhp_diff = (this->isInjector())? inj_limit - bhp: bhp - prod_limit;
             if (bhp_diff > 0){
-                this->openWell();
                 well_state.well(this->index_of_well_).bhp = (this->isInjector())? inj_limit : prod_limit;
                 if (has_thp) {
                     well_state.well(this->index_of_well_).thp = this->getTHPConstraint(summary_state);
+                    const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
+                                                                    ws.production_cmode == Well::ProducerCMode::THP;
+                    if (this->isProducer() && thp_controlled) {
+                        std::vector<Scalar> ipr_rates(3, 0.0);
+                        this->computeRatesFromBhpAndIPR(well_state, prod_limit, ipr_rates);
+                        const bool zero_ipr = std::all_of(ipr_rates.begin(), ipr_rates.end(), [](const Scalar x){ return std::abs(x) < 1.0e-15; });
+                        if (zero_ipr) { // Cannot estimate a stable bhp from zero IPR, so no indication that it might be unsolvable
+                            this->openWell();
+                            return true;
+                        }
+                        this->adaptRatesForVFP(ipr_rates);
+                        const auto stable_bhp = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, ipr_rates, this->getRefDensity(), summary_state);
+                        if (!stable_bhp) {
+                            deferred_logger.debug(fmt::format("Well {} local iteration {}: Not opening THP-controlled producer at estimated BHP limit = {:.2f} bar - unable to estimate stable BHP.",
+                                                            this->name(),
+                                                            it,
+                                                            prod_limit/unit::barsa),
+                                                /*debug_verbosity_level*/ 4);
+                            return false;
+                        } else { // Try to get a better initial guess (quite likely nonsense without resolving for bhp??)
+                            deferred_logger.debug(fmt::format("Well {} local iteration {}: Re-opening with THP control (estimated stable BHP = {:.2f} bar)",
+                                                    this->name(), it, (*stable_bhp)/unit::barsa),
+                                                    /*debug_verbosity_level*/ 4);
+                        }
+                    }
                 }
+                this->openWell();
                 return true;
             } else {
                 return false;
@@ -504,7 +535,8 @@ namespace Opm
                          const double dt,
                          WellState<Scalar>& well_state,
                          const GroupState<Scalar>& group_state,
-                         DeferredLogger& deferred_logger)
+                         DeferredLogger& deferred_logger,
+                         const bool only_operability_update)
     {
         OPM_TIMEFUNCTION();
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -519,7 +551,7 @@ namespace Opm
             if (!this->param_.local_well_solver_control_switching_){
                 converged = this->iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
             } else {
-                if (this->param_.use_implicit_ipr_ && this->well_ecl_.isProducer() && (this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+                if (this->param_.use_implicit_ipr_ && this->well_ecl_.isProducer() && (this->well_ecl_.getStatus() == WellStatus::OPEN) && !only_operability_update) {
                     converged = solveWellWithOperabilityCheck(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
                 } else {
                     converged = this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
@@ -576,6 +608,7 @@ namespace Opm
         bool is_operable = true;
         bool converged = true;
         auto& ws = well_state.well(this->index_of_well_);
+        const bool already_vfpexplicit = this->operability_status_.use_vfpexplicit;
         // if well is stopped, check if we can reopen
         if (this->wellIsStopped()) {
             this->openWell();
@@ -608,7 +641,7 @@ namespace Opm
             this->adaptRatesForVFP(rates);
             this->updateIPRImplicit(simulator, well_state, deferred_logger);
             bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state);
-            if (!is_stable) {
+            if (!is_stable && !already_vfpexplicit) {
                 // solution converged to an unstable point!
                 this->operability_status_.use_vfpexplicit = true;
                 auto bhp_stable = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
@@ -626,7 +659,7 @@ namespace Opm
             }
         }
 
-        if (!converged) {
+        if (!converged && !already_vfpexplicit) {
             // Well did not converge, switch to explicit fractions
             this->operability_status_.use_vfpexplicit = true;
             this->openWell();
@@ -659,6 +692,22 @@ namespace Opm
         this->operability_status_.obey_thp_limit_under_bhp_limit = is_operable;
         return converged;
     }
+
+    template<typename TypeTag>
+    void WellInterface<TypeTag>::
+    computeRatesFromBhpAndIPR(const WellState<Scalar>& well_state,
+                              const Scalar bhp,
+                              std::vector<Scalar>& rates) const
+    {
+        const auto& ws = well_state.well(this->indexOfWell());
+        const auto& ipr_a = ws.implicit_ipr_a;
+        const auto& ipr_b = ws.implicit_ipr_b;
+
+        for (auto i=0*rates.size(); i<rates.size(); ++i) {
+            rates[i] = -1*(ipr_a[i] - bhp*ipr_b[i]);
+        }
+    }
+
 
     template<typename TypeTag>
     std::optional<typename WellInterface<TypeTag>::Scalar>
@@ -1082,15 +1131,25 @@ namespace Opm
                           DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
+        constexpr bool fallback_to_classical_operability_check = false;
+
         if (this->param_.local_well_solver_control_switching_) {
             const bool success = updateWellOperabilityFromWellEq(simulator, well_state, deferred_logger);
             if (success) {
                 return;
-            } else {
-                deferred_logger.debug("Operability check using well equations did not converge for well "
-                                      + this->name() + ", reverting to classical approach." );
             }
+
+            if (!fallback_to_classical_operability_check) {
+                deferred_logger.debug(fmt::format("Well {} did not converge and is considered inoperable.", this->name()));
+                this->operability_status_.operable_under_only_bhp_limit = false;
+                this->operability_status_.obey_thp_limit_under_bhp_limit = false;
+                this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+                this->operability_status_.obey_bhp_limit_with_thp_limit = false;
+            }
+            return;
         }
+
+        deferred_logger.debug(fmt::format("Operability check using well equations did not converge for well {}, reverting to classical approach.", this->name()));
         this->operability_status_.resetOperability();
 
         bool thp_controlled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::THP:
@@ -1126,7 +1185,7 @@ namespace Opm
         const auto& group_state = simulator.problem().wellModel().groupState();
         const double dt = simulator.timeStepSize();
         // equations should be converged at this stage, so only one it is needed
-        bool converged = iterateWellEquations(simulator, dt, well_state_copy, group_state, deferred_logger);
+        bool converged = iterateWellEquations(simulator, dt, well_state_copy, group_state, deferred_logger, /*only_operability_update*/ true);
         return converged;
     }
 

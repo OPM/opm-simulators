@@ -247,6 +247,7 @@ public:
                            DeferredLogger& deferred_logger) /* const */;
 
     bool updateWellControlAndStatusLocalIteration(const Simulator& simulator,
+                                                  const int it,
                                                   WellState<Scalar>& well_state,
                                                   const GroupState<Scalar>& group_state,
                                                   const Well::InjectionControls& inj_controls,
@@ -420,7 +421,8 @@ protected:
                               const double dt,
                               WellState<Scalar>& well_state,
                               const GroupState<Scalar>& group_state,
-                              DeferredLogger& deferred_logger);
+                              DeferredLogger& deferred_logger,
+                              const bool only_operability_update = false);
 
     bool solveWellWithOperabilityCheck(const Simulator& simulator,
                                        const double dt,
@@ -429,6 +431,10 @@ protected:
                                        WellState<Scalar>& well_state,
                                        const GroupState<Scalar>& group_state,
                                        DeferredLogger& deferred_logger);
+
+    void computeRatesFromBhpAndIPR(const WellState<Scalar>& well_state,
+                                    const Scalar bhp,
+                                    std::vector<Scalar>& rates) const;
 
     std::optional<Scalar>
     estimateOperableBhp(const Simulator& ebos_simulator,
