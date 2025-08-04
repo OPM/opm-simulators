@@ -327,7 +327,7 @@ update_injector_targets(const Well& ecl_well, const SummaryState& st)
     switch (inj_controls.injector_type) {
     case InjectorType::WATER:
         assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)] = inj_surf_rate;
+        this->surface_rates[FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx)] = inj_surf_rate;
         break;
     case InjectorType::GAS:
         assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
