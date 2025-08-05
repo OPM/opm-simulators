@@ -637,7 +637,6 @@ protected:
     std::unique_ptr<Solver> solver_;
 
     // Observed objects.
-    // PhaseUsage phaseUsage_;
     // Misc. data
     bool terminalOutput_;
 

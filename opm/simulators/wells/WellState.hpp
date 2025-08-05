@@ -76,10 +76,6 @@ public:
 
     WellState() = default;
 
-    // explicit WellState(const PhaseUsage& pu)
-    //     : phase_usage_(pu)
-    // {}
-
     static WellState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
 
     std::size_t size() const
@@ -240,11 +236,6 @@ public:
         return Indices::numPhases;
     }
 
-    // const PhaseUsage& phaseUsage() const
-    // {
-    //     return this->phase_usage_;
-    // }
-
     /// One rate per well and phase.
     std::vector<Scalar>& wellRates(std::size_t well_index)
     { return this->wells_[well_index].surface_rates; }
@@ -333,8 +324,6 @@ public:
 
 private:
     bool enableDistributedWells_ = false;
-
-//    PhaseUsage phase_usage_;
 
     // The wells_ variable is essentially a map of all the wells on the current
     // process. Observe that since a well can be split over several processes a

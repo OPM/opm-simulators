@@ -27,7 +27,6 @@
 
 namespace Opm {
 template<class Scalar> class GroupState;
-struct PhaseUsage;
 class Schedule;
 template<typename FluidSystem, typename Indices> class WellState;
 }

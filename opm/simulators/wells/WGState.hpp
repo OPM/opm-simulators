@@ -34,8 +34,6 @@ template<class Scalar> class ParallelWellInfo;
   Microscopic class to handle well, group and well test state.
 */
 
-struct PhaseUsage;
-
 template<typename FluidSystem, typename Indices>
 struct WGState
 {

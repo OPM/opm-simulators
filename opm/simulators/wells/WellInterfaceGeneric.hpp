@@ -40,7 +40,6 @@ class DeferredLogger;
 class GuideRate;
 template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
-struct PhaseUsage;
 class SummaryState;
 template<typename FluidSystem, typename Indices> class VFPProperties;
 class WellTestState;
@@ -368,8 +367,6 @@ protected:
     std::vector<int> saturation_table_number_;
 
     Well::Status wellStatus_;
-
-    // const PhaseUsage* phase_usage_;
 
     Scalar gravity_;
     Scalar wsolvent_;
