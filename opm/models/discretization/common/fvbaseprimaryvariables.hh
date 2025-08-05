@@ -57,7 +57,7 @@ class FvBasePrimaryVariables
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
     using Toolbox = MathToolbox<Evaluation>;
-    using ParentType = Dune::FieldVector<Scalar, numEq>;
+    using ParentType = VectorType<Scalar, numEq>;
 
 public:
     FvBasePrimaryVariables()
