@@ -31,7 +31,6 @@ namespace Opm
 {
 
 class DeferredLogger;
-struct PhaseUsage;
 template<typename FluidSystem, typename Indices> class SingleWellState;
 class WellEconProductionLimits;
 template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;

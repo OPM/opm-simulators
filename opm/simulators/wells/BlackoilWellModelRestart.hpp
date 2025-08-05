@@ -39,7 +39,6 @@ template<class Scalar> class GroupState;
 class GuideRate;
 class GuideRateConfig;
 template<class Scalar> struct PerforationData;
-struct PhaseUsage;
 template<typename FluidSystem, typename Indices> class SingleWellState;
 template<typename FluidSystem, typename Indices> class WellState;
 

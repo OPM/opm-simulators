@@ -540,8 +540,6 @@ template<class Scalar> class WellContributions;
             void computeWellTemperature();
 
         private:
-            BlackoilWellModel(Simulator& simulator, const PhaseUsage& pu);
-
             BlackoilWellModelGasLift<TypeTag> gaslift_;
             BlackoilWellModelNldd<TypeTag>* nldd_ = nullptr; //!< NLDD well model adapter (not owned)
 

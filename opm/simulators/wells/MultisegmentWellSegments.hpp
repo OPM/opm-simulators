@@ -31,7 +31,6 @@
 namespace Opm {
 
     class  AutoICD;
-    struct PhaseUsage;
     template<class Scalar> class SegmentState;
     class  UnitSystem;
     template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
