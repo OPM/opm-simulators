@@ -36,10 +36,9 @@ namespace Opm::gpuistl::detail
  * @brief Computes indices of diagonal elements for non-reordered GPU preconditioner.
  *
  * @tparam T Matrix element type
- * @param[in] mat The matrix in BCSR format
  * @param[in] rowIndices Row indices of the BCSR matrix
  * @param[in] colIndices Column indices of the BCSR matrix
- * @param[in] reorderedToNatural Mapping from reordered indices to natural indices
+ * @param[in] indexConversion Mapping from levelset-row index to matrix row
  * @param[in] rows Number of rows in the matrix
  * @param[out] diagIndices Array to store the indices of diagonal elements
  */
