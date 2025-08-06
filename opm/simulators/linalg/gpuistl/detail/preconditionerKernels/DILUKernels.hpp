@@ -59,6 +59,32 @@ void solveLowerLevelSet(T* reorderedMat,
 
 /**
  * @brief Perform a lower solve on certain rows in a matrix that can safely be computed in parallel
+ * @param mat pointer to GPU memory containing nonzerovalues of the sparse matrix.
+ * @param rowIndices Pointer to vector on GPU containing row indices compliant wiht bsr format
+ * @param colIndices Pointer to vector on GPU containing col indices compliant wiht bsr format
+ * @param indexConversion Integer array containing mapping an index from a levelset-row index to a a matrix row
+ * @param startIdx Index of the first row of the matrix to be solve
+ * @param rowsInLevelSet Number of rows in this level set, which number the amount of rows solved in parallel by this
+ * function
+ * @param dInv The diagonal matrix used by the Diagonal ILU preconditioner.
+ * @param d Stores the defect
+ * @param [out] v Will store the results of the lower solve
+ */
+template <class T, int blocksize>
+void solveLowerLevelSetNoReorder(const T* mat,
+                                 const int* rowIndices,
+                                 const int* colIndices,
+                                 const size_t* indexConversion,
+                                 int startIdx,
+                                 int rowsInLevelSet,
+                                 const T* dInv,
+                                 const T* d,
+                                 T* v,
+                                 int threadBlockSize,
+                                 cudaStream_t stream);
+
+/**
+ * @brief Perform a lower solve on certain rows in a matrix that can safely be computed in parallel
  * @param reorderedUpperMat pointer to GPU memory containing nonzerovalues of the sparse matrix. The matrix reordered
  * such that rows in the same level sets are contiguous. Thismatrix is assumed to be strictly lower triangular
  * @param rowIndices Pointer to vector on GPU containing row indices compliant wiht bsr format
@@ -115,6 +141,31 @@ void solveUpperLevelSet(T* reorderedMat,
 
 /**
  * @brief Perform an upper solve on certain rows in a matrix that can safely be computed in parallel
+ * @param mat pointer to GPU memory containing nonzerovalues of the sparse matrix.
+ * @param rowIndices Pointer to vector on GPU containing row indices compliant wiht bsr format
+ * @param colIndices Pointer to vector on GPU containing col indices compliant wiht bsr format
+ * @param indexConversion Integer array containing mapping an index from the levelset to a matrix row
+ * @param startIdx Index of the first row of the matrix to be solve
+ * @param rowsInLevelSet Number of rows in this level set, which number the amount of rows solved in parallel by this
+ * function
+ * @param dInv The diagonal matrix used by the Diagonal ILU preconditioner
+ * @param [out] v Will store the results of the lower solve. To begin with it should store the output from the lower
+ * solve
+ */
+template <class T, int blocksize>
+void solveUpperLevelSetNoReorder(const T* mat,
+                                 const int* rowIndices,
+                                 const int* colIndices,
+                                 const size_t* indexConversion,
+                                 int startIdx,
+                                 int rowsInLevelSet,
+                                 const T* dInv,
+                                 T* v,
+                                 int threadBlockSize,
+                                 cudaStream_t stream);
+
+/**
+ * @brief Perform an upper solve on certain rows in a matrix that can safely be computed in parallel
  * @param reorderedUpperMat pointer to GPU memory containing nonzerovalues of the sparse matrix. The matrix reordered
  * such that rows in the same level sets are contiguous. This matrix is assumed to be strictly upper triangular
  * @param rowIndices Pointer to vector on GPU containing row indices compliant wiht bsr format
@@ -162,10 +213,34 @@ void computeDiluDiagonal(T* reorderedMat,
                          int* colIndices,
                          int* reorderedToNatural,
                          int* naturalToReordered,
+                         size_t* diagIndices,
                          int startIdx,
                          int rowsInLevelSet,
                          T* dInv,
                          int threadBlockSize);
+
+/**
+ * @brief Computes the DILU of a BCSR matrix and stores it in a vector containing the diagonal blocks
+ * @param mat pointer to GPU memory containing nonzerovalues of the sparse matrix.
+ * @param rowIndices Pointer to vector on GPU containing row indices compliant wiht bsr format
+ * @param colIndices Pointer to vector on GPU containing col indices compliant wiht bsr format
+ * @param indexConversion Size_t array that maps you from a levelset-row index to a a matrix row
+ * @param diagIndices Size_t array that maps you from a matrix row to a the index of the block on the diagonal
+ * @param startIdx Index of the first row of the matrix to be solve
+ * @param rowsInLevelSet Number of rows in this level set, which number the amount of rows solved in parallel by this
+ * function
+ * @param [out] dInv The diagonal matrix used by the Diagonal ILU preconditioner
+ */
+template <class T, int blocksize>
+void computeDiluDiagonalNoReorder(const T* mat,
+                                  const int* rowIndices,
+                                  const int* colIndices,
+                                  const size_t* indexConversion,
+                                  const size_t* diagIndices,
+                                  int startIdx,
+                                  int rowsInLevelSet,
+                                  T* dInv,
+                                  int threadBlockSize);
 
 /**
  * @brief Computes the ILU0 of the diagonal elements of the split reordered matrix and stores it in a reordered vector
