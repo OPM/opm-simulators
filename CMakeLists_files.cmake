@@ -934,6 +934,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/GenericThresholdPressure_impl.hpp
   opm/simulators/flow/GenericTracerModel.hpp
   opm/simulators/flow/GenericTracerModel_impl.hpp
+  opm/simulators/flow/HybridNewton.hpp
   opm/simulators/flow/InterRegFlows.hpp
   opm/simulators/flow/KeywordValidation.hpp
   opm/simulators/flow/LogOutputHelper.hpp

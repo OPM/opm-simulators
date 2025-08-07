@@ -62,6 +62,8 @@
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
+#include <opm/simulators/flow/HybridNewton.hpp> 
+#include <opm/simulators/flow/HybridNewtonConfig.hpp> 
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 
@@ -159,6 +161,7 @@ protected:
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using WellModel = GetPropType<TypeTag, Properties::WellModel>;
     using AquiferModel = GetPropType<TypeTag, Properties::AquiferModel>;
+    using HybridNewton = Opm::HybridNewton<TypeTag>;
 
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
@@ -230,6 +233,7 @@ public:
         , aquiferModel_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
+        , hybridNewton_(simulator)
     {
         if (! Parameters::Get<Parameters::CheckSatfuncConsistency>()) {
             // User did not enable the "new" saturation function consistency
@@ -376,6 +380,7 @@ public:
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
+        hybridNewton_.tryApplyHybridNewton();
 
     }
 
@@ -1682,6 +1687,7 @@ protected:
 
     WellModel wellModel_;
     AquiferModel aquiferModel_;
+    HybridNewton hybridNewton_; 
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
