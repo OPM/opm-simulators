@@ -251,7 +251,6 @@ template<class TypeTag>
 struct TimeDiscHistorySize<TypeTag, TTag::FvBaseDiscretization>
 { static constexpr int value = 2; };
 
-
 //! Most models use extensive quantities for their storage term (so far, only the Stokes
 //! model does), so we disable this by default.
 template<class TypeTag>
@@ -415,6 +414,7 @@ public:
 
         PrimaryVariables::init();
         // Setting up the intensive quantities cache and storage cache is done in finishInit()
+        // and applyInitialSolution() to ensure that the history size is correct.
         asImp_().registerOutputModules_();
     }
 
@@ -643,11 +643,11 @@ public:
      */
     const IntensiveQuantities* cachedIntensiveQuantities(unsigned globalIdx, unsigned timeIdx) const
     {
-        if (!enableIntensiveQuantityCache_ || !intensiveQuantityCacheUpToDate_[timeIdx][globalIdx]) {
+        if (!enableIntensiveQuantityCache_ ||
+            timeIdx >= cachedIntensiveQuantityHistorySize_ ||
+            !intensiveQuantityCacheUpToDate_[timeIdx][globalIdx]) {
             return nullptr;
         }
-
-        assert(timeIdx < cachedIntensiveQuantityHistorySize_);
 
         // With the storage cache enabled, usually only the
         // intensive quantities for the most recent time step are
@@ -673,11 +673,9 @@ public:
                                          unsigned globalIdx,
                                          unsigned timeIdx) const
     {
-        if (!storeIntensiveQuantities()) {
+        if (!storeIntensiveQuantities() || timeIdx >= cachedIntensiveQuantityHistorySize_) {
             return;
         }
-
-        assert(timeIdx < cachedIntensiveQuantityHistorySize_);
 
         intensiveQuantityCache_[timeIdx][globalIdx] = intQuants;
         intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = true;
@@ -714,7 +712,9 @@ public:
      */
     void invalidateIntensiveQuantitiesCache(unsigned timeIdx) const
     {
-        assert(timeIdx < cachedIntensiveQuantityHistorySize_);
+        if (timeIdx >= cachedIntensiveQuantityHistorySize_) {
+            return;
+        }
 
         if (storeIntensiveQuantities()) {
             std::fill(intensiveQuantityCacheUpToDate_[timeIdx].begin(),
@@ -783,8 +783,7 @@ public:
      */
     void shiftIntensiveQuantityCache(unsigned numSlots = 1)
     {
-        // TODO: Consider removing this method as it i not needed when we only have one time step in the cache.
-        if (!storeIntensiveQuantities()) {
+        if (!storeIntensiveQuantities() || numSlots <= 0) {
             return;
         }
 
@@ -798,7 +797,6 @@ public:
             return;
         }
 
-        assert(numSlots > 0);
         const unsigned intensiveHistorySize = cachedIntensiveQuantityHistorySize_;
         for (unsigned timeIdx = 0; timeIdx < intensiveHistorySize - numSlots; ++timeIdx) {
             intensiveQuantityCache_[timeIdx + numSlots] = intensiveQuantityCache_[timeIdx];
@@ -835,14 +833,22 @@ public:
      * volume unit at a given time. The user is responsible for making sure that the
      * value of this is correct and that it can be used before this method is called.
      *
+     * \attention If the storage cache is disabled, or if the entry is not up to date,
+     *            this method will throw a std::logic_error.
+     *
      * \param globalDofIdx The index of the relevant degree of freedom in a grid-global vector
      * \param timeIdx The relevant index for the time discretization
      */
     const EqVector& cachedStorage(unsigned globalIdx, unsigned timeIdx) const
     {
-        assert(enableStorageCache_);
-        assert(timeIdx < historySize);
-        assert(storageCacheUpToDate_[timeIdx][globalIdx] != 0);
+        if (!enableStorageCache_ ||
+            timeIdx >= historySize ||
+            !storageCacheUpToDate_[timeIdx][globalIdx]) {
+            throw std::logic_error("Cached storage is not available or up to date for the requested "
+                                   "global index and time index. Make sure storage cache is enabled "
+                                   "and the entry is valid before calling this method.");
+        }
+
         return storageCache_[timeIdx][globalIdx];
     }
 
@@ -859,8 +865,10 @@ public:
      */
     void updateCachedStorage(unsigned globalIdx, unsigned timeIdx, const EqVector& value) const
     {
-        assert(enableStorageCache_);
-        assert(timeIdx < historySize);
+        if (!enableStorageCache_ || timeIdx >= historySize) {
+            return;
+        }
+
         storageCache_[timeIdx][globalIdx] = value;
         storageCacheUpToDate_[timeIdx][globalIdx] = 1;
     }
@@ -873,7 +881,7 @@ public:
      */
     bool storageCacheIsUpToDate(unsigned globalIdx, unsigned timeIdx) const
     {
-        if (!enableStorageCache_) {
+        if (!enableStorageCache_ || timeIdx >= historySize) {
             return false;
         }
         return storageCacheUpToDate_[timeIdx][globalIdx] != 0;
@@ -887,7 +895,7 @@ public:
      */
     void invalidateStorageCacheEntry(unsigned globalIdx, unsigned timeIdx) const
     {
-        if (enableStorageCache_) {
+        if (enableStorageCache_ && timeIdx < historySize) {
             storageCacheUpToDate_[timeIdx][globalIdx] = 0;
         }
     }
@@ -899,7 +907,7 @@ public:
      */
     void invalidateStorageCache(unsigned timeIdx) const
     {
-        if (enableStorageCache_) {
+        if (enableStorageCache_ && timeIdx < historySize) {
             std::fill(storageCacheUpToDate_[timeIdx].begin(),
                       storageCacheUpToDate_[timeIdx].end(),
                       /*value=*/0);
