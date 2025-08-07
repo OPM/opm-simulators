@@ -729,13 +729,15 @@ void
 BlackoilModel<TypeTag>::
 updateTUNING(const Tuning& tuning)
 {
-    this->param_.tolerance_mb_ = tuning.XXXMBE;
-    this->param_.tolerance_cnv_ = tuning.XXXCNV;
+    this->param_.tolerance_cnv_ = tuning.TRGCNV;
+    this->param_.tolerance_cnv_relaxed_ = tuning.XXXCNV;
+    this->param_.tolerance_mb_ = tuning.TRGMBE;
+    this->param_.tolerance_mb_relaxed_ = tuning.XXXMBE;
 
     if (terminal_output_) {
         std::string message = "Setting BlackoilModel tolerances:";
-        message += fmt::format(" MB: {:.2e},", tuning.XXXMBE);
-        message += fmt::format(" CNV: {:.2e}", tuning.XXXCNV);
+        message += fmt::format(" MB: {:.2e},", tuning.TRGMBE);
+        message += fmt::format(" CNV: {:.2e}", tuning.TRGCNV);
         OpmLog::debug(message);
     }
 }
