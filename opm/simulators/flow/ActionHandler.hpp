@@ -36,7 +36,7 @@ namespace Opm::Action {
 } // namespace Opm::Action
 
 namespace Opm {
-template<class Scalar> class BlackoilWellModelGeneric;
+template<typename FluidSystem, typename Indices> class BlackoilWellModelGeneric;
 class EclipseState;
 class Schedule;
 struct SimulatorUpdate;
@@ -47,10 +47,11 @@ class UDQState;
 namespace Opm {
 
 //! \brief Class handling Action support in simulator
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class ActionHandler
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     //! \brief Function handle to update transmissiblities.
     using TransFunc = std::function<void(bool)>;
 
@@ -74,7 +75,7 @@ public:
                   Schedule& schedule,
                   Action::State& actionState,
                   SummaryState& summaryState,
-                  BlackoilWellModelGeneric<Scalar>& wellModel,
+                  BlackoilWellModelGeneric<FluidSystem, Indices>& wellModel,
                   Parallel::Communication comm);
 
     /// Run all pending actions.
@@ -138,7 +139,7 @@ private:
     SummaryState& summaryState_;
 
     /// Simulation wells on this rank.
-    BlackoilWellModelGeneric<Scalar>& wellModel_;
+    BlackoilWellModelGeneric<FluidSystem, Indices>& wellModel_;
 
     /// MPI communicator object linking all simulation ranks.
     Parallel::Communication comm_;

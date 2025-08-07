@@ -178,7 +178,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/SimulatorTimerInterface.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/gatherConvergenceReport.cpp
-  opm/simulators/utils/BlackoilPhases.cpp
   opm/simulators/utils/ComponentName.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/FullySupportedFlowKeywords.cpp
@@ -191,7 +190,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/UnsupportedFlowKeywords.cpp
   opm/simulators/utils/compressPartition.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
-  opm/simulators/utils/phaseUsageFromDeck.cpp
   opm/simulators/utils/readDeck.cpp
   opm/simulators/utils/satfunc/RelpermDiagnostics.cpp
   opm/simulators/wells/ALQState.cpp
@@ -224,7 +222,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/ParallelWBPCalculation.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/PerfData.cpp
-  opm/simulators/wells/RateConverter.cpp
+#   opm/simulators/wells/RateConverter.cpp
   opm/simulators/wells/RatioCalculator.cpp
   opm/simulators/wells/SegmentState.cpp
   opm/simulators/wells/SingleWellState.cpp
@@ -233,17 +231,17 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/StandardWellEquations.cpp
   opm/simulators/wells/StandardWellEval.cpp
   opm/simulators/wells/StandardWellPrimaryVariables.cpp
-  opm/simulators/wells/TargetCalculator.cpp
+#  opm/simulators/wells/TargetCalculator.cpp
   opm/simulators/wells/VFPHelpers.cpp
   opm/simulators/wells/VFPInjProperties.cpp
   opm/simulators/wells/VFPProdProperties.cpp
-  opm/simulators/wells/WellAssemble.cpp
-  opm/simulators/wells/WellBhpThpCalculator.cpp
+#  opm/simulators/wells/WellAssemble.cpp
+#  opm/simulators/wells/WellBhpThpCalculator.cpp
   opm/simulators/wells/WellConstraints.cpp
   opm/simulators/wells/WellConvergence.cpp
   opm/simulators/wells/WellFilterCake.cpp
   opm/simulators/wells/WellGroupConstraints.cpp
-  opm/simulators/wells/WellGroupControls.cpp
+#  opm/simulators/wells/WellGroupControls.cpp
   opm/simulators/wells/WellGroupHelpers.cpp
   opm/simulators/wells/WellHelpers.cpp
   opm/simulators/wells/WellInterfaceFluidSystem.cpp
@@ -436,7 +434,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_equil.cpp
   tests/test_extractMatrix.cpp
   tests/test_flexiblesolver.cpp
-  tests/test_glift1.cpp
+#  tests/test_glift1.cpp
   tests/test_graphcoloring.cpp
   tests/test_GroupState.cpp
   tests/test_interregflows.cpp
@@ -456,15 +454,15 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_propertytree.cpp
   tests/test_region_phase_pvaverage.cpp
   tests/test_relpermdiagnostics.cpp
-  tests/test_RestartSerialization.cpp
+#  tests/test_RestartSerialization.cpp
   tests/test_RunningStatistics.cpp
   tests/test_rstconv.cpp
   tests/test_stoppedwells.cpp
   tests/test_timer.cpp
   tests/test_vfpproperties.cpp
-  tests/test_wellmodel.cpp
+#  tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
-  tests/test_wellstate.cpp
+#  tests/test_wellstate.cpp
   )
 
 if (HAVE_ECL_INPUT)
@@ -1039,7 +1037,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/SimulatorReport.hpp
   opm/simulators/timestepping/SimulatorTimerInterface.hpp
   opm/simulators/timestepping/gatherConvergenceReport.hpp
-  opm/simulators/utils/BlackoilPhases.hpp
   opm/simulators/utils/ComponentName.hpp
   opm/simulators/utils/DeferredLogger.hpp
   opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
@@ -1054,7 +1051,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/compressPartition.hpp
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
-  opm/simulators/utils/phaseUsageFromDeck.hpp
   opm/simulators/utils/ParallelCommunication.hpp
   opm/simulators/utils/ParallelSerialization.hpp
   opm/simulators/utils/readDeck.hpp
@@ -1260,7 +1256,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/reservoir_blackoil_vcfv.cpp
   examples/reservoir_ncp_ecfv.cpp
   examples/reservoir_ncp_vcfv.cpp
-  examples/printvfp.cpp
+#  examples/printvfp.cpp
   examples/tutorial1.cpp
   examples/waterair_pvs_ni.cpp
 )

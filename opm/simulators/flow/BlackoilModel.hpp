@@ -38,7 +38,6 @@
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/ComponentName.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -237,7 +236,7 @@ public:
 
     /// The number of active fluid phases in the model.
     int numPhases() const
-    { return phaseUsage_.num_phases; }
+    { return Indices::numPhases; }
 
     /// Wrapper required due to not following generic API
     template<class T>
@@ -315,7 +314,6 @@ protected:
     // ---------  Data members  ---------
     Simulator& simulator_;
     const Grid& grid_;
-    const PhaseUsage phaseUsage_;
     static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_extbo_ = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool has_polymer_ = getPropValue<TypeTag, Properties::EnablePolymer>();
