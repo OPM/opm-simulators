@@ -403,6 +403,7 @@ public:
         , enableIntensiveQuantityCache_(Parameters::Get<Parameters::EnableIntensiveQuantityCache>())
         , enableStorageCache_(Parameters::Get<Parameters::EnableStorageCache>())
         , enableThermodynamicHints_(Parameters::Get<Parameters::EnableThermodynamicHints>())
+        , cachedIntensiveQuantityHistorySize_(-1)
     {
         const bool isEcfv = std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>;
         if (enableGridAdaptation_ && !isEcfv) {
@@ -412,19 +413,8 @@ public:
         }
 
         PrimaryVariables::init();
-        const std::size_t numDof = asImp_().numGridDof();
-        for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
-            if (storeIntensiveQuantities()) {
-                intensiveQuantityCache_[timeIdx].resize(numDof);
-                intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof, /*value=*/false);
-            }
-
-            if (enableStorageCache_) {
-                storageCache_[timeIdx].resize(numDof);
-            }
-        }
-
-        resizeAndResetIntensiveQuantitiesCache_();
+        // Setting up the intensive quantities cache and storage cache is done in finishInit()
+        // and applyInitialSolution() to ensure that the history size is correct.
         asImp_().registerOutputModules_();
     }
 
@@ -523,12 +513,6 @@ public:
         }
 
         resizeAndResetIntensiveQuantitiesCache_();
-        if (storeIntensiveQuantities()) {
-            // invalidate all cached intensive quantities
-            for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
-                invalidateIntensiveQuantitiesCache(timeIdx);
-            }
-        }
 
         newtonMethod_.finishInit();
     }
@@ -582,6 +566,11 @@ public:
         for (unsigned timeIdx = 1; timeIdx < historySize; ++timeIdx) {
             solution(timeIdx) = solution(/*timeIdx=*/0);
         }
+
+        // Initialize intensive quantities cache now that all problem-specific parameters are available.
+        // This ensures intensiveQuantityHistorySize is correct based on recycleFirstIterationStorage().
+        // TODO: Where this is done should perhaps be changed once finishInit() is refactored.
+        resizeAndResetIntensiveQuantitiesCache_();
 
         simulator_.problem().initialSolutionApplied();
 
@@ -654,7 +643,9 @@ public:
      */
     const IntensiveQuantities* cachedIntensiveQuantities(unsigned globalIdx, unsigned timeIdx) const
     {
-        if (!enableIntensiveQuantityCache_ || !intensiveQuantityCacheUpToDate_[timeIdx][globalIdx]) {
+        if (!enableIntensiveQuantityCache_ ||
+            timeIdx >= cachedIntensiveQuantityHistorySize_ ||
+            !intensiveQuantityCacheUpToDate_[timeIdx][globalIdx]) {
             return nullptr;
         }
 
@@ -682,12 +673,12 @@ public:
                                          unsigned globalIdx,
                                          unsigned timeIdx) const
     {
-        if (!storeIntensiveQuantities()) {
+        if (!storeIntensiveQuantities() || timeIdx >= cachedIntensiveQuantityHistorySize_) {
             return;
         }
 
         intensiveQuantityCache_[timeIdx][globalIdx] = intQuants;
-        intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = 1;
+        intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = true;
     }
 
     /*!
@@ -709,12 +700,22 @@ public:
     }
 
     /*!
+     * \brief Get the cached intensive quantity history size.
+     */
+    unsigned cachedIntensiveQuantityHistorySize() const
+    { return cachedIntensiveQuantityHistorySize_; }
+
+    /*!
      * \brief Invalidate the whole intensive quantity cache for time index.
      *
      * \param timeIdx The index used by the time discretization.
      */
     void invalidateIntensiveQuantitiesCache(unsigned timeIdx) const
     {
+        if (timeIdx >= cachedIntensiveQuantityHistorySize_) {
+            return;
+        }
+
         if (storeIntensiveQuantities()) {
             std::fill(intensiveQuantityCacheUpToDate_[timeIdx].begin(),
                       intensiveQuantityCacheUpToDate_[timeIdx].end(),
@@ -782,7 +783,7 @@ public:
      */
     void shiftIntensiveQuantityCache(unsigned numSlots = 1)
     {
-        if (!storeIntensiveQuantities()) {
+        if (!storeIntensiveQuantities() || numSlots <= 0) {
             return;
         }
 
@@ -796,9 +797,8 @@ public:
             return;
         }
 
-        assert(numSlots > 0);
-
-        for (unsigned timeIdx = 0; timeIdx < historySize - numSlots; ++timeIdx) {
+        const unsigned intensiveHistorySize = cachedIntensiveQuantityHistorySize_;
+        for (unsigned timeIdx = 0; timeIdx < intensiveHistorySize - numSlots; ++timeIdx) {
             intensiveQuantityCache_[timeIdx + numSlots] = intensiveQuantityCache_[timeIdx];
             intensiveQuantityCacheUpToDate_[timeIdx + numSlots] = intensiveQuantityCacheUpToDate_[timeIdx];
         }
@@ -833,12 +833,22 @@ public:
      * volume unit at a given time. The user is responsible for making sure that the
      * value of this is correct and that it can be used before this method is called.
      *
+     * \attention If the storage cache is disabled, or if the entry is not up to date,
+     *            this method will throw a std::logic_error.
+     *
      * \param globalDofIdx The index of the relevant degree of freedom in a grid-global vector
      * \param timeIdx The relevant index for the time discretization
      */
     const EqVector& cachedStorage(unsigned globalIdx, unsigned timeIdx) const
     {
-        assert(enableStorageCache_);
+        if (!enableStorageCache_ ||
+            timeIdx >= historySize ||
+            !storageCacheUpToDate_[timeIdx][globalIdx]) {
+            throw std::logic_error("Cached storage is not available or up to date for the requested "
+                                   "global index and time index. Make sure storage cache is enabled "
+                                   "and the entry is valid before calling this method.");
+        }
+
         return storageCache_[timeIdx][globalIdx];
     }
 
@@ -855,8 +865,77 @@ public:
      */
     void updateCachedStorage(unsigned globalIdx, unsigned timeIdx, const EqVector& value) const
     {
-        assert(enableStorageCache_);
+        if (!enableStorageCache_ || timeIdx >= historySize) {
+            return;
+        }
+
         storageCache_[timeIdx][globalIdx] = value;
+        storageCacheUpToDate_[timeIdx][globalIdx] = 1;
+    }
+
+    /*!
+     * \brief Returns true if the storage cache entry for a given DOF and time index is up to date.
+     *
+     * \param globalIdx The global space index for the entity
+     * \param timeIdx The index used by the time discretization
+     */
+    bool storageCacheIsUpToDate(unsigned globalIdx, unsigned timeIdx) const
+    {
+        if (!enableStorageCache_ || timeIdx >= historySize) {
+            return false;
+        }
+        return storageCacheUpToDate_[timeIdx][globalIdx] != 0;
+    }
+
+    /*!
+     * \brief Invalidate the storage cache for a given DOF and time index.
+     *
+     * \param globalIdx The global space index for the entity
+     * \param timeIdx The index used by the time discretization
+     */
+    void invalidateStorageCacheEntry(unsigned globalIdx, unsigned timeIdx) const
+    {
+        if (enableStorageCache_ && timeIdx < historySize) {
+            storageCacheUpToDate_[timeIdx][globalIdx] = 0;
+        }
+    }
+
+    /*!
+     * \brief Invalidate the whole storage cache for a given time index.
+     *
+     * \param timeIdx The index used by the time discretization
+     */
+    void invalidateStorageCache(unsigned timeIdx) const
+    {
+        if (enableStorageCache_ && timeIdx < historySize) {
+            std::fill(storageCacheUpToDate_[timeIdx].begin(),
+                      storageCacheUpToDate_[timeIdx].end(),
+                      /*value=*/0);
+        }
+    }
+
+    /*!
+     * \brief Shift storage cache by a given number of time step slots.
+     *
+     * This should be called at the end of each time step to move the storage cache
+     * for timeIdx=0 (current time) to timeIdx=1 (previous time) and so on.
+     *
+     * This method should only be called by the time discretization.
+     *
+     * \param numSlots The number of time step slots for which the
+     *                 storage cache should be shifted.
+     */
+    void shiftStorageCache(unsigned numSlots = 1) const
+    {
+        // If we cannot recycle first iteration storage, it does not make sense to shift the storage cache.
+        if (enableStorageCache_ && !simulator_.problem().recycleFirstIterationStorage()) {
+            for (unsigned timeIdx = 0; timeIdx < historySize - numSlots; ++timeIdx) {
+                storageCache_[timeIdx + numSlots] = storageCache_[timeIdx];
+                storageCacheUpToDate_[timeIdx + numSlots] = storageCacheUpToDate_[timeIdx];
+            }
+
+             // should we invalidate the cache for the most recent time indices? (see shiftIntensiveQuantityCache)
+        }
     }
 
     /*!
@@ -1407,6 +1486,9 @@ public:
         // make the current solution the previous one.
         solution(/*timeIdx=*/1) = solution(/*timeIdx=*/0);
 
+        // shift the storage cache by one position in the history
+        asImp_().shiftStorageCache(/*numSlots=*/1);
+
         // shift the intensive quantities cache by one position in the
         // history
         asImp_().shiftIntensiveQuantityCache(/*numSlots=*/1);
@@ -1840,13 +1922,21 @@ protected:
             const std::size_t numDof = asImp_().numGridDof();
             for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
                 storageCache_[timeIdx].resize(numDof);
+                storageCacheUpToDate_[timeIdx].resize(numDof, /*value=*/0);
             }
         }
 
         // allocate the intensive quantities cache
         if (storeIntensiveQuantities()) {
             const std::size_t numDof = asImp_().numGridDof();
-            for(unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
+            cachedIntensiveQuantityHistorySize_ = simulator_.problem().intensiveQuantityHistorySize();
+            const unsigned intensiveHistorySize = cachedIntensiveQuantityHistorySize_;
+
+            // resize the vectors based on runtime history size
+            intensiveQuantityCache_.resize(intensiveHistorySize);
+            intensiveQuantityCacheUpToDate_.resize(intensiveHistorySize);
+
+            for(unsigned timeIdx = 0; timeIdx < intensiveHistorySize; ++timeIdx) {
                 intensiveQuantityCache_[timeIdx].resize(numDof);
                 intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof);
                 invalidateIntensiveQuantitiesCache(timeIdx);
@@ -1921,10 +2011,10 @@ protected:
 
     // cur is the current iterative solution, prev the converged
     // solution of the previous time step
-    mutable std::array<IntensiveQuantitiesVector, historySize> intensiveQuantityCache_;
+    mutable std::vector<IntensiveQuantitiesVector> intensiveQuantityCache_;
 
     // while these are logically bools, concurrent writes to vector<bool> are not thread safe.
-    mutable std::array<std::vector<unsigned char>, historySize> intensiveQuantityCacheUpToDate_;
+    mutable std::vector<std::vector<unsigned char>> intensiveQuantityCacheUpToDate_;
 
     mutable std::array<std::unique_ptr<DiscreteFunction>, historySize> solution_;
 
@@ -1936,10 +2026,15 @@ protected:
 
     mutable std::array<GlobalEqVector, historySize> storageCache_;
 
+    // while these are logically bools, concurrent writes to vector<bool> are not thread safe.
+    mutable std::array<std::vector<unsigned char>, historySize> storageCacheUpToDate_;
+
     bool enableGridAdaptation_;
     bool enableIntensiveQuantityCache_;
     bool enableStorageCache_;
     bool enableThermodynamicHints_;
+
+    mutable unsigned cachedIntensiveQuantityHistorySize_;
 };
 
 /*!
