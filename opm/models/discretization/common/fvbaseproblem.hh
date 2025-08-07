@@ -189,7 +189,7 @@ public:
      * This is only relevant if the storage cache is enabled and is usually the case,
      * i.e., this method only needs to be overwritten in rare corner cases.
      */
-    virtual bool recycleFirstIterationStorage() const
+    bool recycleFirstIterationStorage() const
     { return true; }
 
     /*!
@@ -201,7 +201,7 @@ public:
      */
      unsigned intensiveQuantityHistorySize() const
      {
-         if (Parameters::Get<Parameters::EnableStorageCache>() && recycleFirstIterationStorage()) {
+         if (Parameters::Get<Parameters::EnableStorageCache>() && asImp_().recycleFirstIterationStorage()) {
              return 1;
          }
          return 2;
