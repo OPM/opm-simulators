@@ -309,13 +309,15 @@ public:
 
     void updateTUNING(const Tuning& tuning)
     {
-        modelParam_.tolerance_mb_ = tuning.XXXMBE;
-        modelParam_.tolerance_cnv_ = tuning.XXXCNV;
+        modelParam_.tolerance_cnv_ = tuning.TRGCNV;
+        modelParam_.tolerance_cnv_relaxed_ = tuning.XXXCNV;
+        modelParam_.tolerance_mb_ = tuning.TRGMBE;
+        modelParam_.tolerance_mb_relaxed_ = tuning.XXXMBE;
         if (terminalOutput_) {
-            std::string message = "Setting SimulatorFullyImplicitBlackoil tolerances:";
-            message += fmt::format(" MB: {:.2e},", tuning.XXXMBE);
-            message += fmt::format(" CNV: {:.2e}", tuning.XXXCNV);
-            OpmLog::debug(message);
+            const auto msg = fmt::format("Tuning SimulatorFullyImplicitBlackoil tolerances: "
+                                         "MB: {:.2e}, CNV: {:.2e}",
+                                         tuning.TRGMBE, tuning.TRGCNV);
+            OpmLog::debug(msg);
         }
     }
 
