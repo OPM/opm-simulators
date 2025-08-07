@@ -18,6 +18,8 @@
 */
 
 #include "config.h"
+#include "dune/istl/schwarz.hh"
+#include "opm/simulators/linalg/FlexibleSolver.hpp"
 #include <dune/istl/operators.hh>
 #include <opm/simulators/linalg/FlexibleSolver_impl.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
@@ -33,4 +35,31 @@ template class ::Dune::FlexibleSolver<Dune::MatrixAdapter<::Opm::gpuistl::GpuSpa
 template class ::Dune::FlexibleSolver<Dune::MatrixAdapter<::Opm::gpuistl::GpuSparseMatrix<float>,
                                                           ::Opm::gpuistl::GpuVector<float>,
                                                           ::Opm::gpuistl::GpuVector<float>>>;
+#endif
+
+#if HAVE_MPI
+template <class realtype>
+using CommGpu = ::Opm::gpuistl::GpuOwnerOverlapCopy<realtype, Comm>;
+
+template <class Scalar>
+using ParOpGpu = Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatrix<Scalar>,
+                                                  ::Opm::gpuistl::GpuVector<Scalar>,
+                                                  ::Opm::gpuistl::GpuVector<Scalar>,
+                                                  CommGpu<Scalar>>;
+
+#define INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(T)                                                                          \
+    template class Dune::FlexibleSolver<ParOpGpu<T>>;                                                                  \
+    template Dune::FlexibleSolver<ParOpGpu<T>>::FlexibleSolver(                                                        \
+        ParOpGpu<T>& op,                                                                                               \
+        const CommGpu<T>& comm,                                                                                        \
+        const Opm::PropertyTree& prm,                                                                                  \
+        const std::function<typename ParOpGpu<T>::domain_type()>& weightsCalculator,                                   \
+        std::size_t pressureIndex);
+
+INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_FLEXIBLESOLVER_GPU_MPI(float)
+#endif
+
 #endif
