@@ -1113,22 +1113,21 @@ getGuideRateInj(const std::string& name,
 template<class Scalar>
 int WellGroupHelpers<Scalar>::
 updateGroupControlledWells(const Schedule& schedule,
-                     const WellState<Scalar>& well_state,
-                     GroupState<Scalar>& group_state,
-                     const SummaryState& summary_state,
-                     const GuideRate* guideRate,
-                     const int report_step,
-                     const std::string& group_name,
-                     const std::string& always_included_child,
-                     const bool is_production_group,
-                     const Phase injection_phase)
+                           const WellState<Scalar>& well_state,
+                           GroupState<Scalar>& group_state,
+                           const SummaryState& summary_state,
+                           const GuideRate* guideRate,
+                           const int report_step,
+                           const std::string& group_name,
+                           const bool is_production_group,
+                           const Phase injection_phase)
 {
     OPM_TIMEFUNCTION();
     const Group& group = schedule.getGroup(group_name, report_step);
     int num_wells = 0;
     for (const std::string& child_group : group.groups()) {
 
-        bool included = (child_group == always_included_child);
+        bool included = false;
         if (is_production_group) {
             const auto ctrl = group_state.production_control(child_group);
             included = included || (ctrl == Group::ProductionCMode::FLD) || (ctrl == Group::ProductionCMode::NONE);
@@ -1139,16 +1138,16 @@ updateGroupControlledWells(const Schedule& schedule,
 
         if (included) {
             num_wells
-                += updateGroupControlledWells(schedule, well_state, group_state, summary_state, guideRate, report_step, child_group, always_included_child, is_production_group, injection_phase);
+                += updateGroupControlledWells(schedule, well_state, group_state, summary_state, guideRate, report_step, child_group, is_production_group, injection_phase);
         } else {
-            updateGroupControlledWells(schedule, well_state, group_state, summary_state, guideRate, report_step, child_group, always_included_child, is_production_group, injection_phase);
+            updateGroupControlledWells(schedule, well_state, group_state, summary_state, guideRate, report_step, child_group, is_production_group, injection_phase);
         }
     }
     for (const std::string& child_well : group.wells()) {
-        bool included = (child_well == always_included_child);
+        bool included = false;
         const Well& well = schedule.getWell(child_well, report_step);
         if (is_production_group && well.isProducer()) {
-                included = included || well_state.isProductionGrup(child_well) || group.as_choke();
+            included = included || well_state.isProductionGrup(child_well) || group.as_choke();
         } else if (!is_production_group && !well.isProducer()) {
             const auto& well_controls = well.injectionControls(summary_state);
             auto injectorType = well_controls.injector_type;
@@ -1229,9 +1228,9 @@ updateGroupControlledWells(const Schedule& schedule,
         }
     }
     if (is_production_group) {
-        group_state.update_number_of_wells_under_this_control(group_name, num_wells);
+        group_state.update_number_of_wells_under_group_control(group_name, num_wells);
     } else {
-        group_state.update_number_of_wells_under_this_inj_control(group_name, injection_phase, num_wells);
+        group_state.update_number_of_wells_under_inj_group_control(group_name, injection_phase, num_wells);
     }
 
     return num_wells;
@@ -1249,10 +1248,12 @@ groupControlledWells(const Schedule& schedule,
                      const bool is_production_group,
                      const Phase injection_phase)
 {
-    auto num_wells = is_production_group? group_state.number_of_wells_under_this_control(group_name): group_state.number_of_wells_under_this_inj_control(group_name, injection_phase);
+    auto num_wells = is_production_group ? group_state.number_of_wells_under_group_control(group_name)
+        : group_state.number_of_wells_under_inj_group_control(group_name, injection_phase);
     if (schedule.hasWell(always_included_child, report_step)) {
         const bool isInGroup = isInGroupChainTopBot(always_included_child, group_name, schedule, report_step);
-        bool already_included = is_production_group? well_state.isProductionGrup(always_included_child) : well_state.isInjectionGrup(always_included_child);
+        const bool already_included = is_production_group ? well_state.isProductionGrup(always_included_child)
+            : well_state.isInjectionGrup(always_included_child);
         if (!already_included && isInGroup) {
             num_wells++;
         }
@@ -1295,9 +1296,9 @@ template<class Scalar>
 bool
 WellGroupHelpers<Scalar>::
 isInGroupChainTopBot(const std::string& bottom,
-                 const std::string& top,
-                 const Schedule& schedule,
-                 const int report_step)
+                     const std::string& top,
+                     const Schedule& schedule,
+                     const int report_step)
 {
     // Get initial parent, 'bottom' can be a well or a group.
     std::string parent;
@@ -1307,17 +1308,15 @@ isInGroupChainTopBot(const std::string& bottom,
         parent = schedule.getGroup(bottom, report_step).parent();
     }
 
-    // Build the chain from bottom to top.
-    std::vector<std::string> chain;
-    chain.push_back(bottom);
-    chain.push_back(parent);
     while (parent != top) {
         parent = schedule.getGroup(parent, report_step).parent();
-        chain.push_back(parent);
-        if (parent == "FIELD")
-            break;
+        if (parent == top) {
+            return true;
+        } else if (parent == "FIELD") {
+            return false;
+        }
     }
-    return chain.back() == top;
+    return true;
 }
 
 template<class Scalar>

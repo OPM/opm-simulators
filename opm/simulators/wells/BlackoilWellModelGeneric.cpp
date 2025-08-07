@@ -1375,11 +1375,10 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     auto& well_state = this->wellState();
     const auto& well_state_nupcol = this->nupcolWellState();
 
-
-
-    std::vector<bool> is_production_group = {true, false, false, false};
-    const Phase all[] = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
-    for (int i = 0; i < 4; i++) {
+    constexpr int num_configs = 4;
+    constexpr std::array<bool, num_configs> is_production_group = {true, false, false, false};
+    constexpr std::array<Phase, num_configs> phases = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
+    for (int i = 0; i < num_configs; i++) {
         WellGroupHelpers<Scalar>::updateGroupControlledWells(schedule(),
                                                              well_state,
                                                              this->groupState(),
@@ -1387,9 +1386,8 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                              &guideRate_,
                                                              reportStepIdx,
                                                              "FIELD",
-                                                             "",
                                                              is_production_group[i],
-                                                             all[i]);
+                                                             phases[i]);
     }
 
     // the group target reduction rates needs to be update since wells may have switched to/from GRUP control
