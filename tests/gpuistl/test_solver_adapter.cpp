@@ -77,7 +77,7 @@ createSolverAdapterWithMatrix(const size_t N = 10)
     auto sp = std::make_shared<Dune::ScalarProduct<Vector>>();
     auto prm = Opm::PropertyTree();
     prm.put<double>("relaxation", 1.0);
-    prm.put<std::string>("type", "GPUILU0");
+    prm.put<std::string>("type", "gpuilu0");
     auto prec = PrecondFactory::create(*op, prm);
     auto solverAdapter = std::make_shared<SolverAdapter>(*op, *sp, prec, 1.0, 10, 0, Dune::Amg::SequentialInformation());
 

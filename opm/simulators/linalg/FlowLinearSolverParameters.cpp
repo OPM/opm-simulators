@@ -105,11 +105,11 @@ void FlowLinearSolverParameters::registerParameters()
         ("The fill-in level of the linear solver's ILU preconditioner");
     Parameters::Register<Parameters::MiluVariant>
         ("Specify which variant of the modified-ILU preconditioner ought to be used. "
-         "Possible variants are: ILU (default, plain ILU), "
-         "MILU_1 (lump diagonal with dropped row entries), "
-         "MILU_2 (lump diagonal with the sum of the absolute values of the dropped row entries), "
-         "MILU_3 (if diagonal is positive add sum of dropped row entries, otherwise subtract them), "
-         "MILU_4 (if diagonal is positive add sum of dropped row entries, otherwise do nothing");
+         "Possible variants are: ilu (default, plain ILU), "
+         "milu_1 (lump diagonal with dropped row entries), "
+         "milu_2 (lump diagonal with the sum of the absolute values of the dropped row entries), "
+         "milu_3 (if diagonal is positive add sum of dropped row entries, otherwise subtract them), "
+         "milu_4 (if diagonal is positive add sum of dropped row entries, otherwise do nothing)");
     Parameters::Register<Parameters::IluRedblack>
         ("Use red-black partitioning for the ILU preconditioner");
     Parameters::Register<Parameters::IluReorderSpheres>

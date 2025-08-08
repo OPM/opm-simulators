@@ -54,15 +54,19 @@ namespace Opm
 
 MILU_VARIANT convertString2Milu(const std::string& milu)
 {
-    if( 0 == milu.compare("MILU_1") )
+    // We use lower case as the internal canonical representation of solver names
+    std::string milu_lower = milu;
+    std::transform(milu_lower.begin(), milu_lower.end(), milu_lower.begin(), ::tolower);
+
+    if( 0 == milu_lower.compare("milu_1") )
     {
         return MILU_VARIANT::MILU_1;
     }
-    if ( 0 == milu.compare("MILU_2") )
+    if ( 0 == milu_lower.compare("milu_2") )
     {
         return MILU_VARIANT::MILU_2;
     }
-    if ( 0 == milu.compare("MILU_3") )
+    if ( 0 == milu_lower.compare("milu_3") )
     {
         return MILU_VARIANT::MILU_3;
     }
