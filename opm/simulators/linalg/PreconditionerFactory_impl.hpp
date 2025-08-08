@@ -91,7 +91,9 @@ PreconditionerFactory<Operator, Comm>::doCreate(const Operator& op,
         StandardPreconditioners<Operator, Comm>::add();
         defAdded_ = true;
     }
-    const std::string& type = prm.get<std::string>("type", "ParOverILU0");
+    std::string type = prm.get<std::string>("type", "paroverilu0");
+    // We use lower case as the internal canonical representation of solver names
+    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
     auto it = creators_.find(type);
     if (it == creators_.end()) {
         std::ostringstream msg;
@@ -117,7 +119,9 @@ PreconditionerFactory<Operator, Comm>::doCreate(const Operator& op,
         StandardPreconditioners<Operator, Comm>::add();
         defAdded_ = true;
     }
-    const std::string& type = prm.get<std::string>("type", "ParOverILU0");
+    std::string type = prm.get<std::string>("type", "paroverilu0");
+    // We use lower case as the internal canonical representation of solver names
+    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
     auto it = parallel_creators_.find(type);
     if (it == parallel_creators_.end()) {
         std::ostringstream msg;
