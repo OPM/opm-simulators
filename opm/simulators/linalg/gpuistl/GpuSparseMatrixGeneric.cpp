@@ -16,6 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <config.h>
+
 #include "opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp"
 #include <cuda.h>
 #include <dune/common/fmatrix.hh>
@@ -79,6 +81,7 @@ GpuSparseMatrixGeneric<T>::GpuSparseMatrixGeneric(const T* nonZeroElements,
 
     // Create matrix descriptor based on blockSize
     if (blockSize > 1) {
+#if !USE_HIP
         // Use BSR format for blocked matrices
         OPM_CUSPARSE_SAFE_CALL(cusparseCreateBsr(
             &m_matrixDescriptor,
@@ -96,6 +99,9 @@ GpuSparseMatrixGeneric<T>::GpuSparseMatrixGeneric(const T* nonZeroElements,
             getDataType(),
             CUSPARSE_ORDER_ROW
         ));
+#else
+        OPM_THROW(std::invalid_argument, "BSR format not supported for HIP with Generic API");
+#endif
     } else {
         // Use CSR format for scalar matrices
         OPM_CUSPARSE_SAFE_CALL(cusparseCreateCsr(
@@ -134,6 +140,7 @@ GpuSparseMatrixGeneric<T>::GpuSparseMatrixGeneric(const GpuVector<int>& rowIndic
 {
     // Create matrix descriptor based on blockSize
     if (blockSize > 1) {
+#if !USE_HIP
         // Use BSR format for blocked matrices
         OPM_CUSPARSE_SAFE_CALL(cusparseCreateBsr(
             &m_matrixDescriptor,
@@ -151,6 +158,9 @@ GpuSparseMatrixGeneric<T>::GpuSparseMatrixGeneric(const GpuVector<int>& rowIndic
             getDataType(),
             CUSPARSE_ORDER_ROW
         ));
+#else
+        OPM_THROW(std::invalid_argument, "BSR format not supported for HIP with Generic API");
+#endif
     } else {
         // Use CSR format for scalar matrices
         OPM_CUSPARSE_SAFE_CALL(cusparseCreateCsr(
@@ -187,6 +197,7 @@ GpuSparseMatrixGeneric<T>::GpuSparseMatrixGeneric(const GpuSparseMatrixGeneric<T
 {
     // Create a new matrix descriptor with the same properties
     if (other.blockSize() > 1) {
+#if !USE_HIP
         // Use BSR format for blocked matrices
         OPM_CUSPARSE_SAFE_CALL(cusparseCreateBsr(
             &m_matrixDescriptor,
@@ -204,6 +215,9 @@ GpuSparseMatrixGeneric<T>::GpuSparseMatrixGeneric(const GpuSparseMatrixGeneric<T
             getDataType(),
             CUSPARSE_ORDER_ROW
         ));
+#else
+        OPM_THROW(std::invalid_argument, "BSR format not supported for HIP with Generic API");
+#endif
     } else {
         // Use CSR format for scalar matrices
         OPM_CUSPARSE_SAFE_CALL(cusparseCreateCsr(

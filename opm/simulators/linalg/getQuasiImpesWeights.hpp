@@ -34,8 +34,13 @@
 #endif
 
 #if HAVE_CUDA
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/detail/cpr_amg_operations.hpp>
+#else
 #include <opm/simulators/linalg/gpuistl/detail/cpr_amg_operations.hpp>
 #endif
+#endif
+
 
 namespace Opm
 {

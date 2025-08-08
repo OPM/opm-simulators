@@ -27,12 +27,13 @@
 #if USE_HIP
 #include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/PinnedMemoryHolder.hpp>
 #else
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/PinnedMemoryHolder.hpp>
 #endif
 
-#include <opm/simulators/linalg/gpuistl/PinnedMemoryHolder.hpp>
 
 #include <opm/simulators/linalg/gpuistl/detail/FlexibleSolverWrapper.hpp>
 #include <opm/simulators/linalg/printlinearsolverparameter.hpp>
