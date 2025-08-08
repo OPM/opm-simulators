@@ -20,9 +20,8 @@
 #ifndef OPM_GPU_PRESSURE_TRANSFER_POLICY_HEADER_INCLUDED
 #define OPM_GPU_PRESSURE_TRANSFER_POLICY_HEADER_INCLUDED
 
-
+#include <opm/simulators/linalg/twolevelmethodcpr.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
-#include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/WellOperators.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
@@ -44,37 +43,36 @@ namespace Opm { namespace Details {
 
 namespace Opm::gpuistl
 {
-// Note: This is not a subclass of LevelTransferPolicyCpr anymore, but a wrapper that implements the same interface.
-// This is because the constructor of LevelTransferPolicyCpr requires default constructors which we do not want with gpu types.
 template <class FineOperator, class Communication, class Scalar, bool transpose = false>
 class GpuPressureTransferPolicy
+    : public Dune::Amg::LevelTransferPolicyCpr<FineOperator, Details::GpuCoarseOperatorType<Scalar,Communication>>
 {
 public:
     using CoarseOperator = typename Details::GpuCoarseOperatorType<Scalar,Communication>;
+    using ParentType = Dune::Amg::LevelTransferPolicyCpr<FineOperator, CoarseOperator>;
     using ParallelInformation = Communication;
-    using GpuMatrixType = GpuSparseMatrix<Scalar>;
 
-    using FineRangeType = typename FineOperator::range_type;
-    using FineDomainType = typename FineOperator::domain_type;
+    using FineVectorType = typename FineOperator::domain_type;
     using CoarseRangeType = typename CoarseOperator::range_type;
     using CoarseDomainType = typename CoarseOperator::domain_type;
 
 public:
     GpuPressureTransferPolicy(const Communication& comm,
-                           const FineRangeType& weights,
+                           const FineVectorType& weights,
                            [[maybe_unused]] const PropertyTree& prm,
                            int pressure_var_index)
-        : communication_(&const_cast<Communication&>(comm)),
-          weights_(weights),
-          pressure_var_index_(pressure_var_index)
+        : communication_(&const_cast<Communication&>(comm))
+        , weights_(weights)
+        , pressure_var_index_(pressure_var_index)
     {
     }
 
-    void createCoarseLevelSystem(const FineOperator& fineOperator)
+    void createCoarseLevelSystem(const FineOperator& fineOperator) override
     {
+        using CoarseMatrix = typename CoarseOperator::matrix_type;
         const auto& fineLevelMatrix = fineOperator.getmat();
         // Create coarse level matrix on GPU with block size 1 but same sparsity pattern
-        coarseLevelMatrix_ = std::make_shared<GpuMatrixType>(
+        coarseLevelMatrix_ = std::make_shared<CoarseMatrix>(
             fineLevelMatrix.getRowIndices(),
             fineLevelMatrix.getColumnIndices(),
             1 // block size 1
@@ -82,18 +80,16 @@ public:
 
         // Calculate entries for coarse matrix
         calculateCoarseEntries(fineOperator);
+        coarseLevelCommunication_.reset(communication_, [](Communication*) {});
 
-        if (!lhs_)
-            // We also set lhs to .N() (and not .M()) because we assume a square matrix
-            lhs_ = std::make_shared<FineDomainType>(coarseLevelMatrix_->N());
-        if (!rhs_)
-            rhs_ = std::make_shared<FineRangeType>(coarseLevelMatrix_->N());
+        this->lhs_.resize(coarseLevelMatrix_->N());
+        this->rhs_.resize(coarseLevelMatrix_->N());
 
         // Create a MatrixAdapter that wraps the matrix without copying it
-        operator_ = std::make_shared<CoarseOperator>(*coarseLevelMatrix_);
+        this->operator_ = std::make_shared<CoarseOperator>(*coarseLevelMatrix_);
     }
 
-    void calculateCoarseEntries(const FineOperator& fineOperator)
+    void calculateCoarseEntries(const FineOperator& fineOperator) override
     {
         const auto& fineLevelMatrix = fineOperator.getmat();
 
@@ -110,28 +106,28 @@ public:
         );
     }
 
-    void moveToCoarseLevel(const FineRangeType& fine)
+    void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
     {
         // Set coarse vector to zero
-        *rhs_ = 0;
+        this->rhs_ = 0;
 
         // Restrict vector on GPU
         detail::restrictVector(
             fine,
-            *rhs_,
+            this->rhs_,
             weights_,
             pressure_var_index_,
             transpose
         );
 
-        *lhs_ = 0;
+        this->lhs_ = 0;
     }
 
-    void moveToFineLevel(FineDomainType& fine)
+    void moveToFineLevel(typename ParentType::FineDomainType& fine) override
     {
         // Prolongate vector on GPU
         detail::prolongateVector(
-            *lhs_,
+            this->lhs_,
             fine,
             weights_,
             pressure_var_index_,
@@ -139,9 +135,14 @@ public:
         );
     }
 
-    GpuPressureTransferPolicy* clone() const
+    GpuPressureTransferPolicy* clone() const override
     {
         return new GpuPressureTransferPolicy(*this);
+    }
+
+    const Communication& getCoarseLevelCommunication() const
+    {
+        return *coarseLevelCommunication_;
     }
 
     std::size_t getPressureIndex() const
@@ -149,40 +150,12 @@ public:
         return pressure_var_index_;
     }
 
-
-    std::shared_ptr<CoarseOperator>& getCoarseLevelOperator()
-    {
-        return operator_;
-    }
-
-    CoarseRangeType& getCoarseLevelRhs()
-    {
-        return *rhs_;
-    }
-
-    CoarseDomainType& getCoarseLevelLhs()
-    {
-        return *lhs_;
-    }
-
-    Communication& getCoarseLevelCommunication()
-    {
-        return *communication_;
-    }
-
-    const Communication& getCoarseLevelCommunication() const
-    {
-        return *communication_;
-    }
-
 private:
     Communication* communication_;
-    const FineRangeType& weights_;
+    const FineVectorType& weights_;
     const std::size_t pressure_var_index_;
-    std::shared_ptr<GpuMatrixType> coarseLevelMatrix_;
-    std::shared_ptr<CoarseOperator> operator_;
-    std::shared_ptr<FineDomainType> lhs_;
-    std::shared_ptr<FineRangeType> rhs_;
+    std::shared_ptr<Communication> coarseLevelCommunication_;
+    std::shared_ptr<typename CoarseOperator::matrix_type> coarseLevelMatrix_;
 };
 
 } // namespace Opm::gpuistl

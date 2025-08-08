@@ -97,8 +97,7 @@ struct StandardPreconditioners<Operator,
             using Scalar = typename V::field_type;
             using GpuVector = gpuistl::GpuVector<Scalar>;
             using LevelTransferPolicy = Opm::gpuistl::GpuPressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, false>;
-            using GpuOwningTwoLevelPreconditioner = typename gpuistl::GpuOwningTwoLevelPreconditioner<O, GpuVector, LevelTransferPolicy>;
-            return std::make_shared<GpuOwningTwoLevelPreconditioner>(op, prm, weightsCalculator, pressureIndex);
+            return std::make_shared<Dune::OwningTwoLevelPreconditioner<O, GpuVector, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
         });
 
         F::addCreator("cprt", [](const O& op, const P& prm, const std::function<V()>& weightsCalculator, std::size_t pressureIndex) {
@@ -108,8 +107,7 @@ struct StandardPreconditioners<Operator,
             using Scalar = typename V::field_type;
             using GpuVector = gpuistl::GpuVector<Scalar>;
             using LevelTransferPolicy = Opm::gpuistl::GpuPressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, true>;
-            using GpuOwningTwoLevelPreconditioner = typename gpuistl::GpuOwningTwoLevelPreconditioner<O, GpuVector, LevelTransferPolicy>;
-            return std::make_shared<GpuOwningTwoLevelPreconditioner>(op, prm, weightsCalculator, pressureIndex);
+            return std::make_shared<Dune::OwningTwoLevelPreconditioner<O, GpuVector, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
         });
 
         // Only add AMG preconditioners to the factory if the operator
