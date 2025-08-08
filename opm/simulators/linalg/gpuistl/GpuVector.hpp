@@ -530,4 +530,15 @@ private:
 };
 
 } // namespace Opm::gpuistl
+
+// ADL bridge: convert GPU vector to Dune BlockVector and delegate to Dune's writer
+namespace Opm::gpuistl
+{
+template <typename T>
+inline void writeMatrixMarket(const GpuVector<T>& vectorOnDevice, std::ostream& ostr)
+{
+    const auto hostBlockVector = vectorOnDevice.template asDuneBlockVector<1>();
+    writeMatrixMarket(hostBlockVector, ostr);
+}
+} // namespace Opm::gpuistl
 #endif
