@@ -1372,10 +1372,24 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             }
         }
     }
-
-
     auto& well_state = this->wellState();
     const auto& well_state_nupcol = this->nupcolWellState();
+
+    constexpr int num_configs = 4;
+    constexpr std::array<bool, num_configs> is_production_group = {true, false, false, false};
+    constexpr std::array<Phase, num_configs> phases = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
+    for (int i = 0; i < num_configs; i++) {
+        WellGroupHelpers<Scalar>::updateGroupControlledWells(schedule(),
+                                                             well_state,
+                                                             this->groupState(),
+                                                             summaryState_,
+                                                             &guideRate_,
+                                                             reportStepIdx,
+                                                             "FIELD",
+                                                             is_production_group[i],
+                                                             phases[i]);
+    }
+
     // the group target reduction rates needs to be update since wells may have switched to/from GRUP control
     // The group target reduction does not honor NUPCOL.
     std::vector<Scalar> groupTargetReduction(numPhases(), 0.0);
@@ -2186,9 +2200,12 @@ reportGroupSwitching(DeferredLogger& local_deferredLogger) const
             const Group::InjectionCMode& oldControl =
                 this->prevWGState().group_state.injection_control(grname, phase);
             if (ctrls.back() != oldControl) {
+                std::ostringstream ss;
+                ss << phase;
                 const std::string msg =
-                    fmt::format("    Injection Group {} control model changed from {} to {}",
+                    fmt::format("    Injection Group {} (phase = {}) control model changed from {} to {}",
                                 grname,
+                                ss.str(),
                                 Group::InjectionCMode2String(oldControl),
                                 Group::InjectionCMode2String(ctrls.back()));
                 local_deferredLogger.info(msg);

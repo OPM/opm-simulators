@@ -262,11 +262,22 @@ public:
                                   const Phase& injectionPhase,
                                   const PhaseUsage& pu);
 
+    /// update the number of wells that are actively under group control for a given group with name given by group_name
+    /// its main usage is to detect cases where there is no wells under group control
+    static int updateGroupControlledWells(const Schedule& schedule,
+                                          const WellState<Scalar>& well_state,
+                                          GroupState<Scalar>& group_state,
+                                          const SummaryState& summary_state,
+                                          const GuideRate* guideRate,
+                                          const int report_step,
+                                          const std::string& group_name,
+                                          const bool is_production_group,
+                                          const Phase injection_phase);
+
+    /// returns the number of wells that are actively under group control for a given group with name given by group_name
     static int groupControlledWells(const Schedule& schedule,
                                     const WellState<Scalar>& well_state,
                                     const GroupState<Scalar>& group_state,
-                                    const SummaryState& summary_state,
-                                    const GuideRate* guideRate,
                                     const int report_step,
                                     const std::string& group_name,
                                     const std::string& always_included_child,
@@ -313,6 +324,14 @@ public:
                      const std::string& top,
                      const Schedule& schedule,
                      const int report_step);
+
+    
+    // check if well/group bottom is a sub well/group of the group top
+    static bool
+    isInGroupChainTopBot(const std::string& bottom,
+                         const std::string& top,
+                         const Schedule& schedule,
+                         const int report_step);
 
     static std::string
     control_group(const Group& group,

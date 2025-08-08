@@ -54,6 +54,8 @@ GroupState<Scalar> GroupState<Scalar>::serializationTestObject()
     result.injection_controls = {{{Phase::FOAM, "test12"}, Group::InjectionCMode::REIN}};
     result.gpmaint_state.add("foo", GPMaint::State::serializationTestObject());
     result.m_gconsump_rates = {{"testA", {0.2, 0.1}}};
+    result.m_number_of_wells_under_group_control = {{"test13", 3}};
+    result.m_number_of_wells_under_inj_group_control = {{ {Phase::WATER, "test14"}, 3}};
 
     return result;
 }
@@ -72,6 +74,8 @@ bool GroupState<Scalar>::operator==(const GroupState& other) const
            this->inj_surface_rates == other.inj_surface_rates &&
            this->m_grat_sales_target == other.m_grat_sales_target &&
            this->injection_controls == other.injection_controls &&
+           this->m_number_of_wells_under_group_control == m_number_of_wells_under_group_control &&
+           this->m_number_of_wells_under_inj_group_control == m_number_of_wells_under_inj_group_control &&
            this->gpmaint_state == other.gpmaint_state &&
            this->m_gconsump_rates == other.m_gconsump_rates;
 }
@@ -412,6 +416,48 @@ injection_control(const std::string& gname, Phase phase) const
     auto group_iter = this->injection_controls.find( key );
     if (group_iter == this->injection_controls.end())
         throw std::logic_error("Could not find ontrol for injection group: " + gname);
+
+    return group_iter->second;
+}
+
+
+
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_number_of_wells_under_group_control(const std::string& gname, int number)
+{
+    this->m_number_of_wells_under_group_control[gname] = number;
+}
+template<class Scalar>
+int GroupState<Scalar>::
+number_of_wells_under_group_control(const std::string& gname) const
+{
+    auto group_iter = this->m_number_of_wells_under_group_control.find(gname);
+    if (group_iter == this->m_number_of_wells_under_group_control.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+//-------------------------------------------------------------------------
+
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_number_of_wells_under_inj_group_control(const std::string& gname, Phase phase, int number)
+{
+    this->m_number_of_wells_under_inj_group_control[{phase, gname}] = number;
+}
+
+template<class Scalar>
+int GroupState<Scalar>::
+number_of_wells_under_inj_group_control(const std::string& gname, Phase phase) const
+{
+    auto group_iter = this->m_number_of_wells_under_inj_group_control.find({phase, gname});
+    if (group_iter == this->m_number_of_wells_under_inj_group_control.end())
+        throw std::logic_error("No such group");
 
     return group_iter->second;
 }
