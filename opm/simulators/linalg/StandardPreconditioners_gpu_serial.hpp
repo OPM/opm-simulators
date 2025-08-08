@@ -127,10 +127,28 @@ struct StandardPreconditioners<Operator,
                 });
             }
 #endif
-
         }
-    }
 
+        F::addCreator("cpr", [](const O& op, const P& prm, const std::function<V()>& weightsCalculator, std::size_t pressureIndex) {
+            if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
+                OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+            }
+            using Scalar = typename V::field_type;
+            using GpuVector = gpuistl::GpuVector<Scalar>;
+            using LevelTransferPolicy = Opm::gpuistl::GpuPressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, false>;
+            return std::make_shared<Dune::OwningTwoLevelPreconditioner<O, GpuVector, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
+        });
+
+        F::addCreator("cprt", [](const O& op, const P& prm, const std::function<V()>& weightsCalculator, std::size_t pressureIndex) {
+            if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
+                OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+            }
+            using Scalar = typename V::field_type;
+            using GpuVector = gpuistl::GpuVector<Scalar>;
+            using LevelTransferPolicy = Opm::gpuistl::GpuPressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, true>;
+            return std::make_shared<Dune::OwningTwoLevelPreconditioner<O, GpuVector, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
+        });
+    }
 
     
 };

@@ -110,7 +110,8 @@ public:
                 OPM_THROW(std::ofstream::failure,
                           "Could not write weights to file " + filename + ".");
             }
-            Dune::writeMatrixMarket(weights_, outfile);
+            // Unqualified on purpose to enable ADL for GPU/CPU types
+            writeMatrixMarket(weights_, outfile);
         }
     }
 
@@ -143,7 +144,8 @@ public:
                 OPM_THROW(std::ofstream::failure,
                           "Could not write weights to file " + filename + ".");
             }
-            Dune::writeMatrixMarket(weights_, outfile);
+            // Unqualified on purpose to enable ADL for GPU/CPU types
+            writeMatrixMarket(weights_, outfile);
         }
     }
 
