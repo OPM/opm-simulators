@@ -310,6 +310,8 @@ public:
     void updateTUNING(const Tuning& tuning)
     {
         modelParam_.tolerance_mb_ = tuning.XXXMBE;
+        modelParam_.newton_max_iter_ = tuning.NEWTMX;
+        modelParam_.newton_min_iter_ = tuning.NEWTMN;
         if (terminalOutput_) {
             OpmLog::debug(fmt::format("Setting SimulatorFullyImplicitBlackoil mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
         }
