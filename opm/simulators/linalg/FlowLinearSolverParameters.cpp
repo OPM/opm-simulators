@@ -75,9 +75,8 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
 
     if (linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU) {
         if (!Parameters::IsSet<Parameters::LinearSolver>()) {
-            // TODO: Once CPRW/CPR is implemented for GPU, we can remove this
-            // and use the same default as for CPU
-            linsolver_ = "ilu0";
+            // Since well operator is not implemented for GPU we can not use default cprw
+            linsolver_ = "cpr_trueimpes";
         }
     }
 }
