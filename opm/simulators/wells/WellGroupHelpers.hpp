@@ -256,7 +256,7 @@ public:
     /// update the number of wells that are actively under group control for a given group with name given by group_name
     /// its main usage is to detect cases where there is no wells under group control
     static int updateGroupControlledWells(const Schedule& schedule,
-                                          const WellState<Scalar>& well_state,
+                                          const WellStateType& well_state,
                                           GroupState<Scalar>& group_state,
                                           const SummaryState& summary_state,
                                           const GuideRate* guideRate,

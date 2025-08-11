@@ -1376,7 +1376,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     constexpr std::array<bool, num_configs> is_production_group = {true, false, false, false};
     constexpr std::array<Phase, num_configs> phases = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
     for (int i = 0; i < num_configs; i++) {
-        WellGroupHelpers<Scalar>::updateGroupControlledWells(schedule(),
+        WellGroupHelpers<FluidSystem, Indices>::updateGroupControlledWells(schedule(),
                                                              well_state,
                                                              this->groupState(),
                                                              summaryState_,

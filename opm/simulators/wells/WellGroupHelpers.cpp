@@ -1128,15 +1128,15 @@ getGuideRateInj(const std::string& name,
 
 template<typename FluidSystem, typename Indices>
 int WellGroupHelpers<FluidSystem, Indices>::
-groupControlledWells(const Schedule& schedule,
-                     const WellState<FluidSystem, Indices>& well_state,
-                     const GroupState<Scalar>& group_state,
-                     const SummaryState& summary_state,
-                     const GuideRate* guideRate,
-                     const int report_step,
-                     const std::string& group_name,
-                     const bool is_production_group,
-                     const Phase injection_phase)
+updateGroupControlledWells(const Schedule& schedule,
+                           const WellStateType& well_state,
+                           GroupState<Scalar>& group_state,
+                           const SummaryState& summary_state,
+                           const GuideRate* guideRate,
+                           const int report_step,
+                           const std::string& group_name,
+                           const bool is_production_group,
+                           const Phase injection_phase)
 {
     OPM_TIMEFUNCTION();
     const Group& group = schedule.getGroup(group_name, report_step);
@@ -1251,10 +1251,10 @@ groupControlledWells(const Schedule& schedule,
 }
 
 
-template<class Scalar>
-int WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+int WellGroupHelpers<FluidSystem, Indices>::
 groupControlledWells(const Schedule& schedule,
-                     const WellState<Scalar>& well_state,
+                     const WellStateType& well_state,
                      const GroupState<Scalar>& group_state,
                      const int report_step,
                      const std::string& group_name,
