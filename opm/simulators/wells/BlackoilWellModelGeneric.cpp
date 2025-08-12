@@ -1129,20 +1129,18 @@ assignDynamicWellStatus(data::Wells& wsrpt,
                         const int reportStepIndex) const
 {
     this->loopOwnedWells([this, reportStepIndex, &wsrpt]
-                         ([[maybe_unused]] const auto wellID,
+                         (const auto wellID,
                           const Well& well)
     {
-
         auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
         xwel.dynamicStatus = this->wellState().well(well.name()).status;
 
         // Well was shut this time step we keep it open one last time
         // for output
-        if (wasDynamicallyShutThisTimeStep(well.name())) {
+        if (wasDynamicallyShutThisTimeStep(wellID)) {
             xwel.dynamicStatus = Well::Status::OPEN;
         }
     });
-
 }
 
 template<class Scalar>

@@ -112,7 +112,7 @@ namespace Opm {
         }
 
         for (const std::string& wellName : group.wells()) {
-            const auto& well_index = wellState.index(wellName);
+            const auto well_index = wellState.index(wellName);
             if (!well_index.has_value())
                 continue;
 
@@ -297,7 +297,7 @@ sumSolventRates(const Group& group,
     }
 
     for (const std::string& wellName : group.wells()) {
-        const auto& well_index = wellState.index(wellName);
+        const auto well_index = wellState.index(wellName);
         if (!well_index.has_value())
             continue;
 
@@ -436,7 +436,7 @@ updateGroupTargetReduction(const Group& group,
         if (wellTmp.isInjector() && !isInjector)
             continue;
 
-        const auto& well_index = wellState.index(wellName);
+        const auto well_index = wellState.index(wellName);
         if (!well_index.has_value())
             continue;
 
@@ -516,7 +516,7 @@ updateWellRatesFromGroupTargetScale(const Scalar scale,
         if (wellTmp.isInjector() && !isInjector)
             continue;
 
-        const auto& well_index = wellState.index(wellName);
+        const auto well_index = wellState.index(wellName);
         if (!well_index.has_value())
             continue;
 
@@ -644,7 +644,7 @@ updateWellRates(const Group& group,
     const int np = wellState.numPhases();
     for (const std::string& wellName : group.wells()) {
         std::vector<Scalar> rates(np, 0.0);
-        const auto& well_index = wellState.index(wellName);
+        const auto well_index = wellState.index(wellName);
         if (well_index.has_value()) { // the well is found on this node
             const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
             int sign = 1;
@@ -1055,7 +1055,7 @@ getGuideRate(const std::string& name,
         if (wellTmp.isInjector())
             continue;
 
-        const auto& well_index = wellState.index(wellName);
+        const auto well_index = wellState.index(wellName);
         if (!well_index.has_value())
             continue;
 
@@ -1119,7 +1119,7 @@ getGuideRateInj(const std::string& name,
         if (!wellTmp.isInjector())
             continue;
 
-        const auto& well_index = wellState.index(wellName);
+        const auto well_index = wellState.index(wellName);
         if (!well_index.has_value())
             continue;
 
