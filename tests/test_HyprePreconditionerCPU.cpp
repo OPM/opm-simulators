@@ -23,26 +23,63 @@
 #define BOOST_TEST_MODULE TestHyprePreconditionerCPU
 #define BOOST_TEST_NO_MAIN
 
-#include <dune/common/parallel/mpihelper.hh>
-#include "MpiFixture.hpp"
-#include "HyprePreconditionerTestHelper.hpp"
-
 #include <boost/test/unit_test.hpp>
 
+#include "HyprePreconditionerTestHelper.hpp"
+#include "MpiFixture.hpp"
+
+#include <opm/simulators/linalg/HyprePreconditioner.hpp>
+
+#include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
-#include <dune/istl/operators.hh>
-#include <dune/istl/solvers.hh>
 
-#include <opm/simulators/linalg/HyprePreconditioner.hpp>
-#include <opm/simulators/linalg/PropertyTree.hpp>
 
 BOOST_GLOBAL_FIXTURE(MPIFixture);
 
-BOOST_AUTO_TEST_CASE(TestHyprePreconditionerCPU)
+// CPU input test function (specific to this test file)
+inline void testHyprePreconditionerCpuInput(bool use_gpu)
 {
-    testHyprePreconditioner(false);
+    constexpr int N = 100; // 100x100 grid
+    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
+
+    // Create matrix
+    Matrix matrix;
+    setupLaplace2d(N, matrix);
+
+    testHyprePreconditionerImpl<Matrix, Vector>(matrix, use_gpu);
+}
+
+// Per-test fixture for HYPRE state isolation
+struct HypreTestFixture {
+    HypreTestFixture() {
+        // Reset HYPRE state for each test
+        if (HYPRE_Initialized()) {
+            HYPRE_Finalize();
+        }
+
+        // Re-initialize HYPRE for this test
+#if HYPRE_RELEASE_NUMBER >= 22900
+        HYPRE_Initialize();
+#else
+        HYPRE_Init();
+#endif
+    }
+
+    ~HypreTestFixture() {
+        // Clean state after test
+        if (HYPRE_Initialized()) {
+            HYPRE_Finalize();
+        }
+    }
+};
+
+BOOST_FIXTURE_TEST_CASE(TestHyprePreconditionerCPU, HypreTestFixture)
+{
+    // Test CPU backend with CPU input (the only valid combination for CPU backend)
+    testHyprePreconditionerCpuInput(false);
 }
 
 bool init_unit_test_func()
@@ -54,15 +91,7 @@ int main(int argc, char** argv)
 {
     Dune::MPIHelper::instance(argc, argv);
 
-#if HYPRE_RELEASE_NUMBER >= 22900
-    HYPRE_Initialize();
-#else
-    HYPRE_Init();
-#endif
-
     int result = boost::unit_test::unit_test_main(&init_unit_test_func, argc, argv);
-
-    HYPRE_Finalize();
 
     return result;
 }
