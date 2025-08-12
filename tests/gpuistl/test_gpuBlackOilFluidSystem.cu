@@ -128,21 +128,21 @@ using Scalar = typename Opm::MathToolbox<Evaluation>::Scalar;
 
 // checks that we can access value stored as scalar
 template <class IndexTraits>
-__global__ void getReservoirTemperature(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView, Opm::gpuistl::ValueAsPointer> fs, double* res)
+__global__ void getReservoirTemperature(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView> fs, double* res)
 {
   *res = fs.reservoirTemperature();
 }
 
 // checks that we can access value stored in vectors/buffer/views
 template <class IndexTraits>
-__global__ void getReferenceDensity(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView, Opm::gpuistl::ValueAsPointer> fs, double* res)
+__global__ void getReferenceDensity(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView> fs, double* res)
 {
   *res = fs.referenceDensity(0, 0);
 }
 
 // check that we can correctly compute values that require using pvt multiplexers
 template <class IndexTraits>
-__global__ void getReferenceDensityFromGasPvt(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView, Opm::gpuistl::ValueAsPointer> fs, double* res)
+__global__ void getReferenceDensityFromGasPvt(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView> fs, double* res)
 {
   *res = fs.gasPvt().gasReferenceDensity(0);
 }
@@ -187,54 +187,4 @@ BOOST_AUTO_TEST_CASE(BlackOilFluidSystemOnGpu)
 
 
     OPM_GPU_SAFE_CALL(cudaFree(gpuComputedValPtr));
-}
-
-__global__ void useGasPvtMultiplexer(Opm::GasPvtMultiplexer<double, true, ::Opm::gpuistl::GpuView, ::Opm::gpuistl::ValueAsPointer> gasMultiplexer, double* refTemp)
-{
-  *refTemp = gasMultiplexer.gasReferenceDensity(0);
-}
-
-__global__ void useWaterPvtMultiplexer(Opm::WaterPvtMultiplexer<double, true, true, ::Opm::gpuistl::GpuView, ::Opm::gpuistl::ValueAsPointer> waterMultiplexer, double* refTemp)
-{
-  *refTemp = waterMultiplexer.waterReferenceDensity(0);
-}
-
-BOOST_AUTO_TEST_CASE(GasPvtMultiplexer)
-{
-    Opm::Parser parser;
-
-    auto deck = parser.parseString(deckString1);
-    auto python = std::make_shared<Opm::Python>();
-    Opm::EclipseState eclState(deck);
-    Opm::Schedule schedule(deck, eclState, python);
-
-    FluidSystem::initFromState(eclState, schedule);
-
-    // get and compute CPU pvts
-    auto gaspvt = FluidSystem::gasPvt();
-    auto cpuGasRefDensity = gaspvt.gasReferenceDensity(0);
-    auto waterpvt = FluidSystem::waterPvt();
-    auto cpuWaterRefDensity = waterpvt.waterReferenceDensity(0);
-
-    // move pvts to gpu
-    auto gpuGasPvtBuf = ::Opm::gpuistl::copy_to_gpu(gaspvt);
-    auto gpuGasPvtView = ::Opm::gpuistl::make_view(gpuGasPvtBuf);
-    auto gpuWaterPvtBuf = ::Opm::gpuistl::copy_to_gpu(waterpvt);
-    auto gpuWaterPvtView = ::Opm::gpuistl::make_view(gpuWaterPvtBuf);
-
-    double gpuRefDensity = 0.0;
-    double* gpuRefDensityPtr = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuRefDensityPtr, sizeof(double)));
-
-    // check that the GPU computed GAS reference density is correct
-    useGasPvtMultiplexer<<<1, 1>>>(gpuGasPvtView, gpuRefDensityPtr);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuRefDensity, gpuRefDensityPtr, sizeof(double), cudaMemcpyDeviceToHost));
-    BOOST_CHECK_CLOSE(cpuGasRefDensity, gpuRefDensity, 1e-10);
-
-    // check that the GPU computed WATER reference density is correct
-    useWaterPvtMultiplexer<<<1, 1>>>(gpuWaterPvtView, gpuRefDensityPtr);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuRefDensity, gpuRefDensityPtr, sizeof(double), cudaMemcpyDeviceToHost));
-    BOOST_CHECK_CLOSE(cpuWaterRefDensity, gpuRefDensity, 1e-10);
-
-    OPM_GPU_SAFE_CALL(cudaFree(gpuRefDensityPtr));
 }
