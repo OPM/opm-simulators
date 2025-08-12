@@ -1269,12 +1269,18 @@ namespace Opm {
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            if (optimize_gas_lift) alq_updated = gaslift_.maybeDoGasLiftOptimize(simulator_,
+            if (optimize_gas_lift) {
+                // we need to update the potentials if the thp limit as been modified by
+                // the network balancing
+                const bool updatePotentials = (this->shouldBalanceNetwork(reportStepIdx, iterationIdx) || mandatory_network_balance);
+                alq_updated = gaslift_.maybeDoGasLiftOptimize(simulator_,
                                                           well_container_,
+                                                          this->node_pressures_,
+                                                          updatePotentials,
                                                           this->wellState(),
                                                           this->groupState(),
                                                           local_deferredLogger);
-
+            }
             prepareWellsBeforeAssembling(dt, local_deferredLogger);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
