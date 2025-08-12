@@ -206,7 +206,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     transBoundary_.clear();
 
     // if energy is enabled, let's do the same for the "thermal half transmissibilities"
-    if (enableEnergy_ && !onlyTrans) {
+    if ( enableEnergy_ && !onlyTrans) {
         thermalHalfTrans_.clear();
         if (num_threads == 1) {
             thermalHalfTrans_.reserve(numElements*6*1.05);
