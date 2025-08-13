@@ -36,7 +36,8 @@ setup(
     package_data={
         'opm': [
             '$<TARGET_FILE_NAME:BlackOil>',
-            '$<TARGET_FILE_NAME:GasWater>'
+            '$<TARGET_FILE_NAME:GasWater>',
+            '$<TARGET_FILE_NAME:OnePhase>',
         ]
     },
     include_package_data=True,
