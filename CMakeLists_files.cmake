@@ -544,6 +544,14 @@ if (HAVE_CUDA)
     foreach(file ${CU_FILES_NEEDING_RELAXED_CONSTEXPR})
         set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS "--expt-relaxed-constexpr")
     endforeach()
+
+    set(CU_FILES_NEEDING_FPERMISSIVE
+      tests/gpuistl/test_primary_variables_gpu.cu
+    )
+
+    foreach(file ${CU_FILES_NEEDING_FPERMISSIVE})
+      set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS "-fpermissive --expt-relaxed-constexpr -Xcompiler=-fpermissive")
+    endforeach()
   endif()
 endif()
 
