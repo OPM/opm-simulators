@@ -116,9 +116,6 @@ public:
         return data_[idx];
     }
 
-    /* --------------------------------------------------------------------- */
-    /*                              iterators                                */
-    /* --------------------------------------------------------------------- */
     /** @return Iterator to first element (mutable). */
     OPM_HOST_DEVICE constexpr iterator begin() noexcept
     {
