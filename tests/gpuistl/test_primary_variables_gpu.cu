@@ -42,7 +42,7 @@ using TypeTag = Opm::Properties::TTag::FlowProblem;
 
 namespace {
   __global__ void testCreationGPU() {
-    Opm::BlackOilPrimaryVariables<TypeTag, Opm::gpuistl::MiniVectorr> primaryVariablesFieldVector;
+    Opm::BlackOilPrimaryVariables<TypeTag, Opm::gpuistl::MiniVector> primaryVariablesFieldVector;
   }
 }
 
