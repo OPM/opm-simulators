@@ -28,7 +28,7 @@ namespace Opm::gpuistl
  * @tparam T         Element type (must be trivially copyable for use on the GPU).
  * @tparam Dimension Compile‑time dimension (must be strictly positive).
  */
-template <class T, std::size_t Dimension>
+template <class T, int Dimension>
 class MiniVector
 {
     static_assert(Dimension > 0, "Dimension must be positive");
