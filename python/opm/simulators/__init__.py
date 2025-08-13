@@ -11,3 +11,4 @@
 #
 from .BlackOil import BlackOilSimulator
 from .GasWater import GasWaterSimulator
+from .OnePhase import OnePhaseSimulator
