@@ -168,7 +168,8 @@ add_test_compareECLFiles(CASENAME network_01_wtest
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR network)
+                         DIR network
+                         TEST_ARGS --enable-tuning=true)
 
 add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          FILENAME SPE1CASE1_METRIC_VFP1
