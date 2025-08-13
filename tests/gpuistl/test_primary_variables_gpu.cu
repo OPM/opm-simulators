@@ -31,8 +31,7 @@
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
-#include <opm/simulators/linalg/gpuistl/dense/DenseVector.hpp>
-#include <opm/simulators/linalg/gpuistl/dense/FieldVector.hpp>
+#include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
@@ -43,17 +42,15 @@ using TypeTag = Opm::Properties::TTag::FlowProblem;
 
 namespace {
   __global__ void testCreationGPU() {
-    Opm::BlackOilPrimaryVariables<TypeTag, Opm::gpuistl::dense::FieldVector> primaryVariablesFieldVector;
+    Opm::BlackOilPrimaryVariables<TypeTag, Opm::gpuistl::MiniVectorr> primaryVariablesFieldVector;
   }
 }
 
 BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationWithFieldVector) 
 {
-  
-
    Opm::BlackOilPrimaryVariables<TypeTag> primaryVariables;
 
-   Opm::BlackOilPrimaryVariables<TypeTag, Opm::gpuistl::dense::FieldVector> primaryVariablesFieldVector;
+   Opm::BlackOilPrimaryVariables<TypeTag, Opm::gpuistl::MiniVector> primaryVariablesFieldVector;
 }
 
 BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCrationGPU) 
