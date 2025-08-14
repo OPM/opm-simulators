@@ -17,50 +17,61 @@
 
 #define BOOST_TEST_MODULE TestConditionalStorageGPU
 
+#include <boost/test/unit_test.hpp>
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <boost/test/unit_test.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
-namespace {
+namespace
+{
 
-template<bool enabled, class T>
-__global__ void createCondtionalStorage() {
+template <bool enabled, class T>
+__global__ void
+createCondtionalStorage()
+{
     // just make sure we can run the constructor
     Opm::ConditionalStorage<enabled, T> someStorage;
-    
+
 
     Opm::ConditionalStorage<enabled, T> other = someStorage;
 
     other = someStorage;
 }
-template<class T>
-__global__ void testEnabledStorage(Opm::ConditionalStorage<true, T> storage, T* output) {
+template <class T>
+__global__ void
+testEnabledStorage(Opm::ConditionalStorage<true, T> storage, T* output)
+{
     output[0] = *storage;
 }
 
-template<class T, class S>
-__global__ void testEnabledStorageArrow(Opm::ConditionalStorage<true, T> storage, S* output) {
+template <class T, class S>
+__global__ void
+testEnabledStorageArrow(Opm::ConditionalStorage<true, T> storage, S* output)
+{
     output[0] = storage->someFunc();
 }
 
-template<class T>
-__global__ void testEnabledStorage(Opm::ConditionalStorage<true, T>* storage, T* output) {
+template <class T>
+__global__ void
+testEnabledStorage(Opm::ConditionalStorage<true, T>* storage, T* output)
+{
     output[0] = **storage;
 }
 
-template<class T, class S>
-__global__ void testEnabledStorageArrow(Opm::ConditionalStorage<true, T>* storage, S* output) {
+template <class T, class S>
+__global__ void
+testEnabledStorageArrow(Opm::ConditionalStorage<true, T>* storage, S* output)
+{
     output[0] = (*storage)->someFunc();
 }
 
 struct SomeStruct {
-    OPM_HOST_DEVICE int someFunc() {
+    OPM_HOST_DEVICE int someFunc()
+    {
         return 123;
     }
-
 };
 
 } // namespace
@@ -75,10 +86,9 @@ BOOST_AUTO_TEST_CASE(TestRunConstructor)
     createCondtionalStorage<false, double><<<1, 1>>>();
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
-    
 }
 
-BOOST_AUTO_TEST_CASE(TestEnabledStoragePointer) 
+BOOST_AUTO_TEST_CASE(TestEnabledStoragePointer)
 {
     using namespace Opm;
     using CS = ConditionalStorage<true, double>;
@@ -93,14 +103,15 @@ BOOST_AUTO_TEST_CASE(TestEnabledStoragePointer)
 
     auto numberFromGPUFromCall = Opm::gpuistl::make_gpu_unique_ptr<int>(0);
 
-    auto storageSomeStruct = Opm::gpuistl::make_gpu_unique_ptr<ConditionalStorage<true, SomeStruct>>(ConditionalStorage<true, SomeStruct>());
+    auto storageSomeStruct = Opm::gpuistl::make_gpu_unique_ptr<ConditionalStorage<true, SomeStruct>>(
+        ConditionalStorage<true, SomeStruct>());
     testEnabledStorageArrow<<<1, 1>>>(storageSomeStruct.get(), numberFromGPUFromCall.get());
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
     auto numberFromCall = Opm::gpuistl::copyFromGPU(numberFromGPUFromCall);
     BOOST_CHECK_EQUAL(123, numberFromCall);
 }
-BOOST_AUTO_TEST_CASE(TestEnabledStorageCopy) 
+BOOST_AUTO_TEST_CASE(TestEnabledStorageCopy)
 {
     using namespace Opm;
     using CS = ConditionalStorage<true, double>;
