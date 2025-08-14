@@ -473,10 +473,11 @@ public:
     virtual void writeOutput(bool verbose)
     {
         OPM_TIMEBLOCK(problemWriteOutput);
-        // use the generic code to prepare the output fields and to
-        // write the desired VTK files.
+
         if (Parameters::Get<Parameters::EnableWriteAllSolutions>() ||
-            this->simulator().episodeWillBeOver()) {
+            this->episodeWillBeOver())
+        {
+            // Create VTK output as needed.
             ParentType::writeOutput(verbose);
         }
     }
@@ -1719,6 +1720,13 @@ protected:
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
     bool first_step_ = true;
+
+    /// Whether or not the current episode will end at the end of the
+    /// current time step.
+    virtual bool episodeWillBeOver() const
+    {
+        return this->simulator().episodeWillBeOver();
+    }
 };
 
 } // namespace Opm

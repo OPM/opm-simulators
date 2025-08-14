@@ -256,8 +256,6 @@ public:
     {
         FlowProblemType::endTimeStep();
 
-        const bool isSubStep = !this->simulator().episodeWillBeOver();
-
         // after the solution is updated, the values in output module also needs to be updated
         this->eclWriter_->mutableOutputModule().invalidateLocalData();
 
@@ -267,9 +265,8 @@ public:
         using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
         constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
         if (!isCpGrid || (grid.maxLevel() == 0)) {
-            this->eclWriter_->evalSummaryState(isSubStep);
+            this->eclWriter_->evalSummaryState(! this->episodeWillBeOver());
         }
-
     }
 
     void writeReports(const SimulatorTimer& timer) {
@@ -286,13 +283,16 @@ public:
     {
         FlowProblemType::writeOutput(verbose);
 
-        const bool isSubStep = !this->simulator().episodeWillBeOver();
+        if (! this->enableEclOutput_) {
+            return;
+        }
 
-        data::Solution localCellData = {};
-        if (enableEclOutput_) {
-            if (Parameters::Get<Parameters::EnableWriteAllSolutions>() || !isSubStep) {
-                eclWriter_->writeOutput(std::move(localCellData), isSubStep);
-            }
+        const auto isSubStep = !this->episodeWillBeOver();
+
+        if (!isSubStep || Parameters::Get<Parameters::EnableWriteAllSolutions>()) {
+            auto localCellData = data::Solution {};
+
+            this->eclWriter_->writeOutput(std::move(localCellData), isSubStep);
         }
     }
 
