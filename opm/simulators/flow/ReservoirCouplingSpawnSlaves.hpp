@@ -35,12 +35,13 @@
 
 namespace Opm {
 
+template <class Scalar>
 class ReservoirCouplingSpawnSlaves {
 public:
     using MessageTag = ReservoirCoupling::MessageTag;
 
     ReservoirCouplingSpawnSlaves(
-        ReservoirCouplingMaster &master,
+        ReservoirCouplingMaster<Scalar> &master,
         const ReservoirCoupling::CouplingInfo &rescoup
     );
 
@@ -49,6 +50,7 @@ public:
 private:
     void createMasterGroupNameOrder_();
     void createMasterGroupToSlaveNameMap_();
+    void createSlaveNameToMasterGroupsMap_();
     std::pair<std::vector<char>, std::size_t>
         getMasterGroupNamesForSlave_(const std::string &slave_name) const;
     std::vector<char *> getSlaveArgv_(
@@ -62,7 +64,7 @@ private:
     void sendSlaveNamesToSlaves_();
     void spawnSlaveProcesses_();
 
-    ReservoirCouplingMaster &master_;
+    ReservoirCouplingMaster<Scalar> &master_;
     const ReservoirCoupling::CouplingInfo &rescoup_;
     const Parallel::Communication &comm_;
     ReservoirCoupling::Logger logger_;
