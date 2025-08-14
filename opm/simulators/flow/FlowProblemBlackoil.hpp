@@ -62,6 +62,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -457,9 +458,7 @@ public:
         using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
         constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
         if (!isCpGrid || (grid.maxLevel() == 0)) {
-            const bool isSubStep = !this->simulator().episodeWillBeOver();
-
-            this->eclWriter_->evalSummaryState(isSubStep);
+            this->eclWriter_->evalSummaryState(!this->episodeWillBeOver());
         }
 
         {
@@ -526,22 +525,24 @@ public:
      * \brief Write the requested quantities of the current solution into the output
      *        files.
      */
-    void writeOutput(bool verbose) override
+    void writeOutput(const bool verbose) override
     {
         FlowProblemType::writeOutput(verbose);
 
-        bool isSubStep = !this->simulator().episodeWillBeOver();
+        const auto isSubStep = !this->episodeWillBeOver();
 
-        data::Solution localCellData = {};
+        auto localCellData = data::Solution {};
+
 #if HAVE_DAMARIS
         // N.B. the Damaris output has to be done before the ECL output as the ECL one
         // does all kinds of std::move() relocation of data
-        if (enableDamarisOutput_) {
-            damarisWriter_->writeOutput(localCellData, isSubStep) ;
+        if (this->enableDamarisOutput_ && (this->damarisWriter_ != nullptr)) {
+            this->damarisWriter_->writeOutput(localCellData, isSubStep);
         }
 #endif
-        if (enableEclOutput_){
-            eclWriter_->writeOutput(std::move(localCellData), isSubStep);
+
+        if (this->enableEclOutput_ && (this->eclWriter_ != nullptr)) {
+            this->eclWriter_->writeOutput(std::move(localCellData), isSubStep);
         }
     }
 
@@ -1679,6 +1680,32 @@ protected:
     ActionHandler<Scalar> actionHandler_;
 
     ModuleParams moduleParams_;
+
+private:
+    /// Whether or not the current epsiode will end at the end of the
+    /// current time step.
+    ///
+    /// Custom implementation for black-oil cases.
+    ///
+    /// [2025-08-14] This is arguably a hack.  We intentionally do not use
+    /// the 'simulator()'s episodeWillBeOver() function, as that has been
+    /// shown to have non-trivial false negatives in the context of certain
+    /// regression tests.  It is likely that we will need to revisit this
+    /// predicate in the future.
+    bool episodeWillBeOver() const override
+    {
+        const auto currTime = this->simulator().time()
+            + this->simulator().timeStepSize();
+
+        const auto nextReportStep =
+            this->simulator().vanguard().schedule()
+            .seconds(this->simulator().episodeIndex() + 1);
+
+        const auto isSubStep = (nextReportStep - currTime)
+            > (2 * std::numeric_limits<float>::epsilon()) * nextReportStep;
+
+        return !isSubStep;
+    }
 };
 
 } // namespace Opm
