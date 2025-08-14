@@ -17,17 +17,17 @@
 
 #define BOOST_TEST_MODULE TestBlackOilFluidStateGPU
 
+#include <boost/test/unit_test.hpp>
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <boost/test/unit_test.hpp>
+#include <opm/material/common/HasMemberGeneratorMacros.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
-#include <opm/material/common/HasMemberGeneratorMacros.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 namespace
 {
 
-template<class ScalarT>
+template <class ScalarT>
 struct DummyFluidSystem {
     static constexpr auto numPhases = 3u;
     static constexpr auto numComponents = 1;
@@ -39,25 +39,54 @@ struct DummyFluidSystem {
     static constexpr auto gasCompIdx = 0;
 
 
-    static auto reservoirTemperature(int) { return ScalarT{ 0.0 }; }
-    static auto enthalpyEqualEnergy() { return true; }
-    static auto molarMass(int, int) { return ScalarT{ 0.0 }; }
-    template<class T>
-    static auto viscosity(const T&, int, int) { return ScalarT{ 0.0 }; }
+    static auto reservoirTemperature(int)
+    {
+        return ScalarT {0.0};
+    }
+    static auto enthalpyEqualEnergy()
+    {
+        return true;
+    }
+    static auto molarMass(int, int)
+    {
+        return ScalarT {0.0};
+    }
+    template <class T>
+    static auto viscosity(const T&, int, int)
+    {
+        return ScalarT {0.0};
+    }
 
-    static auto convertRsToXoG(ScalarT, int) { return ScalarT{ 0.0 }; }
-    static auto convertRvToXg0(ScalarT, int) { return ScalarT{ 0.0 }; }
-    static auto convertXoGToRs(ScalarT, int) { return ScalarT{ 0.0 }; }
+    static auto convertRsToXoG(ScalarT, int)
+    {
+        return ScalarT {0.0};
+    }
+    static auto convertRvToXg0(ScalarT, int)
+    {
+        return ScalarT {0.0};
+    }
+    static auto convertXoGToRs(ScalarT, int)
+    {
+        return ScalarT {0.0};
+    }
 
-    template<class T>
-    static auto fugacityCoefficient(const T&, int, int, int) { return ScalarT{ 0.0 }; }
+    template <class T>
+    static auto fugacityCoefficient(const T&, int, int, int)
+    {
+        return ScalarT {0.0};
+    }
 
-    static auto activeToCanonicalPhaseIdx(int) { return 0u; }
-    static auto canonicalToActivePhaseIdx(int) { return 0u; }
-
+    static auto activeToCanonicalPhaseIdx(int)
+    {
+        return 0u;
+    }
+    static auto canonicalToActivePhaseIdx(int)
+    {
+        return 0u;
+    }
 };
 
-template<class ScalarT>
+template <class ScalarT>
 struct DummyFluidSystemDynamic {
     static constexpr auto numPhases = 3u;
     static constexpr auto numComponents = 1;
@@ -69,55 +98,94 @@ struct DummyFluidSystemDynamic {
     static constexpr auto gasCompIdx = 0;
 
 
-    OPM_HOST_DEVICE auto reservoirTemperature(int) const { return ScalarT{ 0.0 }; }
-    OPM_HOST_DEVICE auto enthalpyEqualEnergy() const { return true; }
-    OPM_HOST_DEVICE auto molarMass(int, int) const { return ScalarT{ 0.0 }; }
-    template<class T>
-    OPM_HOST_DEVICE auto viscosity(const T&, int, int) const { return ScalarT{ someVariable }; }
+    OPM_HOST_DEVICE auto reservoirTemperature(int) const
+    {
+        return ScalarT {0.0};
+    }
+    OPM_HOST_DEVICE auto enthalpyEqualEnergy() const
+    {
+        return true;
+    }
+    OPM_HOST_DEVICE auto molarMass(int, int) const
+    {
+        return ScalarT {0.0};
+    }
+    template <class T>
+    OPM_HOST_DEVICE auto viscosity(const T&, int, int) const
+    {
+        return ScalarT {someVariable};
+    }
 
-    OPM_HOST_DEVICE auto convertRsToXoG(ScalarT, int) const { return ScalarT{ 0.0 }; }
-    OPM_HOST_DEVICE auto convertRvToXg0(ScalarT, int) const { return ScalarT{ 0.0 }; }
-    OPM_HOST_DEVICE auto convertXoGToRs(ScalarT, int) const { return ScalarT{ 0.0 }; }
+    OPM_HOST_DEVICE auto convertRsToXoG(ScalarT, int) const
+    {
+        return ScalarT {0.0};
+    }
+    OPM_HOST_DEVICE auto convertRvToXg0(ScalarT, int) const
+    {
+        return ScalarT {0.0};
+    }
+    OPM_HOST_DEVICE auto convertXoGToRs(ScalarT, int) const
+    {
+        return ScalarT {0.0};
+    }
 
-    template<class T>
-    OPM_HOST_DEVICE auto fugacityCoefficient(const T&, int, int, int) const { return ScalarT{ 0.0 }; }
+    template <class T>
+    OPM_HOST_DEVICE auto fugacityCoefficient(const T&, int, int, int) const
+    {
+        return ScalarT {0.0};
+    }
 
-    OPM_HOST_DEVICE auto activeToCanonicalPhaseIdx(int) const { return 0u; }
-    OPM_HOST_DEVICE auto canonicalToActivePhaseIdx(int) const { return 0u; }
+    OPM_HOST_DEVICE auto activeToCanonicalPhaseIdx(int) const
+    {
+        return 0u;
+    }
+    OPM_HOST_DEVICE auto canonicalToActivePhaseIdx(int) const
+    {
+        return 0u;
+    }
 
 
     double someVariable = 43.2;
-
 };
-    
+
 
 template <class FluidState>
-__global__ void kernelCreatingBlackoilFluidState() {
+__global__ void
+kernelCreatingBlackoilFluidState()
+{
     FluidState state;
 }
 
-template<class FluidState, class FluidSystem>
-__global__ void kernelCreatingBlackoilFluidStateDynamic() {
+template <class FluidState, class FluidSystem>
+__global__ void
+kernelCreatingBlackoilFluidStateDynamic()
+{
     FluidSystem system;
     FluidState state(system);
 }
 
-template<class FluidState>
-__global__ void kernelSetAndGetTotalSaturation(double saturation, double* readSaturation) {
+template <class FluidState>
+__global__ void
+kernelSetAndGetTotalSaturation(double saturation, double* readSaturation)
+{
     FluidState state;
     state.setTotalSaturation(saturation);
     *readSaturation = state.totalSaturation();
 }
 
-template<class FluidState>
-__global__ void getPressure(Opm::gpuistl::PointerView<FluidState> input, std::array<double, 3>* output) {
+template <class FluidState>
+__global__ void
+getPressure(Opm::gpuistl::PointerView<FluidState> input, std::array<double, 3>* output)
+{
     for (int i = 0; i < 3; ++i) {
         (*output)[i] = input->pressure(i);
     }
 }
 
-template<class FluidState, class FluidSystem>
-__global__ void getViscosity(FluidSystem input, double* output) {
+template <class FluidState, class FluidSystem>
+__global__ void
+getViscosity(FluidSystem input, double* output)
+{
     FluidState state(input);
     *output = state.viscosity(0);
 }
@@ -131,7 +199,6 @@ using FluidStateDynamic = Opm::BlackOilFluidState<ScalarT, DummyFluidSystemDynam
 
 BOOST_AUTO_TEST_CASE(TestCreation)
 {
-   
     kernelCreatingBlackoilFluidState<FluidState><<<1, 1>>>();
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
@@ -165,7 +232,7 @@ BOOST_AUTO_TEST_CASE(TestPressure)
     BOOST_CHECK_EQUAL(3.0, outputCPU[2]);
 }
 
-BOOST_AUTO_TEST_CASE(TestDynamicCreation) 
+BOOST_AUTO_TEST_CASE(TestDynamicCreation)
 {
     kernelCreatingBlackoilFluidStateDynamic<FluidStateDynamic, DummyFluidSystemDynamic<ScalarT>><<<1, 1>>>();
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
@@ -182,5 +249,4 @@ BOOST_AUTO_TEST_CASE(TestPassByValueToGPUDynamic)
 
     auto outputCPU = Opm::gpuistl::copyFromGPU(output);
     BOOST_CHECK_EQUAL(1234, outputCPU);
-
 }
