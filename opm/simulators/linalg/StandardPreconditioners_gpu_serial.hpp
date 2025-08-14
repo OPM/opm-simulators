@@ -45,14 +45,14 @@ struct StandardPreconditioners<Operator,
     static constexpr int maxblocksize = 6;
     static void add()
     {
-        F::addCreator("ILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using GpuILU0 =
                 typename gpuistl::GpuSeqILU0<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
             return std::make_shared<GpuILU0>(op.getmat(), w);
         });
 
-        F::addCreator("JAC", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using GPUJac = typename gpuistl::GpuJac<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
             return std::make_shared<GPUJac>(op.getmat(), w);
@@ -64,7 +64,7 @@ struct StandardPreconditioners<Operator,
         // dispatch the creation of the preconditioner based on the block size. 
         //
         // Note that this dispatching is not needed in the future, since we will have a constructor taking GPU matrices directly.
-        F::addCreator("OPMILU0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("opmilu0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             return dispatchOnBlockSize<maxblocksize>(op, [&](const auto& cpuMatrix) {
                 const bool split_matrix = prm.get<bool>("split_matrix", true);
                 const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
@@ -77,7 +77,7 @@ struct StandardPreconditioners<Operator,
             });
         });
 
-        F::addCreator("DILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("dilu", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             return dispatchOnBlockSize<maxblocksize>(op, [&](const auto& cpuMatrix) {
                 const bool split_matrix = prm.get<bool>("split_matrix", true);
                 const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);

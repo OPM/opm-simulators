@@ -256,7 +256,7 @@ Maximum water saturation. Default: 1
 Configuration of Metis partitioner. You can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.' See http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/manual.pdffor available METIS options. Default: "default"
 .TP
 \fB\-\-milu\-variant\fR=\fI\,STRING\/\fR
-Specify which variant of the modified\-ILU preconditioner ought to be used. Possible variants are: ILU (default, plain ILU), MILU_1 (lump diagonal with dropped row entries), MILU_2 (lump diagonal with the sum of the absolute values of the dropped row entries), MILU_3 (if diagonal is positive add sum of dropped row entries, otherwise subtract them), MILU_4 (if diagonal is positive add sum of dropped row entries, otherwise do nothing. Default: "ILU"
+Specify which variant of the modified\-ILU preconditioner ought to be used. Possible variants are: ilu (default, plain ILU), milu_1 (lump diagonal with dropped row entries), milu_2 (lump diagonal with the sum of the absolute values of the dropped row entries), milu_3 (if diagonal is positive add sum of dropped row entries, otherwise subtract them), milu_4 (if diagonal is positive add sum of dropped row entries, otherwise do nothing. Default: "ilu"
 .TP
 \fB\-\-min\-strict\-cnv\-iter\fR=\fI\,INTEGER\/\fR
 Minimum number of Newton iterations before relaxed tolerances can be used for the CNV convergence criterion. Default: \fB\-1\fR
