@@ -118,8 +118,6 @@ static constexpr const char* deckString1 =
 "TSTEP\n"
 "1 /";
 
-using GpuB = Opm::gpuistl::GpuBuffer<double>;
-using GpuV = Opm::gpuistl::GpuView<double>;
 using GpuBufCo2Tables = Opm::CO2Tables<double, Opm::gpuistl::GpuBuffer>;
 using GpuBufBrineCo2Pvt = Opm::BrineCo2Pvt<double, Opm::gpuistl::GpuBuffer>;
 using FluidSystem = Opm::BlackOilFluidSystem<double>;
