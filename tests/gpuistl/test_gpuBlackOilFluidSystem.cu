@@ -26,7 +26,7 @@
 /*!
  * \file
  *
- * \brief This is the unit test for the black oil fluid system
+ * \brief This is the unit test for the black oil fluid system on the GPU.
  *
  * This test requires the presence of opm-parser.
  */
