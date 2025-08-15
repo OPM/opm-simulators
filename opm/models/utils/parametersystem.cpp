@@ -365,7 +365,7 @@ ParamType Get_(const std::string& paramName, ParamType defaultValue,
 {
     if (errorIfNotRegistered) {
         if (MetaData::registrationOpen()) {
-            throw std::runtime_error("Parameters can only retrieved after _all_ of them have "
+            throw std::runtime_error("Parameters can only be retrieved after _all_ of them have "
                                      "been registered.");
         }
 
@@ -427,7 +427,7 @@ bool IsSet_(const std::string& paramName, bool errorIfNotRegistered)
 {
     if (errorIfNotRegistered) {
         if (MetaData::registrationOpen()) {
-            throw std::runtime_error("Parameters can only checked after _all_ of them have "
+            throw std::runtime_error("Parameters can only be checked after _all_ of them have "
                                      "been registered.");
         }
 
@@ -509,7 +509,7 @@ void getLists(std::vector<Parameter>& usedParams,
     unusedParams.clear();
 
     if (MetaData::registrationOpen()) {
-        throw std::runtime_error("Parameter lists can only retrieved after _all_ of them have "
+        throw std::runtime_error("Parameter lists can only be retrieved after _all_ of them have "
                                  "been registered.");
     }
 
