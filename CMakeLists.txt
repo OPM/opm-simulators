@@ -441,9 +441,9 @@ endmacro (tests_hook)
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
 
-opm_add_test(test_tuning_xxxMBE
+opm_add_test(test_tuning_trgmbe
               SOURCES
-                tests/test_tuning_XXXMBE.cpp
+                tests/test_tuning_TRGMBE.cpp
               LIBRARIES
                 ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
               ONLY_COMPILE)
