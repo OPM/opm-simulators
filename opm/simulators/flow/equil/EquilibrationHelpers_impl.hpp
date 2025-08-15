@@ -658,7 +658,7 @@ satFromDepth(const MaterialLawManager& materialLawManager,
     const Scalar s0 = increasing ? maxSaturations<FluidSystem>(materialLawManager, phase, cell) : minSaturations<FluidSystem>(materialLawManager, phase, cell);
     const Scalar s1 = increasing ? minSaturations<FluidSystem>(materialLawManager, phase, cell) : maxSaturations<FluidSystem>(materialLawManager, phase, cell);
 
-    if (cellDepth < contactDepth) {
+    if (cellDepth <= contactDepth) {
         return s0;
     }
     else {
