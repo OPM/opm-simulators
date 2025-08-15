@@ -25,6 +25,8 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/gpuistl/HypreInterface.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_type_detection.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -33,25 +35,43 @@
 #include <HYPRE_parcsr_ls.h>
 #include <HYPRE_krylov.h>
 #include <_hypre_utilities.h>
-
-#include <vector>
 #include <numeric>
+#include <vector>
 
 namespace Hypre {
+
+using HypreInterface = Opm::gpuistl::HypreInterface;
 
 /**
  * @brief Wrapper for Hypre's BoomerAMG preconditioner.
  *
  * This class provides an interface to the BoomerAMG preconditioner from the Hypre library.
  * It is designed to work with matrices, update vectors, and defect vectors specified by the template parameters.
+ * The HypreInterface class provides a unified interface to Hypre's functionality, allowing for easy 
+ * switching between CPU and GPU input data types and backend acceleration.
  *
- * @tparam M The matrix type the preconditioner is for.
- * @tparam X The type of the update vector.
- * @tparam Y The type of the defect vector.
+ * Supports three use cases:
+ * 1. Input type is CPU and backend acceleration is CPU
+ * 2. Input type is CPU and backend acceleration is GPU
+ * 3. Input type is GPU and backend acceleration is GPU
+ *
+ * @tparam M The matrix type
+ * @tparam X The vector type for the solution
+ * @tparam Y The vector type for the right-hand side
  */
 template<class M, class X, class Y>
 class HyprePreconditioner : public Dune::PreconditionerWithUpdate<X,Y> {
 public:
+    //! \brief The matrix type the preconditioner is for
+    using matrix_type = M;
+    //! \brief The field type of the matrix
+    using matrix_field_type = typename M::field_type;
+    //! \brief The domain type of the preconditioner
+    using domain_type = X;
+    //! \brief The range type of the preconditioner
+    using range_type = Y;
+    //! \brief The field type of the vectors
+    using vector_field_type = typename X::field_type;
 
     /**
      * @brief Constructor for the HyprePreconditioner class.
@@ -61,7 +81,7 @@ public:
      * @param A The matrix for which the preconditioner is constructed.
      * @param prm The property tree containing configuration parameters.
      */
-    HyprePreconditioner (const M& A, const Opm::PropertyTree prm)
+    HyprePreconditioner(const M& A, const Opm::PropertyTree prm)
         : A_(A)
     {
         OPM_TIMEBLOCK(prec_construct);
@@ -72,113 +92,51 @@ public:
             OPM_THROW(std::runtime_error, "HyprePreconditioner is currently only implemented for sequential runs");
         }
 
-        use_gpu_ = prm.get<bool>("use_gpu", false);
+        use_gpu_backend_ = prm.get<bool>("use_gpu", false);
 
-        // Set memory location and execution policy
-#if HYPRE_USING_CUDA || HYPRE_USING_HIP
-        if (use_gpu_) {
-            HYPRE_SetMemoryLocation(HYPRE_MEMORY_DEVICE);
-            HYPRE_SetExecutionPolicy(HYPRE_EXEC_DEVICE);
-            // use hypre's SpGEMM instead of vendor implementation
-            HYPRE_SetSpGemmUseVendor(false);
-            // use cuRand for PMIS
-            HYPRE_SetUseGpuRand(1);
-            HYPRE_DeviceInitialize();
-            HYPRE_PrintDeviceInfo();
-        }
-        else
-#endif
-        {
-            HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
-            HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
-        }
+        // Initialize Hypre library with backend configuration
+        HypreInterface::initialize(use_gpu_backend_);
 
-        // Create the solver (BoomerAMG)
-        HYPRE_BoomerAMGCreate(&solver_);
+        // Create solver
+        solver_ = HypreInterface::createSolver();
+        HypreInterface::setSolverParameters(solver_, prm, use_gpu_backend_);
 
-        // Set parameters from property tree with defaults
-        HYPRE_BoomerAMGSetPrintLevel(solver_, prm.get<int>("print_level", 0));
-        HYPRE_BoomerAMGSetMaxIter(solver_, prm.get<int>("max_iter", 1));
-        HYPRE_BoomerAMGSetStrongThreshold(solver_, prm.get<double>("strong_threshold", 0.5));
-        HYPRE_BoomerAMGSetAggTruncFactor(solver_, prm.get<double>("agg_trunc_factor", 0.3));
-        HYPRE_BoomerAMGSetInterpType(solver_, prm.get<int>("interp_type", 6));
-        HYPRE_BoomerAMGSetMaxLevels(solver_, prm.get<int>("max_levels", 15));
-        HYPRE_BoomerAMGSetTol(solver_, prm.get<double>("tolerance", 0.0));
+        // Cache matrix dimensions
+        N_ = static_cast<HYPRE_Int>(A_.N());
+        nnz_ = static_cast<HYPRE_Int>(A_.nonzeroes());
 
-        if (use_gpu_) {
-            HYPRE_BoomerAMGSetRelaxType(solver_, 16);
-            HYPRE_BoomerAMGSetCoarsenType(solver_, 8);
-            HYPRE_BoomerAMGSetAggNumLevels(solver_, 0);
-            HYPRE_BoomerAMGSetAggInterpType(solver_, 6);
-            // Keep transpose to avoid SpMTV
-            HYPRE_BoomerAMGSetKeepTranspose(solver_, true);
-        }
-        else {
-            HYPRE_BoomerAMGSetRelaxType(solver_, prm.get<int>("relax_type", 13));
-            HYPRE_BoomerAMGSetCoarsenType(solver_, prm.get<int>("coarsen_type", 10));
-            HYPRE_BoomerAMGSetAggNumLevels(solver_, prm.get<int>("agg_num_levels", 1));
-            HYPRE_BoomerAMGSetAggInterpType(solver_, prm.get<int>("agg_interp_type", 4));
-        }
+        // Setup helper arrays for both CPU and GPU matrices
+        setupHelperArrays();
 
-        // Create Hypre vectors
-        N_ = A_.N();
-        nnz_ = A_.nonzeroes();
-        HYPRE_IJVectorCreate(MPI_COMM_SELF, 0, N_-1, &x_hypre_);
-        HYPRE_IJVectorCreate(MPI_COMM_SELF, 0, N_-1, &b_hypre_);
-        HYPRE_IJVectorSetObjectType(x_hypre_, HYPRE_PARCSR);
-        HYPRE_IJVectorSetObjectType(b_hypre_, HYPRE_PARCSR);
-        HYPRE_IJVectorInitialize(x_hypre_);
-        HYPRE_IJVectorInitialize(b_hypre_);
-        // Create indices vector
-        indices_.resize(N_);
-        std::iota(indices_.begin(), indices_.end(), 0);
-        if (use_gpu_) {
-            indices_device_ = hypre_CTAlloc(HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE);
-            hypre_TMemcpy(indices_device_, indices_.data(), HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-            // Allocate device vectors
-            x_values_device_ = hypre_CTAlloc(HYPRE_Real, N_, HYPRE_MEMORY_DEVICE);
-            b_values_device_ = hypre_CTAlloc(HYPRE_Real, N_, HYPRE_MEMORY_DEVICE);
-        }
+        // Create Hypre matrix and vectors
+        A_hypre_ = HypreInterface::createMatrix(N_);
+        x_hypre_ = HypreInterface::createVector(N_);
+        b_hypre_ = HypreInterface::createVector(N_);
 
-        // Create Hypre matrix
-        HYPRE_IJMatrixCreate(MPI_COMM_SELF, 0, N_-1, 0, N_-1, &A_hypre_);
-        HYPRE_IJMatrixSetObjectType(A_hypre_, HYPRE_PARCSR);
-        HYPRE_IJMatrixInitialize(A_hypre_);
+        // Initialize matrix structure and values using pre-allocated helper arrays
+        HypreInterface::initializeMatrix(A_, A_hypre_, use_gpu_backend_,
+                                       ncols_, rows_, cols_,
+                                       ncols_device_, rows_device_, cols_device_,
+                                       matrix_buffer_device_);
 
-        setupSparsityPattern();
+        // Perform initial update
         update();
     }
 
     /**
-     * @brief Destructor for the HyprePreconditioner class.
+     * @brief Destructor for HyprePreconditioner
      *
      * Cleans up resources allocated by the preconditioner.
      */
-    ~HyprePreconditioner() {
-        if (solver_) {
-            HYPRE_BoomerAMGDestroy(solver_);
-        }
-        if (A_hypre_) {
-            HYPRE_IJMatrixDestroy(A_hypre_);
-        }
-        if (x_hypre_) {
-            HYPRE_IJVectorDestroy(x_hypre_);
-        }
-        if (b_hypre_) {
-            HYPRE_IJVectorDestroy(b_hypre_);
-        }
-        if (values_device_) {
-            hypre_TFree(values_device_, HYPRE_MEMORY_DEVICE);
-        }
-        if (x_values_device_) {
-            hypre_TFree(x_values_device_, HYPRE_MEMORY_DEVICE);
-        }
-        if (b_values_device_) {
-            hypre_TFree(b_values_device_, HYPRE_MEMORY_DEVICE);
-        }
-        if (indices_device_) {
-            hypre_TFree(indices_device_, HYPRE_MEMORY_DEVICE);
-        }
+    ~HyprePreconditioner()
+    {
+        // Clean up device arrays if allocated
+        cleanupHelperArrays();
+
+        HypreInterface::destroySolver(solver_);
+        HypreInterface::destroyVector(x_hypre_);
+        HypreInterface::destroyVector(b_hypre_);
+        HypreInterface::destroyMatrix(A_hypre_);
     }
 
     /**
@@ -188,8 +146,24 @@ public:
      */
     void update() override {
         OPM_TIMEBLOCK(prec_update);
-        copyMatrixToHypre();
-        HYPRE_BoomerAMGSetup(solver_, parcsr_A_, par_b_, par_x_);
+
+        // Update matrix values using pre-allocated helper arrays
+        HypreInterface::updateMatrixValues(A_, A_hypre_, use_gpu_backend_,
+                                         ncols_, rows_, cols_,
+                                         ncols_device_, rows_device_, cols_device_,
+                                         matrix_buffer_device_);
+
+        // Get the underlying ParCSR matrix for setup
+        HYPRE_ParCSRMatrix parcsr_A;
+        HYPRE_SAFE_CALL(HYPRE_IJMatrixGetObject(A_hypre_, reinterpret_cast<void**>(&parcsr_A)));
+
+        // Get the underlying ParVector objects
+        HYPRE_ParVector par_x, par_b;
+        HYPRE_SAFE_CALL(HYPRE_IJVectorGetObject(x_hypre_, reinterpret_cast<void**>(&par_x)));
+        HYPRE_SAFE_CALL(HYPRE_IJVectorGetObject(b_hypre_, reinterpret_cast<void**>(&par_b)));
+
+        // Setup the solver
+        HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetup(solver_, parcsr_A, par_b, par_x));
     }
 
     /**
@@ -207,6 +181,8 @@ public:
      * @brief Applies the preconditioner to a vector.
      *
      * Performs one AMG V-cycle to solve the system.
+     * Involves uploading vectors to Hypre, applying the preconditioner,
+     * and transferring the result back to the vector.
      *
      * @param v The update vector.
      * @param d The defect vector.
@@ -214,14 +190,22 @@ public:
     void apply(X& v, const Y& d) override {
         OPM_TIMEBLOCK(prec_apply);
 
-        // Copy vectors to Hypre format
-        copyVectorsToHypre(v, d);
+        // Transfer vectors to Hypre
+        HypreInterface::transferVectorToHypre(v, x_hypre_, use_gpu_backend_, indices_, indices_device_, vector_buffer_device_);
+        HypreInterface::transferVectorToHypre(d, b_hypre_, use_gpu_backend_, indices_, indices_device_, vector_buffer_device_);
+
+        // Get the underlying ParCSR matrix and ParVector objects
+        HYPRE_ParCSRMatrix parcsr_A;
+        HYPRE_ParVector par_x, par_b;
+        HYPRE_SAFE_CALL(HYPRE_IJMatrixGetObject(A_hypre_, reinterpret_cast<void**>(&parcsr_A)));
+        HYPRE_SAFE_CALL(HYPRE_IJVectorGetObject(x_hypre_, reinterpret_cast<void**>(&par_x)));
+        HYPRE_SAFE_CALL(HYPRE_IJVectorGetObject(b_hypre_, reinterpret_cast<void**>(&par_b)));
 
         // Apply the preconditioner (one AMG V-cycle)
-        HYPRE_BoomerAMGSolve(solver_, parcsr_A_, par_b_, par_x_);
+        HYPRE_SAFE_CALL(HYPRE_BoomerAMGSolve(solver_, parcsr_A, par_b, par_x));
 
-        // Copy result back
-        copyVectorFromHypre(v);
+        // Transfer result back
+        HypreInterface::transferVectorFromHypre(x_hypre_, v, use_gpu_backend_, indices_, indices_device_, vector_buffer_device_);
     }
 
     /**
@@ -257,18 +241,81 @@ public:
     }
 
 private:
+    // Reference to the input matrix
+    const M& A_;
+
+    // Hypre handles
+    HYPRE_Solver solver_ = nullptr;
+    HYPRE_IJMatrix A_hypre_ = nullptr;
+    HYPRE_IJVector x_hypre_ = nullptr;
+    HYPRE_IJVector b_hypre_ = nullptr;
+
+    // Backend configuration
+    bool use_gpu_backend_ = false;
+
+    // Matrix dimensions (cached for performance)
+    HYPRE_Int N_;
+    HYPRE_Int nnz_;
+
+    // Host helper arrays for matrix operations
+    std::vector<HYPRE_Int> ncols_;
+    std::vector<HYPRE_BigInt> rows_;
+    std::vector<HYPRE_BigInt> cols_;
+    std::vector<HYPRE_BigInt> indices_;
+
+    // Device helper arrays (only allocated when use_gpu_backend_ is true)
+    HYPRE_Int* ncols_device_ = nullptr;
+    HYPRE_BigInt* rows_device_ = nullptr;
+    HYPRE_BigInt* cols_device_ = nullptr;
+    HYPRE_BigInt* indices_device_ = nullptr;
+    HYPRE_Real* vector_buffer_device_ = nullptr;
+    HYPRE_Real* matrix_buffer_device_ = nullptr;
+
     /**
-     * @brief Sets up the sparsity pattern for the Hypre matrix.
-     *
-     * Allocates and initializes arrays required by Hypre.
+     * @brief Setup helper arrays for matrix and vector operations
      */
-    void setupSparsityPattern() {
-        // Allocate arrays required by Hypre
+    void setupHelperArrays() {
+        // Setup host arrays
         ncols_.resize(N_);
         rows_.resize(N_);
         cols_.resize(nnz_);
+        indices_.resize(N_);
 
-        // Setup arrays and fill column indices
+        // Setup sparsity pattern based on matrix type
+#if HYPRE_USING_CUDA || HYPRE_USING_HIP
+        if constexpr (Opm::gpuistl::is_gpu_type<M>::value) {
+            setupSparsityPatternFromGpuMatrix();
+        } else
+#endif
+        {
+            setupSparsityPatternFromCpuMatrix();
+        }
+
+        // Setup indices array for vectors
+        std::iota(indices_.begin(), indices_.end(), 0);
+
+        // Allocate device arrays if using GPU backend
+        if (use_gpu_backend_) {
+#if HYPRE_USING_CUDA || HYPRE_USING_HIP
+            ncols_device_ = hypre_CTAlloc(HYPRE_Int, N_, HYPRE_MEMORY_DEVICE);
+            rows_device_ = hypre_CTAlloc(HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE);
+            cols_device_ = hypre_CTAlloc(HYPRE_BigInt, nnz_, HYPRE_MEMORY_DEVICE);
+            indices_device_ = hypre_CTAlloc(HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE);
+            vector_buffer_device_ = hypre_CTAlloc(HYPRE_Real, N_, HYPRE_MEMORY_DEVICE);
+            matrix_buffer_device_ = hypre_CTAlloc(HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE);
+            // Copy data to device
+            hypre_TMemcpy(ncols_device_, ncols_.data(), HYPRE_Int, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            hypre_TMemcpy(rows_device_, rows_.data(), HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            hypre_TMemcpy(cols_device_, cols_.data(), HYPRE_BigInt, nnz_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            hypre_TMemcpy(indices_device_, indices_.data(), HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+#endif
+        }
+    }
+
+    /**
+     * @brief Setup sparsity pattern from CPU matrix (BCRSMatrix)
+     */
+    void setupSparsityPatternFromCpuMatrix() {
         int pos = 0;
         for (auto row = A_.begin(); row != A_.end(); ++row) {
             const int rowIdx = row.index();
@@ -279,127 +326,63 @@ private:
                 cols_[pos++] = col.index();
             }
         }
-        if (use_gpu_) {
-            // Allocate device arrays
-            ncols_device_ = hypre_CTAlloc(HYPRE_Int, N_, HYPRE_MEMORY_DEVICE);
-            rows_device_ = hypre_CTAlloc(HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE);
-            cols_device_ = hypre_CTAlloc(HYPRE_BigInt, nnz_, HYPRE_MEMORY_DEVICE);
-            values_device_ = hypre_CTAlloc(HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE);
+    }
 
-            // Copy to device
-            hypre_TMemcpy(ncols_device_, ncols_.data(), HYPRE_Int, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-            hypre_TMemcpy(rows_device_, rows_.data(), HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-            hypre_TMemcpy(cols_device_, cols_.data(), HYPRE_BigInt, nnz_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+    #if HYPRE_USING_CUDA || HYPRE_USING_HIP
+    /**
+     * @brief Setup sparsity pattern from GPU matrix (GpuSparseMatrix)
+     */
+    void setupSparsityPatternFromGpuMatrix() {
+        // Get row pointers from GPU matrix (one-time host copy during setup)
+        auto host_row_ptrs = A_.getRowIndices().asStdVector();
+        auto host_col_indices = A_.getColumnIndices().asStdVector();
+
+        // Setup row information and ncols
+        for (int i = 0; i < N_; ++i) {
+            rows_[i] = i;
+            ncols_[i] = host_row_ptrs[i + 1] - host_row_ptrs[i];
+        }
+
+        // Convert column indices to HYPRE_BigInt format
+        for (int i = 0; i < nnz_; ++i) {
+            cols_[i] = host_col_indices[i];
         }
     }
+#endif
 
     /**
-     * @brief Copies the matrix values to the Hypre matrix.
-     *
-     * This method transfers the matrix data from the host to the Hypre matrix.
-     * It assumes that the values of the matrix are stored in a contiguous array.
-     * If GPU is used, the data is transferred to the device.
+     * @brief Clean up device helper arrays
      */
-    void copyMatrixToHypre() {
-        OPM_TIMEBLOCK(prec_copy_matrix);
-        // Get pointer to matrix values array
-        const HYPRE_Real* values = &(A_[0][0][0][0]);
-        // Indexing explanation:
-        // A_[0]             - First row of the matrix
-        //     [0]           - First block in that row
-        //        [0]        - First row within the 1x1 block
-        //           [0]     - First column within the 1x1 block
-
-        if (use_gpu_) {
-            hypre_TMemcpy(values_device_, values, HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-            HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_device_, rows_device_, cols_device_, values_device_);
-        }
-        else {
-            HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_.data(), rows_.data(), cols_.data(), values);
-        }
-
-        HYPRE_IJMatrixAssemble(A_hypre_);
-        HYPRE_IJMatrixGetObject(A_hypre_, reinterpret_cast<void**>(&parcsr_A_));
-    }
-
-    /**
-     * @brief Copies vectors to the Hypre format.
-     *
-     * Transfers the update and defect vectors to Hypre.
-     * If GPU is used, the data is transferred from the host to the device.
-     *
-     * @param v The update vector.
-     * @param d The defect vector.
-     */
-    void copyVectorsToHypre(const X& v, const Y& d) {
-        OPM_TIMEBLOCK(prec_copy_vectors_to_hypre);
-        const HYPRE_Real* x_vals = &(v[0][0]);
-        const HYPRE_Real* b_vals = &(d[0][0]);
-
-        if (use_gpu_) {
-            hypre_TMemcpy(x_values_device_, x_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-            hypre_TMemcpy(b_values_device_, b_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-
-            HYPRE_IJVectorSetValues(x_hypre_, N_, indices_device_, x_values_device_);
-            HYPRE_IJVectorSetValues(b_hypre_, N_, indices_device_, b_values_device_);
-        }
-        else {
-            HYPRE_IJVectorSetValues(x_hypre_, N_, indices_.data(), x_vals);
-            HYPRE_IJVectorSetValues(b_hypre_, N_, indices_.data(), b_vals);
-        }
-
-        HYPRE_IJVectorAssemble(x_hypre_);
-        HYPRE_IJVectorAssemble(b_hypre_);
-        HYPRE_IJVectorGetObject(x_hypre_, reinterpret_cast<void**>(&par_x_));
-        HYPRE_IJVectorGetObject(b_hypre_, reinterpret_cast<void**>(&par_b_));
-    }
-
-    /**
-     * @brief Copies the solution vector from Hypre.
-     *
-     * Transfers the solution vector from Hypre back to the host.
-     * If GPU is used, the data is transferred from the device to the host.
-     *
-     * @param v The update vector.
-     */
-    void copyVectorFromHypre(X& v) {
-        OPM_TIMEBLOCK(prec_copy_vector_from_hypre);
-        HYPRE_Real* values = &(v[0][0]);
-        if (use_gpu_) {
-            HYPRE_IJVectorGetValues(x_hypre_, N_, indices_device_, x_values_device_);
-            hypre_TMemcpy(values, x_values_device_, HYPRE_Real, N_, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
-        }
-        else {
-            HYPRE_IJVectorGetValues(x_hypre_, N_, indices_.data(), values);
+    void cleanupHelperArrays() {
+        if (use_gpu_backend_) {
+#if HYPRE_USING_CUDA || HYPRE_USING_HIP
+            if (ncols_device_) {
+                hypre_TFree(ncols_device_, HYPRE_MEMORY_DEVICE);
+                ncols_device_ = nullptr;
+            }
+            if (rows_device_) {
+                hypre_TFree(rows_device_, HYPRE_MEMORY_DEVICE);
+                rows_device_ = nullptr;
+            }
+            if (cols_device_) {
+                hypre_TFree(cols_device_, HYPRE_MEMORY_DEVICE);
+                cols_device_ = nullptr;
+            }
+            if (indices_device_) {
+                hypre_TFree(indices_device_, HYPRE_MEMORY_DEVICE);
+                indices_device_ = nullptr;
+            }
+            if (vector_buffer_device_) {
+                hypre_TFree(vector_buffer_device_, HYPRE_MEMORY_DEVICE);
+                vector_buffer_device_ = nullptr;
+            }
+            if (matrix_buffer_device_) {
+                hypre_TFree(matrix_buffer_device_, HYPRE_MEMORY_DEVICE);
+                matrix_buffer_device_ = nullptr;
+            }
+#endif
         }
     }
-
-    const M& A_; //!< The matrix for which the preconditioner is constructed.
-    bool use_gpu_ = false; //!< Flag indicating whether to use GPU acceleration.
-
-    HYPRE_Solver solver_ = nullptr; //!< The Hypre solver object.
-    HYPRE_IJMatrix A_hypre_ = nullptr; //!< The Hypre matrix object.
-    HYPRE_ParCSRMatrix parcsr_A_ = nullptr; //!< The parallel CSR matrix object.
-    HYPRE_IJVector x_hypre_ = nullptr; //!< The Hypre solution vector.
-    HYPRE_IJVector b_hypre_ = nullptr; //!< The Hypre right-hand side vector.
-    HYPRE_ParVector par_x_ = nullptr; //!< The parallel solution vector.
-    HYPRE_ParVector par_b_ = nullptr; //!< The parallel right-hand side vector.
-
-    std::vector<HYPRE_Int> ncols_; //!< Number of columns per row.
-    std::vector<HYPRE_BigInt> rows_; //!< Row indices.
-    std::vector<HYPRE_BigInt> cols_; //!< Column indices.
-    HYPRE_Int* ncols_device_ = nullptr; //!< Device array for number of columns per row.
-    HYPRE_BigInt* rows_device_ = nullptr; //!< Device array for row indices.
-    HYPRE_BigInt* cols_device_ = nullptr; //!< Device array for column indices.
-    HYPRE_Real* values_device_ = nullptr; //!< Device array for matrix values.
-
-    std::vector<HYPRE_BigInt> indices_; //!< Indices vector for copying vectors to/from Hypre.
-    HYPRE_BigInt* indices_device_ = nullptr; //!< Device array for indices.
-    HYPRE_Int N_ = -1; //!< Number of rows in the matrix.
-    HYPRE_Int nnz_ = -1; //!< Number of non-zero elements in the matrix.
-
-    HYPRE_Real* x_values_device_ = nullptr; //!< Device array for solution vector values.
-    HYPRE_Real* b_values_device_ = nullptr; //!< Device array for right-hand side vector values.
 };
 
 } // namespace Hypre
