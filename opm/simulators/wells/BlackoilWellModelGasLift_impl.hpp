@@ -29,6 +29,7 @@
 #endif
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
@@ -41,6 +42,8 @@ bool
 BlackoilWellModelGasLift<TypeTag>::
 maybeDoGasLiftOptimize(const Simulator& simulator,
                        const std::vector<WellInterfacePtr>& well_container,
+                       const std::map<std::string, Scalar>& node_pressures,
+                       const bool updatePotentials,
                        WellState<Scalar>& wellState,
                        GroupState<Scalar>& groupState,
                        DeferredLogger& deferred_logger)
@@ -63,6 +66,11 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
     {
         do_glift_optimization = true;
         this->last_glift_opt_time_ = simulation_time;
+    }
+
+    // update potentials if changed by network (needed by the gaslift algorithm)
+    if (updatePotentials) {
+        updateWellPotentials(simulator, well_container, node_pressures, wellState, deferred_logger);
     }
 
     if (do_glift_optimization) {
@@ -301,6 +309,50 @@ initGliftEclWellMap(const std::vector<WellInterfacePtr>& well_container,
 {
     for (const auto& well : well_container) {
         ecl_well_map.try_emplace(well->name(), &well->wellEcl(), well->indexOfWell());
+    }
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelGasLift<TypeTag>::
+updateWellPotentials(const Simulator& simulator,
+                     const std::vector<WellInterfacePtr>& well_container,
+                     const std::map<std::string, Scalar>& node_pressures,
+                     WellState<Scalar>& wellState,
+                     DeferredLogger& deferred_logger)
+{
+    auto well_state_copy = wellState;
+    const int np = wellState.numPhases();
+    std::string exc_msg;
+    auto exc_type = ExceptionType::NONE;
+    for (const auto& well : well_container) {
+        if (well->isInjector() || !well->wellEcl().predictionMode())
+            continue;
+
+        const auto it = node_pressures.find(well->wellEcl().groupName());
+        if (it != node_pressures.end()) {
+            std::vector<Scalar> potentials;
+            std::string cur_exc_msg;
+            auto cur_exc_type = ExceptionType::NONE;
+            try {
+                well->computeWellPotentials(simulator, well_state_copy, potentials, deferred_logger);
+                auto& ws = wellState.well(well->indexOfWell());
+                for (int p = 0; p < np; ++p) {
+                    // make sure the potentials are positive
+                    ws.well_potentials[p] = std::max(Scalar{0.0}, potentials[p]);
+                }
+            }
+            // catch all possible exception and store type and message.
+            OPM_PARALLEL_CATCH_CLAUSE(cur_exc_type, cur_exc_msg);
+            if (cur_exc_type != ExceptionType::NONE) {
+                exc_msg += fmt::format("\nFor well {}: {}", well->name(), cur_exc_msg);
+            }
+            exc_type = std::max(exc_type, cur_exc_type);
+        }
+    }
+    if (exc_type != ExceptionType::NONE) {
+        const std::string msg = "Updating well potentials after network balancing failed. Continue with current potentials";
+        deferred_logger.warning("WELL_POT_SOLVE_AFTER_NETWORK_FAILED", msg + exc_msg);
     }
 }
 

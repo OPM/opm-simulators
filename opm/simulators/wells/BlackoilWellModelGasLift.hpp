@@ -116,6 +116,8 @@ public:
 
     bool maybeDoGasLiftOptimize(const Simulator& simulator,
                                 const std::vector<WellInterfacePtr>& well_container,
+                                const std::map<std::string, Scalar>& node_pressures,
+                                const bool updatePotentials,
                                 WellState<Scalar>& wellState,
                                 GroupState<Scalar>& groupState,
                                 DeferredLogger& deferred_logger);
@@ -142,6 +144,12 @@ private:
                                              GLiftWellStateMap& state_map,
                                              GLiftSyncGroups& groups_to_sync,
                                              DeferredLogger& deferred_logger);
+
+    void updateWellPotentials(const Simulator& simulator,
+                              const std::vector<WellInterfacePtr>& well_container,
+                              const std::map<std::string, Scalar>& node_pressures,
+                              WellState<Scalar>& wellState,
+                              DeferredLogger& deferred_logger);
 
     const PhaseUsage& phase_usage_;
 };
