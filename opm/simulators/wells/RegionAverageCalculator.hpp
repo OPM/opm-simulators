@@ -22,7 +22,6 @@
 
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <dune/grid/common/gridenums.hh>
@@ -68,10 +67,8 @@ namespace Opm {
              * corresponds to the "FIPNUM" mapping of an ECLIPSE input
              * deck.
              */
-            AverageRegionalPressure(const PhaseUsage& phaseUsage,
-                                    const Region&   region)
-                : phaseUsage_(phaseUsage)
-                , rmap_ (region)
+            explicit AverageRegionalPressure(const Region&   region)
+                : rmap_ (region)
                 , attr_ (rmap_, Attributes())
             {
             }
@@ -123,8 +120,7 @@ namespace Opm {
 
                     // only count oil and gas filled parts of the domain
                     Scalar hydrocarbon = 1.0;
-                    const auto& pu = phaseUsage_;
-                    if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
+                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
                     }
 
@@ -136,10 +132,10 @@ namespace Opm {
                     if (hydrocarbonPV > 0.) {
                         auto& attr = attributes_hpv[reg];
                         attr.pv += hydrocarbonPV;
-                        if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
+                        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
                         } else {
-                            assert(RegionAttributeHelpers::PhaseUsed::gas(pu));
+                            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
                             attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
                         }
                     }
@@ -147,12 +143,12 @@ namespace Opm {
                     if (pv_cell > 0.) {
                         auto& attr = attributes_pv[reg];
                         attr.pv += pv_cell;
-                        if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
+                        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
-                        } else if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+                        } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                              attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * pv_cell;
                         } else {
-                            assert(RegionAttributeHelpers::PhaseUsed::water(pu));
+                            assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
                             attr.pressure += fs.pressure(FluidSystem::waterPhaseIdx).value() * pv_cell;
                         }
                     }
@@ -216,11 +212,6 @@ namespace Opm {
 
 
         private:
-            /**
-             * Fluid property object.
-             */
-            const PhaseUsage phaseUsage_;
-
             /**
              * "Fluid-in-place" region mapping (forward and reverse).
              */
