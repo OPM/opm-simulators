@@ -103,7 +103,10 @@ namespace Opm {
             rate += gefac * sumWellPhaseRates(res_rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector, network);
         }
 
-        // only sum satelite production once
+        // only sum satellite production once
+        // With the current treatment, satellite production must also explicitly be accounted for in
+        // updateGroupTargetReduction. A cleaner solution would perhaps be to let sumWellPhaseRates return
+        // the satellite production directly (it currently returns zero for satellite groups).
         if (wellState.isRank0() && !injector) {
             const auto rateComp = selectRateComponent(wellState.phaseUsage(), phasePos);
             if (rateComp.has_value()) {
@@ -422,6 +425,18 @@ updateGroupTargetReduction(const Group& group,
                         groupTargetReduction[phase] += subGroupEfficiency * subGroupTargetReduction[phase];
                     }
                 }
+            }
+        }
+    }
+
+    // only sum satellite production once
+    // With the current treatment, satellite rates here must be added to target reduction excactly the same 
+    // way as in sumWellPhaseRates (see comment there)
+    if (wellState.isRank0()) {
+        for (int phase = 0; phase < np; phase++) {
+            const auto rateComp = selectRateComponent(wellState.phaseUsage(), phase);
+            if (rateComp.has_value()) {
+                groupTargetReduction[phase] += satelliteProduction(schedule[reportStepIdx], group.groups(), *rateComp);
             }
         }
     }
