@@ -1129,25 +1129,16 @@ assignDynamicWellStatus(data::Wells& wsrpt,
                         const int reportStepIndex) const
 {
     this->loopOwnedWells([this, reportStepIndex, &wsrpt]
-                         (const auto wellID, const Well& well)
+                         (const auto wellID,
+                          const Well& well)
     {
         auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
+        xwel.dynamicStatus = this->wellState().well(well.name()).status;
 
-        xwel.dynamicStatus = this->schedule()[reportStepIndex]
-            .wells(well.name()).getStatus();
-
-        if ((xwel.dynamicStatus == Well::Status::OPEN) &&
-            this->wellTestState().well_is_closed(well.name()) &&
-            !this->wasDynamicallyShutThisTimeStep(wellID))
-        {
-            // Well is supposed to be flowing according to the run
-            // specification (Schedule object), but it is not operable or
-            // cannot meet its economic limits (well testing).
-            //
-            // Assign status based on the well's defined automatic shut-in
-            // procedure.
-            xwel.dynamicStatus = well.getAutomaticShutIn()
-                ? Well::Status::SHUT : Well::Status::STOP;
+        // Well was shut this time step we keep it open one last time
+        // for output
+        if (wasDynamicallyShutThisTimeStep(wellID)) {
+            xwel.dynamicStatus = Well::Status::OPEN;
         }
     });
 }

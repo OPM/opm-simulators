@@ -752,8 +752,6 @@ updateProductionGroupPotentialFromSubGroups(const Group& group, std::vector<Scal
         if (well_tmp.isInjector())
             continue;
 
-        if (well_tmp.getStatus() == Well::Status::SHUT)
-            continue;
         const auto& well_index = this->well_state_.index(well_name);
         if (!well_index.has_value()) // the well is not found
             continue;
@@ -764,6 +762,9 @@ updateProductionGroupPotentialFromSubGroups(const Group& group, std::vector<Scal
         }
 
         const auto& ws = this->well_state_.well(well_index.value());
+        if (ws.status == Well::Status::SHUT)
+            continue;
+
         for (int phase = 0; phase < this->num_phases_; phase++) {
             pot[phase] += wefac * ws.well_potentials[phase];
         }
