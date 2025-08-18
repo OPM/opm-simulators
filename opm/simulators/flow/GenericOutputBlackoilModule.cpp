@@ -631,7 +631,7 @@ doAllocBuffers(const unsigned bufferSize,
 
     // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
     for (auto& [keyword, should_write] : rstKeywords) {
-        if (this->isOutputCreationDirective_(keyword)) {
+        if (this->isOutputCreationDirective_(keyword) || keyword == "WELLS") {
             // 'BASIC', 'FREQ' and similar.  Don't attempt to create
             // cell-based output for these keywords and don't warn about
             // not being able to create such cell-based result vectors.
