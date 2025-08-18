@@ -369,8 +369,8 @@ findTHP(const std::vector<Scalar>& bhp_array,
 {
     int nthp = thp_array.size();
 
-    if (std::isnan(bhp)) {
-        throw NumericalProblem("findTHP: Error bhp is nan");
+    if (!std::isfinite(bhp)) {
+        throw NumericalProblem("findTHP: Error bhp is not finite");
     }
     Scalar thp = -1e100;
 
