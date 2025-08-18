@@ -119,48 +119,6 @@ public:
                                            GroupState<Scalar>& group_state,
                                            std::vector<Scalar>& groupTargetReduction);
 
-    static void updateGuideRates(const Group& group,
-                                 const Schedule& schedule,
-                                 const SummaryState& summary_state,
-                                 const PhaseUsage& pu,
-                                 int report_step,
-                                 double sim_time,
-                                 WellState<Scalar>& well_state,
-                                 const GroupState<Scalar>& group_state,
-                                 const Parallel::Communication& comm,
-                                 GuideRate* guide_rate,
-                                 std::vector<Scalar>& pot,
-                                 DeferredLogger& deferred_logger);
-
-    static void updateGuideRateForProductionGroups(const Group& group,
-                                                   const Schedule& schedule,
-                                                   const PhaseUsage& pu,
-                                                   const int reportStepIdx,
-                                                   const double& simTime,
-                                                   WellState<Scalar>& wellState,
-                                                   const GroupState<Scalar>& group_state,
-                                                   const Parallel::Communication& comm,
-                                                   GuideRate* guideRate,
-                                                   std::vector<Scalar>& pot);
-
-    static void updateGuideRatesForWells(const Schedule& schedule,
-                                         const PhaseUsage& pu,
-                                         const int reportStepIdx,
-                                         const double& simTime,
-                                         const WellState<Scalar>& wellState,
-                                         const Parallel::Communication& comm,
-                                         GuideRate* guideRate);
-
-    static void updateGuideRatesForInjectionGroups(const Group& group,
-                                                   const Schedule& schedule,
-                                                   const SummaryState& summaryState,
-                                                   const PhaseUsage& pu,
-                                                   const int reportStepIdx,
-                                                   const WellState<Scalar>& wellState,
-                                                   const GroupState<Scalar>& group_state,
-                                                   GuideRate* guideRate,
-                                                   DeferredLogger& deferred_logger);
-
     static void updateVREPForGroups(const Group& group,
                                     const Schedule& schedule,
                                     const int reportStepIdx,
