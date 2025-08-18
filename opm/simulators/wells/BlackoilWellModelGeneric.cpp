@@ -882,8 +882,16 @@ updateEclWellsConstraints(const int              timeStepIdx,
                          (const auto wellIdx, const auto& well)
     {
         auto& ws = this->wellState().well(wellIdx);
-        ws.updateStatus(well.getStatus());
-        ws.update_type_and_targets(well, st);
+        bool updated = ws.updateStatus(well.getStatus());
+        if (updated) {
+            ws.events.addEvent(ScheduleEvents::WELL_STATUS_CHANGE);
+            ws.events.addEvent(ScheduleEvents::ACTIONX_WELL_EVENT);
+        }
+        updated = ws.update_type_and_targets(well, st);
+        if (updated) {
+            ws.events.addEvent(ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER);
+            ws.events.addEvent(ScheduleEvents::ACTIONX_WELL_EVENT);
+        }
     });
 }
 
@@ -1801,9 +1809,11 @@ updateWellPotentials(const int reportStepIdx,
                                              + ScheduleEvents::NEW_WELL
                                              + ScheduleEvents::PRODUCTION_UPDATE
                                              + ScheduleEvents::INJECTION_UPDATE;
-        const auto& events = schedule()[reportStepIdx].wellgroup_events();
-        const bool event = events.hasEvent(well->name(), ScheduleEvents::ACTIONX_WELL_EVENT) ||
-                           (report_step_starts_ && events.hasEvent(well->name(), effective_events_mask));
+        const auto& eventsSchedule = schedule()[reportStepIdx].wellgroup_events();
+        const auto& eventsWell = this->wellState().well(well->indexOfWell()).events;
+        const bool event = eventsSchedule.hasEvent(well->name(), ScheduleEvents::ACTIONX_WELL_EVENT) ||
+                           (report_step_starts_ && eventsSchedule.hasEvent(well->name(), effective_events_mask)) ||
+                           eventsWell.hasEvent(effective_events_mask);
         const bool needPotentialsForGuideRates = well->underPredictionMode() && (!onlyAfterEvent || event);
         const bool needPotentialsForOutput = !onlyAfterEvent && (needed_for_summary || write_restart_file);
         const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates;

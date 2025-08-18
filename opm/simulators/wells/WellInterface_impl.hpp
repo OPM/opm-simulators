@@ -490,6 +490,7 @@ namespace Opm
                 if (!welltest_state_temp.completion_is_closed(this->name(), completion.first))
                     well_test_state.open_completion(this->name(), completion.first);
             }
+            ws.events.addEvent(ScheduleEvents::NEW_WELL);
             well_state = well_state_copy;
             open_times.try_emplace(this->name(), well_test_state.lastTestTime(this->name()));
         }

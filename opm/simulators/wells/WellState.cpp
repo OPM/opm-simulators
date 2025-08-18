@@ -391,6 +391,16 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
             auto& new_well = this->well(w);
             new_well.init_timestep(prev_well);
 
+            // PYACTION and ACTIONX may have opened a well. We notify the
+            // simulator by adding a well event.
+            if ( prev_well.events.hasEvent(ScheduleEvents::ACTIONX_WELL_EVENT)) {
+                new_well.events.addEvent(ScheduleEvents::ACTIONX_WELL_EVENT);
+                if (prev_well.events.hasEvent(ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER))
+                    new_well.events.addEvent(ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER);
+                if (prev_well.events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE))
+                    new_well.events.addEvent(ScheduleEvents::WELL_STATUS_CHANGE);
+            }
+
             if (prev_well.status == Well::Status::SHUT) {
                 // Well was shut in previous state, do not use its values.
                 continue;
@@ -401,9 +411,8 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
                 // use its previous values.
                 continue;
             }
-
-            // If new target is set using WCONPROD, WCONINJE etc. we use the new control
-            if (!new_well.events.hasEvent(WellState::event_mask)) {
+            // If we have changed from historical to prediction mode we use the new control
+            if (!new_well.events.hasEvent(ScheduleEvents::HIST_TO_PRED)) {
                 new_well.injection_cmode = prev_well.injection_cmode;
                 new_well.production_cmode = prev_well.production_cmode;
             }
