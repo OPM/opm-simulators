@@ -82,7 +82,6 @@ public:
         int rank;
         MPI_Comm_size(MPI_COMM_WORLD, &size);
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        HYPRE_Init();//ialize();
         if (size > 1) {
             assert(size == comm.communicator().size());
             assert(rank == comm.communicator().rank());
@@ -115,7 +114,6 @@ public:
 
         // Set parameters from property tree with defaults
         HYPRE_BoomerAMGSetPrintLevel(solver_, prm.get<int>("print_level", 0));
-        //HYPRE_BoomerAMGSetPrintLevel(solver_, 10);
         HYPRE_BoomerAMGSetMaxIter(solver_, prm.get<int>("max_iter", 1));
         HYPRE_BoomerAMGSetStrongThreshold(solver_, prm.get<double>("strong_threshold", 0.5));
         HYPRE_BoomerAMGSetAggTruncFactor(solver_, prm.get<double>("agg_trunc_factor", 0.3));
@@ -139,9 +137,7 @@ public:
         }
 
         // Create Hypre vectors
-        setupHypreParallelInfo(comm_);
-        //N_ = A_.N();
-        //nnz_ = A_.nonzeroes();
+        setupHypreParallelInfo(comm_);//create all need information for setting up the matrix
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, dof_offset_, dof_offset_ +(N_-1), &x_hypre_);
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, dof_offset_, dof_offset_ +(N_-1), &b_hypre_);
         HYPRE_IJVectorSetObjectType(x_hypre_, HYPRE_PARCSR);
@@ -251,8 +247,8 @@ public:
 
         // Copy result back
         copyVectorFromHypre(v);
-        // NB do we need ot sync values to be consiten to unique?
-        //comm_.project(v);
+        // NB do we need ot sync values to get correct values since a preconditioner
+        // consistent result (a operator apply should give unique).
         comm_.copyOwnerToAll(v,v);
     }
 
@@ -293,8 +289,6 @@ private:
   void setupHypreParallelInfo(const Dune::Amg::SequentialInformation& /*comm*/)
     {
         N_ = A_.N();
-        M_ = A_.M();
-        assert(N_ == M_);
         nnz_ = A_.nonzeroes();
 
         local_hypre_.resize(N_);
@@ -325,9 +319,7 @@ private:
         // in case index set is not full dune we fix it
         if(!(A_.N() == comm.indexSet().size())){
           // in OPM this will likely not be trigged
-          // ensure no holes in index set
-          // hopefully not need for fillIndexSetHoles
-          // may be usefull to build global numbering more efficient
+          // ensure no holes in index sett
           const_cast<Commun&>(comm).buildGlobalLookup(A_.N());// need?
           Dune::Amg::MatrixGraph<M> graph(const_cast<M&>(A_));// do not know why not const ref is sufficient
           Dune::fillIndexSetHoles(graph, const_cast<Commun&>(comm));
@@ -346,8 +338,7 @@ private:
             }
         }
         N_ = count;
-        M_ = N_;// not needed
-
+ 
         // make order of variables
         //NB owner first will fail for cprw...
         bool owner_first = true;
@@ -408,23 +399,15 @@ private:
             for (auto col = row->begin(); col != row->end(); ++col) {
                 if (!(local_hypre_[rowIdx] < 0) ){
                     nnz++;
-                    if(!(local_hypre_[col.index()] < 0)) {
-                        nnz_diag++;
-                    } else {
-                        nnz_offdiag++;
-                    }
                 }
             }
         }
         nnz_ = nnz;
-        nnz_diag_ = nnz_diag;
-        nnz_offdiag_ = nnz_offdiag;
      }
 
      /**
-      * @brief Sets up the sparsity pattern for the Hypre matrix.
+      * @brief Mapping from local dofs to hypre global dofs 
       *
-      * Allocates and initializes arrays required by Hypre.
       */
 
      int localToHypreGlobal(int index)
@@ -438,10 +421,16 @@ private:
          return local_hypre_global_[index];
      }
 
+     /**
+      *  @brief Sets up the sparsity pattern for the Hypre matrix.
+      *
+      *  Allocates and initializes arrays required by Hypre
+      *
+      */
+  
      void setupSparsityPattern()
      {
          // Allocate arrays required by Hypre
-         assert(M_ == N_);
          ncols_.resize(N_);
          rows_.resize(N_);
          cols_.resize(nnz_);
@@ -488,6 +477,23 @@ private:
          }
      }
 
+     void makeContinousMatrixEntries()
+     {
+       if(contintous_matrix_entries_.size() != nnz_){
+         continuous_matrix_entries_.resize(nnz_);
+         int nnz = 0;
+         for (auto row = A_.begin(); row != A_.end(); ++row) {
+             const int rowIdx = row.index();
+             for (auto col = row->begin(); col != row->end(); ++col) {
+                 if (!(local_hypre_[rowIdx] < 0)) {
+                     const auto& value = *col;
+                     continuous_matrix_entries_[nnz] = value[0][0];
+                     nnz++;
+                 }
+             }
+         }
+     }
+
      /**
       * @brief Copies the matrix values to the Hypre matrix.
       *
@@ -506,28 +512,23 @@ private:
          //           [0]     - First column within the 1x1 block
 
          if (use_gpu_) {
+           if (owner_first_) {
              const HYPRE_Real* values = &(A_[0][0][0][0]);
              hypre_TMemcpy(values_device_, values, HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-             HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_device_, rows_device_, cols_device_, values_device_);
+           }else{
+             // need a temp storage since matrix elements which should be copied is not continous in memory
+             this->makeContinousMatrixEntries();
+             const HYPRE_Real* values = &(continuous_matrix_entries_[0]);
+             hypre_TMemcpy(values_device_, values, HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+           }
+           HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_device_, rows_device_, cols_device_, values_device_);
          } else {
              if (owner_first_) {
                  const HYPRE_Real* values = &(A_[0][0][0][0]);
                  HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_.data(), rows_.data(), cols_.data(), values);
              } else {
-                 // need a temp storage since matrix elements which should be copied is not continous in memory
-                 std::vector<double> tmp_values(nnz_, 0.0);
-                 int nnz = 0;
-                 for (auto row = A_.begin(); row != A_.end(); ++row) {
-                     const int rowIdx = row.index();
-                     for (auto col = row->begin(); col != row->end(); ++col) {
-                         if (!(local_hypre_[rowIdx] < 0)) {
-                             const auto& value = *col;
-                             tmp_values[nnz] = value[0][0];
-                             nnz++;
-                         }
-                     }
-                 }
-                 const HYPRE_Real* values = &(tmp_values[0]);
+                 this->makeContinousMatrixEntries();
+                 const HYPRE_Real* values = &(continuous_matrix_entries_[0]);
                  HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_.data(), rows_.data(), cols_.data(), values);
              }
          }
@@ -535,6 +536,21 @@ private:
          HYPRE_IJMatrixAssemble(A_hypre_);
          HYPRE_IJMatrixGetObject(A_hypre_, reinterpret_cast<void**>(&parcsr_A_));
     }
+
+
+    void setContinousVectorForHypre(const X& v)
+    {
+        if (continous_vector_values_.size() != N_) {
+            assert(hypre_local_.size() == N_);
+            continous_vector_values_.resize(N_);
+        }
+
+        // set v values solution vectors
+        for (size_t i = 0; i < hypre_local_.size(); ++i) {
+            continous_vector_values_[i] = v[hypre_local_[i]][0];
+        }
+    }
+
 
     /**
      * @brief Copies vectors to the Hypre format.
@@ -548,14 +564,22 @@ private:
     void copyVectorsToHypre(const X& v, const Y& d) {
         OPM_TIMEBLOCK(prec_copy_vectors_to_hypre);        
         if (use_gpu_) {
-            assert(owner_first_);
+          if(owner_first_){
             const HYPRE_Real* x_vals = &(v[0][0]);
             const HYPRE_Real* b_vals = &(d[0][0]);
             hypre_TMemcpy(x_values_device_, x_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
             hypre_TMemcpy(b_values_device_, b_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-
-            HYPRE_IJVectorSetValues(x_hypre_, N_, indices_device_, x_values_device_);
-            HYPRE_IJVectorSetValues(b_hypre_, N_, indices_device_, b_values_device_);
+          }else
+            // continuous_vector_values_ as continuous storage
+            this->setContinuousVectorForHypre(v);
+            const HYPRE_Real* x_vals = &(continuous_vector_values_[0]);
+            hypre_TMemcpy(x_values_device_, x_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            this->setContinuousVectorForHypre(d);
+            const HYPRE_Real* b_vals = &(continuous_vector_values_[0]);
+            hypre_TMemcpy(b_values_device_, b_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+          }
+          HYPRE_IJVectorSetValues(x_hypre_, N_, indices_device_, x_values_device_);
+          HYPRE_IJVectorSetValues(b_hypre_, N_, indices_device_, b_values_device_);
         }
         else {
           if(owner_first_){
@@ -564,15 +588,12 @@ private:
             HYPRE_IJVectorSetValues(x_hypre_, N_, indices_.data(), x_vals);
             HYPRE_IJVectorSetValues(b_hypre_, N_, indices_.data(), b_vals);
           }else{
-            std::vector<double> tmp_xvals(hypre_local_.size(),0);
-            std::vector<double> tmp_bvals(hypre_local_.size(),0);
-            for(size_t i=0; i < hypre_local_.size();++i){
-              tmp_xvals[i]=v[hypre_local_[i]][0];
-              tmp_bvals[i]=d[hypre_local_[i]][0];
-            }
-            const HYPRE_Real* x_vals = &(tmp_xvals[0]);
-            const HYPRE_Real* b_vals = &(tmp_bvals[0]);
+            // continuous_vector_values_ as continuous storage
+            this->setContinuousVectorForHypre(v);
+            const HYPRE_Real* x_vals = &(continuous_vector_values_[0]);
             HYPRE_IJVectorSetValues(x_hypre_, N_, indices_.data(), x_vals);
+            this->setContinuousVectorForHypre(d);
+            const HYPRE_Real* b_vals = &(continuous_vector_values_[0]);
             HYPRE_IJVectorSetValues(b_hypre_, N_, indices_.data(), b_vals);            
           }
         }
@@ -595,20 +616,32 @@ private:
         OPM_TIMEBLOCK(prec_copy_vector_from_hypre);
         
         if (use_gpu_) {
+          if(owner_first_){
             HYPRE_Real* values = &(v[0][0]);
             HYPRE_IJVectorGetValues(x_hypre_, N_, indices_device_, x_values_device_);
             hypre_TMemcpy(values, x_values_device_, HYPRE_Real, N_, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+          }else{
+            if(continuous_vector_entries_.size() != N_){
+              continuous_vector_entries_.resize(N_);
+            }
+            HYPRE_Real* values = &(continuous_vector_entries_[0]);
+            HYPRE_IJVectorGetValues(x_hypre_, N_, indices_device_, x_values_device_);
+            hypre_TMemcpy(values, x_values_device_, HYPRE_Real, N_, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+          }
         }
         else {
           if(owner_first_){
             HYPRE_Real* values = &(v[0][0]);
             HYPRE_IJVectorGetValues(x_hypre_, N_, indices_.data(), values);
           }else{
-            std::vector<double> tmp_values(N_,0.0);
-            HYPRE_Real* values = &(tmp_values[0]);
+            if(continuous_vector_entries_.size() != N_){
+              assert(N_ == hypre_local_.size());
+              continuous_vector_entries_.resize(N_);
+            }
+            HYPRE_Real* values = &(continuous_vector_entries_[0]);
             HYPRE_IJVectorGetValues(x_hypre_, N_, indices_.data(), values);
             for(size_t i=0; i < hypre_local_.size();++i){
-              v[hypre_local_[i]][0] = tmp_values[i];
+              v[hypre_local_[i]][0] = continuous_vector_entries_[i];
             }
           }
         }
@@ -622,6 +655,8 @@ private:
     std::vector<int> local_hypre_;
     std::vector<int> local_hypre_global_;
     std::vector<int> hypre_local_;// will only be needed if not owner first
+    std::vector<double> continuous_matrix_entries_;
+    std::vector<double> continuous_vector_entries_;
     int dof_offset_;
     int global_size_;
     bool owner_first_;
@@ -645,10 +680,7 @@ private:
     std::vector<HYPRE_BigInt> indices_; //!< Indices vector for copying vectors to/from Hypre.
     HYPRE_BigInt* indices_device_ = nullptr; //!< Device array for indices.
     HYPRE_Int N_ = -1; //!< Number of rows in the matrix.
-    HYPRE_Int M_ = -1; //!< Number of rows in the matrix.
     HYPRE_Int nnz_ = -1; //!< Number of non-zero elements in the matrix.
-    HYPRE_Int nnz_diag_ = -1; //!< Number of non-zero diagonal elements in the matrix.
-    HYPRE_Int nnz_offdiag_ = -1; //!< Number of non-zero off-diagonal elements in the matrix.
 
     HYPRE_Real* x_values_device_ = nullptr; //!< Device array for solution vector values.
     HYPRE_Real* b_values_device_ = nullptr; //!< Device array for right-hand side vector values.
