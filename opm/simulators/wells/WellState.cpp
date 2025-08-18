@@ -391,6 +391,11 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
             auto& new_well = this->well(w);
             new_well.init_timestep(prev_well);
 
+            // PYACTION and ACTIONX may have opened a well. We notify the
+            // simulator by adding a well event.
+            if ( prev_well.events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE))
+                new_well.events.addEvent(ScheduleEvents::WELL_STATUS_CHANGE);
+
             if (prev_well.status == Well::Status::SHUT) {
                 // Well was shut in previous state, do not use its values.
                 continue;

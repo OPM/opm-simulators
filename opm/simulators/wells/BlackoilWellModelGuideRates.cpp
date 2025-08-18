@@ -595,16 +595,16 @@ guideRateUpdateIsNeeded(const int reportStepIdx) const
         return well->changedToOpenThisStep();
     });
     if (!need_update && wellModel_.reportStepStarts()) {
-        const auto& events = wellModel_.schedule()[reportStepIdx].wellgroup_events();
         constexpr auto effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
             + ScheduleEvents::INJECTION_TYPE_CHANGED
             + ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER
             + ScheduleEvents::NEW_WELL;
-
+        const auto& wellState = wellModel_.wellState();
         need_update = std::any_of(genWells.begin(), genWells.end(),
-            [&events](const WellInterfaceGeneric<Scalar>* well)
+            [wellState](const WellInterfaceGeneric<Scalar>* well)
         {
-            return events.hasEvent(well->name(), effective_events_mask);
+            const auto& events = wellState.well(well->name()).events;
+            return events.hasEvent(effective_events_mask);
         });
     }
     return wellModel_.comm().max(static_cast<int>(need_update));
