@@ -75,8 +75,11 @@ namespace Opm
         return {1, 1.0, 2.0, true};
     }
 
-    double SimpleIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const AdaptiveSimulatorTimer& /* substepTimer */) const
+    double
+    SimpleIterationCountTimeStepControl::computeTimeStepSize(const double dt,
+                                                             const int iterations,
+                                                             const RelativeChangeInterface& /* relativeChange */,
+                                                             const AdaptiveSimulatorTimer& /* substepTimer */) const
     {
         double dtEstimate = dt ;
 
@@ -93,7 +96,8 @@ namespace Opm
         }
 
         if( verbose_ )
-            OpmLog::info(fmt::format("Suggested next time step size (from controller): {} days", unit::convert::to( dtEstimate, unit::day )));
+            OpmLog::debug(fmt::format("Suggested next time step size (from controller): {} days",
+                                      unit::convert::to( dtEstimate, unit::day )));
 
         return dtEstimate;
     }
@@ -118,7 +122,8 @@ namespace Opm
     {
         std::ifstream infile (filename);
         if (!infile.is_open()) {
-            OPM_THROW(std::runtime_error,"Incorrect or no filename is provided to the hardcodedTimeStep. Use timestep.control.filename=your_file_name");
+            OPM_THROW(std::runtime_error,"Incorrect or no filename is provided to the hardcodedTimeStep. "
+                      "Use timestep.control.filename=your_file_name");
         }
         std::string::size_type sz;
         std::string line;
@@ -139,10 +144,14 @@ namespace Opm
         return result;
     }
 
-    double HardcodedTimeStepControl::
-    computeTimeStepSize( const double /*dt */, const int /*iterations */, const RelativeChangeInterface& /* relativeChange */ , const AdaptiveSimulatorTimer& substepTimer) const
+    double
+    HardcodedTimeStepControl::computeTimeStepSize(const double /*dt */,
+                                                  const int /*iterations */,
+                                                  const RelativeChangeInterface& /* relativeChange */,
+                                                  const AdaptiveSimulatorTimer& substepTimer) const
     {
-        auto nextTime = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), substepTimer.simulationTimeElapsed());
+        auto nextTime
+            = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), substepTimer.simulationTimeElapsed());
         return (*nextTime - substepTimer.simulationTimeElapsed());
     }
 
@@ -175,8 +184,11 @@ namespace Opm
         return result;;
     }
 
-    double PIDTimeStepControl::
-    computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relChange, const AdaptiveSimulatorTimer& /* substepTimer */) const
+    double
+    PIDTimeStepControl::computeTimeStepSize(const double dt,
+                                            const int /* iterations */,
+                                            const RelativeChangeInterface& relChange,
+                                            const AdaptiveSimulatorTimer& /* substepTimer */) const
     {
         // shift errors
         for( int i=0; i<2; ++i ) {
@@ -195,13 +207,15 @@ namespace Opm
             // adjust dt by given tolerance
             const double newDt = dt * tol_ / error;
             if ( verbose_ )
-                    OpmLog::info(fmt::format("Suggested next time step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
+                    OpmLog::debug(fmt::format("Suggested next time step size (from PID controller): {} days",
+                                              unit::convert::to( newDt, unit::day )));
             return newDt;
         }
         else if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
         {
             if ( verbose_ )
-                OpmLog::info("The solution between time steps does not change, there is no time step constraint from the PID time step control ");
+                OpmLog::debug("The solution between time steps does not change, "
+                              "there is no time step constraint from the PID time step control ");
             return std::numeric_limits<double>::max();
         }
         else
@@ -214,7 +228,8 @@ namespace Opm
                                  std::pow( tol_         / errors_[ 2 ], kI ) *
                                  std::pow( errors_[1]*errors_[1]/errors_[ 0 ]/errors_[ 2 ], kD ));
             if( verbose_ )
-                OpmLog::info(fmt::format("Suggested next time step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
+                OpmLog::debug(fmt::format("Suggested next time step size (from PID controller): {} days",
+                                          unit::convert::to( newDt, unit::day )));
             return newDt;
         }
     }
@@ -255,8 +270,11 @@ namespace Opm
         return PIDAndIterationCountTimeStepControl{1, 2.0, 3.0, 4.0, 5.0, true};
     }
 
-    double PIDAndIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relChange,  const AdaptiveSimulatorTimer& substepTimer) const
+    double
+    PIDAndIterationCountTimeStepControl::computeTimeStepSize(const double dt,
+                                                             const int iterations,
+                                                             const RelativeChangeInterface& relChange,
+                                                             const AdaptiveSimulatorTimer& substepTimer) const
     {
         double dtEstimatePID = PIDTimeStepControl :: computeTimeStepSize( dt, iterations, relChange, substepTimer);
 
@@ -275,7 +293,8 @@ namespace Opm
         }
 
         if( verbose_ )
-            OpmLog::info(fmt::format("Suggested next time step size (from iteration target): {} days", unit::convert::to( dtEstimateIter, unit::day )));
+            OpmLog::debug(fmt::format("Suggested next time step size (from iteration target): {} days",
+                                      unit::convert::to( dtEstimateIter, unit::day )));
 
         return std::min(dtEstimatePID, dtEstimateIter);
     }
@@ -350,8 +369,11 @@ namespace Opm
         return result;
     }
 
-    double General3rdOrderController::
-    computeTimeStepSize(const double dt, const int /* iterations */, const RelativeChangeInterface& /* relChange */, const AdaptiveSimulatorTimer& substepTimer) const
+    double
+    General3rdOrderController::computeTimeStepSize(const double dt,
+                                                   const int /* iterations */,
+                                                   const RelativeChangeInterface& /* relChange */,
+                                                   const AdaptiveSimulatorTimer& substepTimer) const
     {
         for( int i = 0; i < 2; ++i )
         {
@@ -366,7 +388,7 @@ namespace Opm
         {
             controllerVersion_ = InternalControlVersions::General3rdOrder;
         }
-        
+
         bool noTimeStepConstraint = false;
 
         if (controllerVersion_ == InternalControlVersions::IController)
@@ -383,12 +405,13 @@ namespace Opm
                 noTimeStepConstraint = true;
             }
         }
-        
+
         if (noTimeStepConstraint)
         {
             if ( verbose_ )
             {
-                OpmLog::info("The solution between time steps does not change, there is no time step constraint from the controller.");
+                OpmLog::debug("The solution between time steps does not change, "
+                              "there is no time step constraint from the controller.");
             }
             return std::numeric_limits<double>::max();
         }
@@ -397,8 +420,9 @@ namespace Opm
 
         if (verbose_)
         {
-            OpmLog::info(fmt::format("Suggested next time step size (from controller): {} days", unit::convert::to( newDt, unit::day )));
-            OpmLog::info(fmt::format("Most recent relative change: {}", errors_[2]));
+            OpmLog::debug(fmt::format("Suggested next time step size (from controller): {} days",
+                                      unit::convert::to( newDt, unit::day )));
+            OpmLog::debug(fmt::format("Most recent relative change: {}", errors_[2]));
         }
         return newDt;
     }
@@ -455,7 +479,7 @@ namespace Opm
             errors_[2] = error;
             timeSteps_[2] = timeStepJustCompleted;
         }
-        
+
         return acceptTimeStep;
     }
 
