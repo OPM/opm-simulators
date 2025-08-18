@@ -23,11 +23,13 @@
 // this is an empty model that having a lot of empty interfaces.
 // it is use for the development when some facility class are not ready
 
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+
+#include <opm/models/discretization/common/baseauxiliarymodule.hh>
+
 #include <opm/output/data/Aquifer.hpp>
 #include <opm/output/data/Groups.hpp>
 #include <opm/output/data/Wells.hpp>
-
-#include <opm/models/discretization/common/baseauxiliarymodule.hh>
 
 namespace Opm {
 
