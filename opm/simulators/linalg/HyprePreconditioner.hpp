@@ -286,7 +286,34 @@ public:
     }
 
 private:
-  void setupHypreParallelInfo(const Dune::Amg::SequentialInformation& /*comm*/)
+
+    /**
+     * @brief Save all elements which should be copied to hypre in a continuous memery
+     */
+
+    void makeContinuousMatrixEntries()
+    {
+
+        assert(continuous_matrix_entries_.size() == nnz_);
+        int nnz = 0;
+        for (auto row = A_.begin(); row != A_.end(); ++row) {
+            const int rowIdx = row.index();
+            for (auto col = row->begin(); col != row->end(); ++col) {
+                if (!(local_hypre_[rowIdx] < 0)) {
+                    const auto& value = *col;
+                    continuous_matrix_entries_[nnz] = value[0][0];
+                    nnz++;
+                }
+            }
+        }
+    }
+
+    /**
+     * @brief Set up helping structure for hypre in serial case
+     */
+
+
+    void setupHypreParallelInfo(const Dune::Amg::SequentialInformation& /*comm*/)
     {
         N_ = A_.N();
         nnz_ = A_.nonzeroes();
@@ -302,8 +329,14 @@ private:
         dof_offset_ = 0;
         global_size_ = N_;
         owner_first_ = true;
+        // continuous_vector_values_.resize(N_); // should not be needed
     }
-  
+
+
+    /**
+     * @brief Set up helping structure for hypre in parallel case
+     */
+
     template <class Commun>
     void setupHypreParallelInfo(const Commun& comm)
     {
@@ -358,7 +391,10 @@ private:
 
         //owner first need other copying of data
         owner_first_ = owner_first;
-        
+        if(!owner_first){// only need this storage if not owner first
+          continuous_vector_values_.resize(N_);
+        }
+
         std::vector<int> sizes(collective_comm.size(), 0);
         for (int i = 0; i < collective_comm.size(); ++i) {
             if (collective_comm.rank() == i) {
@@ -392,8 +428,6 @@ private:
 
         // calculate matrix propeties which can be used to optimize memmory
         int nnz = 0;
-        int nnz_diag = 0;
-        int nnz_offdiag = 0;
         for (auto row = A_.begin(); row != A_.end(); ++row) {
             const int rowIdx = row.index();
             for (auto col = row->begin(); col != row->end(); ++col) {
@@ -403,6 +437,9 @@ private:
             }
         }
         nnz_ = nnz;
+        if(!owner_first){
+          continuous_matrix_entries_.resize(nnz_);
+        }
      }
 
      /**
@@ -477,23 +514,6 @@ private:
          }
      }
 
-     void makeContinousMatrixEntries()
-     {
-       if(contintous_matrix_entries_.size() != nnz_){
-         continuous_matrix_entries_.resize(nnz_);
-         int nnz = 0;
-         for (auto row = A_.begin(); row != A_.end(); ++row) {
-             const int rowIdx = row.index();
-             for (auto col = row->begin(); col != row->end(); ++col) {
-                 if (!(local_hypre_[rowIdx] < 0)) {
-                     const auto& value = *col;
-                     continuous_matrix_entries_[nnz] = value[0][0];
-                     nnz++;
-                 }
-             }
-         }
-     }
-
      /**
       * @brief Copies the matrix values to the Hypre matrix.
       *
@@ -517,17 +537,17 @@ private:
              hypre_TMemcpy(values_device_, values, HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
            }else{
              // need a temp storage since matrix elements which should be copied is not continous in memory
-             this->makeContinousMatrixEntries();
+             this->makeContinuousMatrixEntries();
              const HYPRE_Real* values = &(continuous_matrix_entries_[0]);
              hypre_TMemcpy(values_device_, values, HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
            }
            HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_device_, rows_device_, cols_device_, values_device_);
          } else {
              if (owner_first_) {
-                 const HYPRE_Real* values = &(A_[0][0][0][0]);
+                const HYPRE_Real* values = &(A_[0][0][0][0]);
                  HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_.data(), rows_.data(), cols_.data(), values);
              } else {
-                 this->makeContinousMatrixEntries();
+                 this->makeContinuousMatrixEntries();
                  const HYPRE_Real* values = &(continuous_matrix_entries_[0]);
                  HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_.data(), rows_.data(), cols_.data(), values);
              }
@@ -538,16 +558,12 @@ private:
     }
 
 
-    void setContinousVectorForHypre(const X& v)
+    void setContinuousVectorForHypre(const X& v)
     {
-        if (continous_vector_values_.size() != N_) {
-            assert(hypre_local_.size() == N_);
-            continous_vector_values_.resize(N_);
-        }
-
+        assert(continuous_vector_values_.size() == N_);
         // set v values solution vectors
         for (size_t i = 0; i < hypre_local_.size(); ++i) {
-            continous_vector_values_[i] = v[hypre_local_[i]][0];
+            continuous_vector_values_[i] = v[hypre_local_[i]][0];
         }
     }
 
@@ -561,41 +577,41 @@ private:
      * @param v The update vector.
      * @param d The defect vector.
      */
-    void copyVectorsToHypre(const X& v, const Y& d) {
-        OPM_TIMEBLOCK(prec_copy_vectors_to_hypre);        
+    void copyVectorsToHypre(const X& v, const Y& d)
+    {
+        OPM_TIMEBLOCK(prec_copy_vectors_to_hypre);
         if (use_gpu_) {
-          if(owner_first_){
-            const HYPRE_Real* x_vals = &(v[0][0]);
-            const HYPRE_Real* b_vals = &(d[0][0]);
-            hypre_TMemcpy(x_values_device_, x_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-            hypre_TMemcpy(b_values_device_, b_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-          }else
-            // continuous_vector_values_ as continuous storage
-            this->setContinuousVectorForHypre(v);
-            const HYPRE_Real* x_vals = &(continuous_vector_values_[0]);
-            hypre_TMemcpy(x_values_device_, x_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-            this->setContinuousVectorForHypre(d);
-            const HYPRE_Real* b_vals = &(continuous_vector_values_[0]);
-            hypre_TMemcpy(b_values_device_, b_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-          }
-          HYPRE_IJVectorSetValues(x_hypre_, N_, indices_device_, x_values_device_);
-          HYPRE_IJVectorSetValues(b_hypre_, N_, indices_device_, b_values_device_);
-        }
-        else {
-          if(owner_first_){
-            const HYPRE_Real* x_vals = &(v[0][0]);
-            const HYPRE_Real* b_vals = &(d[0][0]);
-            HYPRE_IJVectorSetValues(x_hypre_, N_, indices_.data(), x_vals);
-            HYPRE_IJVectorSetValues(b_hypre_, N_, indices_.data(), b_vals);
-          }else{
-            // continuous_vector_values_ as continuous storage
-            this->setContinuousVectorForHypre(v);
-            const HYPRE_Real* x_vals = &(continuous_vector_values_[0]);
-            HYPRE_IJVectorSetValues(x_hypre_, N_, indices_.data(), x_vals);
-            this->setContinuousVectorForHypre(d);
-            const HYPRE_Real* b_vals = &(continuous_vector_values_[0]);
-            HYPRE_IJVectorSetValues(b_hypre_, N_, indices_.data(), b_vals);            
-          }
+            if (owner_first_) {
+                const HYPRE_Real* x_vals = &(v[0][0]);
+                const HYPRE_Real* b_vals = &(d[0][0]);
+                hypre_TMemcpy(x_values_device_, x_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+                hypre_TMemcpy(b_values_device_, b_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            } else {
+                // continuous_vector_values_ as continuous storage
+                this->setContinuousVectorForHypre(v);
+                const HYPRE_Real* x_vals = &(continuous_vector_values_[0]);
+                hypre_TMemcpy(x_values_device_, x_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+                this->setContinuousVectorForHypre(d);
+                const HYPRE_Real* b_vals = &(continuous_vector_values_[0]);
+                hypre_TMemcpy(b_values_device_, b_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            }
+            HYPRE_IJVectorSetValues(x_hypre_, N_, indices_device_, x_values_device_);
+            HYPRE_IJVectorSetValues(b_hypre_, N_, indices_device_, b_values_device_);
+        } else {
+            if (owner_first_) {
+                const HYPRE_Real* x_vals = &(v[0][0]);
+                const HYPRE_Real* b_vals = &(d[0][0]);
+                HYPRE_IJVectorSetValues(x_hypre_, N_, indices_.data(), x_vals);
+                HYPRE_IJVectorSetValues(b_hypre_, N_, indices_.data(), b_vals);
+            } else {
+                // continuous_vector_values_ as continuous storage
+                this->setContinuousVectorForHypre(v);// setting continuous_vector_values_
+                const HYPRE_Real* x_vals = &(continuous_vector_values_[0]);
+                HYPRE_IJVectorSetValues(x_hypre_, N_, indices_.data(), x_vals);
+                this->setContinuousVectorForHypre(d);// setting continuous_vector_values_
+                const HYPRE_Real* b_vals = &(continuous_vector_values_[0]);
+                HYPRE_IJVectorSetValues(b_hypre_, N_, indices_.data(), b_vals);
+            }
         }
 
         HYPRE_IJVectorAssemble(x_hypre_);
@@ -605,6 +621,18 @@ private:
     }
 
     /**
+     * @brief Set dune vector from continous vector storage
+     */
+
+    void setDuneVectorFromContinuousVector(X& v)
+    {
+        for (size_t i = 0; i < hypre_local_.size(); ++i) {
+            v[hypre_local_[i]][0] = continuous_vector_values_[i];
+        }
+    }
+
+
+    /**
      * @brief Copies the solution vector from Hypre.
      *
      * Transfers the solution vector from Hypre back to the host.
@@ -612,40 +640,33 @@ private:
      *
      * @param v The update vector.
      */
-    void copyVectorFromHypre(X& v) {
+    void copyVectorFromHypre(X& v)
+    {
         OPM_TIMEBLOCK(prec_copy_vector_from_hypre);
-        
+
         if (use_gpu_) {
-          if(owner_first_){
-            HYPRE_Real* values = &(v[0][0]);
-            HYPRE_IJVectorGetValues(x_hypre_, N_, indices_device_, x_values_device_);
-            hypre_TMemcpy(values, x_values_device_, HYPRE_Real, N_, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
-          }else{
-            if(continuous_vector_entries_.size() != N_){
-              continuous_vector_entries_.resize(N_);
+            if (owner_first_) {
+                HYPRE_Real* values = &(v[0][0]);
+                HYPRE_IJVectorGetValues(x_hypre_, N_, indices_device_, x_values_device_);
+                hypre_TMemcpy(values, x_values_device_, HYPRE_Real, N_, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+            } else {
+                HYPRE_Real* values = &(continuous_vector_values_[0]);
+                HYPRE_IJVectorGetValues(x_hypre_, N_, indices_device_, x_values_device_);
+                hypre_TMemcpy(values, x_values_device_, HYPRE_Real, N_, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+                this->setDuneVectorFromContinuousVector(v);
             }
-            HYPRE_Real* values = &(continuous_vector_entries_[0]);
-            HYPRE_IJVectorGetValues(x_hypre_, N_, indices_device_, x_values_device_);
-            hypre_TMemcpy(values, x_values_device_, HYPRE_Real, N_, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
-          }
-        }
-        else {
-          if(owner_first_){
-            HYPRE_Real* values = &(v[0][0]);
-            HYPRE_IJVectorGetValues(x_hypre_, N_, indices_.data(), values);
-          }else{
-            if(continuous_vector_entries_.size() != N_){
-              assert(N_ == hypre_local_.size());
-              continuous_vector_entries_.resize(N_);
+        } else {
+            if (owner_first_) {
+                HYPRE_Real* values = &(v[0][0]);
+                HYPRE_IJVectorGetValues(x_hypre_, N_, indices_.data(), values);
+            } else {
+                HYPRE_Real* values = &(continuous_vector_values_[0]);
+                HYPRE_IJVectorGetValues(x_hypre_, N_, indices_.data(), values);
+                this->setDuneVectorFromContinuousVector(v);
             }
-            HYPRE_Real* values = &(continuous_vector_entries_[0]);
-            HYPRE_IJVectorGetValues(x_hypre_, N_, indices_.data(), values);
-            for(size_t i=0; i < hypre_local_.size();++i){
-              v[hypre_local_[i]][0] = continuous_vector_entries_[i];
-            }
-          }
         }
     }
+
 
     const M& A_; //!< The matrix for which the preconditioner is constructed.
     const Comm& comm_; //!< The communication object for parallel operations.
@@ -656,7 +677,7 @@ private:
     std::vector<int> local_hypre_global_;
     std::vector<int> hypre_local_;// will only be needed if not owner first
     std::vector<double> continuous_matrix_entries_;
-    std::vector<double> continuous_vector_entries_;
+    std::vector<double> continuous_vector_values_;
     int dof_offset_;
     int global_size_;
     bool owner_first_;
