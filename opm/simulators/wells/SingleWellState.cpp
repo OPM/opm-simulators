@@ -121,6 +121,9 @@ void SingleWellState<Scalar>::open()
 template<class Scalar>
 void SingleWellState<Scalar>::updateStatus(Well::Status new_status)
 {
+    if (new_status != this->status) {
+        this->events.addEvent(ScheduleEvents::WELL_STATUS_CHANGE);
+    }
     switch (new_status) {
     case Well::Status::OPEN:
         this->open();
