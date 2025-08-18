@@ -93,7 +93,7 @@ namespace Opm
         }
 
         if( verbose_ )
-            OpmLog::info(fmt::format("Suggested next time step size (from controller): {} days", unit::convert::to( dtEstimate, unit::day )));
+            OpmLog::debug(fmt::format("Suggested next time step size (from controller): {} days", unit::convert::to( dtEstimate, unit::day )));
 
         return dtEstimate;
     }
@@ -195,13 +195,13 @@ namespace Opm
             // adjust dt by given tolerance
             const double newDt = dt * tol_ / error;
             if ( verbose_ )
-                    OpmLog::info(fmt::format("Suggested next time step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
+                    OpmLog::debug(fmt::format("Suggested next time step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
         }
         else if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
         {
             if ( verbose_ )
-                OpmLog::info("The solution between time steps does not change, there is no time step constraint from the PID time step control ");
+                OpmLog::debug("The solution between time steps does not change, there is no time step constraint from the PID time step control ");
             return std::numeric_limits<double>::max();
         }
         else
@@ -214,7 +214,7 @@ namespace Opm
                                  std::pow( tol_         / errors_[ 2 ], kI ) *
                                  std::pow( errors_[1]*errors_[1]/errors_[ 0 ]/errors_[ 2 ], kD ));
             if( verbose_ )
-                OpmLog::info(fmt::format("Suggested next time step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
+                OpmLog::debug(fmt::format("Suggested next time step size (from PID controller): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
         }
     }
@@ -275,7 +275,7 @@ namespace Opm
         }
 
         if( verbose_ )
-            OpmLog::info(fmt::format("Suggested next time step size (from iteration target): {} days", unit::convert::to( dtEstimateIter, unit::day )));
+            OpmLog::debug(fmt::format("Suggested next time step size (from iteration target): {} days", unit::convert::to( dtEstimateIter, unit::day )));
 
         return std::min(dtEstimatePID, dtEstimateIter);
     }
@@ -388,7 +388,7 @@ namespace Opm
         {
             if ( verbose_ )
             {
-                OpmLog::info("The solution between time steps does not change, there is no time step constraint from the controller.");
+                OpmLog::debug("The solution between time steps does not change, there is no time step constraint from the controller.");
             }
             return std::numeric_limits<double>::max();
         }
@@ -397,8 +397,8 @@ namespace Opm
 
         if (verbose_)
         {
-            OpmLog::info(fmt::format("Suggested next time step size (from controller): {} days", unit::convert::to( newDt, unit::day )));
-            OpmLog::info(fmt::format("Most recent relative change: {}", errors_[2]));
+            OpmLog::debug(fmt::format("Suggested next time step size (from controller): {} days", unit::convert::to( newDt, unit::day )));
+            OpmLog::debug(fmt::format("Most recent relative change: {}", errors_[2]));
         }
         return newDt;
     }
