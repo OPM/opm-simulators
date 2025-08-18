@@ -231,7 +231,7 @@ add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
                                      FILENAME 3D_TRAN_OPERATOR
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL 0.03
+                                     REL_TOL 0.0003
                                      DIR parallel_fieldprops
                                      TEST_ARGS --enable-tuning=true --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
 
