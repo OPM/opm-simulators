@@ -408,12 +408,14 @@ add_test_runSimulator(CASENAME spe1case1_carfin
                       DIR lgr
                       TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
 
-add_test_runSimulator(CASENAME spe1case1_carfin_parallel
-                      FILENAME SPE1CASE1_CARFIN
-                      SIMULATOR flow
-                      DIR lgr
-                      PROCS 4
-                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
+if(MPI_FOUND)
+  add_test_runSimulator(CASENAME spe1case1_carfin_parallel
+                        FILENAME SPE1CASE1_CARFIN
+                        SIMULATOR flow
+                        DIR lgr
+                        PROCS 4
+                        TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
+endif()
 
 add_test_runSimulator(CASENAME dryrun
                       FILENAME CO2STORE_PRECSALT
