@@ -409,8 +409,8 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
 
             // If new target is set using WCONPROD, WCONINJE etc. we use the new control
             if (!new_well.events.hasEvent(WellState::event_mask)) {
-                new_well.injection_cmode = prev_well.injection_cmode;
-                new_well.production_cmode = prev_well.production_cmode;
+                //new_well.injection_cmode = prev_well.injection_cmode;
+                //new_well.production_cmode = prev_well.production_cmode;
             }
 
             new_well.surface_rates = prev_well.surface_rates;
