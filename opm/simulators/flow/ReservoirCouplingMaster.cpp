@@ -76,6 +76,12 @@ const std::vector<std::string>&
 ReservoirCouplingMaster<Scalar>::
 getMasterGroupNamesForSlave(std::size_t slave_idx) const
 {
+    // Fast path: O(1) direct vector access for performance-critical usage
+    if (slave_idx < this->slave_idx_to_master_groups_.size()) {
+        return this->slave_idx_to_master_groups_[slave_idx];
+    }
+
+    // Fallback to existing implementation for bounds checking and error handling
     const auto& slave_name = this->getSlaveName(slave_idx);
     auto it = this->slave_name_to_master_groups_map_.find(slave_name);
     if (it != this->slave_name_to_master_groups_map_.end()) {
@@ -84,8 +90,8 @@ getMasterGroupNamesForSlave(std::size_t slave_idx) const
     OPM_THROW(
         std::runtime_error,
         fmt::format(
-            "Slave name {} not found in master-to-slave-group-name mapping",
-            slave_name
+            "Slave index {} out of bounds (slave name: {})",
+            slave_idx, slave_name
         )
     );
 }
@@ -208,6 +214,26 @@ ReservoirCouplingMaster<Scalar>::
 numSlavesStarted() const
 {
     return this->slave_names_.size();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+rebuildSlaveIdxToMasterGroupsVector()
+{
+    // Rebuild the index-based vector from the name-based map
+    // This ensures consistent ordering with slave_names_ vector
+    this->slave_idx_to_master_groups_.clear();
+    this->slave_idx_to_master_groups_.resize(this->slave_names_.size());
+
+    for (std::size_t slave_idx = 0; slave_idx < this->slave_names_.size(); ++slave_idx) {
+        const auto& slave_name = this->slave_names_[slave_idx];
+        auto it = this->slave_name_to_master_groups_map_.find(slave_name);
+        if (it != this->slave_name_to_master_groups_map_.end()) {
+            this->slave_idx_to_master_groups_[slave_idx] = it->second;
+        }
+        // If slave_name not found in map, leave the vector empty for that index
+    }
 }
 
 template <class Scalar>
