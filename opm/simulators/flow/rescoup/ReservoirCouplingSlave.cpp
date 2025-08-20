@@ -78,7 +78,7 @@ void
 ReservoirCouplingSlave<Scalar>::
 maybeActivate(int report_step) {
     if (!this->activated()) {
-        auto rescoup = this->schedule_[report_step].rescoup();
+        const auto& rescoup = this->schedule_[report_step].rescoup();
         if (rescoup.grupSlavCount() > 0) {
             this->activated_ = true;
             // Send a handshake to the master process to indicate that the slave has activated
