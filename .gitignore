@@ -29,6 +29,7 @@ test_vec
 
 # Build directory in source
 build/
+export/
 
 # Mac OS X debug info
 *.dSYM

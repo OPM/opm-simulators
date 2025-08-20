@@ -1,0 +1,89 @@
+./runme  --linear-solver=ilu0  ../data/norne/NORNE_ATW2013.DATA 
+
+================    End of simulation     ===============
+
+Number of MPI processes:         1
+Threads per MPI process:         1
+Setup time:                      2.48 s
+  Deck input:                    1.80 s
+Number of timesteps:           393
+Simulation time:               515.08 s
+  Assembly time:               106.01 s (Wasted: 1.9 s; 1.7%)
+    Well assembly:               2.27 s (Wasted: 0.0 s; 1.6%)
+  Linear solve time:           229.95 s (Wasted: 2.5 s; 1.1%)
+    Linear setup:               19.08 s (Wasted: 0.4 s; 2.1%)
+  Props/update time:            95.07 s (Wasted: 2.0 s; 2.1%)
+  Pre/post step:                80.95 s (Wasted: 0.1 s; 0.1%)
+  Output write time:             0.79 s
+Overall Linearizations:       2386      (Wasted:    42; 1.8%)
+Overall Newton Iterations:    1995      (Wasted:    42; 2.1%)
+Overall Linear Iterations:   31316      (Wasted:   308; 1.0%)
+
+
+
+./runme --linear-solver=ilu0 --linear-solver-reduction=0.001 ../data/norne/NORNE_ATW2013.DATA 
+
+================    End of simulation     ===============
+
+Number of MPI processes:         1
+Threads per MPI process:         1
+Setup time:                      2.50 s
+  Deck input:                    1.82 s
+Number of timesteps:           365
+Simulation time:               480.37 s
+  Assembly time:                80.56 s (Wasted: 0.0 s; 0.0%)
+    Well assembly:               1.84 s (Wasted: 0.0 s; 0.0%)
+  Linear solve time:           250.20 s (Wasted: 0.0 s; 0.0%)
+    Linear setup:               14.20 s (Wasted: 0.0 s; 0.0%)
+  Props/update time:            70.74 s (Wasted: 0.0 s; 0.0%)
+  Pre/post step:                75.84 s (Wasted: 0.0 s; 0.0%)
+  Output write time:             0.72 s
+Overall Linearizations:       1848      (Wasted:     0; 0.0%)
+Overall Newton Iterations:    1483      (Wasted:     0; 0.0%)
+Overall Linear Iterations:   35616      (Wasted:     0; 0.0%)
+
+
+
+./runme --linear-solver=ilu0 --linear-solver-reduction=0.0001 ../data/norne/NORNE_ATW2013.DATA 
+
+================    End of simulation     ===============
+
+Number of MPI processes:         1
+Threads per MPI process:         1
+Setup time:                      2.52 s
+  Deck input:                    1.84 s
+Number of timesteps:           346
+Simulation time:               498.43 s
+  Assembly time:                66.50 s (Wasted: 0.0 s; 0.0%)
+    Well assembly:               1.57 s (Wasted: 0.0 s; 0.0%)
+  Linear solve time:           300.42 s (Wasted: 0.0 s; 0.0%)
+    Linear setup:               11.25 s (Wasted: 0.0 s; 0.0%)
+  Props/update time:            56.40 s (Wasted: 0.0 s; 0.0%)
+  Pre/post step:                72.15 s (Wasted: 0.0 s; 0.0%)
+  Output write time:             0.70 s
+Overall Linearizations:       1526      (Wasted:     0; 0.0%)
+Overall Newton Iterations:    1180      (Wasted:     0; 0.0%)
+Overall Linear Iterations:   44246      (Wasted:     0; 0.0%)
+
+
+./runme --linear-solver=ilu0 --linear-solver-reduction=0.00001 ../data/norne/NORNE_ATW2013.DATA
+
+================    End of simulation     ===============
+
+Number of MPI processes:         1
+Threads per MPI process:         1
+Setup time:                      2.48 s
+  Deck input:                    1.80 s
+Number of timesteps:           346
+Simulation time:               600.60 s
+  Assembly time:                65.42 s (Wasted: 0.0 s; 0.0%)
+    Well assembly:               1.56 s (Wasted: 0.0 s; 0.0%)
+  Linear solve time:           405.32 s (Wasted: 0.0 s; 0.0%)
+    Linear setup:               11.04 s (Wasted: 0.0 s; 0.0%)
+  Props/update time:            55.40 s (Wasted: 0.0 s; 0.0%)
+  Pre/post step:                71.49 s (Wasted: 0.0 s; 0.0%)
+  Output write time:             0.70 s
+Overall Linearizations:       1505      (Wasted:     0; 0.0%)
+Overall Newton Iterations:    1159      (Wasted:     0; 0.0%)
+Overall Linear Iterations:   60622      (Wasted:     0; 0.0%)
+
