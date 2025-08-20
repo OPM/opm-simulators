@@ -535,6 +535,7 @@ if (HAVE_CUDA)
       tests/gpuistl/test_gpu_ad.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
+      tests/gpuistl/test_gpuBlackOilFluidSystem
     )
 
     foreach(file ${CU_FILES_NEEDING_RELAXED_CONSTEXPR})
