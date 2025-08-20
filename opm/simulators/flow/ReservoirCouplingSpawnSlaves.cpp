@@ -150,6 +150,8 @@ createSlaveNameToMasterGroupsMap_()
     for (const auto& [group_name, master_group] : master_groups) {
         slave_name_to_master_groups[master_group.slaveName()].push_back(group_name);
     }
+    // Rebuild the index-based vector for O(1) performance optimization
+    this->master_.rebuildSlaveIdxToMasterGroupsVector();
 }
 
 template <class Scalar>
