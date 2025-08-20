@@ -316,6 +316,8 @@ ReservoirCouplingMaster<Scalar>::
 sendInjectionTargetsToSlave(std::size_t slave_idx,
                             const std::vector<InjectionGroupTarget>& injection_targets) const
 {
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
     if (this->comm_.rank() == 0) {
         auto num_injection_targets = injection_targets.size();
         auto MPI_INJECTION_TARGETS_TYPE = Dune::MPITraits<InjectionGroupTarget>::getType();
@@ -340,6 +342,8 @@ void
 ReservoirCouplingMaster<Scalar>::
 sendNextTimeStepToSlaves(double timestep)
 {
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
     if (this->comm_.rank() == 0) {
         for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
             // NOTE: See comment about error handling at the top of this file.
@@ -367,6 +371,8 @@ sendNumGroupTargetsToSlave(std::size_t slave_idx,
                            std::size_t num_injection_targets,
                            std::size_t num_production_targets) const
 {
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
     if (this->comm_.rank() == 0) {
         std::vector<std::size_t> num_targets(2);
         num_targets[0] = num_injection_targets;
@@ -394,6 +400,8 @@ ReservoirCouplingMaster<Scalar>::
 sendProductionTargetsToSlave(std::size_t slave_idx,
                              const std::vector<ProductionGroupTarget>& production_targets) const
 {
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
     if (this->comm_.rank() == 0) {
         auto num_production_targets = production_targets.size();
         auto MPI_PRODUCTION_TARGETS_TYPE = Dune::MPITraits<ProductionGroupTarget>::getType();
