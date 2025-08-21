@@ -563,7 +563,7 @@ add_test_compareECLFiles(CASENAME reg_smry_in_fld_udq
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
-                         TEST_ARGS --enable-tuning=true)
+                         TEST_ARGS --enable-tuning=true --time-step-control=pid)
 
 # UDQ ASSIGN for subsets of group level UDQs.  Updates triggered from
 # ACTIONX blocks.
@@ -848,7 +848,8 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR parallel_fieldprops)
+                         DIR parallel_fieldprops
+                         TEST_ARGS --enable-tuning=true)
 
 add_test_compareECLFiles(CASENAME micp
                          FILENAME MICP
