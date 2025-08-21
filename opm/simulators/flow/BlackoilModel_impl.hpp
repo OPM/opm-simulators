@@ -729,12 +729,16 @@ void
 BlackoilModel<TypeTag>::
 updateTUNING(const Tuning& tuning)
 {
-    this->param_.tolerance_mb_ = tuning.XXXMBE;
+    this->param_.tolerance_cnv_ = tuning.TRGCNV;
+    this->param_.tolerance_cnv_relaxed_ = tuning.XXXCNV;
+    this->param_.tolerance_mb_ = tuning.TRGMBE;
+    this->param_.tolerance_mb_relaxed_ = tuning.XXXMBE;
 
     if (terminal_output_) {
-        OpmLog::debug(fmt::format("Setting BlackoilModel mass "
-                                  "balance limit (XXXMBE) to {:.2e}",
-                                  tuning.XXXMBE));
+        const auto msg = fmt::format("Tuning BlackoilModel tolerances: "
+                                     "MB: {:.2e}, CNV: {:.2e}",
+                                     tuning.TRGMBE, tuning.TRGCNV);
+        OpmLog::debug(msg);
     }
 }
 

@@ -179,18 +179,18 @@ add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          DIR vfpprod_spe1)
 
 add_test_compareECLFiles(CASENAME spe1_spider
-                           FILENAME SPIDER_CAKESLICE
-                           SIMULATOR flow
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
-                           DIR radial_grid)
+                         FILENAME SPIDER_CAKESLICE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR radial_grid)
 
 add_test_compareECLFiles(CASENAME spe1_radial
-                           FILENAME RADIAL_CAKESLICE
-                           SIMULATOR flow
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
-                           DIR radial_grid)
+                         FILENAME RADIAL_CAKESLICE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR radial_grid)
 
 add_test_compareECLFiles(CASENAME jfunc_01
                          FILENAME JFUNC-01
@@ -236,7 +236,7 @@ add_test_compareECLFiles(CASENAME aquflux_01
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifers
-                         TEST_ARGS --solver-max-time-step-in-days=1)
+                         TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0)
 
 add_test_compareECLFiles(CASENAME aquflux_02
                          FILENAME AQUFLUX-02
@@ -251,7 +251,7 @@ add_test_compareECLFiles(CASENAME spe3
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --tolerance-wells=1e-6 --newton-max-iterations=20)
+                         TEST_ARGS --tolerance-wells=1e-6)
 
 add_test_compareECLFiles(CASENAME spe9
                          FILENAME SPE9_CP_SHORT
@@ -291,35 +291,33 @@ add_test_compareECLFiles(CASENAME polymer_oilwater
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --solver-max-time-step-in-days=10 --tolerance-mb=1.e-7)
+                         TEST_ARGS --solver-max-time-step-in-days=10)
 
 add_test_compareECLFiles(CASENAME polymer_injectivity
                          FILENAME 2D_POLYMER_INJECTIVITY
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --tolerance-mb=1.e-7 --tolerance-wells=1.e-6 --linear-solver=ilu0)
+                         TEST_ARGS --tolerance-wells=1.e-6 --linear-solver=ilu0)
 
 add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --tolerance-mb=1.e-7 --tolerance-mb-relaxed=1.e-7)
+                         TEST_ARGS --tolerance-mb-relaxed=1.e-7)
 
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --newton-max-iterations=20)
+                         REL_TOL ${coarse_rel_tol})
 
 add_test_compareECLFiles(CASENAME spe5_co2eor
                          FILENAME SPE5CASE1_DYN
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --newton-max-iterations=20)
+                         REL_TOL ${coarse_rel_tol})
 
 add_test_compareECLFiles(CASENAME wecon_wtest
                          FILENAME 3D_WECON
@@ -563,7 +561,7 @@ add_test_compareECLFiles(CASENAME reg_smry_in_fld_udq
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
-                         TEST_ARGS --enable-tuning=true)
+                         TEST_ARGS --enable-tuning=true --time-step-control=pid)
 
 # UDQ ASSIGN for subsets of group level UDQs.  Updates triggered from
 # ACTIONX blocks.
@@ -848,7 +846,8 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR parallel_fieldprops)
+                         DIR parallel_fieldprops
+                         TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0)
 
 add_test_compareECLFiles(CASENAME micp
                          FILENAME MICP
@@ -956,7 +955,7 @@ add_test_compareECLFiles(CASENAME rxft_smry
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR rxft_smry
-                         TEST_ARGS --enable-tuning=true)
+                         TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7)
 
 add_test_compareECLFiles(CASENAME bo_diffusion
                          FILENAME BO_DIFFUSE_CASE1
