@@ -184,7 +184,7 @@ add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                      FILENAME SPE1CASE2_THERMAL
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol}
-                                     REL_TOL ${coarse_rel_tol_parallel}}
+                                     REL_TOL ${coarse_rel_tol_parallel}
                                      DIR spe1
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
@@ -230,8 +230,8 @@ add_test_compare_parallel_simulation(CASENAME ctaquifer_2d_oilwater
 add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
                                      FILENAME 3D_TRAN_OPERATOR
                                      SIMULATOR flow
-                                     ABS_TOL 0.3
-                                     REL_TOL 0.0005
+                                     ABS_TOL ${abs_tol_parallel}
+                                     REL_TOL 0.0003
                                      DIR parallel_fieldprops
                                      TEST_ARGS --enable-tuning=true --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
 
@@ -313,10 +313,10 @@ add_test_compare_parallel_simulation(CASENAME actionx_m1
 add_test_compare_parallel_simulation(CASENAME reg_smry_in_fld_udq
                                      FILENAME UDQ_REG-01
                                      SIMULATOR flow
-                                     ABS_TOL 0.04
-                                     REL_TOL 0.1
+                                     ABS_TOL ${abs_tol_parallel}
+                                     REL_TOL ${coarse_rel_tol_parallel}
                                      DIR udq_actionx
-                                     TEST_ARGS --enable-tuning=true)
+                                     TEST_ARGS --enable-tuning=true --time-step-control=pid)
 
 add_test_compare_parallel_simulation(CASENAME winjmult_msw
                                      FILENAME WINJMULT_MSW
