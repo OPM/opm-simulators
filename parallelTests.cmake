@@ -10,7 +10,7 @@ add_test_compare_parallel_simulation(CASENAME spe1
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
 add_test_compare_parallel_simulation(CASENAME spe1_gaswater
                                      FILENAME SPE1CASE2_GASWATER
@@ -25,7 +25,7 @@ add_test_compare_parallel_simulation(CASENAME spe9
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
 # A test for distributed standard wells. We load distribute only along the z-axis
 add_test_compare_parallel_simulation(CASENAME spe9_dist_z
@@ -34,7 +34,7 @@ add_test_compare_parallel_simulation(CASENAME spe9_dist_z
                                      SIMULATOR flow_distribute_z
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
 # A test for distributed standard wells with 8 processes. We load distribute only along the z-axis
 add_test_compare_parallel_simulation(CASENAME spe9_dist_z_8
@@ -45,7 +45,7 @@ add_test_compare_parallel_simulation(CASENAME spe9_dist_z_8
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
                                      MPI_PROCS 8
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
 # A test for distributed multisegment wells. We load distribute only along the z-axis
 add_test_compare_parallel_simulation(CASENAME msw-simple
@@ -158,7 +158,7 @@ add_test_compare_parallel_simulation(CASENAME spe3_partition_method_zoltanwell
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7 --partition-method=zoltanwell)
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7)
 
 add_test_compare_parallel_simulation(CASENAME spe1_solvent
                                      FILENAME SPE1CASE2_SOLVENT
@@ -184,7 +184,7 @@ add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                      FILENAME SPE1CASE2_THERMAL
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol}
-                                     REL_TOL ${coarse_rel_tol_parallel}}
+                                     REL_TOL ${coarse_rel_tol_parallel}
                                      DIR spe1
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
@@ -233,7 +233,7 @@ add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL 0.0003
                                      DIR parallel_fieldprops
-                                     TEST_ARGS --enable-tuning=true --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
+                                     TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0)
 
 add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
                                      FILENAME 3D_2AQU_NUM
@@ -241,7 +241,7 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
                                      ABS_TOL 0.17
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR aquifer-num
-                                     TEST_ARGS --tolerance-cnv=0.000003 --time-step-control=pid --linear-solver=cpr_trueimpes --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
+                                     TEST_ARGS --tolerance-cnv=0.000003 --time-step-control=pid --linear-solver=cpr_trueimpes --relaxed-max-pv-fraction=0.0)
 
 add_test_compare_parallel_simulation(CASENAME aquflux_01
                                      FILENAME AQUFLUX-01
@@ -249,7 +249,7 @@ add_test_compare_parallel_simulation(CASENAME aquflux_01
                                      ABS_TOL ${abs_tol}
                                      REL_TOL 0.06
                                      DIR aquifers
-                                     TEST_ARGS --enable-tuning=true --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0 --tolerance-cnv=1.0e-3)
+                                     TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0)
 
 add_test_compare_parallel_simulation(CASENAME aquflux_02
                                      FILENAME AQUFLUX-02
@@ -265,7 +265,7 @@ add_test_compare_parallel_simulation(CASENAME network_balance_01
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR network
-                                     TEST_ARGS --enable-tuning=true --time-step-control=newtoniterationcount --time-step-control-growth-rate=3.0 --relaxed-max-pv-fraction=0.0 --tolerance-cnv=1e-3)
+                                     TEST_ARGS --enable-tuning=true)
 
 add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      FILENAME 3D_1AQU_3CELLS
@@ -273,7 +273,7 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL 0.05
                                      DIR aquifer-num
-                                     TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
+                                     TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes --relaxed-max-pv-fraction=0.0)
 
 add_test_compare_parallel_simulation(CASENAME 6_uda_model5_stdw
   FILENAME 6_UDA_MODEL5_STDW
@@ -316,7 +316,7 @@ add_test_compare_parallel_simulation(CASENAME reg_smry_in_fld_udq
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR udq_actionx
-                                     TEST_ARGS --enable-tuning=true)
+                                     TEST_ARGS --enable-tuning=true --time-step-control=pid)
 
 add_test_compare_parallel_simulation(CASENAME winjmult_msw
                                      FILENAME WINJMULT_MSW
@@ -324,7 +324,7 @@ add_test_compare_parallel_simulation(CASENAME winjmult_msw
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${rel_tol}
                                      DIR winjmult
-                                     TEST_ARGS --enable-drift-compensation=false --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                     TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7)
 
 add_test_compare_parallel_simulation(CASENAME winjdam_msw
                                      FILENAME WINJDAM_MSW
@@ -332,7 +332,7 @@ add_test_compare_parallel_simulation(CASENAME winjdam_msw
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${rel_tol}
                                      DIR winjdam
-                                     TEST_ARGS --enable-drift-compensation=false --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                     TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7)
 
 add_test_compare_parallel_simulation(CASENAME 3_a_mpi_multflt_mod2
                                      FILENAME 3_A_MPI_MULTFLT_SCHED_MODEL2
@@ -348,7 +348,7 @@ add_test_compare_parallel_simulation(CASENAME rxft
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL 1.0e-3
                                      DIR rxft_smry
-                                     TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
+                                     TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7)
 
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")
 
