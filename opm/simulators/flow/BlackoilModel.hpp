@@ -213,6 +213,14 @@ public:
     std::pair<std::vector<double>, std::vector<int>>
     characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt);
 
+    /// \brief Compute the number of Newtons required by each cell in order to
+    /// satisfy the solution change convergence criteria at the last time step.
+    void convergencePerCell(const std::vector<Scalar>& B_avg,
+                            const double tol_cnv,
+                            const double dt,
+                            const double tol_cnv_energy,
+                            const int iteration);
+
     void updateTUNING(const Tuning& tuning);
 
     ConvergenceReport

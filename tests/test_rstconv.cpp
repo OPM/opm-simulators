@@ -176,6 +176,17 @@ BOOST_AUTO_TEST_CASE(RstConvTest)
             }
         }
     }
+
+    std::vector<int> conv_new(10, 0);
+    cnv.updateNewton(conv_new);
+    std::vector<int> conv_new_ite1(10, 1);
+    cnv.updateNewton(conv_new_ite1);
+    if (cc.rank() == 0) {
+        BOOST_CHECK_EQUAL(cnv.getConvNew().size(), 10*cc.size());
+        for (int i = 0; i < cnv.getConvNew().size(); ++i) {
+            BOOST_CHECK_EQUAL(cnv.getConvNew()[i], 2);
+        }
+    }
 #if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 < 67
     }
 #endif
