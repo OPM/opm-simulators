@@ -27,8 +27,6 @@
 
 #include <opm/simulators/wells/WellContainer.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <map>
 #include <vector>
 #include <utility>

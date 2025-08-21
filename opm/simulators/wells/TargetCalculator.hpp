@@ -32,18 +32,18 @@ namespace Opm {
 
 class DeferredLogger;
 template<class Scalar> class GroupState;
-struct PhaseUsage;
+template<typename IndexTraits> class PhaseUsageInfo;
 
 namespace WGHelpers {
 
 /// Based on a group control mode, extract or calculate rates, and
 /// provide other conveniences.
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class TargetCalculator
 {
 public:
     TargetCalculator(const Group::ProductionCMode cmode,
-                     const PhaseUsage& pu,
+                     const PhaseUsageInfo<IndexTraits>& pu,
                      const std::vector<Scalar>& resv_coeff,
                      const Scalar group_grat_target_from_sales,
                      const std::string& group_name,
@@ -66,7 +66,7 @@ public:
 
 private:
     Group::ProductionCMode cmode_;
-    const PhaseUsage& pu_;
+    const PhaseUsageInfo<IndexTraits>& pu_;
     const std::vector<Scalar>& resv_coeff_;
     const Scalar group_grat_target_from_sales_;
     const std::string& group_name_;
@@ -76,12 +76,12 @@ private:
 
 /// Based on a group control mode, extract or calculate rates, and
 /// provide other conveniences.
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class InjectionTargetCalculator
 {
 public:
     InjectionTargetCalculator(const Group::InjectionCMode& cmode,
-                              const PhaseUsage& pu,
+                              const PhaseUsageInfo<IndexTraits>& pu,
                               const std::vector<Scalar>& resv_coeff,
                               const std::string& group_name,
                               const Scalar sales_target,
@@ -103,7 +103,7 @@ public:
 
 private:
     Group::InjectionCMode cmode_;
-    const PhaseUsage& pu_;
+    const PhaseUsageInfo<IndexTraits>& pu_;
     const std::vector<Scalar>& resv_coeff_;
     const std::string& group_name_;
     Scalar sales_target_;

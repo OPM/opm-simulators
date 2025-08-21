@@ -34,14 +34,14 @@
 
 namespace Opm {
 
-template<class Scalar> class BlackoilWellModelGeneric;
+template<typename Scalar, typename IndexTraits> class BlackoilWellModelGeneric;
 
 /// Class for handling the blackoil well model.
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelWBP
 {
 public:
-    explicit BlackoilWellModelWBP(BlackoilWellModelGeneric<Scalar>& well_model);
+    explicit BlackoilWellModelWBP(BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model);
 
     void initializeSources(typename ParallelWBPCalculation<Scalar>::GlobalToLocal index,
                            typename ParallelWBPCalculation<Scalar>::Evaluator eval);
@@ -57,12 +57,12 @@ public:
     computeWellBlockAveragePressures(const Scalar gravity) const;
 
 private:
-    BlackoilWellModelGeneric<Scalar>& well_model_;
+    BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model_;
     mutable ParallelWBPCalculation<Scalar> wbpCalculationService_;
 
     struct WBPCalcID
     {
-        std::optional<typename std::vector<WellInterfaceGeneric<Scalar>*>::size_type> openWellIdx_{};
+        std::optional<typename std::vector<WellInterfaceGeneric<Scalar, IndexTraits>*>::size_type> openWellIdx_{};
         std::size_t wbpCalcIdx_{};
     };
 

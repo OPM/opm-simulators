@@ -44,21 +44,20 @@ GasLiftSingleWell(const WellInterface<TypeTag>& well,
                   const Simulator& simulator,
                   const SummaryState& summary_state,
                   DeferredLogger& deferred_logger,
-                  WellState<Scalar>& well_state,
+                  WellState<Scalar, IndexTraits>& well_state,
                   const GroupState<Scalar>& group_state,
-                  GasLiftGroupInfo<Scalar>& group_info,
+                  GasLiftGroupInfo<Scalar, IndexTraits>& group_info,
                   GLiftSyncGroups &sync_groups,
                   const Parallel::Communication& comm,
                   bool glift_debug)
     // The parent class GasLiftSingleWellGeneric contains all stuff
     //   that is not dependent on TypeTag
-    : GasLiftSingleWellGeneric<Scalar>(deferred_logger,
+    : GasLiftSingleWellGeneric<Scalar, IndexTraits>(deferred_logger,
                                        well_state,
                                        group_state,
                                        well.wellEcl(),
                                        summary_state,
                                        group_info,
-                                       well.phaseUsage(),
                                        simulator.vanguard().schedule(),
                                        simulator.episodeIndex(),
                                        sync_groups,
@@ -180,11 +179,10 @@ void
 GasLiftSingleWell<TypeTag>::
 setupPhaseVariables_()
 {
-    const auto& pu = this->phase_usage_;
 #ifndef NDEBUG
-    bool num_phases_ok = (pu.num_phases == 3);
+    bool num_phases_ok = (FluidSystem::numActivePhases()== 3);
 #endif
-    if (pu.num_phases == 2) {
+    if (FluidSystem::numActivePhases()== 2) {
         // NOTE: We support two-phase oil-water flow, by setting the gas flow rate
         //   to zero. This is done by initializing the potential vector to zero:
         //
@@ -195,9 +193,9 @@ setupPhaseVariables_()
         //  has been adapted to the two-phase oil-water case, see the comment
         //  in WellInterfaceGeneric.cpp for the method adaptRatesForVFP() for
         //  more information.
-        if (    pu.phase_used[BlackoilPhases::Aqua] == 1
-             && pu.phase_used[BlackoilPhases::Liquid] == 1
-             && pu.phase_used[BlackoilPhases::Vapour] == 0)
+        if (    FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+             && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+             && !FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) )
         {
 #ifndef NDEBUG
             num_phases_ok = true;  // two-phase oil-water is also supported
@@ -209,9 +207,9 @@ setupPhaseVariables_()
         }
     }
     assert(num_phases_ok);
-    this->oil_pos_ = pu.phase_pos[this->Oil];
-    this->gas_pos_ = pu.phase_pos[this->Gas];
-    this->water_pos_ = pu.phase_pos[this->Water];
+    this->oil_pos_ = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+    this->gas_pos_ = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+    this->water_pos_ = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
 }
 
 template<typename TypeTag>

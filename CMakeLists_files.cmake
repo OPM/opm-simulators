@@ -178,7 +178,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/SimulatorTimerInterface.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/gatherConvergenceReport.cpp
-  opm/simulators/utils/BlackoilPhases.cpp
   opm/simulators/utils/ComponentName.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/FullySupportedFlowKeywords.cpp
@@ -191,7 +190,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/UnsupportedFlowKeywords.cpp
   opm/simulators/utils/compressPartition.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
-  opm/simulators/utils/phaseUsageFromDeck.cpp
   opm/simulators/utils/readDeck.cpp
   opm/simulators/utils/satfunc/RelpermDiagnostics.cpp
   opm/simulators/wells/ALQState.cpp
@@ -1050,7 +1048,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/SimulatorReport.hpp
   opm/simulators/timestepping/SimulatorTimerInterface.hpp
   opm/simulators/timestepping/gatherConvergenceReport.hpp
-  opm/simulators/utils/BlackoilPhases.hpp
   opm/simulators/utils/ComponentName.hpp
   opm/simulators/utils/DeferredLogger.hpp
   opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
@@ -1065,7 +1062,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/compressPartition.hpp
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
-  opm/simulators/utils/phaseUsageFromDeck.hpp
   opm/simulators/utils/ParallelCommunication.hpp
   opm/simulators/utils/ParallelSerialization.hpp
   opm/simulators/utils/readDeck.hpp

@@ -23,6 +23,8 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/PerforationData.hpp>
@@ -35,10 +37,10 @@
 
 namespace Opm {
 
-template<class Scalar>
-void WellFilterCake<Scalar>::
-updatePostStep(const WellInterfaceGeneric<Scalar>& well,
-               WellState<Scalar>& well_state,
+template<typename Scalar, typename IndexTraits>
+void WellFilterCake<Scalar, IndexTraits>::
+updatePostStep(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
+               WellState<Scalar, IndexTraits>& well_state,
                const double dt,
                const Scalar conc,
                const std::size_t water_index,
@@ -60,17 +62,17 @@ updatePostStep(const WellInterfaceGeneric<Scalar>& well,
     updateSkinFactorsAndMultipliers(well, well_state, dt, water_index, deferred_logger);
 }
 
-template<class Scalar>
-void WellFilterCake<Scalar>::
-updatePreStep(const WellInterfaceGeneric<Scalar>& well, DeferredLogger& deferred_logger)
+template<typename Scalar, typename IndexTraits>
+void WellFilterCake<Scalar, IndexTraits>::
+updatePreStep(const WellInterfaceGeneric<Scalar, IndexTraits>& well, DeferredLogger& deferred_logger)
 {
     // Apply cleaning and reset any filter cake cleaning multipliers (even if the well is producing at this time)
     applyCleaning(well, deferred_logger);
 }
 
-template<class Scalar>
-void WellFilterCake<Scalar>::
-applyCleaning(const WellInterfaceGeneric<Scalar>& well,
+template<typename Scalar, typename IndexTraits>
+void WellFilterCake<Scalar, IndexTraits>::
+applyCleaning(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
               DeferredLogger& deferred_logger)
 {
     const auto& connections = well.wellEcl().getConnections();
@@ -116,10 +118,10 @@ applyCleaning(const WellInterfaceGeneric<Scalar>& well,
 }
 
 
-template<class Scalar>
-void WellFilterCake<Scalar>::
-updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar>& well,
-                  WellState<Scalar>& well_state,
+template<typename Scalar, typename IndexTraits>
+void WellFilterCake<Scalar, IndexTraits>::
+updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
+                  WellState<Scalar, IndexTraits>& well_state,
                   const double dt,
                   const std::size_t water_index,
                   DeferredLogger& deferred_logger)
@@ -210,8 +212,9 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar>& well,
     }
 }
 
-template<class Scalar> template <class Conn>
-void WellFilterCake<Scalar>::
+template<typename Scalar, typename IndexTraits>
+template <class Conn>
+void WellFilterCake<Scalar, IndexTraits>::
 updateMultiplier(const Conn& connection, const int perf)
 {
     const auto denom = connection.ctfProperties().peaceman_denom;
@@ -219,10 +222,10 @@ updateMultiplier(const Conn& connection, const int perf)
     inj_fc_multiplier_[perf] = denom / denom2;
 }
 
-template class WellFilterCake<double>;
+template class WellFilterCake<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class WellFilterCake<float>;
+template class WellFilterCake<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm

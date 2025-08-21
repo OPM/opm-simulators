@@ -40,22 +40,22 @@ enum class InjectorType;
 using RegionId = int;
 class Schedule;
 class SummaryState;
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
+template<typename Scalar, typename IndexTraits> class WellState;
 
 //! \brief Class for computing well group constraints.
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class WellGroupConstraints {
 public:
     //! \brief Constructor sets reference to well.
-    explicit WellGroupConstraints(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
+    explicit WellGroupConstraints(const WellInterfaceGeneric<Scalar, IndexTraits>& well) : well_(well) {}
 
     using RateConvFunc = std::function<void(const RegionId,
                                             const int,
                                             const std::optional<std::string>&,
                                             std::vector<Scalar>&)>;
 
-    bool checkGroupConstraints(WellState<Scalar>& well_state,
+    bool checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
                                const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
@@ -66,7 +66,7 @@ public:
 private:
     std::pair<bool, Scalar>
     checkGroupConstraintsInj(const Group& group,
-                             const WellState<Scalar>& well_state,
+                             const WellState<Scalar, IndexTraits>& well_state,
                              const GroupState<Scalar>& group_state,
                              const Scalar efficiencyFactor,
                              const Schedule& schedule,
@@ -77,7 +77,7 @@ private:
 
     std::pair<bool, Scalar>
     checkGroupConstraintsProd(const Group& group,
-                              const WellState<Scalar>& well_state,
+                              const WellState<Scalar, IndexTraits>& well_state,
                               const GroupState<Scalar>& group_state,
                               const Scalar efficiencyFactor,
                               const Schedule& schedule,
@@ -86,7 +86,7 @@ private:
                               const bool check_guide_rate,
                               DeferredLogger& deferred_logger) const;
 
-    const WellInterfaceGeneric<Scalar>& well_; //!< Reference to well interface
+    const WellInterfaceGeneric<Scalar, IndexTraits>& well_; //!< Reference to well interface
 };
 
 }

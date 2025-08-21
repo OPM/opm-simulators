@@ -26,6 +26,8 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
+
 #include <opm/input/eclipse/Schedule/Events.hpp>
 
 #include <opm/output/data/Wells.hpp>
@@ -36,7 +38,6 @@
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <algorithm>
@@ -60,7 +61,7 @@ enum class WellStatus;
 
 /// The state of a set of wells, tailored for use by the fully
 /// implicit blackoil simulator.
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class WellState
 {
 public:
@@ -69,15 +70,18 @@ public:
         | ScheduleEvents::INJECTION_UPDATE;
 
     // TODO: same definition with WellInterface, eventually they should go to a common header file.
-    static const int Water = BlackoilPhases::Aqua;
-    static const int Oil = BlackoilPhases::Liquid;
-    static const int Gas = BlackoilPhases::Vapour;
+
+    // TODO: trying to PhasedIdx to make it more explicit as phase index, will evaluate how it goes.
+    // TODO: eventually, we should distinguish phase index and component index
+    static const int waterPhaseIdx = IndexTraits::waterPhaseIdx;
+    static const int oilPhaseIdx = IndexTraits::oilPhaseIdx;
+    static const int gasPhaseIdx = IndexTraits::gasPhaseIdx;
 
     // Only usable for testing purposes
     explicit WellState(const ParallelWellInfo<Scalar>& pinfo);
 
-    explicit WellState(const PhaseUsage& pu)
-        : phase_usage_(pu)
+    explicit WellState(const PhaseUsageInfo<IndexTraits>& pu)
+        : phaseUsageInfo_(pu)
     {}
 
     static WellState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
@@ -95,6 +99,12 @@ public:
     int numWells() const
     {
         return this->size();
+    }
+
+    // TODO: temporary naming during development, will change to phaseUsage() later
+    const PhaseUsageInfo<IndexTraits>& phaseUsageInfo() const
+    {
+        return this->phaseUsageInfo_;
     }
 
     const ParallelWellInfo<Scalar>& parallelWellInfo(std::size_t well_index) const;
@@ -151,7 +161,6 @@ public:
            const std::function<bool(const int)>& wasDynamicallyClosed) const;
 
     void reportConnections(std::vector<data::Connection>& connections,
-                           const PhaseUsage &pu,
                            std::size_t well_index,
                            const int* globalCellIdxMap) const;
 
@@ -236,14 +245,9 @@ public:
     void stopWell(int well_index);
 
     /// The number of phases present.
-    int numPhases() const
+    constexpr int numPhases() const
     {
-        return this->phase_usage_.num_phases;
-    }
-
-    const PhaseUsage& phaseUsage() const
-    {
-        return this->phase_usage_;
+        return phaseUsageInfo_.numActivePhases();
     }
 
     /// One rate per well and phase.
@@ -262,42 +266,42 @@ public:
         return this->wells_.well_index(well_name);
     }
 
-    const SingleWellState<Scalar>& operator[](std::size_t well_index) const
+    const SingleWellState<Scalar, IndexTraits>& operator[](std::size_t well_index) const
     {
         return this->wells_[well_index];
     }
 
-    const SingleWellState<Scalar>& operator[](const std::string& well_name) const
+    const SingleWellState<Scalar, IndexTraits>& operator[](const std::string& well_name) const
     {
         return this->wells_[well_name];
     }
 
-    SingleWellState<Scalar>& operator[](std::size_t well_index)
+    SingleWellState<Scalar, IndexTraits>& operator[](std::size_t well_index)
     {
         return this->wells_[well_index];
     }
 
-    SingleWellState<Scalar>& operator[](const std::string& well_name)
+    SingleWellState<Scalar, IndexTraits>& operator[](const std::string& well_name)
     {
         return this->wells_[well_name];
     }
 
-    const SingleWellState<Scalar>& well(std::size_t well_index) const
+    const SingleWellState<Scalar, IndexTraits>& well(std::size_t well_index) const
     {
         return this->operator[](well_index);
     }
 
-    const SingleWellState<Scalar>& well(const std::string& well_name) const
+    const SingleWellState<Scalar, IndexTraits>& well(const std::string& well_name) const
     {
         return this->operator[](well_name);
     }
 
-    SingleWellState<Scalar>& well(std::size_t well_index)
+    SingleWellState<Scalar, IndexTraits>& well(std::size_t well_index)
     {
         return this->operator[](well_index);
     }
 
-    SingleWellState<Scalar>& well(const std::string& well_name)
+    SingleWellState<Scalar, IndexTraits>& well(const std::string& well_name)
     {
         return this->operator[](well_name);
     }
@@ -335,12 +339,12 @@ public:
 private:
     bool enableDistributedWells_ = false;
 
-    PhaseUsage phase_usage_;
+    PhaseUsageInfo<IndexTraits> phaseUsageInfo_;
 
     // The wells_ variable is essentially a map of all the wells on the current
     // process. Observe that since a well can be split over several processes a
     // well might appear in the WellContainer on different processes.
-    WellContainer<SingleWellState<Scalar>> wells_;
+    WellContainer<SingleWellState<Scalar, IndexTraits>> wells_;
 
     // The members global_well_info and well_rates are map like
     // structures which will have entries for *all* the wells in the system.
@@ -408,7 +412,6 @@ private:
                                  std::vector<data::Connection>& connections) const;
 
     void reportConnectionPressuresAndRates(const std::size_t well_index,
-                                           const PhaseUsage& pu,
                                            std::vector<data::Connection>& connections) const;
 
     void reportConnectionFilterCake(const std::size_t well_index,
@@ -420,4 +423,5 @@ private:
 
 } // namespace Opm
 
+// TODO: we are missing pu, while it was not there in the first place
 #endif // OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED

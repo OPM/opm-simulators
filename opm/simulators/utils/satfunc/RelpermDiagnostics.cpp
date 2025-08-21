@@ -22,7 +22,6 @@
 #endif // HAVE_CONFIG_H
 
 #include <opm/simulators/utils/satfunc/RelpermDiagnostics.hpp>
-#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclEpsGridProperties.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
@@ -115,8 +114,6 @@ namespace Opm {
 
     void RelpermDiagnostics::satFamilyCheck_(const EclipseState& eclState)
     {
-        const PhaseUsage pu = phaseUsageFromDeck(eclState);
-
         const auto& tableManager = eclState.getTableManager();
         const TableContainer& swofTables = tableManager.getSwofTables();
         const TableContainer& slgofTables= tableManager.getSlgofTables();
@@ -133,31 +130,35 @@ namespace Opm {
         const TableContainer& gsfTables = tableManager.getGsfTables();
         const TableContainer& wsfTables = tableManager.getWsfTables();
 
+        const auto& phases = eclState.runspec().phases();
+        const bool waterActive   = phases.active( Phase::WATER );
+        const bool gasActive     = phases.active( Phase::GAS );
+        const bool oilActive     = phases.active( Phase::OIL );
+
         // Family I test.
-        bool family1 = pu.phase_used[BlackoilPhases::Liquid];
-        if (pu.phase_used[BlackoilPhases::Aqua]) {
+        bool family1 = oilActive;
+        if (waterActive) {
             family1 = family1 && (!swofTables.empty() || !swofletTable.empty());
         }
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
+        if (gasActive) {
             family1 = family1 && ((!sgofTables.empty() || !sgofletTable.empty()) || !slgofTables.empty());
         }
 
         // Family II test.
         bool family2 = true;
-        if (pu.phase_used[BlackoilPhases::Aqua]) {
+        if (waterActive) {
             family2 = family2 && (!swfnTables.empty() || !sgwfnTables.empty());
         }
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
+        if (oilActive) {
             family2 = family2 && (!sof3Tables.empty() || !sof2Tables.empty());
         }
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
+        if (gasActive) {
             family2 = family2 && (!sgfnTables.empty() || !sgwfnTables.empty());
         }
 
         bool family3 = !gsfTables.empty() && !wsfTables.empty();
 
         if (family3) {
-            const auto& phases = eclState.runspec().phases();
             const bool co2store = eclState.runspec().co2Storage();
             const bool h2store = eclState.runspec().h2Storage();
             if ( !((co2store || h2store) && phases.active(Phase::GAS) && phases.active(Phase::WATER))) {

@@ -20,8 +20,6 @@
 #ifndef OPM_GROUP_ECONOMIC_LIMITS_CHECKER_HEADER_INCLUDED
 #define OPM_GROUP_ECONOMIC_LIMITS_CHECKER_HEADER_INCLUDED
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
@@ -32,17 +30,17 @@
 namespace Opm
 {
 
-template<class Scalar> class BlackoilWellModelGeneric;
+template<typename Scalar, typename IndexTraits> class BlackoilWellModelGeneric;
 class DeferredLogger;
 class Group;
-template<class Scalar> class WellState;
+template<typename Scalar, typename IndexTraits> class WellState;
 class WellTestState;
 
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class GroupEconomicLimitsChecker
 {
 public:
-    GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar>& well_model,
+    GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
                                WellTestState& well_test_state,
                                const Group& group,
                                const double simulation_time,
@@ -74,25 +72,25 @@ private:
     bool closeWellsRecursive(const Group& group, int level = 0);
     void throwNotImplementedError(const std::string& error) const;
 
-    const BlackoilWellModelGeneric<Scalar>& well_model_;
+    const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model_;
     const Group& group_;
     const double simulation_time_;
     const int report_step_idx_;
     DeferredLogger& deferred_logger_;
     const std::string date_string_;
     const UnitSystem& unit_system_;
-    const WellState<Scalar>& well_state_;
+    const WellState<Scalar, IndexTraits>& well_state_;
     WellTestState& well_test_state_;
     const Schedule& schedule_;
     GroupEconProductionLimits::GEconGroupProp gecon_props_;
     bool debug_ = true;
     std::array<Scalar,NUM_PHASES> production_rates_;
-    std::map<int, BlackoilPhases::PhaseIndex> phase_idx_map_ = {
-        {0, BlackoilPhases::Liquid},
-        {1, BlackoilPhases::Vapour},
-        {2, BlackoilPhases::Aqua}
+    std::map<int, unsigned> phase_idx_map_ = {
+        {0, IndexTraits::oilPhaseIdx},
+        {1, IndexTraits::gasPhaseIdx},
+        {2, IndexTraits::waterPhaseIdx}
     };
-    std::map<BlackoilPhases::PhaseIndex, int> phase_idx_reverse_map_;
+    std::map<unsigned, int> phase_idx_reverse_map_;
     std::string message_;
 };
 
