@@ -44,6 +44,8 @@
 
 #include <fmt/format.h>
 
+#include <opm/simulators/linalg/HaugenLabs.h>
+
 namespace Opm {
 
 template <class TypeTag>
@@ -526,8 +528,12 @@ solveJacobianSystem(BVector& x)
 
         Dune::Timer perfTimer;
         perfTimer.start();
+
+        bsr_hello();
         linSolver.prepare(jacobian, residual);
+
         linear_solve_setup_time_ = perfTimer.stop();
+
         linSolver.setResidual(residual);
         // actually, the error needs to be calculated after setResidual in order to
         // account for parallelization properly. since the residual of ECFV
