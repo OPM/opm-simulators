@@ -27,25 +27,23 @@
 
 namespace Opm {
 template<class Scalar> class GroupState;
-struct PhaseUsage;
 class Schedule;
-template<class Scalar> class WellState;
+template<typename Scalar, typename IndexTraits> class WellState;
 }
 
 namespace Opm::WGHelpers {
 
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class FractionCalculator
 {
 public:
     FractionCalculator(const Schedule& schedule,
-                       const WellState<Scalar>& well_state,
+                       const WellState<Scalar, IndexTraits>& well_state,
                        const GroupState<Scalar>& group_state,
                        const SummaryState& summary_state,
                        const int report_step,
                        const GuideRate* guide_rate,
                        const GuideRateModel::Target target,
-                       const PhaseUsage& pu,
                        const bool is_producer,
                        const Phase injection_phase);
     Scalar fraction(const std::string& name,
@@ -69,13 +67,12 @@ private:
                              const std::string& always_included_child);
     GuideRate::RateVector getGroupRateVector(const std::string& group_name);
     const Schedule& schedule_;
-    const WellState<Scalar>& well_state_;
+    const WellState<Scalar, IndexTraits>& well_state_;
     const GroupState<Scalar>& group_state_;
     const SummaryState& summary_state_;
     int report_step_;
     const GuideRate* guide_rate_;
     GuideRateModel::Target target_;
-    const PhaseUsage& pu_;
     bool is_producer_;
     Phase injection_phase_;
 };

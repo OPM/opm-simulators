@@ -36,22 +36,21 @@
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm {
 
 //! \brief Class administering assembler access to equation system.
-template<class Scalar, int numEq>
+template<typename Scalar, typename IndexTraits, int numEq>
 class StandardWellEquationAccess {
 public:
     //! \brief Constructor initializes reference to the equation system.
-    explicit StandardWellEquationAccess(StandardWellEquations<Scalar,numEq>& eqns)
+    explicit StandardWellEquationAccess(StandardWellEquations<Scalar, IndexTraits, numEq>& eqns)
         : eqns_(eqns)
     {}
 
-    using BVectorWell = typename StandardWellEquations<Scalar,numEq>::BVectorWell;
-    using DiagMatWell = typename StandardWellEquations<Scalar,numEq>::DiagMatWell;
-    using OffDiatMatWell = typename StandardWellEquations<Scalar,numEq>::OffDiagMatWell;
+    using BVectorWell = typename StandardWellEquations<Scalar, IndexTraits, numEq>::BVectorWell;
+    using DiagMatWell = typename StandardWellEquations<Scalar, IndexTraits, numEq>::DiagMatWell;
+    using OffDiatMatWell = typename StandardWellEquations<Scalar, IndexTraits, numEq>::OffDiagMatWell;
 
     //! \brief Returns a reference to residual vector.
     BVectorWell& residual()
@@ -78,13 +77,13 @@ public:
     }
 
 private:
-    StandardWellEquations<Scalar,numEq>& eqns_; //!< Reference to equation system
+    StandardWellEquations<Scalar, IndexTraits, numEq>& eqns_; //!< Reference to equation system
 };
 
 template<class FluidSystem, class Indices>
 void
 StandardWellAssemble<FluidSystem,Indices>::
-assembleControlEq(const WellState<Scalar>& well_state,
+assembleControlEq(const WellState<Scalar, IndexTraits>& well_state,
                   const GroupState<Scalar>& group_state,
                   const Schedule& schedule,
                   const SummaryState& summaryState,
@@ -92,13 +91,13 @@ assembleControlEq(const WellState<Scalar>& well_state,
                   const Well::ProductionControls& prod_controls,
                   const PrimaryVariables& primary_variables,
                   const Scalar rho,
-                  StandardWellEquations<Scalar,Indices::numEq>& eqns1,
+                  StandardWellEquationsType& eqns1,
                   const bool stopped_or_zero_target,
                   DeferredLogger& deferred_logger) const
 {
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
     EvalWell control_eq(primary_variables.numWellEq() + Indices::numEq, 0.0);
 
     const auto& well = well_.wellEcl();
@@ -189,7 +188,7 @@ assembleInjectivityEq(const EvalWell& eq_pskin,
                       const int wat_vel_index,
                       const int cell_idx,
                       const int numWellEq,
-                      StandardWellEquations<Scalar,Indices::numEq>& eqns1) const
+                      StandardWellEquationsType& eqns1) const
 {
     StandardWellEquationAccess eqns(eqns1);
     eqns.residual()[0][pskin_index] = eq_pskin.value();
@@ -211,7 +210,7 @@ assemblePerforationEq(const EvalWell& cq_s_effective,
                       const int componentIdx,
                       const int cell_idx,
                       const int numWellEq,
-                      StandardWellEquations<Scalar,Indices::numEq>& eqns1) const
+                      StandardWellEquationsType& eqns1) const
 {
     StandardWellEquationAccess eqns(eqns1);
 
@@ -235,7 +234,7 @@ void StandardWellAssemble<FluidSystem,Indices>::
 assembleSourceEq(const EvalWell& resWell_loc,
                  const int componentIdx,
                  const int numWellEq,
-                 StandardWellEquations<Scalar,Indices::numEq>& eqns1) const
+                 StandardWellEquationsType& eqns1) const
 {
     StandardWellEquationAccess eqns(eqns1);
     for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
@@ -249,7 +248,7 @@ void StandardWellAssemble<FluidSystem,Indices>::
 assembleZFracEq(const EvalWell& cq_s_zfrac_effective,
                 const int cell_idx,
                 const int numWellEq,
-                StandardWellEquations<Scalar,Indices::numEq>& eqns1) const
+                StandardWellEquationsType& eqns1) const
 {
     StandardWellEquationAccess eqns(eqns1);
     for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {

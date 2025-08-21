@@ -131,12 +131,14 @@ BOOST_AUTO_TEST_CASE(G1)
     using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
     //using EclProblem = Opm::EclProblem<TypeTag>;
     //using EclWellModel = typename EclProblem::EclWellModel;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
     using WellModel = Opm::BlackoilWellModel<TypeTag>;
-    using WellState = Opm::WellState<double>;
+    using WellState = Opm::WellState<double, IndexTraits>;
     using StdWell = Opm::StandardWell<TypeTag>;
     using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
-    using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double>;
-    using GasLiftSingleWellGeneric = Opm::GasLiftSingleWellGeneric<double>;
+    using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double, IndexTraits>;
+    using GasLiftSingleWellGeneric = Opm::GasLiftSingleWellGeneric<double, IndexTraits>;
     using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
     const std::string filename = "GLIFT1.DATA";
     using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
@@ -188,7 +190,6 @@ BOOST_AUTO_TEST_CASE(G1)
         summary_state,
         simulator->episodeIndex(),
         iteration_idx,
-        well_model.phaseUsage(),
         deferred_logger,
         well_state,
         group_state,

@@ -25,29 +25,31 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
+
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 
 #include <cassert>
 
 namespace Opm {
 
-template<class Scalar>
-BlackoilWellModelWBP<Scalar>::
-BlackoilWellModelWBP(BlackoilWellModelGeneric<Scalar>& well_model)
+template<typename Scalar, typename IndexTraits>
+BlackoilWellModelWBP<Scalar, IndexTraits>::
+BlackoilWellModelWBP(BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model)
     : well_model_(well_model)
     , wbpCalculationService_(well_model.eclipseState().gridDims(), well_model.comm())
 {}
 
-template<class Scalar>
-void BlackoilWellModelWBP<Scalar>::
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelWBP<Scalar, IndexTraits>::
 initializeSources(typename ParallelWBPCalculation<Scalar>::GlobalToLocal index,
                   typename ParallelWBPCalculation<Scalar>::Evaluator eval)
 {
     this->wbpCalculationService_.localCellIndex(index).evalCellSource(eval);
 }
 
-template<class Scalar>
-void BlackoilWellModelWBP<Scalar>::
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelWBP<Scalar, IndexTraits>::
 registerOpenWellsForWBPCalculation()
 {
     assert(this->wbpCalcMap_.size() ==
@@ -57,14 +59,14 @@ registerOpenWellsForWBPCalculation()
         wbpCalc.openWellIdx_.reset();
     }
 
-    auto openWellIdx = typename std::vector<WellInterfaceGeneric<Scalar>*>::size_type{0};
+    auto openWellIdx = typename std::vector<WellInterfaceGeneric<Scalar, IndexTraits>*>::size_type{0};
     for (const auto* openWell : well_model_.genericWells()) {
         this->wbpCalcMap_[openWell->indexOfWell()].openWellIdx_ = openWellIdx++;
     }
 }
 
-template<class Scalar>
-void BlackoilWellModelWBP<Scalar>::
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelWBP<Scalar, IndexTraits>::
 initializeWBPCalculationService()
 {
     this->wbpCalcMap_.clear();
@@ -86,9 +88,9 @@ initializeWBPCalculationService()
     this->wbpCalculationService_.defineCommunication();
 }
 
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 data::WellBlockAveragePressures
-BlackoilWellModelWBP<Scalar>::
+BlackoilWellModelWBP<Scalar, IndexTraits>::
 computeWellBlockAveragePressures(const Scalar gravity) const
 {
     auto wbpResult = data::WellBlockAveragePressures{};
@@ -128,9 +130,9 @@ computeWellBlockAveragePressures(const Scalar gravity) const
     return wbpResult;
 }
 
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
-BlackoilWellModelWBP<Scalar>::
+BlackoilWellModelWBP<Scalar, IndexTraits>::
 makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
 {
     using Span = typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
@@ -179,10 +181,10 @@ makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
     };
 }
 
-template class BlackoilWellModelWBP<double>;
+template class BlackoilWellModelWBP<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class BlackoilWellModelWBP<float>;
+template class BlackoilWellModelWBP<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 }

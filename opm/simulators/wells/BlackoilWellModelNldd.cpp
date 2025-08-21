@@ -23,11 +23,13 @@
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelNldd.hpp>
 
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
+
 namespace Opm {
 
-template <typename Scalar>
+template<typename Scalar, typename IndexTraits>
 std::vector<Scalar>
-BlackoilWellModelNlddGeneric<Scalar>::
+BlackoilWellModelNlddGeneric<Scalar, IndexTraits>::
 getPrimaryVarsDomain(const int domainIdx) const
 {
     std::vector<Scalar> ret;
@@ -40,9 +42,9 @@ getPrimaryVarsDomain(const int domainIdx) const
     return ret;
 }
 
-template <typename Scalar>
+template<typename Scalar, typename IndexTraits>
 void
-BlackoilWellModelNlddGeneric<Scalar>::
+BlackoilWellModelNlddGeneric<Scalar, IndexTraits>::
 setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars)
 {
     std::size_t offset = 0;
@@ -55,9 +57,9 @@ setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars)
     assert(offset == vars.size());
 }
 
-template <typename Scalar>
+template<typename Scalar, typename IndexTraits>
 void
-BlackoilWellModelNlddGeneric<Scalar>::
+BlackoilWellModelNlddGeneric<Scalar, IndexTraits>::
 findWellDomains(const std::vector<const SubDomainIndices*>& domains)
 {
     // TODO: This loop nest may be slow for very large numbers of
@@ -91,9 +93,9 @@ findWellDomains(const std::vector<const SubDomainIndices*>& domains)
     }
 }
 
-template <typename Scalar>
+template<typename Scalar, typename IndexTraits>
 void
-BlackoilWellModelNlddGeneric<Scalar>::
+BlackoilWellModelNlddGeneric<Scalar, IndexTraits>::
 logDomains() const
 {
     // Write well/domain info to the DBG file.
@@ -113,9 +115,9 @@ logDomains() const
     }
 }
 
-template <typename Scalar>
+template<typename Scalar, typename IndexTraits>
 void
-BlackoilWellModelNlddGeneric<Scalar>::
+BlackoilWellModelNlddGeneric<Scalar, IndexTraits>::
 calcLocalIndices(const std::vector<const SubDomainIndices*>& domains)
 {
     well_local_cells_.clear();
@@ -142,9 +144,9 @@ calcLocalIndices(const std::vector<const SubDomainIndices*>& domains)
     }
 }
 
-template <typename Scalar>
+template<typename Scalar, typename IndexTraits>
 void
-BlackoilWellModelNlddGeneric<Scalar>::
+BlackoilWellModelNlddGeneric<Scalar, IndexTraits>::
 calcDomains(const std::vector<const SubDomainIndices*>& domains)
 {
     const Opm::Parallel::Communication& comm = genWellModel_.comm();
@@ -161,10 +163,10 @@ calcDomains(const std::vector<const SubDomainIndices*>& domains)
     this->calcLocalIndices(domains);
 }
 
-template class BlackoilWellModelNlddGeneric<double>;
+template class BlackoilWellModelNlddGeneric<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class BlackoilWellModelNlddGeneric<float>;
+template class BlackoilWellModelNlddGeneric<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm

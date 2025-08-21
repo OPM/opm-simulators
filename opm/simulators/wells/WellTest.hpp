@@ -31,20 +31,19 @@ namespace Opm
 {
 
 class DeferredLogger;
-struct PhaseUsage;
-template<class Scalar> class SingleWellState;
+template<typename Scalar, typename IndexTraits> class SingleWellState;
 class WellEconProductionLimits;
-template<class Scalar> class WellInterfaceGeneric;
+template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
 class WellTestState;
 
 //! \brief Class for performing well tests.
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class WellTest {
 public:
     //! \brief Constructor sets reference to well.
-    explicit WellTest(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
+    explicit WellTest(const WellInterfaceGeneric<Scalar, IndexTraits>& well) : well_(well) {}
 
-    void updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
+    void updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                                      const double simulation_time,
                                      const bool write_message_to_opmlog,
                                      WellTestState& well_test_state,
@@ -65,24 +64,24 @@ private:
     };
 
     void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                          const SingleWellState<Scalar>& ws,
+                          const SingleWellState<Scalar, IndexTraits>& ws,
                           RatioLimitCheckReport& report) const;
 
     void checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                          const SingleWellState<Scalar>& ws,
+                          const SingleWellState<Scalar, IndexTraits>& ws,
                           RatioLimitCheckReport& report) const;
 
     void checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                               const SingleWellState<Scalar>& ws,
+                               const SingleWellState<Scalar, IndexTraits>& ws,
                                RatioLimitCheckReport& report) const;
 
     template<class RatioFunc>
-    bool checkMaxRatioLimitWell(const SingleWellState<Scalar>& ws,
+    bool checkMaxRatioLimitWell(const SingleWellState<Scalar, IndexTraits>& ws,
                                 const Scalar max_ratio_limit,
                                 const RatioFunc& ratioFunc) const;
 
     template<class RatioFunc>
-    void checkMaxRatioLimitCompletions(const SingleWellState<Scalar>& ws,
+    void checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
                                        const Scalar max_ratio_limit,
                                        const RatioFunc& ratioFunc,
                                        RatioLimitCheckReport& report) const;
@@ -93,11 +92,11 @@ private:
 
     RatioLimitCheckReport
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                         const SingleWellState<Scalar>& ws,
+                         const SingleWellState<Scalar, IndexTraits>& ws,
                          DeferredLogger& deferred_logger) const;
 
 
-    const WellInterfaceGeneric<Scalar>& well_; //!< Reference to well interface
+    const WellInterfaceGeneric<Scalar, IndexTraits>& well_; //!< Reference to well interface
 };
 
 }

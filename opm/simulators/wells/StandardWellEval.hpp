@@ -39,13 +39,14 @@ class Schedule;
 class SummaryState;
 template<class Scalar> class WellContributions;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 
 template<class FluidSystem, class Indices>
 class StandardWellEval
 {
 protected:
     using Scalar = typename FluidSystem::Scalar;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
     using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices>;
     using StdWellConnections = StandardWellConnections<FluidSystem,Indices>;
     static constexpr int Bhp = PrimaryVariables::Bhp;
@@ -61,10 +62,10 @@ protected:
 public:
     using EvalWell = typename PrimaryVariables::EvalWell;
     using Eval = DenseAd::Evaluation<Scalar, Indices::numEq>;
-    using BVectorWell = typename StandardWellEquations<Scalar,Indices::numEq>::BVectorWell;
+    using BVectorWell = typename StandardWellEquations<Scalar, IndexTraits, Indices::numEq>::BVectorWell;
 
     //! \brief Returns a const reference to equation system.
-    const StandardWellEquations<Scalar,Indices::numEq>& linSys() const
+    const StandardWellEquations<Scalar, IndexTraits, Indices::numEq>& linSys() const
     { return linSys_; }
 
 protected:
@@ -77,7 +78,7 @@ protected:
     // computing the accumulation term for later use in well mass equations
     void computeAccumWell();
 
-    ConvergenceReport getWellConvergence(const WellState<Scalar>& well_state,
+    ConvergenceReport getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                                          const std::vector<Scalar>& B_avg,
                                          const Scalar maxResidualAllowed,
                                          const Scalar tol_wells,
@@ -91,7 +92,7 @@ protected:
               const std::vector<Scalar>& depth_arg,
               const bool has_polymermw);
 
-    void updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
+    void updateWellStateFromPrimaryVariables(WellState<Scalar, IndexTraits>& well_state,
                                              const SummaryState& summary_state,
                                              DeferredLogger& deferred_logger) const;
 
@@ -100,7 +101,7 @@ protected:
     // the saturations in the well bore under surface conditions at the beginning of the time step
     std::vector<Scalar> F0_;
 
-    StandardWellEquations<Scalar,Indices::numEq> linSys_; //!< Linear equation system
+    StandardWellEquations<Scalar, IndexTraits, Indices::numEq> linSys_; //!< Linear equation system
     StdWellConnections connections_; //!< Connection level values
 };
 

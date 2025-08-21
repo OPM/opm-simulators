@@ -23,6 +23,7 @@
 #define OPM_BLACKOILWELLMODEL_GASLIFT_HEADER_INCLUDED
 
 #include "opm/models/utils/basicproperties.hh"
+#include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 
 #include <memory>
@@ -33,18 +34,18 @@ namespace Opm {
 
 class DeferredLogger;
 template<class Scalar> class GroupState;
-template<class Scalar> class WellState;
+template<typename Scalar, typename IndexTraits> class WellState;
 template<class TypeTag> class WellInterface;
 
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelGasLiftGeneric
 {
 public:
-    using GLiftOptWells = std::map<std::string, std::unique_ptr<GasLiftSingleWellGeneric<Scalar>>>;
-    using GLiftProdWells = std::map<std::string, const WellInterfaceGeneric<Scalar>*>;
+    using GLiftOptWells = std::map<std::string, std::unique_ptr<GasLiftSingleWellGeneric<Scalar, IndexTraits>>>;
+    using GLiftProdWells = std::map<std::string, const WellInterfaceGeneric<Scalar, IndexTraits>*>;
     using GLiftWellStateMap = std::map<std::string, std::unique_ptr<GasLiftWellState<Scalar>>>;
-    using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
-    using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
+    using GLiftEclWells = typename GasLiftGroupInfo<Scalar, IndexTraits>::GLiftEclWells;
+    using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::GLiftSyncGroups;
 
     explicit BlackoilWellModelGasLiftGeneric(bool terminal_output)
         : terminal_output_(terminal_output)
@@ -67,18 +68,18 @@ public:
     { return this->last_glift_opt_time_ == that.last_glift_opt_time_; }
 
 protected:
-    void gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<Scalar>*>& well_container,
-                           const WellState<Scalar>& wellState,
+    void gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<Scalar, IndexTraits>*>& well_container,
+                           const WellState<Scalar, IndexTraits>& wellState,
                            DeferredLogger& deferred_logger);
 
     void gasLiftOptimizationStage2(const Parallel::Communication& comm,
                                    const Schedule& schedule,
                                    const SummaryState& summaryState,
-                                   WellState<Scalar>& wellState,
+                                   WellState<Scalar, IndexTraits>& wellState,
                                    GroupState<Scalar>& groupState,
                                    GLiftProdWells& prod_wells,
                                    GLiftOptWells& glift_wells,
-                                   GasLiftGroupInfo<Scalar>& group_info,
+                                   GasLiftGroupInfo<Scalar, IndexTraits>& group_info,
                                    GLiftWellStateMap& map,
                                    const int episodeIndex,
                                    DeferredLogger& deferred_logger);
@@ -90,25 +91,26 @@ protected:
 /// Class for handling the gaslift in the blackoil well model.
 template<typename TypeTag>
 class BlackoilWellModelGasLift :
-    public BlackoilWellModelGasLiftGeneric<GetPropType<TypeTag, Properties::Scalar>>
+    public BlackoilWellModelGasLiftGeneric<GetPropType<TypeTag, Properties::Scalar>,
+                                           typename GetPropType<TypeTag, Properties::FluidSystem>::IndexTraitsType>
 {
-    using Base = BlackoilWellModelGasLiftGeneric<GetPropType<TypeTag, Properties::Scalar>>;
-
 public:
-    using Base::glift_debug;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using Base = BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>;
+    using Base::glift_debug;
+    using GLiftEclWells = typename GasLiftGroupInfo<Scalar, IndexTraits>::GLiftEclWells;
     using GLiftOptWells = typename Base::GLiftOptWells;
     using GLiftProdWells = typename Base::GLiftProdWells;
-    using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
+    using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::GLiftSyncGroups;
     using GLiftWellStateMap =  typename Base::GLiftWellStateMap;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag>>;
+    using WellStateType = WellState<Scalar, IndexTraits>;
 
-    BlackoilWellModelGasLift(bool terminal_output,
-                             const PhaseUsage& phase_usage)
+    explicit BlackoilWellModelGasLift(bool terminal_output)
         : Base(terminal_output)
-        , phase_usage_(phase_usage)
     {}
 
     static void initGliftEclWellMap(const std::vector<WellInterfacePtr>& well_container,
@@ -118,29 +120,29 @@ public:
                                 const std::vector<WellInterfacePtr>& well_container,
                                 const std::map<std::string, Scalar>& node_pressures,
                                 const bool updatePotentials,
-                                WellState<Scalar>& wellState,
+                                WellStateType& wellState,
                                 GroupState<Scalar>& groupState,
                                 DeferredLogger& deferred_logger);
 
 private:
     void gasLiftOptimizationStage1(const Simulator& simulator,
                                    const std::vector<WellInterfacePtr>& well_container,
-                                   WellState<Scalar>& wellState,
+                                   WellStateType& wellState,
                                    GroupState<Scalar>& groupState,
                                    GLiftProdWells& prod_wells,
                                    GLiftOptWells& glift_wells,
-                                   GasLiftGroupInfo<Scalar>& group_info,
+                                   GasLiftGroupInfo<Scalar, IndexTraits>& group_info,
                                    GLiftWellStateMap& state_map,
                                    DeferredLogger& deferred_logger);
 
     // cannot be const since it accesses the non-const WellState
     void gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag>* well,
                                              const Simulator& simulator,
-                                             WellState<Scalar>& wellState,
+                                             WellStateType& wellState,
                                              GroupState<Scalar>& groupState,
                                              GLiftProdWells& prod_wells,
                                              GLiftOptWells& glift_wells,
-                                             GasLiftGroupInfo<Scalar>& group_info,
+                                             GasLiftGroupInfo<Scalar, IndexTraits>& group_info,
                                              GLiftWellStateMap& state_map,
                                              GLiftSyncGroups& groups_to_sync,
                                              DeferredLogger& deferred_logger);
@@ -148,10 +150,9 @@ private:
     void updateWellPotentials(const Simulator& simulator,
                               const std::vector<WellInterfacePtr>& well_container,
                               const std::map<std::string, Scalar>& node_pressures,
-                              WellState<Scalar>& wellState,
+                              WellState<Scalar, IndexTraits>& wellState,
                               DeferredLogger& deferred_logger);
 
-    const PhaseUsage& phase_usage_;
 };
 
 } // namespace Opm
