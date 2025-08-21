@@ -31,12 +31,12 @@ namespace Opm
 
 class DeferredLogger;
 template<class Scalar> class GroupState;
-template<class Scalar, int numWellEq, int numEq> class MultisegmentWellEquations;
+template<class Scalar, typename IndexTraits, int numWellEq, int numEq> class MultisegmentWellEquations;
 template<class FluidSystem, class Indices> class MultisegmentWellPrimaryVariables;
 class Schedule;
 class SummaryState;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-template<class Scalar> class WellState;
+template<typename Scalar, typename IndexTraits> class WellState;
 
 //! \brief Class handling assemble of the equation system for MultisegmentWell.
 template<class FluidSystem, class Indices>
@@ -53,7 +53,8 @@ class MultisegmentWellAssemble
 public:
     static constexpr int numWellEq = Indices::numPhases+1;
     using Scalar = typename FluidSystem::Scalar;
-    using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using Equations = MultisegmentWellEquations<Scalar, IndexTraits, numWellEq,Indices::numEq>;
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq+Indices::numEq>;
 
     //! \brief Constructor initializes reference to well.
@@ -62,7 +63,7 @@ public:
     {}
 
     //! \brief Assemble control equation.
-    void assembleControlEq(const WellState<Scalar>& well_state,
+    void assembleControlEq(const WellState<Scalar, IndexTraits>& well_state,
                            const GroupState<Scalar>& group_state,
                            const Schedule& schedule,
                            const SummaryState& summaryState,

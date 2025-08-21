@@ -25,17 +25,17 @@
 
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
+#include "opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp"
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 namespace Opm {
 
-template<class Scalar>
-bool WellConstraints<Scalar>::
-checkIndividualConstraints(SingleWellState<Scalar>& ws,
+template<typename Scalar, typename IndexTraits>
+bool WellConstraints<Scalar, IndexTraits>::
+checkIndividualConstraints(SingleWellState<Scalar, IndexTraits>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,
@@ -69,15 +69,16 @@ checkIndividualConstraints(SingleWellState<Scalar>& ws,
     return false;
 }
 
-template<class Scalar>
-Well::InjectorCMode WellConstraints<Scalar>::
-activeInjectionConstraint(const SingleWellState<Scalar>& ws,
+template<typename Scalar, typename IndexTraits>
+Well::InjectorCMode
+WellConstraints<Scalar, IndexTraits>::
+activeInjectionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
                           const SummaryState& summaryState,
                           bool& thp_limit_violated_but_not_switched,
                           DeferredLogger& deferred_logger,
                           const std::optional<Well::InjectionControls>& inj_controls) const
 {
-    const PhaseUsage& pu = well_.phaseUsage();
+    const auto& pu = well_.phaseUsage();
 
     const auto controls =  inj_controls.has_value() ? inj_controls.value() : well_.wellEcl().injectionControls(summaryState);
     const auto currentControl = ws.injection_cmode;
@@ -98,17 +99,20 @@ activeInjectionConstraint(const SingleWellState<Scalar>& ws,
         switch (injectorType) {
         case InjectorType::WATER:
         {
-            current_rate = ws.surface_rates[ pu.phase_pos[BlackoilPhases::Aqua] ];
+            const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+            current_rate = ws.surface_rates[water_pos];
             break;
         }
         case InjectorType::OIL:
         {
-            current_rate = ws.surface_rates[ pu.phase_pos[BlackoilPhases::Liquid] ];
+            const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+            current_rate = ws.surface_rates[oil_pos];
             break;
         }
         case InjectorType::GAS:
         {
-            current_rate = ws.surface_rates[  pu.phase_pos[BlackoilPhases::Vapour] ];
+            const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+            current_rate = ws.surface_rates[gas_pos];
             break;
         }
         default:
@@ -122,14 +126,20 @@ activeInjectionConstraint(const SingleWellState<Scalar>& ws,
     if (controls.hasControl(Well::InjectorCMode::RESV) && currentControl != Well::InjectorCMode::RESV)
     {
         Scalar current_rate = 0.0;
-        if (pu.phase_used[BlackoilPhases::Aqua])
-            current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Aqua] ];
+        if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+            const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+            current_rate += ws.reservoir_rates[water_pos];
+        }
 
-        if (pu.phase_used[BlackoilPhases::Liquid])
-            current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Liquid] ];
+        if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+            const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+            current_rate += ws.reservoir_rates[oil_pos];
+        }
 
-        if (pu.phase_used[BlackoilPhases::Vapour])
-            current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Vapour] ];
+        if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+            const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+            current_rate += ws.reservoir_rates[gas_pos];
+        }
 
         if (controls.reservoir_rate < current_rate)
             return Well::InjectorCMode::RESV;
@@ -167,16 +177,17 @@ activeInjectionConstraint(const SingleWellState<Scalar>& ws,
     return currentControl;
 }
 
-template<class Scalar>
-Well::ProducerCMode WellConstraints<Scalar>::
-activeProductionConstraint(const SingleWellState<Scalar>& ws,
+template<typename Scalar, typename IndexTraits>
+Well::ProducerCMode
+WellConstraints<Scalar, IndexTraits>::
+activeProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,
                            DeferredLogger& deferred_logger,
                            const std::optional<Well::ProductionControls>& prod_controls) const
 {
-    const PhaseUsage& pu = well_.phaseUsage();
+    const auto& pu = well_.phaseUsage();
     const auto controls = prod_controls.has_value() ? prod_controls.value() : well_.wellEcl().productionControls(summaryState);
     const auto currentControl = ws.production_cmode;
 
@@ -188,30 +199,35 @@ activeProductionConstraint(const SingleWellState<Scalar>& ws,
     }
 
     if (controls.hasControl(Well::ProducerCMode::ORAT) && currentControl != Well::ProducerCMode::ORAT) {
-        Scalar current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
+        const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+        Scalar current_rate = -ws.surface_rates[oil_pos];
         if (controls.oil_rate < current_rate)
             return Well::ProducerCMode::ORAT;
     }
 
     if (controls.hasControl(Well::ProducerCMode::WRAT) && currentControl != Well::ProducerCMode::WRAT) {
-        Scalar current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+        const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+        Scalar current_rate = -ws.surface_rates[water_pos];
         if (controls.water_rate < current_rate)
             return Well::ProducerCMode::WRAT;
     }
 
     if (controls.hasControl(Well::ProducerCMode::GRAT) && currentControl != Well::ProducerCMode::GRAT) {
-        Scalar current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]];
+        const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+        Scalar current_rate = -ws.surface_rates[gas_pos];
         if (controls.gas_rate < current_rate)
             return Well::ProducerCMode::GRAT;
     }
 
     if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
-        Scalar current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
-        current_rate -= ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+        const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+        const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+        Scalar current_rate = -ws.surface_rates[oil_pos];
+        current_rate -= ws.surface_rates[water_pos];
 
         bool skip = false;
         if (controls.liquid_rate == controls.oil_rate) {
-            const Scalar current_water_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+            const Scalar current_water_rate = ws.surface_rates[water_pos];
             if (std::abs(current_water_rate) < 1e-12) {
                 skip = true;
                 deferred_logger.debug("LRAT_ORAT_WELL", "Well " + well_.name() + " The LRAT target is equal the ORAT target and the water rate is zero, skip checking LRAT");
@@ -223,14 +239,18 @@ activeProductionConstraint(const SingleWellState<Scalar>& ws,
 
     if (controls.hasControl(Well::ProducerCMode::RESV) && currentControl != Well::ProducerCMode::RESV) {
         Scalar current_rate = 0.0;
-        if (pu.phase_used[BlackoilPhases::Aqua])
-            current_rate -= ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Aqua]];
-
-        if (pu.phase_used[BlackoilPhases::Liquid])
-            current_rate -= ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Liquid]];
-
-        if (pu.phase_used[BlackoilPhases::Vapour])
-            current_rate -= ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Vapour]];
+        if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+            const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+            current_rate -= ws.reservoir_rates[water_pos];
+        }
+        if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+            const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+            current_rate -= ws.reservoir_rates[oil_pos];
+        }
+        if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+            const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+            current_rate -= ws.reservoir_rates[gas_pos];
+        }
 
         if (controls.prediction_mode && controls.resv_rate < current_rate)
             return Well::ProducerCMode::RESV;
@@ -240,12 +260,12 @@ activeProductionConstraint(const SingleWellState<Scalar>& ws,
             const int np = well_.numPhases();
 
             std::vector<Scalar> surface_rates(np, 0.0);
-            if (pu.phase_used[BlackoilPhases::Aqua])
-                surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = controls.water_rate;
-            if (pu.phase_used[BlackoilPhases::Liquid])
-                surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = controls.oil_rate;
-            if (pu.phase_used[BlackoilPhases::Vapour])
-                surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = controls.gas_rate;
+            if (pu.phaseIsActive(IndexTraits::waterPhaseIdx))
+                surface_rates[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = controls.water_rate;
+            if (pu.phaseIsActive(IndexTraits::oilPhaseIdx))
+                surface_rates[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = controls.oil_rate;
+            if (pu.phaseIsActive(IndexTraits::gasPhaseIdx))
+                surface_rates[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = controls.gas_rate;
 
             std::vector<Scalar> voidage_rates(np, 0.0);
             calcReservoirVoidageRates(fipreg, well_.pvtRegionIdx(), surface_rates, voidage_rates);
@@ -295,10 +315,10 @@ activeProductionConstraint(const SingleWellState<Scalar>& ws,
     return currentControl;
 }
 
-template class WellConstraints<double>;
+template class WellConstraints<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class WellConstraints<float>;
+template class WellConstraints<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm

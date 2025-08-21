@@ -36,7 +36,7 @@ namespace Opm::Action {
 } // namespace Opm::Action
 
 namespace Opm {
-template<class Scalar> class BlackoilWellModelGeneric;
+template<typename Scalar, typename IndexTraits> class BlackoilWellModelGeneric;
 class EclipseState;
 class Schedule;
 struct SimulatorUpdate;
@@ -47,7 +47,7 @@ class UDQState;
 namespace Opm {
 
 //! \brief Class handling Action support in simulator
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class ActionHandler
 {
 public:
@@ -74,7 +74,7 @@ public:
                   Schedule& schedule,
                   Action::State& actionState,
                   SummaryState& summaryState,
-                  BlackoilWellModelGeneric<Scalar>& wellModel,
+                  BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel,
                   Parallel::Communication comm);
 
     /// Run all pending actions.
@@ -138,7 +138,7 @@ private:
     SummaryState& summaryState_;
 
     /// Simulation wells on this rank.
-    BlackoilWellModelGeneric<Scalar>& wellModel_;
+    BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_;
 
     /// MPI communicator object linking all simulation ranks.
     Parallel::Communication comm_;

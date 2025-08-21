@@ -31,10 +31,9 @@
 namespace Opm {
 
     class  AutoICD;
-    struct PhaseUsage;
     template<class Scalar> class SegmentState;
     class  UnitSystem;
-    template<class Scalar> class WellInterfaceGeneric;
+    template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
     class  SummaryState;
 
 } // namespace Opm
@@ -47,11 +46,12 @@ class MultisegmentWellSegments
     using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
     using Scalar = typename FluidSystem::Scalar;
     using EvalWell = typename PrimaryVariables::EvalWell;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
 
 public:
     MultisegmentWellSegments(const int numSegments,
                              const ParallelWellInfo<Scalar>& parallel_well_info,
-                             WellInterfaceGeneric<Scalar>& well);
+                             WellInterfaceGeneric<Scalar, IndexTraits>& well);
 
     void computeFluidProperties(const EvalWell& temperature,
                                 const EvalWell& saltConcentration,
@@ -132,8 +132,7 @@ public:
         return local_perforation_depth_diffs_[local_perf_index];
     }
 
-    void copyPhaseDensities(const PhaseUsage& pu,
-                            SegmentState<Scalar>& segSol) const;
+    void copyPhaseDensities(SegmentState<Scalar>& segSol) const;
 
 private:
     // TODO: trying to use the information from the Well opm-parser as much
@@ -177,7 +176,7 @@ private:
     std::vector<std::vector<EvalWell>> phase_fractions_;
     std::vector<std::vector<EvalWell>> phase_viscosities_;
 
-    WellInterfaceGeneric<Scalar>& well_;
+    WellInterfaceGeneric<Scalar, IndexTraits>& well_;
 
     void copyPhaseDensities(const unsigned    phaseIdx,
                             const std::size_t stride,

@@ -36,7 +36,7 @@
 
 namespace Opm {
 
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelNlddGeneric
 {
 public:
@@ -50,7 +50,7 @@ public:
     { return well_domain_; }
 
 protected:
-    BlackoilWellModelNlddGeneric(BlackoilWellModelGeneric<Scalar>& model)
+    BlackoilWellModelNlddGeneric(BlackoilWellModelGeneric<Scalar, IndexTraits>& model)
         : genWellModel_(model)
     {}
 
@@ -63,7 +63,7 @@ private:
 
     void calcLocalIndices(const std::vector<const SubDomainIndices*>& domains);
 
-    BlackoilWellModelGeneric<Scalar>& genWellModel_;
+    BlackoilWellModelGeneric<Scalar, IndexTraits>& genWellModel_;
 
     // Keep track of the domain of each well
     std::map<std::string, int> well_domain_{};
@@ -75,7 +75,8 @@ private:
 /// Class for handling the blackoil well model in a NLDD solver.
 template<typename TypeTag>
 class BlackoilWellModelNldd :
-    public BlackoilWellModelNlddGeneric<GetPropType<TypeTag, Properties::Scalar>>
+    public BlackoilWellModelNlddGeneric<GetPropType<TypeTag, Properties::Scalar>,
+                                        typename GetPropType<TypeTag, Properties::FluidSystem>::IndexTraitsType>
 {
 public:
     // ---------      Types      ---------
@@ -83,11 +84,14 @@ public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using PressureMatrix = typename BlackoilWellModel<TypeTag>::PressureMatrix;
     using BVector = typename BlackoilWellModel<TypeTag>::BVector;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     using Domain = SubDomain<Grid>;
 
     BlackoilWellModelNldd(BlackoilWellModel<TypeTag>& model)
-        : BlackoilWellModelNlddGeneric<Scalar>(model)
+        : BlackoilWellModelNlddGeneric<Scalar, IndexTraits>(model)
         , wellModel_(model)
     {}
 
