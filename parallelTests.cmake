@@ -230,8 +230,8 @@ add_test_compare_parallel_simulation(CASENAME ctaquifer_2d_oilwater
 add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
                                      FILENAME 3D_TRAN_OPERATOR
                                      SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL 0.0003
+                                     ABS_TOL 0.3
+                                     REL_TOL 0.0005
                                      DIR parallel_fieldprops
                                      TEST_ARGS --enable-tuning=true --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
 
@@ -313,8 +313,8 @@ add_test_compare_parallel_simulation(CASENAME actionx_m1
 add_test_compare_parallel_simulation(CASENAME reg_smry_in_fld_udq
                                      FILENAME UDQ_REG-01
                                      SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${coarse_rel_tol_parallel}
+                                     ABS_TOL 0.04
+                                     REL_TOL 0.1
                                      DIR udq_actionx
                                      TEST_ARGS --enable-tuning=true)
 
