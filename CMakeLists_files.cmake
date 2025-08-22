@@ -212,6 +212,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/GlobalWellInfo.cpp
   opm/simulators/wells/GroupEconomicLimitsChecker.cpp
   opm/simulators/wells/GroupState.cpp
+  opm/simulators/wells/GroupTargetCalculator.cpp
   opm/simulators/wells/MSWellHelpers.cpp
   opm/simulators/wells/MultisegmentWellAssemble.cpp
   opm/simulators/wells/MultisegmentWellEquations.cpp
@@ -1091,6 +1092,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/GlobalWellInfo.hpp
   opm/simulators/wells/GroupEconomicLimitsChecker.hpp
   opm/simulators/wells/GroupState.hpp
+  opm/simulators/wells/GroupTargetCalculator.hpp
   opm/simulators/wells/GuideRateHandler.hpp
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/MultisegmentWell.hpp
@@ -1288,6 +1290,8 @@ if(MPI_FOUND)
     opm/simulators/flow/ReservoirCouplingMaster.cpp
     opm/simulators/flow/ReservoirCouplingSlave.cpp
     opm/simulators/flow/ReservoirCouplingSpawnSlaves.cpp
+    opm/simulators/wells/RescoupReceiveGroupTargets.cpp
+    opm/simulators/wells/RescoupTargetCalculator.cpp
   )
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/flow/ReservoirCoupling.hpp
@@ -1295,6 +1299,8 @@ if(MPI_FOUND)
     opm/simulators/flow/ReservoirCouplingMaster.hpp
     opm/simulators/flow/ReservoirCouplingSlave.hpp
     opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp
+    opm/simulators/wells/RescoupReceiveGroupTargets.hpp
+    opm/simulators/wells/RescoupTargetCalculator.hpp
     )
   list (APPEND TEST_SOURCE_FILES
     tests/rescoup/test_chopstep.cpp

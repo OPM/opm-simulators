@@ -32,11 +32,15 @@
 
 namespace Opm {
 
+template <class Scalar>
 class ReservoirCouplingMaster {
 public:
     using MessageTag = ReservoirCoupling::MessageTag;
     using Seconds = ReservoirCoupling::Seconds;
-    using Potentials = ReservoirCoupling::Potentials;
+    using Potentials = ReservoirCoupling::Potentials<Scalar>;
+    using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
+    using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
+
     ReservoirCouplingMaster(
         const Parallel::Communication &comm,
         const Schedule &schedule,
@@ -58,6 +62,21 @@ public:
     char *getArgv(int index) const { return this->argv_[index]; }
     char **getArgv() const { return this->argv_; }
     const Parallel::Communication &getComm() const { return this->comm_; }
+    /// @brief Get the master group names associated with a slave reservoir by index.
+    ///
+    /// This method retrieves the list of master group names that are associated with a
+    /// specific slave reservoir identified by its index. The method is optimized for
+    /// performance-critical contexts like target calculation loops.
+    ///
+    /// @param slave_idx The zero-based index of the slave reservoir (must be < numSlaves())
+    /// @return A const reference to a vector of master group names for the specified slave
+    /// @throws std::runtime_error if slave_idx is out of bounds
+    ///
+    /// @note Performance: This method uses O(1) direct vector access when possible,
+    ///       falling back to O(log n) map lookup for error handling. The optimization
+    ///       is important for target calculation loops that call this method frequently.
+    /// @see RescoupTargetCalculator::calculateAndSendTargets() for primary usage context
+    const std::vector<std::string>& getMasterGroupNamesForSlave(std::size_t slave_idx) const;
     /// @brief Get the index of the master group potential for a given slave name and master group name.
     /// The index is used to map the slave group potentials to the master group potentials.
     /// @param slave_name The name of the slave reservoir.
@@ -71,18 +90,38 @@ public:
     double getSimulationStartDate() const { return this->schedule_.getStartTime(); }
     MPI_Comm getSlaveComm(int index) const { return this->master_slave_comm_[index]; }
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name);
+    int getSlaveIdx(const std::string &slave_name) const;
     const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }
+    std::map<std::string, std::vector<std::string>> &getSlaveNameToMasterGroupsMap() {
+        return this->slave_name_to_master_groups_map_;
+    }
+    void rebuildSlaveIdxToMasterGroupsVector();
+    const std::vector<std::string> &getSlaveNames() const { return this->slave_names_; }
     const double *getSlaveStartDates() { return this->slave_start_dates_.data(); }
     bool isMasterGroup(const std::string &group_name) const;
     double maybeChopSubStep(double suggested_timestep, double current_time) const;
     void maybeSpawnSlaveProcesses(int report_step);
     std::size_t numSlaveGroups(unsigned int index);
+    std::size_t numSlaves() const { return this->numSlavesStarted(); }
     std::size_t numSlavesStarted() const;
     void receiveNextReportDateFromSlaves();
     void receivePotentialsFromSlaves();
     void resizeSlaveStartDates(int size) { this->slave_start_dates_.resize(size); }
     void resizeNextReportDates(int size) { this->slave_next_report_time_offsets_.resize(size); }
     void sendNextTimeStepToSlaves(double next_time_step);
+    void sendInjectionTargetsToSlave(
+        std::size_t slave_idx,
+        const std::vector<InjectionGroupTarget>& injection_targets
+    ) const;
+    void sendNumGroupTargetsToSlave(
+        std::size_t slave_idx,
+        std::size_t num_injection_targets,
+        std::size_t num_production_targets
+    ) const;
+    void sendProductionTargetsToSlave(
+        std::size_t slave_idx,
+        const std::vector<ProductionGroupTarget>& production_targets
+    ) const;
     void setDeferredLogger(DeferredLogger *deferred_logger) {
          this->logger_.setDeferredLogger(deferred_logger);
     }
@@ -122,6 +161,16 @@ private:
     std::map<std::string, std::vector<Potentials>> slave_group_potentials_;
     // A mapping from master group names to slave names
     std::map<std::string, std::string> master_group_slave_names_;
+    // A mapping from slave names to master group names
+    // NOTE: The order of the master groups in the vector is important,
+    //   as the slaves will communicate the indices of the master groups in
+    //   the vector instead of the group names themselves.
+    // NOTE: This map is created by ReservoirCouplingSpawnSlaves.cpp
+    std::map<std::string, std::vector<std::string>> slave_name_to_master_groups_map_;
+    // Direct index-based lookup for performance optimization (O(1) instead of O(log n))
+    // This vector is populated in parallel with slave_name_to_master_groups_map_
+    // and maintains the same ordering as slave_names_ vector for consistent indexing
+    std::vector<std::vector<std::string>> slave_idx_to_master_groups_;
 };
 
 } // namespace Opm
