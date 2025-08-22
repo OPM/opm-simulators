@@ -16,13 +16,16 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <algorithm>
-#include <fmt/core.h>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <fmt/core.h>
+
+#include <algorithm>
+#include <cstddef>
 
 namespace Opm::gpuistl
 {
@@ -198,6 +201,7 @@ template class GpuBuffer<size_t>;
 template class GpuBuffer<double>;
 template class GpuBuffer<float>;
 template class GpuBuffer<int>;
+template class GpuBuffer<std::byte>;
 template class GpuBuffer<std::array<double, 3>>;
 template class GpuBuffer<std::array<float, 3>>;
 template class GpuBuffer<std::array<double, 9>>;
