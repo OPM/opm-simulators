@@ -44,8 +44,6 @@
 
 #include <fmt/format.h>
 
-#include <opm/simulators/linalg/HaugenLabs.h>
-
 namespace Opm {
 
 template <class TypeTag>
@@ -80,6 +78,8 @@ BlackoilModel(Simulator& simulator,
         OPM_THROW(std::runtime_error, "Unknown nonlinear solver option: " +
                                       param_.nonlinear_solver_);
     }
+
+    bsr_jacobian_ = bsr_new();
 }
 
 template <class TypeTag>
@@ -529,7 +529,51 @@ solveJacobianSystem(BVector& x)
         Dune::Timer perfTimer;
         perfTimer.start();
 
-        bsr_hello();
+        if(bsr_jacobian_->nnz==0)
+        {
+            bsr_info(bsr_jacobian_);
+
+            int nrows = jacobian.N();
+            int nnz   = jacobian.nonzeroes();
+            int b     = jacobian[0][0].N();
+
+            bsr_init(bsr_jacobian_,nrows,nnz,b);
+            bsr_jacobian_->dbl=&jacobian[0][0][0][0];// assuming fixed location
+
+            int *rows = bsr_jacobian_->rowptr;
+            int *cols = bsr_jacobian_->colidx;
+
+            int irow=0;
+            int icol=0;
+            rows[0]=0;
+            for(auto row=jacobian.begin(); row!=jacobian.end(); row++)
+            {
+                for(unsigned int i=0;i<row->getsize();i++)
+                {
+                    cols[icol++]=row->getindexptr()[i];
+                }
+                rows[irow+1]= rows[irow]+row->getsize();
+                irow++;
+            }
+
+            bsr_info(bsr_jacobian_);
+            //bsr_sparsity(bsr_jacobian_,"A");
+            bsr_nonzeros(bsr_jacobian_,"A->dbl");
+        }
+        else
+        {
+            printf("bsr_jacobian already initialized\n");
+            bsr_info(bsr_jacobian_);
+            bsr_nonzeros(bsr_jacobian_,"A->dbl");
+        }
+        getchar();
+
+
+
+        const double *r =&residual[0][0]; //address of first element of block vector (assumes contiguous layout)
+        vec_show(r,16,"r");
+
+
         linSolver.prepare(jacobian, residual);
 
         linear_solve_setup_time_ = perfTimer.stop();
