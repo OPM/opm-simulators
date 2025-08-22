@@ -77,6 +77,10 @@ struct EnableApiTracking { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableDebuggingChecks { using type = Properties::UndefinedProperty; };
 
+// Avoid using ElementContext-based code if possible.
+template<class TypeTag, class MyTypeTag>
+struct AvoidElementContext { using type = Properties::UndefinedProperty; };
+
 // if thermal flux boundaries are enabled an effort is made to preserve the initial
 // thermal gradient specified via the TEMPVD keyword
 template<class TypeTag, class MyTypeTag>
@@ -240,6 +244,12 @@ struct EnableExperiments<TypeTag, TTag::FlowBaseProblem>
 template<class TypeTag>
 struct EnableDebuggingChecks<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
+
+// Most modules are implemented only in terms of element contexts,
+// so this must default to false.
+template<class TypeTag>
+struct AvoidElementContext<TypeTag, TTag::FlowBaseProblem>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Properties
 
