@@ -568,7 +568,7 @@ namespace Opm {
             well->setGuideRate(&this->guideRate_);
 
             // initialize rates/previous rates to prevent zero fractions in vfp-interpolation
-            if (well->isProducer()) {
+            if (well->isProducer() && alternative_well_rate_init_) {
                 well->initializeProducerWellState(simulator_, this->wellState(), deferred_logger);
             }
             if (well->isVFPActive(deferred_logger)) {
