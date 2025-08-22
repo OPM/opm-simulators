@@ -32,11 +32,27 @@ template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::FlowBrineEnergyProblem> {
     static constexpr bool value = true;
 };
+}}
+
+
+namespace Opm {
+
+// ----------------- Main program -----------------
+
+int flowBrineEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    FlowMain<Properties::TTag::FlowBrineEnergyProblem>
+        mainfunc {argc, argv, outputCout, outputFiles};
+    return mainfunc.execute();
 }
 
-int flowBrineEnergyMain(int argc, char** argv)
+int flowBrineEnergyMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::FlowBrineEnergyProblem;
+    using TypeTag = Properties::TTag::FlowBrineEnergyProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
