@@ -46,6 +46,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 
 using namespace Opm;
 
