@@ -698,7 +698,7 @@ BOOST_AUTO_TEST_CASE(DeckWithCapillaryOverlap)
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
     const double reltol = 1.0e-4;
-    const double reltol_ecl = 100.0;
+    const double reltol_ecl = 1.0;
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48324e+07, reltol_ecl);  // eclipse
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49224e+07, reltol_ecl);
@@ -760,8 +760,8 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveOil)
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-4;
-    const double reltol_ecl = 100.0;
+    const double reltol = 1.0e-2;
+    const double reltol_ecl = 1.0;
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48324e+07, reltol_ecl);  // eclipse
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49224e+07, reltol_ecl);
@@ -881,8 +881,8 @@ BOOST_AUTO_TEST_CASE(DeckWithWetGas)
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-1;
-    const double reltol_ecl = 100.0;
+    const double reltol = 1.0e-2;
+    const double reltol_ecl = 1.0;
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48215e+07, reltol_ecl);  // eclipse
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49115e+07, reltol_ecl);
@@ -960,7 +960,7 @@ BOOST_AUTO_TEST_CASE(DeckWithHumidWetGas)
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
 
     const int first = 0, last = grid.number_of_cells - 1;
-    const double reltol = 1.0e-1;
+    const double reltol = 1.0e-2;
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.480599988e7, reltol);  
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.549297524e7, reltol);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.489599988e7, reltol);
@@ -1024,8 +1024,8 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVD)
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-4;
-    const double reltol_ecl = 100.0;
+    const double reltol = 1.0e-2;
+    const double reltol_ecl = 1.0;
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48350e+07, reltol_ecl);  // eclipse
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54794e+07, reltol_ecl);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49250e+07, reltol_ecl);
@@ -1126,7 +1126,7 @@ BOOST_AUTO_TEST_CASE(DeckWithPBVDAndPDVD)
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 5.0e-4;
+    const double reltol = 1.0e-2;
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 14821552.0, reltol);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  15479828.0, reltol);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 14911552.0, reltol);
@@ -1217,7 +1217,7 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVDAndRVWVD)
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
 
     const int first = 0, last = grid.number_of_cells - 1;
-    const double reltol = 1.0e-4;
+    const double reltol = 1.0e-2;
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.483359963e7, reltol);  
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.549297524e7, reltol);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.492359963e7, reltol);

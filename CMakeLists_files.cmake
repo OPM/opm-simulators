@@ -596,6 +596,7 @@ list (APPEND TEST_DATA_FILES
   tests/wells_stopped.data
   tests/relpermDiagnostics.DATA
   tests/norne_pvt.data
+  tests/norne_pvt_expected.txt
   tests/wells_no_perforation.data
   tests/matr33.txt
   tests/offset_map_matrix.txt
