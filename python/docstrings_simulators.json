@@ -1,4 +1,5 @@
 {
+    "_usage_information": "This file defines documentation for OPM Python simulator bindings. It uses a template format where {{name}} is replaced with the simulator name (e.g., BlackOilSimulator) and {{class}} with the internal class name (e.g., PyBlackOilSimulator). The 'simulators' section defines available simulators, 'constructors' defines shared constructor documentation, and 'common_methods' defines documentation for methods shared by all simulators. This file is processed by: (1) opm-common/python/generate_docstring_hpp.py to generate C++ header files with docstrings, (2) opm-python-documentation/.../sphinx_ext_docstrings.py to generate Sphinx documentation. To add a new simulator, add an entry to the 'simulators' section with 'class', 'name', and 'doc' fields.",
     "simulators": {
         "BlackOil": {
             "class": "PyBlackOilSimulator",
