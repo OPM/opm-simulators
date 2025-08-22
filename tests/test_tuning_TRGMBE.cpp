@@ -7,7 +7,7 @@
 #include <limits>
 #include <algorithm>
 
-#define BOOST_TEST_MODULE TestTuningXXXMBE
+#define BOOST_TEST_MODULE TestTuningTRGMBE
 #include <boost/test/unit_test.hpp>
 
 struct Column : public std::vector<std::string>
@@ -114,10 +114,10 @@ struct ColumnData
     std::map<std::string, Column*> columns;
 };
 
-BOOST_AUTO_TEST_CASE(CheckMassBalanceWithinXXXMBE)
+BOOST_AUTO_TEST_CASE(CheckMassBalanceWithinTRGMBE)
 {
     //std::string case_name(boost::unit_test::framework::master_test_suite().argv[1]);
-    std::string case_name("01_TUNING_XXXMBE");
+    std::string case_name("01_TUNING_TRGMBE");
     std::string file_name = case_name + ".INFOITER";
 
     ColumnData data(file_name);
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE(CheckMassBalanceWithinXXXMBE)
     BOOST_TEST_MESSAGE("---------------------------------------------------------------------------");
 
 
-    BOOST_CHECK_MESSAGE( max_mb[0] < 1.0e-6, "max_mb[0] (= " << max_mb[0] << ") is not strictly less than 1.0e-6" );
+    BOOST_CHECK_MESSAGE( max_mb[0] < 1.0e-7, "max_mb[0] (= " << max_mb[0] << ") is not strictly less than 1.0e-7" );
     BOOST_CHECK_MESSAGE( max_mb[1] < 1.0e-8, "max_mb[1] (= " << max_mb[1] << ") is not strictly less than 1.0e-8"  );
     BOOST_CHECK_MESSAGE( max_mb[2] < 1.0e-10, "max_mb[2] (= " << max_mb[1] << ") is not strictly less than 1.0e-10"  );
 }
