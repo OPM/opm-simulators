@@ -435,6 +435,17 @@ public:
             simulator.model().applyInitialSolution();
             FlowProblemType::writeOutput(true);
         }
+
+        if (!eclState.getIOConfig().initOnly()) {
+            if (!this->enableTuning_ && eclState.getSimulationConfig().anyTUNING()) {
+                OpmLog::info("\nThe deck has TUNING in the SCHEDULE section, but "
+                             "it is ignored due\nto the flag --enable-tuning=false. "
+                             "Set this flag to true to activate it.\n"
+                             "Manually tuning the simulator with the TUNING keyword may "
+                             "increase run time.\nIt is recommended using the simulator's "
+                             "default tuning (--enable-tuning=false).");
+            }
+        }
     }
 
     /*!
