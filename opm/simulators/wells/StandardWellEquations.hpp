@@ -35,14 +35,14 @@ namespace Opm
 {
 
 template<class Scalar> class ParallelWellInfo;
-template<class Scalar, int numEq> class StandardWellEquationAccess;
+template<class Scalar, typename IndexTraits, int numEq> class StandardWellEquationAccess;
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
 #endif
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
+template<typename Scalar, typename IndexTraits> class WellState;
 
-template<class Scalar, int numEq>
+template<typename Scalar, typename IndexTraits, int numEq>
 class StandardWellEquations
 {
 public:
@@ -113,9 +113,9 @@ public:
                                   const BVector& weights,
                                   const int pressureVarIndex,
                                   const bool use_well_weights,
-                                  const WellInterfaceGeneric<Scalar>& well,
+                                  const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                                   const int bhp_var_index,
-                                  const WellState<Scalar>& well_state) const;
+                                  const WellState<Scalar, IndexTraits>& well_state) const;
 
     //! \brief Get the number of blocks of the C and B matrices.
     unsigned int getNumBlocks() const;
@@ -130,7 +130,7 @@ public:
     }
 
 private:
-    friend class StandardWellEquationAccess<Scalar,numEq>;
+    friend class StandardWellEquationAccess<Scalar, IndexTraits, numEq>;
 
     // two off-diagonal matrices
     OffDiagMatWell duneB_;

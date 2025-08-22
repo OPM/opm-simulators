@@ -44,7 +44,7 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
                        const std::vector<WellInterfacePtr>& well_container,
                        const std::map<std::string, Scalar>& node_pressures,
                        const bool updatePotentials,
-                       WellState<Scalar>& wellState,
+                       WellStateType& wellState,
                        GroupState<Scalar>& groupState,
                        DeferredLogger& deferred_logger)
 {
@@ -92,7 +92,6 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
             simulator.vanguard().summaryState(),
             simulator.episodeIndex(),
             simulator.model().newtonMethod().numIterations(),
-            phase_usage_,
             deferred_logger,
             wellState,
             groupState,
@@ -124,12 +123,12 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
                                         deferred_logger);
 
         if constexpr (glift_debug) {
-            std::vector<WellInterfaceGeneric<Scalar>*> wc;
+            std::vector<WellInterfaceGeneric<Scalar, IndexTraits>*> wc;
             wc.reserve(well_container.size());
             std::transform(well_container.begin(), well_container.end(),
                            std::back_inserter(wc),
                            [](const auto& w)
-                           { return static_cast<WellInterfaceGeneric<Scalar>*>(w.get()); });
+                           { return static_cast<WellInterfaceGeneric<Scalar, IndexTraits>*>(w.get()); });
             this->gliftDebugShowALQ(wc,
                                     wellState,
                                     deferred_logger);
@@ -145,11 +144,11 @@ void
 BlackoilWellModelGasLift<TypeTag>::
 gasLiftOptimizationStage1(const Simulator& simulator,
                           const std::vector<WellInterfacePtr>& well_container,
-                          WellState<Scalar>& wellState,
+                          WellStateType& wellState,
                           GroupState<Scalar>& groupState,
                           GLiftProdWells& prod_wells,
                           GLiftOptWells &glift_wells,
-                          GasLiftGroupInfo<Scalar>& group_info,
+                          GasLiftGroupInfo<Scalar, IndexTraits>& group_info,
                           GLiftWellStateMap& state_map,
                           DeferredLogger& deferred_logger)
 {
@@ -271,11 +270,11 @@ void
 BlackoilWellModelGasLift<TypeTag>::
 gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag>* well,
                                     const Simulator& simulator,
-                                    WellState<Scalar>& wellState,
+                                    WellStateType& wellState,
                                     GroupState<Scalar>& groupState,
                                     GLiftProdWells& prod_wells,
                                     GLiftOptWells& glift_wells,
-                                    GasLiftGroupInfo<Scalar>& group_info,
+                                    GasLiftGroupInfo<Scalar, IndexTraits>& group_info,
                                     GLiftWellStateMap& state_map,
                                     GLiftSyncGroups& sync_groups,
                                     DeferredLogger& deferred_logger)
@@ -318,7 +317,7 @@ BlackoilWellModelGasLift<TypeTag>::
 updateWellPotentials(const Simulator& simulator,
                      const std::vector<WellInterfacePtr>& well_container,
                      const std::map<std::string, Scalar>& node_pressures,
-                     WellState<Scalar>& wellState,
+                     WellStateType& wellState,
                      DeferredLogger& deferred_logger)
 {
     auto well_state_copy = wellState;

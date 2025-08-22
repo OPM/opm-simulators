@@ -43,17 +43,17 @@
 namespace Opm
 {
 
-template<class FluidSystem>
+template<typename FluidSystem>
 WellAssemble<FluidSystem>::
 WellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well)
     : well_(well)
 {}
 
-template<class FluidSystem>
+template<typename FluidSystem>
 template<class EvalWell>
 void
 WellAssemble<FluidSystem>::
-assembleControlEqProd(const WellState<Scalar>& well_state,
+assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
                       const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
@@ -65,33 +65,32 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
                       DeferredLogger& deferred_logger) const
 {
     const auto current = well_state.well(well_.indexOfWell()).production_cmode;
-    const auto& pu = well_.phaseUsage();
     const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor() *
                                     well_state[well_.name()].efficiency_scaling_factor;
 
     switch (current) {
     case Well::ProducerCMode::ORAT: {
         assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-        const EvalWell rate = -rates[BlackoilPhases::Liquid];
+        const EvalWell rate = -rates[FluidSystem::oilPhaseIdx];
         control_eq = rate - controls.oil_rate;
         break;
     }
     case Well::ProducerCMode::WRAT: {
         assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-        const EvalWell rate = -rates[BlackoilPhases::Aqua];
+        const EvalWell rate = -rates[FluidSystem::waterPhaseIdx];
         control_eq = rate - controls.water_rate;
         break;
     }
     case Well::ProducerCMode::GRAT: {
         assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-        const EvalWell rate = -rates[BlackoilPhases::Vapour];
+        const EvalWell rate = -rates[FluidSystem::gasPhaseIdx];
         control_eq = rate - controls.gas_rate;
         break;
     }
     case Well::ProducerCMode::LRAT: {
         assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
         assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-        EvalWell rate = -rates[BlackoilPhases::Aqua] - rates[BlackoilPhases::Liquid];
+        EvalWell rate = -rates[FluidSystem::waterPhaseIdx] - rates[FluidSystem::oilPhaseIdx];
         control_eq = rate - controls.liquid_rate;
         break;
     }
@@ -106,8 +105,8 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
         std::vector<Scalar> convert_coeff(well_.numPhases(), 1.0);
         well_.rateConverter().calcCoeff(/*fipreg*/ 0, well_.pvtRegionIdx(), well_state.well(well_.indexOfWell()).surface_rates, convert_coeff);
         for (int phase = 0; phase < 3; ++phase) {
-            if (pu.phase_used[phase]) {
-                const int pos = pu.phase_pos[phase];
+            if (FluidSystem::phaseIsActive(phase)) {
+                const int pos = FluidSystem::canonicalToActivePhaseIdx(phase);
                 total_rate -= rates[phase] * convert_coeff[pos]; // Note different indices.
             }
         }
@@ -116,13 +115,16 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
         } else {
             std::vector<Scalar> hrates(well_.numPhases(), 0.);
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                hrates[pu.phase_pos[Water]] = controls.water_rate;
+                const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                hrates[water_pos] = controls.water_rate;
             }
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                hrates[pu.phase_pos[Oil]] = controls.oil_rate;
+                const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                hrates[oil_pos] = controls.oil_rate;
             }
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                hrates[pu.phase_pos[Gas]] = controls.gas_rate;
+                const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                hrates[gas_pos] = controls.gas_rate;
             }
             std::vector<Scalar> hrates_resv(well_.numPhases(), 0.);
             well_.rateConverter().calcReservoirVoidageRates(/*fipreg*/ 0, well_.pvtRegionIdx(), hrates, hrates_resv);
@@ -148,10 +150,12 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
         // they are required (THP controlled well). But for the
         // group production control things we must pass only the
         // active phases' rates.
-        std::vector<EvalWell> active_rates(pu.num_phases);
+        const auto& pu = well_.phaseUsage();
+        std::vector<EvalWell> active_rates(pu.numActivePhases());
         for (int canonical_phase = 0; canonical_phase < 3; ++canonical_phase) {
-            if (pu.phase_used[canonical_phase]) {
-                active_rates[pu.phase_pos[canonical_phase]] = rates[canonical_phase];
+            if (FluidSystem::phaseIsActive(canonical_phase)) {
+                const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(canonical_phase);
+                active_rates[phase_pos] = rates[canonical_phase];
             }
         }
         auto rCoeff = [this, &group_state](const RegionId id, const int region,
@@ -191,11 +195,11 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
     }
 }
 
-template<class FluidSystem>
+template<typename FluidSystem>
 template<class EvalWell>
 void
 WellAssemble<FluidSystem>::
-assembleControlEqInj(const WellState<Scalar>& well_state,
+assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
                      const GroupState<Scalar>& group_state,
                      const Schedule& schedule,
                      const SummaryState& summaryState,
@@ -208,7 +212,6 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
 {
     auto current = well_state.well(well_.indexOfWell()).injection_cmode;
     const InjectorType injectorType = controls.injector_type;
-    const auto& pu = well_.phaseUsage();
     const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor() *
                                     well_state[well_.name()].efficiency_scaling_factor;
 
@@ -225,15 +228,18 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
 
         switch (injectorType) {
         case InjectorType::WATER: {
-            coeff = convert_coeff[pu.phase_pos[BlackoilPhases::Aqua]];
+            const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            coeff = convert_coeff[phase_pos];
             break;
         }
         case InjectorType::OIL: {
-            coeff = convert_coeff[pu.phase_pos[BlackoilPhases::Liquid]];
+            const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+            coeff = convert_coeff[phase_pos];
             break;
         }
         case InjectorType::GAS: {
-            coeff = convert_coeff[pu.phase_pos[BlackoilPhases::Vapour]];
+            const int phase_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            coeff = convert_coeff[phase_pos];
             break;
         }
         default:
@@ -287,7 +293,7 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
 
 #define INSTANTIATE_METHODS(A,...)                                        \
 template void WellAssemble<A>::                                           \
-assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar>&,  \
+assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar, BlackOilDefaultFluidSystemIndices>&,  \
                                    const GroupState<typename A::Scalar>&, \
                                    const Schedule&,                       \
                                    const SummaryState&,                   \
@@ -298,7 +304,7 @@ assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar>&,  \
                                    __VA_ARGS__&,                          \
                                    DeferredLogger&) const;                \
 template void WellAssemble<A>::                                           \
-assembleControlEqInj<__VA_ARGS__>(const WellState<typename A::Scalar>&,   \
+assembleControlEqInj<__VA_ARGS__>(const WellState<typename A::Scalar, BlackOilDefaultFluidSystemIndices>&,   \
                                   const GroupState<typename A::Scalar>&,  \
                                   const Schedule&,                        \
                                   const SummaryState&,                    \

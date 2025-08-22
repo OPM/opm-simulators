@@ -41,6 +41,8 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellMatcher.hpp>
 
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
+
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -166,13 +168,13 @@ namespace {
 
 namespace Opm {
 
-template<class Scalar>
-ActionHandler<Scalar>::
+template<typename Scalar, typename IndexTraits>
+ActionHandler<Scalar, IndexTraits>::
 ActionHandler(EclipseState& ecl_state,
               Schedule& schedule,
               Action::State& actionState,
               SummaryState& summaryState,
-              BlackoilWellModelGeneric<Scalar>& wellModel,
+              BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel,
               Parallel::Communication comm)
     : ecl_state_(ecl_state)
     , schedule_(schedule)
@@ -182,8 +184,8 @@ ActionHandler(EclipseState& ecl_state,
     , comm_(comm)
 {}
 
-template<class Scalar>
-void ActionHandler<Scalar>::
+template<typename Scalar, typename IndexTraits>
+void ActionHandler<Scalar, IndexTraits>::
 applyActions(const int reportStep,
              const double sim_time,
              const TransFunc& transUp)
@@ -265,8 +267,8 @@ applyActions(const int reportStep,
     }
 }
 
-template<class Scalar>
-void ActionHandler<Scalar>::
+template<typename Scalar, typename IndexTraits>
+void ActionHandler<Scalar, IndexTraits>::
 applySimulatorUpdate(const int report_step,
                      const SimulatorUpdate& sim_update,
                      const TransFunc& updateTrans,
@@ -290,8 +292,8 @@ applySimulatorUpdate(const int report_step,
     }
 }
 
-template<class Scalar>
-void ActionHandler<Scalar>::
+template<typename Scalar, typename IndexTraits>
+void ActionHandler<Scalar, IndexTraits>::
 evalUDQAssignments(const unsigned episodeIdx,
                    UDQState& udq_state)
 {
@@ -303,10 +305,10 @@ evalUDQAssignments(const unsigned episodeIdx,
                      udq_state);
 }
 
-template class ActionHandler<double>;
+template class ActionHandler<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class ActionHandler<float>;
+template class ActionHandler<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm

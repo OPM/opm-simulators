@@ -70,7 +70,7 @@ extendEval(const Eval& in) const
 template<class FluidSystem, class Indices>
 void
 StandardWellEval<FluidSystem,Indices>::
-updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
+updateWellStateFromPrimaryVariables(WellState<Scalar, IndexTraits>& well_state,
                                     const SummaryState& summary_state,
                                     DeferredLogger& deferred_logger) const
 {
@@ -79,9 +79,6 @@ updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
     WellBhpThpCalculator(baseif_).
             updateThp(connections_.rho(),
                       [this,&well_state]() { return this->baseif_.getALQ(well_state); },
-                      {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
-                       FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
-                       FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
                       well_state, summary_state, deferred_logger);
 }
 
@@ -98,7 +95,7 @@ computeAccumWell()
 template<class FluidSystem, class Indices>
 ConvergenceReport
 StandardWellEval<FluidSystem,Indices>::
-getWellConvergence(const WellState<Scalar>& well_state,
+getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                    const std::vector<Scalar>& B_avg,
                    const Scalar maxResidualAllowed,
                    const Scalar tol_wells,
