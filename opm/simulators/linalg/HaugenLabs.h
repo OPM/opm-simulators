@@ -26,7 +26,19 @@ void bsr_info(bsr_matrix *A);
 void bsr_sparsity(const bsr_matrix *A, const char *name);
 void bsr_nonzeros(bsr_matrix *A, const char *name);
 
-void bsr_hello();
+
+typedef
+struct bildu_prec
+{
+    bsr_matrix *L;
+    bsr_matrix *D;
+    bsr_matrix *U;
+}
+bildu_prec;
+
+bildu_prec *bildu_new();
+void bildu_init(bildu_prec *P, bsr_matrix *A);
+void bildu_info(bildu_prec *P);
 
 
 void vec_show(const double *x, int n, const char *name);
