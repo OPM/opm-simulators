@@ -558,7 +558,13 @@ solveJacobianSystem(BVector& x)
 
             bsr_info(bsr_jacobian_);
             //bsr_sparsity(bsr_jacobian_,"A");
-            bsr_nonzeros(bsr_jacobian_,"A->dbl");
+            //bsr_nonzeros(bsr_jacobian_,"A->dbl");
+            bildu_prec *prec_ = bildu_new();
+            bildu_init(prec_, bsr_jacobian_);
+            bildu_info(prec_);
+            bsr_sparsity(prec_->L,"L");
+            bsr_sparsity(prec_->D,"D");
+            bsr_sparsity(prec_->U,"U");
         }
         else
         {
