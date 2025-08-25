@@ -536,6 +536,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (flexibleSolver_.empty()) {
                 return true;
             }
+
             if (!flexibleSolver_[activeSolverNum_].solver_) {
                 return true;
             }
