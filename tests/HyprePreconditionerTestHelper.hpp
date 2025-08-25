@@ -28,6 +28,7 @@
 #include <dune/istl/bvector.hh>
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
+#include <dune/istl/owneroverlapcopy.hh>
 
 #include <opm/simulators/linalg/HyprePreconditioner.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
@@ -102,7 +103,7 @@ inline void testHyprePreconditioner(bool use_gpu)
     prm.put("use_gpu", use_gpu ? 1 : 0);
 
     // Create preconditioner
-    auto prec = std::make_shared<Hypre::HyprePreconditioner<Matrix, Vector, Vector>>(matrix, prm);
+    auto prec = std::make_shared<Hypre::HyprePreconditioner<Matrix, Vector, Vector,Dune::Amg::SequentialInformation>>(matrix, prm, Dune::Amg::SequentialInformation());
 
     // Create solver
     double reduction = 1e-8;
