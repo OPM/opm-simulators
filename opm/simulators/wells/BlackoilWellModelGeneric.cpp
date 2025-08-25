@@ -1125,10 +1125,9 @@ assignInjectionWellTargets(const Well& well, data::WellControlLimits& limits) co
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
-assignDynamicWellStatus(data::Wells& wsrpt,
-                        const int reportStepIndex) const
+assignDynamicWellStatus(data::Wells& wsrpt) const
 {
-    this->loopOwnedWells([this, reportStepIndex, &wsrpt]
+    this->loopOwnedWells([this, &wsrpt]
                          (const auto wellID,
                           const Well& well)
     {
