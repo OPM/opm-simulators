@@ -313,6 +313,8 @@ public:
         modelParam_.tolerance_cnv_relaxed_ = tuning.XXXCNV;
         modelParam_.tolerance_mb_ = tuning.TRGMBE;
         modelParam_.tolerance_mb_relaxed_ = tuning.XXXMBE;
+        modelParam_.newton_max_iter_ = tuning.NEWTMX;
+        modelParam_.newton_min_iter_ = tuning.NEWTMN;
         if (terminalOutput_) {
             const auto msg = fmt::format("Tuning SimulatorFullyImplicitBlackoil tolerances: "
                                          "MB: {:.2e}, CNV: {:.2e}",
