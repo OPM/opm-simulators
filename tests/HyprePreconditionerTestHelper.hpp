@@ -78,23 +78,19 @@ void setupLaplace2d(int N, Matrix& mat)
     }
 }
 
-inline void testHyprePreconditioner(bool use_gpu)
+// Generic templated test function
+template<class MatrixType, class VectorType>
+inline void testHyprePreconditionerImpl(const MatrixType& matrix, bool use_gpu)
 {
     constexpr int N = 100; // 100x100 grid
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
-    using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
-
-    // Create matrix
-    Matrix matrix;
-    setupLaplace2d(N, matrix);
 
     // Create vectors
-    Vector x(N*N), b(N*N);
+    VectorType x(N*N), b(N*N);
     x = 100.0;  // Initial guess
     b = 0.0;    // RHS
 
     // Create operator
-    using Operator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
+    using Operator = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
     Operator op(matrix);
 
     // Set up HYPRE parameters
@@ -102,13 +98,13 @@ inline void testHyprePreconditioner(bool use_gpu)
     prm.put("use_gpu", use_gpu ? 1 : 0);
 
     // Create preconditioner
-    auto prec = std::make_shared<Hypre::HyprePreconditioner<Matrix, Vector, Vector>>(matrix, prm);
+    auto prec = std::make_shared<Hypre::HyprePreconditioner<MatrixType, VectorType, VectorType>>(matrix, prm);
 
     // Create solver
     double reduction = 1e-8;
     int maxit = 300;
     int verbosity = 0;
-    Dune::LoopSolver<Vector> solver(op, *prec, reduction, maxit, verbosity);
+    Dune::LoopSolver<VectorType> solver(op, *prec, reduction, maxit, verbosity);
 
     // Solve
     Dune::InverseOperatorResult res;

@@ -31,6 +31,136 @@
 namespace Opm
 {
 
+namespace {
+// Populate DUNE AMG parameters under the given root prefix.
+inline void setupDuneAMG(PropertyTree& prm, const std::string& root)
+{
+    using namespace std::string_literals;
+    prm.put(root + "alpha", prm.get<double>(root + "alpha", 0.333333333333));
+    prm.put(root + "relaxation", prm.get<double>(root + "relaxation", 1.0));
+    prm.put(root + "iterations", prm.get<int>(root + "iterations", 1));
+    prm.put(root + "coarsenTarget", prm.get<int>(root + "coarsenTarget", 1200));
+    prm.put(root + "pre_smooth", prm.get<int>(root + "pre_smooth", 1));
+    prm.put(root + "post_smooth", prm.get<int>(root + "post_smooth", 1));
+    prm.put(root + "beta", prm.get<double>(root + "beta", 0.0));
+    prm.put(root + "smoother", prm.get<std::string>(root + "smoother", "ilu0"s));
+    prm.put(root + "verbosity", prm.get<int>(root + "verbosity", 0));
+    prm.put(root + "maxlevel", prm.get<int>(root + "maxlevel", 15));
+    prm.put(root + "skip_isolated", prm.get<int>(root + "skip_isolated", 0));
+    // We request to accumulate data to 1 process always as our matrix
+    // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
+    // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
+    prm.put(root + "accumulate", prm.get<int>(root + "accumulate", 1));
+    prm.put(root + "prolongationdamping", prm.get<double>(root + "prolongationdamping", 1.0));
+    prm.put(root + "maxdistance", prm.get<int>(root + "maxdistance", 2));
+    prm.put(root + "maxconnectivity", prm.get<int>(root + "maxconnectivity", 15));
+    prm.put(root + "maxaggsize", prm.get<int>(root + "maxaggsize", 6));
+    prm.put(root + "minaggsize", prm.get<int>(root + "minaggsize", 4));
+}
+
+// Populate Hypre BoomerAMG defaults under the given root prefix.
+// These defaults mirror HyprePreconditioner.hpp
+inline void setupHypreAMG(PropertyTree& prm, const std::string& root, bool useGpu)
+{
+    prm.put(root + "print_level", prm.get<int>(root + "print_level", 0));
+    prm.put(root + "max_iter", prm.get<int>(root + "max_iter", 1));
+    prm.put(root + "strong_threshold", prm.get<double>(root + "strong_threshold", 0.5));
+    prm.put(root + "agg_trunc_factor", prm.get<double>(root + "agg_trunc_factor", 0.3));
+    prm.put(root + "interp_type", prm.get<int>(root + "interp_type", 6));
+    prm.put(root + "max_levels", prm.get<int>(root + "max_levels", 15));
+    prm.put(root + "tolerance", prm.get<double>(root + "tolerance", 0.0));
+
+    prm.put(root + "use_gpu", useGpu);
+    if (useGpu) {
+        prm.put(root + "relax_type", prm.get<int>(root + "relax_type", 16));
+        prm.put(root + "coarsen_type", prm.get<int>(root + "coarsen_type", 8));
+        prm.put(root + "agg_num_levels", prm.get<int>(root + "agg_num_levels", 0));
+        prm.put(root + "agg_interp_type", prm.get<int>(root + "agg_interp_type", 6));
+    } else {
+        prm.put(root + "relax_type", prm.get<int>(root + "relax_type", 13));
+        prm.put(root + "coarsen_type", prm.get<int>(root + "coarsen_type", 10));
+        prm.put(root + "agg_num_levels", prm.get<int>(root + "agg_num_levels", 1));
+        prm.put(root + "agg_interp_type", prm.get<int>(root + "agg_interp_type", 4));
+    }
+}
+
+// Populate AMGX AMG defaults under the given root prefix.
+// These defaults mirror AmgxPreconditioner.hpp (AmgxConfig)
+inline void setupAMGXAMG(PropertyTree& prm, const std::string& root)
+{
+    using namespace std::string_literals;
+    prm.put(root + "determinism_flag", prm.get<int>(root + "determinism_flag", 0));
+    prm.put(root + "print_grid_stats", prm.get<int>(root + "print_grid_stats", 0));
+    prm.put(root + "print_solve_stats", prm.get<int>(root + "print_solve_stats", 0));
+    prm.put(root + "solver", prm.get<std::string>(root + "solver", "AMG"s));
+    prm.put(root + "algorithm", prm.get<std::string>(root + "algorithm", "CLASSICAL"s));
+    prm.put(root + "interpolator", prm.get<std::string>(root + "interpolator", "D2"s));
+    prm.put(root + "selector", prm.get<std::string>(root + "selector", "PMIS"s));
+    prm.put(root + "smoother", prm.get<std::string>(root + "smoother", "BLOCK_JACOBI"s));
+    prm.put(root + "presweeps", prm.get<int>(root + "presweeps", 3));
+    prm.put(root + "postsweeps", prm.get<int>(root + "postsweeps", 3));
+    prm.put(root + "strength_threshold", prm.get<double>(root + "strength_threshold", 0.5));
+    prm.put(root + "max_iters", prm.get<int>(root + "max_iters", 1));
+    prm.put(root + "setup_frequency", prm.get<int>(root + "setup_frequency", Opm::Parameters::Get<Opm::Parameters::CprReuseInterval>()));
+}
+
+// Decide and configure the GPU AMG backend. Throws if none available.
+inline void setGpuAmgBackend(PropertyTree& prm,
+                             const std::string& typeKey,
+                             const std::string& root)
+{
+    using namespace std::string_literals;
+
+    // Respect explicit request if user already set a backend
+    std::string requested = prm.get(typeKey, "amg"s);
+    std::transform(requested.begin(), requested.end(), requested.begin(), ::tolower);
+
+    if (requested == "amgx") {
+#if HAVE_AMGX
+        prm.put(typeKey, "amgx"s);
+        setupAMGXAMG(prm, root);
+        return;
+#else
+        OPM_THROW(std::invalid_argument, "Requested AMGX, but AMGX support is not available in this build.");
+#endif
+    }
+
+    if (requested == "hypre") {
+#if HAVE_HYPRE
+#  if HYPRE_USING_CUDA || HYPRE_USING_HIP
+        prm.put(typeKey, "hypre"s);
+        setupHypreAMG(prm, root, true);
+        return;
+#  else
+        OPM_THROW(std::invalid_argument, "Requested Hypre on GPU, but Hypre was built without CUDA/HIP support.");
+#  endif
+#else
+        OPM_THROW(std::invalid_argument, "Requested Hypre, but Hypre support is not available in this build.");
+#endif
+    }
+
+#if HAVE_AMGX
+    prm.put(typeKey, "amgx"s);
+    setupAMGXAMG(prm, root);
+    return;
+#elif HAVE_HYPRE
+#  if HYPRE_USING_CUDA || HYPRE_USING_HIP
+    prm.put(typeKey, "hypre"s);
+    setupHypreAMG(prm, root, true);
+    return;
+#  else
+    OPM_THROW(std::invalid_argument,
+              "GPU accelerator selected, but Hypre is built without GPU support. "
+              "Enable AMGX or build Hypre with CUDA/HIP, or use a different preconditioner (e.g., DILU by setting --linear-solver-configuration=dilu).");
+#  endif
+#else
+    OPM_THROW(std::invalid_argument,
+              "GPU accelerator selected, but no GPU AMG backend is available. "
+              "Enable AMGX or build Hypre with CUDA/HIP, or use a different preconditioner (e.g., DILU by setting --linear-solver-configuration=dilu).");
+#endif
+}
+} // anonymous namespace
+
 /// Set up a property tree intended for FlexibleSolver by either reading
 /// the tree from a JSON file or creating a tree giving the default solver
 /// and preconditioner. If the latter, the parameters --linear-solver-reduction,
@@ -50,7 +180,27 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
             OPM_THROW(std::invalid_argument, "JSON file " + conf + " does not exist.");
         }
         try {
-            return PropertyTree(conf);
+            auto prm = PropertyTree(conf);
+            using namespace std::string_literals;
+            auto preconditionerType = prm.get("preconditioner.type", "cpr"s);
+            std::transform(preconditionerType.begin(), preconditionerType.end(), preconditionerType.begin(), ::tolower);
+
+            if (preconditionerType == "cpr" || preconditionerType == "cprt" ||
+                preconditionerType == "cprw" || preconditionerType == "cprwt") {
+                auto coarsesolverType = prm.get("preconditioner.coarsesolver.preconditioner.type", "amg"s);
+                std::transform(coarsesolverType.begin(), coarsesolverType.end(), coarsesolverType.begin(), ::tolower);
+
+                // Choose coarsesolver AMG backend based on accelerator backend and available AMG backends
+                if (p.linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU ||
+                    coarsesolverType == "amgx" || coarsesolverType == "hypre") {
+                    setGpuAmgBackend(prm,
+                                            "preconditioner.coarsesolver.preconditioner.type",
+                                            "preconditioner.coarsesolver.preconditioner.");
+                } else {
+                    setupDuneAMG(prm, "preconditioner.coarsesolver.preconditioner.");
+                }
+            }
+            return prm;
         }
         catch (...) {
             OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " + conf);
@@ -156,26 +306,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.coarsesolver.solver", "loopsolver"s);
     prm.put("preconditioner.coarsesolver.verbosity", 0);
     prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
-    prm.put("preconditioner.coarsesolver.preconditioner.alpha", 0.333333333333);
-    prm.put("preconditioner.coarsesolver.preconditioner.relaxation", 1.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.iterations", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget", 1200);
-    prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.post_smooth", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.beta", 0.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ilu0"s);
-    prm.put("preconditioner.coarsesolver.preconditioner.verbosity", 0);
-    prm.put("preconditioner.coarsesolver.preconditioner.maxlevel", 15);
-    prm.put("preconditioner.coarsesolver.preconditioner.skip_isolated", 0);
-    // We request to accumulate data to 1 process always as our matrix
-    // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
-    // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
-    prm.put("preconditioner.coarsesolver.preconditioner.accumulate", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.prolongationdamping", 1.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.maxdistance", 2);
-    prm.put("preconditioner.coarsesolver.preconditioner.maxconnectivity", 15);
-    prm.put("preconditioner.coarsesolver.preconditioner.maxaggsize", 6);
-    prm.put("preconditioner.coarsesolver.preconditioner.minaggsize", 4);
+    setupDuneAMG(prm, "preconditioner.coarsesolver.preconditioner.");
     return prm;
 }
 
@@ -198,34 +329,28 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     }
     prm.put("preconditioner.pre_smooth", 0);
     prm.put("preconditioner.post_smooth", 1);
-    prm.put("preconditioner.finesmoother.type", "paroverilu0"s);
+    // Choose finesmoother based on accelerator backend
+    if (p.linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU) {
+        prm.put("preconditioner.finesmoother.type", "dilu"s);
+    } else {
+        prm.put("preconditioner.finesmoother.type", "paroverilu0"s);
+    }
     prm.put("preconditioner.finesmoother.relaxation", 1.0);
     prm.put("preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.maxiter", 1);
     prm.put("preconditioner.coarsesolver.tol", 1e-1);
     prm.put("preconditioner.coarsesolver.solver", "loopsolver"s);
     prm.put("preconditioner.coarsesolver.verbosity", 0);
-    prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
-    prm.put("preconditioner.coarsesolver.preconditioner.alpha", 0.333333333333);
-    prm.put("preconditioner.coarsesolver.preconditioner.relaxation", 1.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.iterations", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget", 1200);
-    prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.post_smooth", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.beta", 0.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ilu0"s);
-    prm.put("preconditioner.coarsesolver.preconditioner.verbosity", 0);
-    prm.put("preconditioner.coarsesolver.preconditioner.maxlevel", 15);
-    prm.put("preconditioner.coarsesolver.preconditioner.skip_isolated", 0);
-    // We request to accumulate data to 1 process always as our matrix
-    // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
-    // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
-    prm.put("preconditioner.coarsesolver.preconditioner.accumulate", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.prolongationdamping", 1.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.maxdistance", 2);
-    prm.put("preconditioner.coarsesolver.preconditioner.maxconnectivity", 15);
-    prm.put("preconditioner.coarsesolver.preconditioner.maxaggsize", 6);
-    prm.put("preconditioner.coarsesolver.preconditioner.minaggsize", 4);
+    // Choose coarsesolver AMG backend based on accelerator backend and available AMG backends
+    if (p.linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU) {
+        setGpuAmgBackend(prm,
+                                "preconditioner.coarsesolver.preconditioner.type",
+                                "preconditioner.coarsesolver.preconditioner.");
+        return prm;
+    } else {
+        prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
+        setupDuneAMG(prm, "preconditioner.coarsesolver.preconditioner.");
+    }
     return prm;
 }
 
@@ -239,27 +364,20 @@ setupAMG([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
     prm.put("solver", getSolverString(p));
-    prm.put("preconditioner.type", "amg"s);
-    prm.put("preconditioner.alpha", 0.333333333333);
-    prm.put("preconditioner.relaxation", 1.0);
+
+    // Choose AMG backend based on accelerator backend and available AMG backends
+    if (p.linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU ||
+        prm.get("preconditioner.type", "amg"s) == "amgx"s ||
+        prm.get("preconditioner.type", "amg"s) == "hypre"s) {
+        setGpuAmgBackend(prm, "preconditioner.type", "preconditioner.");
+    } else {
+        prm.put("preconditioner.type", "amg"s);
+        setupDuneAMG(prm, "preconditioner.");
+        // Override fields that differ for standalone AMG (compared to CPR coarse solver)
+        prm.put("preconditioner.beta", 1e-5);
+        prm.put("preconditioner.prolongationdamping", 1.6);
+}
     prm.put("preconditioner.iterations", 20);
-    prm.put("preconditioner.coarsenTarget", 1200);
-    prm.put("preconditioner.pre_smooth", 1);
-    prm.put("preconditioner.post_smooth", 1);
-    prm.put("preconditioner.beta", 1e-5);
-    prm.put("preconditioner.smoother", "ilu0"s);
-    prm.put("preconditioner.verbosity", 0);
-    prm.put("preconditioner.maxlevel", 15);
-    prm.put("preconditioner.skip_isolated", 0);
-    // We request to accumulate data to 1 process always as our matrix
-    // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
-    // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
-    prm.put("preconditioner.accumulate", 1);
-    prm.put("preconditioner.prolongationdamping", 1.6);
-    prm.put("preconditioner.maxdistance", 2);
-    prm.put("preconditioner.maxconnectivity", 15);
-    prm.put("preconditioner.maxaggsize", 6);
-    prm.put("preconditioner.minaggsize", 4);
     return prm;
 }
 
