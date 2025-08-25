@@ -884,6 +884,7 @@ updateEclWellsConstraints(const int              timeStepIdx,
         auto& ws = this->wellState().well(wellIdx);
         ws.updateStatus(well.getStatus());
         ws.update_type_and_targets(well, st);
+        ws.events.addEvent(ScheduleEvents::WELL_STATUS_CHANGE);
     });
 }
 
@@ -1801,9 +1802,11 @@ updateWellPotentials(const int reportStepIdx,
                                              + ScheduleEvents::NEW_WELL
                                              + ScheduleEvents::PRODUCTION_UPDATE
                                              + ScheduleEvents::INJECTION_UPDATE;
-        const auto& events = schedule()[reportStepIdx].wellgroup_events();
-        const bool event = events.hasEvent(well->name(), ScheduleEvents::ACTIONX_WELL_EVENT) ||
-                           (report_step_starts_ && events.hasEvent(well->name(), effective_events_mask));
+        const auto& eventsSchedule = schedule()[reportStepIdx].wellgroup_events();
+        const auto& eventsWell = this->wellState().well(well->indexOfWell()).events;
+        const bool event = eventsSchedule.hasEvent(well->name(), ScheduleEvents::ACTIONX_WELL_EVENT) ||
+                           (report_step_starts_ && eventsSchedule.hasEvent(well->name(), effective_events_mask)) ||
+                           eventsWell.hasEvent(effective_events_mask);
         const bool needPotentialsForGuideRates = well->underPredictionMode() && (!onlyAfterEvent || event);
         const bool needPotentialsForOutput = !onlyAfterEvent && (needed_for_summary || write_restart_file);
         const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates;
