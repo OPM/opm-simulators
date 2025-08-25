@@ -395,10 +395,7 @@ protected:
     ///
     /// \param[in,out] wsrpt Well solution object.  On exit, holds current
     /// values for \code data::Well::dynamicStatus \endcode.
-    ///
-    /// \param[in] reportStepIdx Zero-based index of current report step.
-    void assignDynamicWellStatus(data::Wells& wsrpt,
-                                 const int reportStepIdx) const;
+    void assignDynamicWellStatus(data::Wells& wsrpt) const;
 
     /// Assign basic result quantities for shut connections of wells owned
     /// by current rank.
