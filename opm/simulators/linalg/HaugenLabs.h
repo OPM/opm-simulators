@@ -38,6 +38,8 @@ bildu_prec;
 
 bildu_prec *bildu_new();
 void bildu_init(bildu_prec *P, bsr_matrix *A);
+void bildu_factorize(bildu_prec *P, bsr_matrix *A);
+void bildu_apply3(bildu_prec *P, double *x);
 void bildu_info(bildu_prec *P);
 
 

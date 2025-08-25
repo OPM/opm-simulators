@@ -361,6 +361,7 @@ private:
     std::vector<bool> wasSwitched_;
 
     bsr_matrix *bsr_jacobian_; // HaugenLabs matrix object
+    bildu_prec *bildu_prec_;         // HaugenLabs preconditioner object
 };
 
 } // namespace Opm
