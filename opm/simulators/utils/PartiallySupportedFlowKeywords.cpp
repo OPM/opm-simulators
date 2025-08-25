@@ -202,12 +202,6 @@ partiallySupported()
             },
          },
          {
-            "RPTRST",
-            {
-               {1,{false, allow_values<std::string> {"ALLPROPS", "BASIC=0", "BASIC=1", "BASIC=2", "BASIC=3", "BASIC=4", "BASIC=5", "BASIC=6", "DEN", "KRG", "KRO", "KRW", "RSSAT", "RVSAT", "VISC"}, "RPTRST(RPTRST): invalid option or unsupported integer control format"}}, // MNEMONIC_LIST
-            },
-         },
-         {
             "SATOPTS",
             {
                {1,{true, allow_values<std::string> {"HYSTER", "DIRECT"}, "SATOPTS(IRREVERS/SURFTENS): options not supported"}}, // IRREVERS
