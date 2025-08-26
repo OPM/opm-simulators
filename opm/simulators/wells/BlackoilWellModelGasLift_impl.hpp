@@ -331,10 +331,10 @@ updateWellPotentials(const Simulator& simulator,
 
         const auto it = node_pressures.find(well->wellEcl().groupName());
         if (it != node_pressures.end()) {
-            std::vector<Scalar> potentials;
             std::string cur_exc_msg;
             auto cur_exc_type = ExceptionType::NONE;
             try {
+                std::vector<Scalar> potentials;
                 well->computeWellPotentials(simulator, well_state_copy, potentials, deferred_logger);
                 auto& ws = wellState.well(well->indexOfWell());
                 for (int p = 0; p < np; ++p) {

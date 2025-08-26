@@ -548,8 +548,8 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
         const Scalar low = 10.0 * unit::barsa;
         const Scalar high = 800.0 * unit::barsa;
         const Scalar flo_tolerance = flo_rel_tol * std::fabs(flo_samples.back());
-        int iteration = 0;
         try {
+            int iteration = 0;
             const Scalar solved_bhp = RegulaFalsiBisection<ErrorPolicy>::
                     solve(eq, low, high, max_iteration, flo_tolerance, iteration);
             bhp_samples.push_back(solved_bhp);
@@ -610,7 +610,6 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
     const Scalar low = bhp_samples[sign_change_index + 1];
     const Scalar high = bhp_samples[sign_change_index];
     const Scalar bhp_tolerance = 0.01 * unit::barsa;
-    int iteration = 0;
     if (low == high) {
         // We are in the high flow regime where the bhp_samples
         // are all equal to the bhp_limit.
@@ -620,6 +619,7 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
         return std::nullopt;
     }
     try {
+        int iteration = 0;
         const Scalar solved_bhp = RegulaFalsiBisection<ErrorPolicy>::
                 solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
         if constexpr (extraBhpAtThpLimitOutput) {
@@ -773,8 +773,8 @@ computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& fra
     // Solve for the proper solution in the given interval.
     const int max_iteration = 100;
     const Scalar bhp_tolerance = 0.01 * unit::barsa;
-    int iteration = 0;
     try {
+        int iteration = 0;
         const Scalar solved_bhp = RegulaFalsiBisection<ThrowOnError>::
             solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
         return solved_bhp;
@@ -1053,10 +1053,9 @@ bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
     constexpr int sample_number = 1000;
     constexpr Scalar interval = 1E5; 
     Scalar eq_low = eq(min_thp);
-    Scalar eq_high = 0.0;
     for (int i = 0; i < sample_number + 1; ++i) {
         max_thp = min_thp + interval * i;
-        eq_high = eq(max_thp);
+        const Scalar eq_high = eq(max_thp);
         if (eq_high * eq_low <= 0.) {
             bracket_found = true;
             min_thp = max_thp - interval;

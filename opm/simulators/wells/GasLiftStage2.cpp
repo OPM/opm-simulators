@@ -111,10 +111,10 @@ addOrRemoveALQincrement_(GradMap &grad_map,
     if (it == this->well_state_map_.end())
         return;
 
-    GasLiftWellState<Scalar>& state = *(it->second.get());
     const GradInfo& gi = grad_map.at(well_name);
     if (this->debug) {
         auto new_alq = gi.alq;
+        const GasLiftWellState<Scalar>& state = *(it->second.get());
         auto old_alq = state.alq();
         const std::string msg = fmt::format("well {} : {} ALQ increment, "
             "old alq: {}, new alq: {}",
@@ -1182,7 +1182,6 @@ computeDelta(const std::string& well_name)
     // compute the delta on wells on own rank
     if (this->parent.well_state_map_.count(well_name) > 0) {
         const GradInfo& gi = this->parent.dec_grads_.at(well_name);
-        GasLiftWellState<Scalar>& state = *(this->parent.well_state_map_.at(well_name).get());
         GasLiftSingleWell& gs_well = *(this->parent.stage1_wells_.at(well_name).get());
         const WellInterfaceGeneric<Scalar>& well = gs_well.getWell();
         // only get deltas for wells owned by this rank
@@ -1190,6 +1189,7 @@ computeDelta(const std::string& well_name)
             const auto& well_ecl = well.wellEcl();
             Scalar factor = well_ecl.getEfficiencyFactor() *
                             this->well_state[well_name].efficiency_scaling_factor;
+            const GasLiftWellState<Scalar>& state = *(this->parent.well_state_map_.at(well_name).get());
             auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
             delta_oil = factor * (gi.new_oil_rate - state.oilRate());
             delta_gas = factor * (gi.new_gas_rate - state.gasRate());
