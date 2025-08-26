@@ -264,9 +264,6 @@ assembleDefaultPressureEq(const int seg,
     // TODO: we might be able to add member variables to store these values, then we update well state
     // after converged
 
-    auto& ws = well_state.well(baseif_.indexOfWell());
-    auto& segments = ws.segments;
-
     if (this->frictionalPressureLossConsidered()) {
         const auto friction_pressure_drop = segments_.getFrictionPressureLoss(seg);
         if (reverseFlow){
@@ -276,7 +273,8 @@ assembleDefaultPressureEq(const int seg,
                 assemblePressureEqExtraDerivatives(seg, seg_upwind, extra_derivatives, linSys_);
         }
         pressure_equation -= friction_pressure_drop;
-        segments.pressure_drop_friction[seg] = friction_pressure_drop.value();
+        auto& ws = well_state.well(baseif_.indexOfWell());
+        ws.segments.pressure_drop_friction[seg] = friction_pressure_drop.value();
     }
 
     // contribution from the outlet segment

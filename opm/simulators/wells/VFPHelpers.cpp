@@ -578,7 +578,7 @@ intersectWithIPR(const VFPProdTable& table,
     }
     // find largest flo (flo_x) for which y = bhp(flo) + (flo-a)/b = 0 and dy/dflo > 0
     Scalar flo_x = -1.0;
-    Scalar flo0, flo1;
+    Scalar flo0;
     Scalar y0, y1;
     flo0 = 0.0; // start by checking flo=0
     auto flo_i = findInterpData(flo0, table.getFloAxis());
@@ -587,7 +587,7 @@ intersectWithIPR(const VFPProdTable& table,
 
     const std::vector<double>& flos = table.getFloAxis();
     for (size_t i = 0; i < flos.size(); ++i) {
-        flo1 = flos[i];
+        const auto flo1 = flos[i];
         flo_i = findInterpData(flo1, flos);
         bhp_i = interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
         y1 = adjust_bhp(bhp_i.value) + (flo1 - ipr_a)/ipr_b;
