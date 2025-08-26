@@ -56,8 +56,10 @@ struct OutputMode { static constexpr auto value = "all"; };
 // between writing restart files
 struct RestartWritingInterval { static constexpr int value = 0xffffff; }; // disable
 
-struct HyNeConfigFile {static constexpr auto value = "foo.json"; }; 
-struct UseHyNe {static constexpr bool value = false; }; 
+// Path to the config file containing all Hybrid Newton parameters
+struct HyNeConfigFile { static constexpr auto value = "foo.json"; }; 
+// Wheter or not to use Hybrid Newton nonlinear preconditioning
+struct UseHyNe { static constexpr bool value = false; }; 
 
 } // namespace Opm::Parameters
 
