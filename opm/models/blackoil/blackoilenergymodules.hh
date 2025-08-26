@@ -264,7 +264,7 @@ public:
                                   const FluidState& fluidState)
     {
         if constexpr (enableEnergy) {
-            priVars[temperatureIdx] = fluidState.temperature(/*phaseIdx=*/0);
+            priVars[temperatureIdx] = getValue(fluidState.temperature(/*phaseIdx=*/0));
         }
     }
 

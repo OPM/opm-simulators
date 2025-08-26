@@ -1,6 +1,7 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
 /*
-  Copyright 2015 SINTEF ICT, Applied Mathematics.
-  Copyright 2015 Statoil ASA.
+  Copyright 2025 NORCE Research AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -67,22 +68,66 @@ struct Scaler {
     }
 };
 
+struct Transform {
+    enum class Type { None, Log, Log10, Log1p } type = Type::None;
+
+    Transform() = default;
+    explicit Transform(const std::string& name) {
+        if (name == "log10") type = Type::Log10;
+        else if (name == "log") type = Type::Log;
+        else if (name == "log1p") type = Type::Log1p;
+        else type = Type::None;
+    }
+
+    double apply(double raw_value) const {
+        switch (type) {
+            case Type::Log10: return std::log10(raw_value);
+            case Type::Log: return std::log(raw_value);
+            case Type::Log1p: return std::log1p(raw_value);
+            case Type::None:
+            default: return raw_value;
+        }
+    }
+
+    double applyInverse(double transformed_value) const {
+        switch (type) {
+            case Type::Log10: return std::pow(10.0, transformed_value);
+            case Type::Log: return std::exp(transformed_value);
+            case Type::Log1p: return std::expm1(transformed_value);
+            case Type::None:
+            default: return transformed_value;
+        }
+    }
+};
 
 
-  struct FeatureSpec {
-      std::string unit;
-      std::string transform = "none"; // "log", "log10", "log1p", etc.
-      Scaler scaler;
-  };
+struct FeatureSpec {
+    Transform transform;   // replace string transform with Transform struct
+    Scaler scaler;
 
-  struct HybridNewtonConfig {
-      std::string model_path;
-      std::vector<int> cell_indices;
-      std::vector<double> apply_times;
+    FeatureSpec() = default;
+    FeatureSpec(const std::string& transform_name, const Scaler& scaler_)
+      : transform(transform_name), scaler(scaler_) {}
+};
 
-      std::unordered_map<std::string, FeatureSpec> input_features;
-      std::unordered_map<std::string, FeatureSpec> output_features;
-  };
+struct HybridNewtonConfig {
+    std::string model_path;
+    std::string cell_indices_file;
+    std::vector<double> apply_times;
+
+    std::vector<std::pair<std::string, FeatureSpec>> input_features;
+    std::vector<std::pair<std::string, FeatureSpec>> output_features;
+
+    bool hasInputFeature(const std::string& name) const {
+        return std::any_of(input_features.begin(), input_features.end(),
+                           [&](const auto& p) { return p.first == name; });
+    }
+
+    bool hasOutputFeature(const std::string& name) const {
+        return std::any_of(output_features.begin(), output_features.end(),
+                           [&](const auto& p) { return p.first == name; });
+    }
+};
 
 } // namespace Opm
 
