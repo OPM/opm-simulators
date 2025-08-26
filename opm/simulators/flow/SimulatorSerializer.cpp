@@ -223,8 +223,8 @@ void SimulatorSerializer::checkSerializedCmdLine(const std::string& current,
                                   curr_strings.begin(), curr_strings.end(),
                                   std::back_inserter(difference));
 
-    std::vector<std::string> only_stored, only_curr;
     if (!difference.empty()) {
+        std::vector<std::string> only_stored, only_curr;
         for (std::size_t i = 0; i < difference.size(); ) {
             auto stored_it = std::find(stored_strings.begin(),
                                        stored_strings.end(), difference[i]);

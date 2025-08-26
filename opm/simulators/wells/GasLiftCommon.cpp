@@ -52,8 +52,7 @@ displayDebugMessageOnRank0_(const std::string& msg) const
 {
     // This output should be identical for all ranks.
 
-    if (   (!this->debug_output_only_on_rank0)
-        || (this->debug_output_only_on_rank0 && this->comm_.rank() == 0) ) {
+    if (!this->debug_output_only_on_rank0 || this->comm_.rank() == 0)  {
         displayDebugMessage_(msg);
     }
 }

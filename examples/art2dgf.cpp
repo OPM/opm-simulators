@@ -27,8 +27,6 @@
 
 #include <algorithm>
 #include <fstream>
-#include <iomanip>
-#include <memory>
 #include <stdexcept>
 #include <sstream>
 #include <string>
@@ -70,7 +68,7 @@ namespace Ewoms {
             // remove comments
             auto commentPos = curLine.find("%");
             if (commentPos != curLine.npos) {
-                curLine = curLine.substr(0, commentPos);
+                curLine.erase(commentPos);
             }
 
             // remove leading whitespace
@@ -86,7 +84,7 @@ namespace Ewoms {
             while (curLine.size() > numTrailingSpaces
                    && std::isspace(curLine[curLine.size() - numTrailingSpaces]))
                 ++numTrailingSpaces;
-            curLine = curLine.substr(0, curLine.size() - numTrailingSpaces);
+            curLine.erase(numTrailingSpaces);
 
             // a section of the file is finished, go to the next one
             if (curLine == "$") {
