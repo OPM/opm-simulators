@@ -99,7 +99,7 @@ public:
 private:
     struct ConnData
     {
-        ConnData(const Connection& conn);
+        explicit ConnData(const Connection& conn);
 
         int I, J, K;
         std::vector<Scalar> data;
