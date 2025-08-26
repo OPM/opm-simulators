@@ -77,8 +77,11 @@ void setupLaplace2d(int N, Matrix& mat)
     }
 }
 
+//==============================================================================
+// Test preconditioner solve CPU input
+//==============================================================================
 template<typename MatrixScalar, typename VectorScalar>
-void testAmgxPreconditioner()
+void testAmgxPreconditionerCpuInput()
 {
     constexpr int N = 100; // 100x100 grid
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<MatrixScalar, 1, 1>>;
@@ -90,17 +93,15 @@ void testAmgxPreconditioner()
 
     // Create vectors
     Vector x(N*N), b(N*N);
-    x = 100.0;    // Initial guess
-    b = 0.0;      // RHS
+    x = 0.0;    // Initial guess
+    b = 1.0;    // RHS
 
     // Create operator
     using Operator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
     Operator op(matrix);
 
-    // Set up AMGX parameters
-    Opm::PropertyTree prm;
-
     // Create preconditioner
+    Opm::PropertyTree prm;
     auto prec = std::make_shared<Amgx::AmgxPreconditioner<Matrix, Vector, Vector>>(matrix, prm);
 
     // Create solver
@@ -116,6 +117,191 @@ void testAmgxPreconditioner()
     // Check convergence
     BOOST_CHECK(res.converged);
     BOOST_CHECK_LT(res.reduction, 1e-8);
+
+    // Check solution has expected behavior (maximum at the center, decreasing outward)
+    double center_value = x[N/2 + (N/2)*N];
+    BOOST_CHECK_GT(center_value, 0.0);
+
+    // Check a few points away from center (should have smaller values)
+    double near_center = x[(N/2+1) + (N/2)*N];
+    double far_from_center = x[0]; // Corner
+
+    BOOST_CHECK_LT(near_center, center_value);
+    BOOST_CHECK_LT(far_from_center, near_center);
+}
+
+//==============================================================================
+// Test preconditioner update CPU input
+//==============================================================================
+template<typename MatrixScalar, typename VectorScalar>
+void testAmgxPreconditionerUpdateCpuInput()
+{
+    using namespace Opm::gpuistl;
+
+    constexpr int N = 20;
+    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<MatrixScalar, 1, 1>>;
+    using Vector = Dune::BlockVector<Dune::FieldVector<VectorScalar, 1>>;
+
+    // Create matrix
+    Matrix matrix;
+    setupLaplace2d(N, matrix);
+
+    // Create vectors
+    Vector x(N*N);
+    Vector b(N*N);
+    x = 0.0;
+    b = 1.0;
+
+    // Create preconditioner and apply it with initial values
+    Opm::PropertyTree prm;
+    auto prec = std::make_shared<Amgx::AmgxPreconditioner<Matrix, Vector, Vector>>(matrix, prm);
+    prec->apply(x, b);
+
+    // Update matrix with the new values and update the preconditioner
+    matrix *= 2.0;
+    prec->update();
+
+    // Apply again after update but with same initial guess
+    Vector x2(N*N);
+    x2 = 0.0;
+    prec->apply(x2, b);
+
+    // Verify that the vectors are different
+    bool all_same = true;
+    for (size_t i = 0; i < x.size(); ++i) {
+        if (std::abs(x[i] - x2[i]) > 1e-10) {
+            all_same = false;
+            break;
+        }
+    }
+
+    // The vectors should be different after applying preconditioner with updated matrix
+    BOOST_CHECK(!all_same);
+}
+
+
+//==============================================================================
+// Test preconditioner solve GPU input
+//==============================================================================
+template<typename MatrixScalar, typename VectorScalar>
+void testAmgxPreconditionerGpuInput()
+{
+    using namespace Opm::gpuistl;
+
+    constexpr int N = 100; // 100x100 grid
+    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<MatrixScalar, 1, 1>>;
+    using Vector = Dune::BlockVector<Dune::FieldVector<VectorScalar, 1>>;
+    using GpuMatrixType = GpuSparseMatrix<MatrixScalar>;
+    using GpuVectorType = GpuVector<VectorScalar>;
+
+    // Create matrix on CPU first
+    Matrix matrix;
+    setupLaplace2d(N, matrix);
+
+    // Convert to GPU matrix
+    GpuMatrixType gpu_matrix = GpuMatrixType::fromMatrix(matrix);
+
+    // Create cpu vectors
+    Vector x(N*N);
+    Vector b(N*N);
+    x = 0.0;
+    b = 1.0;
+
+    // Convert to GPU vectors
+    GpuVectorType gpu_x(x);
+    GpuVectorType gpu_b(b);
+
+    // Create GPU operator
+    using GpuOperator = Dune::MatrixAdapter<GpuMatrixType, GpuVectorType, GpuVectorType>;
+    auto op = std::make_shared<GpuOperator>(gpu_matrix);
+
+    // Set up AMGX parameters
+    Opm::PropertyTree prm;
+
+    // Create preconditioner
+    auto prec = std::make_shared<Amgx::AmgxPreconditioner<GpuMatrixType, GpuVectorType, GpuVectorType>>(gpu_matrix, prm);
+
+    // Create solver
+    double reduction = 1e-8;
+    int maxit = 300;
+    int verbosity = 0;
+    Dune::LoopSolver<GpuVectorType> solver(*op, *prec, reduction, maxit, verbosity);
+
+    // Solve the system
+    Dune::InverseOperatorResult res;
+    solver.apply(gpu_x, gpu_b, res);
+
+    // Check convergence
+    BOOST_CHECK(res.converged);
+    BOOST_CHECK_LT(res.reduction, reduction);
+
+    // Retrieve solution from GPU
+    auto gpu_x_host = gpu_x.asStdVector();
+
+    // Check solution has expected behavior (maximum at the center, decreasing outward)
+    double center_value = gpu_x_host[N/2 + (N/2)*N];
+    BOOST_CHECK_GT(center_value, 0.0);
+
+    // Check a few points away from center (should have smaller values)
+    double near_center = gpu_x_host[(N/2+1) + (N/2)*N];
+    double far_from_center = gpu_x_host[0]; // Corner
+
+    BOOST_CHECK_LT(near_center, center_value);
+    BOOST_CHECK_LT(far_from_center, near_center);
+}
+
+
+//==============================================================================
+// Test preconditioner update GPU input
+//==============================================================================
+template<typename MatrixScalar, typename VectorScalar>
+void testAmgxPreconditionerUpdateGpuInput()
+{
+    using namespace Opm::gpuistl;
+
+    constexpr int N = 20;
+    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<MatrixScalar, 1, 1>>;
+    using GpuMatrixType = GpuSparseMatrix<MatrixScalar>;
+    using GpuVectorType = GpuVector<VectorScalar>;
+
+    // Create matrix
+    Matrix matrix;
+    setupLaplace2d(N, matrix);
+    GpuMatrixType gpu_matrix = GpuMatrixType::fromMatrix(matrix);
+
+    // Create vectors
+    GpuVectorType gpu_x(N*N);
+    GpuVectorType gpu_b(N*N);
+    gpu_x = 0.0;
+    gpu_b = 1.0;
+
+    // Create preconditioner and apply it with initial values
+    Opm::PropertyTree prm;
+    auto prec = std::make_shared<Amgx::AmgxPreconditioner<GpuMatrixType, GpuVectorType, GpuVectorType>>(gpu_matrix, prm);
+    prec->apply(gpu_x, gpu_b);
+
+    // Update GPU matrix with the new values and update the preconditioner
+    gpu_matrix.getNonZeroValues() *= 2.0;
+    prec->update();
+
+    // Apply again after update but with same initial guess
+    GpuVectorType gpu_x2(N*N);
+    gpu_x2 = 0.0;
+    prec->apply(gpu_x2, gpu_b);
+
+    // Verify that the vectors are different
+    auto x1 = gpu_x.asStdVector();
+    auto x2 = gpu_x2.asStdVector();
+    bool all_same = true;
+    for (size_t i = 0; i < x1.size(); ++i) {
+        if (std::abs(x1[i] - x2[i]) > 1e-10) {
+            all_same = false;
+            break;
+        }
+    }
+
+    // The vectors should be different after applying preconditioner with updated matrix
+    BOOST_CHECK(!all_same);
 }
 
 #endif // TEST_AMGXPRECONDITIONER_HELPER_HPP

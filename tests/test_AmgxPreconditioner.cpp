@@ -29,23 +29,68 @@
 #include "AmgxPreconditionerTestHelper.hpp"
 
 
-BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerMatDoubleVecDouble)
+//==============================================================================
+// Test preconditioner solve CPU input
+//==============================================================================
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerCpuInputMatFloatVecFloat)
 {
-    testAmgxPreconditioner<double, double>();
+    testAmgxPreconditionerCpuInput<float, float>();
 }
 
-// This test is disabled because it crashes the program with the following error:
-// "Mixed precision modes not currently supported for CUDA 10.1 or later."
-//BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerMatFloatVecDouble)
-//{
-//    testAmgxPreconditioner<float, double>();
-//}
-
-
-BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerMatFloatVecFloat)
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerCpuInputMatDoubleVecDouble)
 {
-    testAmgxPreconditioner<float, float>();
+    testAmgxPreconditionerCpuInput<double, double>();
 }
+
+// Note: Mixed precision tests disabled due to CUDA limitation
+// BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerMatFloatVecDouble)
+// {
+//     testAmgxPreconditionerCpuInput<float, double>();
+// }
+
+
+//==============================================================================
+// Test preconditioner update CPU input
+//==============================================================================
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerUpdateCpuInputFloat)
+{
+    testAmgxPreconditionerUpdateCpuInput<float, float>();
+}
+
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerUpdateCpuInputDouble)
+{
+    testAmgxPreconditionerUpdateCpuInput<double, double>();
+}
+
+
+//==============================================================================
+// Test preconditioner solve GPU input
+//==============================================================================
+
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerGpuInputMatFloatVecFloat)
+{
+    testAmgxPreconditionerGpuInput<float, float>();
+}
+
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerGpuInputMatDoubleVecDouble)
+{
+    testAmgxPreconditionerGpuInput<double, double>();
+}
+
+
+//==============================================================================
+// Test preconditioner update GPU input
+//==============================================================================
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerUpdateGpuInputMatFloatVecFloat)
+{
+    testAmgxPreconditionerUpdateGpuInput<float, float>();
+}
+
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerUpdateGpuInputMatDoubleVecDouble)
+{
+    testAmgxPreconditionerUpdateGpuInput<double, double>();
+}
+
 
 bool init_unit_test_func()
 {
