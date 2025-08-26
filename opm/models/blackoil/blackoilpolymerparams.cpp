@@ -231,7 +231,6 @@ initFromState(const EclipseState& eclState)
                 shearMultiplier[i] *= refViscMult;
                 shearMultiplier[i] -= 1;
                 shearMultiplier[i] /= (refViscMult - 1);
-                shearMultiplier[i] = shearMultiplier[i];
             }
             plyshlogShearEffectRefMultiplier_[pvtRegionIdx].resize(waterVelocity.size());
             plyshlogShearEffectRefLogVelocity_[pvtRegionIdx].resize(waterVelocity.size());
