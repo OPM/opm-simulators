@@ -136,7 +136,7 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Absolute maximum tolerated for residuals without cutting the time step size");
     Parameters::Register<Parameters::RelaxedMaxPvFraction<Scalar>>
         ("The fraction of the pore volume of the reservoir "
-         "where the volumetric error (CNV) may be voilated "
+         "where the volumetric error (CNV) may be violated "
          "during strict Newton iterations.");
     Parameters::Register<Parameters::ToleranceMb<Scalar>>
         ("Tolerated mass balance error relative to total mass present");

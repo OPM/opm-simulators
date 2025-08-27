@@ -70,7 +70,8 @@ checkGroupInjectionConstraints(const Group& group,
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       phasePos,
-                                                                      /*isInjector*/true);
+                                                                      /*isInjector*/true,
+                                                                      wellModel_.summaryState());
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -99,7 +100,8 @@ checkGroupInjectionConstraints(const Group& group,
                                                                   well_state,
                                                                   reportStepIdx,
                                                                   phasePos,
-                                                                  /*isInjector*/true);
+                                                                  /*isInjector*/true,
+                                                                  wellModel_.summaryState());
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
 
@@ -129,7 +131,8 @@ checkGroupInjectionConstraints(const Group& group,
                                                                          well_state,
                                                                          reportStepIdx,
                                                                          phasePos,
-                                                                         /*isInjector*/false);
+                                                                         /*isInjector*/false,
+                                                                         wellModel_.summaryState());
 
             // sum over all nodes
             production_Rate = wellModel_.comm().sum(production_Rate);
@@ -140,7 +143,8 @@ checkGroupInjectionConstraints(const Group& group,
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       phasePos,
-                                                                      /*isInjector*/true);
+                                                                      /*isInjector*/true,
+                                                                      wellModel_.summaryState());
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -165,18 +169,21 @@ checkGroupInjectionConstraints(const Group& group,
                                                                   well_state,
                                                                   reportStepIdx,
                                                                   pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                                  false);
+                                                                  false,
+                                                                  wellModel_.summaryState());
             voidage_rate += WellGroupHelpersType::sumWellResRates(groupVoidage,
                                                                   wellModel_.schedule(),
                                                                   well_state,
                                                                   reportStepIdx,
                                                                   pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                                  false);
+                                                                  false,
+                                                                  wellModel_.summaryState());
             voidage_rate += WellGroupHelpersType::sumWellResRates(groupVoidage,
                                                                   wellModel_.schedule(),
                                                                   well_state, reportStepIdx,
                                                                   pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                                  false);
+                                                                  false,
+                                                                  wellModel_.summaryState());
 
             // sum over all nodes
             voidage_rate = wellModel_.comm().sum(voidage_rate);
@@ -187,19 +194,22 @@ checkGroupInjectionConstraints(const Group& group,
                                                                 well_state,
                                                                 reportStepIdx,
                                                                 pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                                true);
+                                                                true,
+                                                                wellModel_.summaryState());
             total_rate += WellGroupHelpersType::sumWellResRates(group,
                                                                 wellModel_.schedule(),
                                                                 well_state,
                                                                 reportStepIdx,
                                                                 pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                                true);
+                                                                true,
+                                                                wellModel_.summaryState());
             total_rate += WellGroupHelpersType::sumWellResRates(group,
-                                                               wellModel_.schedule(),
+                                                                wellModel_.schedule(),
                                                                 well_state,
                                                                 reportStepIdx,
                                                                 pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                                true);
+                                                                true,
+                                                                wellModel_.summaryState());
 
             // sum over all nodes
             total_rate = wellModel_.comm().sum(total_rate);
@@ -237,7 +247,8 @@ checkGroupProductionConstraints(const Group& group,
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                                      false);
+                                                                      false,
+                                                                      wellModel_.summaryState());
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -261,7 +272,8 @@ checkGroupProductionConstraints(const Group& group,
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                                      false);
+                                                                      false,
+                                                                      wellModel_.summaryState());
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -284,7 +296,8 @@ checkGroupProductionConstraints(const Group& group,
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                                      false);
+                                                                      false,
+                                                                      wellModel_.summaryState());
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -306,13 +319,15 @@ checkGroupProductionConstraints(const Group& group,
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                                      false);
+                                                                      false,
+                                                                      wellModel_.summaryState());
             current_rate += WellGroupHelpersType::sumWellSurfaceRates(group,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                                      false);
+                                                                      false,
+                                                                      wellModel_.summaryState());
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -325,7 +340,8 @@ checkGroupProductionConstraints(const Group& group,
                                                               well_state,
                                                               reportStepIdx,
                                                               pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                              false);
+                                                              false,
+                                                              wellModel_.summaryState());
                 current_water_rate = wellModel_.comm().sum(current_water_rate);
                 if (std::abs(current_water_rate) < 1e-12) {
                     skip = true;
@@ -357,21 +373,24 @@ checkGroupProductionConstraints(const Group& group,
                                                       well_state,
                                                       reportStepIdx,
                                                       pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                      false);
+                                                      false,
+                                                      wellModel_.summaryState());
             current_rate +=
                 WellGroupHelpersType::sumWellResRates(group,
                                                       wellModel_.schedule(),
                                                       well_state,
                                                       reportStepIdx,
                                                       pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                      false);
+                                                      false,
+                                                      wellModel_.summaryState());
             current_rate +=
                 WellGroupHelpersType::sumWellResRates(group,
                                                       wellModel_.schedule(),
                                                       well_state,
                                                       reportStepIdx,
                                                       pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                      false);
+                                                      false,
+                                                      wellModel_.summaryState());
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
