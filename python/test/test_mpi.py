@@ -7,13 +7,12 @@ from .pytest_common import pushd
 class TestBasic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # NOTE: See comment in test_basic.py for the reason why we are
-        #   only using a single test_all() function instead of splitting
-        #   it up in multiple test functions
         test_dir = Path(os.path.dirname(__file__))
         cls.data_dir = test_dir.parent.joinpath("test_data/SPE1CASE1a")
 
-    # IMPORTANT: Tests are run alphabetically, so we need to make sure that
+    # IMPORTANT: Since all the python unittests run in the same process we must be
+    #  careful to not call MPI_Init() more than once.
+    #  Tests are run alphabetically, so we need to make sure that
     #  the the first test calls MPI_Init(), therefore the name of the tests
     #  have a numeric label like "01" in test_01_mpi_init to ensure that they
     #  are run in a given order.

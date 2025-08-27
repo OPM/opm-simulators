@@ -7,19 +7,19 @@ from .pytest_common import pushd
 class TestBasic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # NOTE: See comment in test_basic.py for the reason why we are
-        #   only using a single test_all() function instead of splitting
-        #   it up in multiple test functions
         test_dir = Path(os.path.dirname(__file__))
         cls.data_dir_bo = test_dir.parent.joinpath("test_data/SPE1CASE1a")
         cls.data_dir_gw = test_dir.parent.joinpath("test_data/SPE1CASE2")
 
+    # IMPORTANT: Since all the python unittests run in the same process we must be
+    #  careful to not call MPI_Init() more than once.
+    #  Tests are run alphabetically, so we need to make sure that
+    #  the the first test calls MPI_Init(), therefore the name of the tests
+    #  have a numeric label like "01" in test_01_bo to ensure that they
+    #  are run in a given order.
 
-    def test_all(self):
-        self._bo()
-        self._gw()
-
-    def _bo(self):
+    # IMPORTANT:This test must be run first since it calls MPI_Init()
+    def test_01_blackoil(self):
         with pushd(self.data_dir_bo):
             sim = BlackOilSimulator("SPE1CASE1.DATA")
             sim.setup_mpi(True, False)
@@ -50,7 +50,8 @@ class TestBasic(unittest.TestCase):
             T = sim.get_fluidstate_variable(name='T')
             self.assertAlmostEqual(T[0], 288.705, places=3, msg='value of temperature')
 
-    def _gw(self):
+    # IMPORTANT: This test must be run last since it calls MPI_Finalize()
+    def test_99_gaswater(self):
         with pushd(self.data_dir_gw):
             sim = GasWaterSimulator("SPE1CASE2_GASWATER.DATA")
             sim.setup_mpi(False, True)
