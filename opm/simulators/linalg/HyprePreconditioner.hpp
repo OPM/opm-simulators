@@ -79,7 +79,12 @@ public:
         OPM_TIMEBLOCK(prec_construct);
         int size;
         int rank;
-        const auto& mpi_comm = comm.communicator();
+        MPI_Comm mpi_comm;
+        if constexpr (std::is_same_v<Comm,Dune::Amg::SequentialInformation>){
+            mpi_comm = MPI_COMM_SELF;
+        }else{
+            mpi_comm = comm.communicator();
+        }
         MPI_Comm_size(mpi_comm, &size);
         MPI_Comm_rank(mpi_comm, &rank);
         if (size > 1) {
@@ -324,7 +329,6 @@ private:
             local_dune_to_global_hypre_[i] = i;
         }
         dof_offset_ = 0;
-        global_size_ = N_;
         owner_first_ = true;
     }
 
@@ -400,9 +404,11 @@ private:
                                      dof_counts_per_process.begin() + collective_comm.rank(), 0);
 
         // Create global DOF indices by adding offset to local indices
-        for (size_t i = 0; i < local_hypre_.size(); ++i) {
-            if (local_hypre_[i] >= 0) {
-                local_hypre_global_[i] = local_hypre_[i] + dof_offset_;
+        for (size_t i = 0; i < local_dune_to_local_hypre_.size(); ++i) {
+            if (local_dune_to_local_hypre_[i] >= 0) {
+                local_dune_to_global_hypre_[i] = local_dune_to_local_hypre_[i] + dof_offset_;
+            }else{
+              local_dune_to_global_hypre_[i] = -1;
             }
         }
 
