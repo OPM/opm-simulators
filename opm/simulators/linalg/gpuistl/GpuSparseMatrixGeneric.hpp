@@ -1,5 +1,5 @@
 /*
-  Copyright 2022-2023 SINTEF AS
+  Copyright 2025 Equinor ASA
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -16,64 +16,43 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_GPUSPARSEMATRIX_HPP
-#define OPM_GPUSPARSEMATRIX_HPP
-#include <cusparse.h>
-#include <iostream>
-#include <memory>
-#include <stdexcept>
-#include <type_traits>
+#ifndef OPM_GPUSPARSEMATRIXGENERIC_HPP
+#define OPM_GPUSPARSEMATRIXGENERIC_HPP
+
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_utilities.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
-#include <vector>
+
+#include <cusparse.h>
+
+#include <cstddef>
 
 namespace Opm::gpuistl
 {
 
+
+
 /**
- * @brief The GpuSparseMatrix class simple wrapper class for a CuSparse matrix.
+ * @brief The GpuSparseMatrixGeneric class uses cuSPARSE Generic API for sparse matrix operations.
  *
- * @note we currently only support simple raw primitives for T (double and float). Block size is handled through the
- * block size parameter
+ * @note We support raw primitives for T (double and float). Block size is handled through the
+ * blockSize parameter.
  *
- * @tparam T the type to store. Can be either float, double or int.
+ * @tparam T the type to store. Can be either float or double.
  *
  * @note we only support square matrices.
- *
- * @note We only support Block Compressed Sparse Row Format (BSR) for now.
-
- * @note This class uses the legacy cuSPARSE API, to be compatible with CuSparse's ilu0 preconditioner. However,
- *       this preconditioner is deprecated and will be removed in future versions of CuSparse. So we should migrate
- *       to the new cuSPARSE generic API in the future.
- *
- * @note To also support block size 1, we use the GpuSparseMatrixGeneric class which uses the new cuSPARSE generic API.
- *       This is a temporary solution, and we should migrate to the new API for all block sizes in the future by
- *       replacing this class with GpuSparseMatrixGeneric.
  */
 template <typename T>
-class GpuSparseMatrix
-
+class GpuSparseMatrixGeneric
 {
 public:
     using field_type = T;
-    
-    /**
-    * @brief Maximum block size supported by this implementation.
-    * 
-    * This constant defines an upper bound on the block size to ensure reasonable compilation times.
-    * While this class itself could support larger values, functions that call dispatchOnBlocksize() 
-    * might have limitations. This value can be increased if needed, but will increase compilation time
-    * due to template instantiations.
-    */
-    static constexpr int max_block_size = 6;
-    
+
     //! Create the sparse matrix specified by the raw data.
-    //!
-    //! \note Prefer to use the constructor taking a const reference to a matrix instead.
     //!
     //! \param[in] nonZeroElements the non-zero values of the matrix
     //! \param[in] rowIndices      the row indices of the non-zero elements
@@ -82,36 +61,35 @@ public:
     //! \param[in] blockSize size of each block matrix (typically 3)
     //! \param[in] numberOfRows the number of rows
     //!
-    //! \note We assume numberOfNonzeroBlocks, blockSize and numberOfRows all are representable as int due to
-    //!       restrictions in the current version of cusparse. This might change in future versions.
-    GpuSparseMatrix(const T* nonZeroElements,
-                   const int* rowIndices,
-                   const int* columnIndices,
-                   size_t numberOfNonzeroBlocks,
-                   size_t blockSize,
-                   size_t numberOfRows);
+    GpuSparseMatrixGeneric(const T* nonZeroElements,
+                           const int* rowIndices,
+                           const int* columnIndices,
+                           size_t numberOfNonzeroBlocks,
+                           size_t blockSize,
+                           size_t numberOfRows);
 
     //! Create a sparse matrix by copying the sparsity structure of another matrix, not filling in the values
-    //!
-    //! \note Prefer to use the constructor taking a const reference to a matrix instead.
     //!
     //! \param[in] rowIndices      the row indices of the non-zero elements
     //! \param[in] columnIndices   the column indices of the non-zero elements
     //! \param[in] blockSize size of each block matrix (typically 3)
     //!
-    //! \note We assume numberOfNonzeroBlocks, blockSize and numberOfRows all are representable as int due to
-    //!       restrictions in the current version of cusparse. This might change in future versions.
-    GpuSparseMatrix(const GpuVector<int>& rowIndices,
-                   const GpuVector<int>& columnIndices,
-                   size_t blockSize);
+    GpuSparseMatrixGeneric(const GpuVector<int>& rowIndices, const GpuVector<int>& columnIndices, size_t blockSize);
 
-    GpuSparseMatrix(const GpuSparseMatrix&);
+    GpuSparseMatrixGeneric(const GpuSparseMatrixGeneric&);
 
-    // We want to have this as non-mutable as possible, that is we do not want 
+    /**
+     * @brief Preprocess SpMV operation to optimize for sparsity pattern
+     *
+     * This function preprocesses the sparsity pattern of the matrix to optimize for the SpMV operation.
+     */
+    void preprocessSpMV();
+
+    // We want to have this as non-mutable as possible, that is we do not want
     // to deal with changing matrix sizes and sparsity patterns.
-    GpuSparseMatrix& operator=(const GpuSparseMatrix&) = delete;
+    GpuSparseMatrixGeneric& operator=(const GpuSparseMatrixGeneric&) = delete;
 
-    virtual ~GpuSparseMatrix();
+    virtual ~GpuSparseMatrixGeneric();
 
     /**
      * @brief fromMatrix creates a new matrix with the same block size and values as the given matrix
@@ -123,39 +101,13 @@ public:
      * @tparam MatrixType is assumed to be a Dune::BCRSMatrix compatible matrix.
      */
     template <class MatrixType>
-    static GpuSparseMatrix<T> fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false);
-
-    /**
-     * @brief setUpperTriangular sets the CuSparse flag that this is an upper diagonal (with unit diagonal) matrix.
-     */
-    void setUpperTriangular();
-
-    /**
-     * @brief setLowerTriangular sets the CuSparse flag that this is an lower diagonal (with non-unit diagonal) matrix.
-     */
-    void setLowerTriangular();
-
-    /**
-     * @brief setUnitDiagonal sets the CuSparse flag that this has unit diagional.
-     */
-    void setUnitDiagonal();
-
-
-    /**
-     * @brief setNonUnitDiagonal sets the CuSparse flag that this has non-unit diagional.
-     */
-    void setNonUnitDiagonal();
+    static GpuSparseMatrixGeneric<T> fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false);
 
     /**
      * @brief N returns the number of rows (which is equal to the number of columns)
      */
     size_t N() const
     {
-        // Technically this safe conversion is not needed since we enforce these to be
-        // non-negative in the constructor, but keeping them for added sanity for now.
-        //
-        // We don't believe this will yield any performance penality (it's used too far away from the inner loop),
-        // but should that be false, they can be removed.
         return detail::to_size_t(m_numberOfRows);
     }
 
@@ -180,9 +132,6 @@ public:
      */
     GpuVector<T>& getNonZeroValues()
     {
-        if (m_genericMatrixForBlockSize1) {
-            return m_genericMatrixForBlockSize1->getNonZeroValues();
-        }
         return m_nonZeroElements;
     }
 
@@ -193,9 +142,6 @@ public:
      */
     const GpuVector<T>& getNonZeroValues() const
     {
-        if (m_genericMatrixForBlockSize1) {
-            return m_genericMatrixForBlockSize1->getNonZeroValues();
-        }
         return m_nonZeroElements;
     }
 
@@ -206,9 +152,6 @@ public:
      */
     GpuVector<int>& getRowIndices()
     {
-        if (m_genericMatrixForBlockSize1) {
-            return m_genericMatrixForBlockSize1->getRowIndices();
-        }
         return m_rowIndices;
     }
 
@@ -219,9 +162,6 @@ public:
      */
     const GpuVector<int>& getRowIndices() const
     {
-        if (m_genericMatrixForBlockSize1) {
-            return m_genericMatrixForBlockSize1->getRowIndices();
-        }
         return m_rowIndices;
     }
 
@@ -232,9 +172,6 @@ public:
      */
     GpuVector<int>& getColumnIndices()
     {
-        if (m_genericMatrixForBlockSize1) {
-            return m_genericMatrixForBlockSize1->getColumnIndices();
-        }
         return m_columnIndices;
     }
 
@@ -245,9 +182,6 @@ public:
      */
     const GpuVector<int>& getColumnIndices() const
     {
-        if (m_genericMatrixForBlockSize1) {
-            return m_genericMatrixForBlockSize1->getColumnIndices();
-        }
         return m_columnIndices;
     }
 
@@ -278,16 +212,6 @@ public:
         // We don't believe this will yield any performance penality (it's used too far away from the inner loop),
         // but should that be false, they can be removed.
         return detail::to_size_t(m_blockSize);
-    }
-
-    /**
-     * @brief getDescription the cusparse matrix description.
-     *
-     * This description is needed for most calls to the CuSparse library
-     */
-    detail::GpuSparseMatrixDescription& getDescription()
-    {
-        return *m_matrixDescription;
     }
 
     /**
@@ -330,34 +254,7 @@ public:
      * @param matrix the matrix to extract the non-zero values from
      * @note This assumes the given matrix has the same sparsity pattern.
      */
-     void updateNonzeroValues(const GpuSparseMatrix<T>& matrix);
-
-     
-    /**
-     * @brief Dispatches a function based on the block size of the matrix.
-     * 
-     * This method allows executing different code paths depending on the block size
-     * of the matrix, up to the maximum block size specified by max_block_size.
-     *
-     * Use this function if you need the block size to be known at compile time.
-     * 
-     * @tparam FunctionType Type of the function to be dispatched
-     * @param function The function to be executed based on the block size
-     * @return The result of the function execution
-     *
-     * You can use this function as
-     *
-     * \code{.cpp}
-     * matrix.dispatchOnBlocksize([](auto val) {
-     *    constexpr int blockSize = decltype(val)::value;
-     * });
-     * \endcode
-     */
-     template<class FunctionType>
-     auto dispatchOnBlocksize(FunctionType function) const
-     {
-        return dispatchOnBlocksizeImpl<max_block_size>(function);
-     }
+    void updateNonzeroValues(const GpuSparseMatrixGeneric<T>& matrix);
 
 private:
     GpuVector<T> m_nonZeroElements;
@@ -372,26 +269,32 @@ private:
     const int m_numberOfRows;
     const int m_blockSize;
 
-    detail::GpuSparseMatrixDescriptionPtr m_matrixDescription;
+    // Generic API descriptors
+    decltype(detail::makeSafeMatrixDescriptor()) m_matrixDescriptor;
     detail::CuSparseHandle& m_cusparseHandle;
 
-    // For blockSize == 1, we use the generic API
-    std::unique_ptr<GpuSparseMatrixGeneric<T>> m_genericMatrixForBlockSize1;
+    // Cached buffer for operations
+    mutable GpuBuffer<std::byte> m_buffer;
+
+    // Helper methods for SpMV operations
+    void spMV(T alpha, const GpuVector<T>& x, T beta, GpuVector<T>& y) const;
+
+    // Initialize matrix descriptor based on block size
+    void initializeMatrixDescriptor();
 
     template <class VectorType>
     void assertSameSize(const VectorType& vector) const;
 
-    template<int blockSizeCompileTime, class FunctionType>
-    auto dispatchOnBlocksizeImpl(FunctionType function) const
+    // Helper to get cuSPARSE data type from C++ type
+    constexpr cudaDataType getDataType() const
     {
-        if (blockSizeCompileTime == m_blockSize) {
-            return function(std::integral_constant<int, blockSizeCompileTime>());
-        }
-
-        if constexpr (blockSizeCompileTime > 1) {
-            return dispatchOnBlocksizeImpl<blockSizeCompileTime - 1>(function);
+        if constexpr (std::is_same_v<T, float>) {
+            return CUDA_R_32F;
+        } else if constexpr (std::is_same_v<T, double>) {
+            return CUDA_R_64F;
         } else {
-            OPM_THROW(std::runtime_error, fmt::format("Unsupported block size: {}", m_blockSize));
+            static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>, "Only float and double are supported");
+            return CUDA_R_32F; // Unreachable, but needed to compile
         }
     }
 };
