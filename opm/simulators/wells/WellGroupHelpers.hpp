@@ -57,16 +57,18 @@ public:
                                     const Opm::Group& group,
                                     const Opm::Schedule& schedule,
                                     const WellStateType& wellState,
+                                    const SummaryState& summaryState,
                                     const int reportStepIdx,
                                     const int phasePos,
                                     const bool injector,
                                     const bool network = false);
 
-    static Scalar satelliteProduction(const ScheduleState& sched,
+    static Scalar satelliteProduction(const SummaryState& summaryState,
+                                      const ScheduleState& sched,
                                       const std::vector<std::string>& groups,
-                                      const GSatProd::GSatProdGroup::Rate rateComp);
+                                      const GSatProd::GSatProdGroupProp::Rate rateComp);
 
-    static std::optional<GSatProd::GSatProdGroup::Rate>
+    static std::optional<GSatProd::GSatProdGroupProp::Rate>
     selectRateComponent(const PhaseUsageInfo<IndexTraits>& pu, const int phasePos);
 
     static void setCmodeGroup(const Group& group,
@@ -85,7 +87,8 @@ public:
                                       const WellStateType& wellState,
                                       const int reportStepIdx,
                                       const int phasePos,
-                                      const bool injector);
+                                      const bool injector,
+                                      const SummaryState& summaryState);
 
     /// Returns the name of the worst offending well and its fraction (i.e. violated_phase / preferred_phase)
     static std::pair<std::optional<std::string>, Scalar>
@@ -102,7 +105,8 @@ public:
                                   const WellStateType& wellState,
                                   const int reportStepIdx,
                                   const int phasePos,
-                                  const bool injector);
+                                  const bool injector,
+                                  const SummaryState& summaryState);
 
     static Scalar sumSolventRates(const Group& group,
                                   const Schedule& schedule,
@@ -124,7 +128,8 @@ public:
                                     const Schedule& schedule,
                                     const int reportStepIdx,
                                     const WellStateType& wellState,
-                                    GroupState<Scalar>& group_state);
+                                    GroupState<Scalar>& group_state,
+                                    const SummaryState& summaryState);
 
     template <class RegionalValues>
     static void updateGpMaintTargetForGroups(const Group& group,
@@ -139,13 +144,15 @@ public:
                                                     const Schedule& schedule,
                                                     const int reportStepIdx,
                                                     const WellStateType& wellState,
-                                                    GroupState<Scalar>& group_state);
+                                                    GroupState<Scalar>& group_state,
+                                                    const SummaryState& summaryState);
 
     static void updateSurfaceRatesInjectionGroups(const Group& group,
                                                   const Schedule& schedule,
                                                   const int reportStepIdx,
                                                   const WellStateType& wellState,
-                                                  GroupState<Scalar>& group_state);
+                                                  GroupState<Scalar>& group_state,
+                                                  const SummaryState& summaryState);
 
     static void updateWellRates(const Group& group,
                                 const Schedule& schedule,
@@ -157,12 +164,14 @@ public:
                                            const Schedule& schedule,
                                            const int reportStepIdx,
                                            const WellStateType& wellState,
-                                           GroupState<Scalar>& group_state);
+                                           GroupState<Scalar>& group_state,
+                                           const SummaryState& summaryState);
 
     static void updateNetworkLeafNodeProductionRates(const Schedule& schedule,
                                                      const int reportStepIdx,
                                                      const WellStateType& wellState,
-                                                     GroupState<Scalar>& group_state);
+                                                     GroupState<Scalar>& group_state,
+                                                     const SummaryState& summaryState);
 
 
     static void updateWellRatesFromGroupTargetScale(const Scalar scale,
