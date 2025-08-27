@@ -14,12 +14,15 @@ class TestBasic(unittest.TestCase):
         cls.data_dir_bo = test_dir.parent.joinpath("test_data/SPE1CASE1a")
         cls.data_dir_gw = test_dir.parent.joinpath("test_data/SPE1CASE2")
 
+    # IMPORTANT: Since all the python unittests run in the same process we must be
+    #  careful to not call MPI_Init() more than once.
+    #  Tests are run alphabetically, so we need to make sure that
+    #  the the first test calls MPI_Init(), therefore the name of the tests
+    #  have a numeric label like "01" in test_01_bo to ensure that they
+    #  are run in a given order.
 
-    def test_all(self):
-        self._bo()
-        self._gw()
-
-    def _bo(self):
+    # IMPORTANT:This test must be run first since it calls MPI_Init()
+    def test_01_blackoil(self):
         with pushd(self.data_dir_bo):
             sim = BlackOilSimulator("SPE1CASE1.DATA")
             sim.setup_mpi(True, False)
@@ -48,7 +51,8 @@ class TestBasic(unittest.TestCase):
                 variable='brine')
             self.assertEqual(brine_meaning[0], brine_meaning_map["Disabled"])
 
-    def _gw(self):
+    # IMPORTANT: This test must be run last since it calls MPI_Finalize()
+    def test_99_gaswater(self):
         with pushd(self.data_dir_gw):
             sim = GasWaterSimulator("SPE1CASE2_GASWATER.DATA")
             sim.setup_mpi(False, True)
