@@ -77,15 +77,14 @@ public:
         : A_(A),comm_(comm)
     {
         OPM_TIMEBLOCK(prec_construct);
-
         int size;
         int rank;
-        MPI_Comm_size(MPI_COMM_WORLD, &size);
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        const auto& mpi_comm = comm.communicator();
+        MPI_Comm_size(mpi_comm, &size);
+        MPI_Comm_rank(mpi_comm, &rank);
         if (size > 1) {
             assert(size == comm.communicator().size());
             assert(rank == comm.communicator().rank());
-            //OPM_THROW(std::runtime_error, "HyprePreconditioner is currently only implemented for sequential runs");
         }
 
         use_gpu_ = prm.get<bool>("use_gpu", false);
@@ -138,8 +137,8 @@ public:
 
         // Create Hypre vectors
         setupHypreParallelInfo(comm_);//create all need information for setting up the matrix
-        HYPRE_IJVectorCreate(MPI_COMM_WORLD, dof_offset_, dof_offset_ +(N_-1), &x_hypre_);
-        HYPRE_IJVectorCreate(MPI_COMM_WORLD, dof_offset_, dof_offset_ +(N_-1), &b_hypre_);
+        HYPRE_IJVectorCreate(mpi_comm, dof_offset_, dof_offset_ +(N_-1), &x_hypre_);
+        HYPRE_IJVectorCreate(mpi_comm, dof_offset_, dof_offset_ +(N_-1), &b_hypre_);
         HYPRE_IJVectorSetObjectType(x_hypre_, HYPRE_PARCSR);
         HYPRE_IJVectorSetObjectType(b_hypre_, HYPRE_PARCSR);
         HYPRE_IJVectorInitialize(x_hypre_);
@@ -156,9 +155,7 @@ public:
         }
 
         // Create Hypre matrix
-        //HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, N_-1, 0, N_-1, &A_hypre_);
-        //HYPRE_IJMatrixSetPrintLevel (A_hypre_, 10);
-        HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 
+        HYPRE_IJMatrixCreate(mpi_comm, 
                             dof_offset_, dof_offset_ +(N_-1),
                             dof_offset_, dof_offset_ +(N_-1),  
                             &A_hypre_);
@@ -299,7 +296,7 @@ private:
         for (auto row = A_.begin(); row != A_.end(); ++row) {
             const int rowIdx = row.index();
             for (auto col = row->begin(); col != row->end(); ++col) {
-                if (!(local_hypre_[rowIdx] < 0)) {
+                if (!(local_dune_to_local_hypre_[rowIdx] < 0)) {
                     const auto& value = *col;
                     continuous_matrix_entries_[nnz] = value[0][0];
                     nnz++;
@@ -318,18 +315,17 @@ private:
         N_ = A_.N();
         nnz_ = A_.nonzeroes();
 
-        local_hypre_.resize(N_);
-        local_hypre_global_.resize(N_);
-        hypre_local_.resize(N_);
+        local_dune_to_local_hypre_.resize(N_);
+        local_dune_to_global_hypre_.resize(N_);
+        local_hypre_to_local_dune_.resize(N_);
         for (int i = 0; i < N_; ++i) {
-            local_hypre_[i] = i;
-            hypre_local_[i] = i;
-            local_hypre_global_[i] = i;
+            local_dune_to_local_hypre_[i] = i;
+            local_hypre_to_local_dune_[i] = i;
+            local_dune_to_global_hypre_[i] = i;
         }
         dof_offset_ = 0;
         global_size_ = N_;
         owner_first_ = true;
-        // continuous_vector_values_.resize(N_); // should not be needed
     }
 
 
@@ -345,8 +341,8 @@ private:
         // make global numbering and mapping for matrix
         
         size_t count = 0;
-        local_hypre_.resize(comm.indexSet().size(), -1);
-        local_hypre_global_.resize(comm.indexSet().size(), -1);
+        local_dune_to_local_hypre_.resize(comm.indexSet().size(), -1);
+        local_dune_to_global_hypre_.resize(comm.indexSet().size(), -1);
 
         
         // in case index set is not full dune we fix it
@@ -363,11 +359,11 @@ private:
         for (const auto& ind : comm.indexSet()) {
             int local_ind = ind.local().local();
             if (ind.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::owner) {
-                local_hypre_[local_ind] = 1;//count;
+                local_dune_to_local_hypre_[local_ind] = 1;//count;
                 count += 1;
                 
             } else {
-               local_hypre_[local_ind] = -1;
+               local_dune_to_local_hypre_[local_ind] = -1;
             }
         }
         N_ = count;
@@ -377,13 +373,13 @@ private:
         bool owner_first = true;
         bool visited_copy = false;
         count = 0;
-        for(size_t i=0; i < local_hypre_.size(); ++i) {
-            if (local_hypre_[i] < 0) {
+        for(size_t i=0; i < local_dune_to_local_hypre_.size(); ++i) {
+            if (local_dune_to_local_hypre_[i] < 0) {
                 visited_copy = true;
-                assert(local_hypre_[i] == -1);
+                assert(local_dune_to_local_hypre_[i] == -1);
             } else {
-                local_hypre_[i] = count;
-                hypre_local_.push_back(i);
+                local_dune_to_local_hypre_[i] = count;
+                local_hypre_to_local_dune_.push_back(i);
                 owner_first = owner_first && !visited_copy;
                 count +=1;
             }
@@ -395,43 +391,33 @@ private:
           continuous_vector_values_.resize(N_);
         }
 
-        std::vector<int> sizes(collective_comm.size(), 0);
-        for (int i = 0; i < collective_comm.size(); ++i) {
-            if (collective_comm.rank() == i) {
-                sizes[i] = N_;
-            }
-        }
-        
-        collective_comm.barrier(); // need? should take any time
-        collective_comm.sum(sizes.data(), sizes.size());
-        global_size_ = 0;
+                // Gather the number of DOFs from each process
+        std::vector<int> dof_counts_per_process(collective_comm.size());
+        collective_comm.allgather(&N_, 1, dof_counts_per_process.data());
 
-        for (int i = 0; i < collective_comm.size(); ++i) {
-            global_size_ += sizes[i];
-        }
+        // Calculate our process's offset (sum of DOFs in processes before us)
+        dof_offset_ = std::accumulate(dof_counts_per_process.begin(),
+                                     dof_counts_per_process.begin() + collective_comm.rank(), 0);
 
-        dof_offset_ = 0;
-        for (int i = 0; i < collective_comm.rank(); ++i) {
-            dof_offset_ += sizes[i];
-        }
-
-        for(size_t i=0; i < local_hypre_.size(); ++i) {
+        // Create global DOF indices by adding offset to local indices
+        for (size_t i = 0; i < local_hypre_.size(); ++i) {
             if (local_hypre_[i] >= 0) {
                 local_hypre_global_[i] = local_hypre_[i] + dof_offset_;
             }
         }
+
         if(collective_comm.rank() > 0) {
             assert(dof_offset_>0);
         }
         // communicate global numbering of dofs
-        comm.copyOwnerToAll(local_hypre_global_, local_hypre_global_);
+        comm.copyOwnerToAll(local_dune_to_global_hypre_, local_dune_to_global_hypre_);
 
         // calculate matrix propeties which can be used to optimize memmory
         int nnz = 0;
         for (auto row = A_.begin(); row != A_.end(); ++row) {
             const int rowIdx = row.index();
             for (auto col = row->begin(); col != row->end(); ++col) {
-                if (!(local_hypre_[rowIdx] < 0) ){
+                if (!(local_dune_to_local_hypre_[rowIdx] < 0) ){
                     nnz++;
                 }
             }
@@ -449,13 +435,7 @@ private:
 
      int localToHypreGlobal(int index)
      {
-         if (local_hypre_[index] < 0) {
-             // This is a ghost dof, return -1
-             assert(local_hypre_[index] == -1);
-         } else {
-             assert((local_hypre_[index] + dof_offset_) == local_hypre_global_[index]);
-         }
-         return local_hypre_global_[index];
+         return local_dune_to_global_hypre_[index];
      }
 
      /**
@@ -477,12 +457,12 @@ private:
          int rowpos = 0;
          for (auto row = A_.begin(); row != A_.end(); ++row) {
              const int rind = row.index();
-             if (local_hypre_[rind] < 0) {
+             if (local_dune_to_local_hypre_[rind] < 0) {
                  // This is a ghost dof, skip it
                  continue;
              }
 
-             const int local_rowIdx = local_hypre_[rind];
+             const int local_rowIdx = local_dune_to_local_hypre_[rind];
              const int global_rowIdx = localToHypreGlobal(rind);
              assert(local_rowIdx == rowpos);
              if (owner_first_) {
@@ -495,7 +475,6 @@ private:
              for (auto col = row->begin(); col != row->end(); ++col) {
                  const int colIdx = localToHypreGlobal(col.index());
                  assert(colIdx >= 0);
-                 assert(colIdx < global_size_);
                  cols_[pos++] = colIdx;
              }
              rowpos++;
@@ -562,8 +541,8 @@ private:
     {
         assert(continuous_vector_values_.size() == N_);
         // set v values solution vectors
-        for (size_t i = 0; i < hypre_local_.size(); ++i) {
-            continuous_vector_values_[i] = v[hypre_local_[i]][0];
+        for (size_t i = 0; i < local_hypre_to_local_dune_.size(); ++i) {
+            continuous_vector_values_[i] = v[local_hypre_to_local_dune_[i]][0];
         }
     }
 
@@ -626,8 +605,8 @@ private:
 
     void setDuneVectorFromContinuousVector(X& v)
     {
-        for (size_t i = 0; i < hypre_local_.size(); ++i) {
-            v[hypre_local_[i]][0] = continuous_vector_values_[i];
+        for (size_t i = 0; i < local_hypre_to_local_dune_.size(); ++i) {
+            v[local_hypre_to_local_dune_[i]][0] = continuous_vector_values_[i];
         }
     }
 
@@ -673,13 +652,12 @@ private:
     bool use_gpu_ = false; //!< Flag indicating whether to use GPU acceleration.
 
     // mappings between dune and hypre use int to have negative values as not owned
-    std::vector<int> local_hypre_;
-    std::vector<int> local_hypre_global_;
-    std::vector<int> hypre_local_;// will only be needed if not owner first
-    std::vector<double> continuous_matrix_entries_;
-    std::vector<double> continuous_vector_values_;
+    std::vector<int> local_dune_to_local_hypre_;
+    std::vector<int> local_dune_to_global_hypre_;
+    std::vector<int> local_hypre_to_local_dune_;// will only be needed if not owner first
+    std::vector<HYPRE_Real> continuous_matrix_entries_;
+    std::vector<HYPRE_Real> continuous_vector_values_;
     int dof_offset_;
-    int global_size_;
     bool owner_first_;
 
     HYPRE_Solver solver_ = nullptr; //!< The Hypre solver object.
