@@ -65,10 +65,14 @@ struct Setup
     explicit Setup(const Deck& deck)
         : ecl_state  { std::make_unique<EclipseState>(deck) }
         , schedule   { std::make_unique<Schedule>(deck, *ecl_state, std::make_shared<Python>()) }
-        , well_state { std::make_unique<WellState<double, IndexTraits>>(PhaseUsage(ecl_state->runspec().phases())) }
     {
         const int step = 0;
         const auto& sched_state = (*this->schedule)[step];
+
+        PhaseUsage pu;
+        pu.initFromPhases(ecl_state->runspec().phases());
+
+        this->well_state = std::make_unique<WellState<double, IndexTraits>>(pu);
 
         this->vfp_properties = std::make_unique<VFPProperties<double, IndexTraits>>
             (sched_state.vfpinj(), sched_state.vfpprod(), *well_state);

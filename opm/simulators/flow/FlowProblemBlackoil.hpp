@@ -340,8 +340,6 @@ public:
             this->maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
         }
 
-        this->initFluidSystem_();
-
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);

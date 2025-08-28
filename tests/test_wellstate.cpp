@@ -84,12 +84,13 @@ struct Setup
 
     Setup(const Opm::Deck& deck)
         : es   (deck)
-        , pu   (Opm::PhaseUsageInfo<IndexTraits>(es.runspec().phases()))
+        , pu   ()
         , grid (es.getInputGrid())
         , sched(deck, es, std::make_shared<Opm::Python>())
         , st   { Opm::TimeService::from_time_t(sched.getStartTime()),
                  es.runspec().udqParams().undefinedValue() }
     {
+        pu.initFromState(es);
         initWellPerfData();
     }
 
@@ -611,9 +612,7 @@ BOOST_AUTO_TEST_CASE(TestSingleWellState) {
     using PhaseUsage = Opm::PhaseUsageInfo<IndexTraits>;
 
     PhaseUsage pu;
-
-    // This is totally bonkers, but the pu needs a complete deck to initialize properly
-    pu.setNumActivePhases(3);
+    pu.initFromPhases({Opm::Phases{true, true, true}});
 
     SingleWellState ws1("W1", pinfo, pu, true,  100.0, connections, 1.0);
     SingleWellState ws2("W2", pinfo, pu, true,  100.0, connections, 2.0);
