@@ -100,8 +100,8 @@ GpuSparseMatrixGeneric<T>::initializeMatrixDescriptor()
 {
     // Create matrix descriptor based on blockSize
     if (m_blockSize > 1) {
-#if !USE_HIP
-        // Use BSR format for blocked matrices
+#if !USE_HIP && CUDA_VERSION >= 12030
+        // Use BSR format for blocked matrices (requires CUDA 12.3+)
         OPM_CUSPARSE_SAFE_CALL(cusparseCreateBsr(m_matrixDescriptor.get(),
                                                  m_numberOfRows,
                                                  m_numberOfRows,
@@ -117,7 +117,7 @@ GpuSparseMatrixGeneric<T>::initializeMatrixDescriptor()
                                                  getDataType(),
                                                  CUSPARSE_ORDER_ROW));
 #else
-        OPM_THROW(std::invalid_argument, "BSR format not supported for HIP with Generic API");
+        OPM_THROW(std::invalid_argument, "BSR format not supported for HIP or CUDA < 12.3 with Generic API");
 #endif
     } else {
         // Use CSR format for scalar matrices
@@ -171,7 +171,8 @@ GpuSparseMatrixGeneric<T>::preprocessSpMV()
 
     m_buffer.resize(bufferSize);
 
-    // Preprocess SpMV operation to optimize for this sparsity pattern
+#if CUDA_VERSION >= 12040
+    // Preprocess SpMV operation to optimize for this sparsity pattern (requires CUDA 12.4+)
     // TODO: Does the value of the alpha and beta matter in this preprocessing?
     OPM_CUSPARSE_SAFE_CALL(cusparseSpMV_preprocess(m_cusparseHandle.get(),
                                                    CUSPARSE_OPERATION_NON_TRANSPOSE,
@@ -183,6 +184,7 @@ GpuSparseMatrixGeneric<T>::preprocessSpMV()
                                                    getDataType(),
                                                    CUSPARSE_SPMV_ALG_DEFAULT,
                                                    m_buffer.data()));
+#endif
 
     // Descriptors automatically cleaned up by unique_ptr destructors
 }
