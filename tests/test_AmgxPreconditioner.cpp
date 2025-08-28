@@ -29,30 +29,56 @@
 #include "AmgxPreconditionerTestHelper.hpp"
 
 
-BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerMatDoubleVecDouble)
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerCpuInputFloat)
 {
-    testAmgxPreconditioner<double, double>();
+    testAmgxPreconditioner<float, false>();
 }
 
-// This test is disabled because it crashes the program with the following error:
-// "Mixed precision modes not currently supported for CUDA 10.1 or later."
-//BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerMatFloatVecDouble)
-//{
-//    testAmgxPreconditioner<float, double>();
-//}
-
-
-BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerMatFloatVecFloat)
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerCpuInputDouble)
 {
-    testAmgxPreconditioner<float, float>();
+    testAmgxPreconditioner<double, false>();
 }
 
-bool init_unit_test_func()
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerUpdateCpuInputFloat)
+{
+    testAmgxPreconditionerUpdate<float, false>();
+}
+
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerUpdateCpuInputDouble)
+{
+    testAmgxPreconditionerUpdate<double, false>();
+}
+
+
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerGpuInputFloat)
+{
+    testAmgxPreconditioner<float, true>();
+}
+
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerGpuInputDouble)
+{
+    testAmgxPreconditioner<double, true>();
+}
+
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerUpdateGpuInputFloat)
+{
+    testAmgxPreconditionerUpdate<float, true>();
+}
+
+BOOST_AUTO_TEST_CASE(TestAmgxPreconditionerUpdateGpuInputDouble)
+{
+    testAmgxPreconditionerUpdate<double, true>();
+}
+
+
+bool
+init_unit_test_func()
 {
     return true;
 }
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
     AMGX_SAFE_CALL(AMGX_initialize());
 
