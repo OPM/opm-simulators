@@ -49,12 +49,12 @@ Use the provided helper script for simplified building with automatic logging:
 ./docker/run-docker-build.sh --help
 
 # Test a PR from opm-simulators
-./docker/run-docker-build.sh pr-test --version-simulators "pull/1234/head" --output pr-wheels
+./docker/run-docker-build.sh pr-test --version-simulators "pull/1234/merge" --output pr-wheels
 
 # Test multiple PRs together
 ./docker/run-docker-build.sh multi-pr \
-    --version-common "pull/567/head" \
-    --version-simulators "pull/1234/head" \
+    --version-common "pull/567/merge" \
+    --version-simulators "pull/1234/merge" \
     --output multi-pr-wheels
 
 # Use specific branches/tags for each repository
@@ -66,7 +66,7 @@ Use the provided helper script for simplified building with automatic logging:
 
 # Test PR #6075 with custom build targets
 ./docker/run-docker-build.sh pr6075 \
-    --version-simulators "pull/6075/head" \
+    --version-simulators "pull/6075/merge" \
     --target-simulators "GasWater BlackOil" \
     --output pr6075-wheels
 ```
@@ -86,14 +86,14 @@ The build system supports testing different versions, branches, or pull requests
 ```bash
 # Test a PR from opm-simulators against master branches
 ./docker/run-docker-build.sh pr-test \
-    --version-simulators "pull/1234/head" \
+    --version-simulators "pull/1234/merge" \
     --output pr-wheels
 
 # Test compatibility between multiple PRs
 ./docker/run-docker-build.sh multi-pr \
-    --version-common "pull/567/head" \
-    --version-grid "pull/890/head" \
-    --version-simulators "pull/1234/head" \
+    --version-common "pull/567/merge" \
+    --version-grid "pull/890/merge" \
+    --version-simulators "pull/1234/merge" \
     --output multi-pr-test
 
 # Use specific release tags
@@ -107,7 +107,7 @@ The build system supports testing different versions, branches, or pull requests
 The version parameters accept any valid Git reference:
 - Branch names: `master`, `release/2024.10/final`
 - Tags: `v2024.10`, `release-2024-10`
-- PR references: `pull/1234/head` (GitHub PR format)
+- PR references: `pull/1234/merge` (GitHub PR format)
 - Commit hashes: `abc123def456`
 
 The target parameters accept space-separated CMake target names:
