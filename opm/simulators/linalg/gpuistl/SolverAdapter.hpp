@@ -94,7 +94,7 @@ public:
     {
         // TODO: Can we do this without reimplementing the other function?
         // TODO: [perf] Do we need to update the matrix every time? Probably yes
-        m_matrix.updateNonzeroValues(m_opOnCPUWithMatrix.getmat());
+        m_matrix.updateNonzeroValues(m_opOnCPUWithMatrix.getmat(), true);
 
         if (!m_inputBuffer) {
             m_inputBuffer.reset(new XGPU(b.dim()));
@@ -114,7 +114,7 @@ public:
     virtual void apply(X& x, X& b, Dune::InverseOperatorResult& res) override
     {
         // TODO: [perf] Do we need to update the matrix every time? Probably yes
-        m_matrix.updateNonzeroValues(m_opOnCPUWithMatrix.getmat());
+        m_matrix.updateNonzeroValues(m_opOnCPUWithMatrix.getmat(), true);
 
         if (!m_inputBuffer) {
             m_inputBuffer.reset(new XGPU(b.dim()));

@@ -25,9 +25,11 @@
 #if USE_HIP
 #include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/PinnedMemoryHolder.hpp>
 #else
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/PinnedMemoryHolder.hpp>
 #endif
 
 #include <opm/simulators/linalg/gpuistl/detail/FlexibleSolverWrapper.hpp>
@@ -231,8 +233,13 @@ public:
 
         if (!m_x) {
             m_x = std::make_unique<GpuVector<real_type>>(x);
+            m_pinnedXMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
+                const_cast<real_type*>(&x[0][0]),
+                x.dim()
+            );
         } else {
-            m_x->copyFromHost(x);
+            // copy from host to device using main stream and asynchronous transfer
+            m_x->copyFromHostAsync(x);
         }
         m_gpuSolver->apply(*m_x, *m_rhs, result);
 
@@ -282,12 +289,16 @@ private:
         if (!m_matrix) {
 
             m_matrix.reset(new auto(GPUMatrix::fromMatrix(M)));
+            m_pinnedMatrixMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
+                const_cast<real_type*>(&M[0][0][0][0]),
+                M.nonzeroes() * M[0][0].N() * M[0][0].M()
+            );
             std::function<GPUVector()> weightsCalculator = {};
             const bool parallel = false;
             m_gpuSolver = std::make_unique<SolverType>(
                 *m_matrix, parallel, m_propertyTree, pressureIndex, weightsCalculator, m_forceSerial, nullptr);
         } else {
-            m_matrix->updateNonzeroValues(M);
+            m_matrix->updateNonzeroValues(M, true);
             m_gpuSolver->update();
         }
     }
@@ -296,8 +307,13 @@ private:
     {
         if (!m_rhs) {
             m_rhs = std::make_unique<GPUVector>(b);
+            m_pinnedRhsMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
+                const_cast<real_type*>(&b[0][0]),
+                b.dim()
+            );
         } else {
-            m_rhs->copyFromHost(b);
+            // copy from host to device using main stream and asynchronous transfer
+            m_rhs->copyFromHostAsync(b);
         }
     }
 
@@ -313,6 +329,10 @@ private:
 
     std::unique_ptr<GPUVector> m_rhs;
     std::unique_ptr<GPUVector> m_x;
+
+    std::unique_ptr<PinnedMemoryHolder<real_type>> m_pinnedMatrixMemory;
+    std::unique_ptr<PinnedMemoryHolder<real_type>> m_pinnedRhsMemory;
+    std::unique_ptr<PinnedMemoryHolder<real_type>> m_pinnedXMemory;
 
     const bool m_forceSerial;
 };

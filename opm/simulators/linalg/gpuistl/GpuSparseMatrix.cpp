@@ -20,7 +20,7 @@
 
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cusparse_constants.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_wrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_utilities.hpp>
@@ -162,7 +162,8 @@ GpuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix, bool copyNonZe
 
     } else {
         const T* newNonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
-        m_nonZeroElements.copyFromHost(newNonZeroElements, nonzeroes() * blockSize() * blockSize());
+        // copy from host to device using default stream and asynchronous transfer
+        m_nonZeroElements.copyFromHostAsync(newNonZeroElements, nonzeroes() * blockSize() * blockSize());
     }
 }
 

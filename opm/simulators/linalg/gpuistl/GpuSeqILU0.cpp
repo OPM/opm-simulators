@@ -28,7 +28,7 @@
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSeqILU0.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cusparse_constants.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_wrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/fix_zero_diagonal.hpp>
@@ -125,7 +125,7 @@ void
 GpuSeqILU0<M, X, Y, l>::update()
 {
     if constexpr (is_gpu_matrix_v<M>) {
-        m_LU.updateNonzeroValues(detail::makeMatrixWithNonzeroDiagonal(m_underlyingMatrix));
+        m_LU.updateNonzeroValues(detail::makeMatrixWithNonzeroDiagonal(m_underlyingMatrix), true);
     } else {
         m_LU.updateNonzeroValues(m_underlyingMatrix);
     }
