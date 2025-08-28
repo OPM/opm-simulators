@@ -178,17 +178,6 @@ public:
 
     BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
 
-    void updateTempSalt(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
-    {
-        if constexpr (enableTemperature || enableEnergy) {
-            asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
-        }
-
-        if constexpr (enableBrine) {
-            asImp_().updateSaltConcentration_(elemCtx, dofIdx, timeIdx);
-        }
-    }
-
     void updateTempSalt(const Problem& problem,
                         const PrimaryVariables& priVars,
                         const unsigned globalSpaceIdx,
@@ -202,13 +191,6 @@ public:
         if constexpr (enableBrine) {
             asImp_().updateSaltConcentration_(priVars, timeIdx, lintype);
         }
-    }
-
-    void updateSaturations(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
-    {
-        const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        const LinearizationType lintype = elemCtx.problem().model().linearizer().getLinearizationType();
-        this->updateSaturations(priVars, timeIdx, lintype);
     }
 
     void updateSaturations(const PrimaryVariables& priVars,
@@ -282,14 +264,7 @@ public:
         }
     }
 
-    void updateRelpermAndPressures(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
-    {
-        const auto& problem = elemCtx.problem();
-        const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        this->updateRelpermAndPressures(problem, priVars, globalSpaceIdx, timeIdx, elemCtx.linearizationType());
-    }
-
+    template <class ...Args>
     void updateRelpermAndPressures(const Problem& problem,
                                    const PrimaryVariables& priVars,
                                    const unsigned globalSpaceIdx,
@@ -306,12 +281,13 @@ public:
         }
 
         // Phase relperms.
-        problem.updateRelperms(mobility_, dirMob_, fluidState_, globalSpaceIdx);
+        problem.template updateRelperms<FluidState, Args...>(mobility_, dirMob_, fluidState_, globalSpaceIdx);
 
         // now we compute all phase pressures
-        std::array<Evaluation, numPhases> pC;
+        using EvalArr = std::array<Evaluation, numPhases>;
+        EvalArr pC;
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
-        MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
+        MaterialLaw::template capillaryPressures<EvalArr, FluidState, Args...>(pC, materialParams, fluidState_);
 
         // scaling the capillary pressure due to salt precipitation
         if constexpr (enableBrine) {
@@ -365,14 +341,6 @@ public:
         if constexpr (enableSolvent) {
             asImp_().solventPostSatFuncUpdate_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
         }
-    }
-
-    void updateRsRvRsw(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
-    {
-        const auto& problem = elemCtx.problem();
-        const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        this->updateRsRvRsw(problem, priVars, globalSpaceIdx, timeIdx);
     }
 
     void updateRsRvRsw(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
@@ -632,13 +600,15 @@ public:
     /*!
      * \copydoc IntensiveQuantities::update
      */
+    template <class ...Args>
     void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        updateCommonPart(problem, priVars, globalSpaceIdx, timeIdx);
+
+        updateCommonPart<Args...>(problem, priVars, globalSpaceIdx, timeIdx);
 
         updatePorosity(elemCtx, dofIdx, timeIdx);
 
@@ -692,6 +662,7 @@ public:
         }
     }
 
+    template <class ...Args>
     void update(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
     {
         // This is the version of update() that does not use any ElementContext.
@@ -707,7 +678,7 @@ public:
         static_assert(!enableDispersion);
 
         this->extrusionFactor_ = 1.0;// to avoid fixing parent update
-        updateCommonPart(problem, priVars, globalSpaceIdx, timeIdx);
+        updateCommonPart<Args...>(problem, priVars, globalSpaceIdx, timeIdx);
         // Porosity requires separate calls so this can be instantiated with ReservoirProblem from the examples/ directory.
         updatePorosity(problem, priVars, globalSpaceIdx, timeIdx);
 
@@ -715,6 +686,7 @@ public:
     }
 
     // This function updated the parts that are common to the IntensiveQuantities regardless of extensions used.
+    template <class ...Args>
     void updateCommonPart(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
     {
         OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
@@ -726,7 +698,7 @@ public:
 
         updateTempSalt(problem, priVars, globalSpaceIdx, timeIdx, linearizationType);
         updateSaturations(priVars, timeIdx, linearizationType);
-        updateRelpermAndPressures(problem, priVars, globalSpaceIdx, timeIdx, linearizationType);
+        updateRelpermAndPressures<Args...>(problem, priVars, globalSpaceIdx, timeIdx, linearizationType);
 
         // update extBO parameters
         if constexpr (enableExtbo) {
