@@ -473,20 +473,20 @@ public:
 
         // compute the phase densities and transform the phase permeabilities into mobilities
         int nmobilities = 1;
-        std::vector<std::array<Evaluation,numPhases>*> mobilities = {&mobility_};
+        constexpr int max_nmobilities = 4;
+        std::array<std::array<Evaluation, numPhases>*, max_nmobilities> mobilities = { &mobility_};
         if (dirMob_) {
             for (int i = 0; i < 3; ++i) {
+                mobilities[nmobilities] = &(dirMob_->getArray(i));
                 ++nmobilities;
-                mobilities.push_back(&(dirMob_->getArray(i)));
             }
         }
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
-            const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState_, phaseIdx, pvtRegionIdx);
+            const auto [b, mu] = FluidSystem::inverseFormationVolumeFactorAndViscosity(fluidState_, phaseIdx, pvtRegionIdx);
             fluidState_.setInvB(phaseIdx, b);
-            const auto& mu = FluidSystem::viscosity(fluidState_, phaseIdx, pvtRegionIdx);
             for (int i = 0; i < nmobilities; ++i) {
                 if (enableExtbo && phaseIdx == oilPhaseIdx) {
                     (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
