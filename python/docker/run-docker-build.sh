@@ -67,6 +67,7 @@ OPTIONS:
     --version-simulators <ref>  Git ref for opm-simulators (branch/tag/PR) (default: master)
     --target-common <targets>   CMake targets for opm-common (default: opmcommon_python)
     --target-simulators <targets>   CMake targets for opm-simulators (default: simulators)
+    --version-tag <tag>     Version tag for wheels (optional)
     --no-buildx             Use DOCKER_BUILDKIT=0 for detailed output
     --help                  Show this help message
 
@@ -85,6 +86,8 @@ EXAMPLES:
         # Test multiple PRs together
     $(basename "$0") debug --libtype shared --no-buildx --jobs 8 --output /tmp/wheels
         # Creates /tmp/wheels/ with wheels (absolute path)
+    $(basename "$0") release --version-tag "rc1" --output release-wheels
+        # Creates docker/release-wheels/ with wheels tagged as version rc1
 
 NOTES:
     - Script automatically runs from python/ directory
@@ -147,6 +150,7 @@ parse_arguments() {
     VERSION_SIMULATORS="master"
     TARGET_COMMON="opmcommon_python"
     TARGET_SIMULATORS="simulators"
+    VERSION_TAG=""
     NO_BUILDX=false
 
     # Parse options
@@ -194,6 +198,10 @@ parse_arguments() {
                 ;;
             --target-simulators)
                 TARGET_SIMULATORS="$2"
+                shift 2
+                ;;
+            --version-tag)
+                VERSION_TAG="$2"
                 shift 2
                 ;;
             --no-buildx)
@@ -283,6 +291,11 @@ main() {
     DOCKER_CMD+=(--build-arg "version_simulators=$VERSION_SIMULATORS")
     DOCKER_CMD+=(--build-arg "target_common=$TARGET_COMMON")
     DOCKER_CMD+=(--build-arg "target_simulators=$TARGET_SIMULATORS")
+    
+    # Add version_tag if specified
+    if [ -n "$VERSION_TAG" ]; then
+        DOCKER_CMD+=(--build-arg "version_tag=$VERSION_TAG")
+    fi
 
     # Add output option if specified
     if [ -n "$OUTPUT_DIR" ]; then
