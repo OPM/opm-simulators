@@ -26,7 +26,7 @@
 namespace Opm {
 
 // ----------------------------------------------------
-// Constructor for the GuideRateTargetCalculator class
+// Constructor for the GroupTargetCalculator class
 // ----------------------------------------------------
 template<class Scalar>
 GroupTargetCalculator<Scalar>::
@@ -136,31 +136,8 @@ calculateGroupTarget()
 // Private methods for the GeneralCalculator class
 // -------------------------------------------------------
 
-
-// Calculates the target for a group. If the group is a production group, it is
-//   assumed that Group::ExceedAction::RATE (GCONPROD item 7 is "RATE").
-// The group control mode can be:
-// (a) FLD (then item 8 of GCONPROD/GCONINJE is ignored), but a guide rate must be defined
-//   in item 9 and 10 of GCONPROD/GCONINJE.
-// (b) NONE (then item 8 of GCONPROD/GCONINJE must be YES and a guide rate must be defined.
-// - ORAT, WRAT, GRAT, LRAT, CRAT, RESV,... and item 8 of GCONPROD/GCONINJE is "NO", then
-//   the target (item 3, 4, 5 or 6) of GCONPROD is used, or for an injector the target defined
-//   in GCONINJE is used.
-// (c) ORAT, WRAT, GRAT, LRAT, CRAT, RESV,... and item 8 of GCONPROD/GCONINJE is "YES", then
-//   if a higher level group target is found, and a guide rate is defined, then this target is used
-//   instead of the target defined in GCONPROD/GCONINJE.
-//  
-// - If the group has control different from FLD or NONE:
-//   - If the group still is available for control (item 8 of GCONPROD/GCONINJE is "YES" or):
-//     - Use procedure A
-//   - else:
-//     -
-
-// with control FLD or control NONE. The group is assumed to
-// have a guide rate defined. Also, a chain of parent groups with similar controls must exist until
-// a group with a control mode different from FLD or NONE (e.g. ORAT) is reached. The corresponding
-// target of this group is then distributed down the chain of parent groups by subtracting local
-// reductions and multiplying by local fractions. The target is then returned.
+// See comments above RescoupTargetCalculator::calculateMasterGroupTargetsAndSendToSlaves() about how
+// the target is calculated.
 template<class Scalar>
 std::optional<typename GroupTargetCalculator<Scalar>::TargetInfo>
 GroupTargetCalculator<Scalar>::
