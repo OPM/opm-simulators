@@ -119,8 +119,11 @@ void SingleWellState<Scalar>::open()
 }
 
 template<class Scalar>
-void SingleWellState<Scalar>::updateStatus(Well::Status new_status)
+bool SingleWellState<Scalar>::updateStatus(Well::Status new_status)
 {
+    if (this->status == new_status)
+        return false;
+
     switch (new_status) {
     case Well::Status::OPEN:
         this->open();
@@ -134,6 +137,7 @@ void SingleWellState<Scalar>::updateStatus(Well::Status new_status)
     default:
         throw std::logic_error("Invalid well status");
     }
+    return true;
 }
 
 template<class Scalar>
