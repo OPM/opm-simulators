@@ -203,6 +203,14 @@ getMasterGroupNamesForSlave_(const std::string &slave_name) const
     // For the given slave name, get all pairs of master group names and slave group names
     // Serialize the data such that it can be sent over MPI in one chunk
     // NOTE: The order of the names in the vector is important, as the slaves will
+    //       use this order to establish an index mapping. Later, when sending group targets,
+    //       the master will send indices instead of group names for efficiency. See:
+    //       - ReservoirCouplingSpawnSlaves::createSlaveNameToMasterGroupsMap_() which creates
+    //          the index-based mapping
+    //       - ReservoirCouplingSlave::saveMasterGroupNamesAsMap_() which establishes the same mapping
+    //          on the slave side
+    //       - RescoupTargetCalculator::calculateMasterGroupTargetsAndSendToSlaves() which uses
+    //          the index-based mapping to send the group targets to the slaves
     auto master_groups = this->rescoup_.masterGroups();
     std::vector<std::string> data;
     std::vector<std::string> master_group_names;
