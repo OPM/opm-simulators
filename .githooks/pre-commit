@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-pre-commit: ensure exactly one trailing newline in staged C/C++/Python/shell/yaml/cmake files.
+pre-commit: ensure exactly one trailing newline in staged C/C++/Python/shell/yaml/cmake/markdown files.
 
 This hook ensures that all staged source code files end with a newline. I.e. it adds a newline
 at the end of the file if it is missing, or it truncates more than one newline at the end of the
@@ -68,6 +68,7 @@ PYTHON_EXT_RE = re.compile(r"\.(?:py)$", re.IGNORECASE)
 SHELL_EXT_RE = re.compile(r"\.(?:sh)$", re.IGNORECASE)
 YAML_EXT_RE = re.compile(r"\.(?:yml|yaml)$", re.IGNORECASE)
 CMAKE_EXT_RE = re.compile(r"\.(?:cmake)$", re.IGNORECASE)
+MARKDOWN_EXT_RE = re.compile(r"\.(?:md|markdown)$", re.IGNORECASE)
 
 def run(*args, check=True, text=True, capture_output=True):
     return subprocess.run(args, check=check, text=text, capture_output=capture_output)
@@ -97,7 +98,8 @@ def is_source_or_script_file(path: Path) -> bool:
         PYTHON_EXT_RE.search(path.name) or
         SHELL_EXT_RE.search(path.name) or
         YAML_EXT_RE.search(path.name) or
-        CMAKE_EXT_RE.search(path.name)):
+        CMAKE_EXT_RE.search(path.name) or
+        MARKDOWN_EXT_RE.search(path.name)):
         return True
 
     # Check for CMakeLists.txt files specifically
