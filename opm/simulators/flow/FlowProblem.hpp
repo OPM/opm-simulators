@@ -159,7 +159,7 @@ protected:
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using WellModel = GetPropType<TypeTag, Properties::WellModel>;
     using AquiferModel = GetPropType<TypeTag, Properties::AquiferModel>;
-    
+
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
@@ -1680,7 +1680,7 @@ protected:
     GlobalEqVector drift_;
 
     WellModel wellModel_;
-    AquiferModel aquiferModel_; 
+    AquiferModel aquiferModel_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
