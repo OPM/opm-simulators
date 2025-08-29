@@ -24,8 +24,6 @@
 #ifndef OPM_WELL_ASSEMBLE_HEADER_INCLUDED
 #define OPM_WELL_ASSEMBLE_HEADER_INCLUDED
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
@@ -39,23 +37,24 @@ class Group;
 template<class Scalar> class GroupState;
 class Schedule;
 class SummaryState;
-template<class FluidSystem> class WellInterfaceFluidSystem;
-template<class Scalar> class WellState;
+template<typename FluidSystem> class WellInterfaceFluidSystem;
+template<typename Scalar, typename IndexTraits> class WellState;
 struct WellInjectionControls;
 struct WellProductionControls;
 
-template<class FluidSystem>
+template<typename FluidSystem>
 class WellAssemble {
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Water = FluidSystem::waterPhaseIdx;
+    static constexpr int Oil = FluidSystem::oilPhaseIdx;
+    static constexpr int Gas = FluidSystem::gasPhaseIdx;
     using Scalar = typename FluidSystem::Scalar;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
 
 public:
     explicit WellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well);
 
     template<class EvalWell>
-    void assembleControlEqProd(const WellState<Scalar>& well_state,
+    void assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
                                const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
@@ -67,7 +66,7 @@ public:
                                DeferredLogger& deferred_logger) const;
 
     template<class EvalWell>
-    void assembleControlEqInj(const WellState<Scalar>& well_state,
+    void assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
                               const GroupState<Scalar>& group_state,
                               const Schedule& schedule,
                               const SummaryState& summaryState,

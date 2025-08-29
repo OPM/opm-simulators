@@ -22,8 +22,6 @@
 
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 #include <map>
 #include <optional>
 #include <string>
@@ -36,13 +34,15 @@ class DeferredLogger;
 class GasLiftOpt;
 class Group;
 template<class Scalar> class GroupState;
+template<typename IndexTraits> class PhaseUsageInfo;
 class Schedule;
 class SummaryState;
 class Well;
-template<class Scalar> class WellState;
+template<typename Scalar, typename IndexTraits> class WellState;
 
-template<class Scalar>
-class GasLiftGroupInfo : public GasLiftCommon<Scalar>
+
+template<typename Scalar, typename IndexTraits>
+class GasLiftGroupInfo : public GasLiftCommon<Scalar, IndexTraits>
 {
 protected:
     class GroupRates;
@@ -52,17 +52,11 @@ protected:
     //    factors of the child groups of the group all the way down
     //    to the well group.
     using Well2GroupMap =
-        std::map<std::string, std::vector<std::pair<std::string,Scalar>>>;
+        std::map<std::string, std::vector<std::pair<std::string, Scalar>>>;
     using GroupRateMap =
         std::map<std::string, GroupRates>;
     using GroupIdxMap = std::map<std::string, int>;
     using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>;
-
-    // TODO: same definition with WellInterface, and
-    //   WellState eventually they should go to a common header file.
-    static const int Water = BlackoilPhases::Aqua;
-    static const int Oil = BlackoilPhases::Liquid;
-    static const int Gas = BlackoilPhases::Vapour;
 
 public:
     enum class Rate {oil, gas, water, liquid};
@@ -73,9 +67,8 @@ public:
                      const SummaryState& summary_state,
                      const int report_step_idx,
                      const int iteration_idx,
-                     const PhaseUsage& phase_usage,
                      DeferredLogger& deferred_logger,
-                     WellState<Scalar>& well_state,
+                     WellState<Scalar, IndexTraits>& well_state,
                      const GroupState<Scalar>& group_state,
                      const Parallel::Communication& comm,
                      bool glift_debug);
@@ -242,7 +235,7 @@ protected:
     const SummaryState& summary_state_;
     const int report_step_idx_;
     const int iteration_idx_;
-    const PhaseUsage& phase_usage_;
+    const PhaseUsageInfo<IndexTraits>& phase_usage_;
     const GasLiftOpt& glo_;
     GroupRateMap group_rate_map_;
     Well2GroupMap well_group_map_;

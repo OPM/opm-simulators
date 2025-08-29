@@ -26,11 +26,12 @@
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 #include <opm/input/eclipse/Schedule/Events.hpp>
 
+#include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
+
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/ALQState.hpp>
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm {
 
@@ -38,15 +39,19 @@ template<class Scalar> struct PerforationData;
 class SummaryState;
 class Well;
 
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class SingleWellState {
 public:
+    static const int waterPhaseIdx = PhaseUsageInfo<IndexTraits>::waterPhaseIdx;
+    static const int oilPhaseIdx = PhaseUsageInfo<IndexTraits>::oilPhaseIdx;
+    static const int gasPhaseIdx = PhaseUsageInfo<IndexTraits>::gasPhaseIdx;
+
     SingleWellState(const std::string& name,
                     const ParallelWellInfo<Scalar>& pinfo,
+                    const PhaseUsageInfo<IndexTraits>& pu,
                     bool is_producer,
                     Scalar presssure_first_connection,
                     const std::vector<PerforationData<Scalar>>& perf_input,
-                    const PhaseUsage& pu,
                     Scalar temp);
 
     static SingleWellState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
@@ -88,7 +93,7 @@ public:
 
     WellStatus status{WellStatus::OPEN};
     bool producer;
-    PhaseUsage pu;
+    PhaseUsageInfo<IndexTraits> pu;
     Scalar bhp{0};
     Scalar thp{0};
     Scalar temperature{0};

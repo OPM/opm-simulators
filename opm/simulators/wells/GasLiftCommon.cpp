@@ -24,13 +24,15 @@
 
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
+
 #include <fmt/format.h>
 
 namespace Opm {
 
-template<class Scalar>
-GasLiftCommon<Scalar>::
-GasLiftCommon(WellState<Scalar>& well_state,
+template<typename Scalar, typename IndexTraits>
+GasLiftCommon<Scalar, IndexTraits>::
+GasLiftCommon(WellState<Scalar, IndexTraits>& well_state,
               const GroupState<Scalar>& group_state,
               DeferredLogger& deferred_logger,
               const Parallel::Communication& comm,
@@ -46,8 +48,9 @@ GasLiftCommon(WellState<Scalar>& well_state,
  * Protected methods in alphabetical order
  ****************************************/
 
-template<class Scalar>
-void GasLiftCommon<Scalar>::
+template<typename Scalar, typename IndexTraits>
+void
+GasLiftCommon<Scalar, IndexTraits>::
 displayDebugMessageOnRank0_(const std::string& msg) const
 {
     // This output should be identical for all ranks.
@@ -57,8 +60,9 @@ displayDebugMessageOnRank0_(const std::string& msg) const
     }
 }
 
-template<class Scalar>
-void GasLiftCommon<Scalar>::
+template<typename Scalar, typename IndexTraits>
+void
+GasLiftCommon<Scalar, IndexTraits>::
 logMessage_(const std::string& prefix,
             const std::string& msg,
             MessageType msg_type) const
@@ -92,10 +96,10 @@ logMessage_(const std::string& prefix,
     }
 }
 
-template class GasLiftCommon<double>;
+template class GasLiftCommon<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class GasLiftCommon<float>;
+template class GasLiftCommon<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm

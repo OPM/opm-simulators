@@ -40,6 +40,9 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
+#include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
+
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
@@ -48,9 +51,6 @@
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
 #include <opm/input/eclipse/Units/Units.hpp>
 
@@ -76,18 +76,21 @@ BOOST_GLOBAL_FIXTURE(MPIFixture);
 
 struct Setup
 {
+    using IndexTraits = Opm::BlackOilDefaultFluidSystemIndices;
+
     Setup(const std::string& filename)
         : Setup(Opm::Parser{}.parseFile(filename))
     {}
 
     Setup(const Opm::Deck& deck)
         : es   (deck)
-        , pu   (Opm::phaseUsageFromDeck(es))
+        , pu   ()
         , grid (es.getInputGrid())
         , sched(deck, es, std::make_shared<Opm::Python>())
         , st   { Opm::TimeService::from_time_t(sched.getStartTime()),
                  es.runspec().udqParams().undefinedValue() }
     {
+        pu.initFromState(es);
         initWellPerfData();
     }
 
@@ -139,7 +142,7 @@ struct Setup
     }
 
     Opm::EclipseState es;
-    Opm::PhaseUsage   pu;
+    Opm::PhaseUsageInfo<IndexTraits>   pu;
     Opm::GridManager  grid;
     std::shared_ptr<Opm::Python> python;
     Opm::Schedule     sched;
@@ -148,11 +151,14 @@ struct Setup
 };
 
 namespace {
-    Opm::WellState<double>
+    using IndexTraits = Opm::BlackOilDefaultFluidSystemIndices;
+    using WellState = Opm::WellState<double, IndexTraits>;
+    using PhaseUsage = Opm::PhaseUsageInfo<IndexTraits>;
+    Opm::WellState<double, IndexTraits>
     buildWellState(const Setup& setup, const std::size_t timeStep,
                    std::vector<Opm::ParallelWellInfo<double>>& pinfos)
     {
-        auto state  = Opm::WellState<double>{setup.pu};
+        auto state  = WellState{setup.pu};
 
         const auto cpress =
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
@@ -190,7 +196,7 @@ namespace {
 
 
     void setSegPress(const std::vector<Opm::Well>& wells,
-                     Opm::WellState<double>& wstate)
+                     WellState& wstate)
     {
         const auto nWell = wells.size();
 
@@ -219,17 +225,17 @@ namespace {
 
 
   void setSegRates(const std::vector<Opm::Well>& wells,
-                   const Opm::PhaseUsage&        pu,
-                   Opm::WellState<double>&       wstate)
+                   const PhaseUsage&        pu,
+                   WellState&       wstate)
     {
-        const auto wat = pu.phase_used[Opm::BlackoilPhases::Aqua];
-        const auto iw  = wat ? pu.phase_pos[Opm::BlackoilPhases::Aqua] : -1;
+        const auto wat = pu.phaseIsActive(IndexTraits::waterPhaseIdx);
+        const auto iw  = wat ? pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx) : -1;
 
-        const auto oil = pu.phase_used[Opm::BlackoilPhases::Liquid];
-        const auto io  = oil ? pu.phase_pos[Opm::BlackoilPhases::Liquid] : -1;
+        const auto oil = pu.phaseIsActive(IndexTraits::oilPhaseIdx);
+        const auto io  = oil ? pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx) : -1;
 
-        const auto gas = pu.phase_used[Opm::BlackoilPhases::Vapour];
-        const auto ig  = gas ? pu.phase_pos[Opm::BlackoilPhases::Vapour] : -1;
+        const auto gas = pu.phaseIsActive(IndexTraits::gasPhaseIdx);
+        const auto ig  = gas ? pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx) : -1;
 
         const auto np = wstate.numPhases();
 
@@ -345,9 +351,9 @@ BOOST_AUTO_TEST_CASE(Rates)
 
     const auto rpt = wstate.report(setup.grid.c_grid()->global_cell, [](const int){return false;});
 
-    const auto wat = pu.phase_used[Opm::BlackoilPhases::Aqua];
-    const auto oil = pu.phase_used[Opm::BlackoilPhases::Liquid];
-    const auto gas = pu.phase_used[Opm::BlackoilPhases::Vapour];
+    const auto wat = pu.phaseIsActive(IndexTraits::waterPhaseIdx);
+    const auto oil = pu.phaseIsActive(IndexTraits::oilPhaseIdx);
+    const auto gas = pu.phaseIsActive(IndexTraits::gasPhaseIdx);
 
     BOOST_CHECK(wat && oil && gas);
 
@@ -601,14 +607,16 @@ BOOST_AUTO_TEST_CASE(TESTPerfData) {
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
     Opm::ParallelWellInfo<double> pinfo;
     std::vector<Opm::PerforationData<double>> connections = {{0,1,1,0,0},{1,1,1,0,1},{2,1,1,0,2}};
-    Opm::PhaseUsage pu;
+    using SingleWellState = Opm::SingleWellState<double, Opm::BlackOilDefaultFluidSystemIndices>;
+    using IndexTraits = Opm::BlackOilDefaultFluidSystemIndices;
+    using PhaseUsage = Opm::PhaseUsageInfo<IndexTraits>;
 
-    // This is totally bonkers, but the pu needs a complete deck to initialize properly
-    pu.num_phases = 3;
+    PhaseUsage pu;
+    pu.initFromPhases({Opm::Phases{true, true, true}});
 
-    Opm::SingleWellState ws1("W1", pinfo, true,  100.0, connections, pu, 1.0);
-    Opm::SingleWellState ws2("W2", pinfo, true,  100.0, connections, pu, 2.0);
-    Opm::SingleWellState ws3("W3", pinfo, false, 100.0, connections, pu, 3.0);
+    SingleWellState ws1("W1", pinfo, pu, true,  100.0, connections, 1.0);
+    SingleWellState ws2("W2", pinfo, pu, true,  100.0, connections, 2.0);
+    SingleWellState ws3("W3", pinfo, pu, false, 100.0, connections, 3.0);
 
     ws1.bhp = 100;
     ws1.thp = 200;
@@ -623,30 +631,5 @@ BOOST_AUTO_TEST_CASE(TestSingleWellState) {
     BOOST_CHECK(ws3.bhp != ws1.bhp);
     BOOST_CHECK(ws3.thp != ws1.thp);
 }
-
-
-
-BOOST_AUTO_TEST_CASE(TestPU) {
-    Opm::PhaseUsage pu({Opm::BlackoilPhases::Polymer, Opm::BlackoilPhases::Solvent, Opm::BlackoilPhases::Aqua, Opm::BlackoilPhases::ZFraction});
-
-    BOOST_CHECK(pu.phase_used[Opm::BlackoilPhases::Aqua]);      BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::Aqua], 0);
-    BOOST_CHECK(pu.phase_used[Opm::BlackoilPhases::Solvent]);   BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::Solvent], 1);
-    BOOST_CHECK(pu.phase_used[Opm::BlackoilPhases::Polymer]);   BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::Polymer], 2);
-    BOOST_CHECK(pu.phase_used[Opm::BlackoilPhases::ZFraction]); BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::ZFraction], 3);
-
-    BOOST_CHECK(!pu.phase_used[Opm::BlackoilPhases::Liquid]);   BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::Liquid], -1);
-    BOOST_CHECK(!pu.phase_used[Opm::BlackoilPhases::Energy]);   BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::Energy], -1);
-
-    BOOST_CHECK_EQUAL(pu.num_phases, 1);  // Only Aqua counts as a phase.
-    BOOST_CHECK(pu.has_polymer);
-    BOOST_CHECK(pu.has_solvent);
-    BOOST_CHECK(pu.has_zFraction);
-
-    BOOST_CHECK(!pu.has_energy);
-    BOOST_CHECK(!pu.has_polymermw);
-    BOOST_CHECK(!pu.has_foam);
-    BOOST_CHECK(!pu.has_brine);
-}
-
 
 BOOST_AUTO_TEST_SUITE_END()

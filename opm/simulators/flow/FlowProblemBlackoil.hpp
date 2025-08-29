@@ -150,6 +150,7 @@ private:
 
     using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
     using EclWriterType = EclWriter<TypeTag, OutputBlackOilModule<TypeTag> >;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
 #if HAVE_DAMARIS
     using DamarisWriterType = DamarisWriter<TypeTag>;
 #endif
@@ -338,8 +339,6 @@ public:
             this->initialTimeStepSize_ = tuning.TSINIT.has_value() ? tuning.TSINIT.value() : -1.0;
             this->maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
         }
-
-        this->initFluidSystem_();
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
@@ -1688,7 +1687,7 @@ protected:
 #endif
     MixingRateControls<FluidSystem> mixControls_;
 
-    ActionHandler<Scalar> actionHandler_;
+    ActionHandler<Scalar, IndexTraits> actionHandler_;
 
     ModuleParams moduleParams_;
 
