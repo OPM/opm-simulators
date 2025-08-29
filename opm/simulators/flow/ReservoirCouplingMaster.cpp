@@ -76,24 +76,18 @@ const std::vector<std::string>&
 ReservoirCouplingMaster<Scalar>::
 getMasterGroupNamesForSlave(std::size_t slave_idx) const
 {
-    // Fast path: O(1) direct vector access for performance-critical usage
-    if (slave_idx < this->slave_idx_to_master_groups_.size()) {
-        return this->slave_idx_to_master_groups_[slave_idx];
+    if (slave_idx >= this->slave_idx_to_master_groups_.size()) {
+        OPM_THROW(
+            std::runtime_error,
+            fmt::format(
+                "Slave index {} out of bounds. Valid range is [0, {})",
+                slave_idx, this->slave_idx_to_master_groups_.size()
+            )
+        );
     }
 
-    // Fallback to existing implementation for bounds checking and error handling
-    const auto& slave_name = this->getSlaveName(slave_idx);
-    auto it = this->slave_name_to_master_groups_map_.find(slave_name);
-    if (it != this->slave_name_to_master_groups_map_.end()) {
-        return it->second;
-    }
-    OPM_THROW(
-        std::runtime_error,
-        fmt::format(
-            "Slave index {} out of bounds (slave name: {})",
-            slave_idx, slave_name
-        )
-    );
+    // Direct O(1) vector access for performance-critical usage
+    return this->slave_idx_to_master_groups_[slave_idx];
 }
 
 template <class Scalar>
