@@ -85,7 +85,7 @@ private:
                                             /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
 public:
-    using EclMaterialLawManager = ::Opm::EclMaterialLawManager<Traits>;
+    using EclMaterialLawManager = ::Opm::EclMaterialLaw::EclMaterialLawManager<Traits>;
 
     using type = typename EclMaterialLawManager::MaterialLaw;
 };
