@@ -85,6 +85,10 @@ struct EnableBioeffects { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableMech { using type = UndefinedProperty; };
 
+//! Enable blackoil simulation with geochemical species
+template<class TypeTag, class MyTypeTag>
+struct EnableGeochemistry { using type = UndefinedProperty; };
+
 //! The relative weight of the residual of the energy equation compared to the mass
 //! residuals
 //!

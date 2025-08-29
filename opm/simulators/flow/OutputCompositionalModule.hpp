@@ -114,7 +114,8 @@ public:
                    getPropValue<TypeTag, Properties::EnableBrine>(),
                    getPropValue<TypeTag, Properties::EnableSaltPrecipitation>(),
                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                   getPropValue<TypeTag, Properties::EnableBioeffects>())
+                   getPropValue<TypeTag, Properties::EnableBioeffects>(),
+                   getPropValue<TypeTag, Properties::EnableGeochemistry>())
         , simulator_(simulator)
     {
         for (auto& region_pair : this->regions_) {

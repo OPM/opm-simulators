@@ -139,6 +139,7 @@ private:
     enum { enableDissolvedGas = Indices::compositionSwitchIdx >= 0 };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
+    enum { enableGeochemistry = getPropValue<TypeTag, Properties::EnableGeochemistry>() };
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
@@ -229,6 +230,14 @@ public:
         // create the ECL writer
         eclWriter_ = std::make_unique<EclWriterType>(simulator);
         enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
+
+        // Safeguard against geochemistry since it exsist in a separate module with a separate problem class
+        if constexpr (!enableGeochemistry) {
+            if (vanguard.eclState().runspec().geochem().enabled()) {
+                throw std::runtime_error("GEOCHEM keyword in the deck but geochemistry module "
+                                         "disabled at compile time!");
+            }
+        }
 
 #if HAVE_DAMARIS
         // create Damaris writer

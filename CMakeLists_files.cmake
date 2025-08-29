@@ -137,6 +137,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/FlowProblemParameters.cpp
   opm/simulators/flow/FlowsContainer.cpp
   opm/simulators/flow/FlowUtils.cpp
+  opm/simulators/flow/GeochemistryContainer.cpp
   opm/simulators/flow/GenericCpGridVanguard.cpp
   opm/simulators/flow/GenericOutputBlackoilModule.cpp
   opm/simulators/flow/GenericTemperatureModel.cpp
@@ -953,6 +954,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowUtils.hpp
   opm/simulators/flow/FlowsData.hpp
   opm/simulators/flow/FlowThresholdPressure.hpp
+  opm/simulators/flow/GeochemistryContainer.hpp
   opm/simulators/flow/GenericCpGridVanguard.hpp
   opm/simulators/flow/GenericOutputBlackoilModule.hpp
   opm/simulators/flow/GenericTemperatureModel.hpp
