@@ -154,7 +154,8 @@ public:
                    getPropValue<TypeTag, Properties::EnableBrine>(),
                    getPropValue<TypeTag, Properties::EnableSaltPrecipitation>(),
                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                   getPropValue<TypeTag, Properties::EnableBioeffects>())
+                   getPropValue<TypeTag, Properties::EnableBioeffects>(),
+                   getPropValue<TypeTag, Properties::EnableGeochemistry>())
         , simulator_(simulator)
         , collectOnIORank_(collectOnIORank)
     {
@@ -647,6 +648,14 @@ private:
     template <typename Problem>
     struct HasGeoMech<
         Problem, std::void_t<decltype(std::declval<Problem>().geoMechModel())>
+    > : public std::true_type {};
+
+    template <typename, class = void>
+    struct HasGeochemistry : public std::false_type {};
+
+    template <typename Problem>
+    struct HasGeochemistry<
+        Problem, std::void_t<decltype(std::declval<Problem>().geochemistryModel())>
     > : public std::true_type {};
 
     bool isDefunctParallelWell(const std::string& wname) const override
@@ -1821,6 +1830,32 @@ private:
         // Setup active extractors
         this->extractors_ = Extractor::removeInactive(extractors);
 
+        // Geochemistry
+        if constexpr (getPropValue<TypeTag, Properties::EnableGeochemistry>()) {
+            if (this->geochemC_.allocated()) {
+                this->extractors_.push_back(
+                    Entry{
+                        [&gC = this->geochemC_,
+                         &gM = this->simulator_.problem().geochemistryModel()](const Context& ectx)
+                        {
+                            gC.assignSpeciesConcentrations(
+                                ectx.globalDofIdx,
+                                [gIdx = ectx.globalDofIdx, &gM](const unsigned speciesIdx)
+                                    { return gM.speciesConcentration(speciesIdx, gIdx); }
+                            );
+                            gC.assignMineralConcentrations(
+                                ectx.globalDofIdx,
+                                [gIdx = ectx.globalDofIdx, &gM](const unsigned mineralIdx)
+                                    { return gM.mineralConcentration(mineralIdx, gIdx); }
+                            );
+                            gC.assignPH(ectx.globalDofIdx, gM.PH(ectx.globalDofIdx));
+                        }
+                    }
+                );
+            }
+        }
+
+        // Geomechanics
         if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
             if (this->mech_.allocated()) {
                 this->extractors_.push_back(

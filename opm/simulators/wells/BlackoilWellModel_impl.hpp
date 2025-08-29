@@ -2222,6 +2222,18 @@ namespace Opm {
         this->assignMswTracerRates(wsrpt, trMod.getMswTracerRates(), reportStepIdx);
     }
 
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    assignWellSpeciesRates(data::Wells& wsrpt) const
+    {
+        const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
+        const auto& geochemMod = this->simulator_.problem().geochemistryModel();
+
+        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, geochemMod.getWellSpeciesRates(), reportStepIdx);
+
+        this->assignMswTracerRates(wsrpt, geochemMod.getMswSpeciesRates(), reportStepIdx);
+    }
+
 } // namespace Opm
 
 #endif // OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
