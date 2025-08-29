@@ -903,7 +903,7 @@ getRateWithGroupLimit_(Rate rate_type,
         //  if delta_rate > 0
         const auto& pairs = this->group_info_.getWellGroups(this->well_name_);
         Scalar limited_rate = new_rate;
-        Scalar gr_target, new_gr_rate, efficiency;
+        Scalar gr_target{}, new_gr_rate{}, efficiency{};
         const std::string* group_name = nullptr;
         for (const auto& [group_name_temp, efficiency_temp] : pairs) {
             // in stage 2 we don't want to limit the rate to the group
