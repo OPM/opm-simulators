@@ -383,7 +383,6 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
 
         // 5) Local condition phase viscosities.
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            // const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
             segments.phase_viscosity[seg * well_.numPhases() + oil_pos] =
                     FluidSystem::oilPvt().viscosity(pvtReg, temperature, segment_pressure[seg], Rs);
         }
