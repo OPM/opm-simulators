@@ -185,8 +185,9 @@ def main():
 
         was_changed, delta = normalize_trailing_newline(p)
         if was_changed:
-            # Re-stage so the commit contains the fix
-            run("git", "add", "--", str(p))
+            # Re-stage so the commit contains the fix (only in local mode)
+            if os.environ.get('CI') != 'true':
+                run("git", "add", "--", str(p))
             changed.append((str(p), delta))
 
     if changed:
