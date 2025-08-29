@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-pre-commit: ensure exactly one trailing newline in staged C/C++/Python/shell/yaml files.
+pre-commit: ensure exactly one trailing newline in staged C/C++/Python/shell/yaml/cmake files.
 
 This hook ensures that all staged source code files end with a newline. I.e. it adds a newline
 at the end of the file if it is missing, or it truncates more than one newline at the end of the
@@ -67,6 +67,7 @@ CPP_EXT_RE = re.compile(r"\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$", re.IGNORECASE)
 PYTHON_EXT_RE = re.compile(r"\.(?:py)$", re.IGNORECASE)
 SHELL_EXT_RE = re.compile(r"\.(?:sh)$", re.IGNORECASE)
 YAML_EXT_RE = re.compile(r"\.(?:yml|yaml)$", re.IGNORECASE)
+CMAKE_EXT_RE = re.compile(r"\.(?:cmake)$", re.IGNORECASE)
 
 def run(*args, check=True, text=True, capture_output=True):
     return subprocess.run(args, check=check, text=text, capture_output=capture_output)
@@ -95,7 +96,12 @@ def is_source_or_script_file(path: Path) -> bool:
     if (CPP_EXT_RE.search(path.name) or
         PYTHON_EXT_RE.search(path.name) or
         SHELL_EXT_RE.search(path.name) or
-        YAML_EXT_RE.search(path.name)):
+        YAML_EXT_RE.search(path.name) or
+        CMAKE_EXT_RE.search(path.name)):
+        return True
+
+    # Check for CMakeLists.txt files specifically
+    if path.name == "CMakeLists.txt":
         return True
 
     # Check for shebang (executable scripts without extension)
