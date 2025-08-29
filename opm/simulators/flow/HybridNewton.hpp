@@ -81,6 +81,7 @@ public:
         : simulator_(simulator)
         , configsLoaded_(false)
     {}
+
     void tryApplyHybridNewton()
     {   
         // Check if flag activated 
@@ -128,15 +129,13 @@ private:
     {
         // Load cell indices from file at runtime
         std::vector<int> cell_indices = loadCellIndicesFromFile(config.cell_indices_file);
-        const size_t n_cells = cell_indices.size();
+        const std::size_t n_cells = cell_indices.size();
 
         // Pass cells to each stage
         auto input  = constructInputTensor(config, cell_indices, n_cells);
         auto output = constructOutputTensor(input, config, n_cells);
         updateInitialGuess(output, config, cell_indices, n_cells);
     }
-
-
 
 protected:
 
@@ -319,7 +318,7 @@ protected:
     *         correspond to cells and columns correspond to input features.
     */
     Opm::ML::Tensor<Evaluation> 
-    constructInputTensor(const HybridNewtonConfig& config, const std::vector<int>& cell_indices, size_t n_cells)
+    constructInputTensor(const HybridNewtonConfig& config, const std::vector<int>& cell_indices, std::size_t n_cells)
     {
         const auto& features = config.input_features;
 
@@ -336,11 +335,11 @@ protected:
 
         const auto& unitSyst = simulator_.vanguard().schedule().getUnits();
         // Calculate total input size (feature-major)
-        size_t input_size = num_per_cell_features * n_cells + num_scalar_features;
+        std::size_t input_size = num_per_cell_features * n_cells + num_scalar_features;
         Opm::ML::Tensor<Evaluation> input(input_size);
 
         // Track offset for each feature in flat tensor
-        size_t offset = 0;
+        std::size_t offset = 0;
 
         for (const auto& [name, spec] : features) {
             if (name == "TIMESTEP") {
@@ -353,7 +352,7 @@ protected:
                 offset += 1; // advance offset by 1 for scalar
             } else {
                 // Per-cell feature: assign values for each cell
-                for (size_t cell_idx = 0; cell_idx < n_cells; ++cell_idx) {
+                for (std::size_t cell_idx = 0; cell_idx < n_cells; ++cell_idx) {
                     const auto& intQuants = simulator_.model().intensiveQuantities(cell_indices[cell_idx], 0);
                     const auto& fs = intQuants.fluidState();
 
@@ -415,7 +414,7 @@ protected:
     *         output tensor does not match the expected feature layout.
     */
     Opm::ML::Tensor<Evaluation>
-    constructOutputTensor(const Opm::ML::Tensor<Evaluation>& input, const HybridNewtonConfig& config, size_t n_cells)
+    constructOutputTensor(const Opm::ML::Tensor<Evaluation>& input, const HybridNewtonConfig& config, std::size_t n_cells)
     {
         const auto& features = config.output_features;
         const int n_features = features.size();
@@ -450,7 +449,7 @@ protected:
     * \throws std::runtime_error if an expected output feature is missing
     *         or if state update fails for any cell.
     */
-    void updateInitialGuess(Opm::ML::Tensor<Evaluation>& output, const HybridNewtonConfig& config, const std::vector<int>& cell_indices, size_t n_cells)
+    void updateInitialGuess(Opm::ML::Tensor<Evaluation>& output, const HybridNewtonConfig& config, const std::vector<int>& cell_indices, std::size_t n_cells)
     {
         const auto& features = config.output_features;
 
@@ -471,7 +470,7 @@ protected:
 
         const auto& unitSyst = simulator_.vanguard().schedule().getUnits();
 
-        for (size_t i = 0; i < n_cells; ++i) {
+        for (std::size_t i = 0; i < n_cells; ++i) {
             const int cell_idx = cell_indices[i];
             const auto& intQuants = simulator_.model().intensiveQuantities(cell_idx, /*timeIdx*/0);
             auto fs = intQuants.fluidState();
