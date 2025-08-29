@@ -40,6 +40,7 @@
 #include <opm/simulators/flow/EclWriter.hpp>
 #include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
+#include <opm/simulators/flow/TemperatureModel.hpp>
 
 #if HAVE_DAMARIS
 #include <opm/simulators/flow/DamarisWriter.hpp>
@@ -94,6 +95,12 @@ struct TracerModel {  using type = UndefinedProperty; };
 template <class TypeTag>
 struct TracerModel<TypeTag, TTag::FlowBaseProblem>
 { using type =  ::Opm::TracerModel<TypeTag>; };
+
+template<class TypeTag, class MyTypeTag>
+struct TemperatureModel {  using type = UndefinedProperty; };
+template <class TypeTag>
+struct TemperatureModel<TypeTag, TTag::FlowBaseProblem>
+{ using type =  ::Opm::TemperatureModel<TypeTag>; };
 
 // Select the element centered finite volume method as spatial discretization
 template<class TypeTag>
@@ -193,7 +200,7 @@ struct EnableApiTracking<TypeTag, TTag::FlowBaseProblem>
 // store temperature (but do not conserve energy, as long as EnableEnergy is false)
 template<class TypeTag>
 struct EnableTemperature<TypeTag, TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
+{ static constexpr bool value = false; };
 
 template<class TypeTag>
 struct EnableMech<TypeTag, TTag::FlowBaseProblem>
