@@ -24,8 +24,6 @@
 // it is use for the development when some facility class are not ready
 
 #include <opm/output/data/Aquifer.hpp>
-#include <opm/output/data/Groups.hpp>
-#include <opm/output/data/Wells.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 
@@ -53,9 +51,7 @@ public:
     void linearize(SparseMatrixAdapter& /*matrix*/, GlobalEqVector& /*residual*/) override {}
     unsigned numDofs() const override { return 0; }
     void addNeighbors(std::vector<NeighborSet>& /*neighbors*/) const override {}
-    //void applyInitial(){};
     void initialSolutionApplied(){};
-    //void initFromRestart(const data::Aquifers& aquiferSoln);
     template <class Restarter>
     void serialize(Restarter& /*res*/){};
 
@@ -76,21 +72,6 @@ public:
     void endTimeStep(){};
     void endEpisode(){};
     void applyInitial() override {}
-    template<class RateType>
-    void computeTotalRatesForDof(RateType& /*rate*/, unsigned /*globalIdx*/) const{};
-
-    auto wellData() const {
-        return data::Wells{};
-    }
-    auto wellBlockAveragePressures() const {
-        return data::WellBlockAveragePressures{};
-    }
-    auto groupAndNetworkData(const int&) const {
-        return data::GroupAndNetworkValues{};
-    }
-    auto wellTestState() const {
-        return WellTestState{};
-    }
     auto aquiferData() const {
         return data::Aquifers{};
     }
