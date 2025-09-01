@@ -197,6 +197,9 @@ getGrupSlavActivationDate_() const
               "No GRUPSLAV keyword found in schedule");
 }
 
+// NOTE: It is not legal for a slave to activate before the master has activated. This problem
+//       will be caught by the master when it receives the slave activation date. See:
+//       ReservoirCouplingSpawnSlaves::receiveActivationDateFromSlaves_()
 void
 ReservoirCouplingSlave::
 maybeActivate(int report_step) {
@@ -204,6 +207,8 @@ maybeActivate(int report_step) {
         auto rescoup = this->schedule_[report_step].rescoup();
         if (rescoup.grupSlavCount() > 0) {
             this->activated_ = true;
+            // Send a handshake to the master process to indicate that the slave has activated
+            this->sendActivationHandshakeToMasterProcess_();
         }
     }
 }
@@ -321,6 +326,27 @@ sendActivationDateToMasterProcess_() const
         );
         OpmLog::info("Sent simulation activation date to master process from rank 0");
    }
+}
+
+void
+ReservoirCouplingSlave::
+sendActivationHandshakeToMasterProcess_() const
+{
+    if (this->comm_.rank() == 0) {
+        std::uint8_t activation_handshake = 1u;
+        auto MPI_UINT8_T_TYPE = Dune::MPITraits<std::uint8_t>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            &activation_handshake,
+            /*count=*/1,
+            /*datatype=*/MPI_UINT8_T_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::SlaveActivationHandshake),
+            this->slave_master_comm_
+        );
+        OpmLog::info("Sent simulation activation handshake to master process from rank 0");
+    }
+    this->comm_.barrier();
 }
 
 void

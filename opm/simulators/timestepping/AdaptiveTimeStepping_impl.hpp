@@ -633,6 +633,8 @@ runStepReservoirCouplingMaster_()
     double step_end_time = current_time + original_time_step;
     auto current_step_length = original_time_step;
     SimulatorReport report;
+    // The master needs to know which slaves have activated before it can start the substep loop
+    reservoirCouplingMaster_().maybeReceiveActivationHandshakeFromSlaves(current_time);
     while (true) {
         reservoirCouplingMaster_().receiveNextReportDateFromSlaves();
         if (iteration == 0) {
