@@ -212,36 +212,43 @@ protected:
 
     void updateCachedIntQuants(const unsigned timeIdx) const
     {
-        // Runtime dispatch on three-phase approach into loops with
-        // compile-time fixed approach.
+        // Runtime dispatch on three-phase approach to compile-time fixed approach.
         switch (this->simulator_.problem().materialLawManager()->threePhaseApproach()) {
         case EclMultiplexerApproach::Stone1:
-            updateCachedIntQuantsLoop<EclMultiplexerDispatch<EclMultiplexerApproach::Stone1>>(timeIdx);
+            updateCachedIntQuants1<EclMultiplexerDispatch<EclMultiplexerApproach::Stone1>>(timeIdx);
             break;
 
         case EclMultiplexerApproach::Stone2:
-            updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::Stone2>>(timeIdx);
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::Stone2>>(timeIdx);
             break;
 
         case EclMultiplexerApproach::Default:
-            if (this->simulator_.problem().materialLawManager()->satCurveIsAllPiecewiseLinear()) {
-                using PL = SatCurveMultiplexerDispatch<SatCurveMultiplexerApproach::PiecewiseLinear>;
-                updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::Default>, PL>(timeIdx);
-            } else {
-                // TODO: Might want to set LET here, but need to check if partial use of LET is possible.
-                updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::Default>>(timeIdx);
-            }
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::Default>>(timeIdx);
             break;
 
         case EclMultiplexerApproach::TwoPhase:
-            updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::TwoPhase>>(timeIdx);
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::TwoPhase>>(timeIdx);
             break;
 
         case EclMultiplexerApproach::OnePhase:
-            updateCachedIntQuantsLoop<EMD<EclMultiplexerApproach::OnePhase>>(timeIdx);
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::OnePhase>>(timeIdx);
             break;
         }
     }
+
+    template <class EMDArg>
+    void updateCachedIntQuants1(const unsigned timeIdx) const
+    {
+        // Runtime dispatch on using piecewise linear saturation curves to compile-time fixed approach.
+        if (this->simulator_.problem().materialLawManager()->satCurveIsAllPiecewiseLinear()) {
+            using PL = SatCurveMultiplexerDispatch<SatCurveMultiplexerApproach::PiecewiseLinear>;
+            updateCachedIntQuantsLoop<EMDArg, PL>(timeIdx);
+        } else {
+            // TODO: Might want to set LET here, but need to check if partial use of LET is possible.
+            updateCachedIntQuantsLoop<EMDArg>(timeIdx);
+        }
+    }
+
 
     template <class ...Args>
     void updateCachedIntQuantsLoop(const unsigned timeIdx) const
