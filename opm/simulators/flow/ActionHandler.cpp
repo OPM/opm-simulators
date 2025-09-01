@@ -211,7 +211,7 @@ applyActions(const int reportStep,
                                                 ecl_state_, summaryState_, wellpi);
 
         if (const auto pyRes = this->actionState_.python_result(pyaction->name());
-            !pyRes.has_value() || !*pyRes)
+            !pyRes.has_value())
         {
             logInactivePyAction(pyaction->name(), ts);
             continue;
