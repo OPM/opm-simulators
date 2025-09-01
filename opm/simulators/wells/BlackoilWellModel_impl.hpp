@@ -434,7 +434,13 @@ namespace Opm {
             // nonzero phase anyway.
             for (const auto& well : well_container_) {
                 if (well->isProducer() && !well->wellIsStopped()) {
-                    well->initializeProducerWellState(simulator_, this->wellState(), local_deferredLogger);
+                    const auto& events = this->wellState().well(well->indexOfWell()).events;
+                    const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
+                                + ScheduleEvents::REQUEST_OPEN_WELL
+                                + ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER
+                                + ScheduleEvents::NEW_WELL;
+                    const bool event = events.hasEvent(effective_events_mask);
+                    well->initializeProducerWellState(simulator_, event, this->wellState(), local_deferredLogger);
                 }
             }
         }
@@ -559,7 +565,7 @@ namespace Opm {
 
             // initialize rates/previous rates to prevent zero fractions in vfp-interpolation
             if (well->isProducer() && alternative_well_rate_init_) {
-                well->initializeProducerWellState(simulator_, this->wellState(), deferred_logger);
+                well->initializeProducerWellState(simulator_, /*event=*/true, this->wellState(), deferred_logger);
             }
             if (well->isVFPActive(deferred_logger)) {
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());

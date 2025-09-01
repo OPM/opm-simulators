@@ -1623,6 +1623,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     initializeProducerWellState(const Simulator& simulator,
+                                const bool event,
                                 WellStateType& well_state,
                                 DeferredLogger& deferred_logger) const
     {
@@ -1683,6 +1684,10 @@ namespace Opm
         // typically from a rate constraint. We must make sure it is
         // respected, so if it was lower than the calculated rate for
         // the same phase we scale all rates to match.
+        // But we only want to do this if the well is just opened.
+        if (!event)
+            return;
+
         const Scalar initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
         const Scalar computed_rate = well_q_s[nonzero_rate_index];
         if (std::abs(initial_nonzero_rate) < std::abs(computed_rate)) {

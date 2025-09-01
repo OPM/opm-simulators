@@ -325,10 +325,12 @@ public:
     computeCurrentWellRates(const Simulator& simulator,
                             DeferredLogger& deferred_logger) const = 0;
 
-    /// Modify the well_state's rates if there is only one nonzero rate.
-    /// If so, that rate is kept as is, but the others are set proportionally
+    /// Modify the well_state's rates if none or only one rate are non-zero.
+    /// For cases with one non-zero rate we only update it after an event.
+    /// If updated, that rate is kept as is, but the others are set proportionally
     /// to the rates at bhp limit or bhp 1 bar.
     void initializeProducerWellState(const Simulator& simulator,
+                                     const bool event,
                                      WellStateType& well_state,
                                      DeferredLogger& deferred_logger) const;
 
