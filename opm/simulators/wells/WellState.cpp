@@ -402,8 +402,10 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
                 continue;
             }
 
-            // If new target is set using WCONPROD, WCONINJE etc. we use the new control
-            if (!new_well.events.hasEvent(WellState::event_mask)) {
+            // If we move from historical mode to prediction mode or from injector to producer
+            // we dont want to use the privious controls
+            if (!new_well.events.hasEvent(ScheduleEvents::HIST_TO_PRED) &&
+                !new_well.events.hasEvent(ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER)) {
                 new_well.injection_cmode = prev_well.injection_cmode;
                 new_well.production_cmode = prev_well.production_cmode;
             }
