@@ -100,6 +100,18 @@ getSlaveGroupPotentials(const std::string &master_group_name)
 
 void
 ReservoirCouplingMaster::
+maybeActivate(int report_step) {
+    if (!this->activated()) {
+        double start_date = this->schedule_.getStartTime();
+        auto current_time = start_date + this->schedule_.seconds(report_step);
+        if (Seconds::compare_gt_or_eq(current_time, this->activation_date_)) {
+            this->activated_ = true;
+        }
+    }
+}
+
+void
+ReservoirCouplingMaster::
 maybeSpawnSlaveProcesses(int report_step)
 {
     if (this->numSlavesStarted() > 0) {  // We have already spawned the slave processes
@@ -133,14 +145,15 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
     // where suggested_timestep = step_end_date - step_start_date
     for (std::size_t i = 0; i < num_slaves; i++) {
         double slave_start_date = this->slave_start_dates_[i];
+        double slave_activation_date = this->slave_activation_dates_[i];
         double slave_next_report_date{this->slave_next_report_time_offsets_[i] + slave_start_date};
-        if (Seconds::compare_gt_or_eq(slave_start_date, step_end_date)) {
-            // The slave process has not started yet, and will not start during this timestep
+        if (Seconds::compare_gt_or_eq(slave_activation_date, step_end_date)) {
+            // The slave process has not activated yet, and will not activate during this timestep
             continue;
         }
         double slave_elapsed_time;
-        if (Seconds::compare_lt_or_eq(slave_start_date,step_start_date)) {
-            // The slave process has already started, and will continue during this timestep
+        if (Seconds::compare_lt_or_eq(slave_activation_date,step_start_date)) {
+            // The slave process has already activated, and will continue during this timestep
             if (Seconds::compare_gt(slave_next_report_date, step_end_date)) {
                 // The slave process will not report during this timestep
                 continue;
@@ -149,8 +162,10 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
             slave_elapsed_time = slave_next_report_date - step_start_date;
         }
         else {
-            // The slave process will start during the timestep, but not at the beginning
-            slave_elapsed_time = slave_start_date - step_start_date;
+            // The slave process will activate during the timestep, but not at the beginning
+            // Ensure that we synchronize the slave activation report date with the
+            //   start of a master timestep by chopping the current master timestep.
+            slave_elapsed_time = slave_activation_date - step_start_date;
         }
         suggested_timestep = slave_elapsed_time;
         step_end_date = step_start_date + suggested_timestep;
@@ -160,10 +175,83 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
 
 void
 ReservoirCouplingMaster::
+maybeReceiveActivationHandshakeFromSlaves(double current_time)
+{
+    // Initialize on first call
+    if (this->slave_activation_status_.empty()) {
+        this->slave_activation_status_.resize(this->numSlavesStarted(), false);
+    }
+
+    if (this->comm_.rank() == 0) {
+        auto current_date = this->schedule_.getStartTime() + current_time;
+        for (unsigned int i = 0; i < this->numSlavesStarted(); i++) {
+            // Skip if already activated
+            if (this->slaveIsActivated(i)) {
+                continue;
+            }
+            // Check if slave should activate during this timestep
+            double slave_activation_date = this->slave_activation_dates_[i];
+            // NOTE: The master will adjust its time stepping to ensure that its step will always
+            //    conincide with the slave report steps (and hence the slave activation date)
+            assert(Seconds::compare_gt_or_eq(slave_activation_date, current_date));
+            if (Seconds::compare_eq(slave_activation_date, current_date)) {
+                // Use non-blocking probe first to check for handshake
+                int flag;
+                MPI_Status status;
+                MPI_Iprobe(0, static_cast<int>(MessageTag::SlaveActivationHandshake),
+                          this->master_slave_comm_[i], &flag, &status);
+
+                if (!flag) {
+                    // Handshake not received yet, for debugging reasons it can be useful to know which slave
+                    //   is waiting for the handshake
+                    OpmLog::info(fmt::format("Waiting for activation handshake from slave {}",
+                        this->slave_names_[i]));
+                }
+                std::uint8_t handshake;
+                auto MPI_UINT8_T_TYPE = Dune::MPITraits<std::uint8_t>::getType();
+                MPI_Recv(&handshake, 1, MPI_UINT8_T_TYPE, 0,
+                        static_cast<int>(MessageTag::SlaveActivationHandshake),
+                        this->master_slave_comm_[i], MPI_STATUS_IGNORE);
+                this->slave_activation_status_[i] = handshake;
+                OpmLog::info(fmt::format("Received activation handshake from slave {}",
+                                        this->slave_names_[i]));
+
+            }
+        }
+    }
+    // Broadcast status to all ranks
+    comm_.broadcast(
+        this->slave_activation_status_.data(), /*count=*/this->numSlavesStarted(), /*emitter_rank=*/0
+    );
+}
+
+std::size_t
+ReservoirCouplingMaster::
+numSlaveGroups(unsigned int index)
+{
+    return this->master_group_name_order_[this->slave_names_[index]].size();
+}
+
+std::size_t
+ReservoirCouplingMaster::
+numSlavesStarted() const
+{
+    return this->slave_names_.size();
+}
+
+void
+ReservoirCouplingMaster::
 sendNextTimeStepToSlaves(double timestep)
 {
     if (this->comm_.rank() == 0) {
         for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
+            if (!this->slaveIsActivated(i)) {
+                OpmLog::info(fmt::format(
+                    "Slave {} has not activated yet, skipping sending next time step to slave",
+                    this->slave_names_[i]
+                ));
+                continue;
+            }
             // NOTE: See comment about error handling at the top of this file.
             MPI_Send(
                 &timestep,
@@ -181,15 +269,21 @@ sendNextTimeStepToSlaves(double timestep)
    }
 }
 
-
 void
 ReservoirCouplingMaster::
 receiveNextReportDateFromSlaves()
 {
     auto num_slaves = this->numSlavesStarted();
-    OpmLog::info("Receiving next report dates from slave processes");
     if (this->comm_.rank() == 0) {
+        OpmLog::info("Receiving next report dates from slave processes");
         for (unsigned int i = 0; i < num_slaves; i++) {
+            if (!this->slaveIsActivated(i)) {
+                // Set to zero to indicate that the slave has not activated yet
+                this->slave_next_report_time_offsets_[i] = 0.0;
+                OpmLog::info(fmt::format("Slave {} has not activated yet, setting next report date to 0.0",
+                                        this->slave_names_[i]));
+                continue;
+            }
             double slave_next_report_time_offset; // Elapsed time from the beginning of the simulation
             // NOTE: See comment about error handling at the top of this file.
             MPI_Recv(
@@ -227,23 +321,33 @@ receivePotentialsFromSlaves()
         assert( num_slave_groups > 0 );
         std::vector<Potentials> potentials(num_slave_groups);
         if (this->comm_.rank() == 0) {
-            // NOTE: See comment about error handling at the top of this file.
-            auto MPI_POTENTIALS_TYPE = Dune::MPITraits<Potentials>::getType();
-            MPI_Recv(
-                potentials.data(),
-                /*count=*/num_slave_groups,
-                /*datatype=*/MPI_POTENTIALS_TYPE,
-                /*source_rank=*/0,
-                /*tag=*/static_cast<int>(MessageTag::Potentials),
-                this->getSlaveComm(i),
-                MPI_STATUS_IGNORE
-            );
-            this->logger_.info(
-                fmt::format(
-                    "Received potentials from slave process with name: {}. "
-                    "Number of slave groups: {}", this->slave_names_[i], num_slave_groups
-                )
-            );
+            if (this->slaveIsActivated(i)) {
+                // NOTE: See comment about error handling at the top of this file.
+                auto MPI_POTENTIALS_TYPE = Dune::MPITraits<Potentials>::getType();
+                MPI_Recv(
+                    potentials.data(),
+                    /*count=*/num_slave_groups,
+                    /*datatype=*/MPI_POTENTIALS_TYPE,
+                    /*source_rank=*/0,
+                    /*tag=*/static_cast<int>(MessageTag::Potentials),
+                    this->getSlaveComm(i),
+                    MPI_STATUS_IGNORE
+                );
+                this->logger_.info(
+                    fmt::format(
+                        "Received potentials from slave process with name: {}. "
+                        "Number of slave groups: {}", this->slave_names_[i], num_slave_groups
+                    )
+                );
+            }
+            else {
+                this->logger_.info(fmt::format(
+                    "Slave {} has not activated yet, skipping receiving potentials from slave",
+                        this->slave_names_[i]
+                    )
+                );
+                potentials.assign(num_slave_groups, Potentials{}); // Set to zero potentials
+            }
         }
         // NOTE: The dune broadcast() below will do something like:
         //    MPI_Bcast(inout,len,MPITraits<Potentials>::getType(),root,communicator)
@@ -252,20 +356,6 @@ receivePotentialsFromSlaves()
         this->comm_.broadcast(potentials.data(), /*count=*/num_slave_groups, /*emitter_rank=*/0);
         this->slave_group_potentials_[this->slave_names_[i]] = potentials;
     }
-}
-
-std::size_t
-ReservoirCouplingMaster::
-numSlaveGroups(unsigned int index)
-{
-    return this->master_group_name_order_[this->slave_names_[index]].size();
-}
-
-std::size_t
-ReservoirCouplingMaster::
-numSlavesStarted() const
-{
-    return this->slave_names_.size();
 }
 
 void

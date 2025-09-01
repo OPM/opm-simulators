@@ -51,6 +51,7 @@ enum class MessageTag : int {
     PotentialsSize,
     SlaveSimulationStartDate,
     SlaveActivationDate,
+    SlaveActivationHandshake,
     SlaveProcessTermination,
     SlaveName,
     SlaveNameSize,
@@ -131,6 +132,13 @@ struct Seconds {
     /// \param b Second double value.
     /// \return True if \a a is greater than \a b.
     static bool compare_gt_or_eq(double a, double b);
+
+    /// \brief Determines if \a a is less than \a b within the specified tolerance.
+    ///
+    /// \param a First double value.
+    /// \param b Second double value.
+    /// \return True if \a a is less than \a b.
+    static bool compare_lt(double a, double b);
 
     /// \brief Determines if \a a is less than or equal to \a b within the specified tolerance.
     ///

@@ -61,6 +61,7 @@ private:
     void receiveSlaveNameFromMasterProcess_();
     void saveMasterGroupNamesAsMap_(const std::vector<char>& group_names);
     void sendActivationDateToMasterProcess_() const;
+    void sendActivationHandshakeToMasterProcess_() const;
     void sendSimulationStartDateToMasterProcess_() const;
 
     const Parallel::Communication &comm_;
