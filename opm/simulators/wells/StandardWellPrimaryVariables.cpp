@@ -519,7 +519,7 @@ StandardWellPrimaryVariables<FluidSystem,Indices>::
 surfaceVolumeFraction(const int compIdx) const
 {
     EvalWell sum_volume_fraction_scaled(numWellEq_ + Indices::numEq, 0.);
-    for (int idx = 0; idx < well_.numComponents(); ++idx) {
+    for (int idx = 0; idx < well_.numConservationQuantities(); ++idx) {
         sum_volume_fraction_scaled += this->volumeFractionScaled(idx);
     }
 
@@ -534,7 +534,7 @@ StandardWellPrimaryVariables<FluidSystem,Indices>::
 getQs(const int comp_idx) const
 {
     // Note: currently, the WQTotal definition is still depends on Injector/Producer.
-    assert(comp_idx < well_.numComponents());
+    assert(comp_idx < well_.numConservationQuantities());
 
     if (well_.isInjector()) { // only single phase injection
         Scalar inj_frac = 0.0;
