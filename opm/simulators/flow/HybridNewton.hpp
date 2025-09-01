@@ -25,7 +25,7 @@
 
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/flow/HybridNewtonConfig.hpp>
-
+#include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/ml/ml_model.hpp>
@@ -33,7 +33,6 @@
 #include <string>         
 #include <iostream>
 #include <fstream>
-#include <boost/property_tree/json_parser.hpp>
 #include <vector>
 
 namespace Opm {
@@ -169,27 +168,26 @@ protected:
         return applicable;
     }
 
-    bool shouldApplyHybridNewton(double current_time, const HybridNewtonConfig& config)
+    bool shouldApplyHybridNewton(double current_time, const HybridNewtonConfig& config) const
     {
-        if (config.apply_times.empty()) {
-            return false;
-        }
-
         if (config.apply_times.size() == 1) {
             // Apply exactly at one point in time (with optional tolerance)
             constexpr double tolerance = 1e-6;
-            return std::abs(current_time - config.apply_times[0]) < tolerance;
+            bool apply = std::abs(current_time - config.apply_times[0]) < tolerance;
+            return apply;
         }
 
         if (config.apply_times.size() == 2) {
             double start_time = config.apply_times[0];
             double end_time = config.apply_times[1];
-            return (current_time >= start_time) && (current_time <= end_time);
+            bool apply = (current_time >= start_time) && (current_time <= end_time);
+            return apply;
         }
 
         // If apply_times has an unexpected number of entries
         return false;
     }
+
 
     /*!
     * \brief Parse the Hybrid Newton configuration file (JSON format).
@@ -208,78 +206,102 @@ protected:
     std::vector<HybridNewtonConfig> parseHybridNewtonConfigs(const std::string& path)
     {
         std::vector<HybridNewtonConfig> configs;
-        boost::property_tree::ptree pt;
-        std::ifstream file(path);
-        
-        if (!file.is_open()) {
-            OPM_THROW(std::runtime_error, "Cannot open config file: " + path);
-        }
-        
+
+        // Load the property tree from JSON file
+        PropertyTree pt;
         try {
-            boost::property_tree::read_json(file, pt);
-        } catch (const boost::property_tree::json_parser_error& e) {
-            OPM_THROW(std::runtime_error, "Failed to parse JSON: " + std::string(e.what()));
+            pt = PropertyTree(path);
+        } catch (const std::exception& e) {
+            OPM_THROW(std::runtime_error,
+                    "Failed to open or parse config file: " + path + " (" + e.what() + ")");
         }
-        
-        auto parseFeatures = [](const boost::property_tree::ptree& subtree) {
+
+        // Lambda to parse features (dict of dicts)
+        auto parseFeatures = [](const PropertyTree& subtree) -> std::vector<std::pair<std::string, FeatureSpec>> {
             std::vector<std::pair<std::string, FeatureSpec>> result;
-            for (const auto& [key, val] : subtree) {
+
+            for (const auto& feature_name : subtree.get_child_keys()) {
+                const PropertyTree& featureTree = subtree.get_child(feature_name);
+
                 FeatureSpec spec;
-                spec.transform = Transform(val.get<std::string>("feature_engineering", "none"));
-                
-                if (auto s = val.get_child_optional("scaling_params")) {
-                    if (s->get_child_optional("mean") && s->get_child_optional("std")) {
+                spec.transform = Transform(featureTree.get<std::string>("feature_engineering", "none"));
+
+                if (auto sOpt = featureTree.get_child_optional("scaling_params")) {
+                    const PropertyTree& s = *sOpt;
+                    if (s.get_child_optional("mean") && s.get_child_optional("std")) {
                         spec.scaler.type = Scaler::Type::Standard;
-                        spec.scaler.mean = s->get<double>("mean", 0.0);
-                        spec.scaler.std = s->get<double>("std", 1.0);
-                    } else if (s->get_child_optional("min") && s->get_child_optional("max")) {
+                        spec.scaler.mean = s.get<double>("mean", 0.0);
+                        spec.scaler.std = s.get<double>("std", 1.0);
+                    } else if (s.get_child_optional("min") && s.get_child_optional("max")) {
                         spec.scaler.type = Scaler::Type::MinMax;
-                        spec.scaler.min = s->get<double>("min", 0.0);
-                        spec.scaler.max = s->get<double>("max", 1.0);
+                        spec.scaler.min = s.get<double>("min", 0.0);
+                        spec.scaler.max = s.get<double>("max", 1.0);
                     } else {
                         spec.scaler.type = Scaler::Type::None;
                     }
                 } else {
                     spec.scaler.type = Scaler::Type::None;
                 }
-                
-                result.emplace_back(key, std::move(spec));
+
+                result.emplace_back(feature_name, std::move(spec));
             }
             return result;
         };
-        
-        for (const auto& [index, modelTree] : pt) {
+
+        // Iterate over root-level models ("0", "1", ...)
+        for (const auto& model_key : pt.get_child_keys()) {
+            const PropertyTree mt = pt.get_child(model_key);
+
             HybridNewtonConfig config;
-            
-            config.model_path = modelTree.get<std::string>("model_path", "");
-            
-            // Require cell_indices to be a file path (string)
-            config.cell_indices_file = modelTree.get<std::string>("cell_indices_file", "");
+
+            config.model_path = mt.get<std::string>("model_path", "");
+            if (config.model_path.empty()) {
+                OPM_THROW(std::runtime_error, "Model must have 'model_path' specified in config file: " + path);
+            }
+
+            config.cell_indices_file = mt.get<std::string>("cell_indices_file", "");
             if (config.cell_indices_file.empty()) {
-                OPM_THROW(std::runtime_error, 
-                    "Model must have 'cell_indices' as a file path (string)");
+                OPM_THROW(std::runtime_error, "Model must have 'cell_indices_file' as a file path (string)");
             }
-            
-            auto applyTimesTree = modelTree.get_child("apply_times", {});
-            for (const auto& item : applyTimesTree) {
-                config.apply_times.push_back(item.second.get_value<double>());
+
+            // Parse apply_times (dict of doubles)
+            auto applyTimesOpt = mt.get_child_optional("apply_times");
+            if (!applyTimesOpt) {
+                OPM_THROW(std::runtime_error, "Model must have 'apply_times' defined");
             }
-            
-            config.input_features = parseFeatures(modelTree.get_child("features.inputs"));
-            config.output_features = parseFeatures(modelTree.get_child("features.outputs"));
-            
+
+            for (const auto& time_key : applyTimesOpt->get_child_keys()) {
+                double t = applyTimesOpt->get_child(time_key).get<double>("");
+                config.apply_times.push_back(t);
+            }
+
+            if (config.apply_times.empty()) {
+                OPM_THROW(std::runtime_error, "'apply_times' must contain at least one value");
+            }
+
+            // Parse input features
+            auto inputsOpt = mt.get_child_optional("features.inputs");
+            if (inputsOpt) {
+                config.input_features = parseFeatures(*inputsOpt);
+            }
+
+            // Parse output features
+            auto outputsOpt = mt.get_child_optional("features.outputs");
+            if (outputsOpt) {
+                config.output_features = parseFeatures(*outputsOpt);
+            }
+
             configs.push_back(std::move(config));
         }
-        
+
         if (configs.empty()) {
             OPM_THROW(std::runtime_error, "No models found in config file: " + path);
         }
-        
+
         return configs;
     }
 
-    
-    void validateAllConfigs()
+    void validateAllConfigs() const
     {
         for (const auto& config : configs_) {
             // Check if RS or RV features appear in this config
@@ -317,7 +339,7 @@ protected:
     * \return A tensor of shape [n_cells x n_input_features], where rows
     *         correspond to cells and columns correspond to input features.
     */
-    Opm::ML::Tensor<Evaluation> 
+    ML::Tensor<Evaluation> 
     constructInputTensor(const HybridNewtonConfig& config, const std::vector<int>& cell_indices, std::size_t n_cells)
     {
         const auto& features = config.input_features;
@@ -336,7 +358,7 @@ protected:
         const auto& unitSyst = simulator_.vanguard().schedule().getUnits();
         // Calculate total input size (feature-major)
         std::size_t input_size = num_per_cell_features * n_cells + num_scalar_features;
-        Opm::ML::Tensor<Evaluation> input(input_size);
+        ML::Tensor<Evaluation> input(input_size);
 
         // Track offset for each feature in flat tensor
         std::size_t offset = 0;
@@ -413,17 +435,17 @@ protected:
     * \throws std::runtime_error if model inference fails or if the
     *         output tensor does not match the expected feature layout.
     */
-    Opm::ML::Tensor<Evaluation>
-    constructOutputTensor(const Opm::ML::Tensor<Evaluation>& input, const HybridNewtonConfig& config, std::size_t n_cells)
+    ML::Tensor<Evaluation>
+    constructOutputTensor(const ML::Tensor<Evaluation>& input, const HybridNewtonConfig& config, std::size_t n_cells)
     {
         const auto& features = config.output_features;
         const int n_features = features.size();
         
         // TODO check is model path exists 
-        Opm::ML::NNModel<Evaluation> model;
+        ML::NNModel<Evaluation> model;
         model.loadModel(config.model_path);
 
-        Opm::ML::Tensor<Evaluation> output(1, n_cells * n_features);
+        ML::Tensor<Evaluation> output(1, n_cells * n_features);
         model.apply(input, output);
 
         return output; 
@@ -449,7 +471,12 @@ protected:
     * \throws std::runtime_error if an expected output feature is missing
     *         or if state update fails for any cell.
     */
-    void updateInitialGuess(Opm::ML::Tensor<Evaluation>& output, const HybridNewtonConfig& config, const std::vector<int>& cell_indices, std::size_t n_cells)
+    void updateInitialGuess(
+        ML::Tensor<Evaluation>& output, 
+        const HybridNewtonConfig& config, 
+        const std::vector<int>& cell_indices, 
+        std::size_t n_cells
+    )
     {
         const auto& features = config.output_features;
 
@@ -516,7 +543,6 @@ protected:
 
                 if (actual_name == "PRESSURE") {
                     po_val = unitSyst.to_si(UnitSystem::measure::pressure, raw_value);
-                    std::cout << "Cell idx: " << cell_idx << " Feature: "<< name << " Value: " << po_val <<std::endl;
                 } else if (actual_name == "SWAT") {
                     sw_val = raw_value;
                 } else if (actual_name == "SOIL") {
@@ -645,3 +671,4 @@ protected:
 } // namespace Opm
 
 #endif // HYBRID_NEWTON_CLASS_HPP
+

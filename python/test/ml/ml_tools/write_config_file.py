@@ -1,4 +1,5 @@
-import os, json
+import json
+import os
 
 def write_config(models, model_dir, multi_mode=False, case_label=None):
     """
@@ -25,9 +26,9 @@ def write_config(models, model_dir, multi_mode=False, case_label=None):
         raise ValueError("case_label must be provided for multi_mode=True")
 
     os.makedirs(model_dir, exist_ok=True)
-    all_configs = []
+    all_configs = {}
 
-    for m in models:
+    for idx, m in enumerate(models):
         # Normalize input/output features
         input_features = m["input_features"]
         output_features = m["output_features"]
@@ -82,17 +83,26 @@ def write_config(models, model_dir, multi_mode=False, case_label=None):
             for cell in m["active_cells"]:
                 f.write(f"{cell}\n")
 
+        # If m["apply_time"] is a single float, wrap as dict
+        if isinstance(m["apply_time"], float):
+            apply_times_dict = {"0": m["apply_time"]}
+        elif isinstance(m["apply_time"], list):
+            apply_times_dict = {str(i): t for i, t in enumerate(m["apply_time"])}
+        else:
+            raise ValueError("apply_time must be float or list of floats")
+
+
         # Build config dict
         cfg = {
             "model_path": m["model_path"],
             "cell_indices_file": cells_file,
-            "apply_times": [m["apply_time"]],
+            "apply_times": apply_times_dict,
             "features": {
                 "inputs": input_block,
                 "outputs": output_block
             }
         }
-        all_configs.append(cfg)
+        all_configs[str(idx)] = cfg
 
     # Determine JSON filename
     if multi_mode:
