@@ -515,6 +515,9 @@ namespace Opm {
                         != this->prevWellState().well(well->name()).status;
 
                 if (event || dyn_status_change) {
+                    // We first constrain the solution on the targets
+                    const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Both;
+                    well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), local_deferredLogger);
                     try {
                         well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), local_deferredLogger);
                         well->calculateExplicitQuantities(simulator_, this->wellState(), local_deferredLogger);
