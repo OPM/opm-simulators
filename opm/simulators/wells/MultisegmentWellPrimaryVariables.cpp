@@ -590,7 +590,7 @@ surfaceVolumeFraction(const int seg,
                       const int comp_idx) const
 {
     EvalWell sum_volume_fraction_scaled = 0.;
-    for (int idx = 0; idx < well_.numComponents(); ++idx) {
+    for (int idx = 0; idx < well_.numConservationQuantities(); ++idx) {
         sum_volume_fraction_scaled += this->volumeFractionScaled(seg, idx);
     }
 
