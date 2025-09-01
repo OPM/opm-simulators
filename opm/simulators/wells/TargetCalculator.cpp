@@ -238,6 +238,17 @@ groupTarget(const std::optional<Group::InjectionControls>& ctrl,
             voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Liquid]];
         if (ctrl->phase != Phase::GAS)
             voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Vapour]];
+        // major hack to account for satellite injection given only as surface rates 
+        const std::vector<Scalar>& group_injection_surface_rates = this->group_state_.injection_surface_rates(this->group_name_);
+        if (ctrl->phase == Phase::WATER)
+            voidage_rate += group_injection_surface_rates[pu_.phase_pos[BlackoilPhases::Aqua]]*resv_coeff_[pos_] - 
+                            group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Aqua]];
+        if (ctrl->phase == Phase::OIL)
+            voidage_rate += group_injection_surface_rates[pu_.phase_pos[BlackoilPhases::Liquid]]*resv_coeff_[pos_] - 
+                            group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Liquid]];
+        if (ctrl->phase == Phase::GAS)
+            voidage_rate += group_injection_surface_rates[pu_.phase_pos[BlackoilPhases::Vapour]]*resv_coeff_[pos_] - 
+                            group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Vapour]];
         return voidage_rate / resv_coeff_[pos_];
     }
     case Group::InjectionCMode::SALE: {
