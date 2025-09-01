@@ -90,7 +90,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                    const bool relax_tolerance, 
                    const bool well_is_stopped) const
 {
-    assert(int(B_avg.size()) == baseif_.numComponents());
+    assert(int(B_avg.size()) == baseif_.numConservationQuantities());
 
     // checking if any residual is NaN or too large. The two large one is only handled for the well flux
     std::vector<std::vector<Scalar>> abs_residual(this->numberOfSegments(),
@@ -107,7 +107,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
     // TODO: the following is a little complicated, maybe can be simplified in some way?
     for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            if (eq_idx < baseif_.numComponents()) { // phase or component mass equations
+            if (eq_idx < baseif_.numConservationQuantities()) { // phase or component mass equations
                 const Scalar flux_residual = B_avg[eq_idx] * abs_residual[seg][eq_idx];
                 if (flux_residual > maximum_residual[eq_idx]) {
                     maximum_residual[eq_idx] = flux_residual;
@@ -127,7 +127,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
 
     using CR = ConvergenceReport;
     for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
-        if (eq_idx < baseif_.numComponents()) { // phase or component mass equations
+        if (eq_idx < baseif_.numConservationQuantities()) { // phase or component mass equations
             const Scalar flux_residual = maximum_residual[eq_idx];
             // TODO: the report can not handle the segment number yet.
 
@@ -430,13 +430,13 @@ MultisegmentWellEval<FluidSystem,Indices>::
 getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
                        DeferredLogger& deferred_logger) const
 {
-    assert(int(B_avg.size() ) == baseif_.numComponents());
+    assert(int(B_avg.size() ) == baseif_.numConservationQuantities());
     std::vector<Scalar> residuals(numWellEq + 1, 0.0);
 
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             Scalar residual = 0.;
-            if (eq_idx < baseif_.numComponents()) {
+            if (eq_idx < baseif_.numConservationQuantities()) {
                 residual = std::abs(linSys_.residual()[seg][eq_idx]) * B_avg[eq_idx];
             } else {
                 if (seg > 0) {

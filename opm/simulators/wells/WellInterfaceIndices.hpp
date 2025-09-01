@@ -63,7 +63,7 @@ protected:
                          const ModelParameters& param,
                          const typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType& rate_converter,
                          const int pvtRegionIdx,
-                         const int num_components,
+                         const int num_conservation_quantities,
                          const int num_phases,
                          const int index_of_well,
                          const std::vector<PerforationData<Scalar>>& perf_data);
