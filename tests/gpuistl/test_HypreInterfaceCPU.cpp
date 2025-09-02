@@ -68,7 +68,7 @@ struct HypreTestFixture {
 
 // Helper function to setup matrix helper arrays from CPU matrix
 template<typename Matrix>
-void setupMatrixHelperArrays(const Matrix& matrix, 
+void setupMatrixHelperArrays(const Matrix& matrix,
                             std::vector<HYPRE_Int>& ncols,
                             std::vector<HYPRE_BigInt>& rows,
                             std::vector<HYPRE_BigInt>& cols) {
@@ -145,13 +145,13 @@ BOOST_FIXTURE_TEST_CASE(TestCpuVectorTransfer, HypreTestFixture)
     Dune::Amg::SequentialInformation comm;
     auto hypre_vec = HypreInterface::createVector(5, 0, comm);
 
-    // Setup helper arrays for vector operations
+    // Setup helper arrays for vector operations (simple sequential indices)
     std::vector<HYPRE_BigInt> indices(5);
     std::iota(indices.begin(), indices.end(), 0);
 
     // Transfer to Hypre (CPU backend)
-    std::vector<HYPRE_Real> continuous_vector_values;
     std::vector<int> local_hypre_to_local_dune; // Empty for owner_first = true
+    std::vector<HYPRE_Real> continuous_vector_values;
     bool owner_first = true;
     bool use_gpu_backend = false;
     HypreInterface::transferVectorToHypre(cpu_vec, hypre_vec, use_gpu_backend, indices, nullptr, nullptr,
@@ -203,29 +203,27 @@ BOOST_FIXTURE_TEST_CASE(TestCpuMatrixTransfer, HypreTestFixture)
     Dune::Amg::SequentialInformation comm;
     auto hypre_matrix = HypreInterface::createMatrix(3, 0, comm);
 
-    // Setup additional helper arrays for matrix operations
-    std::vector<HYPRE_Real> continuous_matrix_entries;
-    std::vector<int> local_dune_to_local_hypre(3);
     // Sequential case: identity mapping
+    std::vector<int> local_dune_to_local_hypre(3);
     for (int i = 0; i < 3; ++i) {
         local_dune_to_local_hypre[i] = i;
     }
     bool owner_first = true;
 
+    // Pre-compute row indexes for optimal performance
+    auto row_indexes = HypreInterface::computeRowIndexes(cpu_matrix, ncols, local_dune_to_local_hypre, owner_first);
+
     // This should not throw (CPU backend with CPU input)
     HypreInterface::initializeMatrix(cpu_matrix, hypre_matrix, false,
-                                   ncols, rows, cols,
-                                   nullptr, nullptr, nullptr,
-                                   nullptr, continuous_matrix_entries, local_dune_to_local_hypre, owner_first);
+                                   ncols, rows, cols, row_indexes,
+                                   nullptr, nullptr, nullptr, nullptr,
+                                   nullptr);
 
     // Test update
     HypreInterface::updateMatrixValues(cpu_matrix, hypre_matrix, false,
-                                     ncols, rows, cols,
-                                     nullptr, nullptr, nullptr,
-                                     nullptr,
-                                     continuous_matrix_entries,
-                                     local_dune_to_local_hypre,
-                                     owner_first);
+                                     ncols, rows, cols, row_indexes,
+                                     nullptr, nullptr, nullptr, nullptr,
+                                     nullptr);
 
     // Verify matrix values after update
     auto values_hypre = HypreInterface::getMatrixValues(hypre_matrix, ncols, rows, cols, false);

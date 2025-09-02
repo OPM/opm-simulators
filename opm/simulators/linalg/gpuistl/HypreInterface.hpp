@@ -51,6 +51,8 @@
 
 #include <fmt/core.h>
 
+#include <iostream>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -310,15 +312,19 @@ public:
     //--------------------------------------------------------------------------
 
     /**
-     * @brief Transfer vector to Hypre from any vector type (CPU or GPU) - full version with helper arrays
+     * @brief Transfer vector to Hypre from any vector type (CPU or GPU)
      *
      * Selects the transfer method based on the vector type and backend configuration.
      *
      * @param vec Source vector (typically BlockVector (CPU) or GpuVector (GPU))
      * @param hypre_vec Destination Hypre vector
      * @param use_gpu_backend Whether the Hypre backend is using GPU acceleration
-     * @param indices Pre-allocated host array for vector indices (for CPU input)
-     * @param indices_device Pre-allocated device array for vector indices (for GPU backend)
+     * @param indices Pre-allocated host array for owned DOF indices
+     * @param indices_device Pre-allocated device array for owned DOF indices (for GPU backend)
+     * @param vector_buffer_device Pre-allocated device buffer for vector values (for GPU backend)
+     * @param continuous_vector_values Host buffer for continuous vector values
+     * @param local_hypre_to_local_dune Mapping from HYPRE indices to Dune indices (used for non-owner-first)
+     * @param owner_first Whether owned DOFs come first in the ordering
      * @throws HypreError if the transfer fails
      */
     template<typename VectorType>
@@ -342,15 +348,19 @@ public:
     }
 
     /**
-     * @brief Transfer vector from Hypre to any vector type (CPU or GPU) - full version with helper arrays
+     * @brief Transfer vector from Hypre to any vector type (CPU or GPU)
      *
      * Selects the transfer method based on the vector type and backend configuration.
      *
      * @param hypre_vec Source Hypre vector
      * @param vec Destination vector (typically BlockVector (CPU) or GpuVector (GPU))
      * @param use_gpu_backend Whether the Hypre backend is using GPU acceleration
-     * @param indices Pre-allocated host array for vector indices (for CPU input)
-     * @param indices_device Pre-allocated device array for vector indices (for GPU backend)
+     * @param indices Pre-allocated host array for owned DOF indices
+     * @param indices_device Pre-allocated device array for owned DOF indices (for GPU backend)
+     * @param vector_buffer_device Pre-allocated device buffer for vector values (for GPU backend)
+     * @param continuous_vector_values Host buffer for continuous vector values
+     * @param local_hypre_to_local_dune Mapping from HYPRE indices to Dune indices (used for non-owner-first)
+     * @param owner_first Whether owned DOFs come first in the ordering
      * @throws HypreError if the transfer fails
      */
     template<typename VectorType>
@@ -380,19 +390,23 @@ public:
 
 
     /**
-     * @brief Initialize Hypre matrix from any matrix type (CPU or GPU) - full version with helper arrays
+     * @brief Initialize Hypre matrix from any matrix type (CPU or GPU)
      *
      * Selects the transfer method based on the matrix type and backend configuration.
+     * Uses HYPRE_IJMatrixSetValues2 with pre-computed row_indexes for optimal performance.
      *
      * @param matrix Source matrix (typically BCRSMatrix (CPU) or GpuSparseMatrix (GPU))
      * @param hypre_matrix Destination Hypre matrix
      * @param use_gpu_backend Whether the Hypre backend is using GPU acceleration
-     * @param ncols Pre-allocated host array for number of columns per row (for CPU input)
-     * @param rows Pre-allocated host array for row indices (for CPU input)
-     * @param cols Pre-allocated host array for column indices (for CPU input)
+     * @param ncols Pre-allocated host array for number of columns per row
+     * @param rows Pre-allocated host array for row indices
+     * @param cols Pre-allocated host array for column indices
+     * @param row_indexes Pre-computed row indexes for HYPRE_IJMatrixSetValues2
      * @param ncols_device Pre-allocated device array for number of columns per row (for GPU backend)
      * @param rows_device Pre-allocated device array for row indices (for GPU backend)
      * @param cols_device Pre-allocated device array for column indices (for GPU backend)
+     * @param row_indexes_device Pre-allocated device array for row indexes (for GPU backend)
+     * @param matrix_buffer_device Pre-allocated device buffer for matrix values (for GPU backend)
      * @throws HypreError if initialization fails
      */
     template<typename MatrixType>
@@ -400,54 +414,50 @@ public:
                                 const std::vector<HYPRE_Int>& ncols,
                                 const std::vector<HYPRE_BigInt>& rows,
                                 const std::vector<HYPRE_BigInt>& cols,
+                                const std::vector<HYPRE_Int>& row_indexes,
                                 HYPRE_Int* ncols_device,
                                 HYPRE_BigInt* rows_device,
                                 HYPRE_BigInt* cols_device,
-                                HYPRE_Real* matrix_buffer_device,
-                                std::vector<HYPRE_Real>& continuous_matrix_entries,
-                                const std::vector<int>& local_dune_to_local_hypre,
-                                bool owner_first) {
+                                HYPRE_Int* row_indexes_device,
+                                HYPRE_Real* matrix_buffer_device) {
 #if HAVE_CUDA
         if constexpr (is_gpu_type<MatrixType>::value) {
             // GPU input type
             initializeMatrixFromGpuSparseMatrix(matrix, hypre_matrix, use_gpu_backend,
-                                              ncols, rows, cols,
-                                              ncols_device, rows_device, cols_device,
-                                              matrix_buffer_device,
-                                              continuous_matrix_entries,
-                                              local_dune_to_local_hypre,
-                                              owner_first);
+                                              ncols, rows, cols, row_indexes,
+                                              ncols_device, rows_device, cols_device, row_indexes_device);
         } else
 #endif
         {
             // CPU input type
             initializeMatrixFromCpuMatrix(matrix, hypre_matrix, use_gpu_backend,
-                                        ncols, rows, cols,
-                                        ncols_device, rows_device, cols_device,
-                                        matrix_buffer_device,
-                                        continuous_matrix_entries,
-                                        local_dune_to_local_hypre,
-                                        owner_first);
+                                        ncols, rows, cols, row_indexes,
+                                        ncols_device, rows_device, cols_device, row_indexes_device,
+                                        matrix_buffer_device);
         }
     }
 
 
 
     /**
-     * @brief Update matrix values in Hypre - full version with helper arrays
+     * @brief Update matrix values in Hypre
      *
      * Selects the update method based on the matrix type and backend configuration.
      * Updates the coefficients of a Hypre matrix, without changing its sparsity pattern.
+     * Uses HYPRE_IJMatrixSetValues2 with pre-computed row_indexes for optimal performance.
      *
      * @param matrix Source matrix with updated values
      * @param hypre_matrix Hypre matrix to update
      * @param use_gpu_backend Whether the Hypre backend is using GPU acceleration
-     * @param ncols Pre-allocated host array for number of columns per row (for CPU input)
-     * @param rows Pre-allocated host array for row indices (for CPU input)
-     * @param cols Pre-allocated host array for column indices (for CPU input)
+     * @param ncols Pre-allocated host array for number of columns per row
+     * @param rows Pre-allocated host array for row indices
+     * @param cols Pre-allocated host array for column indices
+     * @param row_indexes Pre-computed row indexes for HYPRE_IJMatrixSetValues2
      * @param ncols_device Pre-allocated device array for number of columns per row (for GPU backend)
      * @param rows_device Pre-allocated device array for row indices (for GPU backend)
      * @param cols_device Pre-allocated device array for column indices (for GPU backend)
+     * @param row_indexes_device Pre-allocated device array for row indexes (for GPU backend)
+     * @param matrix_buffer_device Pre-allocated device buffer for matrix values (for GPU backend)
      * @throws HypreError if the update fails
      */
     template<typename MatrixType>
@@ -455,34 +465,26 @@ public:
                                  const std::vector<HYPRE_Int>& ncols,
                                  const std::vector<HYPRE_BigInt>& rows,
                                  const std::vector<HYPRE_BigInt>& cols,
+                                 const std::vector<HYPRE_Int>& row_indexes,
                                  HYPRE_Int* ncols_device,
                                  HYPRE_BigInt* rows_device,
                                  HYPRE_BigInt* cols_device,
-                                 HYPRE_Real* matrix_buffer_device,
-                                 std::vector<HYPRE_Real>& continuous_matrix_entries,
-                                 const std::vector<int>& local_dune_to_local_hypre,
-                                 bool owner_first) {
+                                 HYPRE_Int* row_indexes_device,
+                                 HYPRE_Real* matrix_buffer_device) {
 #if HAVE_CUDA
         if constexpr (is_gpu_type<MatrixType>::value) {
             // GPU input type
             updateMatrixFromGpuSparseMatrix(matrix, hypre_matrix, use_gpu_backend,
-                                          ncols, rows, cols,
-                                          ncols_device, rows_device, cols_device,
-                                          matrix_buffer_device,
-                                          continuous_matrix_entries,
-                                          local_dune_to_local_hypre,
-                                          owner_first);
+                                          ncols, rows, cols, row_indexes,
+                                          ncols_device, rows_device, cols_device, row_indexes_device);
         } else
 #endif
         {
             // CPU input type
             updateMatrixFromCpuMatrix(matrix, hypre_matrix, use_gpu_backend,
-                                    ncols, rows, cols,
-                                    ncols_device, rows_device, cols_device,
-                                    matrix_buffer_device,
-                                    continuous_matrix_entries,
-                                    local_dune_to_local_hypre,
-                                    owner_first);
+                                    ncols, rows, cols, row_indexes,
+                                    ncols_device, rows_device, cols_device, row_indexes_device,
+                                    matrix_buffer_device);
         }
     }
 
@@ -545,6 +547,107 @@ public:
         return values;
     }
 
+    /**
+     * @brief Compute row indexes for HYPRE_IJMatrixSetValues2
+     *
+     * Chooses the appropriate row index computation method based on owner_first and matrix type.
+     * For owner_first=true: Uses simple prefix sum (contiguous data)
+     * For owner_first=false: Uses mapping-based approach (handles gaps in data)
+     *
+     * @param matrix The matrix to analyze
+     * @param ncols Array containing number of columns per row
+     * @param local_dune_to_local_hypre Mapping from Dune indices to Hypre indices
+     * @param owner_first Whether owned DOFs come first in the ordering
+     * @return Vector containing row indexes for HYPRE_IJMatrixSetValues2
+     */
+    template<typename MatrixType>
+    static std::vector<HYPRE_Int> computeRowIndexes(const MatrixType& matrix,
+                                                   const std::vector<HYPRE_Int>& ncols,
+                                                   const std::vector<int>& local_dune_to_local_hypre,
+                                                   bool owner_first) {
+        if (owner_first) {
+            // Simple contiguous case: prefix sum of ncols
+            std::vector<HYPRE_Int> row_indexes(ncols.size());
+            row_indexes[0] = 0;
+            for (size_t i = 1; i < ncols.size(); ++i) {
+                row_indexes[i] = row_indexes[i-1] + ncols[i-1];
+            }
+            return row_indexes;
+        } else {
+            // We need to compute the row indexes with mapping since we have gaps in the data
+#if HAVE_CUDA
+            if constexpr (is_gpu_type<MatrixType>::value) {
+                return computeRowIndexesWithMappingGpu(matrix, local_dune_to_local_hypre);
+            } else
+#endif
+            {
+                return computeRowIndexesWithMappingCpu(matrix, local_dune_to_local_hypre);
+            }
+        }
+    }
+
+    /**
+     * @brief Compute row indexes for CPU matrix with ownership mapping
+     *
+     * Computes row_indexes that point directly into the FULL (including ghost) matrix,
+     * allowing us to use the original matrix without any data copying.
+     *
+     * @param matrix Matrix to analyze
+     * @param local_dune_to_local_hypre Mapping from Dune indices to Hypre indices (-1 for non-owned)
+     * @return Vector containing row indexes that map to full matrix data positions
+     */
+    template<typename MatrixType>
+    static std::vector<HYPRE_Int> computeRowIndexesWithMappingCpu(const MatrixType& matrix,
+                                                               const std::vector<int>& local_dune_to_local_hypre) {
+        const int N = std::count_if(local_dune_to_local_hypre.begin(), local_dune_to_local_hypre.end(),
+                                   [](int val) { return val >= 0; });
+        std::vector<HYPRE_Int> row_indexes(N);
+        int cumulative_full_nnz = 0;  // Counter for entries in the FULL (including ghost) matrix
+        // Iterate through matrix rows in order
+        for (auto row = matrix.begin(); row != matrix.end(); ++row) {
+            const int dune_row_idx = row.index();
+            const int hypre_row_idx = local_dune_to_local_hypre[dune_row_idx];
+
+            if (hypre_row_idx >= 0) {
+                // This is an owned row - record where its data starts in the FULL (including ghost) matrix
+                row_indexes[hypre_row_idx] = cumulative_full_nnz;
+            }
+            // Always advance the cumulative count (including non-owned rows - this creates gaps)
+            cumulative_full_nnz += row->size();
+        }
+        return row_indexes;
+    }
+
+#if HAVE_CUDA
+    /**
+     * @brief Compute row indexes for GPU matrix with ownership mapping
+     *
+     * Specialized version for GPU matrices that computes row_indexes pointing
+     * directly into the FULL (including ghost) GPU matrix data, allowing zero-copy operation.
+     */
+    template<typename T>
+    static std::vector<HYPRE_Int> computeRowIndexesWithMappingGpu(const GpuSparseMatrix<T>& gpu_matrix,
+                                                                 const std::vector<int>& local_dune_to_local_hypre) {
+        const int N = std::count_if(local_dune_to_local_hypre.begin(), local_dune_to_local_hypre.end(),
+                                   [](int val) { return val >= 0; });
+        std::vector<HYPRE_Int> row_indexes(N);
+
+        // Get row pointers from GPU matrix
+        auto host_row_ptrs = gpu_matrix.getRowIndices().asStdVector();
+
+        // Map each owned Hypre row to its starting position in the FULL (including ghost) GPU matrix
+        for (int dune_row_idx = 0; dune_row_idx < static_cast<int>(gpu_matrix.N()); ++dune_row_idx) {
+            const int hypre_row_idx = local_dune_to_local_hypre[dune_row_idx];
+
+            if (hypre_row_idx >= 0) {
+                // This is an owned row - record where its data starts in the FULL (including ghost) GPU matrix
+                row_indexes[hypre_row_idx] = host_row_ptrs[dune_row_idx];
+            }
+            // Non-owned rows create natural gaps in the indexing
+        }
+        return row_indexes;
+    }
+#endif
 
 private:
 #if HAVE_CUDA
@@ -563,36 +666,33 @@ private:
                                        const std::vector<int>& local_hypre_to_local_dune,
                                        bool owner_first) {
         const int N = static_cast<int>(indices.size());
-        const T* values;
 
         if (use_gpu_backend) {
-            // GPU backend with GPU input: use pre-allocated device arrays
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
-            if (!owner_first) {
-                // Use continuous storage for non-owner-first ordering
-                setContinuousGpuVectorForHypre(gpu_vec, continuous_vector_values, local_hypre_to_local_dune);
-                values = reinterpret_cast<const T*>(continuous_vector_values.data());
-                hypre_TMemcpy(vector_buffer_device, values, HYPRE_Real, N, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-                OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, indices_device, vector_buffer_device));
-            } else {
+            // GPU backend with GPU input: use pre-allocated device arrays
+            if (owner_first) {
                 // Direct device-to-device transfer for owner-first ordering
                 const T* device_ptr = gpu_vec.data();
                 OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, indices_device, const_cast<T*>(device_ptr)));
+            } else {
+                // Use continuous storage and device buffer for non-owner-first ordering
+                setContinuousGpuVectorForHypre(gpu_vec, continuous_vector_values, local_hypre_to_local_dune);
+                hypre_TMemcpy(vector_buffer_device, continuous_vector_values.data(), HYPRE_Real, N, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+                OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, indices_device, vector_buffer_device));
             }
 #endif
         } else {
-            // CPU backend with GPU input: copy to host first
-            if (!owner_first) {
-                setContinuousGpuVectorForHypre(gpu_vec, continuous_vector_values, local_hypre_to_local_dune);
-                values = reinterpret_cast<const T*>(continuous_vector_values.data());
-                OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, const_cast<HYPRE_BigInt*>(indices.data()), values));
-            } else {
-                // Copy entire vector to host first and use directly
+            // CPU backend with GPU input: copy via host memory
+            if (owner_first) {
+                // Get values to host and then set
                 auto host_values = gpu_vec.asStdVector();
-                OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, const_cast<HYPRE_BigInt*>(indices.data()), host_values.data()));
+                OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, const_cast<HYPRE_BigInt*>(indices.data()), reinterpret_cast<HYPRE_Real*>(host_values.data())));
+            } else {
+                // Use continuous storage for non-owner-first ordering
+                setContinuousGpuVectorForHypre(gpu_vec, continuous_vector_values, local_hypre_to_local_dune);
+                OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, const_cast<HYPRE_BigInt*>(indices.data()), continuous_vector_values.data()));
             }
         }
-
         OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorAssemble(hypre_vec));
     }
 
@@ -600,7 +700,7 @@ private:
      * @brief Transfer Hypre vector to GpuVector
      */
     template<typename T>
-    static void transferHypreToGpuVector(HYPRE_IJVector hypre_vec, GpuVector<T>& gpu_vec, bool use_gpu_backend, 
+    static void transferHypreToGpuVector(HYPRE_IJVector hypre_vec, GpuVector<T>& gpu_vec, bool use_gpu_backend,
                                        const std::vector<HYPRE_BigInt>& indices, HYPRE_BigInt* indices_device,
                                        HYPRE_Real* vector_buffer_device,
                                        std::vector<HYPRE_Real>& continuous_vector_values,
@@ -658,9 +758,8 @@ private:
     template<typename T>
     static void setGpuVectorFromContinuousVector(GpuVector<T>& v, const std::vector<HYPRE_Real>& continuous_vector_values, const std::vector<int>& local_hypre_to_local_dune)
     {
-        // Get current vector data to host
+        // Copy values to host and update values with mapping
         auto host_values = v.asStdVector();
-        // Update values using the mapping
         for (size_t i = 0; i < local_hypre_to_local_dune.size(); ++i) {
             host_values[local_hypre_to_local_dune[i]] = continuous_vector_values[i];
         }
@@ -673,18 +772,25 @@ private:
     // CPU Vector Operations (BlockVector input)
     //--------------------------------------------------------------------------
 
+    /**
+     * @brief Extract owned vector values in the order expected by HYPRE
+     */
     template<typename VectorType>
     static void setContinuousVectorForHypre(const VectorType& v, std::vector<HYPRE_Real>& continuous_vector_values, const std::vector<int>& local_hypre_to_local_dune)
     {
-        // set v values solution vectors
+        // Set v values solution vectors
         for (size_t i = 0; i < local_hypre_to_local_dune.size(); ++i) {
             continuous_vector_values[i] = v[local_hypre_to_local_dune[i]][0];
         }
     }
 
+    /**
+     * @brief Distribute HYPRE vector values back to original vector positions
+     */
     template<typename VectorType>
     static void setDuneVectorFromContinuousVector(VectorType& v, const std::vector<HYPRE_Real>& continuous_vector_values, const std::vector<int>& local_hypre_to_local_dune)
     {
+        // Place values back in original positions
         for (size_t i = 0; i < local_hypre_to_local_dune.size(); ++i) {
             v[local_hypre_to_local_dune[i]][0] = continuous_vector_values[i];
         }
@@ -703,30 +809,33 @@ private:
                                        bool owner_first) {
         const int N = static_cast<int>(indices.size());
         using T = typename VectorType::field_type;
-        const T* values;
 
         if (use_gpu_backend) {
-            // GPU backend with CPU input: use pre-allocated device arrays
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
-            if (!owner_first) {
-                 // continuous_vector_values_ as continuous storage
-                 setContinuousVectorForHypre(cpu_vec, continuous_vector_values, local_hypre_to_local_dune);
-                 values = reinterpret_cast<const T*>(continuous_vector_values.data());
-                } else {
-                    values = &cpu_vec[0][0];
-                }
-            hypre_TMemcpy(vector_buffer_device, values, HYPRE_Real, N, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-            OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, indices_device, vector_buffer_device));
+            // GPU backend with CPU input: use pre-allocated device arrays
+            if (owner_first) {
+                // Direct host-to-device transfer for owner-first ordering
+                const T* values = &(cpu_vec[0][0]);
+                hypre_TMemcpy(vector_buffer_device, values, HYPRE_Real, N, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+                OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, indices_device, vector_buffer_device));
+            } else {
+                // Use continuous storage and device buffer for non-owner-first ordering
+                setContinuousVectorForHypre(cpu_vec, continuous_vector_values, local_hypre_to_local_dune);
+                hypre_TMemcpy(vector_buffer_device, continuous_vector_values.data(), HYPRE_Real, N, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+                OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, indices_device, vector_buffer_device));
+            }
 #endif
         } else {
-            // CPU backend: use host arrays directly
-            if (!owner_first) {
-                setContinuousVectorForHypre(cpu_vec, continuous_vector_values, local_hypre_to_local_dune);
-                values = reinterpret_cast<const T*>(continuous_vector_values.data());
+            // CPU backend with CPU input: use host arrays directly
+            if (owner_first) {
+                // Direct transfer for owner-first ordering
+                const T* values = &(cpu_vec[0][0]);
+                OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, const_cast<HYPRE_BigInt*>(indices.data()), values));
             } else {
-                values = &cpu_vec[0][0];
+                // Use continuous storage for non-owner-first ordering
+                setContinuousVectorForHypre(cpu_vec, continuous_vector_values, local_hypre_to_local_dune);
+                OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, const_cast<HYPRE_BigInt*>(indices.data()), continuous_vector_values.data()));
             }
-            OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorSetValues(hypre_vec, N, const_cast<HYPRE_BigInt*>(indices.data()), values));
         }
 
         OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorAssemble(hypre_vec));
@@ -750,21 +859,25 @@ private:
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
             // GPU backend with CPU input: use pre-allocated device arrays
             if (owner_first) {
+                // Direct device-to-host transfer for owner-first ordering
                 T* values = &(cpu_vec[0][0]);
                 OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorGetValues(hypre_vec, N, indices_device, vector_buffer_device));
                 hypre_TMemcpy(values, vector_buffer_device, HYPRE_Real, N, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
             } else {
+                // Use device buffer and then remap for non-owner-first ordering
                 OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorGetValues(hypre_vec, N, indices_device, vector_buffer_device));
                 hypre_TMemcpy(continuous_vector_values.data(), vector_buffer_device, HYPRE_Real, N, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
                 setDuneVectorFromContinuousVector(cpu_vec, continuous_vector_values, local_hypre_to_local_dune);
             }
 #endif
         } else {
-            // CPU backend: use host arrays directly
+            // CPU backend with CPU input: use host arrays directly
             if (owner_first) {
+                // Direct transfer for owner-first ordering
                 T* values = &(cpu_vec[0][0]);
                 OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorGetValues(hypre_vec, N, const_cast<HYPRE_BigInt*>(indices.data()), values));
             } else {
+                // Use continuous storage for non-owner-first ordering
                 OPM_HYPRE_SAFE_CALL(HYPRE_IJVectorGetValues(hypre_vec, N, const_cast<HYPRE_BigInt*>(indices.data()), continuous_vector_values.data()));
                 setDuneVectorFromContinuousVector(cpu_vec, continuous_vector_values, local_hypre_to_local_dune);
             }
@@ -778,186 +891,86 @@ private:
 
     /**
      * @brief Initialize Hypre matrix from GpuSparseMatrix using pre-allocated helper arrays
+     * Uses HYPRE_IJMatrixSetValues2 with pre-computed row_indexes, which allows us to use the original GPU matrix data (with potential ghost values) directly.
      */
     template<typename T>
     static void initializeMatrixFromGpuSparseMatrix(const GpuSparseMatrix<T>& gpu_matrix, HYPRE_IJMatrix hypre_matrix, bool use_gpu_backend,
                                                    const std::vector<HYPRE_Int>& ncols,
                                                    const std::vector<HYPRE_BigInt>& rows,
                                                    const std::vector<HYPRE_BigInt>& cols,
+                                                   const std::vector<HYPRE_Int>& row_indexes,
                                                    HYPRE_Int* ncols_device,
                                                    HYPRE_BigInt* rows_device,
                                                    HYPRE_BigInt* cols_device,
-                                                   HYPRE_Real* matrix_buffer_device,
-                                                   std::vector<HYPRE_Real>& continuous_matrix_entries,
-                                                   const std::vector<int>& local_dune_to_local_hypre,
-                                                   bool owner_first) {
+                                                   HYPRE_Int* row_indexes_device) {
         const auto N = rows.size();
-        const auto nnz = cols.size();
-
-        // Get values pointer
-        const T* values;
+        const T* values = gpu_matrix.getNonZeroValues().data();
 
         if (use_gpu_backend) {
             // GPU backend with GPU input: use pre-allocated device arrays
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
-            if (!owner_first) {
-                // Use continuous storage for non-owner-first ordering
-                makeContinuousGpuMatrixEntries(gpu_matrix, continuous_matrix_entries, local_dune_to_local_hypre);
-                values = reinterpret_cast<const T*>(continuous_matrix_entries.data());
-                hypre_TMemcpy(matrix_buffer_device, values, HYPRE_Real, nnz, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-                OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues(hypre_matrix, N, ncols_device, rows_device, cols_device, matrix_buffer_device));
-            } else {
-                // Direct device-to-device transfer for owner-first ordering
-                values = gpu_matrix.getNonZeroValues().data();
-                OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues(hypre_matrix, N, ncols_device, rows_device, cols_device, values));
-            }
+            // Direct device-to-device transfer using smart row_indexes
+            OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues2(hypre_matrix, N, ncols_device, rows_device, row_indexes_device, cols_device, values));
 #endif
         } else {
             // CPU backend with GPU input: copy to host first
-            if (!owner_first) {
-                makeContinuousGpuMatrixEntries(gpu_matrix, continuous_matrix_entries, local_dune_to_local_hypre);
-                values = reinterpret_cast<const T*>(continuous_matrix_entries.data());
-                OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues(hypre_matrix, N, const_cast<HYPRE_Int*>(ncols.data()), const_cast<HYPRE_BigInt*>(rows.data()), const_cast<HYPRE_BigInt*>(cols.data()), values));
-            } else {
-                // Copy entire matrix to host first and use directly to avoid dangling pointer
-                auto host_values = gpu_matrix.getNonZeroValues().asStdVector();
-                OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues(hypre_matrix, N, const_cast<HYPRE_Int*>(ncols.data()), const_cast<HYPRE_BigInt*>(rows.data()), const_cast<HYPRE_BigInt*>(cols.data()), host_values.data()));
-            }
+            auto host_values = gpu_matrix.getNonZeroValues().asStdVector();
+            OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues2(hypre_matrix, N, const_cast<HYPRE_Int*>(ncols.data()), const_cast<HYPRE_BigInt*>(rows.data()), const_cast<HYPRE_Int*>(row_indexes.data()), const_cast<HYPRE_BigInt*>(cols.data()), host_values.data()));
         }
-
         OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixAssemble(hypre_matrix));
     }
 
     /**
      * @brief Update Hypre matrix values from GpuSparseMatrix using pre-allocated helper arrays
+     * Uses HYPRE_IJMatrixSetValues2 with pre-computed row_indexes, which allows us to use the original GPU matrix data (with potential ghost values) directly.
      */
     template<typename T>
     static void updateMatrixFromGpuSparseMatrix(const GpuSparseMatrix<T>& gpu_matrix, HYPRE_IJMatrix hypre_matrix, bool use_gpu_backend,
                                                const std::vector<HYPRE_Int>& ncols,
                                                const std::vector<HYPRE_BigInt>& rows,
                                                const std::vector<HYPRE_BigInt>& cols,
+                                               const std::vector<HYPRE_Int>& row_indexes,
                                                HYPRE_Int* ncols_device,
                                                HYPRE_BigInt* rows_device,
                                                HYPRE_BigInt* cols_device,
-                                               HYPRE_Real* matrix_buffer_device,
-                                               std::vector<HYPRE_Real>& continuous_matrix_entries,
-                                               const std::vector<int>& local_dune_to_local_hypre,
-                                               bool owner_first) {
+                                               HYPRE_Int* row_indexes_device) {
         // For value updates, we need to re-upload the full matrix since Hypre doesn't have
-        // a separate coefficient update API like AMGX
+        // a separate coefficient update API
         initializeMatrixFromGpuSparseMatrix(gpu_matrix, hypre_matrix, use_gpu_backend,
-                                          ncols, rows, cols,
-                                          ncols_device, rows_device, cols_device,
-                                          matrix_buffer_device,
-                                          continuous_matrix_entries,
-                                          local_dune_to_local_hypre,
-                                          owner_first);
+                                          ncols, rows, cols, row_indexes,
+                                          ncols_device, rows_device, cols_device, row_indexes_device);
     }
 
 #endif // HAVE_CUDA
 
-    //--------------------------------------------------------------------------
-    // GPU Matrix Helper Functions
-    //--------------------------------------------------------------------------
-
-#if HAVE_CUDA
-    /**
-     * @brief Save all owned elements from GPU matrix in continuous memory for Hypre
-     */
-    template<typename T>
-    static void makeContinuousGpuMatrixEntries(const GpuSparseMatrix<T>& gpu_matrix, 
-                                             std::vector<HYPRE_Real>& continuous_matrix_entries, 
-                                             const std::vector<int>& local_dune_to_local_hypre) {
-        // Get matrix data to host first
-        auto host_values = gpu_matrix.getNonZeroValues().asStdVector();
-        auto host_row_ptrs = gpu_matrix.getRowIndices().asStdVector();
-
-        int nnz_owned = 0;
-        // Iterate through matrix using CSR format and only include owned rows
-        for (int rind = 0; rind < static_cast<int>(gpu_matrix.N()); ++rind) {
-            if (local_dune_to_local_hypre[rind] >= 0) {
-                // This is an owned row, include its entries
-                const int row_start = host_row_ptrs[rind];
-                const int row_end = host_row_ptrs[rind + 1];
-                for (int col_idx = row_start; col_idx < row_end; ++col_idx) {
-                    continuous_matrix_entries[nnz_owned++] = host_values[col_idx];
-                }
-            }
-        }
-    }
-#endif
-
-    //--------------------------------------------------------------------------
-    // CPU Matrix Operations (BCRSMatrix input)
-    //--------------------------------------------------------------------------
-
-
-    /**
-     * @brief Save all elements which should be copied to hypre in a continuous memery
-     */
-
-    template<typename MatrixType>
-    static void makeContinuousMatrixEntries(const MatrixType& cpu_matrix, std::vector<HYPRE_Real>& continuous_matrix_entries, const std::vector<int>& local_dune_to_local_hypre)
-     {
-
-         assert(continuous_matrix_entries.size() == cpu_matrix.nonzeroes());
-         int nnz = 0;
-         for (auto row = cpu_matrix.begin(); row != cpu_matrix.end(); ++row) {
-             const int rowIdx = row.index();
-             for (auto col = row->begin(); col != row->end(); ++col) {
-                 if (!(local_dune_to_local_hypre[rowIdx] < 0)) {
-                     const auto& value = *col;
-                     continuous_matrix_entries[nnz] = value[0][0];
-                     nnz++;
-                 }
-             }
-         }
-     }
-
-
     /**
      * @brief Initialize Hypre matrix from CPU matrix
+     * Uses HYPRE_IJMatrixSetValues2 with pre-computed row_indexes, which allows us to use the original CPU matrix data (with potential ghost values) directly.
      */
     template<typename MatrixType>
     static void initializeMatrixFromCpuMatrix(const MatrixType& cpu_matrix, HYPRE_IJMatrix hypre_matrix, bool use_gpu_backend,
                                             const std::vector<HYPRE_Int>& ncols,
                                             const std::vector<HYPRE_BigInt>& rows,
                                             const std::vector<HYPRE_BigInt>& cols,
+                                            const std::vector<HYPRE_Int>& row_indexes,
                                             HYPRE_Int* ncols_device,
                                             HYPRE_BigInt* rows_device,
                                             HYPRE_BigInt* cols_device,
-                                            HYPRE_Real* matrix_buffer_device,
-                                            std::vector<HYPRE_Real>& continuous_matrix_entries,
-                                            const std::vector<int>& local_dune_to_local_hypre,
-                                            bool owner_first) {
+                                            HYPRE_Int* row_indexes_device,
+                                            HYPRE_Real* matrix_buffer_device) {
         const auto N = rows.size();
-        const auto nnz = cols.size();
+        const auto nnz = cpu_matrix.nonzeroes();  // Total entries including ghost
 
-        // Get values pointer
         using T = typename MatrixType::field_type;
-        const T* values;
+        const T* values = &(cpu_matrix[0][0][0][0]);
 
         if (use_gpu_backend) {
-            // GPU backend with CPU input: use pre-allocated device arrays
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
-            if (!owner_first) {
-                makeContinuousMatrixEntries(cpu_matrix, continuous_matrix_entries, local_dune_to_local_hypre);
-                values = reinterpret_cast<const T*>(continuous_matrix_entries.data());
-            } else {
-                values = &(cpu_matrix[0][0][0][0]);
-            }
             hypre_TMemcpy(matrix_buffer_device, values, HYPRE_Real, nnz, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-            OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues(hypre_matrix, N, ncols_device, rows_device, cols_device, matrix_buffer_device));
+            OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues2(hypre_matrix, N, ncols_device, rows_device, row_indexes_device, cols_device, matrix_buffer_device));
 #endif
         } else {
-            // CPU backend: use host arrays directly
-            if (!owner_first) {
-                makeContinuousMatrixEntries(cpu_matrix, continuous_matrix_entries, local_dune_to_local_hypre);
-                values = reinterpret_cast<const T*>(continuous_matrix_entries.data());
-            } else {
-                values = &(cpu_matrix[0][0][0][0]);
-            }
-            OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues(hypre_matrix, N, const_cast<HYPRE_Int*>(ncols.data()), const_cast<HYPRE_BigInt*>(rows.data()), const_cast<HYPRE_BigInt*>(cols.data()), values));
+            OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues2(hypre_matrix, N, const_cast<HYPRE_Int*>(ncols.data()), const_cast<HYPRE_BigInt*>(rows.data()), const_cast<HYPRE_Int*>(row_indexes.data()), const_cast<HYPRE_BigInt*>(cols.data()), values));
         }
 
         OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixAssemble(hypre_matrix));
@@ -965,28 +978,25 @@ private:
 
     /**
      * @brief Update Hypre matrix values from CPU matrix
+     * Uses HYPRE_IJMatrixSetValues2 with pre-computed row_indexes for optimal performance.
      */
     template<typename MatrixType>
     static void updateMatrixFromCpuMatrix(const MatrixType& cpu_matrix, HYPRE_IJMatrix hypre_matrix, bool use_gpu_backend,
                                         const std::vector<HYPRE_Int>& ncols,
                                         const std::vector<HYPRE_BigInt>& rows,
                                         const std::vector<HYPRE_BigInt>& cols,
+                                        const std::vector<HYPRE_Int>& row_indexes,
                                         HYPRE_Int* ncols_device,
                                         HYPRE_BigInt* rows_device,
                                         HYPRE_BigInt* cols_device,
-                                        HYPRE_Real* matrix_buffer_device,
-                                        std::vector<HYPRE_Real>& continuous_matrix_entries,
-                                        const std::vector<int>& local_dune_to_local_hypre,
-                                        bool owner_first) {
+                                        HYPRE_Int* row_indexes_device,
+                                        HYPRE_Real* matrix_buffer_device) {
         // For value updates, we need to re-upload the full matrix since Hypre doesn't have
         // a separate coefficient update API like AMGX
         initializeMatrixFromCpuMatrix(cpu_matrix, hypre_matrix, use_gpu_backend,
-                                    ncols, rows, cols,
-                                    ncols_device, rows_device, cols_device,
-                                    matrix_buffer_device,
-                                    continuous_matrix_entries,
-                                    local_dune_to_local_hypre,
-                                    owner_first);
+                                    ncols, rows, cols, row_indexes,
+                                    ncols_device, rows_device, cols_device, row_indexes_device,
+                                    matrix_buffer_device);
     }
 };
 

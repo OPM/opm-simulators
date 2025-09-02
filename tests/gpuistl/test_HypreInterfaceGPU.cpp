@@ -222,6 +222,14 @@ BOOST_FIXTURE_TEST_CASE(TestGpuMatrixTransfer, HypreTestFixture)
     std::vector<HYPRE_BigInt> cols;
     setupGpuMatrixHelperArrays(gpu_matrix, ncols, rows, cols);
 
+    // Pre-compute row indexes for optimal performance
+    std::vector<int> local_dune_to_local_hypre(3);
+    for (int i = 0; i < 3; ++i) {
+        local_dune_to_local_hypre[i] = i;
+    }
+    bool owner_first = true;
+    auto row_indexes = HypreInterface::computeRowIndexes(gpu_matrix, ncols, local_dune_to_local_hypre, owner_first);
+
     // Allocate device arrays for GPU backend
     const int N = gpu_matrix.N();
     const int nnz = gpu_matrix.nonzeroes();
@@ -240,27 +248,18 @@ BOOST_FIXTURE_TEST_CASE(TestGpuMatrixTransfer, HypreTestFixture)
     auto hypre_matrix = HypreInterface::createMatrix(3, 0, comm);
 
     // Setup MPI parallel helper arrays
-    std::vector<HYPRE_Real> continuous_matrix_entries;
-    std::vector<int> local_dune_to_local_hypre(3);  // empty for owner_first = true
-    bool owner_first = true;
 
     // This should not throw (GPU backend with GPU input)
     HypreInterface::initializeMatrix(gpu_matrix, hypre_matrix, true,
-                                    ncols, rows, cols,
-                                    ncols_device, rows_device, cols_device,
-                                    matrix_buffer_device,
-                                    continuous_matrix_entries,
-                                    local_dune_to_local_hypre,
-                                    owner_first);
+                                    ncols, rows, cols, row_indexes,
+                                    ncols_device, rows_device, cols_device, nullptr,
+                                    nullptr);
 
     // Test update
     HypreInterface::updateMatrixValues(gpu_matrix, hypre_matrix, true,
-                                        ncols, rows, cols,
-                                        ncols_device, rows_device, cols_device,
-                                        matrix_buffer_device,
-                                        continuous_matrix_entries,
-                                        local_dune_to_local_hypre,
-                                        owner_first);
+                                        ncols, rows, cols, row_indexes,
+                                        ncols_device, rows_device, cols_device, nullptr,
+                                        nullptr);
 
     // Verify matrix values after update
     auto values_hypre = HypreInterface::getMatrixValues(hypre_matrix, ncols, rows, cols, true);
@@ -358,18 +357,30 @@ BOOST_FIXTURE_TEST_CASE(TestCpuMatrixWithGpuBackend, HypreTestFixture)
     std::vector<HYPRE_BigInt> cols;
     setupMatrixHelperArrays(cpu_matrix, ncols, rows, cols);
 
+    // Setup MPI parallel helper arrays
+    std::vector<int> local_dune_to_local_hypre(3);  // Sequential case: identity mapping
+    for (int i = 0; i < 3; ++i) {
+        local_dune_to_local_hypre[i] = i;
+    }
+    bool owner_first = true;
+
+    // Pre-compute row indexes for optimal performance
+    auto row_indexes = HypreInterface::computeRowIndexes(cpu_matrix, ncols, local_dune_to_local_hypre, owner_first);
+
     // Allocate device arrays for GPU backend
     const int N = cpu_matrix.N();
     const int nnz = cpu_matrix.nonzeroes();
     HYPRE_Int* ncols_device = hypre_CTAlloc(HYPRE_Int, N, HYPRE_MEMORY_DEVICE);
     HYPRE_BigInt* rows_device = hypre_CTAlloc(HYPRE_BigInt, N, HYPRE_MEMORY_DEVICE);
     HYPRE_BigInt* cols_device = hypre_CTAlloc(HYPRE_BigInt, nnz, HYPRE_MEMORY_DEVICE);
+    HYPRE_Int* row_indexes_device = hypre_CTAlloc(HYPRE_Int, N, HYPRE_MEMORY_DEVICE);
     HYPRE_Real* matrix_buffer_device = hypre_CTAlloc(HYPRE_Real, nnz, HYPRE_MEMORY_DEVICE);
 
     // Copy data to device
     hypre_TMemcpy(ncols_device, ncols.data(), HYPRE_Int, N, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
     hypre_TMemcpy(rows_device, rows.data(), HYPRE_BigInt, N, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
     hypre_TMemcpy(cols_device, cols.data(), HYPRE_BigInt, nnz, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+    hypre_TMemcpy(row_indexes_device, row_indexes.data(), HYPRE_Int, N, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
 
     // Create Hypre matrix and test initialization
     Dune::Amg::SequentialInformation comm;
@@ -377,29 +388,18 @@ BOOST_FIXTURE_TEST_CASE(TestCpuMatrixWithGpuBackend, HypreTestFixture)
 
     // Setup MPI parallel helper arrays
     std::vector<HYPRE_Real> continuous_matrix_entries;
-    std::vector<int> local_dune_to_local_hypre(3);  // Sequential case: identity mapping
-    for (int i = 0; i < 3; ++i) {
-        local_dune_to_local_hypre[i] = i;
-    }
-    bool owner_first = true;
 
     // This should not throw (GPU backend with CPU input)
     HypreInterface::initializeMatrix(cpu_matrix, hypre_matrix, true,
-                                    ncols, rows, cols,
-                                    ncols_device, rows_device, cols_device,
-                                    matrix_buffer_device,
-                                    continuous_matrix_entries,
-                                    local_dune_to_local_hypre,
-                                    owner_first);
+                                    ncols, rows, cols, row_indexes,
+                                    ncols_device, rows_device, cols_device, row_indexes_device,
+                                    matrix_buffer_device);
 
     // Test update
     HypreInterface::updateMatrixValues(cpu_matrix, hypre_matrix, true,
-                                        ncols, rows, cols,
-                                        ncols_device, rows_device, cols_device,
-                                        matrix_buffer_device,
-                                        continuous_matrix_entries,
-                                        local_dune_to_local_hypre,
-                                        owner_first);
+                                        ncols, rows, cols, row_indexes,
+                                        ncols_device, rows_device, cols_device, row_indexes_device,
+                                        matrix_buffer_device);
 
     // Verify matrix values after update
     auto values_hypre = HypreInterface::getMatrixValues(hypre_matrix, ncols, rows, cols, true);
@@ -421,6 +421,7 @@ BOOST_FIXTURE_TEST_CASE(TestCpuMatrixWithGpuBackend, HypreTestFixture)
     hypre_TFree(ncols_device, HYPRE_MEMORY_DEVICE);
     hypre_TFree(rows_device, HYPRE_MEMORY_DEVICE);
     hypre_TFree(cols_device, HYPRE_MEMORY_DEVICE);
+    hypre_TFree(row_indexes_device, HYPRE_MEMORY_DEVICE);
     hypre_TFree(matrix_buffer_device, HYPRE_MEMORY_DEVICE);
     HypreInterface::destroyMatrix(hypre_matrix);
 }
@@ -509,7 +510,6 @@ BOOST_FIXTURE_TEST_CASE(TestGpuMatrixWithCpuBackend, HypreTestFixture)
     HYPRE_Int* ncols_device = nullptr;
     HYPRE_BigInt* rows_device = nullptr;
     HYPRE_BigInt* cols_device = nullptr;
-    HYPRE_Real* matrix_buffer_device = nullptr;
 
     // Create Hypre matrix and test initialization
     Dune::Amg::SequentialInformation comm;
@@ -520,23 +520,20 @@ BOOST_FIXTURE_TEST_CASE(TestGpuMatrixWithCpuBackend, HypreTestFixture)
     std::vector<int> local_dune_to_local_hypre(3);  // empty for owner_first = true
     bool owner_first = true;
 
+    // Pre-compute row indexes for optimal performance
+    auto row_indexes = HypreInterface::computeRowIndexes(gpu_matrix, ncols, local_dune_to_local_hypre, owner_first);
+
     // This should not throw (CPU backend with GPU input)
     HypreInterface::initializeMatrix(gpu_matrix, hypre_matrix, false,
-                                    ncols, rows, cols,
-                                    ncols_device, rows_device, cols_device,
-                                    matrix_buffer_device,
-                                    continuous_matrix_entries,
-                                    local_dune_to_local_hypre,
-                                    owner_first);
+                                    ncols, rows, cols, row_indexes,
+                                    ncols_device, rows_device, cols_device, nullptr,
+                                    nullptr);
 
     // Test update
     HypreInterface::updateMatrixValues(gpu_matrix, hypre_matrix, false,
-                                        ncols, rows, cols,
-                                        ncols_device, rows_device, cols_device,
-                                        matrix_buffer_device,
-                                        continuous_matrix_entries,
-                                        local_dune_to_local_hypre,
-                                        owner_first);
+                                        ncols, rows, cols, row_indexes,
+                                        ncols_device, rows_device, cols_device, nullptr,
+                                        nullptr);
 
     // get the matrix values using the new interface function
     auto values_hypre = HypreInterface::getMatrixValues(hypre_matrix, ncols, rows, cols, false);
