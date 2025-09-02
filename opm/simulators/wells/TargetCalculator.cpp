@@ -26,6 +26,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 
+#include <numeric>
 #include <cassert>
 #include <stdexcept>
 
@@ -212,17 +213,35 @@ groupTarget(const std::optional<Group::InjectionControls>& ctrl,
                          + "must either have a valid control or use GPMAINT",
                          deferred_logger);
     }
+    // If we have satellite groups given only with injection surface rates, these will be present in the surface
+    // rates but *not* in the reservoir rates. In this case, the satellite rates are not (and should not) be part
+    // of RESV/VREP-calculations. However, since both these modes output targets in terms of surface rates,
+    // and the computations of reduction rates are agnostic to control-modes, subsequent target calculations will
+    // subtract such satellite injection rates. As counter-effect, we compensate for the mismatch between
+    // surface rates and reservoir-to-surface-converted reservoir rates. This correction amounts to the satellite
+    // injection contribution (e.g., zero if there is no satellite injection)
+    std::vector<Scalar> reservoir_to_surface_correction;
+    if (cmode_ == Group::InjectionCMode::RESV || cmode_ == Group::InjectionCMode::VREP) {
+        reservoir_to_surface_correction = group_state_.injection_surface_rates(group_name_);
+        for (size_t i = 0; i < reservoir_to_surface_correction.size(); ++i) {
+            reservoir_to_surface_correction[i] -= group_state_.injection_reservoir_rates(group_name_)[i]/resv_coeff_[i];
+        }
+    }
     switch (cmode_) {
-    case Group::InjectionCMode::RATE:
+    case Group::InjectionCMode::RATE: {
         if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
             return this->group_state_.gpmaint_target(this->group_name_);
 
         return ctrl->surface_max_rate;
-    case Group::InjectionCMode::RESV:
-        if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
-            return this->group_state_.gpmaint_target(this->group_name_) / resv_coeff_[pos_];
-
-        return ctrl->resv_max_rate / resv_coeff_[pos_];
+    }
+    case Group::InjectionCMode::RESV: {
+        // Sum corrections 
+        const Scalar correction = std::accumulate(reservoir_to_surface_correction.begin(), reservoir_to_surface_correction.end(), 0.0);
+        if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_)) {
+            return this->group_state_.gpmaint_target(this->group_name_) / resv_coeff_[pos_] + correction;
+        }
+        return ctrl->resv_max_rate / resv_coeff_[pos_] + correction;
+    }
     case Group::InjectionCMode::REIN: {
         Scalar production_rate = this->group_state_.injection_rein_rates(ctrl->reinj_group)[pos_];
         return ctrl->target_reinj_fraction * production_rate;
@@ -238,18 +257,18 @@ groupTarget(const std::optional<Group::InjectionControls>& ctrl,
             voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Liquid]];
         if (ctrl->phase != Phase::GAS)
             voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Vapour]];
-        // major hack to account for satellite injection given only as surface rates 
-        const std::vector<Scalar>& group_injection_surface_rates = this->group_state_.injection_surface_rates(this->group_name_);
-        if (ctrl->phase == Phase::WATER)
-            voidage_rate += group_injection_surface_rates[pu_.phase_pos[BlackoilPhases::Aqua]]*resv_coeff_[pos_] - 
-                            group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Aqua]];
-        if (ctrl->phase == Phase::OIL)
-            voidage_rate += group_injection_surface_rates[pu_.phase_pos[BlackoilPhases::Liquid]]*resv_coeff_[pos_] - 
-                            group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Liquid]];
-        if (ctrl->phase == Phase::GAS)
-            voidage_rate += group_injection_surface_rates[pu_.phase_pos[BlackoilPhases::Vapour]]*resv_coeff_[pos_] - 
-                            group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Vapour]];
-        return voidage_rate / resv_coeff_[pos_];
+        voidage_rate /= resv_coeff_[pos_];
+        // Add correction
+        if (ctrl->phase == Phase::WATER) {
+            voidage_rate += reservoir_to_surface_correction[pu_.phase_pos[BlackoilPhases::Aqua]];
+        }
+        if (ctrl->phase == Phase::OIL) {
+            voidage_rate += reservoir_to_surface_correction[pu_.phase_pos[BlackoilPhases::Liquid]];
+        }
+        if (ctrl->phase == Phase::GAS) {
+            voidage_rate += reservoir_to_surface_correction[pu_.phase_pos[BlackoilPhases::Vapour]];
+        }
+        return voidage_rate;
     }
     case Group::InjectionCMode::SALE: {
         assert(pos_ == pu_.phase_pos[BlackoilPhases::Vapour]);
