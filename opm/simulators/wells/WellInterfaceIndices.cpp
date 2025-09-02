@@ -83,8 +83,10 @@ flowPhaseToModelCompIdx(const int phaseIdx) const
 template<class FluidSystem, class Indices>
 int
 WellInterfaceIndices<FluidSystem,Indices>::
-modelCompIdxToFlowCompIdx(const int compIdx) const
+modelCompIdxToFlowPhaseIdx(const int compIdx) const
 {
+    // we might want to provide a mapping from component index to phase index
+    // or we can try to use the solventComponentIndex(which converts phase to component index)
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == compIdx)
         return FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == compIdx)
