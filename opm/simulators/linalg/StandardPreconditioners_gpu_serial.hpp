@@ -108,9 +108,8 @@ struct StandardPreconditioners<Operator,
 #endif
 
 #if HAVE_HYPRE && HYPRE_USING_CUDA || HYPRE_USING_HIP
-            // Only add Hypre for scalar matrices
             F::addCreator("hypre", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-                // Only create AMGX preconditioner for scalar matrices
+                // Only create Hypre preconditioner for scalar matrices
                 if (op.getmat().blockSize() == 1) {
                     return std::make_shared<Hypre::HyprePreconditioner<M, V, V, Dune::Amg::SequentialInformation>>(op.getmat(), prm, Dune::Amg::SequentialInformation());
                 } else {

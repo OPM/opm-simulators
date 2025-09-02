@@ -25,10 +25,9 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "HyprePreconditionerTestHelper.hpp"
+#include "HypreTestHelper.hpp"
 #include "MpiFixture.hpp"
 
-#include <opm/simulators/linalg/HyprePreconditioner.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/fmatrix.hh>
@@ -36,10 +35,11 @@
 #include <dune/istl/bvector.hh>
 
 
+using namespace HypreTestHelpers;
+
 BOOST_GLOBAL_FIXTURE(MPIFixture);
 
-// CPU input test function (specific to this test file)
-inline void testHyprePreconditionerCpuInput(bool use_gpu)
+BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_CpuInputCpuBackend, HypreTestFixture)
 {
     constexpr int N = 100; // 100x100 grid
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
@@ -49,37 +49,8 @@ inline void testHyprePreconditionerCpuInput(bool use_gpu)
     Matrix matrix;
     setupLaplace2d(N, matrix);
 
-    testHyprePreconditionerImpl<Matrix, Vector>(matrix, use_gpu);
-}
-
-// Per-test fixture for HYPRE state isolation
-struct HypreTestFixture {
-    HypreTestFixture() {
-        // Reset HYPRE state for each test
-        if (HYPRE_Initialized()) {
-            HYPRE_Finalize();
-        }
-
-        // Re-initialize HYPRE for this test
-#if HYPRE_RELEASE_NUMBER >= 22900
-        HYPRE_Initialize();
-#else
-        HYPRE_Init();
-#endif
-    }
-
-    ~HypreTestFixture() {
-        // Clean state after test
-        if (HYPRE_Initialized()) {
-            HYPRE_Finalize();
-        }
-    }
-};
-
-BOOST_FIXTURE_TEST_CASE(TestHyprePreconditionerCPU, HypreTestFixture)
-{
-    // Test CPU backend with CPU input (the only valid combination for CPU backend)
-    testHyprePreconditionerCpuInput(false);
+    // Test CPU input with CPU backend
+    testHyprePreconditioner<Matrix, Vector>(matrix, false);
 }
 
 bool init_unit_test_func()
