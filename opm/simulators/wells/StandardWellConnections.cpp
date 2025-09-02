@@ -635,11 +635,13 @@ copyInPerforationRates(const Properties&       props,
     const int np    = this->well_.numPhases();
     const int nc    = this->well_.numConservationQuantities();
 
-    const auto srcIx = [this, np]() {
+    const auto srcIx = [np]() {
         auto ix = std::vector<int>(np);
 
+        // std::iota(ix.begin(), ix.end(), 0);
         for (auto comp = 0; comp < np; ++comp) {
-            ix[comp] = this->well_.modelCompIdxToFlowPhaseIdx(comp);
+            // TODO: it looks like a mixed up of components and phases in mulitple ways
+            ix[comp] = FluidSystem::activeCompToPhaseIdx(comp);
         }
 
         return ix;

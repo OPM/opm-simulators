@@ -2016,7 +2016,7 @@ namespace Opm
             // the reciprocal FVF.
             const int canonical_phase_idx = FluidSystem::activeToCanonicalPhaseIdx(p);
             const auto connMob =
-                mobility[this->flowPhaseToModelCompIdx(p)] * fs.invB(canonical_phase_idx).value();
+                mobility[FluidSystem::activePhaseToCompIdx(p)] * fs.invB(canonical_phase_idx).value();
 
             connPI[p] = connPICalc(connMob);
         }
