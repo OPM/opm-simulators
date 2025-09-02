@@ -66,6 +66,7 @@ protected:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Scalar  = GetPropType<TypeTag, Properties::Scalar>;
 
     enum { numPhases = FluidSystem::numPhases };
 
@@ -98,7 +99,7 @@ public:
             validateAllConfigs();
         }
 
-        double current_time = simulator_.time();
+        Scalar current_time = simulator_.time();
         // Find and apply all models that should run at this time
         auto applicable_models = getApplicableModels(current_time);
         
@@ -155,7 +156,7 @@ protected:
         }
     }
 
-    std::vector<HybridNewtonConfig> getApplicableModels(double current_time)
+    std::vector<HybridNewtonConfig> getApplicableModels(Scalar current_time)
     {
         std::vector<HybridNewtonConfig> applicable;
         
@@ -168,18 +169,18 @@ protected:
         return applicable;
     }
 
-    bool shouldApplyHybridNewton(double current_time, const HybridNewtonConfig& config) const
+    bool shouldApplyHybridNewton(Scalar current_time, const HybridNewtonConfig& config) const
     {
         if (config.apply_times.size() == 1) {
             // Apply exactly at one point in time (with optional tolerance)
-            constexpr double tolerance = 1e-6;
+            constexpr Scalar tolerance = 1e-6;
             bool apply = std::abs(current_time - config.apply_times[0]) < tolerance;
             return apply;
         }
 
         if (config.apply_times.size() == 2) {
-            double start_time = config.apply_times[0];
-            double end_time = config.apply_times[1];
+            Scalar start_time = config.apply_times[0];
+            Scalar end_time = config.apply_times[1];
             bool apply = (current_time >= start_time) && (current_time <= end_time);
             return apply;
         }
@@ -230,12 +231,12 @@ protected:
                     const PropertyTree& s = *sOpt;
                     if (s.get_child_optional("mean") && s.get_child_optional("std")) {
                         spec.scaler.type = Scaler::Type::Standard;
-                        spec.scaler.mean = s.get<double>("mean", 0.0);
-                        spec.scaler.std = s.get<double>("std", 1.0);
+                        spec.scaler.mean = s.get<Scalar>("mean", 0.0);
+                        spec.scaler.std = s.get<Scalar>("std", 1.0);
                     } else if (s.get_child_optional("min") && s.get_child_optional("max")) {
                         spec.scaler.type = Scaler::Type::MinMax;
-                        spec.scaler.min = s.get<double>("min", 0.0);
-                        spec.scaler.max = s.get<double>("max", 1.0);
+                        spec.scaler.min = s.get<Scalar>("min", 0.0);
+                        spec.scaler.max = s.get<Scalar>("max", 1.0);
                     } else {
                         spec.scaler.type = Scaler::Type::None;
                     }
@@ -264,14 +265,14 @@ protected:
                 OPM_THROW(std::runtime_error, "Model must have 'cell_indices_file' as a file path (string)");
             }
 
-            // Parse apply_times (dict of doubles)
+            // Parse apply_times (dict of Scalars)
             auto applyTimesOpt = mt.get_child_optional("apply_times");
             if (!applyTimesOpt) {
                 OPM_THROW(std::runtime_error, "Model must have 'apply_times' defined");
             }
 
             for (const auto& time_key : applyTimesOpt->get_child_keys()) {
-                double t = applyTimesOpt->get_child(time_key).get<double>("");
+                Scalar t = applyTimesOpt->get_child(time_key).get<Scalar>("");
                 config.apply_times.push_back(t);
             }
 
@@ -366,11 +367,10 @@ protected:
         for (const auto& [name, spec] : features) {
             if (name == "TIMESTEP") {
                 // Scalar feature: assign single value at offset
-                double raw_value = simulator_.timeStepSize();
+                Scalar raw_value = simulator_.timeStepSize();
                 raw_value = spec.transform.apply(raw_value);
-                double scaled_value = spec.scaler.scale(raw_value);
-                input(offset) = scaled_value;
-
+                Scalar scaled_value = spec.scaler.scale(raw_value);
+                input(offset) = static_cast<Evaluation>(scaled_value);
                 offset += 1; // advance offset by 1 for scalar
             } else {
                 // Per-cell feature: assign values for each cell
@@ -378,7 +378,7 @@ protected:
                     const auto& intQuants = simulator_.model().intensiveQuantities(cell_indices[cell_idx], 0);
                     const auto& fs = intQuants.fluidState();
 
-                    double raw_value = 0.0;
+                    Scalar raw_value = 0.0;
 
                     if (name == "PRESSURE") {
                         raw_value = getValue(fs.pressure(oilPhaseIdx));
@@ -407,9 +407,9 @@ protected:
                     
                     // Transform and Scaling
                     raw_value = spec.transform.apply(raw_value);
-                    double scaled_value = spec.scaler.scale(raw_value);
+                    Scalar scaled_value = spec.scaler.scale(raw_value);
 
-                    input(offset + cell_idx) = scaled_value;
+                    input(offset + cell_idx) = static_cast<Evaluation>(scaled_value);
                 }
                 offset += n_cells; // advance offset by number of cells
             }
@@ -441,7 +441,6 @@ protected:
         const auto& features = config.output_features;
         const int n_features = features.size();
         
-        // TODO check is model path exists 
         ML::NNModel<Evaluation> model;
         model.loadModel(config.model_path);
 
@@ -505,10 +504,10 @@ protected:
             int feature_idx = 0;
 
             // Temp variables per cell
-            double sw_val = -1.0;
-            double so_val = -1.0;
-            double sg_val = -1.0;
-            double po_val = -1.0;
+            Scalar sw_val = -1.0;
+            Scalar so_val = -1.0;
+            Scalar sg_val = -1.0;
+            Scalar po_val = -1.0;
 
             for (const auto& [name, spec] : features) {
                 bool is_delta = name.compare(0, 6, "DELTA_") == 0;
@@ -517,7 +516,7 @@ protected:
                 auto scaled_value = getValue(output(feature_idx * n_cells + i));
                 
                 // Inverse scaling
-                double raw_value = spec.scaler.unscale(scaled_value);
+                Scalar raw_value = spec.scaler.unscale(scaled_value);
 
                 // Inverse transform
                 raw_value = spec.transform.applyInverse(raw_value);
@@ -569,9 +568,9 @@ protected:
             int sat_count = static_cast<int>(has_SWAT) + static_cast<int>(has_SOIL) + static_cast<int>(has_SGAS);
 
             if (sat_count >= 2) {
-                double sw = sw_val;
-                double so = so_val;
-                double sg = sg_val;
+                Scalar sw = sw_val;
+                Scalar so = so_val;
+                Scalar sg = sg_val;
 
                 if (!has_SWAT) {
                     sw = 1.0 - so - sg;
@@ -581,11 +580,11 @@ protected:
                     sg = 1.0 - sw - so;
                 }
 
-                sw = std::max(0.0, std::min(sw, 1.0));
-                so = std::max(0.0, std::min(so, 1.0));
-                sg = std::max(0.0, std::min(sg, 1.0));
+                sw = max(0.0, min(sw, 1.0));
+                so = max(0.0, min(so, 1.0));
+                sg = max(0.0, min(sg, 1.0));
 
-                double sum = sw + so + sg;
+                Scalar sum = sw + so + sg;
                 if (sum <= 1e-12) {
                     OPM_THROW(std::runtime_error, "Saturation sum is zero in cell " + std::to_string(cell_idx));
                 }
@@ -671,4 +670,3 @@ protected:
 } // namespace Opm
 
 #endif // HYBRID_NEWTON_CLASS_HPP
-
