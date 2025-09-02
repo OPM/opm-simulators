@@ -22,24 +22,24 @@
 
 #define BOOST_TEST_MODULE TestHyprePreconditionerGPU
 #define BOOST_TEST_NO_MAIN
+
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/linalg/HyprePreconditioner.hpp>
-#include <opm/simulators/linalg/gpuistl/set_device.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
+#include "HypreTestHelper.hpp"
 #include "MpiFixture.hpp"
-#include "HyprePreconditionerTestHelper.hpp"
 
 #if HAVE_CUDA || HAVE_HIP
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #endif
 
+using namespace HypreTestHelpers;
+
 BOOST_GLOBAL_FIXTURE(MPIFixture);
 
-// CPU input test function (specific to this test file)
-inline void testHyprePreconditionerCpuInput(bool use_gpu)
+BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_CpuInputGpuBackend, HypreTestFixture)
 {
     constexpr int N = 100; // 100x100 grid
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
@@ -49,41 +49,10 @@ inline void testHyprePreconditionerCpuInput(bool use_gpu)
     Matrix matrix;
     setupLaplace2d(N, matrix);
 
-    testHyprePreconditionerImpl<Matrix, Vector>(matrix, use_gpu);
+    testHyprePreconditioner<Matrix, Vector>(matrix, true);
 }
 
-// Per-test fixture for HYPRE state isolation
-struct HypreTestFixture {
-    HypreTestFixture() {
-        // Reset HYPRE state for each test
-        if (HYPRE_Initialized()) {
-            HYPRE_Finalize();
-        }
-
-        // Re-initialize HYPRE for this test
-#if HYPRE_RELEASE_NUMBER >= 22900
-        HYPRE_Initialize();
-#else
-        HYPRE_Init();
-#endif
-    }
-
-    ~HypreTestFixture() {
-        // Clean state after test
-        if (HYPRE_Initialized()) {
-            HYPRE_Finalize();
-        }
-    }
-};
-
-BOOST_FIXTURE_TEST_CASE(TestHyprePreconditionerGPU_CPUInput, HypreTestFixture)
-{
-    // Test GPU backend with CPU input (CPU data transferred to GPU)
-    testHyprePreconditionerCpuInput(true);
-}
-
-#if HAVE_CUDA || HAVE_HIP
-inline void testHyprePreconditionerGpuInput(bool use_gpu)
+BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_GpuInputGpuBackend, HypreTestFixture)
 {
     using namespace Opm::gpuistl;
 
@@ -99,21 +68,27 @@ inline void testHyprePreconditionerGpuInput(bool use_gpu)
     // Convert to GPU matrix
     GpuMatrixType gpu_matrix = GpuMatrixType::fromMatrix(cpu_matrix);
 
-    testHyprePreconditionerImpl<GpuMatrixType, GpuVectorType>(gpu_matrix, use_gpu);
+    testHyprePreconditioner<GpuMatrixType, GpuVectorType>(gpu_matrix, true);
 }
 
-BOOST_FIXTURE_TEST_CASE(TestHyprePreconditionerGPU_GPUInput, HypreTestFixture)
+BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_GpuInputCpuBackend, HypreTestFixture)
 {
-    // Test GPU backend with GPU input (GPU data used directly)
-    testHyprePreconditionerGpuInput(true);
-}
+    using namespace Opm::gpuistl;
 
-BOOST_FIXTURE_TEST_CASE(TestHyprePreconditionerCPU_GPUInput, HypreTestFixture)
-{
-    // Test CPU backend with GPU input (data transfered to CPU for use with Hypre)
-    testHyprePreconditionerGpuInput(false);
+    constexpr int N = 100; // 100x100 grid
+    using CpuMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using GpuMatrixType = GpuSparseMatrix<double>;
+    using GpuVectorType = GpuVector<double>;
+
+    // Create matrix on CPU first
+    CpuMatrix cpu_matrix;
+    setupLaplace2d(N, cpu_matrix);
+
+    // Convert to GPU matrix
+    GpuMatrixType gpu_matrix = GpuMatrixType::fromMatrix(cpu_matrix);
+
+    testHyprePreconditioner<GpuMatrixType, GpuVectorType>(gpu_matrix, false);
 }
-#endif
 
 bool init_unit_test_func()
 {
