@@ -457,8 +457,8 @@ namespace Opm
         }
         else if (toleranceTestVersion_ == ToleranceTestVersions::ControlErrorFiltering)
         {
-            const std::array<double, 3> tempErrors{errors_[0], errors_[1], error};
-            const std::array<double, 3> tempTimeSteps{timeSteps_[0], timeSteps_[1], timeStepJustCompleted};
+            const std::array<double, 3> tempErrors{errors_[1], errors_[2], error};
+            const std::array<double, 3> tempTimeSteps{timeSteps_[1], timeSteps_[2], timeStepJustCompleted};
             const double stepFactor = timeStepFactor(tempErrors, tempTimeSteps);
             if (rejectCompletedStep_ && stepFactor < maxReductionTimeStep_)
             {
