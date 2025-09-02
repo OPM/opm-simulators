@@ -617,17 +617,17 @@ getSegmentRateUpwinding(const int seg,
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == comp_idx
                 && phase == InjectorType::WATER)
-            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.modelCompIdxToFlowPhaseIdx(comp_idx));
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx));;
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == comp_idx
                 && phase == InjectorType::OIL)
-            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.modelCompIdxToFlowPhaseIdx(comp_idx));
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx));
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == comp_idx
                 && phase == InjectorType::GAS)
-            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.modelCompIdxToFlowPhaseIdx(comp_idx));
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx));
 
         return 0.0;
     }
