@@ -1606,12 +1606,12 @@ namespace Opm
             const Scalar well_tw_fraction = this->well_index_[perf] / total_tw;
             Scalar total_mobility = 0.0;
             for (int p = 0; p < np; ++p) {
-                int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
-                total_mobility += fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value();
+                const int canonical_phase_idx = FluidSystem::activeToCanonicalPhaseIdx(p);
+                total_mobility += fs.invB(canonical_phase_idx).value() * intQuants.mobility(canonical_phase_idx).value();
             }
             for (int p = 0; p < np; ++p) {
-                int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
-                scaling_factor[p] += well_tw_fraction * fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value() / total_mobility;
+                const int canonical_phase_idx = FluidSystem::activeToCanonicalPhaseIdx(p);
+                scaling_factor[p] += well_tw_fraction * fs.invB(canonical_phase_idx).value() * intQuants.mobility(canonical_phase_idx).value() / total_mobility;
             }
         }
         return scaling_factor;
@@ -2014,9 +2014,9 @@ namespace Opm
         for (int p = 0; p < np; ++p) {
             // Note: E100's notion of PI value phase mobility includes
             // the reciprocal FVF.
+            const int canonical_phase_idx = FluidSystem::activeToCanonicalPhaseIdx(p);
             const auto connMob =
-                mobility[this->flowPhaseToModelCompIdx(p)]
-                    * fs.invB(this->flowPhaseToModelPhaseIdx(p)).value();
+                mobility[this->flowPhaseToModelCompIdx(p)] * fs.invB(canonical_phase_idx).value();
 
             connPI[p] = connPICalc(connMob);
         }
@@ -2065,7 +2065,8 @@ namespace Opm
         }
 
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), 0.0);
-        connII[phase_pos] = connIICalc(mt * fs.invB(this->flowPhaseToModelPhaseIdx(phase_pos)).value());
+        const int canonicalPhseIdx = FluidSystem::activeToCanonicalPhaseIdx(phase_pos);
+        connII[phase_pos] = connIICalc(mt * fs.invB(canonicalPhseIdx).value());
     }
 
     template<typename TypeTag>
