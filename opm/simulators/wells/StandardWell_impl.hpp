@@ -419,7 +419,7 @@ namespace Opm
                     auto& perf_rate_solvent = perf_data.solvent_rates;
                     perf_rate_solvent[perf] = cq_s[componentIdx].value();
                 } else {
-                    perf_rates[perf*np + this->modelCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
+                    perf_rates[perf*np + this->modelCompIdxToFlowPhaseIdx(componentIdx)] = cq_s[componentIdx].value();
                 }
             }
 
@@ -893,7 +893,7 @@ namespace Opm
             // could revert to standard approach here:
             updateIPR(simulator, deferred_logger);
             for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx){
-                const int idx = this->modelCompIdxToFlowCompIdx(comp_idx);
+                const int idx = this->modelCompIdxToFlowPhaseIdx(comp_idx);
                 ws.implicit_ipr_a[idx] = this->ipr_a_[comp_idx];
                 ws.implicit_ipr_b[idx] = this->ipr_b_[comp_idx];
             }
@@ -931,7 +931,7 @@ namespace Opm
 
         for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx){
             EvalWell comp_rate = this->primary_variables_.getQs(comp_idx);
-            const int idx = this->modelCompIdxToFlowCompIdx(comp_idx);
+            const int idx = this->modelCompIdxToFlowPhaseIdx(comp_idx);
             for (size_t pvIdx = 0; pvIdx < nEq; ++pvIdx) {
                 // well primary variable derivatives in EvalWell start at position Indices::numEq
                 ws.implicit_ipr_b[idx] -= x_well[0][pvIdx]*comp_rate.derivative(pvIdx+Indices::numEq);
@@ -1470,7 +1470,7 @@ namespace Opm
                             cq_s, perf_rates, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
-                well_flux[this->modelCompIdxToFlowCompIdx(p)] += cq_s[p];
+                well_flux[this->modelCompIdxToFlowPhaseIdx(p)] += cq_s[p];
             }
 
             // the solvent contribution is added to the gas potentials
@@ -1649,7 +1649,7 @@ namespace Opm
         for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
             if (has_solvent && comp_idx == Indices::contiSolventEqIdx) continue; // we do not store the solvent in the well_potentials
             const EvalWell rate = well_copy.primary_variables_.getQs(comp_idx);
-            well_potentials[this->modelCompIdxToFlowCompIdx(comp_idx)] = rate.value();
+            well_potentials[this->modelCompIdxToFlowPhaseIdx(comp_idx)] = rate.value();
         }
 
         // the solvent contribution is added to the gas potentials

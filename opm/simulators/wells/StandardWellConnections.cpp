@@ -639,7 +639,7 @@ copyInPerforationRates(const Properties&       props,
         auto ix = std::vector<int>(np);
 
         for (auto comp = 0; comp < np; ++comp) {
-            ix[comp] = this->well_.modelCompIdxToFlowCompIdx(comp);
+            ix[comp] = this->well_.modelCompIdxToFlowPhaseIdx(comp);
         }
 
         return ix;
