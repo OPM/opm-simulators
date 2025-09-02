@@ -35,7 +35,7 @@
 namespace Opm {
 
 template<class Scalar>
-using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
+using MatLaw = EclMaterialLaw::Manager<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
 
 namespace EQUIL {
 namespace DeckDependent {

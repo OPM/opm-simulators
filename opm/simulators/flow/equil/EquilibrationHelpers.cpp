@@ -28,7 +28,7 @@ namespace Opm {
 namespace EQUIL {
     
 template<class Scalar>
-using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
+using MatLaw = EclMaterialLaw::Manager<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
 template<class Scalar> using FS = BlackOilFluidSystem<Scalar>;
 
 #define INSTANTIATE_TYPE(T) \
