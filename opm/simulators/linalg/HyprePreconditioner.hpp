@@ -37,6 +37,7 @@
 #include <HYPRE_parcsr_ls.h>
 #include <HYPRE_krylov.h>
 #include <_hypre_utilities.h>
+#include <iostream>
 #include <numeric>
 #include <vector>
 
@@ -49,7 +50,7 @@ using HypreInterface = Opm::gpuistl::HypreInterface;
  *
  * This class provides an interface to the BoomerAMG preconditioner from the Hypre library.
  * It is designed to work with matrices, update vectors, and defect vectors specified by the template parameters.
- * The HypreInterface class provides a unified interface to Hypre's functionality, allowing for easy 
+ * The HypreInterface class provides a unified interface to Hypre's functionality, allowing for easy
  * switching between CPU and GPU input data types and backend acceleration.
  *
  * Supports three use cases:
@@ -130,12 +131,9 @@ public:
 
         // Initialize matrix structure and values using pre-allocated helper arrays
         HypreInterface::initializeMatrix(A_, A_hypre_, use_gpu_backend_,
-                                       ncols_, rows_, cols_,
-                                       ncols_device_, rows_device_, cols_device_,
-                                       matrix_buffer_device_,
-                                       continuous_matrix_entries_,
-                                       local_dune_to_local_hypre_,
-                                       owner_first_);
+                                       ncols_, rows_, cols_, row_indexes_,
+                                       ncols_device_, rows_device_, cols_device_, row_indexes_device_,
+                                       matrix_buffer_device_);
 
         // Perform initial update
         update();
@@ -167,12 +165,9 @@ public:
 
         // Update matrix values using pre-allocated helper arrays
         HypreInterface::updateMatrixValues(A_, A_hypre_, use_gpu_backend_,
-                                         ncols_, rows_, cols_,
-                                         ncols_device_, rows_device_, cols_device_,
-                                         matrix_buffer_device_,
-                                         continuous_matrix_entries_,
-                                         local_dune_to_local_hypre_,
-                                         owner_first_);
+                                         ncols_, rows_, cols_, row_indexes_,
+                                         ncols_device_, rows_device_, cols_device_, row_indexes_device_,
+                                         matrix_buffer_device_);
 
         // Get the underlying ParCSR matrix for setup
         HYPRE_ParCSRMatrix parcsr_A;
@@ -275,8 +270,7 @@ private:
     // mappings between dune and hypre use int to have negative values as not owned
     std::vector<int> local_dune_to_local_hypre_;
     std::vector<int> local_dune_to_global_hypre_;
-    std::vector<int> local_hypre_to_local_dune_;// will only be needed if not owner first
-    std::vector<HYPRE_Real> continuous_matrix_entries_;
+    std::vector<int> local_hypre_to_local_dune_;  // will only be needed if not owner first
     std::vector<HYPRE_Real> continuous_vector_values_;
     int dof_offset_;
     bool owner_first_;
@@ -298,15 +292,14 @@ private:
     std::vector<HYPRE_Int> ncols_;
     std::vector<HYPRE_BigInt> rows_;
     std::vector<HYPRE_BigInt> cols_;
-    std::vector<HYPRE_BigInt> indices_;
+    std::vector<HYPRE_Int> row_indexes_;  // Pre-computed row indexes for optimal performance
+    std::vector<HYPRE_BigInt> indices_;  // Owned DOF indices
 
     // Device helper arrays (only allocated when use_gpu_backend_ is true)
     HYPRE_Int* ncols_device_ = nullptr;
     HYPRE_BigInt* rows_device_ = nullptr;
     HYPRE_BigInt* cols_device_ = nullptr;
-    HYPRE_Real* values_device_ = nullptr; //!< Device array for matrix values.
-    HYPRE_Real* x_values_device_ = nullptr; //!< Device array for solution vector values.
-    HYPRE_Real* b_values_device_ = nullptr; //!< Device array for right-hand side vector values.
+    HYPRE_Int* row_indexes_device_ = nullptr; // Device array for pre-computed row indexes
     HYPRE_BigInt* indices_device_ = nullptr;
     HYPRE_Real* vector_buffer_device_ = nullptr;
     HYPRE_Real* matrix_buffer_device_ = nullptr;
@@ -315,25 +308,64 @@ private:
      * @brief Setup helper arrays for matrix and vector operations
      */
     void setupHelperArrays() {
+        // Determine the size for cols_ array based on owner_first
+        if (owner_first_) {
+            std::size_t cols_size = 0;
+            // For packed case, we need to calculate how many owned entries there are
+#if HYPRE_USING_CUDA || HYPRE_USING_HIP
+            if constexpr (Opm::gpuistl::is_gpu_type<M>::value) {
+                // GPU matrix: use row pointers to count owned entries
+                auto host_row_ptrs = A_.getRowIndices().asStdVector();
+                for (int rind = 0; rind < static_cast<int>(A_.N()); ++rind) {
+                    if (local_dune_to_local_hypre_[rind] >= 0) {
+                        const int row_start = host_row_ptrs[rind];
+                        const int row_end = host_row_ptrs[rind + 1];
+                        cols_size += (row_end - row_start);
+                    }
+                }
+            } else
+#endif
+            {
+                // CPU matrix: iterate through rows
+                for (auto row = A_.begin(); row != A_.end(); ++row) {
+                    const int rowIdx = row.index();
+                    if (local_dune_to_local_hypre_[rowIdx] >= 0) {
+                        cols_size += row->size();
+                    }
+                }
+            }
+            nnz_ = cols_size;
+        } else {
+            // Full matrix space case: all entries (including gaps)
+            nnz_ = A_.nonzeroes();
+        }
+
         // Setup host arrays
         ncols_.resize(N_);
         rows_.resize(N_);
         cols_.resize(nnz_);
-        indices_.resize(N_);
 
         // Setup sparsity pattern based on matrix type
-#if HYPRE_USING_CUDA || HYPRE_USING_HIP
+        #if HYPRE_USING_CUDA || HYPRE_USING_HIP
         if constexpr (Opm::gpuistl::is_gpu_type<M>::value) {
-            setupSparsityPatternFromGpuMatrix();
+            setupSparsityPatternFromGpuMatrix(owner_first_);
         } else
-#endif
+        #endif
         {
-            setupSparsityPatternFromCpuMatrix();
+            setupSparsityPatternFromCpuMatrix(owner_first_);
         }
 
-        // Create indices vector
+        // Pre-compute row indexes for optimal performance
+        row_indexes_ = HypreInterface::computeRowIndexes(A_, ncols_, local_dune_to_local_hypre_, owner_first_);
+
+        // Create indices for vector operations - simple sequential indices for owned DOFs
         indices_.resize(N_);
         std::iota(indices_.begin(), indices_.end(), dof_offset_);
+
+        // Setup continuous vector values buffer
+        if (!owner_first_) {
+            continuous_vector_values_.resize(N_);
+        }
 
         // Allocate device arrays if using GPU backend
         if (use_gpu_backend_) {
@@ -341,13 +373,18 @@ private:
             ncols_device_ = hypre_CTAlloc(HYPRE_Int, N_, HYPRE_MEMORY_DEVICE);
             rows_device_ = hypre_CTAlloc(HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE);
             cols_device_ = hypre_CTAlloc(HYPRE_BigInt, nnz_, HYPRE_MEMORY_DEVICE);
+            row_indexes_device_ = hypre_CTAlloc(HYPRE_Int, N_, HYPRE_MEMORY_DEVICE);
             indices_device_ = hypre_CTAlloc(HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE);
             vector_buffer_device_ = hypre_CTAlloc(HYPRE_Real, N_, HYPRE_MEMORY_DEVICE);
-            matrix_buffer_device_ = hypre_CTAlloc(HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE);
+            // For CPU input and GPU backend we need to allocate space for transfering the matrix values
+            if constexpr (!Opm::gpuistl::is_gpu_type<M>::value) {
+                matrix_buffer_device_ = hypre_CTAlloc(HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE);
+            }
             // Copy data to device
             hypre_TMemcpy(ncols_device_, ncols_.data(), HYPRE_Int, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
             hypre_TMemcpy(rows_device_, rows_.data(), HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
             hypre_TMemcpy(cols_device_, cols_.data(), HYPRE_BigInt, nnz_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            hypre_TMemcpy(row_indexes_device_, row_indexes_.data(), HYPRE_Int, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
             hypre_TMemcpy(indices_device_, indices_.data(), HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
 #endif
         }
@@ -355,23 +392,29 @@ private:
 
     /**
      * @brief Setup sparsity pattern from CPU matrix (BCRSMatrix)
+     *
+     * @param owner_first Whether owned DOFs come first in the ordering
      */
-    void setupSparsityPatternFromCpuMatrix() {
-        // Setup arrays and fill column indices
+    void setupSparsityPatternFromCpuMatrix(bool owner_first) {
         int pos = 0;
         for (auto row = A_.begin(); row != A_.end(); ++row) {
             const int rind = row.index();
-            if (local_dune_to_local_hypre_[rind] < 0) {
-                // This is a ghost dof, skip it
+            const int local_rowIdx = local_dune_to_local_hypre_[rind];
+
+            // For owner_first=true: skip ghost rows entirely
+            // For owner_first=false: process all rows (owned + ghost)
+            if (owner_first && local_rowIdx < 0) {
                 continue;
             }
 
-            const int local_rowIdx = local_dune_to_local_hypre_[rind];
-            const int global_rowIdx = local_dune_to_global_hypre_[rind];
+            if (local_rowIdx >= 0) {
+                // This is an owned row - record its metadata
+                const int global_rowIdx = local_dune_to_global_hypre_[rind];
+                rows_[local_rowIdx] = global_rowIdx;
+                ncols_[local_rowIdx] = row->size();
+            }
 
-            rows_[local_rowIdx] = global_rowIdx;
-            ncols_[local_rowIdx] = row->size();
-
+            // Add column indices for this row
             for (auto col = row->begin(); col != row->end(); ++col) {
                 const int global_colIdx = local_dune_to_global_hypre_[col.index()];
                 assert(global_colIdx >= 0);
@@ -383,29 +426,36 @@ private:
     #if HYPRE_USING_CUDA || HYPRE_USING_HIP
     /**
      * @brief Setup sparsity pattern from GPU matrix (GpuSparseMatrix)
+     *
+     * @param owner_first Whether owned DOFs come first in the ordering
      */
-    void setupSparsityPatternFromGpuMatrix() {
+    void setupSparsityPatternFromGpuMatrix(bool owner_first) {
         // Get row pointers and column indices from GPU matrix (one-time host copy during setup)
         auto host_row_ptrs = A_.getRowIndices().asStdVector();
         auto host_col_indices = A_.getColumnIndices().asStdVector();
 
         int pos = 0;
         for (int rind = 0; rind < static_cast<int>(A_.N()); ++rind) {
-            if (local_dune_to_local_hypre_[rind] < 0) {
-                // This is a ghost dof, skip it
+            const int local_rowIdx = local_dune_to_local_hypre_[rind];
+
+            // For owner_first=true: skip ghost rows entirely
+            // For owner_first=false: process all rows (owned + ghost)
+            if (owner_first && local_rowIdx < 0) {
                 continue;
             }
+
             const int row_start = host_row_ptrs[rind];
             const int row_end = host_row_ptrs[rind + 1];
             const int num_cols = row_end - row_start;
 
-            const int local_rowIdx = local_dune_to_local_hypre_[rind];
-            const int global_rowIdx = local_dune_to_global_hypre_[rind];
+            if (local_rowIdx >= 0) {
+                // This is an owned row - record its metadata
+                const int global_rowIdx = local_dune_to_global_hypre_[rind];
+                rows_[local_rowIdx] = global_rowIdx;
+                ncols_[local_rowIdx] = num_cols;
+            }
 
-            rows_[local_rowIdx] = global_rowIdx;
-            ncols_[local_rowIdx] = num_cols;
-
-            // Extract column indices for this row and map them to global Hypre indices
+            // Add column indices for this row
             for (int col_idx = row_start; col_idx < row_end; ++col_idx) {
                 const int colIdx = host_col_indices[col_idx];
                 const int global_colIdx = local_dune_to_global_hypre_[colIdx];
@@ -433,6 +483,10 @@ private:
             if (cols_device_) {
                 hypre_TFree(cols_device_, HYPRE_MEMORY_DEVICE);
                 cols_device_ = nullptr;
+            }
+            if (row_indexes_device_) {
+                hypre_TFree(row_indexes_device_, HYPRE_MEMORY_DEVICE);
+                row_indexes_device_ = nullptr;
             }
             if (indices_device_) {
                 hypre_TFree(indices_device_, HYPRE_MEMORY_DEVICE);
@@ -501,7 +555,7 @@ private:
         for (const auto& ind : comm.indexSet()) {
             int local_ind = ind.local().local();
             if (ind.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::owner) {
-                local_dune_to_local_hypre_[local_ind] = 1;//count;
+                local_dune_to_local_hypre_[local_ind] = 1;
                 count += 1;
 
             } else {
@@ -523,15 +577,12 @@ private:
                 local_dune_to_local_hypre_[i] = count;
                 local_hypre_to_local_dune_.push_back(i);
                 owner_first = owner_first && !visited_copy;
-                count +=1;
+                count += 1;
             }
         }
 
          // owner first need other copying of data
         owner_first_ = owner_first;
-        if (!owner_first){  // only need this storage if not owner first
-            continuous_vector_values_.resize(N_);
-        }
 
         // Gather the number of DOFs from each process
         std::vector<int> dof_counts_per_process(collective_comm.size());
@@ -555,21 +606,6 @@ private:
         }
         // communicate global numbering of dofs
         comm.copyOwnerToAll(local_dune_to_global_hypre_, local_dune_to_global_hypre_);
-
-        // calculate matrix propeties which can be used to optimize memmory
-        int nnz = 0;
-        for (auto row = A_.begin(); row != A_.end(); ++row) {
-            const int rowIdx = row.index();
-            for (auto col = row->begin(); col != row->end(); ++col) {
-                if (!(local_dune_to_local_hypre_[rowIdx] < 0) ){
-                    nnz++;
-                }
-            }
-        }
-        nnz_ = nnz;
-        if (!owner_first){
-            continuous_matrix_entries_.resize(nnz_);
-        }
     }
 };
 
