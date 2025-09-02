@@ -70,10 +70,6 @@ public:
                                           const GSatProd::GSatProdGroup::Rate rateComp, 
                                           bool res_rates);
 
-    static Scalar satelliteProduction(const ScheduleState& sched,
-                                      const std::vector<std::string>& groups,
-                                      const GSatProd::GSatProdGroup::Rate rateComp);
-
     static std::optional<GSatProd::GSatProdGroup::Rate>
     selectRateComponent(const PhaseUsage& pu, const int phasePos);
 

@@ -183,9 +183,8 @@ satelliteInjectionRate(const ScheduleState& sched,
                     if (const auto& qs = satrates.surface(); qs.has_value()) {
                         rate = *qs;
                     }
-                } else { // reservoir rates
+                } else {// reservoir rates - not officially supported (not tested)
                     if (const auto& qr = satrates.reservoir(); qr.has_value()) {
-                        // not officially supported (but should be OK)
                         rate = *qr;
                     }
                 }
@@ -212,23 +211,6 @@ satelliteProductionRate(const ScheduleState& sched,
         // directly here since GSATPROD contains total reservoir rates
     }
     return rate;
-}
-
-template <typename Scalar>
-Scalar WellGroupHelpers<Scalar>::
-satelliteProduction(const ScheduleState& sched,
-                    const std::vector<std::string>& groups,
-                    const GSatProd::GSatProdGroup::Rate rateComp)
-{
-    auto gsatProdRate = Scalar{};
-    const auto& gsatProd = sched.gsatprod();
-    for (const auto& group : groups) {
-        if (! gsatProd.has(group)) {
-            continue;
-        }
-        gsatProdRate += gsatProd.get(group).rate[rateComp];
-    }
-    return gsatProdRate;
 }
 
 template <typename Scalar>
@@ -492,18 +474,6 @@ updateGroupTargetReduction(const Group& group,
             }
         }
     }
-
-    // only sum satellite production once
-    // With the current treatment, satellite rates here must be added to target reduction excactly the same 
-    // way as in sumWellPhaseRates (see comment there)
-    // if (wellState.isRank0()) {
-    //    for (int phase = 0; phase < np; phase++) {
-    //        const auto rateComp = selectRateComponent(wellState.phaseUsage(), phase);
-    //        if (rateComp.has_value()) {
-    //            groupTargetReduction[phase] += satelliteProduction(schedule[reportStepIdx], group.groups(), *rateComp);
-    //        }
-    //    }
-    // }
 
     for (const std::string& wellName : group.wells()) {
         const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
