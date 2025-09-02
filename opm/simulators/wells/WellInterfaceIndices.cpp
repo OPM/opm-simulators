@@ -59,47 +59,6 @@ WellInterfaceIndices(const Well& well,
 }
 
 template<class FluidSystem, class Indices>
-int
-WellInterfaceIndices<FluidSystem,Indices>::
-flowPhaseToModelCompIdx(const int phaseIdx) const
-{
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
-            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx) == phaseIdx) {
-            return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-    }
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx) == phaseIdx) {
-        return Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-    }
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
-            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx) == phaseIdx) {
-        return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-    }
-
-    // for other phases return the index
-    return phaseIdx;
-}
-
-template<class FluidSystem, class Indices>
-int
-WellInterfaceIndices<FluidSystem,Indices>::
-modelCompIdxToFlowPhaseIdx(const int compIdx) const
-{
-    // we might want to provide a mapping from component index to phase index
-    // or we can try to use the solventComponentIndex(which converts phase to component index)
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == compIdx)
-        return FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == compIdx)
-        return FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == compIdx)
-        return FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-
-    // for other phases return the index
-    return compIdx;
-}
-
-
-template<class FluidSystem, class Indices>
 typename WellInterfaceIndices<FluidSystem,Indices>::Scalar
 WellInterfaceIndices<FluidSystem,Indices>::
 scalingFactor(const int phaseIdx) const
