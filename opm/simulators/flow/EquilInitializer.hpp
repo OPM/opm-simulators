@@ -158,8 +158,7 @@ public:
             }
 
             // set the temperature.
-            if (enableTemperature || enableEnergy)
-                fluidState.setTemperature(initialState.temperature()[elemIdx]);
+            fluidState.setTemperature(initialState.temperature()[elemIdx]);
 
             // set the phase pressures, invB factor and density
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {

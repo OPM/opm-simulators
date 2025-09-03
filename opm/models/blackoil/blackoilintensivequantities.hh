@@ -180,9 +180,9 @@ public:
 
     void updateTempSalt(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
-        if constexpr (enableTemperature || enableEnergy) {
-            asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
-        }
+        // the temperature is updated even if the energy equations are not solved
+        // to allow for temperature dependent properites
+        asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
 
         if constexpr (enableBrine) {
             asImp_().updateSaltConcentration_(elemCtx, dofIdx, timeIdx);
@@ -195,10 +195,7 @@ public:
                         const unsigned timeIdx,
                         const LinearizationType& lintype)
     {
-        if constexpr (enableTemperature || enableEnergy) {
-            asImp_().updateTemperature_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
-        }
-
+        asImp_().updateTemperature_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
         if constexpr (enableBrine) {
             asImp_().updateSaltConcentration_(priVars, timeIdx, lintype);
         }
