@@ -149,6 +149,9 @@ struct SimulatorFixture
         simulator{simulator_wrapper.getSimulatorPtr()},
         schedule{simulator->vanguard().schedule()},
         rc_master{Opm::FlowGenericVanguard::comm(), schedule, 0, nullptr},
+        // TODO: Add float type testing when AdaptiveTimeStepping is templated
+        // Currently blocked by hardcoded double types throughout AdaptiveTimeStepping
+        // See PR #6347 review comment for details
         start_date{static_cast<double>(schedule.getStartTime())}
     {
         rc_master.addSlaveName("RES-1");
@@ -165,7 +168,7 @@ struct SimulatorFixture
     OpmSimulatorTestCase simulator_wrapper;
     Simulator *simulator;
     Opm::Schedule& schedule;
-    Opm::ReservoirCouplingMaster rc_master;
+    Opm::ReservoirCouplingMaster<double> rc_master;
     double start_date;
 };
 

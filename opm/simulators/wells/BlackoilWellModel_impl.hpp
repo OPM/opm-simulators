@@ -45,6 +45,8 @@
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
+#include <opm/simulators/wells/RescoupReceiveGroupTargets.hpp>
+#include <opm/simulators/wells/RescoupTargetCalculator.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellGroupControls.hpp>
@@ -476,6 +478,7 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingSlave()) {
             this->guide_rate_handler_.sendSlaveGroupPotentialsToMaster(this->groupState());
+            this->receiveGroupTargetsFromMaster(reportStepIdx);
         }
 #endif
         std::string exc_msg;
@@ -528,6 +531,12 @@ namespace Opm {
         }
         // Catch clauses for all errors setting exc_type and exc_msg
         OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isReservoirCouplingMaster()) {
+            this->sendMasterGroupTargetsToSlaves(reportStepIdx);
+        }
+#endif
 
         if (exc_type != ExceptionType::NONE) {
             const std::string msg = "Compute initial well solution for new wells failed. Continue with zero initial rates";
@@ -607,9 +616,34 @@ namespace Opm {
         }
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    sendMasterGroupTargetsToSlaves(const int reportStepIdx)
+    {
+        // This function is called by the master process to send the group targets to the slaves.
+        RescoupTargetCalculator target_calculator{
+            this->guide_rate_handler_,
+            this->wellState(),
+            this->groupState(),
+            reportStepIdx
+        };
+        target_calculator.calculateMasterGroupTargetsAndSendToSlaves();
+    }
 
-
-
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    receiveGroupTargetsFromMaster(int reportStepIdx)
+    {
+        RescoupReceiveGroupTargets target_receiver{
+            this->guide_rate_handler_,
+            this->wellState(),
+            this->groupState(),
+            reportStepIdx
+        };
+        target_receiver.receiveGroupTargetsFromMaster();
+    }
 
     // called at the end of a report step
     template<typename TypeTag>
@@ -2311,7 +2345,7 @@ namespace Opm {
     calcResvCoeff(const int fipnum,
                   const int pvtreg,
                   const std::vector<Scalar>& production_rates,
-                  std::vector<Scalar>& resv_coeff)
+                  std::vector<Scalar>& resv_coeff) const
     {
         rateConverter_->calcCoeff(fipnum, pvtreg, production_rates, resv_coeff);
     }
@@ -2321,7 +2355,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     calcInjResvCoeff(const int fipnum,
                      const int pvtreg,
-                     std::vector<Scalar>& resv_coeff)
+                     std::vector<Scalar>& resv_coeff) const
     {
         rateConverter_->calcInjCoeff(fipnum, pvtreg, resv_coeff);
     }
