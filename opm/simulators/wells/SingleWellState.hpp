@@ -136,8 +136,8 @@ public:
     /// This called after ACTIONX is executed to update well rates. The new status is
     /// in ecl_well and st.
     /// \return whether well was switched to a producer
-    void update_type_and_targets(const Well& ecl_well, const SummaryState& st);
-    void updateStatus(WellStatus status);
+    bool update_type_and_targets(const Well& ecl_well, const SummaryState& st);
+    bool updateStatus(WellStatus status);
     void init_timestep(const SingleWellState& other);
     void shut();
     void stop();

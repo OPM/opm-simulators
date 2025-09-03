@@ -443,7 +443,11 @@ namespace Opm {
             // This is done only for producers, as injectors will only have a single
             // nonzero phase anyway.
             for (const auto& well : well_container_) {
-                if (well->isProducer() && !well->wellIsStopped()) {
+                const auto& events = this->wellState().well(well->indexOfWell()).events;
+                const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
+                        + ScheduleEvents::NEW_WELL;
+                const bool event = events.hasEvent(effective_events_mask);
+                if (event && well->isProducer() && !well->wellIsStopped()) {
                     well->initializeProducerWellState(simulator_, this->wellState(), local_deferredLogger);
                 }
             }
@@ -509,12 +513,17 @@ namespace Opm {
                         + ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER
                         + ScheduleEvents::NEW_WELL;
 
-                const auto& events = this->schedule()[reportStepIdx].wellgroup_events();
-                const bool event = this->report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
+                auto& events = this->wellState().well(well->indexOfWell()).events;
+                const bool event = events.hasEvent(effective_events_mask);
                 const bool dyn_status_change = this->wellState().well(well->name()).status
                         != this->prevWellState().well(well->name()).status;
-
                 if (event || dyn_status_change) {
+                    if (events.hasEvent(ScheduleEvents::ACTIONX_WELL_EVENT)) {
+                        events.clearEvent(ScheduleEvents::ACTIONX_WELL_EVENT);
+                    }
+                    // We first constrain the solution on the targets
+                    const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Both;
+                    well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), local_deferredLogger);
                     try {
                         well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), local_deferredLogger);
                         well->calculateExplicitQuantities(simulator_, this->wellState(), local_deferredLogger);
@@ -1257,7 +1266,7 @@ namespace Opm {
         OPM_TIMEFUNCTION();
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const int reportStepIdx = simulator_.episodeIndex();
-        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, 
+        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx,
             param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ true, local_deferredLogger);
         const auto [more_inner_network_update, network_imbalance] =
                 updateNetworks(mandatory_network_balance,
@@ -2154,6 +2163,9 @@ namespace Opm {
             // these events only work for the first time step within the report step
             if (events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL)) {
                 events.clearEvent(ScheduleEvents::REQUEST_OPEN_WELL);
+            }
+            if (events.hasEvent(ScheduleEvents::HIST_TO_PRED)) {
+                events.clearEvent(ScheduleEvents::HIST_TO_PRED);
             }
             // solve the well equation initially to improve the initial solution of the well model
             if (param_.solve_welleq_initially_ && well->isOperableAndSolvable()) {

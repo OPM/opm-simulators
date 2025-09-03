@@ -119,8 +119,11 @@ void SingleWellState<Scalar>::open()
 }
 
 template<class Scalar>
-void SingleWellState<Scalar>::updateStatus(Well::Status new_status)
+bool SingleWellState<Scalar>::updateStatus(Well::Status new_status)
 {
+    if (this->status == new_status)
+        return false;
+
     switch (new_status) {
     case Well::Status::OPEN:
         this->open();
@@ -134,6 +137,7 @@ void SingleWellState<Scalar>::updateStatus(Well::Status new_status)
     default:
         throw std::logic_error("Invalid well status");
     }
+    return true;
 }
 
 template<class Scalar>
@@ -345,10 +349,12 @@ update_injector_targets(const Well& ecl_well, const SummaryState& st)
 }
 
 template<class Scalar>
-void SingleWellState<Scalar>::
+bool SingleWellState<Scalar>::
 update_type_and_targets(const Well& ecl_well, const SummaryState& st)
 {
+    bool updated = false;
     if (this->producer != ecl_well.isProducer()) {
+        updated = true;
         // type has changed due to ACTIONX
         // Make sure that we are consistent with the ecl_well
         const bool switchedToProducer = this->producer = ecl_well.isProducer();
@@ -373,6 +379,7 @@ update_type_and_targets(const Well& ecl_well, const SummaryState& st)
     else
         this->update_injector_targets(ecl_well, st);
 
+    return updated;
 }
 
 template<class Scalar>
