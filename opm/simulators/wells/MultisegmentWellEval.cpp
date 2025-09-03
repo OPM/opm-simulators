@@ -54,7 +54,7 @@ namespace Opm
 template<typename FluidSystem, typename Indices>
 MultisegmentWellEval<FluidSystem,Indices>::
 MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const ParallelWellInfo<Scalar>& pw_info)
-    : MultisegmentWellGeneric<Scalar>(baseif)
+    :  MultisegmentWellGeneric<Scalar, IndexTraits>(baseif)
     , pw_info_(pw_info)
     , baseif_(baseif)
     , linSys_(*this, pw_info)
@@ -79,7 +79,7 @@ initMatrixAndVectors()
 template<typename FluidSystem, typename Indices>
 ConvergenceReport
 MultisegmentWellEval<FluidSystem,Indices>::
-getWellConvergence(const WellState<Scalar>& well_state,
+getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                    const std::vector<Scalar>& B_avg,
                    DeferredLogger& deferred_logger,
                    const Scalar max_residual_allowed,
@@ -200,7 +200,7 @@ template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleAccelerationPressureLoss(const int seg,
-                                 WellState<Scalar>& well_state)
+                                 WellState<Scalar, IndexTraits>& well_state)
 {
     // Computes and assembles p-drop due to acceleration
     assert(seg != 0); // top segment can not enter here
@@ -248,7 +248,7 @@ template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleDefaultPressureEq(const int seg,
-                          WellState<Scalar>& well_state,
+                          WellState<Scalar, IndexTraits>& well_state,
                           const bool use_average_density)
 {
     assert(seg != 0); // not top segment
@@ -293,7 +293,7 @@ void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleICDPressureEq(const int seg,
                       const UnitSystem& unit_system,
-                      WellState<Scalar>& well_state,
+                      WellState<Scalar, IndexTraits>& well_state,
                       const SummaryState& summary_state,
                       const bool use_average_density,
                       DeferredLogger& deferred_logger)
@@ -375,7 +375,7 @@ template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleAccelerationAndHydroPressureLosses(const int seg,
-                                           WellState<Scalar>& well_state,
+                                           WellState<Scalar, IndexTraits>& well_state,
                                            const bool use_average_density)
 {
     if (this->accelerationalPressureLossConsidered()) {
@@ -407,7 +407,7 @@ void
 MultisegmentWellEval<FluidSystem,Indices>::
 assemblePressureEq(const int seg,
                    const UnitSystem& unit_system,
-                   WellState<Scalar>& well_state,
+                   WellState<Scalar, IndexTraits>& well_state,
                    const SummaryState& summary_state,
                    const bool use_average_density,
                    DeferredLogger& deferred_logger)
@@ -471,7 +471,7 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
 template<typename FluidSystem, typename Indices>
 typename MultisegmentWellEval<FluidSystem,Indices>::Scalar
 MultisegmentWellEval<FluidSystem,Indices>::
-getControlTolerance(const WellState<Scalar>& well_state,
+getControlTolerance(const WellState<Scalar, IndexTraits>& well_state,
                     const Scalar tolerance_wells,
                     const Scalar tolerance_pressure_ms_wells,
                     DeferredLogger& deferred_logger) const
@@ -538,7 +538,7 @@ getControlTolerance(const WellState<Scalar>& well_state,
 template<typename FluidSystem, typename Indices>
 typename MultisegmentWellEval<FluidSystem,Indices>::Scalar
 MultisegmentWellEval<FluidSystem,Indices>::
-getResidualMeasureValue(const WellState<Scalar>& well_state,
+getResidualMeasureValue(const WellState<Scalar, IndexTraits>& well_state,
                         const std::vector<Scalar>& residuals,
                         const Scalar tolerance_wells,
                         const Scalar tolerance_pressure_ms_wells,

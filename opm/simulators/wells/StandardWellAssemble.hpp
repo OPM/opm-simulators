@@ -31,11 +31,11 @@ namespace Opm
 class DeferredLogger;
 template<class Scalar> class GroupState;
 class Schedule;
-template<class Scalar, int numEq> class StandardWellEquations;
+template<typename Scalar, typename IndexTraits, int numEq> class StandardWellEquations;
 template<class FluidSystem, class Indices> class StandardWellPrimaryVariables;
 class SummaryState;
 template<class FluidSystem> class WellInterfaceFluidSystem;
-template<class Scalar> class WellState;
+template<typename Scalar, typename IndexTraits> class WellState;
 
 //! \brief Class handling assemble of the equation system for StandardWell.
 template<class FluidSystem, class Indices>
@@ -45,6 +45,8 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices>;
     using EvalWell = typename PrimaryVariables::EvalWell;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using StandardWellEquationsType = StandardWellEquations<Scalar, IndexTraits, Indices::numEq>;
 
     //! \brief Constructor initializes reference to well.
     explicit StandardWellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well)
@@ -52,7 +54,7 @@ public:
     {}
 
     //! \brief Assemble control equation.
-    void assembleControlEq(const WellState<Scalar>& well_state,
+    void assembleControlEq(const WellState<Scalar, IndexTraits>& well_state,
                            const GroupState<Scalar>& group_state,
                            const Schedule& schedule,
                            const SummaryState& summaryState,
@@ -60,7 +62,7 @@ public:
                            const Well::ProductionControls& prod_controls,
                            const PrimaryVariables& primary_variables,
                            const Scalar rho,
-                           StandardWellEquations<Scalar,Indices::numEq>& eqns,
+                           StandardWellEquationsType& eqns,
                            const bool stopped_or_zero_target,
                            DeferredLogger& deferred_logger) const;
 
@@ -71,26 +73,26 @@ public:
                                const int wat_vel_index,
                                const int cell_idx,
                                const int numWellEq,
-                               StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
+                               StandardWellEquationsType& eqns) const;
 
     //! \brief Assemble equation for a perforation.
     void assemblePerforationEq(const EvalWell& cq_s_effective,
                                const int componentIdx,
                                const int cell_idx,
                                const int numWellEq,
-                               StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
+                               StandardWellEquationsType& eqns) const;
 
     //! \brief Assemble equation for Z fraction.
     void assembleZFracEq(const EvalWell& cq_s_zfrac_effective,
                          const int cell_idx,
                          const int numWellEq,
-                         StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
+                         StandardWellEquationsType& eqns) const;
 
     //! \brief Assemble a source term.
     void assembleSourceEq(const EvalWell& resWell_loc,
                           const int componentIdx,
                           const int numWellEq,
-                          StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
+                          StandardWellEquationsType& eqns) const;
 
 private:
     const WellInterfaceFluidSystem<FluidSystem>& well_; //!< Reference to well

@@ -25,20 +25,20 @@
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
+
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
-#include <opm/simulators/utils/BlackoilPhases.hpp>
-
 namespace Opm
 {
 
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 std::pair<bool, Scalar>
-WellGroupConstraints<Scalar>::
+WellGroupConstraints<Scalar, IndexTraits>::
 checkGroupConstraintsInj(const Group& group,
-                         const WellState<Scalar>& well_state,
+                         const WellState<Scalar, IndexTraits>& well_state,
                          const GroupState<Scalar>& group_state,
                          const Scalar efficiencyFactor,
                          const Schedule& schedule,
@@ -72,12 +72,12 @@ checkGroupConstraintsInj(const Group& group,
     }
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(well_.phaseUsage().numActivePhases(), 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
     // Call check for the well's injection phase.
-    return WellGroupHelpers<Scalar>::checkGroupConstraintsInj(well_.name(),
+    return WellGroupHelpers<Scalar, IndexTraits>::checkGroupConstraintsInj(well_.name(),
                                                               well_.wellEcl().groupName(),
                                                               group,
                                                               well_state,
@@ -86,7 +86,6 @@ checkGroupConstraintsInj(const Group& group,
                                                               well_.guideRate(),
                                                               ws.surface_rates.data(),
                                                               injectionPhase,
-                                                              well_.phaseUsage(),
                                                               efficiencyFactor,
                                                               schedule,
                                                               summaryState,
@@ -95,11 +94,11 @@ checkGroupConstraintsInj(const Group& group,
                                                               deferred_logger);
 }
 
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 std::pair<bool, Scalar>
-WellGroupConstraints<Scalar>::
+WellGroupConstraints<Scalar, IndexTraits>::
 checkGroupConstraintsProd(const Group& group,
-                          const WellState<Scalar>& well_state,
+                          const WellState<Scalar, IndexTraits>& well_state,
                           const GroupState<Scalar>& group_state,
                           const Scalar efficiencyFactor,
                           const Schedule& schedule,
@@ -109,11 +108,11 @@ checkGroupConstraintsProd(const Group& group,
                           DeferredLogger& deferred_logger) const
 {
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(well_.phaseUsage().numActivePhases(), 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
-    return WellGroupHelpers<Scalar>::checkGroupConstraintsProd(well_.name(),
+    return WellGroupHelpers<Scalar, IndexTraits>::checkGroupConstraintsProd(well_.name(),
                                                                well_.wellEcl().groupName(),
                                                                group,
                                                                well_state,
@@ -121,7 +120,6 @@ checkGroupConstraintsProd(const Group& group,
                                                                well_.currentStep(),
                                                                well_.guideRate(),
                                                                ws.surface_rates.data(),
-                                                               well_.phaseUsage(),
                                                                efficiencyFactor,
                                                                schedule,
                                                                summaryState,
@@ -130,9 +128,9 @@ checkGroupConstraintsProd(const Group& group,
                                                                deferred_logger);
 }
 
-template<class Scalar>
-bool WellGroupConstraints<Scalar>::
-checkGroupConstraints(WellState<Scalar>& well_state,
+template<typename Scalar, typename IndexTraits>
+bool WellGroupConstraints<Scalar, IndexTraits>::
+checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
                       const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
@@ -211,10 +209,10 @@ checkGroupConstraints(WellState<Scalar>& well_state,
     return false;
 }
 
-template class WellGroupConstraints<double>;
+template class WellGroupConstraints<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class WellGroupConstraints<float>;
+template class WellGroupConstraints<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm

@@ -26,17 +26,17 @@
 namespace Opm {
 
 class DeferredLogger;
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
+template<typename Scalar, typename IndexTraits> class WellState;
 
 //! \brief Class for well calculations related to filter cakes.
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class WellFilterCake {
 public:
     //! \brief Post-step filtration model updates
     //! \details Calculates the filtrate deposition volumes and associated skin factors / injectivity multipliers
-    void updatePostStep(const WellInterfaceGeneric<Scalar>& well,
-                WellState<Scalar>& well_state,
+    void updatePostStep(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
+                WellState<Scalar, IndexTraits>& well_state,
                 const double dt,
                 const Scalar conc,
                 const std::size_t water_index,
@@ -44,7 +44,7 @@ public:
 
     //! \brief Pre-step filtration model updates
     //! \details Applies filter cake cleaning
-    void updatePreStep(const WellInterfaceGeneric<Scalar>& well,
+    void updatePreStep(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                        DeferredLogger& deferred_logger);
 
     //! \brief Returns a const-ref to multipliers.
@@ -52,8 +52,8 @@ public:
 
 private:
     //! \brief Update the multiplier for well transmissbility due to cake filtration.
-    void updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar>& well,
-                                         WellState<Scalar>& well_state,
+    void updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
+                                         WellState<Scalar, IndexTraits>& well_state,
                                          const double dt,
                                          const std::size_t water_index,
                                          DeferredLogger& deferred_logger);
@@ -62,7 +62,7 @@ private:
 
     //! \brief Apply cleaning multipliers to skin factors and reduce cake thickness accordingly
     //! \details The cake thickness is re-computed to give the new (reduced) skin factor with current cake properties
-    void applyCleaning(const WellInterfaceGeneric<Scalar>& well,
+    void applyCleaning(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                        DeferredLogger& deferred_logger);
 
 
