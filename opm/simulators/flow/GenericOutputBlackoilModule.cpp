@@ -157,8 +157,8 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableMICP_(enableMICP)
     , flowsC_(schedule, summaryConfig)
     , rftC_(eclState_, schedule_,
-            [this](const std::string& wname)
-            { return this->isOwnedByCurrentRank(wname); })
+            [this](const std::string& wname) { return this->isOwnedByCurrentRank(wname); },
+            [this](const std::string& wname) { return this->isOnCurrentRank(wname); })
     , rst_conv_(std::move(globalCell), comm)
     , local_data_valid_(false)
 {

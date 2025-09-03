@@ -372,6 +372,14 @@ private:
         return ! this->isDefunctParallelWell(wname);
     }
 
+    bool isOnCurrentRank(const std::string& wname) const override
+    {
+        // Note: This statement is not correct for distributed wells and
+        // will need additional logic once those are supported for
+        // compositional flows.
+        return ! this->isDefunctParallelWell(wname);
+    }
+
     void createLocalRegion_(std::vector<int>& region)
     {
         std::size_t elemIdx = 0;
