@@ -246,7 +246,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"GRUPRIG", {true, std::nullopt}},
         {"GRUPSLAV", {true, std::nullopt}},
         {"GRUPTARG", {true, std::nullopt}},
-        {"GSATINJE", {true, std::nullopt}},
         {"GSEPCOND", {true, std::nullopt}},
         {"GSSCPTST", {true, std::nullopt}},
         {"GSWINGF", {true, std::nullopt}},

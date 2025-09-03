@@ -586,6 +586,12 @@ partiallySupported()
             },
          },
          {
+            "GSATINJE",
+            {
+               {4,{true, allow_values<double> {.0}, "GSATINJE(RESV): reservoir volume rate is not supported and should be defaulted (1*)"}}, // RESERVOIR_VOLUME_RATE
+            },
+         },         
+         {
             "GUIDERAT",
             {
                {10,{true, [](double x) { return x >= 0; }, "GUIDERAT(GROPT01): only only positive values allowed – will STOP"}}, // ALLOW_INCREASE
