@@ -59,7 +59,7 @@ public:
                          const int time_step,
                          const ModelParameters& param,
                          const int pvtRegionIdx,
-                         const int num_components,
+                         const int num_conservation_quantities,
                          const int num_phases,
                          const int index_of_well,
                          const std::vector<PerforationData<Scalar>>& perf_data);
@@ -125,7 +125,7 @@ public:
 
     const GuideRate* guideRate() const { return guide_rate_; }
 
-    int numComponents() const { return num_components_; }
+    int numConservationQuantities() const { return num_conservation_quantities_; }
 
     int numPhases() const { return number_of_phases_; }
 
@@ -304,7 +304,7 @@ protected:
     // We assume a well to not penetrate more than one pvt region.
     const int pvtRegionIdx_;
 
-    const int num_components_;
+    const int num_conservation_quantities_;
 
     // number of phases
     int number_of_phases_;

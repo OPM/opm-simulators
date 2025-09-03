@@ -65,7 +65,7 @@ WellInterfaceGeneric(const Well& well,
                      const int time_step,
                      const ModelParameters& param,
                      const int pvtRegionIdx,
-                     const int num_components,
+                     const int num_conservation_quantities,
                      const int num_phases,
                      const int index_of_well,
                      const std::vector<PerforationData<Scalar>>& perf_data)
@@ -74,12 +74,12 @@ WellInterfaceGeneric(const Well& well,
       , current_step_(time_step)
       , param_(param)
       , pvtRegionIdx_(pvtRegionIdx)
-      , num_components_(num_components)
+      , num_conservation_quantities_(num_conservation_quantities)
       , number_of_phases_(num_phases)
       , index_of_well_(index_of_well)
       , perf_data_(&perf_data)
-      , ipr_a_(num_components)
-      , ipr_b_(num_components)
+      , ipr_a_(num_conservation_quantities)
+      , ipr_b_(num_conservation_quantities)
 {
     assert(well.name()==pw_info.name());
     assert(std::is_sorted(perf_data.begin(), perf_data.end(),

@@ -186,21 +186,6 @@ struct BlackOilOnePhaseIndices
         return 0;
     }
 
-    static constexpr int activeToCanonicalComponentIndex([[maybe_unused]] const int compIdx)
-    {
-        // assumes canonical oil = 0, water = 1, gas = 2;
-        constexpr_assert(compIdx == 0);
-        if (gasEnabled) {
-            return 2;
-        } else if (waterEnabled) {
-            return 1;
-        } else {
-            assert(oilEnabled);
-        }
-
-        return 0;
-    }
-
     //! Index of the continuity equation of the first (and only) phase
     static constexpr int conti0EqIdx = PVOffset + 0;
 

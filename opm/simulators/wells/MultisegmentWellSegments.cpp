@@ -74,9 +74,9 @@ MultisegmentWellSegments(const int numSegments,
     , mass_rates_(numSegments, 0.0)
     , viscosities_(numSegments, 0.0)
     , upwinding_segments_(numSegments, 0)
-    , phase_densities_(numSegments, std::vector<EvalWell>(well.numComponents(), 0.0)) // number of phase here?
-    , phase_fractions_(numSegments, std::vector<EvalWell>(well.numComponents(), 0.0)) // number of phase here?
-    , phase_viscosities_(numSegments, std::vector<EvalWell>(well.numComponents(), 0.0)) // number of phase here?
+    , phase_densities_(numSegments, std::vector<EvalWell>(well.numConservationQuantities(), 0.0)) // number of phase here?
+    , phase_fractions_(numSegments, std::vector<EvalWell>(well.numConservationQuantities(), 0.0)) // number of phase here?
+    , phase_viscosities_(numSegments, std::vector<EvalWell>(well.numConservationQuantities(), 0.0)) // number of phase here?
     , well_(well)
 {
     // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
@@ -145,7 +145,7 @@ computeFluidProperties(const EvalWell& temperature,
                        int pvt_region_index,
                        DeferredLogger& deferred_logger)
 {
-    std::vector<Scalar> surf_dens(well_.numComponents());
+    std::vector<Scalar> surf_dens(well_.numConservationQuantities());
     // Surface density.
     for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
         if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -158,13 +158,13 @@ computeFluidProperties(const EvalWell& temperature,
 
     for (std::size_t seg = 0; seg < perforations_.size(); ++seg) {
         // the compostion of the components inside wellbore under surface condition
-        std::vector<EvalWell> mix_s(well_.numComponents(), 0.0);
-        for (int comp_idx = 0; comp_idx < well_.numComponents(); ++comp_idx) {
+        std::vector<EvalWell> mix_s(well_.numConservationQuantities(), 0.0);
+        for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
             mix_s[comp_idx] = primary_variables.surfaceVolumeFraction(seg, comp_idx);
         }
 
-        std::vector<EvalWell> b(well_.numComponents(), 0.0);
-        std::vector<EvalWell> visc(well_.numComponents(), 0.0);
+        std::vector<EvalWell> b(well_.numConservationQuantities(), 0.0);
+        std::vector<EvalWell> visc(well_.numConservationQuantities(), 0.0);
         std::vector<EvalWell>& phase_densities = phase_densities_[seg];
 
         const EvalWell seg_pressure = primary_variables.getSegmentPressure(seg);
@@ -283,13 +283,13 @@ computeFluidProperties(const EvalWell& temperature,
         }
 
         EvalWell volrat(0.0);
-        for (int comp_idx = 0; comp_idx < well_.numComponents(); ++comp_idx) {
+        for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
             volrat += mix[comp_idx] / b[comp_idx];
         }
 
         viscosities_[seg] = 0.;
         // calculate the average viscosity
-        for (int comp_idx = 0; comp_idx < well_.numComponents(); ++comp_idx) {
+        for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
             const EvalWell fraction =  mix[comp_idx] / b[comp_idx] / volrat;
             // TODO: a little more work needs to be done to handle the negative fractions here
             phase_fractions_[seg][comp_idx] = fraction; // >= 0.0 ? fraction : 0.0;
@@ -297,14 +297,14 @@ computeFluidProperties(const EvalWell& temperature,
         }
 
         EvalWell density(0.0);
-        for (int comp_idx = 0; comp_idx < well_.numComponents(); ++comp_idx) {
+        for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
             density += surf_dens[comp_idx] * mix_s[comp_idx];
         }
         densities_[seg] = density / volrat;
 
         // calculate the mass rates
         mass_rates_[seg] = 0.;
-        for (int comp_idx = 0; comp_idx < well_.numComponents(); ++comp_idx) {
+        for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
             const int upwind_seg = upwinding_segments_[seg];
             const EvalWell rate = primary_variables.getSegmentRateUpwinding(seg,
                                                                             upwind_seg,
@@ -368,12 +368,12 @@ getSurfaceVolume(const EvalWell& temperature,
 {
     const EvalWell seg_pressure = primary_variables.getSegmentPressure(seg_idx);
 
-    std::vector<EvalWell> mix_s(well_.numComponents(), 0.0);
-    for (int comp_idx = 0; comp_idx < well_.numComponents(); ++comp_idx) {
+    std::vector<EvalWell> mix_s(well_.numConservationQuantities(), 0.0);
+    for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
         mix_s[comp_idx] = primary_variables.surfaceVolumeFraction(seg_idx, comp_idx);
     }
 
-    std::vector<EvalWell> b(well_.numComponents(), 0.);
+    std::vector<EvalWell> b(well_.numConservationQuantities(), 0.);
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
         const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
         EvalWell rsw(0.0);
@@ -494,7 +494,7 @@ getSurfaceVolume(const EvalWell& temperature,
     }
 
     EvalWell vol_ratio(0.0);
-    for (int comp_idx = 0; comp_idx < well_.numComponents(); ++comp_idx) {
+    for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
         vol_ratio += mix[comp_idx] / b[comp_idx];
     }
 

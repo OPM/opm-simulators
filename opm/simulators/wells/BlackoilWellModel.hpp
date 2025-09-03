@@ -507,8 +507,8 @@ template<class Scalar> class WellContributions;
             void calculateProductivityIndexValues(const WellInterface<TypeTag>* wellPtr,
                                                   DeferredLogger& deferred_logger);
 
-            // The number of components in the model.
-            int numComponents() const;
+            // The number of conservation quantities.
+            int numConservationQuantities() const;
 
             int reportStepIndex() const;
 
