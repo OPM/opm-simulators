@@ -97,6 +97,21 @@ opm_add_test(test_parallel_wbp_calculation_well_openconns
 )
 
 foreach(NPROC 2 3 4)
+  opm_add_test(test_rftcontainer_np${NPROC}
+    EXE_NAME
+      test_rftcontainer
+    CONDITION
+      MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+    DRIVER_ARGS
+      -n ${NPROC}
+      -b ${PROJECT_BINARY_DIR}
+    NO_COMPILE
+    PROCESSORS
+      ${NPROC}
+  )
+endforeach()
+
+foreach(NPROC 2 3 4)
   opm_add_test(test_parallel_region_phase_pvaverage_np${NPROC}
     EXE_NAME
       test_region_phase_pvaverage
