@@ -291,7 +291,7 @@ main() {
     DOCKER_CMD+=(--build-arg "version_simulators=$VERSION_SIMULATORS")
     DOCKER_CMD+=(--build-arg "target_common=$TARGET_COMMON")
     DOCKER_CMD+=(--build-arg "target_simulators=$TARGET_SIMULATORS")
-    
+
     # Add version_tag if specified
     if [ -n "$VERSION_TAG" ]; then
         DOCKER_CMD+=(--build-arg "version_tag=$VERSION_TAG")

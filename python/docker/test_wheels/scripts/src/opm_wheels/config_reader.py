@@ -19,7 +19,7 @@ def load_python_config() -> Dict:
     config_path = get_config_path()
     if not config_path.exists():
         raise FileNotFoundError(f"Python config file not found at {config_path}")
-    
+
     with open(config_path, 'r') as f:
         return json.load(f)
 
