@@ -2,15 +2,29 @@
 
 ## Installation
 
-For regular use:
-```
+**Important:** This package requires access to the `python_versions.json` configuration file in the opm-simulators repository. Choose one of these installation methods:
+
+### Option 1: Install within repository (Recommended)
+```bash
+# Create venv inside the opm-simulators repository
+$ cd /path/to/opm-simulators/python/docker/test_wheels/scripts
 $ python -m venv .venv
 $ source .venv/bin/activate
 $ pip install .    # Installs package and dependencies
 ```
 
-For development (editable install with locked dependency versions):
+### Option 2: Global installation with environment variable
+```bash
+# Install anywhere, but set environment variable
+$ python -m venv .venv
+$ source .venv/bin/activate
+$ pip install .
+$ export OPM_SIMULATORS_ROOT=/path/to/opm-simulators
 ```
+
+### For development (editable install with locked dependency versions):
+```bash
+$ cd /path/to/opm-simulators/python/docker/test_wheels/scripts
 $ uv venv
 $ uv sync          # Installs package in editable mode with exact versions from uv.lock
 $ source .venv/bin/activate
@@ -99,4 +113,35 @@ $ opm-wheels show-wheel-files \
     --wheel-dir="wheelhouse-shared" \
     opm_simulators-2025.10-cp312-cp312-manylinux_2_27_x86_64.whl
 ```
+
+## Troubleshooting
+
+### FileNotFoundError: Could not locate python_versions.json
+
+This error occurs when the CLI cannot find the configuration file. Solutions:
+
+1. **Run from within the repository:**
+   ```bash
+   cd /path/to/opm-simulators
+   cd python/docker/test_wheels/scripts
+   source .venv/bin/activate
+   opm-wheels run-docker-image --help
+   ```
+
+2. **Set environment variable for global installations:**
+   ```bash
+   export OPM_SIMULATORS_ROOT=/path/to/opm-simulators
+   opm-wheels run-docker-image --help
+   ```
+
+3. **Verify the configuration file exists:**
+   ```bash
+   ls /path/to/opm-simulators/python/docker/python_versions.json
+   ```
+
+### RuntimeError: Not a valid Git repository
+
+This error means you're not inside a Git repository. Either:
+- Navigate to the opm-simulators repository directory, or  
+- Use the `OPM_SIMULATORS_ROOT` environment variable method
 
