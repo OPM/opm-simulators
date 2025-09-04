@@ -102,17 +102,42 @@ def run_docker_build(
 def run_docker_run(
     docker_tag: str,
     wheel_dir: Path,
-    python_versions: list[PythonVersion]
+    python_versions: list[PythonVersion],
+    host_tests_dir: Path = None
 ) -> None:
+    # Build Docker run command
+    docker_cmd = [
+        "docker", "run",
+        "--rm",
+        "-v", str(wheel_dir) + ":/test/wheels/",
+        "-e", "PYTHON_VERSIONS=" + ",".join([str(v) for v in python_versions])
+    ]
+
+    # Add host test directory mounts if specified
+    if host_tests_dir:
+        # Validate that the expected directories exist
+        opm_common_python = host_tests_dir / "opm-common" / "python"
+        opm_simulators_python = host_tests_dir / "opm-simulators" / "python"
+
+        if not opm_common_python.exists():
+            raise FileNotFoundError(f"Expected opm-common/python directory not found at: {opm_common_python}")
+        if not opm_simulators_python.exists():
+            raise FileNotFoundError(f"Expected opm-simulators/python directory not found at: {opm_simulators_python}")
+
+        # Add volume mounts for test directories
+        docker_cmd.extend([
+            "-v", str(opm_common_python) + ":/test/opm-common/python",
+            "-v", str(opm_simulators_python) + ":/test/opm-simulators/python"
+        ])
+
+        logging.info(f"Using host test directories from: {host_tests_dir}")
+
+    # Add the Docker image tag
+    docker_cmd.append(docker_tag)
+
     try:
         result = subprocess.run(
-            [
-                "docker", "run",
-                "--rm",
-                "-v", str(wheel_dir) + ":/test/wheels/",
-                "-e", "PYTHON_VERSIONS=" + ",".join([str(v) for v in python_versions]),
-                docker_tag
-            ],
+            docker_cmd,
             check=True,  # Raise an exception if the process returns a non-zero exit code
         )
         logging.info(f"Docker image with tag {docker_tag} run successfully.")
