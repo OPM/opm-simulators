@@ -775,19 +775,20 @@ public:
     std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
     { return materialLawManager_; }
 
-    template <class FluidState>
+    template <class FluidState, class ...Args>
     void updateRelperms(
         std::array<Evaluation,numPhases> &mobility,
         DirectionalMobilityPtr &dirMob,
         FluidState &fluidState,
         unsigned globalSpaceIdx) const
     {
+        using ContainerT = std::array<Evaluation, numPhases>;
         OPM_TIMEBLOCK_LOCAL(updateRelperms);
         {
             // calculate relative permeabilities. note that we store the result into the
             // mobility_ class attribute. the division by the phase viscosity happens later.
             const auto& materialParams = materialLawParams(globalSpaceIdx);
-            MaterialLaw::relativePermeabilities(mobility, materialParams, fluidState);
+            MaterialLaw::template relativePermeabilities<ContainerT, FluidState, Args...>(mobility, materialParams, fluidState);
             Valgrind::CheckDefined(mobility);
         }
         if (materialLawManager_->hasDirectionalRelperms()
@@ -800,7 +801,7 @@ public:
             for (int i = 0; i<ndim; i++) {
                 const auto& materialParams = materialLawParams(globalSpaceIdx, facedirs[i]);
                 auto& mob_array = dirMob->getArray(i);
-                MaterialLaw::relativePermeabilities(mob_array, materialParams, fluidState);
+                MaterialLaw::template relativePermeabilities<ContainerT, FluidState, Args...>(mob_array, materialParams, fluidState);
             }
         }
     }
