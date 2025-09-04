@@ -126,6 +126,12 @@ bool Seconds::compare_gt_or_eq(double a, double b)
     return a > b;
 }
 
+bool Seconds::compare_lt(double a, double b)
+{
+    // Is a less than b?
+    return !compare_eq(a, b) && a < b;
+}
+
 bool Seconds::compare_gt(double a, double b)
 {
     // Is a greater than b?

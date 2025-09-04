@@ -220,9 +220,10 @@ receiveActivationDateFromSlaves_()
                 MPI_STATUS_IGNORE
             );
             if (slave_activation_date < this->master_.getActivationDate()) {
-                OPM_THROW(std::runtime_error, "Slave process start date is earlier than "
+                OPM_THROW(std::runtime_error, "Slave process activation date is earlier than "
                                               "the master process' activation date");
             }
+            this->master_.addSlaveActivationDate(slave_activation_date);
             this->logger_.info(
                 fmt::format(
                     "Received activation date from slave process with name: {}. "
@@ -231,6 +232,13 @@ receiveActivationDateFromSlaves_()
             );
         }
     }
+    if (this->comm_.rank() != 0) {
+        // Ensure that all ranks have the same number of slave activation dates
+        this->master_.resizeSlaveActivationDates(num_slaves);
+    }
+    const double* data = this->master_.getSlaveActivationDates();
+    this->comm_.broadcast(const_cast<double *>(data), /*count=*/num_slaves, /*emitter_rank=*/0);
+    this->logger_.info("Broadcasted slave activation dates to all ranks");
 }
 
 void
@@ -261,7 +269,7 @@ receiveSimulationStartDateFromSlaves_()
         }
     }
     if (this->comm_.rank() != 0) {
-        // Ensure that all ranks have the same number of slave activation dates
+        // Ensure that all ranks have the same number of slave start dates
         this->master_.resizeSlaveStartDates(num_slaves);
     }
     const double* data = this->master_.getSlaveStartDates();
