@@ -120,10 +120,18 @@ def build_docker_image(
     help="The Python versions to use for testing. Valid values are: "
             f"{', '.join(PythonVersion.valid_versions())}"
 )
+@click.option(
+    "--host-tests-dir",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    help="Directory containing opm-common and opm-simulators repositories from host. "
+         "If specified, tests will be run from host directories instead of cloned repos. "
+         "Expected structure: host-tests-dir/opm-common/python and host-tests-dir/opm-simulators/python"
+)
 def run_docker_image(
     docker_os: str,
     wheel_dir: str,
     python_versions: list[PythonVersion],
+    host_tests_dir: Path = None,
 ) -> None:
     f"""Run the Docker image. The option "--docker-tag" specifies the tag of the Docker
     image to run. The option "--python-versions" specifies the Python versions to
@@ -132,4 +140,4 @@ def run_docker_image(
     If not given, the default value is {','.join(get_default_versions())}."""
     wheel_dir = helpers.get_wheel_abs_dir(wheel_dir)
     docker_tag = helpers.get_docker_tag(docker_os)
-    helpers.run_docker_run(docker_tag, wheel_dir, python_versions)
+    helpers.run_docker_run(docker_tag, wheel_dir, python_versions, host_tests_dir)
