@@ -887,7 +887,6 @@ namespace Opm {
 
                 // TODO: should we do this for all kinds of closing reasons?
                 // something like wellTestState().hasWell(well_name)?
-                bool wellIsStopped = false;
                 if (this->wellTestState().well_is_closed(well_name))
                 {
                     if (well_ecl.getAutomaticShutIn()) {
@@ -907,7 +906,6 @@ namespace Opm {
                         }
                         // stopped wells are added to the container but marked as stopped
                         this->wellState().stopWell(w);
-                        wellIsStopped = true;
                     }
                 }
 
@@ -929,8 +927,12 @@ namespace Opm {
                 if (!wcycle.empty()) {
                     const auto it = cycle_states.find(well_name);
                     if (it != cycle_states.end()) {
-                        // If well is shut in schedule we keep it shut
                         if (!it->second || well_status == Well::Status::SHUT) {
+                            // If well is shut in schedule we keep it shut
+                            if (well_status == Well::Status::SHUT) {
+                                this->well_open_times_.erase(well_name);
+                                this->well_close_times_.erase(well_name);
+                            }
                             this->wellState().shutWell(w);
                             continue;
                         } else {
@@ -939,20 +941,14 @@ namespace Opm {
                     }
                 }
 
+                // We dont add SHUT wells to the container
                 if (ws.status == Well::Status::SHUT) {
                     continue;
                 }
 
-                if (ws.status == Well::Status::STOP) {
-                    this->wellState().stopWell(w);
-                    this->well_close_times_.erase(well_name);
-                    this->well_open_times_.erase(well_name);
-                    wellIsStopped = true;
-                }
-
                 well_container_.emplace_back(this->createWellPointer(w, report_step));
 
-                if (wellIsStopped) {
+                if (ws.status == Well::Status::STOP) {
                     well_container_.back()->stopWell();
                     this->well_close_times_.erase(well_name);
                     this->well_open_times_.erase(well_name);
