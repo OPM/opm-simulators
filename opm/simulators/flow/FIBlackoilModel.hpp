@@ -254,6 +254,9 @@ protected:
     void updateCachedIntQuantsLoop(const unsigned timeIdx) const
     {
         const auto& elementMapper = this->simulator_.model().elementMapper();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
         for (const auto& chunk : element_chunks_) {
             for (const auto& elem : chunk) {
                 this->template updateSingleCachedIntQuantUnchecked<Args...>(elementMapper.index(elem), timeIdx);
