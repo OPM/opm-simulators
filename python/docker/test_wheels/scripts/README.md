@@ -55,7 +55,7 @@ $ opm-wheels build-docker-image --docker-os="debian:11"
 - `--docker-os`, `-d` - OS for Docker image (default: ubuntu:22.04)
   - Supported: `3.8,3.9,3.10,3.11,3.12,3.13`
 - `--opm-simulators-repo`, `-osr` - OPM simulators repository URL
-- `--opm-common-repo`, `-ocr` - OPM common repository URL  
+- `--opm-common-repo`, `-ocr` - OPM common repository URL
 - `--opm-simulators-branch`, `-osb` - Simulators branch (default: master)
 - `--opm-common-branch`, `-ocb` - Common branch (default: master)
 - `--docker-progress`, `-dp` - Show Docker build progress output

@@ -10,7 +10,7 @@ ENV PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:${PATH}"
 
 WORKDIR /test
 
-# Make all scripts in the common folder available  
+# Make all scripts in the common folder available
 COPY test_wheels/dockerfiles/common/ /test/common/
 # Copy python_versions.json to the expected location
 COPY python_versions.json /test/python_versions.json

@@ -86,7 +86,7 @@ if [ -f "$DOCKERFILE" ]; then
     # Update the python_versions ARG line
     sed -i "s/^ARG python_versions=.*$/ARG python_versions=\"$DEFAULT_VERSIONS\"/" "$DOCKERFILE"
     log_success "Updated Dockerfile ARG python_versions"
-    
+
     # Update the FROM line with the correct manylinux tag
     sed -i "s|^FROM quay.io/pypa/manylinux_[0-9_]*x86_64 AS stage1$|FROM quay.io/pypa/${MANYLINUX_TAG}_x86_64 AS stage1|" "$DOCKERFILE"
     log_success "Updated Dockerfile FROM line to use ${MANYLINUX_TAG}_x86_64"
