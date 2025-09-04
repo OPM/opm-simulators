@@ -4,14 +4,28 @@ from pathlib import Path
 from typing import Dict, List
 
 from opm_wheels.constants import PythonVersion
+from opm_wheels.helpers import get_git_root
 
 
 def get_config_path() -> Path:
     """Get the path to the python_versions.json config file."""
-    # Go up from docker/test_wheels/scripts/src/opm_wheels to docker root
-    current_dir = Path(__file__).parent
-    config_path = current_dir / ".." / ".." / ".." / ".." / "python_versions.json"
-    return config_path.resolve()
+    try:
+        # Try to find git root (works when inside repo)
+        repo_root = get_git_root()
+        return repo_root / "python/docker/python_versions.json"
+    except RuntimeError:
+        # Fallback to environment variable for global installations
+        env_root = os.environ.get('OPM_SIMULATORS_ROOT')
+        if env_root:
+            repo_root = Path(env_root)
+            config_path = repo_root / "python/docker/python_versions.json"
+            if config_path.exists():
+                return config_path
+        
+        raise FileNotFoundError(
+            "Could not locate python_versions.json. Either run from within "
+            "opm-simulators repository or set OPM_SIMULATORS_ROOT environment variable."
+        )
 
 
 def load_python_config() -> Dict:
