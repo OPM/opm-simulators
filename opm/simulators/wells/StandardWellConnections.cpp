@@ -641,7 +641,7 @@ copyInPerforationRates(const Properties&       props,
         // std::iota(ix.begin(), ix.end(), 0);
         for (auto comp = 0; comp < np; ++comp) {
             // TODO: it looks like a mixed up of components and phases in mulitple ways
-            ix[comp] = this->well_.modelCompIdxToFlowPhaseIdx(comp);
+            ix[comp] = this->well_.activeCompToPhaseIdx(comp);
         }
 
         return ix;
