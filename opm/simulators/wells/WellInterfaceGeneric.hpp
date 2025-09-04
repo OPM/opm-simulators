@@ -208,6 +208,9 @@ public:
 
     void addPerforations(const std::vector<RuntimePerforation>& perfs);
 
+    bool wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
+                                           const WellState<Scalar, IndexTraits>& well_state) const;
+
 protected:
     bool getAllowCrossFlow() const;
 
@@ -222,8 +225,6 @@ protected:
     int polymerInjTable_() const;
     int polymerWaterTable_() const;
 
-    bool wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
-                                           const WellState<Scalar, IndexTraits>& well_state) const;
 
     bool wellUnderGroupControl(const SingleWellState<Scalar, IndexTraits>& ws) const;
 

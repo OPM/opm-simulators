@@ -433,7 +433,8 @@ namespace Opm {
             // This is done only for producers, as injectors will only have a single
             // nonzero phase anyway.
             for (const auto& well : well_container_) {
-                if (well->isProducer() && !well->wellIsStopped()) {
+                const bool stopped_or_zero_target = well->wellIsStopped() || well->wellUnderZeroRateTargetIndividual(this->summaryState(), this->wellState());
+                if (well->isProducer() && !stopped_or_zero_target) {
                     well->initializeProducerWellState(simulator_, this->wellState(), local_deferredLogger);
                 }
             }
