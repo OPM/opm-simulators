@@ -93,6 +93,7 @@ public:
          this->logger_.setDeferredLogger(deferred_logger);
     }
     // These are currently only used for unit testing
+    void setSlaveActivationDate(int index, double date) { this->slave_activation_dates_[index] = date; }
     void setSlaveStartDate(int index, std::time_t date) { this->slave_start_dates_[index] = date; }
     void setSlaveNextReportTimeOffset(int index, double offset) {
          this->slave_next_report_time_offsets_[index] = offset;
