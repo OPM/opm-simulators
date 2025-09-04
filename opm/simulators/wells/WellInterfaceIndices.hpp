@@ -40,8 +40,6 @@ public:
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
     using ModelParameters = typename WellInterfaceFluidSystem<FluidSystem>::ModelParameters;
 
-    int activePhaseToCompIdx(const int phaseIdx) const;
-    int activeCompToPhaseIdx(const int compIdx) const;
     Scalar scalingFactor(const int phaseIdx) const;
 
     template <class EvalWell>
