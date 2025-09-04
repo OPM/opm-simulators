@@ -227,8 +227,6 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
 {
     const auto pvtReg = std::max(well_.wellEcl().pvt_table_number() - 1, 0);
 
-    const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
-
     auto& ws = well_state.well(well_.indexOfWell());
 
     // Store primary variables
@@ -248,6 +246,7 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
         std::vector<Scalar> fractions(well_.numPhases(), 0.0);
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
             fractions[oil_pos] = 1.0;
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
@@ -383,6 +382,7 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
 
         // 5) Local condition phase viscosities.
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
             segments.phase_viscosity[seg * well_.numPhases() + oil_pos] =
                     FluidSystem::oilPvt().viscosity(pvtReg, temperature, segment_pressure[seg], Rs);
         }

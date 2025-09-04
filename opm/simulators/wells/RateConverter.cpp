@@ -54,6 +54,13 @@ dissolvedVaporisedRatio(const int    io,
     };
 }
 
+template<class FluidSystem>
+int phaseIdx(unsigned phase)
+{
+    return FluidSystem::phaseIsActive(phase) ?
+        FluidSystem::canonicalToActivePhaseIdx(phase) : -1;
+}
+
 }
 
 namespace Opm {
@@ -97,9 +104,9 @@ calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
     const Scalar T = ra.temperature;
     const Scalar saltConcentration = ra.saltConcentration;
 
-    const int   iw = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-    const int   io = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
-    const int   ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+    const int   iw = phaseIdx<FluidSystem>(FluidSystem::waterPhaseIdx);
+    const int   io = phaseIdx<FluidSystem>(FluidSystem::oilPhaseIdx);
+    const int   ig = phaseIdx<FluidSystem>(FluidSystem::gasPhaseIdx);
 
     std::fill(& coeff[0], & coeff[0] + FluidSystem::numActivePhases(), 0.0);
 
@@ -148,9 +155,9 @@ void SurfaceToReservoirVoidage<FluidSystem,  Region>::
 calcCoeff(const RegionId r, const int pvtRegionIdx, const Rates& surface_rates, Coeff& coeff) const
 {
     const auto& ra = attr_.attributes(r);
-    const int   iw = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-    const int   io = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
-    const int   ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+    const int   iw = phaseIdx<FluidSystem>(FluidSystem::waterPhaseIdx);
+    const int   io = phaseIdx<FluidSystem>(FluidSystem::oilPhaseIdx);
+    const int   ig = phaseIdx<FluidSystem>(FluidSystem::gasPhaseIdx);
     const auto [Rs, Rv] =
         dissolvedVaporisedRatio(io, ig, ra.rs, ra.rv, surface_rates);
 
@@ -173,9 +180,9 @@ calcCoeff(const int pvtRegionIdx,
           const Scalar saltConcentration,
           Coeff& coeff) const
 {
-    const int   iw = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-    const int   io = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
-    const int   ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+    const int   iw = phaseIdx<FluidSystem>(FluidSystem::waterPhaseIdx);
+    const int   io = phaseIdx<FluidSystem>(FluidSystem::oilPhaseIdx);
+    const int   ig = phaseIdx<FluidSystem>(FluidSystem::gasPhaseIdx);
 
     std::fill(& coeff[0], & coeff[0] + FluidSystem::numActivePhases(), 0.0);
 
@@ -255,9 +262,9 @@ calcReservoirVoidageRates(const int           pvtRegionIdx,
                           const SurfaceRates& surface_rates,
                           VoidageRates&       voidage_rates) const
 {
-    const int   iw = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-    const int   io = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
-    const int   ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+    const int   iw = phaseIdx<FluidSystem>(FluidSystem::waterPhaseIdx);
+    const int   io = phaseIdx<FluidSystem>(FluidSystem::oilPhaseIdx);
+    const int   ig = phaseIdx<FluidSystem>(FluidSystem::gasPhaseIdx);
 
     const auto [Rs, Rv] =
         dissolvedVaporisedRatio(io, ig, rs, rv, surface_rates);
@@ -361,8 +368,8 @@ inferDissolvedVaporisedRatio(const Scalar rsMax,
                              const Rates& surface_rates) const
 {
     // we probably should add checking whether the phases are active
-    const auto io = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
-    const auto ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+    const auto io = phaseIdx<FluidSystem>(FluidSystem::oilPhaseIdx);
+    const auto ig = phaseIdx<FluidSystem>(FluidSystem::gasPhaseIdx);
     return dissolvedVaporisedRatio(io, ig, rsMax, rvMax, surface_rates);
 }
 
