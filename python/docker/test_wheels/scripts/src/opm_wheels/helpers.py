@@ -132,10 +132,15 @@ def run_docker_run(
 
         logging.info(f"Using host test directories from: {host_tests_dir}")
 
+        # Signal to entrypoint that host directories are mounted
+        docker_cmd.extend(["-e", "USE_HOST_TESTS=1"])
+
     # Add the Docker image tag
     docker_cmd.append(docker_tag)
 
     try:
+        # Debug: log the full Docker command
+        logging.info(f"DEBUG: Executing Docker command: {' '.join(docker_cmd)}")
         result = subprocess.run(
             docker_cmd,
             check=True,  # Raise an exception if the process returns a non-zero exit code

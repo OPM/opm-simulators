@@ -9,30 +9,86 @@
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 
+def copy_essential_directories(source_dir: str, dest_dir: str, essential_items: list) -> None:
+    """Copy essential directories from source to destination, avoiding problematic items.
+
+    Ensures clean slate by removing any existing destination directory first.
+    """
+    # Clean slate approach - delete and recreate for predictable, reproducible behavior
+    if os.path.exists(dest_dir):
+        shutil.rmtree(dest_dir)
+    os.makedirs(dest_dir)
+
+    for item in essential_items:
+        item_path = os.path.join(source_dir, item)
+        dest_path = os.path.join(dest_dir, item)
+
+        if os.path.exists(item_path):
+            if os.path.isdir(item_path):
+                shutil.copytree(item_path, dest_path)  # No dirs_exist_ok needed - directory is guaranteed empty
+            else:
+                shutil.copy2(item_path, dest_path)
+
 def run_opm_common_tests(python_bin: str) -> None:
     """Run all unittests in opm-common/python/tests"""
-    subprocess.run(
-        [
+    if os.environ.get("USE_HOST_TESTS"):
+        # Copy strategy for host-mounted directories:
+        # When using --host-tests-dir, the host directories contain 'opm/' source code
+        # that conflicts with installed wheel packages. The local 'opm/' directories
+        # shadow the installed packages, causing import failures because the local
+        # source code doesn't have compiled extensions that the wheels provide.
+        # Solution: Copy only test files (not conflicting opm/ directories) to /tmp
+        # and run tests from there, allowing imports to find the installed wheel packages.
+        test_dir = "/tmp/opm-common-tests"
+
+        # Copy essential directories to clean location, avoiding conflicting opm/ directory
+        copy_essential_directories("/test/opm-common/python", test_dir, ["tests", "test", "examples"])
+
+        # Run tests from clean location (preserves package structure for relative imports)
+        subprocess.run([
+            python_bin, "-m", "unittest", "discover",
+            "-s", test_dir,
+            "-p", "test_*.py",
+            "-v"
+        ], cwd=test_dir, check=True)
+    else:
+        # Original strategy: run from cloned repos (opm directory was moved to opm_original during build)
+        subprocess.run([
             python_bin, "-m", "unittest", "discover",
             "-s", "/test/opm-common/python",  # path to the tests
             "-v"  # verbose output
-        ],
-        check=True
-    )
+        ], check=True)
 
 def run_opm_simulators_tests(python_bin: str) -> None:
     """Run all unittests in opm-simulators/python/test"""
-    subprocess.run(
-        [
+    if os.environ.get("USE_HOST_TESTS"):
+        # Copy strategy for host-mounted directories:
+        # Same issue as opm-common - host 'opm/' directories conflict with installed wheels.
+        # Copy entire python directory structure except conflicting opm/ directory
+        test_dir = "/tmp/opm-simulators-tests"
+
+        # Copy essential directories to clean location, avoiding conflicting opm/ directory
+        copy_essential_directories("/test/opm-simulators/python", test_dir, ["test", "test_data"])
+
+        # Run tests from clean location (preserves package structure for relative imports)
+        # Use parent directory as start and specify test pattern to make relative imports work
+        subprocess.run([
+            python_bin, "-m", "unittest", "discover",
+            "-s", test_dir,
+            "-p", "test_*.py",
+            "-v"
+        ], cwd=test_dir, check=True)
+    else:
+        # Original strategy: run from cloned repos (opm directory was moved to opm_original during build)
+        subprocess.run([
             python_bin, "-m", "unittest", "discover",
             "-s", "/test/opm-simulators/python",  # path to the tests
             "-v"  # verbose output
-        ],
-        check=True
-    )
+        ], check=True)
 
 
 def install_and_test(python_version, pyenv_full_version):
