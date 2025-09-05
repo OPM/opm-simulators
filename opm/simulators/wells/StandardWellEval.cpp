@@ -70,21 +70,6 @@ extendEval(const Eval& in) const
 template<class FluidSystem, class Indices>
 void
 StandardWellEval<FluidSystem,Indices>::
-updateWellStateFromPrimaryVariables(WellState<Scalar, IndexTraits>& well_state,
-                                    const SummaryState& summary_state,
-                                    DeferredLogger& deferred_logger) const
-{
-    this->primary_variables_.copyToWellState(well_state, deferred_logger);
-
-    WellBhpThpCalculator(baseif_).
-            updateThp(connections_.rho(),
-                      [this,&well_state]() { return this->baseif_.getALQ(well_state); },
-                      well_state, summary_state, deferred_logger);
-}
-
-template<class FluidSystem, class Indices>
-void
-StandardWellEval<FluidSystem,Indices>::
 computeAccumWell()
 {
     for (std::size_t eq_idx = 0; eq_idx < F0_.size(); ++eq_idx) {
