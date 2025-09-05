@@ -470,7 +470,7 @@ namespace Opm
                               schedule, summaryState,
                               inj_controls, prod_controls,
                               this->primary_variables_,
-                              this->connections_.rho(),
+                              this->getRefDensity(),
                               this->linSys_,
                               stopped_or_zero_target,
                               deferred_logger);
@@ -761,7 +761,12 @@ namespace Opm
                                         const SummaryState& summary_state,
                                         DeferredLogger& deferred_logger) const
     {
-        this->StdWellEval::updateWellStateFromPrimaryVariables(well_state, summary_state, deferred_logger);
+        this->primary_variables_.copyToWellState(well_state, deferred_logger);
+
+        WellBhpThpCalculator(this->baseif_).
+                updateThp(getRefDensity(),
+                          [this,&well_state]() { return this->baseif_.getALQ(well_state); },
+                          well_state, summary_state, deferred_logger);
 
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {
@@ -986,7 +991,7 @@ namespace Opm
                 const Scalar thp_limit = this->getTHPConstraint(summaryState);
                 const Scalar thp = WellBhpThpCalculator(*this).calculateThpFromBhp(well_rates_bhp_limit,
                                                                                    bhp_limit,
-                                                                                   this->connections_.rho(),
+                                                                                   this->getRefDensity(),
                                                                                    this->getALQ(well_state),
                                                                                    thp_limit,
                                                                                    deferred_logger);
@@ -1813,7 +1818,10 @@ namespace Opm
     StandardWell<TypeTag>::
     getRefDensity() const
     {
-        return this->connections_.rho();
+        Scalar density = this->connections_.rho(0);
+        density = this->parallel_well_info_.broadcastFirstPerforationValue(density);
+        assert(density!=0 && "Owning rank should have at least one perforation.");
+        return density;
     }
 
 
@@ -2229,7 +2237,7 @@ namespace Opm
         auto bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(frates,
                                                                                summary_state,
                                                                                max_pressure,
-                                                                               this->connections_.rho(),
+                                                                               this->getRefDensity(),
                                                                                alq_value,
                                                                                this->getTHPConstraint(summary_state),
                                                                                deferred_logger);
@@ -2257,7 +2265,7 @@ namespace Opm
         bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(fratesIter,
                                                                           summary_state,
                                                                           max_pressure,
-                                                                          this->connections_.rho(),
+                                                                          this->getRefDensity(),
                                                                           alq_value,
                                                                           this->getTHPConstraint(summary_state),
                                                                           deferred_logger);
@@ -2298,7 +2306,7 @@ namespace Opm
 
         return WellBhpThpCalculator(*this).computeBhpAtThpLimitInj(frates,
                                                                    summary_state,
-                                                                   this->connections_.rho(),
+                                                                   this->getRefDensity(),
                                                                    1e-6,
                                                                    50,
                                                                    true,
