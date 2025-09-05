@@ -41,7 +41,7 @@ WellInterfaceIndices(const Well& well,
                      const ModelParameters& param,
                      const typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType& rate_converter,
                      const int pvtRegionIdx,
-                     const int num_components,
+                     const int num_conservation_quantities,
                      const int num_phases,
                      const int index_of_well,
                      const std::vector<PerforationData<Scalar>>& perf_data)
@@ -51,71 +51,12 @@ WellInterfaceIndices(const Well& well,
                                             param,
                                             rate_converter,
                                             pvtRegionIdx,
-                                            num_components,
+                                            num_conservation_quantities,
                                             num_phases,
                                             index_of_well,
                                             perf_data)
 {
 }
-
-template<class FluidSystem, class Indices>
-int
-WellInterfaceIndices<FluidSystem,Indices>::
-flowPhaseToModelCompIdx(const int phaseIdx) const
-{
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
-            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx) == phaseIdx) {
-            return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-    }
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx) == phaseIdx) {
-        return Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-    }
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
-            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx) == phaseIdx) {
-        return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-    }
-
-    // for other phases return the index
-    return phaseIdx;
-}
-
-template<class FluidSystem, class Indices>
-int
-WellInterfaceIndices<FluidSystem,Indices>::
-modelCompIdxToFlowCompIdx(const int compIdx) const
-{
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == compIdx)
-        return FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == compIdx)
-        return FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == compIdx)
-        return FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-
-    // for other phases return the index
-    return compIdx;
-}
-
-
-template<typename FluidSystem, class Indices>
-int
-WellInterfaceIndices<FluidSystem, Indices>::
-flowPhaseToModelPhaseIdx(const int phaseIdx) const
-{
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
-            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx) == phaseIdx)
-        return FluidSystem::waterPhaseIdx;
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx) == phaseIdx)
-        return FluidSystem::oilPhaseIdx;
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
-            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx) == phaseIdx)
-        return FluidSystem::gasPhaseIdx;
-
-    // for other phases return the index
-    return phaseIdx;
-}
-
 
 template<class FluidSystem, class Indices>
 typename WellInterfaceIndices<FluidSystem,Indices>::Scalar

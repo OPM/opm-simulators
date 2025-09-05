@@ -40,9 +40,6 @@ public:
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
     using ModelParameters = typename WellInterfaceFluidSystem<FluidSystem>::ModelParameters;
 
-    int flowPhaseToModelCompIdx(const int phaseIdx) const;
-    int modelCompIdxToFlowCompIdx(const int compIdx) const;
-    int flowPhaseToModelPhaseIdx(const int phaseIdx) const;
     Scalar scalingFactor(const int phaseIdx) const;
 
     template <class EvalWell>
@@ -63,7 +60,7 @@ protected:
                          const ModelParameters& param,
                          const typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType& rate_converter,
                          const int pvtRegionIdx,
-                         const int num_components,
+                         const int num_conservation_quantities,
                          const int num_phases,
                          const int index_of_well,
                          const std::vector<PerforationData<Scalar>>& perf_data);

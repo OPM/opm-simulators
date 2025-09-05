@@ -97,9 +97,6 @@ struct BlackOilVariableAndEquationIndices
     static constexpr int canonicalToActiveComponentIndex(const int compIdx)
     { return compIdx; }
 
-    static constexpr int activeToCanonicalComponentIndex(const int compIdx)
-    { return compIdx; }
-
     ////////
     // Primary variable indices
     ////////

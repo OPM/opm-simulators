@@ -576,7 +576,7 @@ volumeFractionScaled(const int seg,
     // For reservoir rate control, the distr in well control is used for the
     // rate conversion coefficients. For the injection well, only the distr of the injection
     // phase is not zero.
-    const Scalar scale = well_.scalingFactor(well_.modelCompIdxToFlowCompIdx(comp_idx));
+    const Scalar scale = well_.scalingFactor(FluidSystem::activeCompToPhaseIdx(comp_idx));
     if (scale > 0.) {
         return this->volumeFraction(seg, comp_idx) / scale;
     }
@@ -591,7 +591,7 @@ surfaceVolumeFraction(const int seg,
                       const int comp_idx) const
 {
     EvalWell sum_volume_fraction_scaled = 0.;
-    for (int idx = 0; idx < well_.numComponents(); ++idx) {
+    for (int idx = 0; idx < well_.numConservationQuantities(); ++idx) {
         sum_volume_fraction_scaled += this->volumeFractionScaled(seg, idx);
     }
 
@@ -617,17 +617,17 @@ getSegmentRateUpwinding(const int seg,
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == comp_idx
                 && phase == InjectorType::WATER)
-            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.modelCompIdxToFlowCompIdx(comp_idx));
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx));;
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == comp_idx
                 && phase == InjectorType::OIL)
-            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.modelCompIdxToFlowCompIdx(comp_idx));
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx));
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == comp_idx
                 && phase == InjectorType::GAS)
-            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.modelCompIdxToFlowCompIdx(comp_idx));
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx));
 
         return 0.0;
     }
