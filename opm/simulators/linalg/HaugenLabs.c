@@ -473,6 +473,70 @@ void bildu_info(bildu_prec *P)
     bsr_info(P->U);
 }
 
+bslv_memory *bslv_new()
+{
+    bslv_memory *mem = malloc(sizeof(bslv_memory));
+    return mem;
+}
+
+void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A)
+{
+    int n=(A->nrows * A->b);
+
+    mem->tol = tol;
+    mem->max_iter = max_iter;
+    mem->n = n;
+
+    mem->e = (double*) malloc(max_iter*sizeof(double));
+
+    int narrays=7;
+    mem->dtmp = (double**) malloc(narrays*sizeof(double*));
+    //for(int i=0;i<narrays;i++) mem->tmp[i] = (double*) malloc(n*sizeof(double));
+    //for(int i=0;i<narrays;i++) posix_memalign((void**)&(mem->tmp[i]),64,n*sizeof(double));
+
+    int np = 8*((n+7)/8); // padded to nearest multiple of 8
+    for(int i=0;i<narrays;i++)
+    {
+        posix_memalign((void**)&(mem->dtmp[i]),64,np*sizeof(double));
+        for(int k=8*(n/8);k<np;k++) mem->dtmp[i][k] = 0.0; //zeroing out padded section
+    }
+
+    narrays=2;
+    mem->stmp = (float**) malloc(narrays*sizeof(float*));
+
+    np=16*((n+15)/16); // padded to nearest multiple of 16
+    for(int i=0;i<narrays;i++)
+    {
+        posix_memalign((void**)&(mem->stmp[i]),64,np*sizeof(float));
+        for(int k=16*(n/16);k<np;k++) mem->stmp[i][k] = 0.0; //zeroing out padded section
+    }
+
+
+    mem->P = bildu_new();
+    bildu_init(mem->P, A); // initialize structure of L,D,U components of P
+
+    // random initialization of one-dimensinal shadow space
+    //   - note we fix the random seed for reproducibility
+    //   - also note that this done once at solver initialzation
+    srand(0);
+    double rmax=RAND_MAX;
+    double *y = mem->dtmp[0];
+    double norm=0;
+    for(int i=0;i<n;i++)
+    {
+        double x = rand()/rmax;// - 0.5;
+        y[i]=x;
+        norm+=x*x;
+    }
+    norm=sqrt(norm);
+    for(int i=0;i<n;i++) y[i]/=norm;
+    //printf("RAND_MAX=%d\n",RAND_MAX);
+
+}
+
+
+
+
 void vec_show(const double *x, int n, const char *name)
 {
     printf("%s =\n[\n",name);

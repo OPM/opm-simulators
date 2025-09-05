@@ -360,8 +360,8 @@ private:
     double linear_solve_setup_time_;
     std::vector<bool> wasSwitched_;
 
-    bsr_matrix *bsr_jacobian_; // HaugenLabs matrix object
-    bildu_prec *bildu_prec_;         // HaugenLabs preconditioner object
+    bsr_matrix  *bsr_jacobian_; // HaugenLabs matrix object
+    bslv_memory *slv_memory_;   // HaugenLabs solver memory
 };
 
 } // namespace Opm
