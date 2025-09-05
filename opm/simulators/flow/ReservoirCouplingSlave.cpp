@@ -61,18 +61,6 @@ ReservoirCouplingSlave(
 }
 
 template <class Scalar>
-void
-ReservoirCouplingSlave<Scalar>::
-maybeActivate(int report_step) {
-    if (!this->activated()) {
-        const auto& rescoup = this->schedule_[report_step].rescoup();
-        if (rescoup.grupSlavCount() > 0) {
-            this->activated_ = true;
-        }
-    }
-}
-
-template <class Scalar>
 double
 ReservoirCouplingSlave<Scalar>::
 receiveNextTimeStepFromMaster() {

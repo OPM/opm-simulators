@@ -448,32 +448,6 @@ sendInjectionTargetsToSlave(std::size_t slave_idx,
     }
 }
 
-template <class Scalar>
-void
-ReservoirCouplingMaster<Scalar>::
-sendNextTimeStepToSlaves(double timestep)
-{
-    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
-    // do not participate in master-slave communication (no else branch needed).
-    if (this->comm_.rank() == 0) {
-        for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
-            // NOTE: See comment about error handling at the top of this file.
-            MPI_Send(
-                &timestep,
-                /*count=*/1,
-                /*datatype=*/MPI_DOUBLE,
-                /*dest_rank=*/0,
-                /*tag=*/static_cast<int>(MessageTag::SlaveNextTimeStep),
-                this->getSlaveComm(i)
-            );
-            OpmLog::info(fmt::format(
-                "Sent next time step {} from master process rank 0 to slave process "
-                "rank 0 with name: {}", timestep, this->slave_names_[i])
-            );
-        }
-   }
-}
-
 // The slave process will use this information to determine how many targets to expect
 template <class Scalar>
 void
