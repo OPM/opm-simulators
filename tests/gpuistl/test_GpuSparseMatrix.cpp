@@ -190,10 +190,114 @@ void runRandomSparsityMatrixTest()
     }
 }
 
+// Template function to run the random sparsity matrix test with a given block size
+template<std::size_t dim>
+void runRandomSparsityMatrixGenericTest()
+{
+    std::srand(0);
+    double nonzeroPercent = 0.2;
+    std::mt19937 generator;
+    std::uniform_real_distribution<double> distribution(0.0, 1.0);
+    const std::size_t N = 300;
+    using M = Dune::FieldMatrix<double, dim, dim>;
+    using SpMatrix = Dune::BCRSMatrix<M>;
+    using Vector = Dune::BlockVector<Dune::FieldVector<double, dim>>;
+
+    std::vector<std::vector<std::size_t>> nonzerocols(N);
+    int nonZeroes = 0;
+    for (std::size_t row = 0; row < N; ++row) {
+        // Always include the diagonal element to ensure each row has at least one entry
+        nonzerocols.at(row).push_back(row);
+        nonZeroes++;
+
+        // Add other elements based on random sparsity
+        for (std::size_t col = 0; col < N; ++col) {
+            if (col != row && distribution(generator) < nonzeroPercent) {
+                nonzerocols.at(row).push_back(col);
+                nonZeroes++;
+            }
+        }
+    }
+    SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
+    for (auto row = B.createbegin(); row != B.createend(); ++row) {
+        for (std::size_t j = 0; j < nonzerocols[row.index()].size(); ++j) {
+            row.insert(nonzerocols[row.index()][j]);
+        }
+    }
+    // This might not be the most elegant way of filling in a Dune sparse matrix, but it works.
+    for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t j = 0; j < nonzerocols[i].size(); ++j) {
+            for (std::size_t c1 = 0; c1 < dim; ++c1) {
+                for (std::size_t c2 = 0; c2 < dim; ++c2) {
+                    B[i][nonzerocols[i][j]][c1][c2] = distribution(generator);
+                }
+            }
+        }
+    }
+
+#if USE_HIP
+    if constexpr (dim != 1){
+        // Generic API from HIP currently does not support creating blocked compressed sparse row matrices
+        bool threw = false;
+        try {
+            auto shouldFail = Opm::gpuistl::GpuSparseMatrixGeneric<double>::fromMatrix(B);
+            (void)shouldFail;
+        } catch (...) {
+            threw = true;
+        }
+        BOOST_CHECK(threw);
+        return;
+    }
+#endif
+
+    auto gpuSparseMatrix = Opm::gpuistl::GpuSparseMatrix<double>::fromMatrix(B);
+    // check each column
+    for (std::size_t component = 0; component < N * dim; component += N) {
+        std::vector<double> inputDataX(N * dim, 0.0);
+        inputDataX[component] = 1.0;
+        std::vector<double> inputDataY(N * dim, .25);
+        auto inputVectorX = Opm::gpuistl::GpuVector<double>(inputDataX.data(), inputDataX.size());
+        auto inputVectorY = Opm::gpuistl::GpuVector<double>(inputDataY.data(), inputDataY.size());
+        Vector xHost(N), yHost(N);
+        yHost = inputDataY[0];
+        inputVectorX.copyToHost(xHost);
+        const double alpha = 1.42;
+        gpuSparseMatrix.usmv(alpha, inputVectorX, inputVectorY);
+
+        inputVectorY.copyToHost(inputDataY);
+
+        B.usmv(alpha, xHost, yHost);
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t c = 0; c < dim; ++c) {
+                BOOST_CHECK_CLOSE(inputDataY[i * dim + c], yHost[i][c], 1e-7);
+            }
+        }
+        inputVectorX.copyToHost(xHost);
+
+        gpuSparseMatrix.mv(inputVectorX, inputVectorY);
+
+        inputVectorY.copyToHost(inputDataY);
+
+        B.mv(xHost, yHost);
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t c = 0; c < dim; ++c) {
+                BOOST_CHECK_CLOSE(inputDataY[i * dim + c], yHost[i][c], 1e-7);
+            }
+        }
+    }
+}
+
 // Define test cases for block sizes 1-6 using boost::mpl::range_c
 typedef boost::mpl::range_c<int, 1, 7> block_sizes;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSparsityMatrix, T, block_sizes)
 {
     runRandomSparsityMatrixTest<T::value>();
+}
+
+typedef boost::mpl::range_c<int, 1, 7> block_sizes;
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSparsityMatrixGeneric, T, block_sizes)
+{
+    runRandomSparsityMatrixGenericTest<T::value>();
 }
