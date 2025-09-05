@@ -923,12 +923,16 @@ namespace Opm {
                     }
                 }
 
-                // shut wells with zero rante constraints and disallowing
-                if (!well_ecl.getAllowCrossFlow()) {
-                    const bool any_zero_rate_constraint = well_ecl.isProducer()
-                        ? well_ecl.productionControls(this->summaryState_).anyZeroRateConstraint()
-                        : well_ecl.injectionControls(this->summaryState_).anyZeroRateConstraint();
-                    if (any_zero_rate_constraint) {
+                // wells with any zero rate constraint are either shut or stopped
+                const bool any_zero_rate_constraint = well_ecl.isProducer()
+                    ? well_ecl.productionControls(this->summaryState_).anyZeroRateConstraint()
+                    : well_ecl.injectionControls(this->summaryState_).anyZeroRateConstraint();
+                if (any_zero_rate_constraint) {
+                    if (well_ecl.getAllowCrossFlow()) {
+                        this->wellState().stopWell(w);
+                        local_deferredLogger.debug(fmt::format("  Well {} gets stop due to having zero rate constraint while allowing crossflow ", well_ecl.name()) );
+                        wellIsStopped = true;
+                    } else {
                         // Treat as shut, do not add to container.
                         local_deferredLogger.debug(fmt::format("  Well {} gets shut due to having zero rate constraint and disallowing crossflow ", well_ecl.name()) );
                         this->wellState().shutWell(w);
