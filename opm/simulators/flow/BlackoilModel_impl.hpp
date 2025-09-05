@@ -80,7 +80,7 @@ BlackoilModel(Simulator& simulator,
     }
 
     bsr_jacobian_ = bsr_new();
-    bildu_prec_   = bildu_new();
+    slv_memory_   = bslv_new();
 }
 
 template <class TypeTag>
@@ -539,7 +539,7 @@ solveJacobianSystem(BVector& x)
             int b     = jacobian[0][0].N();
 
             bsr_init(bsr_jacobian_,nrows,nnz,b);
-            bsr_jacobian_->dbl=&jacobian[0][0][0][0];// assuming fixed location
+            //bsr_jacobian_->dbl=&jacobian[0][0][0][0];// assuming fixed location
 
             int *rows = bsr_jacobian_->rowptr;
             int *cols = bsr_jacobian_->colidx;
@@ -560,13 +560,14 @@ solveJacobianSystem(BVector& x)
             //bsr_info(bsr_jacobian_);
             //bsr_sparsity(bsr_jacobian_,"A");
             //bsr_nonzeros(bsr_jacobian_,"A->dbl");
-            //bildu_prec_ = bildu_new();
-            bildu_init(bildu_prec_, bsr_jacobian_);
+            bslv_init(slv_memory_, 1e-6, 1024, bsr_jacobian_);
 
-            bildu_info(bildu_prec_);
-            bsr_sparsity(bildu_prec_->L,"L");
-            bsr_sparsity(bildu_prec_->D,"D");
-            bsr_sparsity(bildu_prec_->U,"U");
+            bildu_prec *P = slv_memory_->P;
+            bildu_info(P);
+            bsr_sparsity(P->L,"L");
+            bsr_sparsity(P->D,"D");
+            bsr_sparsity(P->U,"U");
+
         }
         else
         {
@@ -586,13 +587,12 @@ solveJacobianSystem(BVector& x)
 
         double *r =&residual[0][0]; //address of first element of block vector (assumes contiguous layout)
 
-        bildu_factorize(bildu_prec_, bsr_jacobian_);//linSolver.prepare
-
         int n = (bsr_jacobian_->b)*(bsr_jacobian_->nrows);
-        bsr_nonzeros(bsr_jacobian_,"A->dbl");
+        bildu_prec *P = slv_memory_->P;
+        bildu_factorize(P, bsr_jacobian_);
         headtail(r,n,"r");
-        bildu_apply3(bildu_prec_, r);
-        headtail(r,n,"P.r");
+        bildu_apply3(P,r);
+        headtail(r,n,"Pr");
 
         getchar();
 

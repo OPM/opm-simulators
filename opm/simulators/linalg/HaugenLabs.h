@@ -42,6 +42,24 @@ void bildu_factorize(bildu_prec *P, bsr_matrix *A);
 void bildu_apply3(bildu_prec *P, double *x);
 void bildu_info(bildu_prec *P);
 
+typedef
+struct bslv_memory
+{
+    double tol;
+
+    int    max_iter;
+    double *e;
+
+    int n;
+    double **dtmp;
+    float  **stmp;
+
+    bildu_prec *P;
+}
+bslv_memory;
+
+bslv_memory *bslv_new();
+void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A);
 
 void vec_show(const double *x, int n, const char *name);
 void headtail(double *x, int n, char const *name);
