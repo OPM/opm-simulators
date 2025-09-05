@@ -31,7 +31,7 @@
 
 #include <opm/simulators/linalg/AmgxPreconditioner.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_type_detection.hpp>
 
@@ -210,7 +210,7 @@ void
 testAmgxPreconditioner()
 {
     if constexpr (GpuInput) {
-        using Matrix = Opm::gpuistl::GpuSparseMatrix<Scalar>;
+        using Matrix = Opm::gpuistl::GpuSparseMatrixWrapper<Scalar>;
         using Vector = Opm::gpuistl::GpuVector<Scalar>;
         testAmgxPreconditionerGeneric<Matrix, Vector>();
     } else {
@@ -225,7 +225,7 @@ void
 testAmgxPreconditionerUpdate()
 {
     if constexpr (GpuInput) {
-        using Matrix = Opm::gpuistl::GpuSparseMatrix<Scalar>;
+        using Matrix = Opm::gpuistl::GpuSparseMatrixWrapper<Scalar>;
         using Vector = Opm::gpuistl::GpuVector<Scalar>;
         testAmgxPreconditionerUpdateGeneric<Matrix, Vector>();
     } else {

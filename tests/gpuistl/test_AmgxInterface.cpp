@@ -24,7 +24,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/linalg/gpuistl/AmgxInterface.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
 #include <dune/common/fmatrix.hh>
@@ -161,7 +161,7 @@ BOOST_AUTO_TEST_CASE(TestMatrixTransfer)
     }
 
     // Convert to GpuSparseMatrix
-    auto gpu_matrix = GpuSparseMatrix<double>::fromMatrix(dune_matrix);
+    auto gpu_matrix = GpuSparseMatrixWrapper<double>::fromMatrix(dune_matrix);
 
     // Create AMGX matrix and upload data
     AMGX_matrix_handle amgx_matrix = AmgxInterface::createMatrix(resources.getResources(), AMGX_mode_dDDI);
@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE(TestMatrixTransfer)
     BOOST_CHECK_EQUAL(block_dimy, blockSize);
 
     // Test round-trip: upload to AMGX, then download back
-    auto gpu_matrix_copy = GpuSparseMatrix<double>::fromMatrix(dune_matrix);
+    auto gpu_matrix_copy = GpuSparseMatrixWrapper<double>::fromMatrix(dune_matrix);
     AmgxInterface::updateGpuSparseMatrixFromAmgxMatrix(amgx_matrix, gpu_matrix_copy);
 
     // Verify round-trip preserves original values
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(TestTemplatedUtilities)
 {
     // Test is_gpu_type trait
     BOOST_CHECK(is_gpu_type<GpuVector<double>>::value);
-    BOOST_CHECK(is_gpu_type<GpuSparseMatrix<double>>::value);
+    BOOST_CHECK(is_gpu_type<GpuSparseMatrixWrapper<double>>::value);
     BOOST_CHECK(!is_gpu_type<std::vector<double>>::value);
 
     // Test AMGX mode determination

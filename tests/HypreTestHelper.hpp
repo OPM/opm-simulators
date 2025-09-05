@@ -35,7 +35,7 @@
 #include <opm/simulators/linalg/gpuistl/HypreInterface.hpp>
 
 #if HAVE_CUDA || HAVE_HIP
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #endif
 
@@ -199,7 +199,7 @@ void setupMatrixHelperArrays(const Matrix& matrix,
  * @param cols Column indices
  */
 template <typename T>
-void setupGpuMatrixHelperArrays(const Opm::gpuistl::GpuSparseMatrix<T>& gpu_matrix,
+void setupGpuMatrixHelperArrays(const Opm::gpuistl::GpuSparseMatrixWrapper<T>& gpu_matrix,
                                std::vector<HYPRE_Int>& ncols,
                                std::vector<HYPRE_BigInt>& rows,
                                std::vector<HYPRE_BigInt>& cols)
@@ -421,8 +421,8 @@ void testMatrixTransfer(bool use_gpu_backend)
             return std::move(cpu_matrix);
         }
 #if HAVE_CUDA || HAVE_HIP
-        else if constexpr (std::is_same_v<MatrixType, Opm::gpuistl::GpuSparseMatrix<double>>) {
-            return Opm::gpuistl::GpuSparseMatrix<double>::fromMatrix(cpu_matrix, true);
+        else if constexpr (std::is_same_v<MatrixType, Opm::gpuistl::GpuSparseMatrixWrapper<double>>) {
+            return Opm::gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(cpu_matrix, true);
         }
 #endif
     }();
@@ -436,7 +436,7 @@ void testMatrixTransfer(bool use_gpu_backend)
         setupMatrixHelperArrays(matrix, ncols, rows, cols);
     }
 #if HAVE_CUDA || HAVE_HIP
-    else if constexpr (std::is_same_v<MatrixType, GpuSparseMatrix<double>>) {
+    else if constexpr (std::is_same_v<MatrixType, Opm::gpuistl::GpuSparseMatrixWrapper<double>>) {
         setupGpuMatrixHelperArrays(matrix, ncols, rows, cols);
     }
 #endif

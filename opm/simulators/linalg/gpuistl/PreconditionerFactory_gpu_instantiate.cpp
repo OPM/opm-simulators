@@ -20,7 +20,7 @@
 #include "config.h"
 #include <dune/istl/operators.hh>
 #include <opm/simulators/linalg/PreconditionerFactory_impl.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #if HAVE_MPI
 #include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>
@@ -28,13 +28,13 @@
 
 // NOTE: This is very rudimentary, and will be improved once we
 // incorporate MPI in the ISTLSolverGPUISTL class.
-template class ::Opm::PreconditionerFactory<Dune::MatrixAdapter<::Opm::gpuistl::GpuSparseMatrix<double>,
+template class ::Opm::PreconditionerFactory<Dune::MatrixAdapter<::Opm::gpuistl::GpuSparseMatrixWrapper<double>,
                                                                 ::Opm::gpuistl::GpuVector<double>,
                                                                 ::Opm::gpuistl::GpuVector<double>>,
                                             ::Opm::CommSeq>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class ::Opm::PreconditionerFactory<Dune::MatrixAdapter<::Opm::gpuistl::GpuSparseMatrix<float>,
+template class ::Opm::PreconditionerFactory<Dune::MatrixAdapter<::Opm::gpuistl::GpuSparseMatrixWrapper<float>,
                                                                 ::Opm::gpuistl::GpuVector<float>,
                                                                 ::Opm::gpuistl::GpuVector<float>>,
                                             ::Opm::CommSeq>;
@@ -45,7 +45,7 @@ template <class realtype>
 using CommGpu = ::Opm::gpuistl::GpuOwnerOverlapCopy<realtype, ::Opm::CommPar>;
 
 template <class Scalar>
-using ParOpGpu = Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatrix<Scalar>,
+using ParOpGpu = Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatrixWrapper<Scalar>,
                                                   ::Opm::gpuistl::GpuVector<Scalar>,
                                                   ::Opm::gpuistl::GpuVector<Scalar>,
                                                   CommGpu<Scalar>>;

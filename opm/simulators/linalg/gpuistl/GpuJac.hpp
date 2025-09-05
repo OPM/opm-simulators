@@ -21,7 +21,7 @@
 
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseResource.hpp>
