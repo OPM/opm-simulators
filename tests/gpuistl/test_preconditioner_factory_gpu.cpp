@@ -38,7 +38,7 @@ using VectorCPU = Dune::BlockVector<Dune::FieldVector<ScalarT, 1>>;
 using CpuOperatorType = Dune::MatrixAdapter<MatrixTypeCPU, VectorCPU, VectorCPU>;
 using FactoryTypeCpu = Opm::PreconditionerFactory<CpuOperatorType, CommSeq>;
 
-using GpuMatrixType = Opm::gpuistl::GpuSparseMatrix<ScalarT>;
+using GpuMatrixType = Opm::gpuistl::GpuSparseMatrixWrapper<ScalarT>;
 using GpuVectorType = Opm::gpuistl::GpuVector<ScalarT>;
 using GpuOperatorType = Dune::MatrixAdapter<GpuMatrixType, GpuVectorType, GpuVectorType>;
 using FactoryTypeGpu = Opm::PreconditionerFactory<GpuOperatorType, CommSeq>;

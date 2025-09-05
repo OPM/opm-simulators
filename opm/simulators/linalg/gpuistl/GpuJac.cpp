@@ -110,7 +110,7 @@ GpuJac<M, X, Y, l>::invertDiagonalAndFlatten()
 
 } // namespace Opm::gpuistl
 #define INSTANTIATE_CUJAC_DUNE(realtype)                                                         \
-    template class ::Opm::gpuistl::GpuJac<::Opm::gpuistl::GpuSparseMatrix<realtype>,             \
+    template class ::Opm::gpuistl::GpuJac<::Opm::gpuistl::GpuSparseMatrixWrapper<realtype>,             \
                                         ::Opm::gpuistl::GpuVector<realtype>,                     \
                                         ::Opm::gpuistl::GpuVector<realtype>>
    

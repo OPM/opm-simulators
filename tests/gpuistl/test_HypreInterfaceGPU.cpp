@@ -27,7 +27,7 @@
 #include "../MpiFixture.hpp"
 #include "../HypreTestHelper.hpp"
 
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/HypreInterface.hpp>
 
@@ -69,7 +69,7 @@ BOOST_FIXTURE_TEST_CASE(TestVectorTransfer_GpuInputGpuBackend, HypreTestFixture)
 
 BOOST_FIXTURE_TEST_CASE(TestMatrixTransfer_GpuInputGpuBackend, HypreTestFixture)
 {
-    testMatrixTransfer<GpuSparseMatrix<double>>(true);
+    testMatrixTransfer<GpuSparseMatrixWrapper<double>>(true);
 }
 
 // GPU Input + CPU Backend tests
@@ -80,7 +80,7 @@ BOOST_FIXTURE_TEST_CASE(TestVectorTransfer_GpuInputCpuBackend, HypreTestFixture)
 
 BOOST_FIXTURE_TEST_CASE(TestMatrixTransfer_GpuInputCpuBackend, HypreTestFixture)
 {
-    testMatrixTransfer<GpuSparseMatrix<double>>(false);
+    testMatrixTransfer<GpuSparseMatrixWrapper<double>>(false);
 }
 
 // Error handling test run last to avoid interfering with other tests

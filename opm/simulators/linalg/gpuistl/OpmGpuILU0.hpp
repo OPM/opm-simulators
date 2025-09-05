@@ -22,7 +22,7 @@
 #include <memory>
 #include <opm/grid/utility/SparseTable.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_resources.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/kernel_enums.hpp>
@@ -57,9 +57,9 @@ public:
     //! \brief The field type of the preconditioner.
     using field_type = typename X::field_type;
     //! \brief The GPU matrix type
-    using GpuMatrix = GpuSparseMatrix<field_type>;
+    using GpuMatrix = GpuSparseMatrixWrapper<field_type>;
     //! \brief The Float matrix type for mixed precision
-    using FloatMat = GpuSparseMatrix<float>;
+    using FloatMat = GpuSparseMatrixWrapper<float>;
 
     //! \brief The matrix type the preconditioner is for.
     using matrix_type = GpuMatrix;

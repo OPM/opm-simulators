@@ -16,7 +16,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp"
+#include "opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp"
 #include "opm/simulators/linalg/is_gpu_operator.hpp"
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -334,7 +334,7 @@ INSTANTIATE_GPUSEQILU0_DUNE(double, 3);
 INSTANTIATE_GPUSEQILU0_DUNE(double, 4);
 INSTANTIATE_GPUSEQILU0_DUNE(double, 5);
 INSTANTIATE_GPUSEQILU0_DUNE(double, 6);
-template class ::Opm::gpuistl::GpuSeqILU0<Opm::gpuistl::GpuSparseMatrix<double>,
+template class ::Opm::gpuistl::GpuSeqILU0<Opm::gpuistl::GpuSparseMatrixWrapper<double>,
     ::Opm::gpuistl::GpuVector<double>,
     ::Opm::gpuistl::GpuVector<double>>;
 
@@ -344,6 +344,6 @@ INSTANTIATE_GPUSEQILU0_DUNE(float, 3);
 INSTANTIATE_GPUSEQILU0_DUNE(float, 4);
 INSTANTIATE_GPUSEQILU0_DUNE(float, 5);
 INSTANTIATE_GPUSEQILU0_DUNE(float, 6);
-template class ::Opm::gpuistl::GpuSeqILU0<Opm::gpuistl::GpuSparseMatrix<float>,
+template class ::Opm::gpuistl::GpuSeqILU0<Opm::gpuistl::GpuSparseMatrixWrapper<float>,
     ::Opm::gpuistl::GpuVector<float>,
     ::Opm::gpuistl::GpuVector<float>>;

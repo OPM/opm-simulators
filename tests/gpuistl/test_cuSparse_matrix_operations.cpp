@@ -23,7 +23,7 @@
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
 #include <dune/istl/bcrsmatrix.hh>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FlattenAndInvertDiagonalWith3By3Blocks, T, Numeric
     B[1][1][1][1] = -1.0;
     B[1][1][2][2] = -1.0;
 
-    Opm::gpuistl::GpuSparseMatrix<T> m = Opm::gpuistl::GpuSparseMatrix<T>::fromMatrix(B);
+    Opm::gpuistl::GpuSparseMatrixWrapper<T> m = Opm::gpuistl::GpuSparseMatrixWrapper<T>::fromMatrix(B);
     Opm::gpuistl::GpuVector<T> dInvDiag(blocksize * blocksize * N);
 
     Opm::gpuistl::detail::JAC::invertDiagonalAndFlatten<T, 3>(
@@ -159,7 +159,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FlattenAndInvertDiagonalWith2By2Blocks, T, Numeric
     B[1][1][0][0] = -1.0;
     B[1][1][1][1] = -1.0;
 
-    Opm::gpuistl::GpuSparseMatrix<T> m = Opm::gpuistl::GpuSparseMatrix<T>::fromMatrix(B);
+    Opm::gpuistl::GpuSparseMatrixWrapper<T> m = Opm::gpuistl::GpuSparseMatrixWrapper<T>::fromMatrix(B);
     Opm::gpuistl::GpuVector<T> dInvDiag(blocksize * blocksize * N);
 
     Opm::gpuistl::detail::JAC::invertDiagonalAndFlatten<T, 2>(
