@@ -84,7 +84,8 @@ GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar, IndexTraits>& 
                                                                                this->well_state_,
                                                                                this->report_step_idx_,
                                                                                phase_pos,
-                                                                               /*isInjector*/false);
+                                                                               /*isInjector*/false,
+                                                                               well_model_.summaryState());
         this->production_rates_[i] = this->well_model_.comm().sum(production_rate);
     }
 }
