@@ -44,6 +44,7 @@ void bildu_info(bildu_prec *P);
 
 
 void vec_show(const double *x, int n, const char *name);
+void headtail(double *x, int n, char const *name);
 
 #ifdef __cplusplus
 }
