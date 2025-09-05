@@ -52,6 +52,8 @@
 #include <opm/simulators/flow/MixingRateControls.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
+#include <opm/simulators/flow/HybridNewton.hpp> 
+#include <opm/simulators/flow/HybridNewtonConfig.hpp> 
 
 #include <opm/simulators/utils/satfunc/SatfuncConsistencyCheckManager.hpp>
 
@@ -147,6 +149,7 @@ private:
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
     using ModuleParams = typename BlackOilLocalResidualTPFA<TypeTag>::ModuleParams;
+    using HybridNewton = BlackOilHybridNewton<TypeTag>;
 
     using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
     using EclWriterType = EclWriter<TypeTag, OutputBlackOilModule<TypeTag> >;
@@ -187,6 +190,7 @@ public:
                          simulator.vanguard().summaryState(),
                          this->wellModel_,
                          simulator.vanguard().grid().comm())
+        , hybridNewton_(simulator)
     {
         this->model().addOutputModule(std::make_unique<VtkTracerModule<TypeTag>>(simulator));
 
@@ -261,6 +265,15 @@ public:
 
         ConvectiveMixingModule::beginEpisode(simulator.vanguard().eclState(), schedule, episodeIdx,
                                              this->moduleParams_.convectiveMixingModuleParam);
+    }
+
+    /*!
+     * \brief Called by the simulator before each time integration.
+     */
+    void beginTimeStep() override
+    {
+        FlowProblemType::beginTimeStep();
+        hybridNewton_.tryApplyHybridNewton();
     }
 
     /*!
@@ -1690,6 +1703,8 @@ protected:
     ActionHandler<Scalar, IndexTraits> actionHandler_;
 
     ModuleParams moduleParams_;
+
+    HybridNewton hybridNewton_;
 
 private:
     /// Whether or not the current epsiode will end at the end of the

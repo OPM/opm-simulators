@@ -129,6 +129,11 @@ public:
     std::optional<PropertyTree>
     get_child_optional(const std::string& key) const;
 
+    /// Retrieve all child keys of this property tree node
+    ///
+    /// \return Vector of strings containing the names of all immediate children
+    std::vector<std::string> get_child_keys() const;
+
     /// Retrieve node items as linearised vector.
     ///
     /// Assumes that the node's child is an array type of homongeneous
