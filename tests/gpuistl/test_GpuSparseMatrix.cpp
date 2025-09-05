@@ -20,7 +20,7 @@
 
 #define BOOST_TEST_MODULE TestGpuSparseMatrix
 
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
@@ -33,6 +33,7 @@
 
 #include <cstddef>
 #include <random>
+#include <type_traits>
 
 BOOST_AUTO_TEST_CASE(TestConstruction1D)
 {
@@ -82,7 +83,7 @@ BOOST_AUTO_TEST_CASE(TestConstruction1D)
         }
     }
 
-    auto gpuSparseMatrix = Opm::gpuistl::GpuSparseMatrix<double>::fromMatrix(B);
+    auto gpuSparseMatrix = Opm::gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(B);
 
     const auto& nonZeroValuesCuda = gpuSparseMatrix.getNonZeroValues();
     std::vector<double> buffer(gpuSparseMatrix.nonzeroes(), 0.0);
@@ -109,7 +110,7 @@ BOOST_AUTO_TEST_CASE(TestConstruction1D)
 }
 
 // Template function to run the random sparsity matrix test with a given block size
-template<std::size_t dim>
+template<class GpuMatrix, std::size_t dim>
 void runRandomSparsityMatrixTest()
 {
     std::srand(0);
@@ -153,7 +154,30 @@ void runRandomSparsityMatrixTest()
         }
     }
 
-    auto gpuSparseMatrix = Opm::gpuistl::GpuSparseMatrix<double>::fromMatrix(B);
+/*
+    HIP currently does not properly support the generic sparse API
+    CUDA 13 fully supports it, whereas lower CUDA versions only support it for block size 1
+*/
+#if USE_HIP || (!USE_HIP && CUDA_VERSION < 13000)
+    constexpr bool isGeneric     = std::is_same_v<GpuMatrix, Opm::gpuistl::GpuSparseMatrixGeneric<double>>;
+    constexpr bool expectFailure = isGeneric && (dim != 1);
+#else
+    constexpr bool expectFailure = false;
+#endif
+
+    if constexpr (expectFailure) {
+        bool threw = false;
+        try {
+            auto shouldFail = GpuMatrix::fromMatrix(B);
+            (void)shouldFail;
+        } catch (...) {
+            threw = true;
+        }
+        BOOST_CHECK(threw);
+        return;
+    }
+
+    auto gpuSparseMatrix = GpuMatrix::fromMatrix(B);
     // check each column
     for (std::size_t component = 0; component < N * dim; component += N) {
         std::vector<double> inputDataX(N * dim, 0.0);
@@ -195,5 +219,12 @@ typedef boost::mpl::range_c<int, 1, 7> block_sizes;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSparsityMatrix, T, block_sizes)
 {
-    runRandomSparsityMatrixTest<T::value>();
+    runRandomSparsityMatrixTest<Opm::gpuistl::GpuSparseMatrixWrapper<double>, T::value>();
+}
+
+typedef boost::mpl::range_c<int, 1, 7> block_sizes;
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSparsityMatrixGeneric, T, block_sizes)
+{
+    runRandomSparsityMatrixTest<Opm::gpuistl::GpuSparseMatrixGeneric<double>, T::value>();
 }

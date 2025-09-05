@@ -22,17 +22,17 @@
 #include "opm/simulators/linalg/FlexibleSolver.hpp"
 #include <dune/istl/operators.hh>
 #include <opm/simulators/linalg/FlexibleSolver_impl.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
 // NOTE: This is very rudimentary, and will be improved once we
 // incorporate MPI in the ISTLSolverGPUISTL class.
-template class ::Dune::FlexibleSolver<Dune::MatrixAdapter<::Opm::gpuistl::GpuSparseMatrix<double>,
+template class ::Dune::FlexibleSolver<Dune::MatrixAdapter<::Opm::gpuistl::GpuSparseMatrixWrapper<double>,
                                                           ::Opm::gpuistl::GpuVector<double>,
                                                           ::Opm::gpuistl::GpuVector<double>>>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class ::Dune::FlexibleSolver<Dune::MatrixAdapter<::Opm::gpuistl::GpuSparseMatrix<float>,
+template class ::Dune::FlexibleSolver<Dune::MatrixAdapter<::Opm::gpuistl::GpuSparseMatrixWrapper<float>,
                                                           ::Opm::gpuistl::GpuVector<float>,
                                                           ::Opm::gpuistl::GpuVector<float>>>;
 #endif
@@ -42,7 +42,7 @@ template <class realtype>
 using CommGpu = ::Opm::gpuistl::GpuOwnerOverlapCopy<realtype, Comm>;
 
 template <class Scalar>
-using ParOpGpu = Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatrix<Scalar>,
+using ParOpGpu = Dune::OverlappingSchwarzOperator<::Opm::gpuistl::GpuSparseMatrixWrapper<Scalar>,
                                                   ::Opm::gpuistl::GpuVector<Scalar>,
                                                   ::Opm::gpuistl::GpuVector<Scalar>,
                                                   CommGpu<Scalar>>;

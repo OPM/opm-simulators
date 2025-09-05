@@ -23,11 +23,11 @@
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
 #if USE_HIP
-#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/PinnedMemoryHolder.hpp>
 #else
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PinnedMemoryHolder.hpp>
 #endif
@@ -61,7 +61,7 @@ public:
 
     using real_type = typename Vector::field_type;
 
-    using GPUMatrix = Opm::gpuistl::GpuSparseMatrix<real_type>;
+    using GPUMatrix = Opm::gpuistl::GpuSparseMatrixWrapper<real_type>;
     using GPUVector = Opm::gpuistl::GpuVector<real_type>;
 
     constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
