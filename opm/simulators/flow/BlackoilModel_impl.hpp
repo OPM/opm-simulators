@@ -572,18 +572,32 @@ solveJacobianSystem(BVector& x)
         {
             printf("bsr_jacobian already initialized\n");
             bsr_info(bsr_jacobian_);
-            bsr_nonzeros(bsr_jacobian_,"A->dbl");
+            //bsr_nonzeros(bsr_jacobian_,"A->dbl");
         }
 
-        //bsr_nonzeros(bsr_jacobian_,"A->dbl");
-        bildu_factorize(bildu_prec_, bsr_jacobian_);//linSolver.prepare
+        // transpose each dense block to make them column-major
+        double M[9];
+        double const *data = &jacobian[0][0][0][0];// assuming c-contiguous data
+        for(int k=0;k<bsr_jacobian_->nnz;k++)
+        {
+            for(int i=0;i<3;i++) for(int j=0;j<3;j++) M[3*j+i] = data[9*k + 3*i + j];
+            for(int i=0;i<9;i++) bsr_jacobian_->dbl[9*k + i] = M[i];
+        }
 
         double *r =&residual[0][0]; //address of first element of block vector (assumes contiguous layout)
-        vec_show(r,16,"r");
-        //bildu_apply3(bildu_prec_, r);
-        //vec_show(r,16,"P.r");
+
+        bildu_factorize(bildu_prec_, bsr_jacobian_);//linSolver.prepare
+
+        int n = (bsr_jacobian_->b)*(bsr_jacobian_->nrows);
+        bsr_nonzeros(bsr_jacobian_,"A->dbl");
+        headtail(r,n,"r");
+        bildu_apply3(bildu_prec_, r);
+        headtail(r,n,"P.r");
 
         getchar();
+
+
+
 
         linSolver.prepare(jacobian, residual);
 

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <immintrin.h>
 
 void bsr_hello()
 {
@@ -34,6 +35,7 @@ void bsr_init(bsr_matrix *A, int nrows, int nnz, int b)
 
     A->rowptr = malloc((nrows+1)*sizeof(int));
     A->colidx = malloc(nnz*sizeof(int));
+    A->dbl    = malloc(b*b*nnz*sizeof(double));
 }
 
 void bsr_info(bsr_matrix *A)
@@ -100,7 +102,6 @@ void bsr_nonzeros(bsr_matrix *A, const char *name)
 
 bildu_prec *bildu_new()
 {
-    //Initialize bildu_prec assuming structural symmetry
     bildu_prec *P = malloc(sizeof(bildu_prec));
     P->L=bsr_new();
     P->D=bsr_new();
@@ -153,10 +154,10 @@ void bildu_init(bildu_prec *P, bsr_matrix *A)
     U->nnz=nnz;
 
     // allocate values arrays
-    int bb=b*b;
-    L->dbl = malloc(bb*nnz*sizeof(double));
-    D->dbl = malloc(bb*nrows*sizeof(double));
-    U->dbl = malloc(bb*nnz*sizeof(double));
+    //int bb=b*b;
+    //L->dbl = malloc(bb*nnz*sizeof(double));
+    //D->dbl = malloc(bb*nrows*sizeof(double));
+    //U->dbl = malloc(bb*nnz*sizeof(double));
 }
 
 void vec_copy(double *y, double const * x, int n)
@@ -237,19 +238,95 @@ void mat3_inv(double *invA, const double *A)
 
     double detA = A[0]*M[0]+A[1]*M[3]+A[2]*M[6];
     for(int k=0;k<9;k++) invA[k]=M[k]/detA;
+}
 
-/*
+void inline vec_copy9(double *y, double const *x)
+{
+    for(int i=0;i<9;i++) y[i]=x[i];
+}
 
-    double B[9];
-    mat3_matmul(B,A,invA);
+void mat3_rmul(double *A, double const *B)
+{
+    // load left hand matrix
+    __m256d vA[3];
+    vA[0] = _mm256_loadu_pd(A+0);
+    vA[1] = _mm256_loadu_pd(A+3);
+    vA[2] = _mm256_loadu_pd(A+6);
 
-    printf("det(A)=%+.4e\n",detA);
-    mat3_view(A,"A");
-    mat3_view(B,"B");
-    mat3_view(M,"M");
-    mat3_view(invA,"invA");
-    getchar();
-*/
+    for(int j=0;j<3;j++)
+    {
+        // load column j of B matrix
+        __m256d vbj   = _mm256_loadu_pd(B+3*j);
+
+        // multiply matrix A with column j of matrix B
+        __m256d vAB[3];
+        vAB[0] = vA[0]*_mm256_permute4x64_pd(vbj,0b00000000); //0b01010101
+        vAB[1] = vA[1]*_mm256_permute4x64_pd(vbj,0b01010101); //0b01010101
+        vAB[2] = vA[2]*_mm256_permute4x64_pd(vbj,0b10101010); //0b01010101
+
+        __m256d vz = vAB[0] + vAB[1] + vAB[2];
+
+        // Store result in  column j of matrix A
+        double z[4];
+        _mm256_store_pd(z,vz);
+        for(int k=0;k<3;k++) A[3*j+k]=z[k];
+    }
+}
+
+void mat3_lmul(double const *A, double *B)
+{
+    // load left hand matrix
+    __m256d vA[3];
+    vA[0] = _mm256_loadu_pd(A+0);
+    vA[1] = _mm256_loadu_pd(A+3);
+    vA[2] = _mm256_loadu_pd(A+6);
+
+    for(int j=0;j<3;j++)
+    {
+        // load column j of B matrix
+        __m256d vbj   = _mm256_loadu_pd(B+3*j);
+
+        // multiply matrix A with column j of matrix B
+        __m256d vAB[3];
+        vAB[0] = vA[0]*_mm256_permute4x64_pd(vbj,0b00000000); //0b01010101
+        vAB[1] = vA[1]*_mm256_permute4x64_pd(vbj,0b01010101); //0b01010101
+        vAB[2] = vA[2]*_mm256_permute4x64_pd(vbj,0b10101010); //0b01010101
+
+        __m256d vz = vAB[0] + vAB[1] + vAB[2];
+
+        // Store result in  column j of matrix B
+        double z[4];
+        _mm256_store_pd(z,vz);
+        for(int k=0;k<3;k++) B[3*j+k]=z[k];
+    }
+}
+
+void mat3_vfms(double *C, double const *A, double const *B)
+{
+    // load left hand matrix
+    __m256d vA[3];
+    vA[0] = _mm256_loadu_pd(A+0);
+    vA[1] = _mm256_loadu_pd(A+3);
+    vA[2] = _mm256_loadu_pd(A+6);
+
+    for(int j=0;j<3;j++)
+    {
+        // load column j of B matrix
+        __m256d vbj   = _mm256_loadu_pd(B+3*j);
+
+        // multiply matrix A with column j of matrix B
+        __m256d vAB[3];
+        vAB[0] = vA[0]*_mm256_permute4x64_pd(vbj,0b00000000); //0b01010101
+        vAB[1] = vA[1]*_mm256_permute4x64_pd(vbj,0b01010101); //0b01010101
+        vAB[2] = vA[2]*_mm256_permute4x64_pd(vbj,0b10101010); //0b01010101
+
+        __m256d vz = vAB[0] + vAB[1] + vAB[2];
+
+        // Store result in  column j of matrix A
+        double z[4];
+        _mm256_store_pd(z,vz);
+        for(int k=0;k<3;k++) C[3*j+k]-=z[k];
+    }
 }
 
 
@@ -273,16 +350,16 @@ void bildu_factorize(bildu_prec *P, bsr_matrix *A)
             if(j<i)       // struct-transpose of L
             {
                 int kL = L->rowptr[j];
-                mat3_T(L->dbl + bb*kL, A->dbl + bb*k);
+                vec_copy9(L->dbl + bb*kL, A->dbl + bb*k);
                 L->rowptr[j]++;
             }
             else if(j==i) // struct-copy of D
             {
-                mat3_T(D->dbl + bb*i, A->dbl + bb*k);
+                vec_copy9(D->dbl + bb*i, A->dbl + bb*k);
             }
             else if(j>i) // struct-copy of U
             {
-                mat3_T(U->dbl + bb*kU, A->dbl + bb*k);
+                vec_copy9(U->dbl + bb*kU, A->dbl + bb*k);
                 kU++;
             }
         }
@@ -295,23 +372,21 @@ void bildu_factorize(bildu_prec *P, bsr_matrix *A)
     double scale[9]; //hard-coded to 3x3 blocks for now
     for(int i=0;i<A->nrows;i++)
     {
-        //mat_inv(D->data+i*bb,scale,b);
         mat3_inv(scale,D->dbl+i*bb);
-        vec_copy(D->dbl+bb*i, scale, bb); //store inverse instead to simplify application
+        vec_copy9(D->dbl+bb*i, scale); //store inverse instead to simplify application
         for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
         {
             //scale column i of L
-            mat3_matmul(L->dbl+k*bb,L->dbl+k*bb,scale);
+            mat3_rmul(L->dbl+k*bb,scale);
 
             //update diagonal of U
             int j=L->colidx[k];
-            mat3_matfms(D->dbl+j*bb,U->dbl+k*bb,L->dbl+k*bb);
+            mat3_vfms(D->dbl+j*bb,L->dbl+k*bb,U->dbl+k*bb);
 
             //scale row i of U
-            mat3_matmul(U->dbl+k*bb,scale,U->dbl+k*bb);
+            mat3_lmul(scale,U->dbl+k*bb);
 
             //NOT IMPLEMENTED!
-            //update off-diagonal entries of U and L
             for(int m=L->rowptr[j];m<L->rowptr[j+1];m++)
             {
                 if(L->colidx[m]==j)
@@ -321,10 +396,10 @@ void bildu_factorize(bildu_prec *P, bsr_matrix *A)
                     getchar();
                 }
             }
-
         }
     }
 }
+
 
 inline void mat3_vecmul(const double *A, double *x)
 {
@@ -407,4 +482,22 @@ void vec_show(const double *x, int n, const char *name)
         printf("\n");
     }
     printf("]\n\n");
+}
+
+void headtail(double *x, int n, char const *name)
+{
+
+    int const  depth=9;
+    printf("%s =\n[\n",name);
+    for(int i=0;i<depth;i++)
+    {
+        printf(" %+.4e\n",x[i]);
+    }
+    printf("...\n");
+    for(int i=n-depth;i<n;i++)
+    {
+        printf(" %+.4e\n",x[i]);
+    }
+    printf("]\n");
+
 }
