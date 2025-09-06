@@ -88,7 +88,7 @@ addToWells(data::Wells& wellDatas,
 
     for (const auto& wname : this->schedule_[reportStepNum].well_order()) {
         // Don't bother with wells not on this process.
-        if (!wellQuery_(wname)) {
+        if (!wellIsOwnedByCurrentRank_(wname)) {
             continue;
         }
 
@@ -146,9 +146,8 @@ allocate(const std::size_t reportStepNum)
     }
 
     for (const auto& wname : schedule_[reportStepNum].well_order()) {
-
         // don't bother with wells not on this process
-        if (!wellQuery_(wname)) {
+        if (!wellOnCurrentRank_(wname)) {
             continue;
         }
 
