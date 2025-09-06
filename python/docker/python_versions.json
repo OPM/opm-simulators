@@ -1,0 +1,34 @@
+{
+  "_comment": "SINGLE SOURCE OF TRUTH for Python versions in OPM wheel build system",
+  "_maintenance": {
+    "description": "This file controls Python version support across all Docker build components",
+    "after_editing": [
+      "1. Run: ./docker/scripts/sync_versions.sh",
+      "2. Manually update docker/scripts/generate-pypi-package.sh lines 33-38 (version mappings)",
+      "3. Test build: ./docker/run-docker-build.sh test --python-versions [your versions]"
+    ],
+    "locations_auto_synced": [
+      "docker/Dockerfile (ARG python_versions default - derived from supported_versions)",
+      "docker/test_wheels/scripts/README.md (supported versions list - derived from supported_versions)",
+      "docker/test_wheels/scripts/src/opm_wheels/constants.py (enum auto-generated from supported_versions)",
+      "docker/test_wheels/dockerfiles/common/install_python_versions.py (reads supported_versions directly)",
+      "python/setup.py.in (python_requires minimum version - derived from supported_versions)"
+    ],
+    "locations_manual": [
+      "docker/scripts/generate-pypi-package.sh (version mappings array lines 41-46)",
+      "docker/Dockerfile line 16 (manylinux compatibility comment - verify distribution compatibility)",
+      "docker/README.md line 166 (platform compatibility description - verify distribution compatibility)"
+    ],
+    "note": "Default versions are automatically derived from supported_versions.keys() - no separate default_versions field needed"
+  },
+  "supported_versions": {
+    "3.8": "3.8.19",
+    "3.9": "3.9.21",
+    "3.10": "3.10.16",
+    "3.11": "3.11.11",
+    "3.12": "3.12.9",
+    "3.13": "3.13.1"
+  },
+  "manylinux_platform": "manylinux_2_28_x86_64",
+  "_manylinux_note": "auditwheel may optimize to an older version (e.g., manylinux_2_27) for broader compatibility"
+}
