@@ -98,9 +98,9 @@ namespace Opm {
         Scalar rate = 0.0;
         if (wellState.isRank0() && (group.hasSatelliteProduction() || group.hasSatelliteInjection())) {
             if (injector) {
-                rate = satelliteInjectionRate(schedule[reportStepIdx], group, wellState.phaseUsage(), phasePos, res_rates);
+                rate = satelliteInjectionRate(schedule[reportStepIdx], group, wellState.phaseUsageInfo(), phasePos, res_rates);
             } else {
-                const auto rateComp = selectRateComponent(wellState.phaseUsage(), phasePos);
+                const auto rateComp = selectRateComponent(wellState.phaseUsageInfo(), phasePos);
                 if (rateComp.has_value()) {
                     rate = satelliteProductionRate(schedule[reportStepIdx], group, *rateComp, res_rates);
                 }
@@ -164,11 +164,11 @@ satelliteInjectionRate(const ScheduleState& sched,
     if (group.hasSatelliteInjection()) {
         std::optional<Phase> ph;
         for (const auto& [bo_phase, phase] : std::array {
-            std::pair(BlackoilPhases::Aqua, Phase::WATER),
-            std::pair(BlackoilPhases::Liquid, Phase::OIL),
-            std::pair(BlackoilPhases::Vapour, Phase::GAS) })
+            std::pair( IndexTraits::waterPhaseIdx, Phase::WATER),
+            std::pair( IndexTraits::oilPhaseIdx, Phase::OIL),
+            std::pair( IndexTraits::gasPhaseIdx, Phase::GAS) })
         {
-            if (pu.phase_used[bo_phase] && (pu.phase_pos[bo_phase] == phase_pos)) {
+            if (pu.phaseIsActive(bo_phase) && (pu.canonicalToActivePhaseIdx(bo_phase) == phase_pos)) {
                 ph = phase;
             }
         }
@@ -192,8 +192,8 @@ satelliteInjectionRate(const ScheduleState& sched,
     return rate;
 }
 
-template <typename Scalar>
-Scalar WellGroupHelpers<Scalar>::
+template <typename Scalar, typename IndexTraits>
+Scalar WellGroupHelpers<Scalar, IndexTraits>::
 satelliteProductionRate(const ScheduleState& sched,
                         const Group& group, 
                         const GSatProd::GSatProdGroup::Rate rateComp, 

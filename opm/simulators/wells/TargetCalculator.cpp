@@ -126,18 +126,11 @@ groupTarget(const std::optional<Group::ProductionControls>& ctrl,
     case Group::ProductionCMode::LRAT:
         return ctrl->liquid_target;
     case Group::ProductionCMode::RESV:
-    {   
-        // Include reservoir-to-surface correction to account for satellite groups 
-        // See groupTarget for injection groups for explanation
-        Scalar correction = 0.0;
-        for (int i = 0; i < pu_.num_phases; ++i) {
-            correction += group_state_.injection_surface_rates(group_name_)[i] -
-                          group_state_.injection_reservoir_rates(group_name_)[i] / resv_coeff_[i];
-        }
+    {
         if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
-            return this->group_state_.gpmaint_target(this->group_name_) + correction;
+            return this->group_state_.gpmaint_target(this->group_name_);
 
-        return ctrl->resv_target + correction;
+        return ctrl->resv_target;
     }
     default:
         // Should never be here.
@@ -227,20 +220,6 @@ groupTarget(const std::optional<Group::InjectionControls>& ctrl,
                          + "must either have a valid control or use GPMAINT",
                          deferred_logger);
     }
-    // If there are satellite groups given (only) with injection surface rates, these will be added into the surface
-    // rates but *not* in to the reservoir rates. In this case, the satellite rates are not (and should not) be part
-    // of RESV/VREP-calculations. However, since both these modes output targets in terms of surface rates,
-    // the satellite rates are subsequently added into the reduction of its parent groups (correct for other modes). 
-    // We employ a hack to account for this by adding in the mismatch between group surface rates and reservoir-to-surface-converted
-    // reservoir rates. This correction amounts to the satellite injection surface rate contribution. Note that the
-    // correction is zero if there is no satellite injection on current group branch.
-    std::vector<Scalar> res_to_surf_correction;
-    if (cmode_ == Group::InjectionCMode::RESV || cmode_ == Group::InjectionCMode::VREP) {
-        res_to_surf_correction = group_state_.injection_surface_rates(group_name_);
-        for (int i = 0; i < pu_.num_phases; ++i) {
-            res_to_surf_correction[i] -= group_state_.injection_reservoir_rates(group_name_)[i]/resv_coeff_[i];
-        }
-    }
     switch (cmode_) {
     case Group::InjectionCMode::RATE: 
     {
@@ -251,12 +230,10 @@ groupTarget(const std::optional<Group::InjectionControls>& ctrl,
     }
     case Group::InjectionCMode::RESV: 
     {
-        // Sum corrections 
-        const Scalar correction = std::accumulate(res_to_surf_correction.begin(), res_to_surf_correction.end(), 0.0);
         if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_)) {
-            return this->group_state_.gpmaint_target(this->group_name_) / resv_coeff_[pos_] + correction;
+            return this->group_state_.gpmaint_target(this->group_name_) / resv_coeff_[pos_];
         }
-        return ctrl->resv_max_rate / resv_coeff_[pos_] + correction;
+        return ctrl->resv_max_rate / resv_coeff_[pos_];
     }
     case Group::InjectionCMode::REIN: 
     {
@@ -283,7 +260,8 @@ groupTarget(const std::optional<Group::InjectionControls>& ctrl,
         }
         return voidage_rate / resv_coeff_[pos_];
     }
-    case Group::InjectionCMode::SALE: {
+    case Group::InjectionCMode::SALE: 
+    {
         assert(pos_ == pu_.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx) );
         // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
         // Gas import and consumption is already included in the REIN rates

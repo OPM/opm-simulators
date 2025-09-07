@@ -64,7 +64,7 @@ public:
 
     static Scalar satelliteInjectionRate(const ScheduleState& sched,
                                          const Group& group,
-                                         const PhaseUsage& pu,
+                                         const PhaseUsageInfo<IndexTraits>& pu,
                                          const int phase_pos,
                                          bool res_rates);
 
