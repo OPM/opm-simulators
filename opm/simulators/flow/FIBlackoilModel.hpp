@@ -32,12 +32,15 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/utility/ElementChunks.hpp>
 
 #include <opm/models/parallel/threadmanager.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
+#include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 
 #include <cstddef>
 #include <stdexcept>
@@ -67,6 +70,8 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
     static constexpr bool gridIsUnchanging =
         std::is_same_v<GetPropType<TypeTag, Properties::Grid>, Dune::CpGrid>;
 
+    static constexpr bool avoidElementContext = getPropValue<TypeTag, Properties::AvoidElementContext>();
+
 public:
     explicit FIBlackOilModel(Simulator& simulator)
         : BlackOilModel<TypeTag>(simulator)
@@ -79,8 +84,12 @@ public:
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
         this->invalidateIntensiveQuantitiesCache(timeIdx);
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
         if constexpr (gridIsUnchanging) {
+            if constexpr (avoidElementContext) {
+                updateCachedIntQuants(timeIdx);
+                return;
+            }
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -91,6 +100,8 @@ public:
                     elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
                 }
             }
+            OPM_END_PARALLEL_TRY_CATCH("invalidateAndUpdateIntensiveQuantities: state error",
+                                       this->simulator_.vanguard().grid().comm());
         } else {
             // Grid is possibly refined or otherwise changed between calls.
             ElementContext elemCtx(this->simulator_);
@@ -99,8 +110,6 @@ public:
                 elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("InvalideAndUpdateIntensiveQuantities: state error",
-                                   this->simulator_.vanguard().grid().comm());
     }
 
     void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned timeIdx) const
@@ -197,6 +206,75 @@ public:
     }
 
 protected:
+
+    template <EclMultiplexerApproach ApproachArg>
+    using EMD = EclMultiplexerDispatch<ApproachArg>;
+
+    void updateCachedIntQuants(const unsigned timeIdx) const
+    {
+        // Runtime dispatch on three-phase approach to compile-time fixed approach.
+        switch (this->simulator_.problem().materialLawManager()->threePhaseApproach()) {
+        case EclMultiplexerApproach::Stone1:
+            updateCachedIntQuants1<EclMultiplexerDispatch<EclMultiplexerApproach::Stone1>>(timeIdx);
+            break;
+
+        case EclMultiplexerApproach::Stone2:
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::Stone2>>(timeIdx);
+            break;
+
+        case EclMultiplexerApproach::Default:
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::Default>>(timeIdx);
+            break;
+
+        case EclMultiplexerApproach::TwoPhase:
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::TwoPhase>>(timeIdx);
+            break;
+
+        case EclMultiplexerApproach::OnePhase:
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::OnePhase>>(timeIdx);
+            break;
+        }
+    }
+
+    template <class EMDArg>
+    void updateCachedIntQuants1(const unsigned timeIdx) const
+    {
+        // Runtime dispatch on using piecewise linear saturation curves to compile-time fixed approach.
+        if (this->simulator_.problem().materialLawManager()->satCurveIsAllPiecewiseLinear()) {
+            using PL = SatCurveMultiplexerDispatch<SatCurveMultiplexerApproach::PiecewiseLinear>;
+            updateCachedIntQuantsLoop<EMDArg, PL>(timeIdx);
+        } else {
+            // TODO: Might want to set LET here, but need to check if partial use of LET is possible.
+            updateCachedIntQuantsLoop<EMDArg>(timeIdx);
+        }
+    }
+
+
+    template <class ...Args>
+    void updateCachedIntQuantsLoop(const unsigned timeIdx) const
+    {
+        const auto& elementMapper = this->simulator_.model().elementMapper();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (const auto& chunk : element_chunks_) {
+            for (const auto& elem : chunk) {
+                this->template updateSingleCachedIntQuantUnchecked<Args...>(elementMapper.index(elem), timeIdx);
+            }
+        }
+    }
+
+    template <class ...Args>
+    void updateSingleCachedIntQuantUnchecked(const unsigned globalIdx, const unsigned timeIdx) const
+    {
+        // Get the cached data.
+        auto& intquant = this->intensiveQuantityCache_[timeIdx][globalIdx];
+        // Update it.
+        intquant.template update<Args...>(this->simulator_.problem(), this->solution(timeIdx)[globalIdx], globalIdx, timeIdx);
+        // Set the up-to-date flag.
+        this->intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = 1;
+    }
+
     ElementChunks<GridView, Dune::Partitions::All> element_chunks_;
 };
 

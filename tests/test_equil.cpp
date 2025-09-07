@@ -247,6 +247,8 @@ struct EquilFixture {
         using namespace Opm;
         FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
         Opm::ThreadManager::registerParameters();
+        // Since this parameter is registered in opm/models/nonlinear/newtonmethodparams.cpp but not accessed here
+        Parameters::Register<Parameters::NewtonMaxIterations>("The maximum number of Newton iterations per time step");
         BlackoilModelParameters<double>::registerParameters();
         AdaptiveTimeStepping<TypeTag>::registerParameters();
         Parameters::Register<Parameters::EnableTerminalOutput>("Dummy added for the well model to compile.");

@@ -247,7 +247,8 @@ public:
             return report;
         }
 
-        model_.initialLinearization(report, iteration, nonlinear_solver.minIter(), nonlinear_solver.maxIter(), timer);
+        model_.initialLinearization(report, iteration, model_.param().newton_min_iter_,
+                                    model_.param().newton_max_iter_, timer);
 
         if (report.converged) {
             return report;

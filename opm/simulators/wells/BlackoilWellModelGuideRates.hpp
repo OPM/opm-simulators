@@ -30,7 +30,7 @@
 
 namespace Opm {
 
-template<class Scalar> class BlackoilWellModelGeneric;
+template<typename Scalar, typename IndexTraits> class BlackoilWellModelGeneric;
 namespace data {
 struct GroupData;
 struct GroupGuideRates;
@@ -41,12 +41,12 @@ class Group;
 class Well;
 
 /// Class for handling the guide rates in the blackoil well model.
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelGuideRates
 {
 public:
     //! \brief Constructor initializes reference to the well model.
-    explicit BlackoilWellModelGuideRates(const BlackoilWellModelGeneric<Scalar>& wellModel)
+    explicit BlackoilWellModelGuideRates(const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel)
         : wellModel_(wellModel)
     {}
 
@@ -86,7 +86,7 @@ private:
     //! \brief Obtain guide rate values for injection group.
     data::GuideRateValue getGuideRateInjectionGroupValues(const Group& group) const;
 
-    const BlackoilWellModelGeneric<Scalar>& wellModel_; //!< Reference to well model
+    const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_; //!< Reference to well model
 };
 
 

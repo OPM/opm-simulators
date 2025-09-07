@@ -22,6 +22,8 @@
 
 #include <config.h>
 
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
@@ -33,8 +35,8 @@
 
 namespace Opm {
 
-template<class Scalar>
-void BlackoilWellModelGasLiftGeneric<Scalar>::
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>::
 gliftDebug([[maybe_unused]] const std::string& msg,
            [[maybe_unused]] DeferredLogger& deferred_logger) const
 {
@@ -47,10 +49,10 @@ gliftDebug([[maybe_unused]] const std::string& msg,
     }
 }
 
-template<class Scalar>
-void BlackoilWellModelGasLiftGeneric<Scalar>::
-gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<Scalar>*>& well_container,
-                  const WellState<Scalar>& wellState,
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>::
+gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<Scalar, IndexTraits>*>& well_container,
+                  const WellState<Scalar, IndexTraits>& wellState,
                   DeferredLogger& deferred_logger)
 {
     for (const auto& well : well_container) {
@@ -70,16 +72,16 @@ gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<Scalar>*>& well_contain
 // currently has the largest weighted incremental gradient. The
 // procedure takes account of any limits on the group production
 // rate or lift gas supply applied to any level of group.
-template<class Scalar>
-void BlackoilWellModelGasLiftGeneric<Scalar>::
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>::
 gasLiftOptimizationStage2(const Parallel::Communication& comm,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
-                          WellState<Scalar>& wellState,
+                          WellState<Scalar, IndexTraits>& wellState,
                           GroupState<Scalar>& groupState,
                           GLiftProdWells& prod_wells,
                           GLiftOptWells& glift_wells,
-                          GasLiftGroupInfo<Scalar>& group_info,
+                          GasLiftGroupInfo<Scalar, IndexTraits>& group_info,
                           GLiftWellStateMap& glift_well_state_map,
                           const int episodeIndex,
                           DeferredLogger& deferred_logger)
@@ -102,10 +104,10 @@ gasLiftOptimizationStage2(const Parallel::Communication& comm,
     glift.runOptimize();
 }
 
-template class BlackoilWellModelGasLiftGeneric<double>;
+template class BlackoilWellModelGasLiftGeneric<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class BlackoilWellModelGasLiftGeneric<float>;
+template class BlackoilWellModelGasLiftGeneric<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 }

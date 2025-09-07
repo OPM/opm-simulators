@@ -22,6 +22,8 @@
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
+#include <opm/models/nonlinear/newtonmethodparams.hpp>
+
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <algorithm>
@@ -62,6 +64,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     max_niter_inner_well_iter_ = Parameters::Get<Parameters::MaxNewtonIterationsWithInnerWellIterations>();
     shut_unsolvable_wells_ = Parameters::Get<Parameters::ShutUnsolvableWells>();
     max_inner_iter_wells_ = Parameters::Get<Parameters::MaxInnerIterWells>();
+    max_well_status_switch_ = Parameters::Get<Parameters::MaxWellStatusSwitchInInnerIterWells>();
     maxSinglePrecisionTimeStep_ = Parameters::Get<Parameters::MaxSinglePrecisionDays<Scalar>>() * 24 * 60 * 60;
     min_strict_cnv_iter_ = Parameters::Get<Parameters::MinStrictCnvIter>();
     min_strict_mb_iter_ = Parameters::Get<Parameters::MinStrictMbIter>();
@@ -91,6 +94,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     max_local_solve_iterations_ = Parameters::Get<Parameters::MaxLocalSolveIterations>();
     local_tolerance_scaling_mb_ = Parameters::Get<Parameters::LocalToleranceScalingMb<Scalar>>();
     local_tolerance_scaling_cnv_ = Parameters::Get<Parameters::LocalToleranceScalingCnv<Scalar>>();
+    newton_max_iter_ = Parameters::Get<Parameters::NewtonMaxIterations>();
+    newton_min_iter_ = Parameters::Get<Parameters::NewtonMinIterations>();
     nldd_num_initial_newton_iter_ = Parameters::Get<Parameters::NlddNumInitialNewtonIter>();
     nldd_relative_mobility_change_tol_ = Parameters::Get<Parameters::NlddRelativeMobilityChangeTol<Scalar>>();
     num_local_domains_ = Parameters::Get<Parameters::NumLocalDomains>();
@@ -183,6 +188,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Shut unsolvable wells");
     Parameters::Register<Parameters::MaxInnerIterWells>
         ("Maximum number of inner iterations for standard wells");
+    Parameters::Register<Parameters::MaxWellStatusSwitchInInnerIterWells>
+        ("Maximum number of status switching (shut<->open) in inner iterations for wells");
     Parameters::Register<Parameters::AlternativeWellRateInit>
         ("Use alternative well rate initialization procedure");
     Parameters::Register<Parameters::RegularizationFactorWells<Scalar>>
@@ -239,6 +246,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Choose nonlinear solver. Valid choices are newton or nldd.");
     Parameters::Register<Parameters::LocalSolveApproach>
         ("Choose local solve approach. Valid choices are jacobi and gauss-seidel");
+    Parameters::SetDefault<Parameters::NewtonMaxIterations>(20);
+    Parameters::Register<Parameters::NewtonMinIterations>
+        ("The minimum number of Newton iterations per time step");
     Parameters::Register<Parameters::MaxLocalSolveIterations>
         ("Max iterations for local solves with NLDD nonlinear solver.");
     Parameters::Register<Parameters::LocalToleranceScalingMb<Scalar>>

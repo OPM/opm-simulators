@@ -65,6 +65,9 @@ FlowGenericProblem(const EclipseState& eclState,
     , gridView_(gridView)
     , lookUpData_(gridView)
 {
+    // we need to update the FluidSystem based on EclipseState before it is passed around
+    this->initFluidSystem_();
+
     enableTuning_ = Parameters::Get<Parameters::EnableTuning>();
     enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
     initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();

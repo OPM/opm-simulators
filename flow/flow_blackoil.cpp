@@ -38,6 +38,9 @@ namespace Opm {
         template<class TypeTag>
         struct EnableDiffusion<TypeTag, TTag::FlowProblemTPFA> { static constexpr bool value = false; };
 
+        template<class TypeTag>
+        struct AvoidElementContext<TypeTag, TTag::FlowProblemTPFA> { static constexpr bool value = true; };
+
     }
 }
 

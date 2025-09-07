@@ -63,13 +63,18 @@ int
 WellInterfaceIndices<FluidSystem,Indices>::
 flowPhaseToModelCompIdx(const int phaseIdx) const
 {
-    const auto& pu = this->phaseUsage();
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
-        return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
+            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx) == phaseIdx) {
+            return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    }
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx) == phaseIdx) {
         return Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
+    }
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx) == phaseIdx) {
         return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+    }
 
     // for other phases return the index
     return phaseIdx;
@@ -80,13 +85,12 @@ int
 WellInterfaceIndices<FluidSystem,Indices>::
 modelCompIdxToFlowCompIdx(const int compIdx) const
 {
-    const auto& pu = this->phaseUsage();
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == compIdx)
-        return pu.phase_pos[Water];
+        return FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == compIdx)
-        return pu.phase_pos[Oil];
+        return FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == compIdx)
-        return pu.phase_pos[Gas];
+        return FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
 
     // for other phases return the index
     return compIdx;
@@ -98,12 +102,14 @@ int
 WellInterfaceIndices<FluidSystem, Indices>::
 flowPhaseToModelPhaseIdx(const int phaseIdx) const
 {
-    const auto& pu = this->phaseUsage();
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
+            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx) == phaseIdx)
         return FluidSystem::waterPhaseIdx;
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx) == phaseIdx)
         return FluidSystem::oilPhaseIdx;
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx) == phaseIdx)
         return FluidSystem::gasPhaseIdx;
 
     // for other phases return the index
@@ -116,12 +122,14 @@ typename WellInterfaceIndices<FluidSystem,Indices>::Scalar
 WellInterfaceIndices<FluidSystem,Indices>::
 scalingFactor(const int phaseIdx) const
 {
-    const auto& pu = this->phaseUsage();
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
+            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx) == phaseIdx)
         return 1.0;
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx) == phaseIdx)
         return 1.0;
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+            FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx) == phaseIdx)
         return 0.01;
     if (Indices::enableSolvent && phaseIdx == Indices::contiSolventEqIdx )
         return 0.01;

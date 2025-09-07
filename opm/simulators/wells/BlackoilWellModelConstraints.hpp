@@ -29,19 +29,27 @@
 
 namespace Opm {
 
-template<class Scalar> class BlackoilWellModelGeneric;
+template<typename Scalar, typename IndexTraits> class BlackoilWellModelGeneric;
 class DeferredLogger;
 template<class Scalar> class GroupState;
 class SummaryState;
-template<class Scalar> class WellState;
+template<typename Scalar, typename IndexTraits> class WellState;
+template<typename Scalar, typename IndexTraits> class WellGroupHelpers;
 
 /// Class for handling constraints for the blackoil well model.
-template<class Scalar>
+template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelConstraints
 {
 public:
+
+    constexpr static int waterPhaseIdx = IndexTraits::waterPhaseIdx;
+    constexpr static int oilPhaseIdx = IndexTraits::oilPhaseIdx;
+    constexpr static int gasPhaseIdx = IndexTraits::gasPhaseIdx;
+
+    using WellGroupHelpersType = WellGroupHelpers<Scalar, IndexTraits>;
+
     //! \brief Constructor initializes reference to the well model.
-    explicit BlackoilWellModelConstraints(const BlackoilWellModelGeneric<Scalar>& wellModel)
+    explicit BlackoilWellModelConstraints(const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel)
         : wellModel_(wellModel)
     {}
 
@@ -62,7 +70,7 @@ public:
                                    const int reportStepIdx,
                                    const Group::GroupLimitAction group_limit_action,
                                    const Group::ProductionCMode& newControl,
-                                   const WellState<Scalar>& well_state,
+                                   const WellState<Scalar, IndexTraits>& well_state,
                                    std::optional<std::string>& worst_offending_well,
                                    GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger) const;
@@ -71,11 +79,12 @@ public:
     bool updateGroupIndividualControl(const Group& group,
                                       const int reportStepIdx,
                                       const int max_number_of_group_switch,
+                                      const bool update_group_switching_log,
                                       std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>>& switched_inj,
                                       std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
                                       std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                                       GroupState<Scalar>& group_state,
-                                      WellState<Scalar>& well_state,
+                                      WellState<Scalar, IndexTraits>& well_state,
                                       DeferredLogger& deferred_logger) const;
 
 private:
@@ -91,7 +100,7 @@ private:
                                     const int reportStepIdx,
                                     DeferredLogger& deferred_logger) const;
 
-    const BlackoilWellModelGeneric<Scalar>& wellModel_; //!< Reference to well model
+    const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_; //!< Reference to well model
 };
 
 } // namespace Opm
