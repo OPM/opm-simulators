@@ -658,6 +658,11 @@ private:
         return this->simulator_.problem().wellModel().isOwner(wname);
     }
 
+    bool isOnCurrentRank(const std::string& wname) const override
+    {
+        return this->simulator_.problem().wellModel().hasLocalCells(wname);
+    }
+
     void updateFluidInPlace_(const ElementContext& elemCtx, const unsigned dofIdx)
     {
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);

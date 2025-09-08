@@ -40,45 +40,156 @@ namespace data { class Wells; }
 class EclipseState;
 class Schedule;
 
+/// Collection of cell-level RFT data--i.e., pressures and saturations--in
+/// cells intersected by wells.  Will collect dynamic state values only for
+/// those cells for which RFT data has been requested through the Schedule's
+/// RFT configuration (member function ScheduleState::rft_config()).
+///
+/// \tparam FluidSystem Run's fluid system.  Needed, in particular, to infer
+/// the simulator's \c Scalar type and its active phases.
 template<class FluidSystem>
 class RFTContainer {
+    /// Simulator's floating-point element type.
     using Scalar = typename FluidSystem::Scalar;
+
+    /// Convenience type alias for a linear sequence of floating-point
+    /// values.
     using ScalarBuffer = std::vector<Scalar>;
 
+    /// Phase index for gas.
     static constexpr auto gasPhaseIdx = FluidSystem::gasPhaseIdx;
+
+    /// Phase index for oil.
     static constexpr auto oilPhaseIdx = FluidSystem::oilPhaseIdx;
+
+    /// Phase index for water.
     static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
 public:
+    /// Call-back function type for collecting cell level dynamic state
+    /// values.
     using AssignmentFunc = std::function<Scalar()>;
+
+    /// Call-back predicate type for inferring MPI characteristics for a
+    /// named well.  Common examples of such characteristics are whether or
+    /// not the current rank "owns" the well or if the well is intersected
+    /// on the current rank.
     using WellQueryFunc = std::function<bool(const std::string&)>;
 
+    /// Constructor.
+    ///
+    /// \param[in] eclState Run's static properties and configurations.
+    ///
+    /// \param[in] schedule Run's dynamic input objects such as its wells
+    /// and RFT configuration.
+    ///
+    /// \param[in] wellIsOwnedByCurrent Predicate for whether or not a
+    /// particular named well object is owned by the current rank.  The RFT
+    /// state data for a particular well will be collected on the owning
+    /// rank for that well.
+    ///
+    /// \param[in] wellOnCurrent Predicate for whether or not a particular
+    /// named well object is intersected on the current rank.  This function
+    /// will typically return \c true for those ranks that have local
+    /// connections for the well and false otherwise.
     RFTContainer(const EclipseState& eclState,
                  const Schedule& schedule,
-                 const WellQueryFunc& wellQuery)
+                 const WellQueryFunc& wellIsOwnedByCurrent,
+                 const WellQueryFunc& wellOnCurrent)
         : eclState_(eclState)
         , schedule_(schedule)
-        , wellQuery_(wellQuery)
+        , wellIsOwnedByCurrentRank_(wellIsOwnedByCurrent)
+        , wellOnCurrentRank_(wellOnCurrent)
     {}
 
-   void addToWells(data::Wells& wellDatas,
-                   const std::size_t reportStepNum,
-                   const Parallel::Communication& comm);
+    /// Export RFT cell level state data to requisite connections.
+    ///
+    /// Will populate the \code cell_pressure \endcode, the \code
+    /// cell_saturation_water \endcode, and the \code cell_saturation_gas
+    /// \endcode data members of the pertinent \code data::Connection
+    /// \endcode objects depending on the run's active phases.
+    ///
+    /// \param[in,out] wellDatas Well and connection level dynamic report
+    /// data at the current report step.  On exit, also contains all
+    /// relevant and available RFT state data for the wells owned by the
+    /// current rank.
+    ///
+    /// \param[in] reportStepNum Report step.  RFT data will be exported
+    /// only for those wells that request such values at this time.
+    ///
+    /// \param[in] comm MPI communication object.  Needed to collect RFT
+    /// state data from all ranks that share a well.
+    void addToWells(data::Wells& wellDatas,
+                    const std::size_t reportStepNum,
+                    const Parallel::Communication& comm);
 
+    /// Prepare internal data structures to collect RFT state.
+    ///
+    /// \param[in] reportStepNum Report step.  RFT data will be exported
+    /// only for those wells that request such values at this time.
     void allocate(const std::size_t reportStepNum);
 
-   void assign(const unsigned cartesianIndex,
+    /// Collect cell level RFT state into internal data structures.
+    ///
+    /// Does nothing if the cell is not among those for which RFT state is
+    /// requested.
+    ///
+    /// \param[in] cartesianIndex Linearised global cell ID.
+    ///
+    /// \param[in] oil Call-back for transferring cell level pressure values
+    /// in cell \p cartesianIndex from the simulator and into the container.
+    /// Will be invoked only if oil is active in the current run.
+    ///
+    /// \param[in] water Call-back for transferring cell level water
+    /// saturation values in cell \p cartesianIndex from the simulator and
+    /// into the container.  Will be invoked only if water is active in the
+    /// current run.
+    ///
+    /// \param[in] gas Call-back for transferring cell level gas saturation
+    /// values in cell \p cartesianIndex from the simulator and into the
+    /// container.  Will be invoked only if gas is active in the current
+    /// run.
+    void assign(const unsigned cartesianIndex,
                 const AssignmentFunc& oil,
                 const AssignmentFunc& water,
                 const AssignmentFunc& gas);
 
 private:
+    /// Run's static properties and configurations.
     const EclipseState& eclState_;
-    const Schedule& schedule_;
-    WellQueryFunc wellQuery_;
 
+    /// Run's dynamic input objects, e.g., wells and RFT configuration.
+    const Schedule& schedule_;
+
+    /// Predicate function for whether or not a particular named well is
+    /// owned by the current rank.
+    ///
+    /// RFT state data will be collected on the well's owning rank.
+    WellQueryFunc wellIsOwnedByCurrentRank_;
+
+    /// Predicate function for whether or not a particular named well is
+    /// intersected on the current rank.
+    ///
+    /// Needed to properly allocate the internal buffers.
+    WellQueryFunc wellOnCurrentRank_;
+
+    /// Cell level oil pressure values for all pertinent well connections.
+    ///
+    /// Keyed by the linearised global cell ID.  Will be populated only if
+    /// oil is active in the current run.
     std::map<std::size_t, Scalar> oilConnectionPressures_;
+
+    /// Cell level water saturation values for all pertinent well
+    /// connections.
+    ///
+    /// Keyed by the linearised global cell ID.  Will be populated only if
+    /// water is active in the current run.
     std::map<std::size_t, Scalar> waterConnectionSaturations_;
+
+    /// Cell level gas saturation values for all pertinent well connections.
+    ///
+    /// Keyed by the linearised global cell ID.  Will be populated only if
+    /// gas is active in the current run.
     std::map<std::size_t, Scalar> gasConnectionSaturations_;
 };
 
