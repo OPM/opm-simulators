@@ -23,26 +23,34 @@
 #define BOOST_TEST_MODULE TestHyprePreconditionerCPU
 #define BOOST_TEST_NO_MAIN
 
-#include <dune/common/parallel/mpihelper.hh>
-#include "MpiFixture.hpp"
-#include "HyprePreconditionerTestHelper.hpp"
-
 #include <boost/test/unit_test.hpp>
 
+#include "HypreTestHelper.hpp"
+#include "MpiFixture.hpp"
+
+
+#include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
-#include <dune/istl/operators.hh>
-#include <dune/istl/solvers.hh>
 
-#include <opm/simulators/linalg/HyprePreconditioner.hpp>
-#include <opm/simulators/linalg/PropertyTree.hpp>
+
+using namespace HypreTestHelpers;
 
 BOOST_GLOBAL_FIXTURE(MPIFixture);
 
-BOOST_AUTO_TEST_CASE(TestHyprePreconditionerCPU)
+BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_CpuInputCpuBackend, HypreTestFixture)
 {
-    testHyprePreconditioner(false);
+    constexpr int N = 100; // 100x100 grid
+    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
+
+    // Create matrix
+    Matrix matrix;
+    setupLaplace2d(N, matrix);
+
+    // Test CPU input with CPU backend
+    testHyprePreconditioner<Matrix, Vector>(matrix, false);
 }
 
 bool init_unit_test_func()
@@ -54,15 +62,7 @@ int main(int argc, char** argv)
 {
     Dune::MPIHelper::instance(argc, argv);
 
-#if HYPRE_RELEASE_NUMBER >= 22900
-    HYPRE_Initialize();
-#else
-    HYPRE_Init();
-#endif
-
     int result = boost::unit_test::unit_test_main(&init_unit_test_func, argc, argv);
-
-    HYPRE_Finalize();
 
     return result;
 }
