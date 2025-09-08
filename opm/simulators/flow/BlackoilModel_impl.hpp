@@ -539,7 +539,6 @@ solveJacobianSystem(BVector& x)
             int b     = jacobian[0][0].N();
 
             bsr_init(bsr_jacobian_,nrows,nnz,b);
-            //bsr_jacobian_->dbl=&jacobian[0][0][0][0];// assuming fixed location
 
             int *rows = bsr_jacobian_->rowptr;
             int *cols = bsr_jacobian_->colidx;
@@ -557,10 +556,11 @@ solveJacobianSystem(BVector& x)
                 irow++;
             }
 
+            bslv_init(slv_memory_, 1e-4, 1024, bsr_jacobian_);
+
             //bsr_info(bsr_jacobian_);
             //bsr_sparsity(bsr_jacobian_,"A");
             //bsr_nonzeros(bsr_jacobian_,"A->dbl");
-            bslv_init(slv_memory_, 1e-6, 1024, bsr_jacobian_);
 
             bildu_prec *P = slv_memory_->P;
             bildu_info(P);
@@ -569,13 +569,14 @@ solveJacobianSystem(BVector& x)
             bsr_sparsity(P->U,"U");
 
         }
+/*
         else
         {
             printf("bsr_jacobian already initialized\n");
             bsr_info(bsr_jacobian_);
             //bsr_nonzeros(bsr_jacobian_,"A->dbl");
         }
-
+*/
         // transpose each dense block to make them column-major
         double M[9];
         double const *data = &jacobian[0][0][0][0];// assuming c-contiguous data
@@ -584,16 +585,19 @@ solveJacobianSystem(BVector& x)
             for(int i=0;i<3;i++) for(int j=0;j<3;j++) M[3*j+i] = data[9*k + 3*i + j];
             for(int i=0;i<9;i++) bsr_jacobian_->dbl[9*k + i] = M[i];
         }
+        bsr_downcast(bsr_jacobian_);
 
         double *r =&residual[0][0]; //address of first element of block vector (assumes contiguous layout)
-
+/*
         int n = (bsr_jacobian_->b)*(bsr_jacobian_->nrows);
         bildu_prec *P = slv_memory_->P;
         bildu_factorize(P, bsr_jacobian_);
         headtail(r,n,"r");
         bildu_apply3(P,r);
         headtail(r,n,"Pr");
+*/
 
+        bslv_pbicgstab3(slv_memory_, bsr_jacobian_, r, &x[0][0]);
         getchar();
 
 
