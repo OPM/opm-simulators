@@ -63,10 +63,17 @@ public:
                                     const bool injector,
                                     const bool network = false);
 
-    static Scalar satelliteProduction(const SummaryState& summaryState,
-                                      const ScheduleState& sched,
-                                      const std::vector<std::string>& groups,
-                                      const GSatProd::GSatProdGroupProp::Rate rateComp);
+    static Scalar satelliteInjectionRate(const ScheduleState& sched,
+                                         const Group& group,
+                                         const PhaseUsageInfo<IndexTraits>& pu,
+                                         const int phase_pos,
+                                         bool res_rates);
+
+    static Scalar satelliteProductionRate(const SummaryState& summaryState,
+                                          const ScheduleState& sched,
+                                          const Group& group,
+                                          const GSatProd::GSatProdGroupProp::Rate rateComp,
+                                          bool res_rates);
 
     static std::optional<GSatProd::GSatProdGroupProp::Rate>
     selectRateComponent(const PhaseUsageInfo<IndexTraits>& pu, const int phasePos);
