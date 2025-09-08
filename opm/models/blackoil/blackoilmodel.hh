@@ -513,6 +513,9 @@ public:
 
     /*!
      * \copydoc FvBaseDiscretization::eqWeight
+     *
+     * \param globalDofIdx Global DOF
+     * \param eqIdx Equation index
      */
     Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
     {

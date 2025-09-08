@@ -129,6 +129,8 @@ namespace Opm
         static PIDTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
+        /// \param dt Time step length
+        /// \param relativeChange Relative change handler
         double computeTimeStepSize(const double dt,
                                    const int /* iterations */,
                                    const RelativeChangeInterface& relativeChange,
@@ -185,6 +187,9 @@ namespace Opm
         static PIDAndIterationCountTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
+        /// \param dt Time step length
+        /// \param iterations Number of iterations used
+        /// \param relativeChange Relative change handler
         double computeTimeStepSize(const double dt,
                                    const int iterations,
                                    const RelativeChangeInterface& relativeChange,
@@ -312,6 +317,8 @@ namespace Opm
         static HardcodedTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
+        /// \param dt Time step length
+        /// \param substepTimer Sub step timer
         double computeTimeStepSize(const double dt,
                                    const int /* iterations */,
                                    const RelativeChangeInterface& /*relativeChange */,

@@ -18,8 +18,10 @@
 */
 #ifndef OPM_CUISTL_VECTOR_OPERATIONS_HPP
 #define OPM_CUISTL_VECTOR_OPERATIONS_HPP
+
 #include <cstddef>
 #include <cublas_v2.h>
+
 namespace Opm::gpuistl::detail
 {
 
@@ -68,8 +70,9 @@ void syncFromRecvBuf(T* deviceA, T* buffer, size_t numberOfElements, const int* 
  * @param squareBlockVector A GpuVector whose elements are NxN matrix blocks
  * @param numberOfRows The number of rows in the vector
  * @param blocksize The sidelength of the square block elements in the vector
- * @param src_vec A pointer to the data of the GpuVector we multiply the blockvector with
- * @param[out] dst_vec A pointer to the data of the GpuVector we store the result in
+ * @param relaxationFactor Relaxation factor to use
+ * @param srcVec A pointer to the data of the GpuVector we multiply the blockvector with
+ * @param[out] dstVec A pointer to the data of the GpuVector we store the result in
  *
  * @note This is implemented as a faster way to multiply a diagonal matrix with a blockvector. We need only store the
  * diagonal of the matrix and use this product.
@@ -81,5 +84,7 @@ void weightedDiagMV(const T* squareBlockVector,
                     T relaxationFactor,
                     const T* srcVec,
                     T* dstVec);
+
 } // namespace Opm::gpuistl::detail
+
 #endif

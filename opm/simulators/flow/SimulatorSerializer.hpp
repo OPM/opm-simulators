@@ -55,9 +55,12 @@ struct SerializableSim {
 class SimulatorSerializer {
 public:
     //! \brief Constructor inits parameters.
+    //! \param simulator Reference to a serializable simulator
+    //! \param comm Parallel communicator to use
+    //! \param ioconfig I/O configuration object
     //! \param saveSpec Specification of steps to save
     //! \param loadStep Step to load
-    //! \paramn saveFile File to save to
+    //! \param saveFile File to save to
     //! \param loadFile File to load from
     SimulatorSerializer(SerializableSim& simulator,
                         Parallel::Communication& comm,

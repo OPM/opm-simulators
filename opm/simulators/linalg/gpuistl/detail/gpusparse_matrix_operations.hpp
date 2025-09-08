@@ -18,10 +18,12 @@
 */
 #ifndef OPM_GPUISTL_GPUSPARSE_MATRIX_OPERATIONS_HPP
 #define OPM_GPUISTL_GPUSPARSE_MATRIX_OPERATIONS_HPP
+
 #include <cstddef>
-#include <vector>
+
 namespace Opm::gpuistl::detail
 {
+
 /**
  * @brief Reorders the elements of a matrix by copying them from one matrix to another using a permutation list
  * @param srcMatrix The source matrix we will copy data from
@@ -31,6 +33,7 @@ namespace Opm::gpuistl::detail
  * format
  * @param naturalToReordered Permuation list that converts indices in the src matrix to the indices in the dst matrix
  * @param numberOfRows The number of rows in the matrices
+ * @param threadBlockSize Block size for threads
  */
 template <class T, int blocksize>
 void copyMatDataToReordered(const T* srcMatrix,
@@ -44,16 +47,18 @@ void copyMatDataToReordered(const T* srcMatrix,
 /**
  * @brief Reorders the elements of a matrix by copying them from one matrix to a split matrix using a permutation list
  * @param srcMatrix The source matrix we will copy data from
- * @param srcRowIndices Pointer to vector on GPU containing row indices for the source matrix compliant wiht bsr format
+ * @param srcRowIndices Pointer to vector on GPU containing row indices for the source matrix compliant with bsr format
+ * @param srcColumnIndices Pointer to vector on GPU containing column indices for the source matrix compliant with bsr format
  * @param [out] dstLowerMatrix The destination of entries that originates from the strictly lower triangular matrix
- * @param dstRowIndices Pointer to vector on GPU containing rww indices for the destination lower matrix compliant wiht
+ * @param dstLowerRowIndices Pointer to vector on GPU containing rww indices for the destination lower matrix compliant wiht
  * bsr format
  * @param [out] dstUpperMatrix The destination of entries that originates from the strictly upper triangular matrix
- * @param dstRowIndices Pointer to vector on GPU containing riw indices for the destination upper matrix compliant wiht
+ * @param dstUpperRowIndices Pointer to vector on GPU containing riw indices for the destination upper matrix compliant wiht
  * bsr format
  * @param [out] dstDiag The destination buffer for the diagonal part of the matrix
  * @param naturalToReordered Permuation list that converts indices in the src matrix to the indices in the dst matrix
  * @param numberOfRows The number of rows in the matrices
+ * @param threadBlockSize Block size for threads
  */
 template <class T, int blocksize>
 void copyMatDataToReorderedSplit(const T* srcMatrix,
@@ -69,4 +74,5 @@ void copyMatDataToReorderedSplit(const T* srcMatrix,
                                  int threadBlockSize);
 
 } // namespace Opm::gpuistl::detail
+
 #endif

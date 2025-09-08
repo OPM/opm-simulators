@@ -101,7 +101,7 @@ public:
      * specialize to a Dune::PartitionSet<>.
      *
      * @param gridView The gridView
-     * @param PartitionSet<> the set of cells from which to extract geometric data
+     * @param dunePartition the set of cells from which to extract geometric data
      *
      *  The PartitionSet of the data can be specified from one of:
      *   Dune::Partitions::all
@@ -156,7 +156,7 @@ public:
 
       @param x_inout to be filled with x coordinate verticies
       @param y_inout to be filled with y coordinate verticies
-      @param y_inout to be filled with z coordinate verticies
+      @param z_inout to be filled with z coordinate verticies
       @param max_size the maximum number of elements of type T that can be
              written to the input pointer memory regions.
 
@@ -171,7 +171,7 @@ public:
 
       @param x_inout to be filled with x coordinate verticies
       @param y_inout to be filled with y coordinate verticies
-      @param y_inout to be filled with z coordinate verticies
+      @param z_inout to be filled with z coordinate verticies
 
       All parameters must have a size() and data() method (e.g. a std::vector<T>)
       and the current size() must be big enough

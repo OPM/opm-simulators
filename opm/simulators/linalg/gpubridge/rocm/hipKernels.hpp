@@ -46,7 +46,7 @@ public:
     /// Transform blocked vector to scalar vector using pressure-weights, where every workitem handles one blockrow
     /// \param[in]  fine_y     Input y vector
     /// \param[in]  weights    Weights used to combine cells
-    /// \param[out] course_y   Output y vector 
+    /// \param[out] coarse_y   Output y vector
     /// \param[in]  Nb         Number of blocks in the original matrix
     /// \param[in]  stream     Hip stream to use for the computations
     static void full_to_pressure_restriction(const Scalar* fine_y,

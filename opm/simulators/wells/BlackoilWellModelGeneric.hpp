@@ -367,7 +367,7 @@ protected:
     void reportGroupSwitching(DeferredLogger& local_deferredLogger) const;
 
     /// \brief Create the parallel well information
-    /// \param localWells The local wells from ECL schedule
+    /// \param wells The local wells from ECL schedule
     std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>
     createLocalParallelWellInfo(const std::vector<Well>& wells);
 
@@ -410,7 +410,7 @@ protected:
     /// few quantities, like the D factor, the Kh product and the CTF, for
     /// shut connections.
     ///
-    /// \param[in] reportStepIdx Zero-based index of current report step.
+    /// \param[in] reportStepIndex Zero-based index of current report step.
     void assignShutConnections(data::Wells& wsrpt,
                                const int reportStepIndex) const;
 

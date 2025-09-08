@@ -78,7 +78,7 @@ public:
     //! \param[in] nonZeroElements the non-zero values of the matrix
     //! \param[in] rowIndices      the row indices of the non-zero elements
     //! \param[in] columnIndices   the column indices of the non-zero elements
-    //! \param[in] numberOfNonzeroElements number of nonzero elements
+    //! \param[in] numberOfNonzeroBlocks number of nonzero elements
     //! \param[in] blockSize size of each block matrix (typically 3)
     //! \param[in] numberOfRows the number of rows
     //!
@@ -307,6 +307,7 @@ public:
 
     /**
      * @brief umv computes y=alpha * Ax + y
+     * @param[in] alpha The scaling factor for the matrix-vector product
      * @param[in] x the vector to multiply with A
      * @param[inout] y the vector to add and store the output in
      */

@@ -41,15 +41,18 @@ namespace Opm
     {
     public:
         /// \brief constructor taking a simulator timer to determine start and end time
-        ///  \param timer          in case of sub stepping this is the outer timer
-        ///  \param lastStepTaken  last suggested time step
-        ///  \param maxTimeStep    maximum time step allowed
-        AdaptiveSimulatorTimer( const boost::posix_time::ptime simulation_start_time,
-                                const double step_length,
-                                const double elapsed_time,
-                                const double last_step_taken,
-                                const int report_step,
-                                const double max_time_step = std::numeric_limits<double>::max() );
+        ///  \param simulation_start_time Start time for simulation
+        ///  \param step_length Time step length
+        ///  \param elapsed_time Current elapsed time
+        ///  \param last_step_taken Last suggested time step
+        ///  \param report_step Current report step index
+        ///  \param max_time_step    maximum time step allowed
+        AdaptiveSimulatorTimer(const boost::posix_time::ptime simulation_start_time,
+                               const double step_length,
+                               const double elapsed_time,
+                               const double last_step_taken,
+                               const int report_step,
+                               const double max_time_step = std::numeric_limits<double>::max());
 
         /// \brief advance time by currentStepLength
         AdaptiveSimulatorTimer& operator++ ();

@@ -309,7 +309,7 @@ namespace Opm {
              *
              * \param[in] rsw Dissolved gas/water ratio.
              *
-             * \param[in] rwv Vaporised water/gas ratio.
+             * \param[in] rvw Vaporised water/gas ratio.
              *
              * \param[in] T Temperature.  Unused in non-thermal simulation
              *    runs.
@@ -350,7 +350,7 @@ namespace Opm {
              * \param[in] pvtRegionIdx PVT region of the well
              *
              *
-             * \param[out] double Surface-to-reservoir conversion
+             * \param[out] coeff Surface-to-reservoir conversion
              * coefficients for solvent.
              */
             template <class SolventModule>

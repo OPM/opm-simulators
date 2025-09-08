@@ -186,6 +186,12 @@ public:
 
     /*!
      * \copydoc FvBaseProblem::handlePositionalParameter
+     *
+     * \param addKey Callback for adding a key-value pair
+     * \param seenParams Already seen parameters
+     * \param errorMsg Error message
+     * \param argv Command line parameters
+     * \param paramIdx Index of parameter to handle
      */
     static int handlePositionalParameter(std::function<void(const std::string&,
                                                             const std::string&)> addKey,

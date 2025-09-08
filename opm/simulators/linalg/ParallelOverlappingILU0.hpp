@@ -278,7 +278,7 @@ public:
 
       Constructor gets all parameters to operate the prec.
       \param A The matrix to operate on.
-      \param n ILU fill in level (for testing). This does not work in parallel.
+      \param comm Parallel communicator
       \param w The relaxation factor.
       \param milu The modified ILU variant to use. 0 means traditional ILU. \see MILU_VARIANT.
       \param interiorSize The number of interior/owner rows in the matrix.

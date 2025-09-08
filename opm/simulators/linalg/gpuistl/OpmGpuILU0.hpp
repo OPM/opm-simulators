@@ -68,10 +68,17 @@ public:
     //! \brief Constructor.
     //!
     //!  Constructor gets all parameters to operate the prec.
-    //! \param A The matrix to operate on.
-    //! \param w The relaxation factor.
+    //! \param gpuMatrix The GPU matrix to operate on.
+    //! \param cpuMatrix The CPU matrix to operate on.
+    //! \param splitMatrix True to split matrix
+    //! \param tuneKernels True to tune kernels
+    //! \param mixedPrecisionScheme Mixed precision scheme to use
     //!
-    explicit OpmGpuILU0(const GpuMatrix& gpuMatrix, const CPUMatrixT& cpuMatrix, bool splitMatrix, bool tuneKernels, int mixedPrecisionScheme);
+    explicit OpmGpuILU0(const GpuMatrix& gpuMatrix,
+                        const CPUMatrixT& cpuMatrix,
+                        bool splitMatrix,
+                        bool tuneKernels,
+                        int mixedPrecisionScheme);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
