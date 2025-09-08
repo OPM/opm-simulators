@@ -1820,7 +1820,6 @@ namespace Opm
     {
         Scalar density = this->connections_.rho(0);
         density = this->parallel_well_info_.broadcastFirstPerforationValue(density);
-        assert(density!=0 && "Owning rank should have at least one perforation.");
         return density;
     }
 
