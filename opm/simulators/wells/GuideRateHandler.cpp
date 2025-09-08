@@ -115,10 +115,7 @@ receiveMasterGroupPotentialsFromSlaves()
 {
     assert(this->isReservoirCouplingMaster());
     auto& rescoup_master = this->reservoirCouplingMaster();
-    const auto& comm = rescoup_master.getComm();
-    if (comm.rank() == 0) {
-        rescoup_master.receivePotentialsFromSlaves();
-    }
+    rescoup_master.receivePotentialsFromSlaves();
 }
 #endif
 

@@ -141,32 +141,44 @@ struct SimulatorFixture
 {
     using Simulator = Opm::MainTestWrapper::Simulator;
     SimulatorFixture() :
-        simulator_wrapper{
+        simulator_wrapper_{
             /*prog_name=*/"flow_test_chopstep",
             /*deck_filename=*/"RC-01_MAST_PRED.DATA",
             /*args=*/{"--parsing-strictness=low"}  // Need this until PR #5643 is merged
         },
-        simulator{simulator_wrapper.getSimulatorPtr()},
-        schedule{simulator->vanguard().schedule()},
-        rc_master{Opm::FlowGenericVanguard::comm(), schedule, 0, nullptr},
-        start_date{static_cast<double>(schedule.getStartTime())}
+        simulator_{simulator_wrapper_.getSimulatorPtr()},
+        schedule_{simulator_->vanguard().schedule()},
+        rc_master_{Opm::FlowGenericVanguard::comm(), schedule_, 0, nullptr},
+        start_date_{static_cast<double>(schedule_.getStartTime())}
     {
-        rc_master.addSlaveName("RES-1");
-        rc_master.addSlaveName("RES-2");
-        rc_master.resizeSlaveStartDates(2);
-        rc_master.resizeNextReportDates(2);
+        rc_master_.addSlaveName("RES-1");
+        rc_master_.addSlaveName("RES-2");
+        rc_master_.resizeSlaveActivationDates(2);
+        rc_master_.resizeNextReportDates(2);
+        rc_master_.resizeSlaveStartDates(2);
+        rc_master_.setSlaveStartDate(0, start_date_);
+        rc_master_.setSlaveStartDate(1, start_date_);
     }
 
-    void setSlaveStartDateAndNextReportTimeOffset(int slave_number, double slave_start_date, double report_time_step_size)
-    {
-        rc_master.setSlaveStartDate(slave_number, slave_start_date);
-        rc_master.setSlaveNextReportTimeOffset(slave_number, report_time_step_size);
+    void checkEq(double a, double b) const { BOOST_CHECK_CLOSE(a, b, 1e-16); }
+    const Opm::ReservoirCouplingMaster& getRcMaster() const { return rc_master_; }
+    double getStartDate() const { return start_date_; }
+    double runChopSubStep(double report_time_step_size) const {
+        return rc_master_.maybeChopSubStep(report_time_step_size, /*elapsed_time=*/0.0);
     }
-    OpmSimulatorTestCase simulator_wrapper;
-    Simulator *simulator;
-    Opm::Schedule& schedule;
-    Opm::ReservoirCouplingMaster rc_master;
-    double start_date;
+
+    void updateSlaveData(int slave_number, double activation_date, double report_time_step_size)
+    {
+        rc_master_.setSlaveActivationDate(slave_number, activation_date);
+        rc_master_.setSlaveNextReportTimeOffset(slave_number, report_time_step_size);
+    }
+
+private:
+    OpmSimulatorTestCase simulator_wrapper_;
+    Simulator *simulator_;
+    Opm::Schedule& schedule_;
+    Opm::ReservoirCouplingMaster rc_master_;
+    double start_date_;
 };
 
 struct GlobalTestFixture
@@ -196,92 +208,111 @@ BOOST_FIXTURE_TEST_SUITE(ResCoupTestSuite, SimulatorFixture)
 
 BOOST_AUTO_TEST_CASE(NoChop)
 {
-    BOOST_CHECK_EQUAL(start_date, 1538352000);  // 1538352000 = 2018-10-01 00:00:00
-    double time_step = 60*60*24;  // 1 day
-    double elapsed_time = 0.0;
+    auto master_start_date = getStartDate();
+    BOOST_CHECK_EQUAL(master_start_date, 1538352000);  // 1538352000 = 2018-10-01 00:00:00
+    auto master_activation_date = master_start_date;
+    double master_suggested_time_step = 60*60*24;  // 1 day
     auto tol = Opm::ReservoirCoupling::Seconds::reltol / 2;
 
-    // Check that the time step is not chopped when slave processes have identical start dates
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0, /*start_date=*/start_date, /*report_time_step_size=*/time_step);
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1, /*start_date=*/start_date, /*report_time_step_size=*/time_step);
-    auto new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
-    BOOST_CHECK_CLOSE(new_time_step, time_step, 1e-16);
+    {
+        // Check that the time step is not chopped when slave processes have identical activation dates
+        auto activation_date = master_activation_date;
+        auto report_time_step_size = master_suggested_time_step;
+        updateSlaveData(/*slave_number=*/0, activation_date, report_time_step_size);
+        updateSlaveData(/*slave_number=*/1, activation_date, report_time_step_size);
+        auto new_suggested_time_step = runChopSubStep(master_suggested_time_step);
+        checkEq(new_suggested_time_step, master_suggested_time_step);
+    }
 
-    // Check that the time step is not chopped when slave processes start at the same time as
-    // the master but their report steps end after the master process
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0, /*start_date=*/start_date, /*report_time_step_size=*/time_step+1);
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1, /*start_date=*/start_date, /*report_time_step_size=*/time_step+2);
-    new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
-    BOOST_CHECK_CLOSE(new_time_step, time_step, 1e-16);
+    {
+        // Check that the time step is not chopped when slave processes start at the same time as
+        // the master but their report steps end after the master process
+        auto activation_date = master_activation_date;
+        auto report_time_step_size = master_suggested_time_step;
+        updateSlaveData(/*slave_number=*/0, activation_date, report_time_step_size+1);
+        updateSlaveData(/*slave_number=*/1, activation_date, report_time_step_size+2);
+        auto new_suggested_time_step = runChopSubStep(master_suggested_time_step);
+        checkEq(new_suggested_time_step, master_suggested_time_step);
+    }
 
-    // Check that the time step is not chopped when slave processes start at the same time as
-    // the master but their report steps end before the master process but within the tolerance
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0, /*start_date=*/start_date, /*report_time_step_size=*/time_step-tol);
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1, /*start_date=*/start_date, /*report_time_step_size=*/time_step+2);
-    new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
-    BOOST_CHECK_CLOSE(new_time_step, time_step, 1e-16);
+    {
+        // Check that the time step is not chopped when slave processes start at the same time as
+        // the master but their report steps end before the master process but within the tolerance
+        auto activation_date = master_activation_date;
+        auto report_time_step_size = master_suggested_time_step;
+        updateSlaveData(/*slave_number=*/0, activation_date, report_time_step_size-tol);
+        updateSlaveData(/*slave_number=*/1, activation_date, report_time_step_size+2);
+        auto new_suggested_time_step = runChopSubStep(master_suggested_time_step);
+        checkEq(new_suggested_time_step, master_suggested_time_step);
+    }
 
-    // Check that the time step is not chopped when slave processes start before
-    // the master but their report steps end after the master process
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0, /*start_date=*/start_date-1, /*report_time_step_size=*/time_step+1+tol);
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1, /*start_date=*/start_date-2, /*report_time_step_size=*/time_step+2+tol);
-    new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
-    BOOST_CHECK_CLOSE(new_time_step, time_step, 1e-16);
+    {
+        // Check that the time step is not chopped when slave processes start before
+        // the master but their report steps end after the master process
+        auto activation_date1 = master_activation_date-1;
+        auto activation_date2 = master_activation_date-2;
+        auto report_time_step_size = master_suggested_time_step;
+        updateSlaveData(/*slave_number=*/0, activation_date1, report_time_step_size+1+tol);
+        updateSlaveData(/*slave_number=*/1, activation_date2, report_time_step_size+2+tol);
+        auto new_suggested_time_step = runChopSubStep(master_suggested_time_step);
+        checkEq(new_suggested_time_step, master_suggested_time_step);
+    }
 
-    // Check that the time step is not chopped when slave processes starts after the master's
-    // report step has ended
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0,
-                /*start_date=*/start_date+time_step+1,
-                /*report_time_step_size=*/time_step);
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1,
-                 /*start_date=*/start_date+time_step+tol,
-                 /*report_time_step_size=*/time_step);
-    new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
-    BOOST_CHECK_CLOSE(new_time_step, time_step, 1e-16);
+    {
+        // Check that the time step is not chopped when slave processes starts after the master's
+        // report step has ended
+        auto activation_date1 = master_activation_date+master_suggested_time_step+1;
+        auto activation_date2 = master_activation_date+master_suggested_time_step+tol;
+        auto report_time_step_size = master_suggested_time_step;
+        updateSlaveData(/*slave_number=*/0, activation_date1, report_time_step_size);
+        updateSlaveData(/*slave_number=*/1, activation_date2, report_time_step_size);
+        auto new_suggested_time_step = runChopSubStep(master_suggested_time_step);
+        checkEq(new_suggested_time_step, master_suggested_time_step);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(Chop)
 {
-    BOOST_CHECK_EQUAL(start_date, 1538352000);  // 1538352000 = 2018-10-01 00:00:00
-    double time_step = 60*60*24;  // 1 day
-    double elapsed_time = 0.0;
-    double tol;
-    double new_time_step;
+    auto master_start_date = getStartDate();
+    BOOST_CHECK_EQUAL(master_start_date, 1538352000);  // 1538352000 = 2018-10-01 00:00:00
+    auto master_activation_date = master_start_date;
+    double master_suggested_time_step = 60*60*24;  // 1 day
 
-    // Check that the time step is chopped when slave processes start in the middle of the master's
-    // report step
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0,
-                /*start_date=*/start_date+time_step/2,
-                /*report_time_step_size=*/time_step);
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1,
-                 /*start_date=*/start_date+time_step/2,
-                 /*report_time_step_size=*/time_step);
-    new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
-    BOOST_CHECK_CLOSE(new_time_step, time_step/2, 1e-16);
+    {
+        // Check that the time step is chopped when slave processes start in the middle of the master's
+        // report step
+        auto activation_date = master_activation_date + master_suggested_time_step/2;
+        auto report_time_step_size = master_suggested_time_step;
+        updateSlaveData(/*slave_number=*/0, activation_date, report_time_step_size);
+        updateSlaveData(/*slave_number=*/1, activation_date, report_time_step_size);
+        auto new_suggested_time_step = runChopSubStep(master_suggested_time_step);
+        checkEq(new_suggested_time_step, master_suggested_time_step/2);
+    }
+    {
+        // Check that the time step is chopped when slave processes start at the beginning of the master's
+        // report step, but ends within but just outside the tolerance of the master's report step
+        // NOTE: microseconds are approximately the smallest time units that can be represented accurately
+        // for epoch values in this century (2000-2100), so first check this
+        double tol = 1e-8;  // This is then too small, and should not cause the time step to be chopped
+        auto activation_date = master_activation_date;
+        auto report_time_step_size = master_suggested_time_step;
+        updateSlaveData(/*slave_number=*/0, activation_date, report_time_step_size - tol);
+        updateSlaveData(/*slave_number=*/1, activation_date, report_time_step_size);
+        auto new_suggested_time_step = runChopSubStep(master_suggested_time_step);
+        checkEq(new_suggested_time_step, master_suggested_time_step);
+    }
 
-    // Check that the time step is chopped when slave processes start at the beginning of the master's
-    // report step, but ends within but just outside the tolerance of the master's report step
-    // NOTE: microseconds are approximately the smallest time units that can be represented accurately
-    // for epoch values in this century (2000-2100), so first check this
-    tol = 1e-8;  // This is then too small, and should not cause the time step to be chopped
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0,
-                /*start_date=*/start_date,
-                /*report_time_step_size=*/time_step - tol);
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1,
-                 /*start_date=*/start_date+time_step,
-                 /*report_time_step_size=*/time_step);
-    new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
-    BOOST_CHECK(Opm::ReservoirCoupling::Seconds::compare_eq(new_time_step, time_step));
-    tol = 1e-5;  // This is greater than 1e-6 small, and should cause the time step to be chopped
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0,
-                /*start_date=*/start_date,
-                /*report_time_step_size=*/time_step - tol);
-    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1,
-                 /*start_date=*/start_date+time_step,
-                 /*report_time_step_size=*/time_step);
-    new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
-    BOOST_CHECK(!Opm::ReservoirCoupling::Seconds::compare_gt_or_eq(new_time_step, time_step));
-
+    {
+        // This is greater than 1e-6 small, and should cause the time step to be chopped
+        double tol = 1e-5;
+        auto activation_date = master_activation_date;
+        auto report_time_step_size = master_suggested_time_step;
+        updateSlaveData(/*slave_number=*/0, activation_date, report_time_step_size - tol);
+        updateSlaveData(/*slave_number=*/1, activation_date, report_time_step_size);
+        auto new_suggested_time_step = runChopSubStep(master_suggested_time_step);
+        BOOST_CHECK(!Opm::ReservoirCoupling::Seconds::compare_gt_or_eq(
+            new_suggested_time_step, master_suggested_time_step));
+    }
 }
 
-BOOST_AUTO_TEST_SUITE_END() 
+BOOST_AUTO_TEST_SUITE_END()

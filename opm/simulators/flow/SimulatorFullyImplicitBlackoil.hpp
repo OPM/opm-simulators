@@ -507,6 +507,7 @@ public:
 #ifdef RESERVOIR_COUPLING_ENABLED
             if (this->reservoirCouplingMaster_) {
                 this->reservoirCouplingMaster_->maybeSpawnSlaveProcesses(timer.currentStepNum());
+                this->reservoirCouplingMaster_->maybeActivate(timer.currentStepNum());
             }
             else if (this->reservoirCouplingSlave_) {
                 this->reservoirCouplingSlave_->maybeActivate(timer.currentStepNum());

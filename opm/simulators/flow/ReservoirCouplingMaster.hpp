@@ -43,7 +43,7 @@ public:
         int argc, char **argv
     );
 
-    bool activated() { return this->numSlavesStarted() > 0; }
+    bool activated() { return this->activated_; }
     void addSlaveCommunicator(MPI_Comm comm) {
          this->master_slave_comm_.push_back(comm);
     }
@@ -51,6 +51,7 @@ public:
     void addSlaveNextReportTimeOffset(double offset) {
          this->slave_next_report_time_offsets_.push_back(offset);
     }
+    void addSlaveActivationDate(double date) { this->slave_activation_dates_.push_back(date); }
     void addSlaveStartDate(std::time_t date) { this->slave_start_dates_.push_back(date); }
     void clearDeferredLogger() { logger_.clearDeferredLogger(); }
     double getActivationDate() const { return this->activation_date_; }
@@ -68,18 +69,23 @@ public:
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
          return this->master_group_slave_names_;
     }
+    double getSlaveActivationDate(int index) const { return this->slave_activation_dates_[index]; }
+    const double *getSlaveActivationDates() const { return this->slave_activation_dates_.data(); }
     double getSimulationStartDate() const { return this->schedule_.getStartTime(); }
     MPI_Comm getSlaveComm(int index) const { return this->master_slave_comm_[index]; }
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name);
     const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }
     const double *getSlaveStartDates() { return this->slave_start_dates_.data(); }
     bool isMasterGroup(const std::string &group_name) const;
+    void maybeActivate(int report_step);
+    void maybeReceiveActivationHandshakeFromSlaves(double current_time);
     double maybeChopSubStep(double suggested_timestep, double current_time) const;
     void maybeSpawnSlaveProcesses(int report_step);
     std::size_t numSlaveGroups(unsigned int index);
     std::size_t numSlavesStarted() const;
     void receiveNextReportDateFromSlaves();
     void receivePotentialsFromSlaves();
+    void resizeSlaveActivationDates(int size) { this->slave_activation_dates_.resize(size); }
     void resizeSlaveStartDates(int size) { this->slave_start_dates_.resize(size); }
     void resizeNextReportDates(int size) { this->slave_next_report_time_offsets_.resize(size); }
     void sendNextTimeStepToSlaves(double next_time_step);
@@ -87,10 +93,12 @@ public:
          this->logger_.setDeferredLogger(deferred_logger);
     }
     // These are currently only used for unit testing
+    void setSlaveActivationDate(int index, double date) { this->slave_activation_dates_[index] = date; }
     void setSlaveStartDate(int index, std::time_t date) { this->slave_start_dates_[index] = date; }
     void setSlaveNextReportTimeOffset(int index, double offset) {
          this->slave_next_report_time_offsets_[index] = offset;
     }
+    bool slaveIsActivated(int index) const { return this->slave_activation_status_[index] != 0; }
     void updateMasterGroupNameOrderMap(
         const std::string& slave_name, const std::map<std::string, std::size_t>& master_group_map);
 
@@ -101,6 +109,8 @@ private:
     const Schedule& schedule_;
     int argc_;
     char **argv_;
+    // Whether the master process has activated the reservoir coupling
+    bool activated_{false};
     // NOTE: MPI_Comm is just an integer handle, so we can just copy it into the vector
     std::vector<MPI_Comm> master_slave_comm_; // MPI communicators for the slave processes
     std::vector<std::string> slave_names_;
@@ -111,6 +121,8 @@ private:
     // which can include milliseconds. The double values are also convenient when we need to
     // to add fractions of seconds for sub steps to the start date.
     std::vector<double> slave_start_dates_;
+    // The activation dates are in whole seconds since the epoch.
+    std::vector<double> slave_activation_dates_;
     // Elapsed time from the beginning of the simulation
     std::vector<double> slave_next_report_time_offsets_;
     double activation_date_{0.0};  // The date when SLAVES is encountered in the schedule
@@ -118,6 +130,10 @@ private:
     //  potentials to the master process.
     std::map<std::string, std::map<std::string, std::size_t>> master_group_name_order_;
     ReservoirCoupling::Logger logger_;
+    // Whether the slave has activated. Unfortunatley, we cannot use std::vector<bool> since
+    // it is not supported to get a pointer to the underlying array of bools needed
+    // with MPI broadcast().
+    std::vector<std::uint8_t> slave_activation_status_;
     // Potentials for oil, gas, and water rates for each slave group
     std::map<std::string, std::vector<Potentials>> slave_group_potentials_;
     // A mapping from master group names to slave names
