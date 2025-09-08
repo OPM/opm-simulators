@@ -55,10 +55,14 @@ namespace Opm
         /// compute new time step size suggestions based on the PID controller
         /// \param dt          time step size used in the current step
         /// \param iterations  number of iterations used (linear/nonlinear)
-        /// \param timeError   object to compute || u^n+1 - u^n || / || u^n+1 ||
+        /// \param relativeChange Relative change handler
+        /// \param substepTimer Sub step timer
         ///
         /// \return suggested time step size for the next step
-        virtual double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange , const AdaptiveSimulatorTimer& substepTimer) const = 0;
+        virtual double computeTimeStepSize(const double dt,
+                                           const int iterations,
+                                           const RelativeChangeInterface& relativeChange,
+                                           const AdaptiveSimulatorTimer& substepTimer) const = 0;
 
         /// For the general 3rd order controller, the internal shifting of errors and time steps happens here, and
         /// hence this method needs to be called for (after) each time step

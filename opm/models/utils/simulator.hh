@@ -392,7 +392,7 @@ public:
      * size won't exceed the episode or the end of the simulation,
      * though.
      *
-     * \param timeStepSize The new value for the time step size \f$\mathrm{[s]}\f$
+     * \param value The new value for the time step size \f$\mathrm{[s]}\f$
      */
     void setTimeStepSize(Scalar value)
     { timeStepSize_ = value; }
@@ -400,7 +400,7 @@ public:
     /*!
      * \brief Set the current time step index to a given value.
      *
-     * \param timeStepIndex The new value for the time step index
+     * \param value The new value for the time step index
      */
     void setTimeStepIndex(unsigned value)
     { timeStepIdx_ = value; }

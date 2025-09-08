@@ -54,6 +54,9 @@ public:
      * @param vapour Gas phase
      * @param thp Tubing head pressure
      * @param alq Artificial lift or other parameter
+     * @param explicit_wfr Explicit wfr
+     * @param explicit_gfr Explicit gfr
+     * @param use_expvfp True to use explicit VFP calculations
      *
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table, for each entry in the
@@ -78,6 +81,9 @@ public:
      * @param vapour Gas phase
      * @param thp Tubing head pressure
      * @param alq Artificial lift or other parameter
+     * @param explicit_wfr Explicit wfr
+     * @param explicit_gfr Explicit gfr
+     * @param use_expvfp True to use explicit VFP calculations
      *
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
@@ -100,6 +106,9 @@ public:
      * @param vapour Gas phase
      * @param bhp Bottom hole pressure
      * @param alq Artificial lift or other parameter
+     * @param explicit_wfr Explicit wfr
+     * @param explicit_gfr Explicit gfr
+     * @param use_expvfp True to use explicit VFP calculations
      *
      * @return The tubing hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
@@ -110,7 +119,7 @@ public:
                const Scalar vapour,
                const Scalar bhp,
                const Scalar alq,
-               const Scalar explicit_wrf,
+               const Scalar explicit_wfr,
                const Scalar explicit_gfr,
                const bool use_expvfp) const;
 

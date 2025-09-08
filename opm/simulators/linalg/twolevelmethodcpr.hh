@@ -106,7 +106,7 @@ public:
    * coarse level system and initialies the left hand side
    * of the coarse level system. These can afterwards be accessed
    * usinf getCoarseLevelRhs() and getCoarseLevelLhs().
-   * @param fineDefect The current residual of the fine level system.
+   * @param fineRhs The current residual of the fine level system.
    */
   virtual void moveToCoarseLevel(const FineRangeType& fineRhs)=0;
   /**
@@ -424,15 +424,13 @@ public:
   /**
    * @brief Constructs a two level method.
    *
-   * @tparam CoarseSolverPolicy The policy for constructing the coarse
-   * solver, e.g. OneStepAMGCoarseSolverPolicy
    * @param op The fine level operator.
    * @param smoother The fine level smoother.
    * @param policy The level transfer policy.
    * @param coarsePolicy The policy for constructing the coarse level solver.
    * @param preSteps The number of smoothing steps to apply before the coarse
    * level correction.
-   * @param preSteps The number of smoothing steps to apply after the coarse
+   * @param postSteps The number of smoothing steps to apply after the coarse
    * level correction.
    */
   TwoLevelMethodCpr(const FineOperatorType& op,
@@ -440,7 +438,7 @@ public:
                     const LevelTransferPolicyCpr<FineOperatorType,
                                                  CoarseOperatorType>& policy,
                     CoarseLevelSolverPolicy& coarsePolicy,
-                    std::size_t preSteps=1, std::size_t postSteps=1)
+                    std::size_t preSteps = 1, std::size_t postSteps = 1)
     : operator_(&op), smoother_(smoother),
       preSteps_(preSteps), postSteps_(postSteps)
   {

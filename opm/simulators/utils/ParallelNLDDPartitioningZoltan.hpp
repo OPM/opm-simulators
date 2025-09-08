@@ -65,8 +65,7 @@ namespace Opm {
         /// Insert directed graph edge between two vertices.
         ///
         /// \param[in] c1 Source vertex.
-        ///
-        /// \param]in] c2 Sink/destination vertex.
+        /// \param[in] c2 Sink/destination vertex.
         void registerConnection(std::size_t c1, std::size_t c2)
         {
             this->conns_.emplace_back(c1, c2);

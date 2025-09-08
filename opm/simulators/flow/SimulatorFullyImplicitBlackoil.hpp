@@ -117,26 +117,7 @@ public:
     using WellModel = BlackoilWellModel<TypeTag>;
 
     /// Initialise from parameters and objects to observe.
-    /// \param[in] param       parameters, this class accepts the following:
-    ///     parameter (default)            effect
-    ///     -----------------------------------------------------------
-    ///     output (true)                  write output to files?
-    ///     output_dir ("output")          output directoty
-    ///     output_interval (1)            output every nth step
-    ///     nl_pressure_residual_tolerance (0.0) pressure solver residual tolerance (in Pascal)
-    ///     nl_pressure_change_tolerance (1.0)   pressure solver change tolerance (in Pascal)
-    ///     nl_pressure_maxiter (10)       max nonlinear iterations in pressure
-    ///     nl_maxiter (30)                max nonlinear iterations in transport
-    ///     nl_tolerance (1e-9)            transport solver absolute residual tolerance
-    ///     num_transport_substeps (1)     number of transport steps per pressure step
-    ///     use_segregation_split (false)  solve for gravity segregation (if false,
-    ///                                    segregation is ignored).
-    ///
-    /// \param[in] props         fluid and rock properties
-    /// \param[in] linsolver     linear solver
-    /// \param[in] eclipse_state the object which represents an internalized ECL deck
-    /// \param[in] output_writer
-    /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
+    /// \param simulator Reference to main simulator
     explicit SimulatorFullyImplicitBlackoil(Simulator& simulator)
         : simulator_(simulator)
         , serializer_(*this,

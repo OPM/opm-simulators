@@ -63,7 +63,8 @@ public:
     ///          no perforation above.
     /// \param above The ECL index of the next open perforation above.
     /// \param current The ECL index of the current open perforation.
-    void pushBackEclIndex(int above, int current, bool owner=true);
+    /// \param owner True if process is owner
+    void pushBackEclIndex(int above, int current, bool owner = true);
 
     /// \brief Clear all the parallel information
     void clear();
@@ -102,7 +103,7 @@ public:
     /// For distributed wells this may include perforations stored elsewhere.
     /// The result is stored in ther range given as the parameters
     /// \param begin The start of the range
-    /// \param ebd The end of the range
+    /// \param end The end of the range
     /// \tparam RAIterator The type og random access iterator
     template<class RAIterator>
     void partialSumPerfValues(RAIterator begin, RAIterator end) const;
@@ -142,6 +143,8 @@ public:
 
     /// \brief Constructor
     /// \param local_indices completely set up index set for map ecl index to local index
+    /// \param comm Parallle communicator
+    /// \param num_local_perfs Number of local perforations
     GlobalPerfContainerFactory(const IndexSet& local_indices,
                                const Parallel::Communication comm,
                                int num_local_perfs);
@@ -306,7 +309,7 @@ public:
     /// For distributed wells this may include perforations stored elsewhere.
     /// The result is stored in ther range given as the parameters
     /// \param begin The start of the range
-    /// \param ebd The end of the range
+    /// \param end The end of the range
     /// \tparam RAIterator The type og random access iterator
     template<class RAIterator>
     void partialSumPerfValues(RAIterator begin, RAIterator end) const

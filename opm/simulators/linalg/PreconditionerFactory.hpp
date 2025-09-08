@@ -80,6 +80,7 @@ public:
     /// \param op    operator to be preconditioned.
     /// \param prm   parameters for the preconditioner, in particular its type.
     /// \param weightsCalculator Calculator for weights used in CPR.
+    /// \param pressureIndex Index for pressure equation.
     /// \return      (smart) pointer to the created preconditioner.
     static PrecPtr create(const Operator& op, const PropertyTree& prm,
                           const std::function<Vector()>& weightsCalculator = {},
@@ -90,6 +91,7 @@ public:
     /// \param prm   parameters for the preconditioner, in particular its type.
     /// \param comm  communication object (typically OwnerOverlapCopyCommunication).
     /// \param weightsCalculator Calculator for weights used in CPR.
+    /// \param pressureIndex Index for pressure equation.
     /// \return      (smart) pointer to the created preconditioner.
     static PrecPtr create(const Operator& op, const PropertyTree& prm,
                           const std::function<Vector()>& weightsCalculator, const Comm& comm,
@@ -99,6 +101,7 @@ public:
     /// \param op    operator to be preconditioned.
     /// \param prm   parameters for the preconditioner, in particular its type.
     /// \param comm  communication object (typically OwnerOverlapCopyCommunication).
+    /// \param pressureIndex Index for pressure equation.
     /// \return      (smart) pointer to the created preconditioner.
     static PrecPtr create(const Operator& op, const PropertyTree& prm, const Comm& comm,
                           std::size_t pressureIndex = std::numeric_limits<std::size_t>::max());

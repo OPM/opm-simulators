@@ -264,7 +264,8 @@ public:
     /**
      * @brief Destroy an AMGX matrix handle
      *
-     * @param matrix The matrix handle to destroy
+     * @param amgx_matrix The matrix handle to destroy
+     * @param matrix The type of the matrix
      * @throws AmgxError if matrix destruction fails
      */
     template <typename MatrixType>

@@ -44,6 +44,7 @@ public:
      * Takes *no* ownership of data.
      * @param inj_tables A map of different VFPINJ tables.
      * @param prod_tables A map of different VFPPROD tables.
+     * @param well_state Current well state
      */
 
     VFPProperties(const std::vector<std::reference_wrapper<const VFPInjTable>>& inj_tables,

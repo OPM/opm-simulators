@@ -49,6 +49,7 @@ public:
     //! \brief Opens HDF5 file for I/O.
     //! \param fileName Name of file to open
     //! \param mode Open mode for file
+    //! \param comm Parallel communicator
     HDF5File(const std::string& fileName,
              OpenMode mode,
              Parallel::Communication comm);
@@ -60,6 +61,7 @@ public:
     //! \param group Group ("directory") to write data to
     //! \param dset Data set ("file") to write data to
     //! \param buffer Data to write
+    //! \param mode Mode for dataset
     //! \details Throws exception on failure
     void write(const std::string& group,
                const std::string& dset,
@@ -70,11 +72,12 @@ public:
     //! \param group Group ("directory") to read data from
     //! \param dset Data set ("file") to read data from
     //! \param buffer Vector to store read data in
+    //! \param mode Mode for dataset
     //! \details Throws exception on failure
     void read(const std::string& group,
               const std::string& dset,
               std::vector<char>& buffer,
-              DataSetMode Mode = DataSetMode::PROCESS_SPLIT) const;
+              DataSetMode mode = DataSetMode::PROCESS_SPLIT) const;
 
     //! \brief Lists the entries in a given group.
     //! \details Note: Both datasets and subgroups are returned

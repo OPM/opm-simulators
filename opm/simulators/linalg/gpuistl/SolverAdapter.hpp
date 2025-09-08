@@ -64,6 +64,7 @@ public:
     //!
     //! @param op the linear operator (assumed CPU, the output (matrix) of which will be converted to a GPU variant)
     //! @param sp the scalar product (assumed CPU, this will be converted to a GPU variant)
+    //! @param prec The preconditioner to use
     //! @param reduction the reduction factor passed to the iterative solver
     //! @param maxit maximum number of iterations for the linear solver
     //! @param verbose verbosity level

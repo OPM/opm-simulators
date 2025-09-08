@@ -44,6 +44,7 @@ public:
     /// \brief Constructor
     /// \param output_dir The output directory to use for reading/Writing.
     /// \param deckname The name of the deck.
+    /// \param show_fallout True to show fall-out
     ParallelFileMerger(const fs::path& output_dir,
                        const std::string& deckname,
                        bool show_fallout = false);

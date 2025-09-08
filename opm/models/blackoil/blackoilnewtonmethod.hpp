@@ -121,6 +121,9 @@ protected:
 
     /*!
      * \copydoc FvBaseNewtonMethod::endIteration_
+     *
+     * \param uCurrentIter Current solution iterator
+     * \param uLastIter Last solution iterator
      */
     void endIteration_(SolutionVector& uCurrentIter,
                        const SolutionVector& uLastIter)

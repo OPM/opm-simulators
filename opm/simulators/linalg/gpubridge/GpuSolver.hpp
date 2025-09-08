@@ -68,10 +68,8 @@ protected:
 public:
     /// Construct a GpuSolver
     /// \param[in] linear_solver_verbosity    verbosity of solver
-    /// \param[in] maxit                      maximum number of iterations for solver
-    /// \param[in] tolerance                  required relative tolerance for solver
-    /// \param[in] platformID                 the OpenCL platform to be used, only used in openclSolver
-    /// \param[in] deviceID                   the device to be used
+    /// \param[in] max_it                     maximum number of iterations for solver
+    /// \param[in] tolerance_                 required relative tolerance for solver
     GpuSolver(int linear_solver_verbosity, int max_it, Scalar tolerance_)
         : verbosity(linear_solver_verbosity)
         , maxit(max_it)

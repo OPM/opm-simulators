@@ -114,6 +114,9 @@ public:
      * \param[in] temp Temperature at which to calculate RS
      * value.
      *
+     * \param[in] sat Saturation at which to calculate RS
+     * value.
+     *
      * \return Dissolved gas-oil ratio (RS) at depth @c
      * depth and pressure @c press.
      */
@@ -133,15 +136,6 @@ class NoMixing : public RsFunction<Scalar>
 public:
     /**
      * Function call.
-     *
-     * \param[in] depth Depth at which to calculate RS
-     * value.
-     *
-     * \param[in] press Pressure at which to calculate RS
-     * value.
-     *
-     * \param[in] temp Temperature at which to calculate RS
-     * value.
      *
      * \return Dissolved gas-oil ratio (RS) at depth @c
      * depth and pressure @c press.  In "no mixing
@@ -191,6 +185,9 @@ public:
      * \param[in] temp Temperature at which to calculate RS
      * value.
      *
+     * \param[in] satGas Gas saturation at which to calculate RS
+     * value.
+     *
      * \return Dissolved gas-oil ratio (RS) at depth @c
      * depth and pressure @c press.
      */
@@ -236,9 +233,12 @@ public:
      * \param[in] depth Depth at which to calculate RS
      * value.
      *
-     * \param[in] Pressure in the cell
+     * \param[in] cellPress Pressure in the cell
      *
      * \param[in] temp Temperature at which to calculate RS
+     * value.
+     *
+     * \param[in] satGas Gas saturation at which to calculate RS
      * value.
      *
      * \return Dissolved gas-oil ratio (RS) at depth @c
@@ -274,7 +274,7 @@ public:
      *
      * \param[in] pvtRegionIdx The pvt region index
      * \param[in] depth Depth nodes.
-     * \param[in] pbub Dew-point pressure at @c depth.
+     * \param[in] pdew Dew-point pressure at @c depth.
      */
     PDVD(const int pvtRegionIdx,
          const std::vector<Scalar>& depth,
@@ -289,6 +289,9 @@ public:
      * \param[in] cellPress Pressure in the cell
      *
      * \param[in] temp Temperature at which to calculate RV
+     * value.
+     *
+     * \param[in] satOil Oil saturation at which to calculate RV
      * value.
      *
      * \return Vaporized oil-gas ratio (RV) at depth @c
@@ -342,6 +345,9 @@ public:
      * \param[in] temp Temperature at which to calculate RV
      * value.
      *
+     * \param[in] satOil Oil saturation at which to calculate RV
+     * value.
+     *
      * \return Vaporized oil-gas ratio (RV) at depth @c
      * depth and pressure @c press.
      */
@@ -391,6 +397,9 @@ public:
      * value.
      *
      * \param[in] temp Temperature at which to calculate RVW
+     * value.
+     *
+     * \param[in] satWat Water saturation at which to calculate RVW
      * value.
      *
      * \return Vaporized water-gas ratio (RVW) at depth @c
@@ -453,6 +462,9 @@ public:
      * \param[in] temp Temperature at which to calculate RS
      * value.
      *
+     * \param[in] satGas Gas saturation at which to calculate RS
+     * value.
+     *
      * \return Dissolved gas-oil ratio (RS) at depth @c
      * depth and pressure @c press.
      */
@@ -509,6 +521,9 @@ public:
      * value.
      *
      * \param[in] temp Temperature at which to calculate RV
+     * value.
+     *
+     * \param[in] satOil Oil saturation at which to calculate RV
      * value.
      *
      * \return Dissolved oil-gas ratio (RV) at depth @c
@@ -568,6 +583,9 @@ public:
      * \param[in] temp Temperature at which to calculate RVW
      * value.
      *
+     * \param[in] satWat Water saturation at which to calculate RVW
+     * value.
+     *
      * \return Dissolved water-gas ratio (RVW) at depth @c
      * depth and pressure @c press.
      */
@@ -617,7 +635,9 @@ public:
      * \param[in] rs      Calculator of dissolved gas-oil ratio.
      * \param[in] rv      Calculator of vapourised oil-gas ratio.
      * \param[in] rvw     Calculator of vapourised water-gas ratio.
-     * \param[in] pvtRegionIdx The pvt region index
+     * \param[in] tempVdTable Temperature-dependent viscosity table
+     * \param[in] saltVdTable Salinity-dependent viscosity table
+     * \param[in] pvtIdx  The pvt region index
      */
     EquilReg(const EquilRecord& rec,
              std::shared_ptr<Miscibility::RsFunction<Scalar>> rs,

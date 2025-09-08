@@ -295,6 +295,7 @@ protected:
      * index.
      * \param cartMapper The cartesian index mapper for lookup of
      *        cartesian indices
+     * \param isCpGrid True if grid is a CpGrid
      */
     template<class CartMapper>
     std::function<std::array<double,dimensionworld>(int)>

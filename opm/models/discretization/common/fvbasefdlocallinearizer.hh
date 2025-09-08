@@ -224,6 +224,7 @@ public:
      *
      * \param elemCtx The element execution context for which the local residual and its
      *                local Jacobian should be calculated.
+     * \param elem Element to linearize for
      */
     void linearize(ElementContext& elemCtx, const Element& elem)
     {

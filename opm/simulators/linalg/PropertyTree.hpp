@@ -111,7 +111,7 @@ public:
     ///
     /// Throws an exception if no sub tree exists at given root.
     ///
-    /// \param[in] Property key.  Expected to be in hierarchical
+    /// \param[in] key Property key.  Expected to be in hierarchical
     /// notation for subtrees--i.e., using periods ('.') to separate
     /// hierarchy levels.
     ///
@@ -120,7 +120,7 @@ public:
 
     /// Retrieve copy of sub tree rooted at node.
     ///
-    /// \param[in] Property key.  Expected to be in hierarchical
+    /// \param[in] key Property key.  Expected to be in hierarchical
     /// notation for subtrees--i.e., using periods ('.') to separate
     /// hierarchy levels.
     ///

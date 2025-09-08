@@ -46,6 +46,9 @@ public:
     //! \brief Serialize and write data to restart file.
     //! \tparam T Type of class to write
     //! \param data Class to write restart data for
+    //! \param group Group to write dataset to
+    //! \param dset Data set to write
+    //! \param mode Mode for dataset
     template<class T>
     void write(T& data,
                const std::string& group,
@@ -79,6 +82,9 @@ public:
     //! \brief Read data and deserialize from restart file.
     //! \tparam T Type of class to read
     //! \param data Class to read restart data for
+    //! \param group Group to read dataset from
+    //! \param dset Data set to read
+    //! \param mode Mode for dataset
     template<class T>
     void read(T& data,
               const std::string& group,

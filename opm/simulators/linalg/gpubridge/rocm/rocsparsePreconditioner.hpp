@@ -65,6 +65,7 @@ public:
     virtual void copy_system_to_gpu(Scalar* b) = 0;
 
     /// Update linear system to GPU
+    /// \param[in] vals           Matrix values
     /// \param[in] b              input vector, contains N values
     virtual void update_system_on_gpu(Scalar* vals, Scalar* b)=0;
     

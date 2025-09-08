@@ -101,8 +101,9 @@ void SetDefault_(const std::string& paramName,
  *
  * \param helpPreamble The string that is printed after the error message and before the
  *                     list of parameters.
- * \param errorMsg The error message to be printed, if any
  * \param os The \c std::ostream which should be used.
+ * \param errorMsg The error message to be printed, if any
+ * \param showAll True to show all parameters
  */
 void printUsage(const std::string& helpPreamble,
                 std::ostream& os,
@@ -128,6 +129,7 @@ using PositionalArgumentCallback = std::function<int(std::function<void(const st
  *             main() function
  * \param argv The array of strings passed by the operating system to the main()
  *             function
+ * \param posArgCallback Callback for positional arguments
  * \param helpPreamble If non-empty, the --help and -h parameters will be recognized and
  *                     the content of the string will be printed before the list of
  *                     command line parameters

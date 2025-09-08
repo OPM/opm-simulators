@@ -97,6 +97,9 @@ public:
 
     /*!
      * \copydoc ImmiscibleRateVector::setMassRate
+     *
+     * \param value Value to use
+     * \param pvtRegionIdx PVT region index to use
      */
     void setMassRate(const ParentType& value, unsigned pvtRegionIdx = 0)
     {
@@ -126,6 +129,9 @@ public:
 
     /*!
      * \copydoc ImmiscibleRateVector::setMolarRate
+     *
+     * \param value Value to set to
+     * \param pvtRegionIdx PVT region index to use
      */
     void setMolarRate(const ParentType& value, unsigned pvtRegionIdx = 0)
     {

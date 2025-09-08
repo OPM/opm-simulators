@@ -112,7 +112,7 @@ public:
 
     //! \brief Constructor.
     //!
-    //! \param A The matrix to operate on.
+    //! \param matrix The matrix to operate on.
     //!
     //! \note After the PreconditionerConvertFieldTypeAdapter you can get the converted matrix
     //! by calling getConvertedMatrix(), which in turn can be used to create the underlying preconditioner.

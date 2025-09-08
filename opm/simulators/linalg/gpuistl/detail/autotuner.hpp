@@ -32,6 +32,7 @@ namespace Opm::gpuistl::detail
 /// @brief Function that tests the best thread block size, assumes the provided function depends on threadblock-size
 /// @tparam The type of the function to tune
 /// @param f the function to tune, which takes the thread block size as the input
+/// @param descriptionOfFunction Description of function
 template <typename func>
 int
 tuneThreadBlockSize(func& f, std::string descriptionOfFunction)

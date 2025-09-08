@@ -34,8 +34,8 @@ class Matrix
 {
 public:
     /// Allocate square Matrix and data arrays with given sizes
-    /// \param[in] N               number of rows
-    /// \param[in] nnzs            number of nonzeros
+    /// \param[in] N_              number of rows
+    /// \param[in] nnzs_           number of nonzeros
     Matrix(int N_, int nnzs_)
         : N(N_)
         , M(N_)
@@ -47,9 +47,9 @@ public:
     }
 
     /// Allocate rectangular Matrix and data arrays with given sizes
-    /// \param[in] N               number of rows
-    /// \param[in] M               number of columns
-    /// \param[in] nnzs            number of nonzeros
+    /// \param[in] N_              number of rows
+    /// \param[in] M_              number of columns
+    /// \param[in] nnzs_           number of nonzeros
     Matrix(int N_, int M_, int nnzs_)
         : Matrix(N_, nnzs_)
     {
