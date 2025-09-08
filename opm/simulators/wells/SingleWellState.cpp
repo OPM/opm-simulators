@@ -124,8 +124,9 @@ void SingleWellState<Scalar, IndexTraits>::open()
 template<typename Scalar, typename IndexTraits>
 bool SingleWellState<Scalar, IndexTraits>::updateStatus(Well::Status new_status)
 {
-    if (this->status == new_status)
+    if (this->status == new_status) {
         return false;
+    }
 
     switch (new_status) {
     case Well::Status::OPEN:

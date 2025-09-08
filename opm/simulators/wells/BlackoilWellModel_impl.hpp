@@ -1970,7 +1970,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateWellTestState(const double& simulationTime, WellTestState& wellTestState)
+    updateWellTestState(const double simulationTime, WellTestState& wellTestState)
     {
         OPM_TIMEFUNCTION();
         DeferredLogger local_deferredLogger;
@@ -1997,11 +1997,22 @@ namespace Opm {
                 // maybe open a new well
                 const WellEconProductionLimits& econ_production_limits = well->wellEcl().getEconLimits();
                 if (econ_production_limits.validFollowonWell()) {
-                    auto& ws = this->wellState().well(econ_production_limits.followonWell());
-                    bool success = ws.updateStatus(WellStatus::OPEN);
+                    const auto episode_idx = simulator_.episodeIndex();
+                    const auto follow_on_well = econ_production_limits.followonWell();
+                    if (!this->schedule().hasWell(follow_on_well, episode_idx)) {
+                        const auto msg = fmt::format("Well {} was closed. But the given follow on well {} does not exist." 
+                                                     "The simulator continues without opening a follow on well.",
+                                                     wname, follow_on_well);
+                        local_deferredLogger.warning(msg);
+                    }
+                    auto& ws = this->wellState().well(follow_on_well);
+                    const bool success = ws.updateStatus(WellStatus::OPEN);
                     if (success) {
-                        const std::string msg = std::string("well ") + econ_production_limits.followonWell() + std::string(" opens instead");
+                        const auto msg = fmt::format("Well {} was closed. The follow on well {} opens instead.", wname, follow_on_well);
                         local_deferredLogger.info(msg);
+                    } else {
+                        const auto msg = fmt::format("Well {} was closed. The follow on well {} is already open.", wname, follow_on_well);
+                        local_deferredLogger.warning(msg);
                     }
                 }
 
