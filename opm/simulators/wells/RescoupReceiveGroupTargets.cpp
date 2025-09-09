@@ -17,17 +17,18 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 #include <opm/simulators/wells/RescoupReceiveGroupTargets.hpp>
 
 #include <fmt/format.h>
 
 namespace Opm {
 
-template <class Scalar>
-RescoupReceiveGroupTargets<Scalar>::
+template <class Scalar, class IndexTraits>
+RescoupReceiveGroupTargets<Scalar, IndexTraits>::
 RescoupReceiveGroupTargets(
-    GuideRateHandler<Scalar>& guide_rate_handler,
-    const WellState<Scalar>& well_state,
+    GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
+    const WellState<Scalar, IndexTraits>& well_state,
     const GroupState<Scalar>& group_state,
     const int report_step_idx
 )
@@ -39,9 +40,9 @@ RescoupReceiveGroupTargets(
 {
 }
 
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 void
-RescoupReceiveGroupTargets<Scalar>::
+RescoupReceiveGroupTargets<Scalar, IndexTraits>::
 receiveGroupTargetsFromMaster()
 {
     // NOTE: Since this object can only be constructed for a slave process, we can be
@@ -59,10 +60,10 @@ receiveGroupTargetsFromMaster()
     }
 }
 
-template class RescoupReceiveGroupTargets<double>;
+template class RescoupReceiveGroupTargets<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class RescoupReceiveGroupTargets<float>;
+template class RescoupReceiveGroupTargets<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm

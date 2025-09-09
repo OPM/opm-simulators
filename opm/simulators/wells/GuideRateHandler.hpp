@@ -134,7 +134,7 @@ public:
         const Parallel::Communication &comm() const { return this->parent_.comm_; }
         DeferredLogger &deferredLogger() { return this->parent_.deferredLogger(); }
         GuideRate &guideRate() { return this->parent_.guide_rate_; }
-        const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_.wellModel().phaseUsage(); }
+        const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_.phaseUsage(); }
         const SummaryState &summaryState() const { return this->parent_.summary_state_; }
         const Schedule &schedule() const { return this->parent_.schedule_; }
         /**
@@ -208,7 +208,7 @@ public:
     void debugDumpGuideRates(const int report_step_idx, const double sim_time);
     const Parallel::Communication& getComm() const { return comm_; }
     const GuideRate& guideRate() { return guide_rate_; }
-    const PhaseUsage& phaseUsage() const { return phase_usage_; }
+    const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->wellModel().phaseUsage(); }
     void setLogger(DeferredLogger *deferred_logger);
     const Schedule& schedule() const { return schedule_; }
     const SummaryState& summaryState() const { return summary_state_; }

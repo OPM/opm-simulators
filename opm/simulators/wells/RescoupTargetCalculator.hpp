@@ -19,10 +19,10 @@
 
 #ifndef OPM_RESCOUP_TARGET_CALCULATOR_HPP
 #define OPM_RESCOUP_TARGET_CALCULATOR_HPP
+#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
+#include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 #include <opm/simulators/flow/ReservoirCoupling.hpp>
 #include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
-#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
-#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
@@ -32,14 +32,14 @@
 
 namespace Opm {
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 class RescoupTargetCalculator {
 public:
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
     using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
     RescoupTargetCalculator(
-        GuideRateHandler<Scalar>& guide_rate_handler,
-        const WellState<Scalar>& well_state,
+        GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
+        const WellState<Scalar, IndexTraits>& well_state,
         const GroupState<Scalar>& group_state,
         const int report_step_idx
     );
@@ -47,7 +47,7 @@ public:
     void calculateMasterGroupTargetsAndSendToSlaves();
 private:
     std::tuple<std::vector<InjectionGroupTarget>, std::vector<ProductionGroupTarget>>
-        calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar>& calculator) const;
+        calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar, IndexTraits>& calculator) const;
     void sendSlaveGroupTargetsToSlave_(
         const ReservoirCouplingMaster<Scalar>& rescoup_master,
         std::size_t slave_idx,
@@ -55,16 +55,16 @@ private:
         const std::vector<ProductionGroupTarget>& production_targets
     ) const;
 
-    GuideRateHandler<Scalar>& guide_rate_handler_;
-    const WellState<Scalar>& well_state_;
+    GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler_;
+    const WellState<Scalar, IndexTraits>& well_state_;
     const GroupState<Scalar>& group_state_;
     const int report_step_idx_;
     const Schedule& schedule_;
     const SummaryState& summary_state_;
     DeferredLogger& deferred_logger_;
     ReservoirCouplingMaster<Scalar>& reservoir_coupling_master_;
-    BlackoilWellModelGeneric<Scalar>& well_model_;
-    const PhaseUsage& phase_usage_;
+    BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model_;
+    const PhaseUsageInfo<IndexTraits>& phase_usage_;
 };
 
 }  // namespace Opm

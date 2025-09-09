@@ -19,6 +19,7 @@
 #include <config.h>
 #include <opm/input/eclipse/Schedule/Group/GuideRateModel.hpp>
 #include <opm/simulators/wells/GroupTargetCalculator.hpp>
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
 #include <tuple>  // for std::tie
 #include <fmt/format.h>
@@ -28,15 +29,15 @@ namespace Opm {
 // ----------------------------------------------------
 // Constructor for the GroupTargetCalculator class
 // ----------------------------------------------------
-template<class Scalar>
-GroupTargetCalculator<Scalar>::
+template<class Scalar, class IndexTraits>
+GroupTargetCalculator<Scalar, IndexTraits>::
 GroupTargetCalculator(
-    const BlackoilWellModelGeneric<Scalar>& well_model,
-    const WellState<Scalar>& well_state,
+    const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
+    const WellState<Scalar, IndexTraits>& well_state,
     const GroupState<Scalar>& group_state,
     const Schedule& schedule,
     const SummaryState& summary_state,
-    const PhaseUsage& phase_usage,
+    const PhaseUsageInfo<IndexTraits>& phase_usage,
     const GuideRate& guide_rate,
     const int report_step_idx,
     DeferredLogger& deferred_logger
@@ -50,7 +51,7 @@ GroupTargetCalculator(
     guide_rate_{guide_rate},
     report_step_idx_{report_step_idx},
     deferred_logger_{deferred_logger},
-    resv_coeffs_inj_(phase_usage.num_phases, 0.0)
+    resv_coeffs_inj_(phase_usage.numPhases, 0.0)
 {
     std::tie(this->fipnum_, this->pvtreg_) = this->well_model_.getGroupFipnumAndPvtreg();
     // Get the reservoir coefficients for injection
@@ -59,9 +60,9 @@ GroupTargetCalculator(
     this->well_model_.calcInjResvCoeff(this->fipnum_, this->pvtreg_, this->resv_coeffs_inj_);
 }
 
-template<class Scalar>
-std::optional<typename GroupTargetCalculator<Scalar>::InjectionTargetInfo>
-GroupTargetCalculator<Scalar>::
+template<class Scalar, class IndexTraits>
+std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::InjectionTargetInfo>
+GroupTargetCalculator<Scalar, IndexTraits>::
 groupInjectionTarget(const Group& group, Phase injection_phase) {
     GeneralCalculator general_calculator{*this, group, injection_phase};
     auto target_info = general_calculator.calculateGroupTarget();
@@ -74,9 +75,9 @@ groupInjectionTarget(const Group& group, Phase injection_phase) {
     );
 }
 
-template<class Scalar>
-std::optional<typename GroupTargetCalculator<Scalar>::ProductionTargetInfo>
-GroupTargetCalculator<Scalar>::
+template<class Scalar, class IndexTraits>
+std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::ProductionTargetInfo>
+GroupTargetCalculator<Scalar, IndexTraits>::
 groupProductionTarget(const Group& group) {
     GeneralCalculator general_calculator{*this, group};
     auto target_info = general_calculator.calculateGroupTarget();
@@ -96,18 +97,18 @@ groupProductionTarget(const Group& group) {
 // Constructor for inner class GeneralCalculator
 // ----------------------------------------------------
 
-template<class Scalar>
-GroupTargetCalculator<Scalar>::
+template<class Scalar, class IndexTraits>
+GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 GeneralCalculator(
-    GroupTargetCalculator<Scalar>& parent_calculator,
+    GroupTargetCalculator<Scalar, IndexTraits>& parent_calculator,
     const Group& original_group,
     std::optional<Phase> injection_phase  // Only used for injectors
 ) :
     parent_calculator_{parent_calculator},
     original_group_{original_group},
     injection_phase_{injection_phase},
-    resv_coeffs_prod_(this->phaseUsage().num_phases, 0.0)
+    resv_coeffs_prod_(this->phaseUsage().numPhases, 0.0)
 {
     this->wellModel().calcResvCoeff(
         this->fipnum(),
@@ -121,9 +122,9 @@ GeneralCalculator(
 // Public methods for the GeneralCalculator class
 // -------------------------------------------------------
 
-template<class Scalar>
-std::optional<typename GroupTargetCalculator<Scalar>::TargetInfo>
-GroupTargetCalculator<Scalar>::
+template<class Scalar, class IndexTraits>
+std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo>
+GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 calculateGroupTarget()
 {
@@ -138,9 +139,9 @@ calculateGroupTarget()
 
 // See comments above RescoupTargetCalculator::calculateMasterGroupTargetsAndSendToSlaves() about how
 // the target is calculated.
-template<class Scalar>
-std::optional<typename GroupTargetCalculator<Scalar>::TargetInfo>
-GroupTargetCalculator<Scalar>::
+template<class Scalar, class IndexTraits>
+std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo>
+GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_factor)
 {
@@ -173,9 +174,9 @@ calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_facto
     return top_bottom_calc.calculateGroupTarget();
 }
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 bool
-GroupTargetCalculator<Scalar>::
+GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 hasFldOrNoneControl_(const Group& group) const
 {
@@ -189,9 +190,9 @@ hasFldOrNoneControl_(const Group& group) const
     }
 }
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 bool
-GroupTargetCalculator<Scalar>::
+GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 parentGroupControlAvailable_(const Group& group) const
 {
@@ -206,8 +207,8 @@ parentGroupControlAvailable_(const Group& group) const
 // Constructor for inner class TopToBottomCalculator
 // ----------------------------------------------------
 
-template<class Scalar>
-GroupTargetCalculator<Scalar>::
+template<class Scalar, class IndexTraits>
+GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 TopToBottomCalculator(
     GeneralCalculator& parent_calculator,
@@ -230,9 +231,9 @@ TopToBottomCalculator(
 // Public methods for the TopToBottomCalculator class
 // -------------------------------------------------------
 
-template<class Scalar>
-std::optional<typename GroupTargetCalculator<Scalar>::TargetInfo>
-GroupTargetCalculator<Scalar>::
+template<class Scalar, class IndexTraits>
+std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo>
+GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 calculateGroupTarget()
 {
@@ -260,9 +261,9 @@ calculateGroupTarget()
 // Private methods for the TopToBottomCalculator class
 // -------------------------------------------------------
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 void
-GroupTargetCalculator<Scalar>::
+GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForInjector_()
 {
@@ -296,15 +297,14 @@ initForInjector_()
         this->reportStepIdx(),
         &this->guideRate(),
         GuideRateModel::Target{guide_target_mode},
-        this->phaseUsage(),
-        /*is_injector=*/true,
+        /*is_producer=*/false,
         this->injectionPhase()
     );
 }
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 void
-GroupTargetCalculator<Scalar>::
+GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForProducer_()
 {
@@ -334,16 +334,15 @@ initForProducer_()
         this->reportStepIdx(),
         &this->guideRate(),
         GuideRateModel::Target{guide_target_mode},
-        this->phaseUsage(),
-        /*is_injector=*/true,
+        /*is_producer=*/true,
         dummy_phase
     );
 }
 
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar>::
+GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 getGratSalesInjectionTarget_() const
 {
@@ -356,9 +355,9 @@ getGratSalesInjectionTarget_() const
 
 }
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar>::
+GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 getGratSalesProductionTarget_() const
 {
@@ -368,20 +367,20 @@ getGratSalesProductionTarget_() const
 
 }
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 std::vector<std::string>
-GroupTargetCalculator<Scalar>::
+GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 getGroupChainTopBot_() const
 {
-    return WellGroupHelpers<Scalar>::groupChainTopBot(
+    return WellGroupHelpers<Scalar, IndexTraits>::groupChainTopBot(
         this->bottomGroup().name(), this->group_.name(), this->schedule(), this->reportStepIdx()
     );
 }
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar>::
+GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 getTopLevelTarget_()
 {
@@ -407,9 +406,9 @@ getTopLevelTarget_()
     }
 }
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar>::
+GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 localFraction_(const std::string& group_name)
 {
@@ -417,9 +416,9 @@ localFraction_(const std::string& group_name)
     return this->fraction_calculator_->localFraction(group_name, always_included_child);
 }
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar>::
+GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 localReduction_(const std::string& group_name)
 {
@@ -441,10 +440,10 @@ localReduction_(const std::string& group_name)
 }
 
 
-template class GroupTargetCalculator<double>;
+template class GroupTargetCalculator<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class GroupTargetCalculator<float>;
+template class GroupTargetCalculator<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm

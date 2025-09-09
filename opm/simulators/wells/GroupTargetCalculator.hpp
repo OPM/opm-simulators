@@ -38,7 +38,7 @@
 
 namespace Opm {
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 class GroupTargetCalculator {
 public:
     using ControlMode = std::variant<
@@ -46,9 +46,9 @@ public:
         Group::InjectionCMode,
         Group::ProductionCMode
     >;
-    using FractionCalculator = WGHelpers::FractionCalculator<Scalar>;
-    using InjectionTargetCalculator = WGHelpers::InjectionTargetCalculator<Scalar>;
-    using TargetCalculator = WGHelpers::TargetCalculator<Scalar>;
+    using FractionCalculator = WGHelpers::FractionCalculator<Scalar, IndexTraits>;
+    using InjectionTargetCalculator = WGHelpers::InjectionTargetCalculator<Scalar, IndexTraits>;
+    using TargetCalculator = WGHelpers::TargetCalculator<Scalar, IndexTraits>;
     struct TargetInfo {
         Scalar target;
         ControlMode cmode;
@@ -79,17 +79,17 @@ public:
         Phase injectionPhase() const { return this->injection_phase_.value(); }
         bool isInjector() const { return this->injection_phase_.has_value(); }
         bool isProducer() const { return !this->injection_phase_.has_value(); }
-        const PhaseUsage& phaseUsage() const { return this->parent_calculator_.phaseUsage(); }
+        const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_calculator_.phaseUsage(); }
         int pvtreg() const { return this->parent_calculator_.pvtreg(); }
         int reportStepIdx() const { return this->parent_calculator_.reportStepIdx(); }
         const std::vector<Scalar>& resvCoeffsInj() const { return this->parent_calculator_.resvCoeffsInj(); }
         const std::vector<Scalar>& resvCoeffsProd() const { return this->resv_coeffs_prod_; }
         const Schedule& schedule() const { return this->parent_calculator_.schedule(); }
         const SummaryState& summaryState() const { return this->parent_calculator_.summaryState(); }
-        const BlackoilWellModelGeneric<Scalar>& wellModel() const {
+        const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel() const {
             return this->parent_calculator_.wellModel();
         }
-        const WellState<Scalar>& wellState() const { return this->parent_calculator_.wellState(); }
+        const WellState<Scalar, IndexTraits>& wellState() const { return this->parent_calculator_.wellState(); }
     private:
         std::optional<TargetInfo> calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_factor);
         bool hasFldOrNoneControl_(const Group& group) const;
@@ -123,13 +123,13 @@ public:
         Phase injectionPhase() const { return this->parent_calculator_.injectionPhase(); }
         bool isInjector() const { return this->parent_calculator_.isInjector(); }
         bool isProducer() const { return this->parent_calculator_.isProducer(); }
-        const PhaseUsage& phaseUsage() const { return this->parent_calculator_.phaseUsage(); }
+        const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_calculator_.phaseUsage(); }
         int reportStepIdx() const { return this->parent_calculator_.reportStepIdx(); }
         const std::vector<Scalar>& resvCoeffsInj() const { return this->parent_calculator_.resvCoeffsInj(); }
         const std::vector<Scalar>& resvCoeffsProd() const { return this->parent_calculator_.resvCoeffsProd(); }
         const Schedule& schedule() const { return this->parent_calculator_.schedule(); }
         const SummaryState& summaryState() const { return this->parent_calculator_.summaryState(); }
-        const WellState<Scalar>& wellState() const { return this->parent_calculator_.wellState(); }
+        const WellState<Scalar, IndexTraits>& wellState() const { return this->parent_calculator_.wellState(); }
 
     private:
         Scalar getTopLevelTarget_();
@@ -152,12 +152,12 @@ public:
     };
 
     GroupTargetCalculator(
-        const BlackoilWellModelGeneric<Scalar>& well_model,
-        const WellState<Scalar>& well_state,
+        const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
+        const WellState<Scalar, IndexTraits>& well_state,
         const GroupState<Scalar>& group_state,
         const Schedule& schedule,
         const SummaryState& summary_state,
-        const PhaseUsage& phase_usage,
+        const PhaseUsageInfo<IndexTraits>& phase_usage,
         const GuideRate& guide_rate,
         const int report_step_idx,
         DeferredLogger& deferred_logger
@@ -168,22 +168,22 @@ public:
     std::optional<ProductionTargetInfo> groupProductionTarget(const Group& group);
     const GroupState<Scalar>& groupState() const { return this->group_state_; }
     const GuideRate& guideRate() const { return this->guide_rate_; }
-    const PhaseUsage& phaseUsage() const { return this->phase_usage_; }
+    const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->phase_usage_; }
     int pvtreg() const { return this->pvtreg_; }
     int reportStepIdx() const { return this->report_step_idx_; }
     const std::vector<Scalar>& resvCoeffsInj() const { return this->resv_coeffs_inj_; }
     const Schedule& schedule() const { return this->schedule_; }
     const SummaryState& summaryState() const { return this->summary_state_; }
-    const BlackoilWellModelGeneric<Scalar>& wellModel() const { return this->well_model_; }
-    const WellState<Scalar>& wellState() const { return this->well_state_; }
+    const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel() const { return this->well_model_; }
+    const WellState<Scalar, IndexTraits>& wellState() const { return this->well_state_; }
 
 private:
-    const BlackoilWellModelGeneric<Scalar>& well_model_;
-    const WellState<Scalar>& well_state_;
+    const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model_;
+    const WellState<Scalar, IndexTraits >& well_state_;
     const GroupState<Scalar>& group_state_;
     const Schedule& schedule_;
     const SummaryState& summary_state_;
-    const PhaseUsage& phase_usage_;
+    const PhaseUsageInfo<IndexTraits>& phase_usage_;
     const GuideRate& guide_rate_;
     int report_step_idx_;
     std::vector<Scalar> resv_coeff_;
