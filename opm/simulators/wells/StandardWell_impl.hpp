@@ -139,7 +139,7 @@ namespace Opm
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
-            const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+            const unsigned compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
             b_perfcells_dense[compIdx] =  obtain(fs.invB(phaseIdx));
         }
         if constexpr (has_solvent) {
@@ -148,7 +148,7 @@ namespace Opm
 
         if constexpr (has_zFraction) {
             if (this->isInjector()) {
-                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
                 b_perfcells_dense[gasCompIdx] *= (1.0 - this->wsolvent());
                 b_perfcells_dense[gasCompIdx] += this->wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
             }
