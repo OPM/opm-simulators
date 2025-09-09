@@ -264,7 +264,7 @@ public:
 
             // mass flux of solvent component (oil in oil or gas in gas)
             const unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-            const unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
+            const unsigned activeSolventCompIdx = FluidSystem::canonicalToActiveCompIdx(solventCompIdx);
             flux[conti0EqIdx + activeSolventCompIdx] +=
                     -bSAvg *
                     convFactor *
@@ -274,7 +274,7 @@ public:
 
             // mass flux of solute component (gas in oil or oil in gas)
             const unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
-            const unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
+            const unsigned activeSoluteCompIdx = FluidSystem::canonicalToActiveCompIdx(soluteCompIdx);
             flux[conti0EqIdx + activeSoluteCompIdx] +=
                     bSAvg *
                     diffR *

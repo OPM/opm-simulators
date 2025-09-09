@@ -221,15 +221,15 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
     // Therefore, it's safe to have -1 (== numeric_limits<size_t>::max()) be
     // their value in that case.
     const auto gaspos = activeGas
-        ? static_cast<Ix>(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))
+        ? static_cast<Ix>(FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx))
         : static_cast<Ix>(-1);
 
     const auto oilpos = activeOil
-        ? static_cast<Ix>(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))
+        ? static_cast<Ix>(FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx))
         : static_cast<Ix>(-1);
 
     const auto waterpos = activeWater
-        ? static_cast<Ix>(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))
+        ? static_cast<Ix>(FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx))
         : static_cast<Ix>(-1);
 
     const int nperf    = this->well_.numLocalPerfs();
@@ -503,7 +503,7 @@ computePropertiesForPressures(const WellState<Scalar, IndexTraits>&         well
         const int region_idx = prop_func.pvtRegionIdx(cell_idx);
 
         if (waterPresent) {
-            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(IndexTraits::waterCompIdx);
+            const unsigned waterCompIdx = FluidSystem::canonicalToActiveCompIdx(IndexTraits::waterCompIdx);
             Scalar rsw = 0.0;
             if (FluidSystem::enableDissolvedGasInWater()) {
                 // TODO support mutual solubility in water and oil
@@ -526,7 +526,7 @@ computePropertiesForPressures(const WellState<Scalar, IndexTraits>&         well
         }
 
         if (gasPresent) {
-            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
             const int gaspos = gasCompIdx + perf * well_.numConservationQuantities();
 
             Scalar rvw = 0.0;
@@ -573,7 +573,7 @@ computePropertiesForPressures(const WellState<Scalar, IndexTraits>&         well
         }
 
         if (oilPresent) {
-            const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+            const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
             const int oilpos = oilCompIdx + perf * well_.numConservationQuantities();
 
             Scalar rs = 0.0;
@@ -605,7 +605,7 @@ computePropertiesForPressures(const WellState<Scalar, IndexTraits>&         well
                 continue;
             }
 
-            const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+            const unsigned compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
             props.surf_dens_perf[well_.numConservationQuantities() * perf + compIdx] =
                 FluidSystem::referenceDensity( phaseIdx, region_idx );
         }
@@ -702,7 +702,7 @@ connectionRateBrine(Scalar& rate,
                     const std::variant<Scalar,EvalWell>& saltConcentration) const
 {
     // TODO: the application of well efficiency factor has not been tested with an example yet
-    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    const unsigned waterCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
     // Correction salt rate; evaporated water does not contain salt
     EvalWell cq_s_sm = cq_s[waterCompIdx] - vap_wat_rate;
     if (well_.isInjector()) {
@@ -730,14 +730,14 @@ connectionRateFoam(const std::vector<EvalWell>& cq_s,
     auto getFoamTransportIdx = [&deferred_logger,transportPhase] {
         switch (transportPhase) {
             case Phase::WATER: {
-                return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                return FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
             }
             case Phase::GAS: {
-                return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                return FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
             }
             case Phase::SOLVENT: {
                 if constexpr (Indices::enableSolvent)
-                    return Indices::contiSolventEqIdx;
+                    return static_cast<short>(Indices::contiSolventEqIdx);
                 else
                     OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase is SOLVENT but SOLVENT is not activated.", deferred_logger);
             }
@@ -770,7 +770,7 @@ connectionRatesMICP(Scalar& rate_m,
                     const std::variant<Scalar,EvalWell>& oxygenConcentration,
                     const std::variant<Scalar,EvalWell>& ureaConcentration) const
 {
-    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    const unsigned waterCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
     EvalWell cq_s_microbe = cq_s[waterCompIdx];
     if (well_.isInjector()) {
         cq_s_microbe *= std::get<Scalar>(microbialConcentration);
@@ -812,7 +812,7 @@ connectionRatePolymer(Scalar& rate,
                       const std::variant<Scalar,EvalWell>& polymerConcentration) const
 {
     // TODO: the application of well efficiency factor has not been tested with an example yet
-    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    const unsigned waterCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
     EvalWell cq_s_poly = cq_s[waterCompIdx];
     if (well_.isInjector()) {
         cq_s_poly *= std::get<Scalar>(polymerConcentration);
@@ -837,7 +837,7 @@ connectionRatezFraction(Scalar& rate,
                         const std::variant<Scalar, std::array<EvalWell,2>>& solventConcentration) const
 {
     // TODO: the application of well efficiency factor has not been tested with an example yet
-    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+    const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
     EvalWell cq_s_zfrac_effective = cq_s[gasCompIdx];
     if (well_.isInjector()) {
         cq_s_zfrac_effective *= std::get<Scalar>(solventConcentration);

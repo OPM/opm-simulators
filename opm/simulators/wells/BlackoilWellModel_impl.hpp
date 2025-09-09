@@ -2189,7 +2189,7 @@ namespace Opm {
                     continue;
                 }
 
-                const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                const unsigned compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
                 auto& B  = B_avg[ compIdx ];
 
                 B += 1 / fs.invB(phaseIdx).value();

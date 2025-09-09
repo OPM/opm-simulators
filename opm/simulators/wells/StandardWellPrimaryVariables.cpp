@@ -471,7 +471,7 @@ volumeFraction(const int compIdx) const
         return EvalWell(numWellEq_ + Indices::numEq, 1.0);
     }
 
-    if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+    if (has_gfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx)) {
         return evaluation_[GFrac];
     }
 
@@ -480,7 +480,7 @@ volumeFraction(const int compIdx) const
     }
 
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        if (has_wfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
+        if (has_wfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx)) {
             return evaluation_[WFrac];
         }
     }
@@ -540,26 +540,26 @@ getQs(const int comp_idx) const
         Scalar inj_frac = 0.0;
         switch (well_.wellEcl().injectorType()) {
         case InjectorType::WATER:
-            if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))) {
+            if (comp_idx == int(FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx))) {
                 inj_frac = 1.0;
             }
             break;
         case InjectorType::GAS:
             if (Indices::enableSolvent && comp_idx == Indices::contiSolventEqIdx) { // solvent
                 inj_frac = well_.wsolvent();
-            } else if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))) {
+            } else if (comp_idx == int(FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx))) {
                 inj_frac = 1.0 - well_.rsRvInj();
                 if constexpr (Indices::enableSolvent) {
                     inj_frac -= well_.wsolvent();
                 }
-            } else if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))) {
+            } else if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && comp_idx == int(FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx))) {
                 inj_frac = well_.rsRvInj();
             }
             break;
         case InjectorType::OIL:
-            if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))) {
+            if (comp_idx == int(FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx))) {
                 inj_frac = 1.0 - well_.rsRvInj();
-            } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))) {
+            } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && comp_idx == int(FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx))) {
                 inj_frac = well_.rsRvInj();
             }
             break;

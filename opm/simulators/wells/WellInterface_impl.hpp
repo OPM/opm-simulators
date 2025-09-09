@@ -967,7 +967,7 @@ namespace Opm
     {
         for (int perfIdx = 0; perfIdx < this->number_of_local_perforations_; ++perfIdx) {
             if (this->cells()[perfIdx] == cellIdx) {
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
                 return connectionRates_[perfIdx][activeCompIdx].value();
             }
         }
@@ -1743,7 +1743,7 @@ namespace Opm
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
         const Scalar Kh = connection.Kh();
         const Scalar scaling = 3.141592653589 * Kh * connection.wpimult();
-        const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        const unsigned gas_comp_idx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
 
         const Scalar connection_pressure = ws.perf_data.pressure[perf];
         const Scalar cell_pressure = getValue(intQuants.fluidState().pressure(FluidSystem::gasPhaseIdx));
