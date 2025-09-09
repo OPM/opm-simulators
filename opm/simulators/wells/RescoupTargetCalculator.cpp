@@ -17,7 +17,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
-#include <opm/simulators/wells/GroupTargetCalculator.hpp>
 #include <opm/simulators/wells/RescoupTargetCalculator.hpp>
 
 #include <array>
@@ -128,42 +127,58 @@ calculateMasterGroupTargetsAndSendToSlaves()
             this->deferred_logger_
         };
         auto num_slaves = rescoup_master.numSlaves();
-        static const std::array<Phase, 3> phases = { Phase::WATER, Phase::OIL, Phase::GAS };
         for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-            std::vector<InjectionGroupTarget> injection_targets;
-            std::vector<ProductionGroupTarget> production_targets;
-            const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
-            for (std::size_t group_idx = 0; group_idx < master_groups.size(); ++group_idx) {
-                const auto& group_name = master_groups[group_idx];
-                const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-                if (group.isInjectionGroup()) {
-                    for (Phase phase : phases) {
-                        auto target_info = calculator.groupInjectionTarget(group, phase);
-                        if (target_info.has_value()) {
-                            injection_targets.push_back(
-                                InjectionGroupTarget{
-                                    group_idx, target_info->target, target_info->cmode, phase
-                                }
-                            );
-                        }
-                    }
-                }
-                if (group.isProductionGroup()) {
-                    auto target_info = calculator.groupProductionTarget(group);
-                    if (target_info.has_value()) {
-                        production_targets.push_back(
-                            ProductionGroupTarget{
-                                group_idx, target_info->target, target_info->cmode
-                            }
-                        );
-                    }
-                }
+            if (rescoup_master.slaveIsActivated(slave_idx)) {
+                auto [injection_targets, production_targets] =
+                    this->calculateSlaveGroupTargets_(slave_idx, calculator);
+                this->sendSlaveGroupTargetsToSlave_(
+                    rescoup_master, slave_idx, injection_targets, production_targets
+                );
             }
-            this->sendSlaveGroupTargetsToSlave_(
-                rescoup_master, slave_idx, injection_targets, production_targets
-            );
         }
     }
+}
+
+template <class Scalar>
+std::tuple<
+  std::vector<typename RescoupTargetCalculator<Scalar>::InjectionGroupTarget>,
+  std::vector<typename RescoupTargetCalculator<Scalar>::ProductionGroupTarget>
+>
+RescoupTargetCalculator<Scalar>::
+calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar>& calculator) const
+{
+    std::vector<InjectionGroupTarget> injection_targets;
+    std::vector<ProductionGroupTarget> production_targets;
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    static const std::array<Phase, 3> phases = { Phase::WATER, Phase::OIL, Phase::GAS };
+    const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+    for (std::size_t group_idx = 0; group_idx < master_groups.size(); ++group_idx) {
+        const auto& group_name = master_groups[group_idx];
+        const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+        if (group.isInjectionGroup()) {
+            for (Phase phase : phases) {
+                auto target_info = calculator.groupInjectionTarget(group, phase);
+                if (target_info.has_value()) {
+                    injection_targets.push_back(
+                        InjectionGroupTarget{
+                            group_idx, target_info->target, target_info->cmode, phase
+                        }
+                    );
+                }
+            }
+        }
+        if (group.isProductionGroup()) {
+            auto target_info = calculator.groupProductionTarget(group);
+            if (target_info.has_value()) {
+                production_targets.push_back(
+                    ProductionGroupTarget{
+                        group_idx, target_info->target, target_info->cmode
+                    }
+                );
+            }
+        }
+    }
+    return {injection_targets, production_targets};
 }
 
 template <class Scalar>
