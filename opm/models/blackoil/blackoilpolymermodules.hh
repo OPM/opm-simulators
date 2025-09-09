@@ -286,7 +286,7 @@ public:
             const unsigned inIdx = extQuants.interiorIndex();
             const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
             const unsigned contiWaterEqIdx =
-                Indices::conti0EqIdx + Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                Indices::conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
 
             if (upIdx == inIdx) {
                 flux[contiPolymerEqIdx] =

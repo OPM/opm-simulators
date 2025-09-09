@@ -618,7 +618,7 @@ public:
                 if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
                     mass_rate /= FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
                 }
-                rate[Indices::canonicalToActiveComponentIndex(compIdx)] += mass_rate;
+                rate[FluidSystem::canonicalToActiveCompIdx(compIdx)] += mass_rate;
             }
 
             if constexpr (enableSolvent) {
@@ -1188,7 +1188,7 @@ protected:
 
             Scalar avgB = numTotalDof / sumInvB[phaseIdx];
             unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-            unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
+            unsigned activeSolventCompIdx = FluidSystem::canonicalToActiveCompIdx(solventCompIdx);
             this->model().setEqWeight(activeSolventCompIdx, avgB);
         }
     }

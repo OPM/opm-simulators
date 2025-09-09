@@ -538,11 +538,11 @@ MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 volumeFraction(const int seg,
                const int compIdx) const
 {
-    if (has_wfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
+    if (has_wfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx)) {
         return evaluation_[seg][WFrac];
     }
 
-    if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+    if (has_gfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx)) {
         return evaluation_[seg][GFrac];
     }
 
@@ -615,17 +615,17 @@ getSegmentRateUpwinding(const int seg,
         auto phase = well.getInjectionProperties().injectorType;
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
-                && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == comp_idx
+                && FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx) == comp_idx
                 && phase == InjectorType::WATER)
             return evaluation_[seg][WQTotal] / well_.scalingFactor(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx));;
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
-                && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == comp_idx
+                && FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx) == comp_idx
                 && phase == InjectorType::OIL)
             return evaluation_[seg][WQTotal] / well_.scalingFactor(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx));
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
-                && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == comp_idx
+                && FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx) == comp_idx
                 && phase == InjectorType::GAS)
             return evaluation_[seg][WQTotal] / well_.scalingFactor(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx));
 

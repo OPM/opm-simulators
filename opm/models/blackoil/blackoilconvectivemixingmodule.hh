@@ -381,7 +381,7 @@ public:
 
             const auto convectiveFlux = -trans * transMult * info.Xhi_[up.pvtRegionIndex()] * invB *
                                         pressure_difference_convective_mixing * RsupRestricted / (visc * faceArea);
-            unsigned activeGasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
             if (globalUpIndex == globalIndexIn) {
                 flux[conti0EqIdx + activeGasCompIdx] += convectiveFlux;
             }

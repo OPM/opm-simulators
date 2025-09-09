@@ -1147,13 +1147,13 @@ public:
         RateVector rate = 0.0;
         switch (bc.component) {
         case BCComponent::OIL:
-            rate[Indices::canonicalToActiveComponentIndex(oilCompIdx)] = bc.rate;
+            rate[FluidSystem::canonicalToActiveCompIdx(oilCompIdx)] = bc.rate;
             break;
         case BCComponent::GAS:
-            rate[Indices::canonicalToActiveComponentIndex(gasCompIdx)] = bc.rate;
+            rate[FluidSystem::canonicalToActiveCompIdx(gasCompIdx)] = bc.rate;
             break;
         case BCComponent::WATER:
-            rate[Indices::canonicalToActiveComponentIndex(waterCompIdx)] = bc.rate;
+            rate[FluidSystem::canonicalToActiveCompIdx(waterCompIdx)] = bc.rate;
             break;
         case BCComponent::SOLVENT:
             this->handleSolventBC(bc, rate);

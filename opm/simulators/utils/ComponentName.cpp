@@ -44,7 +44,7 @@ ComponentName<FluidSystem,Indices>::ComponentName()
         }
 
         const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-        names_[Indices::canonicalToActiveComponentIndex(canonicalCompIdx)]
+        names_[FluidSystem::canonicalToActiveCompIdx(canonicalCompIdx)]
             = FluidSystem::componentName(canonicalCompIdx);
     }
 

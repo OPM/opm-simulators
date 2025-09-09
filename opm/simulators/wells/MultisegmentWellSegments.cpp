@@ -150,7 +150,7 @@ computeFluidProperties(const EvalWell& temperature,
             continue;
         }
 
-        const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+        const unsigned compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
         surf_dens[compIdx] = FluidSystem::referenceDensity( phaseIdx, pvt_region_index);
     }
 
@@ -168,7 +168,7 @@ computeFluidProperties(const EvalWell& temperature,
         const EvalWell seg_pressure = primary_variables.getSegmentPressure(seg);
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             EvalWell rsw(0.0);
-            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            const unsigned waterCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
             b[waterCompIdx] =
                 FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rsw, saltConcentration);
             visc[waterCompIdx] =
@@ -182,9 +182,9 @@ computeFluidProperties(const EvalWell& temperature,
         EvalWell rvw(0.0);
         // gas phase
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
                 const EvalWell rvmax = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index, temperature, seg_pressure);
                 if (mix_s[oilCompIdx] > 0.0) {
                     if (mix_s[gasCompIdx] > 0.0) {
@@ -219,9 +219,9 @@ computeFluidProperties(const EvalWell& temperature,
         EvalWell rs(0.0);
         // oil phase
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+            const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
                 const EvalWell rsmax = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index, temperature, seg_pressure);
                 if (mix_s[gasCompIdx] > 0.0) {
                     if (mix_s[oilCompIdx] > 0.0) {
@@ -257,8 +257,8 @@ computeFluidProperties(const EvalWell& temperature,
 
         std::vector<EvalWell> mix(mix_s);
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+            const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+            const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
 
             const EvalWell d = 1.0 - rs * rv;
             if (d <= 0.0) {
@@ -373,7 +373,7 @@ getSurfaceVolume(const EvalWell& temperature,
 
     std::vector<EvalWell> b(well_.numConservationQuantities(), 0.);
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        const unsigned waterCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
         EvalWell rsw(0.0);
         b[waterCompIdx] =
             FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index,
@@ -387,9 +387,9 @@ getSurfaceVolume(const EvalWell& temperature,
     EvalWell rvw(0.0);
     // gas phase
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+            const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
             EvalWell rvmax = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index,
                                                                                   temperature,
                                                                                   seg_pressure);
@@ -428,9 +428,9 @@ getSurfaceVolume(const EvalWell& temperature,
     EvalWell rs(0.0);
     // oil phase
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
             EvalWell rsmax = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index,
                                                                                  temperature,
                                                                                  seg_pressure);
@@ -468,8 +468,8 @@ getSurfaceVolume(const EvalWell& temperature,
 
     std::vector<EvalWell> mix(mix_s);
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+        const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
 
         const EvalWell d = 1.0 - rs * rv;
         if (d <= 0.0 || d > 1.0) {
@@ -570,7 +570,7 @@ pressureDropSpiralICD(const int seg,
     EvalWell water_fraction = 0.;
     EvalWell water_viscosity = 0.;
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        const int water_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        const int water_pos = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
         water_fraction = phase_fractions[water_pos];
         water_viscosity = phase_viscosities[water_pos];
     }
@@ -578,7 +578,7 @@ pressureDropSpiralICD(const int seg,
     EvalWell oil_fraction = 0.;
     EvalWell oil_viscosity = 0.;
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        const int oil_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        const int oil_pos = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
         oil_fraction = phase_fractions[oil_pos];
         oil_viscosity = phase_viscosities[oil_pos];
     }
@@ -586,7 +586,7 @@ pressureDropSpiralICD(const int seg,
     EvalWell gas_fraction = 0.;
     EvalWell gas_viscosity = 0.;
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        const int gas_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        const int gas_pos = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
         gas_fraction = phase_fractions[gas_pos];
         gas_viscosity = phase_viscosities[gas_pos];
     }
@@ -677,7 +677,7 @@ pressureDropAutoICD(const int seg,
     EvalWell water_viscosity = 0.;
     EvalWell water_density = 0.;
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        const int water_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        const int water_pos = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
         water_fraction = phase_fractions[water_pos];
         water_viscosity = phase_viscosities[water_pos];
         water_density = phase_densities[water_pos];
@@ -687,7 +687,7 @@ pressureDropAutoICD(const int seg,
     EvalWell oil_viscosity = 0.;
     EvalWell oil_density = 0.;
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        const int oil_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        const int oil_pos = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
         oil_fraction = phase_fractions[oil_pos];
         oil_viscosity = phase_viscosities[oil_pos];
         oil_density = phase_densities[oil_pos];
@@ -697,7 +697,7 @@ pressureDropAutoICD(const int seg,
     EvalWell gas_viscosity = 0.;
     EvalWell gas_density = 0.;
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        const int gas_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        const int gas_pos = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
         gas_fraction = phase_fractions[gas_pos];
         gas_viscosity = phase_viscosities[gas_pos];
         gas_density = phase_densities[gas_pos];
@@ -913,7 +913,7 @@ copyPhaseDensities(const unsigned    phaseIdx,
                    const std::size_t stride,
                    Scalar*           dens) const
 {
-    const auto compIdx = Indices::canonicalToActiveComponentIndex
+    const auto compIdx = FluidSystem::canonicalToActiveCompIdx
         (FluidSystem::solventComponentIndex(phaseIdx));
 
     for (const auto& phase_density : this->phase_densities_) {
@@ -942,8 +942,7 @@ mixtureDensity(const int seg) const
             continue;
         }
 
-        const auto active_comp_index = Indices::
-            canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phIdx));
+        const auto active_comp_index = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phIdx));
 
         mixDens += q[active_comp_index].value() * rho[active_comp_index].value();
     }
@@ -985,8 +984,7 @@ mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const
 
     for (const auto& [fsPhaseIdx, densityExponent] : densityExponents) {
         if (FluidSystem::phaseIsActive(fsPhaseIdx)) {
-            const auto compIdx = Indices::
-                canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(fsPhaseIdx));
+            const auto compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(fsPhaseIdx));
 
             // exp = (aicd.*densityExponent)() in native syntax.
             const auto exp = std::invoke(densityExponent, aicd);

@@ -109,13 +109,13 @@ assembleControlEq(const WellState<Scalar, IndexTraits>& well_state,
     auto getRates = [&]() {
         std::vector<EvalWell> rates(3, 0.0);
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            rates[Water] = primary_variables.getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
+            rates[Water] = primary_variables.getQs(FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx));
         }
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            rates[Oil] = primary_variables.getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+            rates[Oil] = primary_variables.getQs(FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx));
         }
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            rates[Gas] = primary_variables.getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
+            rates[Gas] = primary_variables.getQs(FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx));
         }
         return rates;
     };

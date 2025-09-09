@@ -129,7 +129,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
         }
 
         const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-        const int compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
+        const int compIdx = FluidSystem::canonicalToActiveCompIdx(canonicalCompIdx);
 
         if (std::isnan(well_flux_residual[compIdx])) {
             report.setWellFailed({type, CR::Severity::NotANumber, compIdx, baseif_.name()});
