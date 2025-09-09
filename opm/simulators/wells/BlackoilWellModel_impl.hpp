@@ -661,7 +661,7 @@ namespace Opm {
     sendMasterGroupTargetsToSlaves(const int reportStepIdx)
     {
         // This function is called by the master process to send the group targets to the slaves.
-        RescoupTargetCalculator target_calculator{
+        RescoupTargetCalculator<Scalar, IndexTraits> target_calculator{
             this->guide_rate_handler_,
             this->wellState(),
             this->groupState(),
@@ -675,7 +675,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     receiveGroupTargetsFromMaster(int reportStepIdx)
     {
-        RescoupReceiveGroupTargets target_receiver{
+        RescoupReceiveGroupTargets<Scalar, IndexTraits> target_receiver{
             this->guide_rate_handler_,
             this->wellState(),
             this->groupState(),

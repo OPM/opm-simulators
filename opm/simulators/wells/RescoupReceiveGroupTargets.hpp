@@ -30,19 +30,19 @@
 
 namespace Opm {
 
-template<class Scalar>
+template<class Scalar, class IndexTraits>
 class RescoupReceiveGroupTargets {
 public:
     RescoupReceiveGroupTargets(
-        GuideRateHandler<Scalar>& guide_rate_handler,
-        const WellState<Scalar>& well_state,
+        GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
+        const WellState<Scalar, IndexTraits>& well_state,
         const GroupState<Scalar>& group_state,
         const int report_step_idx
     );
     void receiveGroupTargetsFromMaster();
 private:
-    GuideRateHandler<Scalar>& guide_rate_handler_;
-    const WellState<Scalar>& well_state_;
+    GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler_;
+    const WellState<Scalar, IndexTraits>& well_state_;
     const GroupState<Scalar>& group_state_;
     const int report_step_idx_;
     ReservoirCouplingSlave<Scalar>& reservoir_coupling_slave_;

@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 #include <opm/simulators/wells/RescoupTargetCalculator.hpp>
 
 #include <array>
@@ -31,11 +32,11 @@ namespace Opm {
 // -------------------------------------------------------
 // Constructor for the RescoupTargetCalculator class
 // -------------------------------------------------------
-template <class Scalar>
-RescoupTargetCalculator<Scalar>::
+template <class Scalar, class IndexTraits>
+RescoupTargetCalculator<Scalar, IndexTraits>::
 RescoupTargetCalculator(
-    GuideRateHandler<Scalar>& guide_rate_handler,
-    const WellState<Scalar>& well_state,
+    GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
+    const WellState<Scalar, IndexTraits>& well_state,
     const GroupState<Scalar>& group_state,
     const int report_step_idx
 )
@@ -105,9 +106,9 @@ RescoupTargetCalculator(
 //   * TODO: The RESV, REIN, and VREP targets for a master group can currently not be calculated, since
 //       these targets depend on the slave groups' injection and/or production rates which are not
 //       communicated to the master process yet.
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 void
-RescoupTargetCalculator<Scalar>::
+RescoupTargetCalculator<Scalar, IndexTraits>::
 calculateMasterGroupTargetsAndSendToSlaves()
 {
     // NOTE: Since this object can only be constructed for a master process, we can be
@@ -139,13 +140,13 @@ calculateMasterGroupTargetsAndSendToSlaves()
     }
 }
 
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 std::tuple<
-  std::vector<typename RescoupTargetCalculator<Scalar>::InjectionGroupTarget>,
-  std::vector<typename RescoupTargetCalculator<Scalar>::ProductionGroupTarget>
+  std::vector<typename RescoupTargetCalculator<Scalar, IndexTraits>::InjectionGroupTarget>,
+  std::vector<typename RescoupTargetCalculator<Scalar, IndexTraits>::ProductionGroupTarget>
 >
-RescoupTargetCalculator<Scalar>::
-calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar>& calculator) const
+RescoupTargetCalculator<Scalar, IndexTraits>::
+calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar, IndexTraits>& calculator) const
 {
     std::vector<InjectionGroupTarget> injection_targets;
     std::vector<ProductionGroupTarget> production_targets;
@@ -181,9 +182,9 @@ calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar>
     return {injection_targets, production_targets};
 }
 
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 void
-RescoupTargetCalculator<Scalar>::
+RescoupTargetCalculator<Scalar, IndexTraits>::
 sendSlaveGroupTargetsToSlave_(
     const ReservoirCouplingMaster<Scalar>& rescoup_master,
     std::size_t slave_idx,
@@ -204,10 +205,10 @@ sendSlaveGroupTargetsToSlave_(
     }
 }
 
-template class RescoupTargetCalculator<double>;
+template class RescoupTargetCalculator<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class RescoupTargetCalculator<float>;
+template class RescoupTargetCalculator<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 }// namespace Opm

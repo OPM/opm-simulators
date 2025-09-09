@@ -125,7 +125,7 @@ public:
         const Parallel::Communication &comm() const { return this->parent_.comm_; }
         DeferredLogger &deferredLogger() { return this->parent_.deferredLogger(); }
         GuideRate &guideRate() { return this->parent_.guide_rate_; }
-        const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_.wellModel().phaseUsage(); }
+        const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_.phaseUsage(); }
         const SummaryState &summaryState() const { return this->parent_.summary_state_; }
         const Schedule &schedule() const { return this->parent_.schedule_; }
         /**
