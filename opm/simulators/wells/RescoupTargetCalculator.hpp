@@ -26,8 +26,10 @@
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/wells/GroupTargetCalculator.hpp>
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+
 namespace Opm {
 
 template<class Scalar>
@@ -44,6 +46,8 @@ public:
 
     void calculateMasterGroupTargetsAndSendToSlaves();
 private:
+    std::tuple<std::vector<InjectionGroupTarget>, std::vector<ProductionGroupTarget>>
+        calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar>& calculator) const;
     void sendSlaveGroupTargetsToSlave_(
         const ReservoirCouplingMaster<Scalar>& rescoup_master,
         std::size_t slave_idx,
