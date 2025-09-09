@@ -180,12 +180,6 @@ struct BlackOilOnePhaseIndices
     // Equation indices
     //////////////////////
 
-    //! \brief returns the index of "active" component
-    static constexpr int canonicalToActiveComponentIndex(const int /*compIdx*/)
-    {
-        return 0;
-    }
-
     //! Index of the continuity equation of the first (and only) phase
     static constexpr int conti0EqIdx = PVOffset + 0;
 
