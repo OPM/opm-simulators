@@ -203,6 +203,7 @@ public:
      * \brief Calculates the gradient of an arbitrary quantity at any
      *        flux approximation point.
      *
+     * \param[out] quantityGrad Resulting gradient
      * \param elemCtx The current execution context
      * \param fapIdx The local index of the flux approximation point
      *               in the current element's stencil.
@@ -281,6 +282,7 @@ public:
      * Boundary gradients are always calculated using the two-point
      * approximation.
      *
+     * \param[out] quantityGrad Resulting gradient
      * \param elemCtx The current execution context
      * \param faceIdx The local index of the flux approximation point
      *                in the current element's stencil.

@@ -68,6 +68,8 @@ public:
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
     /// \param[in] jacMatrix  matrix for preconditioner
+    /// \param[in] d_Arows Array of row indices
+    /// \param[in] d_Acols Array of column indices
     bool initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
                     std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                     rocsparse_int *d_Arows,
@@ -101,6 +103,7 @@ public:
     /// and Ux = z
     /// \param[in]  y  Input y vector
     /// \param[out] x  Output x vector
+    /// \param wellContribs Well contributions
     void apply(const Scalar& y,
                Scalar& x,
                WellContributions<Scalar>& wellContribs) override;
@@ -111,11 +114,14 @@ public:
 
     /// Copy matrix A values to GPU
     /// \param[in]  mVals  Input values
+    /// \param[in]  mRows Array of matrix row indices
+    /// \param[in]  mCols Array of matrix column indices
+    /// \param[in]  reuse True to reuse old matrix
     void copy_values_to_gpu(Scalar *mVals, int *mRows, int *mCols, bool reuse);
     
     /// Update GPU values after a new assembly is done
     /// \param[in] b     New b vector
-    void update_system_on_gpu(Scalar* vals, Scalar *b) override;
+    void update_system_on_gpu(Scalar*, Scalar* b) override;
 
 };
 } // namespace Opm

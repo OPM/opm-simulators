@@ -90,6 +90,7 @@ public:
      *        values of quantities at any flux approximation point.
      *
      * \param elemCtx The current execution context
+     * \param timeIdx Time index
      */
     template <bool prepareValues = true, bool prepareGradients = true>
     void prepare([[maybe_unused]] const ElementContext& elemCtx,
@@ -254,6 +255,7 @@ public:
      * \brief Calculates the gradient of an arbitrary quantity at any
      *        flux approximation point.
      *
+     * \param[out] quantityGrad Resulting gradient
      * \param elemCtx The current execution context
      * \param fapIdx The local index of the flux approximation point
      *               in the current element's stencil.
@@ -332,6 +334,7 @@ public:
      * Boundary gradients are always calculated using the two-point
      * approximation.
      *
+     * \param quantityGrad Resulting gradient
      * \param elemCtx The current execution context
      * \param fapIdx The local index of the flux approximation point
      *               in the current element's stencil.

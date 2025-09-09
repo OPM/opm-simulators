@@ -403,7 +403,7 @@ copy_values_to_gpu(Scalar *h_vals, int *h_rows, int *h_cols, bool reuse)
 // don't copy rowpointers and colindices, they stay the same
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-update_system_on_gpu([[maybe_unused]]Scalar* vals, Scalar *d_Avals) 
+update_system_on_gpu(Scalar*, Scalar *d_Avals)
 {
     bool use_multithreading = true;
 

@@ -34,13 +34,18 @@ namespace Action {
 class State;
 }
 
-
 /*! \brief Broadcasts an eclipse state from root node in parallel runs.
+ *! \param comm Parallel communicator
  *! \param eclState EclipseState to broadcast
  *! \param schedule Schedule to broadcast
  *! \param summaryConfig SummaryConfig to broadcast
+ *! \param udqState UDQ state to broadcast
+ *! \param actionState Action state to broadcast
+ *! \param wtestState Well test state to broadcast
 */
-void eclStateBroadcast(Parallel::Communication  comm, EclipseState& eclState, Schedule& schedule,
+void eclStateBroadcast(Parallel::Communication comm,
+                       EclipseState& eclState,
+                       Schedule& schedule,
                        SummaryConfig& summaryConfig,
                        UDQState& udqState,
                        Action::State& actionState,

@@ -101,6 +101,8 @@ public:
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
     /// \param[in] jacMatrix  matrix for preconditioner
+    /// \param[in] d_Arows Array of matrix row indices
+    /// \param[in] d_Acols Array of matrix column indices
     bool initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
                     std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                     rocsparse_int *d_Arows,
@@ -132,17 +134,19 @@ public:
     /// also applies amg for pressure component
     /// \param[in]  y  Input y vector
     /// \param[out] x  Output x vector
+    /// \param wellContribs Well contributions
     void apply(const Scalar& y,
                Scalar& x,
                WellContributions<Scalar>& wellContribs) override;
     
     /// Copy matrix A values to GPU
-    /// \param[in]  mVals  Input values
+    /// \param[in]  b Input values
     void copy_system_to_gpu(Scalar *b) override;
 
     /// Update linear system to GPU
+    /// \param[in] vals           Matrix values
     /// \param[in] b              input vector, contains N values
-    void update_system_on_gpu(Scalar * vals, Scalar *b) override;
+    void update_system_on_gpu(Scalar* vals, Scalar* b) override;
     
 };
 

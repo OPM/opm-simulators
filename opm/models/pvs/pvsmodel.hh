@@ -453,6 +453,9 @@ public:
 
     /*!
      * \copydoc FvBaseDiscretization::eqWeight
+     *
+     * \param globalDofIdx Global index
+     * \param eqIdx Equation index
      */
     Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
     {
@@ -487,6 +490,9 @@ public:
 
     /*!
      * \copydoc FvBaseDiscretization::serializeEntity
+     *
+     * \param outstream Stream to write serialization to
+     * \param dofEntity Dof entity to serialize
      */
     template <class DofEntity>
     void serializeEntity(std::ostream& outstream, const DofEntity& dofEntity)
@@ -504,6 +510,9 @@ public:
 
     /*!
      * \copydoc FvBaseDiscretization::deserializeEntity
+     *
+     * \param instream Stream to de-serialize from
+     * \param dofEntity Dof entity to de-serialize
      */
     template <class DofEntity>
     void deserializeEntity(std::istream& instream, const DofEntity& dofEntity)

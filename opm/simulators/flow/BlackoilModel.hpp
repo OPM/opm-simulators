@@ -113,12 +113,9 @@ public:
     /// Construct the model. It will retain references to the
     /// arguments of this functions, and they are expected to
     /// remain in scope for the lifetime of the solver.
+    /// \param simulator            Reference to main simulator
     /// \param[in] param            parameters
-    /// \param[in] grid             grid data structure
-    /// \param[in] wells            well structure
-    /// \param[in] vfp_properties   Vertical flow performance tables
-    /// \param[in] linsolver        linear solver
-    /// \param[in] eclState         eclipse state
+    /// \param[in] well_model       Reference to well model
     /// \param[in] terminal_output  request output to cout/cerr
     BlackoilModel(Simulator& simulator,
                   const ModelParameters& param,

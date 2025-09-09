@@ -52,8 +52,7 @@ public:
     //! \brief Constructor.
     //!
     //! Constructor gets all parameters to operate the prec.
-    //!    \param A The matrix to operate on.
-    //!    \param w The relaxation factor.
+    //!    \param preconditioner Preconditioner to use in adapter
     //!
     explicit PreconditionerAdapter(std::shared_ptr<CudaPreconditionerType> preconditioner)
         : m_underlyingPreconditioner(preconditioner)

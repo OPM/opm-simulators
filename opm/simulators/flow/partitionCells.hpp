@@ -81,6 +81,8 @@ struct ZoltanPartitioningControl
 /// \param[in] wells Collection of simulation model wells.  Not used unless
 ///    \code method == "zoltan" \endcode.
 ///
+/// \param[in] possibleFutureConnections Map of possible future connections.
+///
 /// \param[in] zoltan_ctrl Control parameters for local Zoltan-based
 ///    partitioning.  Not used unless \code method == "zoltan" \endcode.
 ///

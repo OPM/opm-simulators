@@ -29,9 +29,9 @@ class BlockedMatrix
 {
 public:
     /// Allocate BlockedMatrix and data arrays with given sizes
-    /// \param[in] Nb               number of blockrows
-    /// \param[in] nnzbs            number of nonzero blocks
-    /// \param[in] block_size       the number of rows and columns for each block
+    /// \param[in] Nb_              number of blockrows
+    /// \param[in] nnzbs_           number of nonzero blocks
+    /// \param[in] block_size_      the number of rows and columns for each block
     BlockedMatrix(int Nb_, int nnzbs_, unsigned int block_size_)
         : nnzValues(new Scalar[nnzbs_*block_size_*block_size_])
         , colIndices(new int[nnzbs_*block_size_*block_size_])
@@ -57,12 +57,12 @@ public:
     {}
 
     /// Allocate BlockedMatrix, but let data arrays point to existing arrays
-    /// \param[in] Nb             number of blockrows
-    /// \param[in] nnzbs          number of nonzero blocks
-    /// \param[in] block_size     the number of rows and columns for each block
-    /// \param[in] nnzValues      array of nonzero values, contains nnzb*block_size*block_size scalars
-    /// \param[in] colIndices     array of column indices, contains nnzb entries
-    /// \param[in] rowPointers    array of row pointers, contains Nb+1 entries
+    /// \param[in] Nb_            number of blockrows
+    /// \param[in] nnzbs_         number of nonzero blocks
+    /// \param[in] block_size_    the number of rows and columns for each block
+    /// \param[in] nnzValues_     array of nonzero values, contains nnzb*block_size*block_size scalars
+    /// \param[in] colIndices_    array of column indices, contains nnzb entries
+    /// \param[in] rowPointers_   array of row pointers, contains Nb+1 entries
     BlockedMatrix(int Nb_, int nnzbs_, unsigned int block_size_,
                   Scalar* nnzValues_, int *colIndices_, int *rowPointers_)
         : nnzValues(nnzValues_)

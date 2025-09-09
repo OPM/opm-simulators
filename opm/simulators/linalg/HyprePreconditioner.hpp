@@ -84,11 +84,17 @@ public:
      *
      * @param A The matrix for which the preconditioner is constructed.
      * @param prm The property tree containing configuration parameters.
+     * @param comm Parallel communicator.
      */
-    HyprePreconditioner(const M& A, const Opm::PropertyTree prm, const Comm& comm)
-        : A_(A)
-        , comm_(comm)
-        , use_gpu_backend_(prm.get<bool>("use_gpu", false))
+    // template <typename Prm = std::enable_if_t<std::is_same_v<Comm, Dune::Amg::SequentialInformation>, ::Opm::PropertyTree>>
+    // HyprePreconditioner (const M& A, const Prm& prm)
+    //     : HyprePreconditioner(A, prm, Dune::Amg::SequentialInformation())
+    // {
+    //     //NB if this is used comm_ can never be used
+    // }
+
+    HyprePreconditioner (const M& A, const Opm::PropertyTree prm, const Comm& comm)
+        : A_(A),comm_(comm)
     {
         OPM_TIMEBLOCK(prec_construct);
         int size;

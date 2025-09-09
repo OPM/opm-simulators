@@ -26,8 +26,8 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 namespace Opm::gpuistl::detail
-
 {
+
 /*
   The computeDiagIndices(NoReorder) functions are used to speed up the factorization time by
   not recomputing indices during each update kernel.
@@ -53,10 +53,9 @@ void computeDiagIndicesNoReorder(const int* rowIndices,
  * @brief Computes indices of diagonal elements for reordered GPU preconditioner.
  *
  * @tparam T Matrix element type
- * @param[in] mat The matrix in BCSR format
  * @param[in] rowIndices Row indices of the BCSR matrix
  * @param[in] colIndices Column indices of the BCSR matrix
- * @param[in] indexConversion Index conversion mapping
+ * @param[in] reorderedToNatural Table for reordering to natural numbering
  * @param[in] rows Number of rows in the matrix
  * @param[out] diagIndices Array to store the indices of diagonal elements
  */
@@ -68,4 +67,5 @@ void computeDiagIndices(const int* rowIndices,
                         size_t* diagIndices);
 
 } // namespace Opm::gpuistl::detail
+
 #endif

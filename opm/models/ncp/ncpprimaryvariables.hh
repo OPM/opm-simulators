@@ -148,6 +148,9 @@ public:
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::assignNaive
+     *
+     * \param fluidState The fluid state
+     * \param refPhaseIdx Reference phase index
      */
     template <class FluidState>
     void assignNaive(const FluidState& fluidState, unsigned refPhaseIdx = 0)

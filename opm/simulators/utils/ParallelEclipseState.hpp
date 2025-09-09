@@ -52,6 +52,7 @@ public:
 
     //! \brief Constructor.
     //! \param manager The field property manager to wrap.
+    //! \param comm Parallel communicator
     ParallelFieldPropsManager(FieldPropsManager& manager, Parallel::Communication comm);
 
     //! \brief Returns actnum vector.
@@ -165,6 +166,7 @@ public:
     //! EXPERIMENTAL FUNCTION TO ADD COMM AS INPUT.
     //! \brief Construct from a deck instance.
     //! \param deck The deck to construct from
+    //! \param comm Parallel communicator
     //! \details Only called on root process
     ParallelEclipseState(const Deck& deck, Parallel::Communication comm);
 

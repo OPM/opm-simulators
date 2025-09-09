@@ -54,7 +54,7 @@ namespace Opm {
         ///eclipse data file. Errors and warings will be
         ///output if they're found.
         ///\param[in] eclState  eclipse state.
-        ///\param[in] grid      unstructured grid.
+        ///\param[in] levelCartesianIndexMapper Cartesian index mapper
         template <class LevelCartesianIndexMapper>
         void diagnosis(const EclipseState& eclState,
                        const LevelCartesianIndexMapper& levelCartesianIndexMapper);
