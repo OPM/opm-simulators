@@ -818,10 +818,17 @@ namespace Opm {
                               constexpr auto events_mask = ScheduleEvents::WELL_STATUS_CHANGE |
                                                            ScheduleEvents::REQUEST_OPEN_WELL |
                                                            ScheduleEvents::REQUEST_SHUT_WELL;
-                              const bool well_status_change =
+                              const bool well_event =
                                   this->report_step_starts_ &&
                                   wg_events.hasEvent(well_ecl.name(), events_mask);
-                              if (well_status_change) {
+                              // WCYCLE is suspendended by explicit SHUT events by the user.
+                              // and restarted after explicit OPEN events.
+                              // Note: OPEN or SHUT event does not necessary mean the well
+                              // actually opened or shut at this point as the simulator could
+                              // have done this by operabilty checks and well testing. This
+                              // may need further testing and imply code changes to cope with
+                              // these corner cases.
+                              if (well_event) {
                                   if (well_ecl.getStatus() == WellStatus::OPEN) {
                                       this->well_open_times_.insert_or_assign(well_ecl.name(),
                                                                               this->simulator_.time());
