@@ -108,14 +108,17 @@ struct StandardPreconditioners<Operator,
 #endif
 
 #if HAVE_HYPRE && HYPRE_USING_CUDA || HYPRE_USING_HIP
-            F::addCreator("hypre", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-                // Only create Hypre preconditioner for scalar matrices
-                if (op.getmat().blockSize() == 1) {
-                    return std::make_shared<Hypre::HyprePreconditioner<M, V, V, Dune::Amg::SequentialInformation>>(op.getmat(), prm, Dune::Amg::SequentialInformation());
-                } else {
-                    OPM_THROW(std::logic_error, "Hypre preconditioner only works with scalar matrices (block size 1)");
-                }
-            });
+            // Only register Hypre preconditioner for double precision
+            if constexpr (std::is_same_v<HYPRE_Real, typename V::field_type>) {
+                F::addCreator("hypre", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+                    // Only create Hypre preconditioner for scalar matrices
+                    if (op.getmat().blockSize() == 1) {
+                        return std::make_shared<Hypre::HyprePreconditioner<M, V, V, Dune::Amg::SequentialInformation>>(op.getmat(), prm, Dune::Amg::SequentialInformation());
+                    } else {
+                        OPM_THROW(std::logic_error, "Hypre preconditioner only works with scalar matrices (block size 1).");
+                    }
+                });
+            }
 #endif
 
         }
