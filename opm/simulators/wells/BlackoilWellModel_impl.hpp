@@ -45,8 +45,8 @@
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
-#include <opm/simulators/wells/RescoupReceiveGroupTargets.hpp>
-#include <opm/simulators/wells/RescoupTargetCalculator.hpp>
+#include <opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp>
+#include <opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 
