@@ -1299,8 +1299,8 @@ if(MPI_FOUND)
     opm/simulators/flow/ReservoirCouplingMaster.cpp
     opm/simulators/flow/ReservoirCouplingSlave.cpp
     opm/simulators/flow/ReservoirCouplingSpawnSlaves.cpp
-    opm/simulators/wells/RescoupReceiveGroupTargets.cpp
-    opm/simulators/wells/RescoupTargetCalculator.cpp
+    opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.cpp
+    opm/simulators/wells/rescoup/RescoupTargetCalculator.cpp
   )
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/flow/ReservoirCoupling.hpp
@@ -1308,8 +1308,8 @@ if(MPI_FOUND)
     opm/simulators/flow/ReservoirCouplingMaster.hpp
     opm/simulators/flow/ReservoirCouplingSlave.hpp
     opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp
-    opm/simulators/wells/RescoupReceiveGroupTargets.hpp
-    opm/simulators/wells/RescoupTargetCalculator.hpp
+    opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp
+    opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp
     )
   list (APPEND TEST_SOURCE_FILES
     tests/rescoup/test_chopstep.cpp

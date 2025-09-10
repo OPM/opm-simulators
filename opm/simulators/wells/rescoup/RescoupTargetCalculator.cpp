@@ -18,7 +18,7 @@
 */
 #include <config.h>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
-#include <opm/simulators/wells/RescoupTargetCalculator.hpp>
+#include <opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp>
 
 #include <array>
 #include <string>
