@@ -38,9 +38,23 @@
 
 namespace Opm {
 
+/**
+ * Calculate group-level targets for production and injection.
+ *
+ * This class traverses the group hierarchy to determine effective control
+ * modes and targets, applying guide-rate based distribution, sales limits
+ * (e.g., GCONSALE), efficiency factors, and RESV coefficients where
+ * applicable. It provides a uniform interface for both producers and injectors
+ * and consolidates common logic through nested helper classes.
+ */
 template<class Scalar, class IndexTraits>
 class GroupTargetCalculator {
 public:
+    /**
+     * Union of control-mode types used by group target calculations.
+     * Holds Group::InjectionCMode for injection, Group::ProductionCMode for
+     * production; std::monostate denotes that no specific control applies.
+     */
     using ControlMode = std::variant<
         std::monostate,
         Group::InjectionCMode,
@@ -49,20 +63,32 @@ public:
     using FractionCalculator = WGHelpers::FractionCalculator<Scalar, IndexTraits>;
     using InjectionTargetCalculator = WGHelpers::InjectionTargetCalculator<Scalar, IndexTraits>;
     using TargetCalculator = WGHelpers::TargetCalculator<Scalar, IndexTraits>;
+    /** Generic result for a computed target and its control mode. */
     struct TargetInfo {
         Scalar target;
         ControlMode cmode;
     };
+    /** Result for a production target with its production control mode. */
     struct ProductionTargetInfo {
         Scalar target;
         Group::ProductionCMode cmode;
     };
+    /** Result for an injection target with its injection control mode. */
     struct InjectionTargetInfo {
         Scalar target;
         Group::InjectionCMode cmode;
     };
 
-    // Generalizes calculation for both injectors and producers to avoid code duplication.
+    /**
+     * Shared logic for injector and producer paths.
+     *
+     * Provides the common context (schedule, states, guide rates, phase usage,
+     * PVT/FIP regions, logger) and computes a target for the requested bottom
+     * group. The optional injection_phase indicates whether the calculation is
+     * for injection (has value) or production (no value). Internally it
+     * selects phase-dependent RESV coefficients and performs a recursive
+     * traversal to accumulate limits and select the effective control mode.
+     */
     class GeneralCalculator {
     public:
         GeneralCalculator(
@@ -104,6 +130,15 @@ public:
         std::vector<Scalar> resv_coeffs_prod_;
     };
 
+    /**
+     * Distribute a top-level target down to the requested group.
+     *
+     * After the effective top target and control mode are known, this helper
+     * walks the chain of groups from the top to the bottom group and applies
+     * either a production TargetCalculator or an InjectionTargetCalculator.
+     * A FractionCalculator is used where guide-rate fractions/reductions are
+     * required.
+     */
     class TopToBottomCalculator {
     public:
         TopToBottomCalculator(
@@ -144,6 +179,8 @@ public:
         GeneralCalculator& parent_calculator_;
         const Group& group_;
         Scalar efficiency_factor_;
+        // Active calculator used for distributing the target along the chain:
+        // either production TargetCalculator or InjectionTargetCalculator.
         std::variant<std::monostate, TargetCalculator, InjectionTargetCalculator> target_calculator_;
         // Since FractionCalculator does not have a default constructor, we use std::optional
         // to conditionally initialize it based on whether we are dealing with an injector or producer.
@@ -151,6 +188,9 @@ public:
         ControlMode toplevel_control_mode_;
     };
 
+    /**
+     * Construct a calculator bound to one report step and simulator state.
+     */
     GroupTargetCalculator(
         const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
         const WellState<Scalar, IndexTraits>& well_state,
@@ -164,7 +204,9 @@ public:
     );
     DeferredLogger& deferredLogger() { return this->deferred_logger_; }
     int fipnum() const { return this->fipnum_; }
+    /** Compute injection target for group in the given injection phase. */
     std::optional<InjectionTargetInfo> groupInjectionTarget(const Group& group, Phase injection_phase);
+    /** Compute production target for group. */
     std::optional<ProductionTargetInfo> groupProductionTarget(const Group& group);
     const GroupState<Scalar>& groupState() const { return this->group_state_; }
     const GuideRate& guideRate() const { return this->guide_rate_; }
