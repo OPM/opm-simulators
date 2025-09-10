@@ -181,7 +181,6 @@ namespace Amg
         // Jacobian.
         using FluidSystem = typename Model::FluidSystem;
         using LhsEval = double;
-        using Indices = typename Model::Indices;
 
         using PrimaryVariables = typename Model::PrimaryVariables;
         using VectorBlockType = typename Vector::block_type;
