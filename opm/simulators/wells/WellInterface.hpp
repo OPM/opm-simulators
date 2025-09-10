@@ -180,9 +180,6 @@ public:
                                      const GroupState<Scalar>& group_state,
                                      DeferredLogger& deferred_logger);
 
-    // We count the number of re-openings but may want to start from zero again
-    void resetNumberOfWellReOpenings();
-
     virtual void computeWellRatesWithBhp(const Simulator& ebosSimulator,
                                          const Scalar& bhp,
                                          std::vector<Scalar>& well_flux,
@@ -421,14 +418,12 @@ protected:
 
     bool iterateWellEquations(const Simulator& simulator,
                               const double dt,
-                              const bool allow_reopening_of_well,
                               WellState<Scalar>& well_state,
                               const GroupState<Scalar>& group_state,
                               DeferredLogger& deferred_logger);
 
     bool solveWellWithOperabilityCheck(const Simulator& simulator,
                                        const double dt,
-                                       const bool allow_reopening_of_well,
                                        const Well::InjectionControls& inj_controls,
                                        const Well::ProductionControls& prod_controls,
                                        WellState<Scalar>& well_state,

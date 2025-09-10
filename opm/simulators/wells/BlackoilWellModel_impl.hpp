@@ -1894,11 +1894,6 @@ namespace Opm {
                                                     /*update_wellgrouptarget*/ true, deferred_logger);
             }
             more_network_update = more_network_sub_update || well_group_thp_updated;
-            // Reset count on well openings after network update as we want to try to re-open the wells
-            // again with a different network pressure.
-            for (const auto& well : well_container_) {
-                well->resetNumberOfWellReOpenings();
-            }
         }
         return { more_network_update, network_imbalance };
     }

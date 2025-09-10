@@ -1640,7 +1640,7 @@ namespace Opm
         // iterate to get a solution at the given bhp.
         bool converged = false;
         if (this->well_ecl_.isProducer()) {
-            converged = well_copy.solveWellWithOperabilityCheck(simulator, dt, true, inj_controls, prod_controls, well_state_copy, group_state, deferred_logger);
+            converged = well_copy.solveWellWithOperabilityCheck(simulator, dt, inj_controls, prod_controls, well_state_copy, group_state, deferred_logger);
         } else {
             converged = well_copy.iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state_copy, group_state, deferred_logger);
         }
