@@ -180,7 +180,6 @@ public:
                                      const GroupState<Scalar>& group_state,
                                      DeferredLogger& deferred_logger);
 
-
     virtual void computeWellRatesWithBhp(const Simulator& ebosSimulator,
                                          const Scalar& bhp,
                                          std::vector<Scalar>& well_flux,
@@ -368,6 +367,7 @@ protected:
     std::vector<Scalar> B_avg_;
     bool changed_to_stopped_this_step_ = false;
     bool thp_update_iterations = false;
+    int number_of_well_reopenings_{0};
 
     Scalar wpolymer() const;
     Scalar wfoam() const;
