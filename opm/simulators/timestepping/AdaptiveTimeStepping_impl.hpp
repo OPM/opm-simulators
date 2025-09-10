@@ -578,7 +578,7 @@ runStepOriginal_()
 #ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
 template <class Solver>
-ReservoirCouplingMaster&
+ReservoirCouplingMaster<typename AdaptiveTimeStepping<TypeTag>::Scalar>&
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 reservoirCouplingMaster_()
 {
@@ -589,7 +589,7 @@ reservoirCouplingMaster_()
 #ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
 template <class Solver>
-ReservoirCouplingSlave&
+ReservoirCouplingSlave<typename AdaptiveTimeStepping<TypeTag>::Scalar>&
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 reservoirCouplingSlave_()
 {
