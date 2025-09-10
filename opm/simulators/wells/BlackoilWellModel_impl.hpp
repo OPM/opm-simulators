@@ -1476,7 +1476,7 @@ namespace Opm {
                     const auto& ws = this->wellState().well(well->indexOfWell());
                     const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
                     if (thp_is_limit) {
-                        well->prepareWellBeforeAssembling(this->simulator_, dt, this->wellState(), this->groupState(), local_deferredLogger);
+                        well->prepareWellBeforeAssembling(this->simulator_, dt, false, this->wellState(), this->groupState(), local_deferredLogger);
                     }
                 }
 
@@ -1510,7 +1510,7 @@ namespace Opm {
     {
         OPM_TIMEFUNCTION();
         for (auto& well : well_container_) {
-            well->prepareWellBeforeAssembling(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+            well->prepareWellBeforeAssembling(simulator_, dt, true, this->wellState(), this->groupState(), deferred_logger);
         }
     }
 
@@ -1886,7 +1886,7 @@ namespace Opm {
                         const auto& ws = this->wellState().well(well->indexOfWell());
                         const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
                         if (thp_is_limit) {
-                            well->prepareWellBeforeAssembling(this->simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+                            well->prepareWellBeforeAssembling(this->simulator_, dt, false, this->wellState(), this->groupState(), deferred_logger);
                         }
                     }
                 }
@@ -1894,6 +1894,9 @@ namespace Opm {
                                                     /*update_wellgrouptarget*/ true, deferred_logger);
             }
             more_network_update = more_network_sub_update || well_group_thp_updated;
+            for (const auto& well : well_container_) {
+                well->resetReOpen();
+            }
         }
         return { more_network_update, network_imbalance };
     }

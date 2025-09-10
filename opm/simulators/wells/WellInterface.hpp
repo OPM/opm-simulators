@@ -176,10 +176,14 @@ public:
     // TODO: better name or further refactoring the function to make it more clear
     void prepareWellBeforeAssembling(const Simulator& simulator,
                                      const double dt,
+                                     const bool check_iter,
                                      WellState<Scalar>& well_state,
                                      const GroupState<Scalar>& group_state,
                                      DeferredLogger& deferred_logger);
 
+    void resetReOpen() {
+        re_opened_ = 0;
+    }
 
     virtual void computeWellRatesWithBhp(const Simulator& ebosSimulator,
                                          const Scalar& bhp,
@@ -368,6 +372,7 @@ protected:
     std::vector<Scalar> B_avg_;
     bool changed_to_stopped_this_step_ = false;
     bool thp_update_iterations = false;
+    int re_opened_{0};
 
     Scalar wpolymer() const;
     Scalar wfoam() const;
@@ -418,12 +423,14 @@ protected:
 
     bool iterateWellEquations(const Simulator& simulator,
                               const double dt,
+                              const bool allow_use_exp_vfp,
                               WellState<Scalar>& well_state,
                               const GroupState<Scalar>& group_state,
                               DeferredLogger& deferred_logger);
 
     bool solveWellWithOperabilityCheck(const Simulator& simulator,
                                        const double dt,
+                                       const bool allow_use_exp_vfp,
                                        const Well::InjectionControls& inj_controls,
                                        const Well::ProductionControls& prod_controls,
                                        WellState<Scalar>& well_state,
