@@ -140,6 +140,14 @@ calculateMasterGroupTargetsAndSendToSlaves()
     }
 }
 
+// NOTE on reuse and future refactor:
+// This method relies on GroupTargetCalculator to compute group-level targets
+// for reservoir coupling. Similar target logic exists in WellGroupHelpers
+// (checkGroupContraintsProd/getWellGroupTargetProducer and
+// checkGroupContraintsInj/getWellGroupTargetInjector). The plan is to make
+// GroupTargetCalculator the general implementation and refactor the existing
+// helpers to reuse it, removing duplication. We will address that in a follow-up
+// PR to keep this PR scoped to reservoir coupling behavior.
 template <class Scalar, class IndexTraits>
 std::tuple<
   std::vector<typename RescoupTargetCalculator<Scalar, IndexTraits>::InjectionGroupTarget>,
