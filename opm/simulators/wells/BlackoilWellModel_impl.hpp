@@ -818,10 +818,10 @@ namespace Opm {
                               constexpr auto events_mask = ScheduleEvents::WELL_STATUS_CHANGE |
                                                            ScheduleEvents::REQUEST_OPEN_WELL |
                                                            ScheduleEvents::REQUEST_SHUT_WELL;
-                              const bool well_status_change =
+                              const bool well_event =
                                   this->report_step_starts_ &&
                                   wg_events.hasEvent(well_ecl.name(), events_mask);
-                              if (well_status_change) {
+                              if (well_event) {
                                   if (well_ecl.getStatus() == WellStatus::OPEN) {
                                       this->well_open_times_.insert_or_assign(well_ecl.name(),
                                                                               this->simulator_.time());
