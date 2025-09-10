@@ -321,7 +321,8 @@ namespace Opm
                                            std::vector<Scalar>& well_potentials,
                                            DeferredLogger& deferred_logger) const;               
 
-        // communicate and return the density at the perforation[0] of the rank owning this well
+        // return the density at the perforation[0] of the rank owning this well,
+        // value is cached to minimize the number of broadcasts
         Scalar getRefDensity() const override;
 
         // get the mobility for specific perforation
