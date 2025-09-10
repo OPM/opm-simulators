@@ -455,6 +455,10 @@ namespace Opm
         Eval connectionRateEnergy(const std::vector<EvalWell>& cq_s,
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
+
+        // reduce broadcasts in getRefDensity by caching,
+        // zero means nothing is cached
+        mutable Scalar cachedRefDensity{0};
     };
 
 }
