@@ -77,15 +77,15 @@ list (APPEND MAIN_SOURCE_FILES
   flowexperimental/FIBlackOilModelNoCache.hpp
   flowexperimental/flowexp.hpp
   flowexperimental/FlowExpNewtonMethod.hpp
+  opm/models/blackoil/blackoilbioeffectsparams.cpp
   opm/models/blackoil/blackoilbrineparams.cpp
   opm/models/blackoil/blackoilextboparams.cpp
   opm/models/blackoil/blackoilfoamparams.cpp
-  opm/models/blackoil/blackoilmicpparams.cpp
   opm/models/blackoil/blackoilnewtonmethodparams.cpp
   opm/models/blackoil/blackoilpolymerparams.cpp
   opm/models/blackoil/blackoilsolventparams.cpp
+  opm/models/io/vtkblackoilbioeffectsparams.cpp
   opm/models/io/vtkblackoilenergyparams.cpp
-  opm/models/io/vtkblackoilmicpparams.cpp
   opm/models/io/vtkblackoilpolymerparams.cpp
   opm/models/io/vtkblackoilparams.cpp
   opm/models/io/vtkblackoilsolventparams.cpp
@@ -108,6 +108,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/utils/timer.cpp
   opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp
+  opm/simulators/flow/BioeffectsContainer.cpp
   opm/simulators/flow/BlackoilModelParameters.cpp
   opm/simulators/flow/BlackoilModelConvergenceMonitor.cpp
   opm/simulators/flow/CollectDataOnIORank.cpp
@@ -131,7 +132,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/LogOutputHelper.cpp
   opm/simulators/flow/Main.cpp
   opm/simulators/flow/MechContainer.cpp
-  opm/simulators/flow/MICPContainer.cpp
   opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NlddReporting.cpp
   opm/simulators/flow/NonlinearSolver.cpp
@@ -667,6 +667,8 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
+  opm/models/blackoil/blackoilbioeffectsmodules.hh
+  opm/models/blackoil/blackoilbioeffectsparams.hpp
   opm/models/blackoil/blackoilboundaryratevector.hh
   opm/models/blackoil/blackoilbrinemodules.hh
   opm/models/blackoil/blackoilbrineparams.hpp
@@ -684,8 +686,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilintensivequantities.hh
   opm/models/blackoil/blackoillocalresidual.hh
   opm/models/blackoil/blackoillocalresidualtpfa.hh
-  opm/models/blackoil/blackoilmicpmodules.hh
-  opm/models/blackoil/blackoilmicpparams.hpp
   opm/models/blackoil/blackoilmodel.hh
   opm/models/blackoil/blackoilnewtonmethod.hpp
   opm/models/blackoil/blackoilnewtonmethodparams.hpp
@@ -782,10 +782,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/simplexvanguard.hh
   opm/models/io/structuredgridvanguard.hh
   opm/models/io/unstructuredgridvanguard.hh
+  opm/models/io/vtkblackoilbioeffectsmodule.hpp
+  opm/models/io/vtkblackoilbioeffectsparams.hpp
   opm/models/io/vtkblackoilenergymodule.hpp
   opm/models/io/vtkblackoilenergyparams.hpp
-  opm/models/io/vtkblackoilmicpmodule.hpp
-  opm/models/io/vtkblackoilmicpparams.hpp
   opm/models/io/vtkblackoilmodule.hpp
   opm/models/io/vtkblackoilparams.hpp
   opm/models/io/vtkblackoilpolymermodule.hpp
@@ -882,6 +882,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/AluGridVanguard.hpp
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/BaseAquiferModel.hpp
+  opm/simulators/flow/BioeffectsContainer.hpp
   opm/simulators/flow/BlackoilModel.hpp
   opm/simulators/flow/BlackoilModel_impl.hpp
   opm/simulators/flow/BlackoilModelConvergenceMonitor.hpp
@@ -931,7 +932,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/LogOutputHelper.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/MechContainer.hpp
-  opm/simulators/flow/MICPContainer.hpp
   opm/simulators/flow/MixingRateControls.hpp
   opm/simulators/flow/NewTranFluxModule.hpp
   opm/simulators/flow/NlddReporting.hpp

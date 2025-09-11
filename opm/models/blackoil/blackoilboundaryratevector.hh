@@ -64,7 +64,7 @@ class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { contiEnergyEqIdx = Indices::contiEnergyEqIdx };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
-    enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
+    enum { enableMICP = Indices::enableMICP };
 
     static constexpr bool blackoilConserveSurfaceVolume =
         getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();

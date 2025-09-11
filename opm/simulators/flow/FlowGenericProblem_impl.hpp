@@ -103,7 +103,7 @@ serializationTestObject(const EclipseState& eclState,
     result.solventSaturation_ = {15.0};
     result.solventRsw_ = {18.0};
     result.polymer_ = PolymerSolutionContainer<Scalar>::serializationTestObject();
-    result.micp_ = MICPSolutionContainer<Scalar>::serializationTestObject();
+    result.bioeffects_ = BioeffectsSolutionContainer<Scalar>::serializationTestObject();
 
     return result;
 }
@@ -483,6 +483,7 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
                                          bool enableSolvent,
                                          bool enablePolymer,
                                          bool enablePolymerMolarWeight,
+                                         bool enableBioeffects,
                                          bool enableMICP)
 {
     auto getArray = [](const std::vector<double>& input)
@@ -520,31 +521,33 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
         }
     }
 
-    if (enableMICP) {
+    if (enableBioeffects) {
         if (eclState_.fieldProps().has_double("SMICR")) {
-            micp_.microbialConcentration = getArray(eclState_.fieldProps().get_double("SMICR"));
+            bioeffects_.microbialConcentration = getArray(eclState_.fieldProps().get_double("SMICR"));
         } else {
-            micp_.microbialConcentration.resize(numDof, 0.0);
-        }
-        if (eclState_.fieldProps().has_double("SOXYG")) {
-            micp_.oxygenConcentration = getArray(eclState_.fieldProps().get_double("SOXYG"));
-        } else {
-            micp_.oxygenConcentration.resize(numDof, 0.0);
-        }
-        if (eclState_.fieldProps().has_double("SUREA")) {
-            micp_.ureaConcentration = getArray(eclState_.fieldProps().get_double("SUREA"));
-        } else {
-            micp_.ureaConcentration.resize(numDof, 0.0);
+            bioeffects_.microbialConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SBIOF")) {
-            micp_.biofilmConcentration = getArray(eclState_.fieldProps().get_double("SBIOF"));
+            bioeffects_.biofilmConcentration = getArray(eclState_.fieldProps().get_double("SBIOF"));
         } else {
-            micp_.biofilmConcentration.resize(numDof, 0.0);
+            bioeffects_.biofilmConcentration.resize(numDof, 0.0);
         }
-        if (eclState_.fieldProps().has_double("SCALC")) {
-            micp_.calciteConcentration = getArray(eclState_.fieldProps().get_double("SCALC"));
-        } else {
-            micp_.calciteConcentration.resize(numDof, 0.0);
+        if (enableMICP) {
+            if (eclState_.fieldProps().has_double("SOXYG")) {
+                bioeffects_.oxygenConcentration = getArray(eclState_.fieldProps().get_double("SOXYG"));
+            } else {
+                bioeffects_.oxygenConcentration.resize(numDof, 0.0);
+            }
+            if (eclState_.fieldProps().has_double("SUREA")) {
+                bioeffects_.ureaConcentration = getArray(eclState_.fieldProps().get_double("SUREA"));
+            } else {
+                bioeffects_.ureaConcentration.resize(numDof, 0.0);
+            }
+            if (eclState_.fieldProps().has_double("SCALC")) {
+                bioeffects_.calciteConcentration = getArray(eclState_.fieldProps().get_double("SCALC"));
+            } else {
+                bioeffects_.calciteConcentration.resize(numDof, 0.0);
+            }
         }
     }
 }
@@ -635,11 +638,11 @@ typename FlowGenericProblem<GridView,FluidSystem>::Scalar
 FlowGenericProblem<GridView,FluidSystem>::
 microbialConcentration(unsigned elemIdx) const
 {
-    if (micp_.microbialConcentration.empty()) {
+    if (bioeffects_.microbialConcentration.empty()) {
         return 0;
     }
 
-    return micp_.microbialConcentration[elemIdx];
+    return bioeffects_.microbialConcentration[elemIdx];
 }
 
 template<class GridView, class FluidSystem>
@@ -647,11 +650,11 @@ typename FlowGenericProblem<GridView,FluidSystem>::Scalar
 FlowGenericProblem<GridView,FluidSystem>::
 oxygenConcentration(unsigned elemIdx) const
 {
-    if (micp_.oxygenConcentration.empty()) {
+    if (bioeffects_.oxygenConcentration.empty()) {
         return 0;
     }
 
-    return micp_.oxygenConcentration[elemIdx];
+    return bioeffects_.oxygenConcentration[elemIdx];
 }
 
 template<class GridView, class FluidSystem>
@@ -659,11 +662,11 @@ typename FlowGenericProblem<GridView,FluidSystem>::Scalar
 FlowGenericProblem<GridView,FluidSystem>::
 ureaConcentration(unsigned elemIdx) const
 {
-    if (micp_.ureaConcentration.empty()) {
+    if (bioeffects_.ureaConcentration.empty()) {
         return 0;
     }
 
-    return micp_.ureaConcentration[elemIdx];
+    return bioeffects_.ureaConcentration[elemIdx];
 }
 
 template<class GridView, class FluidSystem>
@@ -671,11 +674,11 @@ typename FlowGenericProblem<GridView,FluidSystem>::Scalar
 FlowGenericProblem<GridView,FluidSystem>::
 biofilmConcentration(unsigned elemIdx) const
 {
-    if (micp_.biofilmConcentration.empty()) {
+    if (bioeffects_.biofilmConcentration.empty()) {
         return 0;
     }
 
-    return micp_.biofilmConcentration[elemIdx];
+    return bioeffects_.biofilmConcentration[elemIdx];
 }
 
 template<class GridView, class FluidSystem>
@@ -683,11 +686,11 @@ typename FlowGenericProblem<GridView,FluidSystem>::Scalar
 FlowGenericProblem<GridView,FluidSystem>::
 calciteConcentration(unsigned elemIdx) const
 {
-    if (micp_.calciteConcentration.empty()) {
+    if (bioeffects_.calciteConcentration.empty()) {
         return 0;
     }
 
-    return micp_.calciteConcentration[elemIdx];
+    return bioeffects_.calciteConcentration[elemIdx];
 }
 
 template<class GridView, class FluidSystem>
@@ -752,7 +755,7 @@ operator==(const FlowGenericProblem& rhs) const
            this->solventSaturation_ == rhs.solventSaturation_ &&
            this->solventRsw_ == rhs.solventRsw_ &&
            this->polymer_ == rhs.polymer_ &&
-           this->micp_ == rhs.micp_;
+           this->bioeffects_ == rhs.bioeffects_;
 }
 
 } // namespace Opm

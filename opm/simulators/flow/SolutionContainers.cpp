@@ -49,8 +49,8 @@ operator==(const PolymerSolutionContainer<Scalar>& rhs) const
 }
 
 template<class Scalar>
-MICPSolutionContainer<Scalar>
-MICPSolutionContainer<Scalar>::serializationTestObject()
+BioeffectsSolutionContainer<Scalar>
+BioeffectsSolutionContainer<Scalar>::serializationTestObject()
 {
     return {{16.0},
             {17.0},
@@ -60,7 +60,7 @@ MICPSolutionContainer<Scalar>::serializationTestObject()
 }
 
 template<class Scalar>
-void MICPSolutionContainer<Scalar>::resize(const unsigned numElems)
+void BioeffectsSolutionContainer<Scalar>::resize(const unsigned numElems)
 {
     microbialConcentration.resize(numElems, 0.0);
     oxygenConcentration.resize(numElems, 0.0);
@@ -70,8 +70,8 @@ void MICPSolutionContainer<Scalar>::resize(const unsigned numElems)
 }
 
 template<class Scalar>
-bool MICPSolutionContainer<Scalar>::
-operator==(const MICPSolutionContainer<Scalar>& rhs) const
+bool BioeffectsSolutionContainer<Scalar>::
+operator==(const BioeffectsSolutionContainer<Scalar>& rhs) const
 {
     return this->microbialConcentration == rhs.microbialConcentration &&
            this->oxygenConcentration == rhs.oxygenConcentration &&
@@ -82,7 +82,7 @@ operator==(const MICPSolutionContainer<Scalar>& rhs) const
 
 #define INSTANTIATE_TYPE(T) \
     template struct PolymerSolutionContainer<T>; \
-    template struct MICPSolutionContainer<T>;
+    template struct BioeffectsSolutionContainer<T>;
 
 INSTANTIATE_TYPE(double)
 
