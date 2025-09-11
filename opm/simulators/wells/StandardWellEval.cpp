@@ -114,8 +114,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
     std::vector<Scalar> well_flux_residual(baseif_.numConservationQuantities());
 
     // Finish computation
-    for (int compIdx = 0; compIdx < baseif_.numConservationQuantities(); ++compIdx )
-    {
+    for (int compIdx = 0; compIdx < baseif_.numConservationQuantities(); ++compIdx) {
         well_flux_residual[compIdx] = B_avg[compIdx] * res[compIdx];
     }
 

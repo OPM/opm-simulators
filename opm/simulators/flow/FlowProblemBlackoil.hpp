@@ -1187,8 +1187,8 @@ protected:
                 continue;
 
             Scalar avgB = numTotalDof / sumInvB[phaseIdx];
-            unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-            unsigned activeSolventCompIdx = FluidSystem::canonicalToActiveCompIdx(solventCompIdx);
+            const unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+            const unsigned activeSolventCompIdx = FluidSystem::canonicalToActiveCompIdx(solventCompIdx);
             this->model().setEqWeight(activeSolventCompIdx, avgB);
         }
     }
