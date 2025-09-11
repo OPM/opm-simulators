@@ -80,6 +80,9 @@ public:
     //! Index of the mass conservation equation for the first
     //! component.
     static constexpr int conti0EqIdx = PVOffset;
+
+    //! MICP implementation is an extension of the black-oil model
+    static constexpr bool enableMICP = false;
 };
 
 } // namespace Opm

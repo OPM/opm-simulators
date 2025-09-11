@@ -31,13 +31,13 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
+#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilextbomodules.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
-#include <opm/models/blackoil/blackoilmicpmodules.hh>
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
@@ -96,7 +96,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
-    using MICPModule = BlackOilMICPModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
 
 public:
@@ -192,8 +192,8 @@ public:
         // deal with salt (if present)
         BrineModule::addStorage(storage, intQuants);
 
-        // deal with micp (if present)
-        MICPModule::addStorage(storage, intQuants);
+        // deal with bioeffects (if present)
+        BioeffectsModule::addStorage(storage, intQuants);
     }
 
     /*!
@@ -243,9 +243,10 @@ public:
         // deal with salt (if present)
         BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with micp (if present)
-        MICPModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // deal with bioeffects (if present)
+        BioeffectsModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
+        // deal with diffusion (if present)
         DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with convective mixing (if enabled)
@@ -264,7 +265,7 @@ public:
         elemCtx.problem().source(source, elemCtx, dofIdx, timeIdx);
 
         // deal with MICP (if present)
-        MICPModule::addSource(source, elemCtx, dofIdx, timeIdx);
+        BioeffectsModule::addSource(source, elemCtx, dofIdx, timeIdx);
 
         // scale the source term of the energy equation
         if constexpr (enableEnergy) {

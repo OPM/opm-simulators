@@ -423,6 +423,12 @@ add_test_runSimulator(CASENAME dryrun
                       DIR co2store
                       TEST_ARGS --enable-dry-run=true --enable-ecl-output=false --enable-vtk-output=true)
 
+add_test_runSimulator(CASENAME h2store_biofilm
+                      FILENAME H2STORE_BIOFILM
+                      SIMULATOR flow
+                      DIR h2store
+                      TEST_ARGS --enable-opm-rst-file=true)
+
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
 add_test_runSimulator(CASENAME tuning_trgmbe
                       FILENAME 01_TUNING_TRGMBE

@@ -22,36 +22,40 @@
 */
 
 #include <config.h>
-#include <opm/models/io/vtkblackoilmicpparams.hpp>
+#include <opm/models/io/vtkblackoilbioeffectsparams.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
 
 namespace Opm {
 
-void VtkBlackoilMICPParams::registerParameters()
+void VtkBlackOilBioeffectsParams::registerParameters(const bool isMICP)
 {
     Parameters::Register<Parameters::VtkWriteMicrobialConcentration>
         ("Include the concentration of the microbial component in the water phase "
          "in the VTK output files");
-    Parameters::Register<Parameters::VtkWriteOxygenConcentration>
-        ("Include the concentration of the oxygen component in the water phase "
-         "in the VTK output files");
-    Parameters::Register<Parameters::VtkWriteUreaConcentration>
-        ("Include the concentration of the urea component in the water phase "
-         "in the VTK output files");
     Parameters::Register<Parameters::VtkWriteBiofilmConcentration>
         ("Include the biofilm volume fraction in the VTK output files");
-    Parameters::Register<Parameters::VtkWriteCalciteConcentration>
-        ("Include the calcite volume fraction in the VTK output files");
+    if (isMICP) {
+        Parameters::Register<Parameters::VtkWriteOxygenConcentration>
+            ("Include the concentration of the oxygen component in the water phase "
+            "in the VTK output files");
+        Parameters::Register<Parameters::VtkWriteUreaConcentration>
+            ("Include the concentration of the urea component in the water phase "
+            "in the VTK output files");
+        Parameters::Register<Parameters::VtkWriteCalciteConcentration>
+            ("Include the calcite volume fraction in the VTK output files");
+    }
 }
 
-void VtkBlackoilMICPParams::read()
+void VtkBlackOilBioeffectsParams::read(const bool isMICP)
 {
     microbialConcentrationOutput_ = Parameters::Get<Parameters::VtkWriteMicrobialConcentration>();
-    oxygenConcentrationOutput_ = Parameters::Get<Parameters::VtkWriteOxygenConcentration>();
-    ureaConcentrationOutput_ = Parameters::Get<Parameters::VtkWriteUreaConcentration>();
     biofilmConcentrationOutput_ = Parameters::Get<Parameters::VtkWriteBiofilmConcentration>();
-    calciteConcentrationOutput_ = Parameters::Get<Parameters::VtkWriteCalciteConcentration>();
+    if (isMICP) {
+        oxygenConcentrationOutput_ = Parameters::Get<Parameters::VtkWriteOxygenConcentration>();
+        ureaConcentrationOutput_ = Parameters::Get<Parameters::VtkWriteUreaConcentration>();
+        calciteConcentrationOutput_ = Parameters::Get<Parameters::VtkWriteCalciteConcentration>();
+    }
 }
 
 } // namespace Opm

@@ -36,7 +36,7 @@ struct FlowMICPProblem {
 };
 }
 template<class TypeTag>
-struct EnableMICP<TypeTag, TTag::FlowMICPProblem> {
+struct EnableBioeffects<TypeTag, TTag::FlowMICPProblem> {
     static constexpr bool value = true;
 };
 template<class TypeTag>

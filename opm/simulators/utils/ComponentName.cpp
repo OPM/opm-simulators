@@ -84,6 +84,11 @@ ComponentName<FluidSystem,Indices>::ComponentName()
         names_[Indices::biofilmConcentrationIdx] = "Biofilm";
         names_[Indices::calciteConcentrationIdx] = "Calcite";
     }
+
+    if constexpr (Indices::enableBiofilm) {
+        names_[Indices::microbialConcentrationIdx] = "Microbes";
+        names_[Indices::biofilmConcentrationIdx] = "Biofilm";
+    }
 }
 
 
