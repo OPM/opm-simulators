@@ -124,9 +124,8 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     {
         if (idx == -1) {
             return 0.0;
-        } else {
-            return v.empty() ? 0.0 : v[idx];
         }
+        return v.empty() ? 0.0 : v[idx];
     }
 
 public:
