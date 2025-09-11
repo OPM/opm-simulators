@@ -780,6 +780,12 @@ double __attribute__((noinline)) vec_inner2(const double *a, const double *b, in
 
 }
 
+double vec_norm(double const *v, int n)
+{
+    double norm=0;
+    for (int k=0;k<n;k++) norm+=v[k]*v[k];
+    return sqrt(norm);
+}
 
 
 void vec_show(const double *x, int n, const char *name)

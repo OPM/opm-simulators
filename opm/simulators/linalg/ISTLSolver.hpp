@@ -380,6 +380,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             } OPM_CATCH_AND_RETHROW_AS_CRITICAL_ERROR("This is likely due to a faulty linear solver JSON specification. Check for errors related to missing nodes.");
         }
 
+        FlowLinearSolverParameters getParameters()
+        {
+            return parameters_[0];
+        }
+
 
         void setResidual(Vector& /* b */) override
         {
