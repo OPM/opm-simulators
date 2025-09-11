@@ -1168,32 +1168,34 @@ getMaxCoeff(const unsigned cell_idx,
                                               std::abs(R2) / pvValue);
     }
 
-    if constexpr (has_micp_) {
+    if constexpr (has_bioeffects_) {
         B_avg[contiMicrobialEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
         const auto R1 = modelResid[cell_idx][contiMicrobialEqIdx];
         R_sum[contiMicrobialEqIdx] += R1;
         maxCoeff[contiMicrobialEqIdx] = std::max(maxCoeff[contiMicrobialEqIdx],
-                                                 std::abs(R1) / pvValue);
-        B_avg[contiOxygenEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-        const auto R2 = modelResid[cell_idx][contiOxygenEqIdx];
-        R_sum[contiOxygenEqIdx] += R2;
-        maxCoeff[contiOxygenEqIdx] = std::max(maxCoeff[contiOxygenEqIdx],
-                                              std::abs(R2) / pvValue);
-        B_avg[contiUreaEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-        const auto R3 = modelResid[cell_idx][contiUreaEqIdx];
-        R_sum[contiUreaEqIdx] += R3;
-        maxCoeff[contiUreaEqIdx] = std::max(maxCoeff[contiUreaEqIdx],
-                                            std::abs(R3) / pvValue);
+                                                std::abs(R1) / pvValue);
         B_avg[contiBiofilmEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-        const auto R4 = modelResid[cell_idx][contiBiofilmEqIdx];
-        R_sum[contiBiofilmEqIdx] += R4;
+        const auto R2 = modelResid[cell_idx][contiBiofilmEqIdx];
+        R_sum[contiBiofilmEqIdx] += R2;
         maxCoeff[contiBiofilmEqIdx] = std::max(maxCoeff[contiBiofilmEqIdx],
-                                               std::abs(R4) / pvValue);
-        B_avg[contiCalciteEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-        const auto R5 = modelResid[cell_idx][contiCalciteEqIdx];
-        R_sum[contiCalciteEqIdx] += R5;
-        maxCoeff[contiCalciteEqIdx] = std::max(maxCoeff[contiCalciteEqIdx],
-                                               std::abs(R5) / pvValue);
+                                               std::abs(R2) / pvValue);
+        if constexpr (has_micp_) {
+            B_avg[contiOxygenEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+            const auto R3 = modelResid[cell_idx][contiOxygenEqIdx];
+            R_sum[contiOxygenEqIdx] += R3;
+            maxCoeff[contiOxygenEqIdx] = std::max(maxCoeff[contiOxygenEqIdx],
+                                                std::abs(R3) / pvValue);
+            B_avg[contiUreaEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+            const auto R4 = modelResid[cell_idx][contiUreaEqIdx];
+            R_sum[contiUreaEqIdx] += R4;
+            maxCoeff[contiUreaEqIdx] = std::max(maxCoeff[contiUreaEqIdx],
+                                                std::abs(R4) / pvValue);
+            B_avg[contiCalciteEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+            const auto R5 = modelResid[cell_idx][contiCalciteEqIdx];
+            R_sum[contiCalciteEqIdx] += R5;
+            maxCoeff[contiCalciteEqIdx] = std::max(maxCoeff[contiCalciteEqIdx],
+                                                std::abs(R5) / pvValue);
+            }
     }
 }
 

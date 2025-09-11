@@ -43,14 +43,14 @@ namespace Opm {
 
             public:
                 using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                                    getPropValue<TypeTag, Properties::EnableFoam>(),
-                                                    getPropValue<TypeTag, Properties::EnableBrine>(),
-                                                    /*PVOffset=*/0,
-                                                    /*disabledCompIdx=*/FluidSystem::oilCompIdx,
-                                                    getPropValue<TypeTag, Properties::EnableMICP>()>;
+                                                     getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                                     getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                                     getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                     getPropValue<TypeTag, Properties::EnableFoam>(),
+                                                     getPropValue<TypeTag, Properties::EnableBrine>(),
+                                                     /*PVOffset=*/0,
+                                                     /*disabledCompIdx=*/FluidSystem::oilCompIdx,
+                                                     getPropValue<TypeTag, Properties::EnableBioeffects>()>;
         };
     }
 }

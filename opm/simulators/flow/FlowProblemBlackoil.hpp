@@ -99,8 +99,9 @@ private:
     using FlowProblemType::numComponents;
 
     // TODO: potentially some cleaning up depending on the usage later here
-    using FlowProblemType::enableConvectiveMixing;
+    using FlowProblemType::enableBioeffects;
     using FlowProblemType::enableBrine;
+    using FlowProblemType::enableConvectiveMixing;
     using FlowProblemType::enableDiffusion;
     using FlowProblemType::enableDispersion;
     using FlowProblemType::enableEnergy;
@@ -142,7 +143,7 @@ private:
     using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
-    using MICPModule = BlackOilMICPModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
@@ -209,9 +210,9 @@ public:
         foamParams.template initFromState<enableFoam>(vanguard.eclState());
         FoamModule::setParams(std::move(foamParams));
 
-        BlackOilMICPParams<Scalar> micpParams;
-        micpParams.template initFromState<enableMICP>(vanguard.eclState());
-        MICPModule::setParams(std::move(micpParams));
+        BlackOilBioeffectsParams<Scalar> bioeffectsParams;
+        bioeffectsParams.template initFromState<enableBioeffects, enableMICP>(vanguard.eclState());
+        BioeffectsModule::setParams(std::move(bioeffectsParams));
 
         BlackOilPolymerParams<Scalar> polymerParams;
         polymerParams.template initFromState<enablePolymer, enablePolymerMolarWeight>(vanguard.eclState());
@@ -710,7 +711,7 @@ public:
             const auto& permfactTable = BrineModule::permfactTable(tableIdx);
             return permfactTable.eval(porosityFactor, /*extrapolation=*/true);
         }
-        else if constexpr (enableMICP) {
+        else if constexpr (enableBioeffects) {
             return intQuants.permFactor().value();
         }
         else {
@@ -928,12 +929,14 @@ public:
             }
         }
 
-        if constexpr (enableMICP){
-            values[Indices::microbialConcentrationIdx] = this->micp_.microbialConcentration[globalDofIdx];
-            values[Indices::oxygenConcentrationIdx]= this->micp_.oxygenConcentration[globalDofIdx];
-            values[Indices::ureaConcentrationIdx]= this->micp_.ureaConcentration[globalDofIdx];
-            values[Indices::calciteConcentrationIdx]= this->micp_.calciteConcentration[globalDofIdx];
-            values[Indices::biofilmConcentrationIdx]= this->micp_.biofilmConcentration[globalDofIdx];
+        if constexpr (enableBioeffects) {
+            values[Indices::microbialConcentrationIdx] = this->bioeffects_.microbialConcentration[globalDofIdx];
+            values[Indices::biofilmConcentrationIdx]= this->bioeffects_.biofilmConcentration[globalDofIdx];
+            if constexpr (enableMICP) {
+                values[Indices::oxygenConcentrationIdx]= this->bioeffects_.oxygenConcentration[globalDofIdx];
+                values[Indices::ureaConcentrationIdx]= this->bioeffects_.ureaConcentration[globalDofIdx];
+                values[Indices::calciteConcentrationIdx]= this->bioeffects_.calciteConcentration[globalDofIdx];
+            }
         }
 
         values.checkDefined();
@@ -1021,15 +1024,15 @@ public:
             this->polymer_.moleWeight.resize(numElems, 0.0);
         }
 
-        if constexpr (enableMICP) {
-            this->micp_.resize(numElems);
+        if constexpr (enableBioeffects) {
+            this->bioeffects_.resize(numElems);
         }
 
         // Initialize mixing controls before trying to set any lastRx valuesx
         this->mixControls_.init(numElems, restart_step, eclState.runspec().tabdims().getNumPVTTables());
 
-        if constexpr (enableMICP) {
-            this->micp_ = this->eclWriter_->outputModule().getMICP().getSolution();
+        if constexpr (enableBioeffects) {
+            this->bioeffects_ = this->eclWriter_->outputModule().getBioeffects().getSolution();
         }
 
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
@@ -1523,11 +1526,12 @@ protected:
     {
         FlowProblemType::readInitialCondition_();
 
-        if constexpr (enableSolvent || enablePolymer || enablePolymerMolarWeight || enableMICP)
+        if constexpr (enableSolvent || enablePolymer || enablePolymerMolarWeight || enableBioeffects)
             this->readBlackoilExtentionsInitialConditions_(this->model().numGridDof(),
                                                            enableSolvent,
                                                            enablePolymer,
                                                            enablePolymerMolarWeight,
+                                                           enableBioeffects,
                                                            enableMICP);
 
     }

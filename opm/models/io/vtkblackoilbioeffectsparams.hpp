@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::VtkBlackOilMICPModule
+ * \copydoc Opm::VtkBlackOilBioeffectsModule
  */
-#ifndef OPM_VTK_BLACK_OIL_MICP_PARAMS_HPP
-#define OPM_VTK_BLACK_OIL_MICP_PARAMS_HPP
+#ifndef OPM_VTK_BLACK_OIL_BIOEFFECTS_PARAMS_HPP
+#define OPM_VTK_BLACK_OIL_BIOEFFECTS_PARAMS_HPP
 
 namespace Opm::Parameters {
 
@@ -41,15 +41,15 @@ struct VtkWriteCalciteConcentration { static constexpr bool value = true; };
 namespace Opm {
 
 /*!
- * \brief Struct holding the parameters for VtkBlackoilMICPModule.
+ * \brief Struct holding the parameters for VtkBlackOilBioeffectsModule.
  */
-struct VtkBlackoilMICPParams
+struct VtkBlackOilBioeffectsParams
 {
     //! \brief Registers the parameters in parameter system.
-    static void registerParameters();
+    static void registerParameters(const bool isMICP);
 
     //! \brief Reads the parameter values from the parameter system.
-    void read();
+    void read(const bool isMICP);
 
     bool microbialConcentrationOutput_;
     bool oxygenConcentrationOutput_;
@@ -60,4 +60,4 @@ struct VtkBlackoilMICPParams
 
 } // namespace Opm
 
-#endif // OPM_VTK_BLACKOIL_MICP_PARAMS_HPP
+#endif // OPM_VTK_BLACK_OIL_BIOEFFECTS_PARAMS_HPP

@@ -265,7 +265,7 @@ public:
         serializer(overburdenPressure_);
         serializer(solventSaturation_);
         serializer(solventRsw_);
-        serializer(micp_);
+        serializer(bioeffects_);
     }
 
 protected:
@@ -304,6 +304,7 @@ protected:
                                                   bool enableSolvent,
                                                   bool enablePolymer,
                                                   bool enablePolymerMolarWeight,
+                                                  bool enableBioeffects,
                                                   bool enableMICP);
 
     void updatePvtnum_();
@@ -338,7 +339,7 @@ protected:
     std::vector<Scalar> overburdenPressure_;
     std::vector<Scalar> solventSaturation_;
     std::vector<Scalar> solventRsw_;
-    MICPSolutionContainer<Scalar> micp_;
+    BioeffectsSolutionContainer<Scalar> bioeffects_;
 
     // time stepping parameters
     bool enableTuning_;
