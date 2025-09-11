@@ -576,7 +576,7 @@ volumeFractionScaled(const int seg,
     // For reservoir rate control, the distr in well control is used for the
     // rate conversion coefficients. For the injection well, only the distr of the injection
     // phase is not zero.
-    const Scalar scale = well_.scalingFactor(FluidSystem::activeCompToPhaseIdx(comp_idx));
+    const Scalar scale = well_.scalingFactor(FluidSystem::activeCompToActivePhaseIdx(comp_idx));
     if (scale > 0.) {
         return this->volumeFraction(seg, comp_idx) / scale;
     }

@@ -504,7 +504,7 @@ typename StandardWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 StandardWellPrimaryVariables<FluidSystem,Indices>::
 volumeFractionScaled(const int compIdx) const
 {
-    const int legacyCompIdx = FluidSystem::activeCompToPhaseIdx(compIdx);
+    const int legacyCompIdx = FluidSystem::activeCompToActivePhaseIdx(compIdx);
     const Scalar scal = well_.scalingFactor(legacyCompIdx);
     if (scal > 0)
         return this->volumeFraction(compIdx) / scal;

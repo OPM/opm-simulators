@@ -640,7 +640,7 @@ copyInPerforationRates(const Properties&       props,
 
         for (auto comp = 0; comp < np; ++comp) {
             // TODO: it might be a mixed up of components and phases in multiple ways
-            ix[comp] = FluidSystem::activeCompToPhaseIdx(comp);
+            ix[comp] = FluidSystem::activeCompToActivePhaseIdx(comp);
         }
 
         return ix;
