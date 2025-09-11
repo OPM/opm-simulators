@@ -805,7 +805,7 @@ public:
             if (FluidSystem::enableDissolvedGas()) {
                 const auto& Rs = BlackOil::getRs_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
 
-                unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
+                const unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
                 if constexpr (blackoilConserveSurfaceVolume) {
                     flux[conti0EqIdx + activeGasCompIdx] += Rs * surfaceVolumeFlux;
                 }
@@ -821,7 +821,7 @@ public:
             if (FluidSystem::enableDissolvedGasInWater()) {
                 const auto& Rsw = BlackOil::getRsw_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
 
-                unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
+                const unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
                 if constexpr (blackoilConserveSurfaceVolume) {
                     flux[conti0EqIdx + activeGasCompIdx] += Rsw * surfaceVolumeFlux;
                 }
@@ -837,7 +837,7 @@ public:
             if (FluidSystem::enableVaporizedOil()) {
                 const auto& Rv = BlackOil::getRv_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
 
-                unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
+                const unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
                 if constexpr (blackoilConserveSurfaceVolume) {
                     flux[conti0EqIdx + activeOilCompIdx] += Rv * surfaceVolumeFlux;
                 }
@@ -851,7 +851,7 @@ public:
             if (FluidSystem::enableVaporizedWater()) {
                 const auto& Rvw = BlackOil::getRvw_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
 
-                unsigned activeWaterCompIdx = FluidSystem::canonicalToActiveCompIdx(waterCompIdx);
+                const unsigned activeWaterCompIdx = FluidSystem::canonicalToActiveCompIdx(waterCompIdx);
                 if constexpr (blackoilConserveSurfaceVolume) {
                     flux[conti0EqIdx + activeWaterCompIdx] += Rvw * surfaceVolumeFlux;
                 }
@@ -885,19 +885,19 @@ public:
             // is disabled, its respective "main" component is not considered as well.)
 
             if constexpr (waterEnabled) {
-                unsigned activeWaterCompIdx = FluidSystem::canonicalToActiveCompIdx(waterCompIdx);
+                const unsigned activeWaterCompIdx = FluidSystem::canonicalToActiveCompIdx(waterCompIdx);
                 container[conti0EqIdx + activeWaterCompIdx] *=
                     FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
             }
 
             if constexpr (gasEnabled) {
-                unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
+                const unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
                 container[conti0EqIdx + activeGasCompIdx] *=
                     FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
             }
 
             if constexpr (oilEnabled) {
-                unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
+                const unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
                 container[conti0EqIdx + activeOilCompIdx] *=
                     FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
             }

@@ -275,13 +275,13 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
 
         // Compute connection level mixture density as a weighted average of
         // phase densities.
-        const auto* const rho_s = &props.surf_dens_perf[perf*num_quantities + 0];
-        const auto* const b     = &props.b_perf        [perf*num_quantities + 0];
+        const auto* const rho_s = &props.surf_dens_perf[perf * num_quantities + 0];
+        const auto* const b     = &props.b_perf        [perf * num_quantities + 0];
 
         auto& rho = this->perf_densities_[perf];
 
         auto volrat = rho = Scalar{0};
-        for (auto comp = 0*num_quantities; comp < num_quantities; ++comp) {
+        for (auto comp = 0 * num_quantities; comp < num_quantities; ++comp) {
             rho    += componentMixture[comp] * rho_s[comp];
             volrat += phaseMixture    [comp] / b    [comp];
         }
@@ -348,11 +348,11 @@ initialiseConnectionMixture(const int                  num_quantities,
 {
     // Find component mix.
     const auto tot_surf_rate =
-        std::accumulate(q_out_perf.begin() + num_quantities*(perf + 0),
-                        q_out_perf.begin() + num_quantities*(perf + 1), Scalar{0});
+        std::accumulate(q_out_perf.begin() + num_quantities * (perf + 0),
+                        q_out_perf.begin() + num_quantities * (perf + 1), Scalar{0});
 
     if (tot_surf_rate != Scalar{0}) {
-        const auto* const qo = &q_out_perf[perf*num_quantities + 0];
+        const auto* const qo = &q_out_perf[perf * num_quantities + 0];
 
         for (int component = 0; component < num_quantities; ++component) {
             componentMixture[component] = std::abs(qo[component] / tot_surf_rate);
@@ -638,9 +638,8 @@ copyInPerforationRates(const Properties&       props,
     const auto srcIx = [np]() {
         auto ix = std::vector<int>(np);
 
-        // std::iota(ix.begin(), ix.end(), 0);
         for (auto comp = 0; comp < np; ++comp) {
-            // TODO: it looks like a mixed up of components and phases in mulitple ways
+            // TODO: it might be a mixed up of components and phases in multiple ways
             ix[comp] = FluidSystem::activeCompToPhaseIdx(comp);
         }
 

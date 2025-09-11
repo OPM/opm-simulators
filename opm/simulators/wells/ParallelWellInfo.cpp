@@ -194,7 +194,7 @@ createGlobal(const std::vector<Scalar>& local_perf_container,
             MPI_Type_contiguous(num_quantities, Dune::MPITraits<Value>::getType(), &data_type);
             MPI_Type_commit(&data_type);
             MPI_Allgatherv(local_perf_container.data(),
-                           local_perf_container.size()/num_quantities,
+                           local_perf_container.size() / num_quantities,
                            data_type, global_recv.data(), sizes_.data(),
                            displ_.data(), data_type, comm_);
             MPI_Type_free(&data_type);
