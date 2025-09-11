@@ -2065,8 +2065,8 @@ namespace Opm
         }
 
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), 0.0);
-        const int canonicalPhseIdx = FluidSystem::activeToCanonicalPhaseIdx(phase_pos);
-        connII[phase_pos] = connIICalc(mt * fs.invB(canonicalPhseIdx).value());
+        const int canonicalPhaseIdx = FluidSystem::activeToCanonicalPhaseIdx(phase_pos);
+        connII[phase_pos] = connIICalc(mt * fs.invB(canonicalPhaseIdx).value());
     }
 
     template<typename TypeTag>
