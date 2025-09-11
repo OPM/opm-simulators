@@ -57,12 +57,18 @@ namespace Amg
 
         VectorBlockType rhs(0.0);
         rhs[pressureVarIndex] = 1.0;
+
+        // Declare variables outside the loop to avoid repetitive allocation
+        MatrixBlockType diag_block;
+        VectorBlockType bweights;
+        MatrixBlockType diag_block_transpose;
+
         // Use OpenMP to parallelize over matrix rows
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for private(diag_block, bweights, diag_block_transpose)
         #endif
         for (int row_idx = 0; row_idx < static_cast<int>(A.N()); ++row_idx) {
-            MatrixBlockType diag_block(0.0);
+            diag_block = MatrixBlockType(0.0);
             // Find diagonal block for this row
             const auto row_it = A.begin() + row_idx;
             const auto endj = (*row_it).end();
@@ -72,12 +78,10 @@ namespace Amg
                     break;
                 }
             }
-
-            VectorBlockType bweights;
             if (transpose) {
                 diag_block.solve(bweights, rhs);
             } else {
-                auto diag_block_transpose = Details::transposeDenseMatrix(diag_block);
+                diag_block_transpose = Details::transposeDenseMatrix(diag_block);
                 diag_block_transpose.solve(bweights, rhs);
             }
 
@@ -109,19 +113,21 @@ namespace Amg
         using Evaluation = typename std::decay_t<decltype(model.localLinearizer(ThreadManager::threadId()).localResidual().residual(0))>
             ::block_type;
 
+        VectorBlockType rhs(0.0);
+        rhs[pressureVarIndex] = 1.0;
+
+        // Declare variables outside the loop to avoid repetitive allocation
+        MatrixBlockType block;
+        VectorBlockType bweights;
+        MatrixBlockType block_transpose;
+        Dune::FieldVector<Evaluation, numEq> storage;
+
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for private(block, bweights, block_transpose, storage)
         #endif
         for (const auto& chunk : element_chunks) {
-            std::size_t thread_id = ThreadManager::threadId();
-            VectorBlockType rhs(0.0);
-            rhs[pressureVarIndex] = 1.0;
-            Dune::FieldVector<Evaluation, numEq> storage;
-            MatrixBlockType block;
-            VectorBlockType bweights;
-            MatrixBlockType block_transpose;
-
+            const std::size_t thread_id = ThreadManager::threadId();
             ElementContext localElemCtx(elemCtx.simulator());
 
             for (const auto& elem : chunk) {
@@ -133,18 +139,17 @@ namespace Amg
                 auto extrusionFactor = localElemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
                 auto scvVolume = localElemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
                 auto storage_scale = scvVolume / localElemCtx.simulator().timeStepSize();
-
                 const double pressure_scale = 50e5;
+
+                // Build the transposed matrix directly to avoid separate transpose step
                 for (int ii = 0; ii < numEq; ++ii) {
                     for (int jj = 0; jj < numEq; ++jj) {
-                        block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
+                        block_transpose[jj][ii] = storage[ii].derivative(jj)/storage_scale;
                         if (jj == pressureVarIndex) {
-                            block[ii][jj] *= pressure_scale;
+                            block_transpose[jj][ii] *= pressure_scale;
                         }
                     }
                 }
-
-                block_transpose = Details::transposeDenseMatrix(block);
                 block_transpose.solve(bweights, rhs);
 
                 double abs_max = *std::max_element(
@@ -185,15 +190,14 @@ namespace Amg
         using Toolbox = MathToolbox<Evaluation>;
 
         const auto& solution = model.solution(/*timeIdx*/ 0);
+        VectorBlockType bweights;
 
         // Use OpenMP to parallelize over element chunks
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for private(bweights)
         #endif
         for (const auto& chunk : element_chunks) {
-            // Thread-local variables
-            VectorBlockType bweights;
 
             // Each thread gets a unique copy of elemCtx
             ElementContext localElemCtx(elemCtx.simulator());
