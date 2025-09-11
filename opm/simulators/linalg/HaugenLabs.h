@@ -43,6 +43,7 @@ void bildu_init(bildu_prec *P, bsr_matrix const *A);
 void bildu_factorize(bildu_prec *P, bsr_matrix *A);
 void bildu_apply3(bildu_prec *P, double *x);
 void bildu_apply3c(bildu_prec *P, double *x);
+void bildu_mapply3c(bildu_prec *P, double *x);
 void bildu_downcast(bildu_prec *P);
 void bildu_info(bildu_prec *P);
 
@@ -69,7 +70,9 @@ void bslv_pbicgstab3(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
 
 double __attribute__((noinline)) vec_inner2(const double *a, const double *b, int n);
 void vec_fill(double *y, double x, int n);
+void vec_copy(double *y, double const * x, int n);
 void vec_show(const double *x, int n, const char *name);
+double vec_norm(double const *v, int n);
 
 void headtail(double *x, int n, char const *name);
 

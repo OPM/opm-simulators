@@ -362,6 +362,7 @@ private:
 
     bsr_matrix  *bsr_jacobian_; // HaugenLabs matrix object
     bslv_memory *slv_memory_;   // HaugenLabs solver memory
+    double *y_;                 // Huagenlabs solution vector (testing only);
 };
 
 } // namespace Opm

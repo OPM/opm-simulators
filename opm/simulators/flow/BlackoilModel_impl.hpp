@@ -532,8 +532,6 @@ solveJacobianSystem(BVector& x)
 
         if(bsr_jacobian_->nnz==0)
         {
-            //bsr_info(bsr_jacobian_);
-
             int nrows = jacobian.N();
             int nnz   = jacobian.nonzeroes();
             int b     = jacobian[0][0].N();
@@ -556,17 +554,15 @@ solveJacobianSystem(BVector& x)
                 irow++;
             }
 
-            bslv_init(slv_memory_, 1e-4, 1024, bsr_jacobian_);
+            double tol      = linSolver.getParameters().linear_solver_reduction_;
+            int    max_iter = linSolver.getParameters().linear_solver_maxiter_;
+            printf("linear_solver_reduction_ = %.4e\n",tol);
+            printf("linear_solver_maxiter_   = %4d\n",max_iter);
+            getchar();
 
-            //bsr_info(bsr_jacobian_);
-            //bsr_sparsity(bsr_jacobian_,"A");
-            //bsr_nonzeros(bsr_jacobian_,"A->dbl");
+            bslv_init(slv_memory_, tol, max_iter, bsr_jacobian_);
 
-            bildu_prec *P = slv_memory_->P;
-            bildu_info(P);
-            bsr_sparsity(P->L,"L");
-            bsr_sparsity(P->D,"D");
-            bsr_sparsity(P->U,"U");
+            y_ = (double*) malloc(b*nrows*sizeof(double));
 
         }
 /*
@@ -577,42 +573,63 @@ solveJacobianSystem(BVector& x)
             //bsr_nonzeros(bsr_jacobian_,"A->dbl");
         }
 */
+
+
+
+        linSolver.prepare(jacobian, residual); // what happens here?
+
+
+        linear_solve_setup_time_ = perfTimer.stop();
+
+
+        linSolver.setResidual(residual);
+
+
+
+        // actually, the error needs to be calculated after setResidual in order to
+        // account for parallelization properly. since the residual of ECFV
+        // discretizations does not need to be synchronized across processes to be
+        // consistent, this is not relevant for OPM-flow...
+
+/*
         // transpose each dense block to make them column-major
         double M[9];
-        double const *data = &jacobian[0][0][0][0];// assuming c-contiguous data
+        double const *data = &jacobian[0][0][0][0];// assuming c-contiguous ndarray
         for(int k=0;k<bsr_jacobian_->nnz;k++)
         {
             for(int i=0;i<3;i++) for(int j=0;j<3;j++) M[3*j+i] = data[9*k + 3*i + j];
             for(int i=0;i<9;i++) bsr_jacobian_->dbl[9*k + i] = M[i];
         }
-        bsr_downcast(bsr_jacobian_);
 
-        double *r =&residual[0][0]; //address of first element of block vector (assumes contiguous layout)
-/*
-        int n = (bsr_jacobian_->b)*(bsr_jacobian_->nrows);
-        bildu_prec *P = slv_memory_->P;
-        bildu_factorize(P, bsr_jacobian_);
-        headtail(r,n,"r");
-        bildu_apply3(P,r);
-        headtail(r,n,"Pr");
+        bsr_downcast(bsr_jacobian_);
 */
 
-        bslv_pbicgstab3(slv_memory_, bsr_jacobian_, r, &x[0][0]);
-        getchar();
+        // compute initial residual norm
+        double  norm_r0 = residual.two_norm();
 
+        // copy residual before calling solve
+        BVector r(residual);
 
-
-
-        linSolver.prepare(jacobian, residual);
-
-        linear_solve_setup_time_ = perfTimer.stop();
-
-        linSolver.setResidual(residual);
-        // actually, the error needs to be calculated after setResidual in order to
-        // account for parallelization properly. since the residual of ECFV
-        // discretizations does not need to be synchronized across processes to be
-        // consistent, this is not relevant for OPM-flow...
+/*
+        //solve Ax=b, where A=jacobian and b=r
+        int n = (bsr_jacobian_->b)*(bsr_jacobian_->nrows);
+        bslv_pbicgstab3(slv_memory_, bsr_jacobian_, &residual[0][0], &x[0][0]);
+        vec_copy(&residual[0][0], slv_memory_->dtmp[3],n);
+*/
         linSolver.solve(x);
+
+        //compute r-Ax, where A=jacobian
+        jacobian.mmv(x,r);
+        //jacobian.umv(x,r);
+
+        //compare norms of r and r0 - Ax
+        double  norm_r1 = residual.two_norm();
+        double  norm_rA = r.two_norm();
+        printf("norm_r0 = %.4e\n",norm_r0);
+        printf("norm_r1 = %.4e (%.4e)\n", norm_r1, norm_r1/norm_r0);
+        printf("norm_rA = %.4e (%.4e)\n", norm_rA, norm_rA/norm_r0);
+
+        getchar();
     }
 }
 
