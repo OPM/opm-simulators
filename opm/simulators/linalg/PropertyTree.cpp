@@ -96,6 +96,15 @@ PropertyTree::get_child_optional(const std::string& key) const
   return PropertyTree(pt.get());
 }
 
+std::vector<std::string> PropertyTree::get_child_keys() const
+{
+    std::vector<std::string> keys;
+    for (auto it = tree_->begin(); it != tree_->end(); ++it) {
+        keys.push_back(it->first);
+    }
+    return keys;
+}
+
 template <typename T>
 std::optional<std::vector<T>>
 PropertyTree::get_child_items_as_vector(const std::string& child) const
