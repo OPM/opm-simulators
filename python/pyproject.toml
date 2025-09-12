@@ -5,3 +5,11 @@ requires= [
   "cmake>=3.15",
   "ninja"
 ]
+# NOTE (2025-09-12): Explicitly declare the backend used by `python -m build`.
+build-backend = "setuptools.build_meta"
+
+# TODO (modernization): Consider migrating to scikit-build-core and PEP 621.
+# - Move metadata to a [project] table (name, version, description, authors,
+#   license-expression), drop setup.py.in, and configure builds under
+#   [tool.scikit-build] or [tool.scikit-build-core]. This would further reduce
+#   legacy behavior and simplify the build.
