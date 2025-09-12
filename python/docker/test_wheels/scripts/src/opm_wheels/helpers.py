@@ -6,9 +6,25 @@ from pathlib import Path
 
 from opm_wheels.constants import Directories, PythonVersion
 
+
+def canonicalize_docker_os(name: str) -> str:
+    """Return a canonical filesystem/tag-friendly OS identifier.
+
+    Accepts legacy values like "ubuntu:22.04" and returns "ubuntu-22.04".
+    If already hyphenated (e.g., "ubuntu-22.04"), it is returned unchanged.
+    """
+    return name.replace(":", "-")
+
 def get_docker_tag(docker_os: str) -> str:
-    """Get the Docker tag for the given OS. Supported: ubuntu:22.04, ubuntu:24.04, debian:11"""
-    return f"test-opm-wheels-{docker_os}"
+    """Get the Docker tag for the given OS.
+
+    The tag is always produced from the canonicalized OS name, e.g.:
+    - input: "ubuntu:22.04" or "ubuntu-22.04" => tag: "test-opm-wheels-ubuntu-22.04"
+
+    Supported values (canonical): ubuntu-22.04, ubuntu-24.04, debian-11.
+    """
+    canonical = canonicalize_docker_os(docker_os)
+    return f"test-opm-wheels-{canonical}"
 
 def get_git_root() -> Path:
     """Return the absolute path of the repository's root."""
