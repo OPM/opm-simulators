@@ -2243,6 +2243,15 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>::numConservationQuantities() const
     {
+        // The numPhases() functions returns 1-3, depending on which
+        // of the (oil, water, gas) phases are active. For each of those phases,
+        // if the phase is active the corresponding component is present and
+        // conserved.
+        // Apart from (oil, water, gas), in the current well model only solvent
+        // is explicitly modelled as a conserved quantity (polymer, energy, salt
+        // etc. are not), unlike the reservoir part where all such quantities are
+        // conserved. This function must therefore be updated when/if we add
+        // more conserved quantities in the well model.
         return this->numPhases() + has_solvent_;
     }
 
