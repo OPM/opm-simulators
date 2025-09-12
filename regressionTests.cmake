@@ -432,6 +432,13 @@ add_test_compareECLFiles(CASENAME gpmaint11
                          REL_TOL ${rel_tol}
                          DIR gpmaint)
 
+add_test_compareECLFiles(CASENAME 3dwecon9
+                         FILENAME 3D_WECON_9
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR wecon_wtest)
+
 set(_gconprod_cases
   T1L
   T1W
