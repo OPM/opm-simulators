@@ -447,6 +447,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         /// \copydoc NewtonIterationBlackoilInterface::iterations
         int iterations () const override { return iterations_; }
 
+        void set_iterations (int count) { iterations_ = count; }
+
         /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
         const std::any& parallelInformation() const { return parallelInformation_; }
 

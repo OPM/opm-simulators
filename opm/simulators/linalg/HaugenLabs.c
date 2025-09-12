@@ -38,6 +38,7 @@ void bsr_init(bsr_matrix *A, int nrows, int nnz, int b)
     A->rowptr = malloc((nrows+1)*sizeof(int));
     A->colidx = malloc(nnz*sizeof(int));
     A->dbl    = malloc(b*b*nnz*sizeof(double));
+    A->flt    = malloc(b*b*nnz*sizeof(float));
 }
 
 void bsr_info(bsr_matrix *A)
@@ -679,7 +680,7 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A)
 
 }
 
-void bslv_pbicgstab3(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
+int bslv_pbicgstab3(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
 {
 
     double tol = mem->tol;
@@ -747,10 +748,16 @@ void bslv_pbicgstab3(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     }
     bildu_mapply3c(P,x_j);                                       //x_j=P.x_j;
 
-    printf("pbicgstab: iterations=%d residual=%.2e\n",j,e[j+1]);
-
+    j++;
+    //printf("pbicgstab: iterations=%d residual=%.2e\n",j,e[j]);
+    return j;
 }
 
+void bslv_info(bslv_memory *mem, int count)
+{
+    double * restrict e = mem->e;
+    printf("bslv_info: iterations=%d reduction=%.2e\n",count,e[count]);
+}
 
 
 

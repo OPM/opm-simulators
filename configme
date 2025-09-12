@@ -1,5 +1,5 @@
 rm -rf build
 mkdir build && cd build
-cmake -D CMAKE_CXX_COMPILER="g++" -D CMAKE_C_FLAGS="-march=native" ..
+cmake -D CMAKE_CXX_COMPILER="g++" -D CMAKE_C_COMPILER="gcc" -D CMAKE_C_FLAGS="-O3 -march=native" ..
 
 
