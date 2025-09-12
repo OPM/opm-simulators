@@ -93,13 +93,6 @@ struct BlackOilVariableAndEquationIndices
     static constexpr int numEq = numPhases + numSolvents + numExtbos + numPolymers +
                                  numEnergy + numFoam + numBrine + numMICPs;
 
-    //! \brief returns the index of "active" component
-    static constexpr int canonicalToActiveComponentIndex(const int compIdx)
-    { return compIdx; }
-
-    static constexpr int activeToCanonicalComponentIndex(const int compIdx)
-    { return compIdx; }
-
     ////////
     // Primary variable indices
     ////////

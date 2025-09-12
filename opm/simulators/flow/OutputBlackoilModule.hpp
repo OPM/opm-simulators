@@ -119,14 +119,13 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableDissolvedGas = Indices::compositionSwitchIdx >= 0 };
 
-    template<int idx, class VectorType>
-    static Scalar value_or_zero(const VectorType& v)
+    template<class VectorType>
+    static Scalar value_or_zero(int idx, const VectorType& v)
     {
-        if constexpr (idx == -1) {
+        if (idx == -1) {
             return 0.0;
-        } else {
-            return v.empty() ? 0.0 : v[idx];
         }
+        return v.empty() ? 0.0 : v[idx];
     }
 
 public:
@@ -1190,7 +1189,7 @@ private:
                              (const unsigned phaseIdx, const Context& ectx)
                              {
                                 const unsigned sIdx = FluidSystem::solventComponentIndex(phaseIdx);
-                                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(sIdx);
+                                const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(sIdx);
                                 return modelResid[ectx.globalDofIdx][activeCompIdx];
                              }
                   },
@@ -1617,40 +1616,40 @@ private:
             Entry{[&flowsInf = this->simulator_.problem().model().linearizer().getFlowsInfo(),
                    &flowsC = this->flowsC_](const Context& ectx)
                   {
-                      constexpr auto gas_idx = Indices::gasEnabled ?
-                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx) : -1;
-                      constexpr auto oil_idx = Indices::oilEnabled ?
-                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx) : -1;
-                      constexpr auto water_idx = Indices::waterEnabled ?
-                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx) : -1;
+                      const auto gas_idx = Indices::gasEnabled ?
+                          conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(gasCompIdx) : -1;
+                      const auto oil_idx = Indices::oilEnabled ?
+                          conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(oilCompIdx) : -1;
+                      const auto water_idx = Indices::waterEnabled ?
+                          conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(waterCompIdx) : -1;
                       const auto& flowsInfos = flowsInf[ectx.globalDofIdx];
                       for (const auto& flowsInfo : flowsInfos) {
                           flowsC.assignFlows(ectx.globalDofIdx,
                                              flowsInfo.faceId,
                                              flowsInfo.nncId,
-                                             value_or_zero<gas_idx>(flowsInfo.flow),
-                                             value_or_zero<oil_idx>(flowsInfo.flow),
-                                             value_or_zero<water_idx>(flowsInfo.flow));
+                                             value_or_zero(gas_idx, flowsInfo.flow),
+                                             value_or_zero(oil_idx, flowsInfo.flow),
+                                             value_or_zero(water_idx, flowsInfo.flow));
                         }
                  }, !this->simulator_.problem().model().linearizer().getFlowsInfo().empty()
             },
             Entry{[&floresInf = this->simulator_.problem().model().linearizer().getFloresInfo(),
                    &flowsC = this->flowsC_](const Context& ectx)
                   {
-                      constexpr auto gas_idx = Indices::gasEnabled ?
-                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx) : -1;
-                      constexpr auto oil_idx = Indices::oilEnabled ?
-                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx) : -1;
-                      constexpr auto water_idx = Indices::waterEnabled ?
-                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx) : -1;
+                      const auto gas_idx = Indices::gasEnabled ?
+                          conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(gasCompIdx) : -1;
+                      const auto oil_idx = Indices::oilEnabled ?
+                          conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(oilCompIdx) : -1;
+                      const auto water_idx = Indices::waterEnabled ?
+                          conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(waterCompIdx) : -1;
                       const auto& floresInfos = floresInf[ectx.globalDofIdx];
                       for (const auto& floresInfo : floresInfos) {
                           flowsC.assignFlores(ectx.globalDofIdx,
                                               floresInfo.faceId,
                                               floresInfo.nncId,
-                                              value_or_zero<gas_idx>(floresInfo.flow),
-                                              value_or_zero<oil_idx>(floresInfo.flow),
-                                              value_or_zero<water_idx>(floresInfo.flow));
+                                              value_or_zero(gas_idx, floresInfo.flow),
+                                              value_or_zero(oil_idx, floresInfo.flow),
+                                              value_or_zero(water_idx, floresInfo.flow));
                       }
                  }, !this->simulator_.problem().model().linearizer().getFloresInfo().empty()
             },

@@ -471,7 +471,7 @@ volumeFraction(const int compIdx) const
         return EvalWell(numWellEq_ + Indices::numEq, 1.0);
     }
 
-    if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+    if (has_gfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx)) {
         return evaluation_[GFrac];
     }
 
@@ -480,7 +480,7 @@ volumeFraction(const int compIdx) const
     }
 
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        if (has_wfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
+        if (has_wfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx)) {
             return evaluation_[WFrac];
         }
     }
@@ -504,7 +504,7 @@ typename StandardWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 StandardWellPrimaryVariables<FluidSystem,Indices>::
 volumeFractionScaled(const int compIdx) const
 {
-    const int legacyCompIdx = well_.modelCompIdxToFlowCompIdx(compIdx);
+    const int legacyCompIdx = FluidSystem::activeCompToActivePhaseIdx(compIdx);
     const Scalar scal = well_.scalingFactor(legacyCompIdx);
     if (scal > 0)
         return this->volumeFraction(compIdx) / scal;
@@ -519,7 +519,7 @@ StandardWellPrimaryVariables<FluidSystem,Indices>::
 surfaceVolumeFraction(const int compIdx) const
 {
     EvalWell sum_volume_fraction_scaled(numWellEq_ + Indices::numEq, 0.);
-    for (int idx = 0; idx < well_.numComponents(); ++idx) {
+    for (int idx = 0; idx < well_.numConservationQuantities(); ++idx) {
         sum_volume_fraction_scaled += this->volumeFractionScaled(idx);
     }
 
@@ -534,32 +534,32 @@ StandardWellPrimaryVariables<FluidSystem,Indices>::
 getQs(const int comp_idx) const
 {
     // Note: currently, the WQTotal definition is still depends on Injector/Producer.
-    assert(comp_idx < well_.numComponents());
+    assert(comp_idx < well_.numConservationQuantities());
 
     if (well_.isInjector()) { // only single phase injection
         Scalar inj_frac = 0.0;
         switch (well_.wellEcl().injectorType()) {
         case InjectorType::WATER:
-            if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))) {
+            if (comp_idx == int(FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx))) {
                 inj_frac = 1.0;
             }
             break;
         case InjectorType::GAS:
             if (Indices::enableSolvent && comp_idx == Indices::contiSolventEqIdx) { // solvent
                 inj_frac = well_.wsolvent();
-            } else if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))) {
+            } else if (comp_idx == int(FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx))) {
                 inj_frac = 1.0 - well_.rsRvInj();
                 if constexpr (Indices::enableSolvent) {
                     inj_frac -= well_.wsolvent();
                 }
-            } else if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))) {
+            } else if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && comp_idx == int(FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx))) {
                 inj_frac = well_.rsRvInj();
             }
             break;
         case InjectorType::OIL:
-            if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))) {
+            if (comp_idx == int(FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx))) {
                 inj_frac = 1.0 - well_.rsRvInj();
-            } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))) {
+            } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && comp_idx == int(FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx))) {
                 inj_frac = well_.rsRvInj();
             }
             break;

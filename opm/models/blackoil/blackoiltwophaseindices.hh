@@ -180,45 +180,6 @@ struct BlackOilTwoPhaseIndices
     // Equation indices
     //////////////////////
 
-    //! \brief returns the index of "active" component
-    static constexpr int canonicalToActiveComponentIndex(const int compIdx)
-    {
-        // assumes canonical oil = 0, water = 1, gas = 2;
-        if (!gasEnabled) {
-            constexpr_assert(compIdx != 2);
-            // oil = 0, water = 1
-            return compIdx;
-        } else if (!waterEnabled) {
-            constexpr_assert(compIdx != 1);
-            // oil = 0, gas = 1
-            return compIdx / 2;
-        } else {
-            constexpr_assert(!oilEnabled);
-            constexpr_assert(compIdx != 0);
-        }
-
-        // water = 0, gas = 1;
-        return compIdx - 1;
-    }
-
-    static constexpr int activeToCanonicalComponentIndex(const int compIdx)
-    {
-        // assumes canonical oil = 0, water = 1, gas = 2;
-        constexpr_assert(compIdx < 2);
-        if (!gasEnabled) {
-            // oil = 0, water = 1
-            return compIdx;
-        } else if (!waterEnabled) {
-            // oil = 0, gas = 1
-            return compIdx * 2;
-        } else {
-            constexpr_assert(!oilEnabled);
-        }
-
-        // water = 0, gas = 1;
-        return compIdx + 1;
-    }
-
     //! Index of the continuity equation of the first phase
     static constexpr int conti0EqIdx = PVOffset + 0;
     // one continuity equation follows

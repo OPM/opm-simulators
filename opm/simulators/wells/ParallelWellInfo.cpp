@@ -172,15 +172,15 @@ int GlobalPerfContainerFactory<Scalar>::globalToLocal(const int globalIndex) con
 template<class Scalar>
 std::vector<Scalar> GlobalPerfContainerFactory<Scalar>::
 createGlobal(const std::vector<Scalar>& local_perf_container,
-             std::size_t num_components) const
+             std::size_t num_quantities) const
 {
     // Could be become templated later.
     using Value = Scalar;
 
     if (comm_.size() > 1)
     {
-        std::vector<Value> global_recv(perf_ecl_index_.size() * num_components);
-        if (num_components == 1)
+        std::vector<Value> global_recv(perf_ecl_index_.size() * num_quantities);
+        if (num_quantities == 1)
         {
             comm_.allgatherv(local_perf_container.data(), local_perf_container.size(),
                              global_recv.data(), const_cast<int*>(sizes_.data()),
@@ -189,12 +189,12 @@ createGlobal(const std::vector<Scalar>& local_perf_container,
         else
         {
 #if HAVE_MPI
-            // Create MPI type for sending num_components entries
+            // Create MPI type for sending num_quantities entries
             MPI_Datatype data_type;
-            MPI_Type_contiguous(num_components, Dune::MPITraits<Value>::getType(), &data_type);
+            MPI_Type_contiguous(num_quantities, Dune::MPITraits<Value>::getType(), &data_type);
             MPI_Type_commit(&data_type);
             MPI_Allgatherv(local_perf_container.data(),
-                           local_perf_container.size()/num_components,
+                           local_perf_container.size() / num_quantities,
                            data_type, global_recv.data(), sizes_.data(),
                            displ_.data(), data_type, comm_);
             MPI_Type_free(&data_type);
@@ -202,13 +202,13 @@ createGlobal(const std::vector<Scalar>& local_perf_container,
         }
 
         // reorder by ascending ecl index.
-        std::vector<Value> global_remapped(perf_ecl_index_.size() * num_components);
+        std::vector<Value> global_remapped(perf_ecl_index_.size() * num_quantities);
         auto global = global_remapped.begin();
         for (auto map_entry = map_received_.begin(); map_entry !=  map_received_.end(); ++map_entry)
         {
-            auto global_index = *map_entry * num_components;
+            auto global_index = *map_entry * num_quantities;
 
-            for(std::size_t i = 0; i < num_components; ++i)
+            for(std::size_t i = 0; i < num_quantities; ++i)
                 *(global++) = global_recv[global_index++];
         }
         assert(global == global_remapped.end());
@@ -224,7 +224,7 @@ template<class Scalar>
 void GlobalPerfContainerFactory<Scalar>::
 copyGlobalToLocal(const std::vector<Scalar>& global,
                   std::vector<Scalar>& local,
-                  std::size_t num_components) const
+                  std::size_t num_quantities) const
 {
     if (global.empty())
     {
@@ -241,9 +241,9 @@ copyGlobalToLocal(const std::vector<Scalar>& global,
             global_perf = std::lower_bound(global_perf, perf_ecl_index_.end(), pair.global());
             assert(global_perf != perf_ecl_index_.end());
             assert(*global_perf == pair.global());
-            auto local_index = pair.local() * num_components;
-            auto global_index = (global_perf - perf_ecl_index_.begin()) * num_components;
-            for (std::size_t i = 0; i < num_components; ++i)
+            auto local_index = pair.local() * num_quantities;
+            auto global_index = (global_perf - perf_ecl_index_.begin()) * num_quantities;
+            for (std::size_t i = 0; i < num_quantities; ++i)
                 local[local_index++] = global[global_index++];
         }
     }

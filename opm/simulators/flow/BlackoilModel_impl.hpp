@@ -130,7 +130,7 @@ prepareStep(const SimulatorTimerInterface& timer)
     {
         if (FluidSystem::phaseIsActive(phaseIdx)) {
             const unsigned sIdx = FluidSystem::solventComponentIndex(phaseIdx);
-            return Indices::canonicalToActiveComponentIndex(sIdx);
+            return FluidSystem::canonicalToActiveCompIdx(sIdx);
         }
 
         return -1;
@@ -1097,7 +1097,7 @@ getMaxCoeff(const unsigned cell_idx,
         }
 
         const unsigned sIdx = FluidSystem::solventComponentIndex(phaseIdx);
-        const unsigned compIdx = Indices::canonicalToActiveComponentIndex(sIdx);
+        const unsigned compIdx = FluidSystem::canonicalToActiveCompIdx(sIdx);
 
         B_avg[compIdx] += 1.0 / fs.invB(phaseIdx).value();
         const auto R2 = modelResid[cell_idx][compIdx];

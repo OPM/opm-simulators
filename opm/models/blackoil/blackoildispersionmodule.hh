@@ -280,7 +280,7 @@ public:
 
             // mass flux of solvent component
             const unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-            const unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
+            const unsigned activeSolventCompIdx = FluidSystem::canonicalToActiveCompIdx(solventCompIdx);
             flux[conti0EqIdx + activeSolventCompIdx] +=
                     -bAvg *
                     normVelocityAvg[phaseIdx] *
@@ -290,7 +290,7 @@ public:
 
             // mass flux of solute component
             const unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
-            const unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
+            const unsigned activeSoluteCompIdx = FluidSystem::canonicalToActiveCompIdx(soluteCompIdx);
             flux[conti0EqIdx + activeSoluteCompIdx] +=
                     bAvg *
                     normVelocityAvg[phaseIdx] *
@@ -422,7 +422,7 @@ protected:
                 if (FluidSystem::phaseIsActive(phaseIdxs[i])) {
                     normVelocityCell_[phaseIdxs[i]] = max( normVelocityCell_[phaseIdxs[i]], 
                         std::abs(velocityInfo.velocity[conti0EqIdx +
-                                 Indices::canonicalToActiveComponentIndex(compIdxs[i])]));
+                                 FluidSystem::canonicalToActiveCompIdx(compIdxs[i])]));
                 }
             }
         }

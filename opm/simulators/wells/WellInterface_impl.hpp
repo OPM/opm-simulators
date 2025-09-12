@@ -61,7 +61,7 @@ namespace Opm
                   const ModelParameters& param,
                   const RateConverterType& rate_converter,
                   const int pvtRegionIdx,
-                  const int num_components,
+                  const int num_conservation_quantities,
                   const int num_phases,
                   const int index_of_well,
                   const std::vector<PerforationData<Scalar>>& perf_data)
@@ -71,7 +71,7 @@ namespace Opm
                                                   param,
                                                   rate_converter,
                                                   pvtRegionIdx,
-                                                  num_components,
+                                                  num_conservation_quantities,
                                                   num_phases,
                                                   index_of_well,
                                                   perf_data)
@@ -338,7 +338,7 @@ namespace Opm
             Scalar inj_limit = inj_controls.bhp_limit;
             const bool has_thp = this->wellHasTHPConstraints(summary_state);
             if (has_thp){
-                std::vector<Scalar> rates(this->num_components_);
+                std::vector<Scalar> rates(this->num_conservation_quantities_);
                 if (this->isInjector()){
                     const Scalar bhp_thp = WellBhpThpCalculator(*this).
                                                 calculateBhpFromThp(well_state, rates,
@@ -967,7 +967,7 @@ namespace Opm
     {
         for (int perfIdx = 0; perfIdx < this->number_of_local_perforations_; ++perfIdx) {
             if (this->cells()[perfIdx] == cellIdx) {
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
                 return connectionRates_[perfIdx][activeCompIdx].value();
             }
         }
@@ -1606,12 +1606,12 @@ namespace Opm
             const Scalar well_tw_fraction = this->well_index_[perf] / total_tw;
             Scalar total_mobility = 0.0;
             for (int p = 0; p < np; ++p) {
-                int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
-                total_mobility += fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value();
+                const int canonical_phase_idx = FluidSystem::activeToCanonicalPhaseIdx(p);
+                total_mobility += fs.invB(canonical_phase_idx).value() * intQuants.mobility(canonical_phase_idx).value();
             }
             for (int p = 0; p < np; ++p) {
-                int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
-                scaling_factor[p] += well_tw_fraction * fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value() / total_mobility;
+                const int canonical_phase_idx = FluidSystem::activeToCanonicalPhaseIdx(p);
+                scaling_factor[p] += well_tw_fraction * fs.invB(canonical_phase_idx).value() * intQuants.mobility(canonical_phase_idx).value() / total_mobility;
             }
         }
         return scaling_factor;
@@ -1721,7 +1721,7 @@ namespace Opm
             OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - possibly wellIndex was called with a global instead of a local perforation index!");
         }
         auto wi = std::vector<Scalar>
-            (this->num_components_, this->well_index_[perf] * trans_mult);
+            (this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
 
         if constexpr (! Indices::gasEnabled) {
             return wi;
@@ -1743,7 +1743,7 @@ namespace Opm
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
         const Scalar Kh = connection.Kh();
         const Scalar scaling = 3.141592653589 * Kh * connection.wpimult();
-        const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        const unsigned gas_comp_idx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
 
         const Scalar connection_pressure = ws.perf_data.pressure[perf];
         const Scalar cell_pressure = getValue(intQuants.fluidState().pressure(FluidSystem::gasPhaseIdx));
@@ -1914,7 +1914,7 @@ namespace Opm
             OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - possibly getMobility was called with a global instead of a local perforation index!");
         }
         const int cell_idx = this->well_cells_[local_perf_index];
-        assert (int(mob.size()) == this->num_components_);
+        assert (int(mob.size()) == this->num_conservation_quantities_);
         const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
         const auto& materialLawManager = simulator.problem().materialLawManager();
 
@@ -1928,7 +1928,7 @@ namespace Opm
                     continue;
                 }
 
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
                 mob[activeCompIdx] = extendEval(intQuants.mobility(phaseIdx));
             }
             if constexpr (has_solvent) {
@@ -1948,7 +1948,7 @@ namespace Opm
                     continue;
                 }
 
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
                 mob[activeCompIdx] = extendEval(relativePerms[phaseIdx] / intQuants.fluidState().viscosity(phaseIdx));
             }
 
@@ -2014,9 +2014,9 @@ namespace Opm
         for (int p = 0; p < np; ++p) {
             // Note: E100's notion of PI value phase mobility includes
             // the reciprocal FVF.
+            const int canonical_phase_idx = FluidSystem::activeToCanonicalPhaseIdx(p);
             const auto connMob =
-                mobility[this->flowPhaseToModelCompIdx(p)]
-                    * fs.invB(this->flowPhaseToModelPhaseIdx(p)).value();
+                mobility[FluidSystem::activePhaseToActiveCompIdx(p)] * fs.invB(canonical_phase_idx).value();
 
             connPI[p] = connPICalc(connMob);
         }
@@ -2065,7 +2065,8 @@ namespace Opm
         }
 
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), 0.0);
-        connII[phase_pos] = connIICalc(mt * fs.invB(this->flowPhaseToModelPhaseIdx(phase_pos)).value());
+        const int canonicalPhaseIdx = FluidSystem::activeToCanonicalPhaseIdx(phase_pos);
+        connII[phase_pos] = connIICalc(mt * fs.invB(canonicalPhaseIdx).value());
     }
 
     template<typename TypeTag>

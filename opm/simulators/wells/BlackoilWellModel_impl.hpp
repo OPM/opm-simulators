@@ -1051,7 +1051,7 @@ namespace Opm {
                                           this->param_,
                                           *this->rateConverter_,
                                           global_pvtreg,
-                                          this->numComponents(),
+                                          this->numConservationQuantities(),
                                           this->numPhases(),
                                           wellID,
                                           perf_data);
@@ -2170,7 +2170,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateAverageFormationFactor()
     {
-        std::vector< Scalar > B_avg(numComponents(), Scalar() );
+        std::vector< Scalar > B_avg(numConservationQuantities(), Scalar() );
         const auto& grid = simulator_.vanguard().grid();
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(simulator_);
@@ -2189,7 +2189,7 @@ namespace Opm {
                     continue;
                 }
 
-                const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                const unsigned compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
                 auto& B  = B_avg[ compIdx ];
 
                 B += 1 / fs.invB(phaseIdx).value();
@@ -2241,19 +2241,18 @@ namespace Opm {
     // The number of components in the model.
     template<typename TypeTag>
     int
-    BlackoilWellModel<TypeTag>::numComponents() const
+    BlackoilWellModel<TypeTag>::numConservationQuantities() const
     {
-        // The numComponents here does not reflect the actual number of the components in the system.
-        // It more or less reflects the number of mass conservation equations for the well equations.
-        // For example, in the current formulation, we do not have the polymer conservation equation
-        // in the well equations. As a result, for an oil-water-polymer system, this function will return 2.
-        // In some way, it makes this function appear to be confusing from its name, and we need
-        // to revisit/revise this function again when extending the variants of system that flow can simulate.
-        int numComp = this->numPhases() < 3 ? this->numPhases() : FluidSystem::numComponents;
-        if constexpr (has_solvent_) {
-            numComp++;
-        }
-        return numComp;
+        // The numPhases() functions returns 1-3, depending on which
+        // of the (oil, water, gas) phases are active. For each of those phases,
+        // if the phase is active the corresponding component is present and
+        // conserved.
+        // Apart from (oil, water, gas), in the current well model only solvent
+        // is explicitly modelled as a conserved quantity (polymer, energy, salt
+        // etc. are not), unlike the reservoir part where all such quantities are
+        // conserved. This function must therefore be updated when/if we add
+        // more conserved quantities in the well model.
+        return this->numPhases() + has_solvent_;
     }
 
     template<typename TypeTag>
