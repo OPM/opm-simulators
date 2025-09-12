@@ -8,6 +8,10 @@
 #
 set -e
 
+# Silence pip's root-user warning inside manylinux build containers. This is a
+# controlled, ephemeral environment and we intentionally run as root.
+export PIP_ROOT_USER_ACTION=ignore
+
 VERSION_COMMON=${1:-"master"}
 VERSION_GRID=${2:-"master"}
 VERSION_SIMULATORS=${3:-"master"}
@@ -85,7 +89,10 @@ fi
 for python_bin in ${python_versions[*]}
 do
   ${python_bin} -m pip install pip --upgrade
-  ${python_bin} -m pip install wheel setuptools twine pytest-runner auditwheel scikit-build cmake numpy
+  # NOTE (2025-09-12): Removed pytest-runner; we no longer use setup_requires
+  # and do not need it at build time. Keep the minimal toolchain for wheel
+  # building and auditwheel repair.
+  ${python_bin} -m pip install wheel setuptools twine auditwheel scikit-build cmake numpy
 done
 
 DIR=`pwd`
