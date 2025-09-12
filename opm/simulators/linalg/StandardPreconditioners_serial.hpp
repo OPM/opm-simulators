@@ -22,7 +22,11 @@
 #define OPM_STANDARDPRECONDITIONERS_SERIAL_HPP
 
 #if HAVE_CUDA
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/PreconditionerCPUMatrixToGPUMatrix.hpp>
+#else
 #include <opm/simulators/linalg/gpuistl/PreconditionerCPUMatrixToGPUMatrix.hpp>
+#endif
 #endif
 
 namespace Opm {
@@ -258,7 +262,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
             using GPUJac =
-                typename gpuistl::GpuJac<gpuistl::GpuSparseMatrix<field_type>,
+                typename gpuistl::GpuJac<gpuistl::GpuSparseMatrixWrapper<field_type>,
                     gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
             
             using MatrixOwner = Opm::gpuistl::PreconditionerCPUMatrixToGPUMatrix<gpuistl::GpuVector<field_type>, 

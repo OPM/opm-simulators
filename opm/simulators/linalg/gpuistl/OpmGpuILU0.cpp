@@ -26,7 +26,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/GraphColoring.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/OpmGpuILU0.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/autotuner.hpp>
@@ -78,10 +78,10 @@ OpmGpuILU0<M, X, Y, l>::OpmGpuILU0(const OpmGpuILU0<M, X, Y, l>::matrix_type& gp
     if (m_splitMatrix) {
         m_gpuMatrixReorderedDiag.emplace(GpuVector<field_type>(blocksize_ * blocksize_ * cpuMatrix.N()));
         std::tie(m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper)
-            = detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrix<field_type>>(cpuMatrix,
+            = detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrixWrapper<field_type>>(cpuMatrix,
                                                                                               m_reorderedToNatural);
     } else {
-        m_gpuReorderedLU = detail::createReorderedMatrix<M, field_type, GpuSparseMatrix<field_type>>(
+        m_gpuReorderedLU = detail::createReorderedMatrix<M, field_type, GpuSparseMatrixWrapper<field_type>>(
             cpuMatrix, m_reorderedToNatural);
     }
 
