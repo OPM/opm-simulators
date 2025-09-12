@@ -558,11 +558,11 @@ solveJacobianSystem(BVector& x)
             int    max_iter = linSolver.getParameters().linear_solver_maxiter_;
             printf("linear_solver_reduction_ = %.4e\n",tol);
             printf("linear_solver_maxiter_   = %4d\n",max_iter);
-            getchar();
+            //getchar();
 
             bslv_init(slv_memory_, tol, max_iter, bsr_jacobian_);
 
-            y_ = (double*) malloc(b*nrows*sizeof(double));
+            //y_ = (double*) malloc(b*nrows*sizeof(double));
 
         }
 /*
@@ -576,13 +576,30 @@ solveJacobianSystem(BVector& x)
 
 
 
-        linSolver.prepare(jacobian, residual); // what happens here?
+        //linSolver.prepare(jacobian, residual); // what happens here?
+
+
+        // transpose each dense block to make them column-major
+        double M[9];
+        double const *data = &jacobian[0][0][0][0];// assuming c-contiguous ndarray
+        for(int k=0;k<bsr_jacobian_->nnz;k++)
+        {
+            for(int i=0;i<3;i++) for(int j=0;j<3;j++) M[3*j+i] = data[9*k + 3*i + j];
+            for(int i=0;i<9;i++)
+            {
+                bsr_jacobian_->dbl[9*k + i] = M[i];
+                bsr_jacobian_->flt[9*k + i] = M[i];
+            }
+        }
+
+        //bsr_downcast(bsr_jacobian_);
+
 
 
         linear_solve_setup_time_ = perfTimer.stop();
 
 
-        linSolver.setResidual(residual);
+        //linSolver.setResidual(residual);
 
 
 
@@ -591,33 +608,25 @@ solveJacobianSystem(BVector& x)
         // discretizations does not need to be synchronized across processes to be
         // consistent, this is not relevant for OPM-flow...
 
+
 /*
-        // transpose each dense block to make them column-major
-        double M[9];
-        double const *data = &jacobian[0][0][0][0];// assuming c-contiguous ndarray
-        for(int k=0;k<bsr_jacobian_->nnz;k++)
-        {
-            for(int i=0;i<3;i++) for(int j=0;j<3;j++) M[3*j+i] = data[9*k + 3*i + j];
-            for(int i=0;i<9;i++) bsr_jacobian_->dbl[9*k + i] = M[i];
-        }
-
-        bsr_downcast(bsr_jacobian_);
-*/
-
         // compute initial residual norm
         double  norm_r0 = residual.two_norm();
 
         // copy residual before calling solve
         BVector r(residual);
-
-/*
-        //solve Ax=b, where A=jacobian and b=r
-        int n = (bsr_jacobian_->b)*(bsr_jacobian_->nrows);
-        bslv_pbicgstab3(slv_memory_, bsr_jacobian_, &residual[0][0], &x[0][0]);
-        vec_copy(&residual[0][0], slv_memory_->dtmp[3],n);
 */
-        linSolver.solve(x);
 
+        //solve Ax=b, where A=jacobian and b=r
+        int count = bslv_pbicgstab3(slv_memory_, bsr_jacobian_, &residual[0][0], &x[0][0]);
+        linSolver.set_iterations(count);
+//        int n = (bsr_jacobian_->b)*(bsr_jacobian_->nrows);
+//        vec_copy(&residual[0][0], slv_memory_->dtmp[3],n);
+        //bslv_info(slv_memory_,count);
+        if(count >= slv_memory_->max_iter) printf("------------------------------> %d\n",count);
+
+        //linSolver.solve(x);
+/*
         //compute r-Ax, where A=jacobian
         jacobian.mmv(x,r);
         //jacobian.umv(x,r);
@@ -628,8 +637,8 @@ solveJacobianSystem(BVector& x)
         printf("norm_r0 = %.4e\n",norm_r0);
         printf("norm_r1 = %.4e (%.4e)\n", norm_r1, norm_r1/norm_r0);
         printf("norm_rA = %.4e (%.4e)\n", norm_rA, norm_rA/norm_r0);
-
-        getchar();
+*/
+        //getchar();
     }
 }
 
