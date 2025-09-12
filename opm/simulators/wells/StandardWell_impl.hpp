@@ -607,29 +607,40 @@ namespace Opm
                                                        saltConcentration);
         }
 
-        if constexpr (has_micp) {
+        if constexpr (has_bioeffects) {
             std::variant<Scalar,EvalWell> microbialConcentration;
-            std::variant<Scalar,EvalWell> oxygenConcentration;
-            std::variant<Scalar,EvalWell> ureaConcentration;
-            if (this->isInjector()) {
-                microbialConcentration = this->wmicrobes();
-                oxygenConcentration = this->woxygen();
-                ureaConcentration = this->wurea();
-            } else {
-                microbialConcentration = this->extendEval(intQuants.microbialConcentration());
-                oxygenConcentration = this->extendEval(intQuants.oxygenConcentration());
-                ureaConcentration = this->extendEval(intQuants.ureaConcentration());
+            if constexpr (has_micp) {
+                std::variant<Scalar,EvalWell> oxygenConcentration;
+                std::variant<Scalar,EvalWell> ureaConcentration;
+                if (this->isInjector()) {
+                    microbialConcentration = this->wmicrobes();
+                    oxygenConcentration = this->woxygen();
+                    ureaConcentration = this->wurea();
+                } else {
+                    microbialConcentration = this->extendEval(intQuants.microbialConcentration());
+                    oxygenConcentration = this->extendEval(intQuants.oxygenConcentration());
+                    ureaConcentration = this->extendEval(intQuants.ureaConcentration());
+                }
+                std::tie(connectionRates[perf][Indices::contiMicrobialEqIdx],
+                         connectionRates[perf][Indices::contiOxygenEqIdx],
+                         connectionRates[perf][Indices::contiUreaEqIdx]) =
+                    this->connections_.connectionRatesMICP(perf_data.microbial_rates[perf],
+                                                           perf_data.oxygen_rates[perf],
+                                                           perf_data.urea_rates[perf],
+                                                           cq_s,
+                                                           microbialConcentration,
+                                                           oxygenConcentration,
+                                                           ureaConcentration);
             }
-            std::tie(connectionRates[perf][Indices::contiMicrobialEqIdx],
-                     connectionRates[perf][Indices::contiOxygenEqIdx],
-                     connectionRates[perf][Indices::contiUreaEqIdx]) =
-                this->connections_.connectionRatesMICP(perf_data.microbial_rates[perf],
-                                                       perf_data.oxygen_rates[perf],
-                                                       perf_data.urea_rates[perf],
-                                                       cq_s,
-                                                       microbialConcentration,
-                                                       oxygenConcentration,
-                                                       ureaConcentration);
+            else {
+                if (this->isProducer()) {
+                    microbialConcentration = this->extendEval(intQuants.microbialConcentration());
+                    connectionRates[perf][Indices::contiMicrobialEqIdx] =
+                    this->connections_.connectionRateBioeffects(perf_data.microbial_rates[perf],
+                                                                perf_rates.vap_wat, cq_s,
+                                                                microbialConcentration);
+                }
+            }
         }
 
         // Store the perforation pressure for later usage.
@@ -1175,7 +1186,7 @@ namespace Opm
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
-        assert((int(B_avg.size()) == this->num_conservation_quantities_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction || has_micp);
+        assert((int(B_avg.size()) == this->num_conservation_quantities_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction || has_bioeffects);
 
         Scalar tol_wells = this->param_.tolerance_wells_;
         // use stricter tolerance for stopped wells and wells under zero rate target control.

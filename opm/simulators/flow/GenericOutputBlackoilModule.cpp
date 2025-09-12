@@ -136,7 +136,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                             bool enableBrine,
                             bool enableSaltPrecipitation,
                             bool enableExtbo,
-                            bool enableMICP)
+                            bool enableBioeffects)
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryState_(summaryState)
@@ -154,7 +154,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableBrine_(enableBrine)
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
-    , enableMICP_(enableMICP)
+    , enableBioeffects_(enableBioeffects)
     , flowsC_(schedule, summaryConfig)
     , rftC_(eclState_, schedule_,
             [this](const std::string& wname) { return this->isOwnedByCurrentRank(wname); },
@@ -402,8 +402,9 @@ assignToSolution(data::Solution& sol)
 
     this->flowsC_.outputRestart(sol);
 
-    if (this->micpC_.allocated()) {
-        this->micpC_.outputRestart(sol);
+    if (this->bioeffectsC_.allocated()) {
+        // Biofilms for gas-water systems; MICP only for water systems
+        this->bioeffectsC_.outputRestart(sol, !FluidSystem::phaseIsActive(gasPhaseIdx));
     }
 
     for (auto& array : extendedSolutionArrays) {
@@ -571,8 +572,9 @@ setRestart(const data::Solution& sol,
                   [&assign](const auto& p)
                   { assign(p.first, *p.second); });
 
-    if (this->micpC_.allocated()) {
-        this->micpC_.readRestart(globalDofIndex, elemIdx, sol);
+    if (this->bioeffectsC_.allocated()) {
+        // Biofilms for gas-water systems; MICP only for water systems
+        this->bioeffectsC_.readRestart(globalDofIndex, elemIdx, sol, !FluidSystem::phaseIsActive(gasPhaseIdx));
     }
 }
 
@@ -762,7 +764,7 @@ doAllocBuffers(const unsigned bufferSize,
        Entry{&cFoam_,                             "", enableFoam_},
        Entry{&cSalt_,                             "", enableBrine_},
        Entry{&pSalt_,                             "", enableSaltPrecipitation_},
-       Entry{&permFact_,                          "", enableSaltPrecipitation_ || enableMICP_},
+       Entry{&permFact_,                          "", enableSaltPrecipitation_ || enableBioeffects_},
        Entry{&soMax_,                             "", oilvap.getType() == OilVapP::VAPPARS},
        Entry{&soMax_,                             "", hysteresisConfig &&
                                                       hysteresisConfig->enableNonWettingHysteresis() &&
@@ -936,8 +938,9 @@ doAllocBuffers(const unsigned bufferSize,
         extboC_.allocate(bufferSize);
     }
 
-    if (enableMICP_) {
-        this->micpC_.allocate(bufferSize);
+    if (enableBioeffects_) {
+        // Biofilms for gas-water systems; MICP only for water systems  
+        this->bioeffectsC_.allocate(bufferSize, !FluidSystem::phaseIsActive(gasPhaseIdx));
     }
 
     // tracers

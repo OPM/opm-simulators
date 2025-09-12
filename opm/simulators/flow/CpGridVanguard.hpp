@@ -155,8 +155,14 @@ public:
         }
 
         if (runspec.micp()) {
-            if (getPropValue<TypeTag, Properties::EnableMICP>() == false) {
+            if (getPropValue<TypeTag, Properties::EnableBioeffects>() == false) {
                 throw std::runtime_error("Input specifies MICP while simulator has it disabled");
+            }
+        }
+
+        if (runspec.biof()) {
+            if (getPropValue<TypeTag, Properties::EnableBioeffects>() == false) {
+                throw std::runtime_error("Input specifies Biofilm while simulator has it disabled");
             }
         }
 

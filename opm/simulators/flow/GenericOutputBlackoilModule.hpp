@@ -32,13 +32,13 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/simulators/flow/BioeffectsContainer.hpp>
 #include <opm/simulators/flow/ExtboContainer.hpp>
 #include <opm/simulators/flow/FIPContainer.hpp>
 #include <opm/simulators/flow/FlowsContainer.hpp>
 #include <opm/simulators/flow/InterRegFlows.hpp>
 #include <opm/simulators/flow/LogOutputHelper.hpp>
 #include <opm/simulators/flow/MechContainer.hpp>
-#include <opm/simulators/flow/MICPContainer.hpp>
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
 #include <opm/simulators/flow/RFTContainer.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
@@ -201,8 +201,8 @@ public:
     const std::vector<Scalar>& getFluidPressure() const
     { return fluidPressure_; }
 
-    const MICPContainer<Scalar>& getMICP() const
-    { return this->micpC_; }
+    const BioeffectsContainer<Scalar>& getBioeffects() const
+    { return this->bioeffectsC_; }
 
     const FlowsContainer<FluidSystem>& getFlows() const
     { return this->flowsC_; }
@@ -286,7 +286,7 @@ protected:
                                 bool enableBrine,
                                 bool enableSaltPrecipitation,
                                 bool enableExtbo,
-                                bool enableMICP);
+                                bool enableBioeffects);
 
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
@@ -353,7 +353,7 @@ protected:
     bool enableBrine_{false};
     bool enableSaltPrecipitation_{false};
     bool enableExtbo_{false};
-    bool enableMICP_{false};
+    bool enableBioeffects_{false};
 
     bool forceDisableFipOutput_{false};
     bool forceDisableFipresvOutput_{false};
@@ -409,7 +409,7 @@ protected:
     ScalarBuffer minimumOilPressure_;
     ScalarBuffer saturatedOilFormationVolumeFactor_;
     ScalarBuffer rockCompTransMultiplier_;
-    MICPContainer<Scalar> micpC_;
+    BioeffectsContainer<Scalar> bioeffectsC_;
     ScalarBuffer pcgw_;
     ScalarBuffer pcow_;
     ScalarBuffer pcog_;

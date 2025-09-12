@@ -721,9 +721,9 @@ template<typename FluidSystem, typename Indices>
 typename StandardWellConnections<FluidSystem, Indices>::Eval
 StandardWellConnections<FluidSystem, Indices>::
 connectionRateFoam(const std::vector<EvalWell>& cq_s,
-                    const std::variant<Scalar,EvalWell>& foamConcentration,
-                    const Phase transportPhase,
-                    DeferredLogger& deferred_logger) const
+                   const std::variant<Scalar,EvalWell>& foamConcentration,
+                   const Phase transportPhase,
+                   DeferredLogger& deferred_logger) const
 {
     // TODO: the application of well efficiency factor has not been tested with an example yet
     auto getFoamTransportIdx = [&deferred_logger,transportPhase] {
@@ -754,6 +754,27 @@ connectionRateFoam(const std::vector<EvalWell>& cq_s,
     }
 
     return well_.restrictEval(cq_s_foam);
+}
+
+template<class FluidSystem, class Indices>
+typename StandardWellConnections<FluidSystem,Indices>::Eval
+StandardWellConnections<FluidSystem,Indices>::
+connectionRateBioeffects(Scalar& rate,
+                         const Scalar vap_wat_rate,
+                         const std::vector<EvalWell>& cq_s,
+                         const std::variant<Scalar,EvalWell>& microbialConcentration) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    const unsigned waterCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
+    // Correction microbial rate; evaporated water does not contain microbes
+    EvalWell cq_s_bm = cq_s[waterCompIdx] - vap_wat_rate;
+    cq_s_bm *= std::get<EvalWell>(microbialConcentration);
+
+    // Note. Efficiency factor is handled in the output layer
+    rate = cq_s_bm.value();
+
+    cq_s_bm *= well_.wellEfficiencyFactor();
+    return well_.restrictEval(cq_s_bm);
 }
 
 template<typename FluidSystem, typename Indices>

@@ -19,38 +19,58 @@
 // Define making clear that the simulator supports AMG
 #define FLOW_SUPPORT_AMG 1
 
-#include <flow/flow_gaswater.hpp>
+#include <flow/flow_biofilm.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
-
-#include <opm/grid/CpGrid.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
-#include <opm/simulators/flow/Main.hpp>
-
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
+
+#include <opm/grid/CpGrid.hpp>
+#include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct FlowGasWaterProblem {
+struct FlowBiofilmProblem {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct EnableBioeffects<TypeTag, TTag::FlowBiofilmProblem> {
+    static constexpr bool value = true;
+};
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowGasWaterProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct EnableDiffusion<TypeTag, TTag::FlowBiofilmProblem> {
+    static constexpr bool value = true;
+};
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowGasWaterProblem> { static constexpr bool value = false; };
+struct EnableDispersion<TypeTag, TTag::FlowBiofilmProblem> {
+    static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct EnableDisgasInWater<TypeTag, TTag::FlowBiofilmProblem> {
+    static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct EnableVapwat<TypeTag, TTag::FlowBiofilmProblem> {
+    static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowBiofilmProblem> { using type = TpfaLinearizer<TypeTag>; };
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowBiofilmProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::FlowGasWaterProblem>
+struct Indices<TypeTag, TTag::FlowBiofilmProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -68,7 +88,7 @@ public:
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
                                          /*disabledCompIdx=*/FluidSystem::oilCompIdx,
-                                         getPropValue<TypeTag, Properties::EnableBioeffects>()>;
+                                         2>; //Two biocomponents (suspended microbes and biofilm)
 };
 }}
 
@@ -76,20 +96,20 @@ namespace Opm {
 
 
 // ----------------- Main program -----------------
-int flowGasWaterMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowBiofilmMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::FlowGasWaterProblem>
+    FlowMain<Properties::TTag::FlowBiofilmProblem>
         mainfunc {argc, argv, outputCout, outputFiles} ;
     return mainfunc.execute();
 }
 
-int flowGasWaterMainStandalone(int argc, char** argv)
+int flowBiofilmMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::FlowGasWaterProblem;
+    using TypeTag = Properties::TTag::FlowBiofilmProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
@@ -97,4 +117,4 @@ int flowGasWaterMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm
