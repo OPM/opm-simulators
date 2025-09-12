@@ -67,7 +67,7 @@ namespace
             // hence we need to dispatch on the block size
             return matrix.dispatchOnBlocksize([&](auto blockSizeVal) -> return_type {
                 // Get the block size from the decltype of the blockSizeVal, 
-                // making it a compile time constant
+                // making it a compile time constantP
                 constexpr int block_size = decltype(blockSizeVal)::value;
 
                 // We are running in parallel (MPI) so we need a communication type, this

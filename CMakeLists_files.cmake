@@ -562,6 +562,8 @@ if (HAVE_CUDA)
     )
 
     foreach(file ${CU_FILES_NEEDING_FPERMISSIVE})
+      # Certain structures in OPM requires the -fpermissive flag to compile with nvcc,
+      # this enables this for the specific files
       set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS "-fpermissive --expt-relaxed-constexpr -Xcompiler=-fpermissive")
     endforeach()
   endif()

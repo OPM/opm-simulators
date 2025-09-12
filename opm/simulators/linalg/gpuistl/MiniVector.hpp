@@ -67,7 +67,7 @@ public:
      * Enables natural brace initialization:
      *
      * @code
-     * opm::MiniVector<float, 3> v{1.0f, 2.0f, 3.0f};
+     * Opm::MiniVector<float, 3> v{1.0f, 2.0f, 3.0f};
      * @endcode
      *
      * @param init List containing exactly `Dimension` elements.
@@ -76,10 +76,9 @@ public:
     OPM_HOST_DEVICE MiniVector(std::initializer_list<value_type> init)
     {
         if (init.size() != Dimension) {
-            OPM_THROW(std::runtime_error, "opm::MiniVector – initializer‑list size mismatch");
+            OPM_THROW(std::runtime_error, "Opm::MiniVector – initializer‑list size mismatch");
         }
-        auto n = std::min(init.size(), std::size_t(Dimension));
-        std::copy_n(init.begin(), n, data_.begin());
+        std::copy_n(init.begin(), Dimension, data_.begin());
     }
 
     /**
@@ -103,7 +102,7 @@ public:
     OPM_HOST_DEVICE reference at(size_type idx)
     {
         if (idx >= Dimension) {
-            OPM_THROW(std::out_of_range, "opm::MiniVector::at – index out of range");
+            OPM_THROW(std::out_of_range, "Opm::MiniVector::at – index out of range");
         }
         return data_[idx];
     }
@@ -111,7 +110,7 @@ public:
     OPM_HOST_DEVICE const_reference at(size_type idx) const
     {
         if (idx >= Dimension) {
-            OPM_THROW(std::out_of_range, "opm::MiniVector::at – index out of range");
+            OPM_THROW(std::out_of_range, "Opm::MiniVector::at – index out of range");
         }
         return data_[idx];
     }

@@ -387,7 +387,7 @@ public:
                 continue;
             }
 
-            Scalar rho = 
+            const Scalar rho = 
                  fluidSystem_->template density<FlashFluidState, Scalar>(fsFlash, paramCache, phaseIdx);
             fsFlash.setDensity(phaseIdx, rho);
         }

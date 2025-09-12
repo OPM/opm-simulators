@@ -82,7 +82,7 @@ public:
         // Nothing required by default.
     }
 
-    OPM_HOST_DEVICE static void registerParameters()
+    static void registerParameters()
     {
         // No parameters to register by default.
     }
