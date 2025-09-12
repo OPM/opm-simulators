@@ -20,8 +20,6 @@
 
 #define BOOST_TEST_MODULE TestGpuPressureTransferPolicy
 
-#include <boost/test/data/monomorphic.hpp>
-#include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <dune/common/fmatrix.hh>
@@ -35,24 +33,22 @@
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
-#include <opm/simulators/linalg/gpuistl/detail/cpr_amg_operations.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuPressureTransferPolicy.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/cpr_amg_operations.hpp>
 
 #include <random>
 #include <vector>
 
-
-// Helper function to run tests for a specific transpose mode and pressure variable index
-template <bool transpose>
-void
-runPressureTransferPolicyTest(int pressureVarIndex)
-{
+/**
+ * @brief Test fixture that sets up matrices and common test data
+ */
+template <int blockSize>
+struct TestFixture {
     // Define types
     using Scalar = double;
-    constexpr int blockSize = 3;
-    constexpr int N = 10; // Size of the system
+    static constexpr int N = 10;
 
     using BlockType = Dune::FieldMatrix<Scalar, blockSize, blockSize>;
     using MatrixType = Dune::BCRSMatrix<BlockType>;
@@ -68,88 +64,137 @@ runPressureTransferPolicyTest(int pressureVarIndex)
     using CpuOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
     using GpuOperatorType = Dune::MatrixAdapter<GpuMatrixType, GpuVectorType, GpuVectorType>;
 
-    // Create a simple test matrix
-    MatrixType matrix(N, N, 3 * N - 2, MatrixType::row_wise);
+    MatrixType matrix;
+    std::mt19937 generator;
+    std::uniform_real_distribution<double> distribution;
 
-    // Setup matrix sparsity pattern
-    for (auto row = matrix.createbegin(); row != matrix.createend(); ++row) {
-        if (row.index() > 0) {
-            row.insert(row.index() - 1);
-        }
-        row.insert(row.index());
-        if (row.index() < N - 1) {
-            row.insert(row.index() + 1);
-        }
+    TestFixture()
+        : matrix(N, N, 3 * N - 2, MatrixType::row_wise)
+        , generator()
+        , distribution(-10.0, 10.0)
+    {
+        setupMatrix();
     }
 
-    // Fill matrix with random values for testing
-    std::mt19937 generator(123); // Fixed seed for reproducibility
-    std::uniform_real_distribution<double> distribution(-10.0, 10.0);
+    // Helper method to create GPU matrix when needed
+    GpuMatrixType createGpuMatrix() const
+    {
+        return GpuMatrixType::fromMatrix(matrix);
+    }
 
-    for (int i = 0; i < N; ++i) {
-        if (i > 0) {
+private:
+    void setupMatrix()
+    {
+        // Setup matrix sparsity pattern (tridiagonal block structure)
+        for (auto row = matrix.createbegin(); row != matrix.createend(); ++row) {
+            if (row.index() > 0) {
+                row.insert(row.index() - 1);
+            }
+            row.insert(row.index());
+            if (row.index() < N - 1) {
+                row.insert(row.index() + 1);
+            }
+        }
+        // Fill matrix with random values for testing
+        for (int i = 0; i < N; ++i) {
+            if (i > 0) {
+                for (int row = 0; row < blockSize; ++row) {
+                    for (int col = 0; col < blockSize; ++col) {
+                        matrix[i][i - 1][row][col] = distribution(generator);
+                    }
+                }
+            }
             for (int row = 0; row < blockSize; ++row) {
                 for (int col = 0; col < blockSize; ++col) {
-                    matrix[i][i - 1][row][col] = distribution(generator);
+                    matrix[i][i][row][col] = distribution(generator);
+                }
+            }
+            if (i < N - 1) {
+                for (int row = 0; row < blockSize; ++row) {
+                    for (int col = 0; col < blockSize; ++col) {
+                        matrix[i][i + 1][row][col] = distribution(generator);
+                    }
                 }
             }
         }
-
-        for (int row = 0; row < blockSize; ++row) {
-            for (int col = 0; col < blockSize; ++col) {
-                matrix[i][i][row][col] = distribution(generator);
-            }
-        }
-
-        if (i < N - 1) {
-            for (int row = 0; row < blockSize; ++row) {
-                for (int col = 0; col < blockSize; ++col) {
-                    matrix[i][i + 1][row][col] = distribution(generator);
-                }
-            }
-        }
     }
+};
 
-    // Convert to GPU matrix
-    GpuMatrixType gpuMatrix = GpuMatrixType::fromMatrix(matrix);
-
-    // Create operators
-    CpuOperatorType cpuOperator(matrix);
-    GpuOperatorType gpuOperator(gpuMatrix);
+/**
+ * @brief Test quasi-impes weight calculation between CPU and GPU implementations
+ */
+template <int blockSize, bool transpose>
+void
+testQuasiImpesWeights(int pressureVarIndex)
+{
+    TestFixture<blockSize> fixture;
 
     // Calculate quasiimpes weights for CPU
-    VectorType cpuWeights = Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(matrix, pressureVarIndex, transpose);
+    auto cpuWeights = Opm::Amg::getQuasiImpesWeights<typename TestFixture<blockSize>::MatrixType,
+                                                     typename TestFixture<blockSize>::VectorType>(
+        fixture.matrix, pressureVarIndex, transpose);
+
     // Calculate quasiimpes weights for GPU
-    GpuVectorType gpuWeights(N * blockSize);
+    auto gpuMatrix = fixture.createGpuMatrix();
+    typename TestFixture<blockSize>::GpuVectorType gpuWeights(fixture.N * blockSize);
     auto diagonalIndices = Opm::Amg::precomputeDiagonalIndices(gpuMatrix);
-    GpuVectorIntType gpuDiagonalIndices(diagonalIndices);
-    Opm::gpuistl::detail::getQuasiImpesWeights<Scalar, transpose>(gpuMatrix, pressureVarIndex, gpuWeights, gpuDiagonalIndices);
-
-    // Convert weights to std::vector for comparison
-    std::vector<double> cpuWeightsData(N * blockSize);
-    for (int i = 0; i < N; ++i) {
-        for (int j = 0; j < blockSize; ++j) {
-            cpuWeightsData[i * blockSize + j] = cpuWeights[i][j];
-        }
-    }
-
-    std::vector<double> gpuWeightsData = gpuWeights.asStdVector();
+    typename TestFixture<blockSize>::GpuVectorIntType gpuDiagonalIndices(diagonalIndices);
+    Opm::gpuistl::detail::getQuasiImpesWeights<typename TestFixture<blockSize>::Scalar, transpose>(
+        gpuMatrix, pressureVarIndex, gpuWeights, gpuDiagonalIndices);
 
     // Check that both implementations yield the same weights
-    BOOST_REQUIRE_EQUAL(cpuWeightsData.size(), gpuWeightsData.size());
-    for (size_t i = 0; i < cpuWeightsData.size(); ++i) {
-        BOOST_CHECK_CLOSE(cpuWeightsData[i], gpuWeightsData[i], 1e-10);
-    }
+    std::vector<double> gpuWeightsData = gpuWeights.asStdVector();
+    BOOST_REQUIRE_EQUAL(fixture.N * blockSize, gpuWeightsData.size());
 
-    // create empty property tree
+    for (int i = 0; i < fixture.N; ++i) {
+        for (int j = 0; j < blockSize; ++j) {
+            BOOST_CHECK_CLOSE(cpuWeights[i][j], gpuWeightsData[i * blockSize + j], 1e-10);
+        }
+    }
+}
+
+/**
+ * @brief Test coarse matrix creation between CPU and GPU implementations
+ */
+template <int blockSize, bool transpose>
+void
+testCoarseMatrixCreation(int pressureVarIndex)
+{
+    TestFixture<blockSize> fixture;
+
+    // Calculate weights for CPU
+    auto cpuWeights = Opm::Amg::getQuasiImpesWeights<typename TestFixture<blockSize>::MatrixType,
+                                                     typename TestFixture<blockSize>::VectorType>(
+        fixture.matrix, pressureVarIndex, transpose);
+
+    // Calculate quasiimpes weights for GPU
+    auto gpuMatrix = fixture.createGpuMatrix();
+    typename TestFixture<blockSize>::GpuVectorType gpuWeights(fixture.N * blockSize);
+    auto diagonalIndices = Opm::Amg::precomputeDiagonalIndices(gpuMatrix);
+    typename TestFixture<blockSize>::GpuVectorIntType gpuDiagonalIndices(diagonalIndices);
+    Opm::gpuistl::detail::getQuasiImpesWeights<typename TestFixture<blockSize>::Scalar, transpose>(
+        gpuMatrix, pressureVarIndex, gpuWeights, gpuDiagonalIndices);
+
+    // Create empty property tree
     Opm::PropertyTree prm;
 
-    // Create policies using calculated weights
-    auto cpuPolicy = Opm::PressureTransferPolicy<CpuOperatorType, CommInfo, Scalar, transpose>(
-        CommInfo(), cpuWeights, prm, pressureVarIndex);
+    // Create CPU transfer policy
+    auto cpuPolicy = Opm::PressureTransferPolicy<typename TestFixture<blockSize>::CpuOperatorType,
+                                                 typename TestFixture<blockSize>::CommInfo,
+                                                 typename TestFixture<blockSize>::Scalar,
+                                                 transpose>(
+        typename TestFixture<blockSize>::CommInfo(), cpuWeights, prm, pressureVarIndex);
 
-    auto gpuPolicy = Opm::gpuistl::GpuPressureTransferPolicy<GpuOperatorType, CommInfo, Scalar, transpose>(
-        CommInfo(), gpuWeights, prm, pressureVarIndex);
+    // Create GPU transfer policy
+    auto gpuPolicy = Opm::gpuistl::GpuPressureTransferPolicy<typename TestFixture<blockSize>::GpuOperatorType,
+                                                             typename TestFixture<blockSize>::CommInfo,
+                                                             typename TestFixture<blockSize>::Scalar,
+                                                             transpose>(
+        typename TestFixture<blockSize>::CommInfo(), gpuWeights, prm, pressureVarIndex);
+
+    // Create operators
+    typename TestFixture<blockSize>::CpuOperatorType cpuOperator(fixture.matrix);
+    typename TestFixture<blockSize>::GpuOperatorType gpuOperator(gpuMatrix);
 
     // Create coarse level systems
     cpuPolicy.createCoarseLevelSystem(cpuOperator);
@@ -175,18 +220,65 @@ runPressureTransferPolicyTest(int pressureVarIndex)
     for (size_t i = 0; i < cpuCoarseMatrixData.size(); ++i) {
         BOOST_CHECK_CLOSE(cpuCoarseMatrixData[i], gpuCoarseMatrixData[i], 1e-10);
     }
+}
 
-    // Test restriction (moveToCoarseLevel)
-    VectorType fineVector(N);
+/**
+ * @brief Test restriction operation between CPU and GPU implementations
+ */
+template <int blockSize, bool transpose>
+void
+testRestriction(int pressureVarIndex)
+{
+    TestFixture<blockSize> fixture;
 
-    for (int i = 0; i < N; ++i) {
+    // Calculate weights for CPU
+    auto cpuWeights = Opm::Amg::getQuasiImpesWeights<typename TestFixture<blockSize>::MatrixType,
+                                                     typename TestFixture<blockSize>::VectorType>(
+        fixture.matrix, pressureVarIndex, transpose);
+
+    // Calculate quasiimpes weights for GPU
+    auto gpuMatrix = fixture.createGpuMatrix();
+    typename TestFixture<blockSize>::GpuVectorType gpuWeights(fixture.N * blockSize);
+    auto diagonalIndices = Opm::Amg::precomputeDiagonalIndices(gpuMatrix);
+    typename TestFixture<blockSize>::GpuVectorIntType gpuDiagonalIndices(diagonalIndices);
+    Opm::gpuistl::detail::getQuasiImpesWeights<typename TestFixture<blockSize>::Scalar, transpose>(
+        gpuMatrix, pressureVarIndex, gpuWeights, gpuDiagonalIndices);
+
+    // Create empty property tree
+    Opm::PropertyTree prm;
+
+    // Create CPU transfer policy
+    auto cpuPolicy = Opm::PressureTransferPolicy<typename TestFixture<blockSize>::CpuOperatorType,
+                                                 typename TestFixture<blockSize>::CommInfo,
+                                                 typename TestFixture<blockSize>::Scalar,
+                                                 transpose>(
+        typename TestFixture<blockSize>::CommInfo(), cpuWeights, prm, pressureVarIndex);
+
+    // Create GPU transfer policy
+    auto gpuPolicy = Opm::gpuistl::GpuPressureTransferPolicy<typename TestFixture<blockSize>::GpuOperatorType,
+                                                             typename TestFixture<blockSize>::CommInfo,
+                                                             typename TestFixture<blockSize>::Scalar,
+                                                             transpose>(
+        typename TestFixture<blockSize>::CommInfo(), gpuWeights, prm, pressureVarIndex);
+
+    // Create operators
+    typename TestFixture<blockSize>::CpuOperatorType cpuOperator(fixture.matrix);
+    typename TestFixture<blockSize>::GpuOperatorType gpuOperator(gpuMatrix);
+
+    // Create coarse level systems
+    cpuPolicy.createCoarseLevelSystem(cpuOperator);
+    gpuPolicy.createCoarseLevelSystem(gpuOperator);
+
+    // Create fine vector
+    typename TestFixture<blockSize>::VectorType fineVector(fixture.N);
+    for (int i = 0; i < fixture.N; ++i) {
         for (int j = 0; j < blockSize; ++j) {
-            fineVector[i][j] = distribution(generator);
+            fineVector[i][j] = fixture.distribution(fixture.generator);
         }
     }
 
     // Copy fine vector to GPU
-    GpuVectorType gpuFineVector(fineVector);
+    typename TestFixture<blockSize>::GpuVectorType gpuFineVector(fineVector);
 
     // Perform restriction
     cpuPolicy.moveToCoarseLevel(fineVector);
@@ -198,56 +290,179 @@ runPressureTransferPolicyTest(int pressureVarIndex)
 
     // Check that restriction results match
     std::vector<double> gpuCoarseData = gpuCoarseRhs.asStdVector();
-    for (size_t i = 0; i < N; ++i) {
+    for (size_t i = 0; i < fixture.N; ++i) {
         BOOST_CHECK_CLOSE(cpuCoarseRhs[i][pressureVarIndex], gpuCoarseData[i], 1e-10);
     }
+}
+
+/**
+ * @brief Test prolongation operation between CPU and GPU implementations
+ */
+template <int blockSize, bool transpose>
+void
+testProlongation(int pressureVarIndex)
+{
+    TestFixture<blockSize> fixture;
+
+    // Calculate weights and create policies
+    auto cpuWeights = Opm::Amg::getQuasiImpesWeights<typename TestFixture<blockSize>::MatrixType,
+                                                     typename TestFixture<blockSize>::VectorType>(
+        fixture.matrix, pressureVarIndex, transpose);
+
+    // Calculate quasiimpes weights for GPU
+    auto gpuMatrix = fixture.createGpuMatrix();
+    typename TestFixture<blockSize>::GpuVectorType gpuWeights(fixture.N * blockSize);
+    auto diagonalIndices = Opm::Amg::precomputeDiagonalIndices(gpuMatrix);
+    typename TestFixture<blockSize>::GpuVectorIntType gpuDiagonalIndices(diagonalIndices);
+    Opm::gpuistl::detail::getQuasiImpesWeights<typename TestFixture<blockSize>::Scalar, transpose>(
+        gpuMatrix, pressureVarIndex, gpuWeights, gpuDiagonalIndices);
+
+    // Create empty property tree
+    Opm::PropertyTree prm;
+
+    // Create CPU transfer policy
+    auto cpuPolicy = Opm::PressureTransferPolicy<typename TestFixture<blockSize>::CpuOperatorType,
+                                                 typename TestFixture<blockSize>::CommInfo,
+                                                 typename TestFixture<blockSize>::Scalar,
+                                                 transpose>(
+        typename TestFixture<blockSize>::CommInfo(), cpuWeights, prm, pressureVarIndex);
+
+    // Create GPU transfer policy
+    auto gpuPolicy = Opm::gpuistl::GpuPressureTransferPolicy<typename TestFixture<blockSize>::GpuOperatorType,
+                                                             typename TestFixture<blockSize>::CommInfo,
+                                                             typename TestFixture<blockSize>::Scalar,
+                                                             transpose>(
+        typename TestFixture<blockSize>::CommInfo(), gpuWeights, prm, pressureVarIndex);
+
+    // Create operators
+    typename TestFixture<blockSize>::CpuOperatorType cpuOperator(fixture.matrix);
+    typename TestFixture<blockSize>::GpuOperatorType gpuOperator(gpuMatrix);
+
+    // Create coarse level systems
+    cpuPolicy.createCoarseLevelSystem(cpuOperator);
+    gpuPolicy.createCoarseLevelSystem(gpuOperator);
 
     // Set some values in the coarse lhs for prolongation test
     auto& cpuCoarseLhs = cpuPolicy.getCoarseLevelLhs();
     auto& gpuCoarseLhs = gpuPolicy.getCoarseLevelLhs();
-
-    for (int i = 0; i < N; ++i) {
-        cpuCoarseLhs[i][pressureVarIndex] = distribution(generator);
+    for (int i = 0; i < fixture.N; ++i) {
+        cpuCoarseLhs[i][pressureVarIndex] = fixture.distribution(fixture.generator);
     }
 
     // Copy coarse lhs to GPU
     gpuCoarseLhs.copyFromHost(cpuCoarseLhs);
 
-    // Test prolongation (moveToFineLevel)
-    VectorType cpuFineResult(N);
-    GpuVectorType gpuFineResult(N * blockSize);
+    // Create fine result
+    typename TestFixture<blockSize>::VectorType cpuFineResult(fixture.N);
+    typename TestFixture<blockSize>::GpuVectorType gpuFineResult(fixture.N * blockSize);
 
     // Initialize fine result to zero, important when not using transpose
     // as we only update the pressure variable
     cpuFineResult = 0.0;
     gpuFineResult = 0.0;
 
+    // Perform prolongation
     cpuPolicy.moveToFineLevel(cpuFineResult);
     gpuPolicy.moveToFineLevel(gpuFineResult);
 
     // Check that prolongation results match
-    std::vector<double> cpuFineResultData(N * blockSize);
-    for (int i = 0; i < N; ++i) {
+    std::vector<double> cpuFineResultData(fixture.N * blockSize);
+    for (int i = 0; i < fixture.N; ++i) {
         for (int j = 0; j < blockSize; ++j) {
             cpuFineResultData[i * blockSize + j] = cpuFineResult[i][j];
         }
     }
-
     std::vector<double> gpuFineResultData = gpuFineResult.asStdVector();
-
-    // Check that prolongation results match
     BOOST_REQUIRE_EQUAL(cpuFineResultData.size(), gpuFineResultData.size());
     for (size_t i = 0; i < cpuFineResultData.size(); ++i) {
         BOOST_CHECK_CLOSE(cpuFineResultData[i], gpuFineResultData[i], 1e-10);
     }
 }
 
-BOOST_DATA_TEST_CASE(TestPressureTransferPolicyTranspose, boost::unit_test::data::make({0, 1, 2}), pressureVarIndex)
+/**
+ * @brief Helper function to run a test function for all valid parameter combinations
+ */
+template <template <int, bool> class TestFunc>
+void
+runTestForAllCombinations()
 {
-    runPressureTransferPolicyTest<true>(pressureVarIndex);
+    // Test all combinations of block sizes (1-3), pressure variable indices, and transpose flags
+    for (int blockSize = 1; blockSize <= 3; ++blockSize) {
+        for (int pressureVarIndex = 0; pressureVarIndex < blockSize; ++pressureVarIndex) {
+            for (bool transpose : {false, true}) {
+                // Dispatch to the appropriate template instantiation
+                if (blockSize == 1) {
+                    if (transpose) {
+                        TestFunc<1, true>::run(pressureVarIndex);
+                    } else {
+                        TestFunc<1, false>::run(pressureVarIndex);
+                    }
+                } else if (blockSize == 2) {
+                    if (transpose) {
+                        TestFunc<2, true>::run(pressureVarIndex);
+                    } else {
+                        TestFunc<2, false>::run(pressureVarIndex);
+                    }
+                } else if (blockSize == 3) {
+                    if (transpose) {
+                        TestFunc<3, true>::run(pressureVarIndex);
+                    } else {
+                        TestFunc<3, false>::run(pressureVarIndex);
+                    }
+                }
+            }
+        }
+    }
 }
 
-BOOST_DATA_TEST_CASE(TestPressureTransferPolicyStandard, boost::unit_test::data::make({0, 1, 2}), pressureVarIndex)
+template <int blockSize, bool transpose>
+struct QuasiImpesWeightsTestRunner {
+    static void run(int pressureVarIndex)
+    {
+        testQuasiImpesWeights<blockSize, transpose>(pressureVarIndex);
+    }
+};
+
+template <int blockSize, bool transpose>
+struct CoarseMatrixCreationTestRunner {
+    static void run(int pressureVarIndex)
+    {
+        testCoarseMatrixCreation<blockSize, transpose>(pressureVarIndex);
+    }
+};
+
+template <int blockSize, bool transpose>
+struct RestrictionTestRunner {
+    static void run(int pressureVarIndex)
+    {
+        testRestriction<blockSize, transpose>(pressureVarIndex);
+    }
+};
+
+template <int blockSize, bool transpose>
+struct ProlongationTestRunner {
+    static void run(int pressureVarIndex)
+    {
+        testProlongation<blockSize, transpose>(pressureVarIndex);
+    }
+};
+
+BOOST_AUTO_TEST_CASE(TestQuasiImpesWeights)
 {
-    runPressureTransferPolicyTest<false>(pressureVarIndex);
+    runTestForAllCombinations<QuasiImpesWeightsTestRunner>();
+}
+
+BOOST_AUTO_TEST_CASE(TestCoarseMatrixCreation)
+{
+    runTestForAllCombinations<CoarseMatrixCreationTestRunner>();
+}
+
+BOOST_AUTO_TEST_CASE(TestRestriction)
+{
+    runTestForAllCombinations<RestrictionTestRunner>();
+}
+
+BOOST_AUTO_TEST_CASE(TestProlongation)
+{
+    runTestForAllCombinations<ProlongationTestRunner>();
 }
