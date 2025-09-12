@@ -215,6 +215,12 @@ The JSON file controls version support across all build components:
 - `docker/test_wheels/scripts/src/opm_wheels/constants.py` - Python version enum (dynamic)
 - `docker/test_wheels/dockerfiles/common/install_python_versions.py` - Installation script (dynamic)
 
+Compatibility note (Windows checkout): directories under `docker/test_wheels/dockerfiles`
+use hyphens instead of colons. Example mappings: `ubuntu:22.04` → `ubuntu-22.04`,
+`ubuntu:24.04` → `ubuntu-24.04`, `debian:11` → `debian-11`. The `opm-wheels` CLI
+accepts both forms via `--docker-os`, but uses the hyphenated form for filesystem
+paths and image tags.
+
 **Manual locations** (requires manual update):
 - `docker/scripts/generate-pypi-package.sh` - Version to wheel tag mappings (lines 33-38)
 

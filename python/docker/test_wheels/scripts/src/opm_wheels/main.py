@@ -41,8 +41,11 @@ def show_wheel_files(name: str, wheel_dir: str) -> None:
 @click.option(
     "--docker-os", "-d",
     type=str,
-    default="ubuntu:22.04",
-    help="The OS to use in the Docker image. Supported: ubuntu:22.04, ubuntu:24.04, debian:11"
+    default="ubuntu-22.04",
+    help=(
+        "The OS to use in the Docker image. Supported (canonical): "
+        "ubuntu-22.04, ubuntu-24.04, debian-11. Legacy colon form accepted."
+    )
 )
 @click.option(
     "--opm-simulators-repo", "-osr",
@@ -89,10 +92,17 @@ def build_docker_image(
     testing_root = helpers.get_testing_root_dir()
     # Use docker directory as build context so python_versions.json is accessible
     docker_root = testing_root.parent  # python/docker/test_wheels -> python/docker
-    docker_tag = helpers.get_docker_tag(docker_os)
-    dockerfile = testing_root / Directories.docker_files / docker_os / "Dockerfile"
+    canonical_os = helpers.canonicalize_docker_os(docker_os)
+    docker_tag = helpers.get_docker_tag(canonical_os)
+    # Prefer canonical directory, fall back to legacy colon directory (pre-rename)
+    dockerfile = testing_root / Directories.docker_files / canonical_os / "Dockerfile"
     if not dockerfile.exists():
-        raise FileNotFoundError(f"Dockerfile {dockerfile} does not exist")
+        legacy_os = canonical_os.replace("-", ":", 1)
+        candidate = testing_root / Directories.docker_files / legacy_os / "Dockerfile"
+        if candidate.exists():
+            dockerfile = candidate
+        else:
+            raise FileNotFoundError(f"Dockerfile {dockerfile} does not exist")
     # Build the Docker image
     helpers.run_docker_build(
         docker_tag,
@@ -109,8 +119,11 @@ def build_docker_image(
 @click.option(
     "--docker-os", "-d",
     type=str,
-    default="ubuntu:22.04",
-    help="The OS for the Docker image. Supported: ubuntu:22.04, ubuntu:24.04, debian:11"
+    default="ubuntu-22.04",
+    help=(
+        "The OS for the Docker image. Supported (canonical): "
+        "ubuntu-22.04, ubuntu-24.04, debian-11. Legacy colon form accepted."
+    )
 )
 @ClickOptions.wheel_dir
 @click.option(
@@ -139,5 +152,6 @@ def run_docker_image(
     be a comma-separated list of versions without separating space. For example: 3.8,3.9,3.10.
     If not given, the default value is {','.join(get_default_versions())}."""
     wheel_dir = helpers.get_wheel_abs_dir(wheel_dir)
-    docker_tag = helpers.get_docker_tag(docker_os)
+    canonical_os = helpers.canonicalize_docker_os(docker_os)
+    docker_tag = helpers.get_docker_tag(canonical_os)
     helpers.run_docker_run(docker_tag, wheel_dir, python_versions, host_tests_dir)

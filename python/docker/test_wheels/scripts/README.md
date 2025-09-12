@@ -2,6 +2,17 @@
 
 ## Installation
 
+Compatibility note (Windows checkout):
+The directory names under `docker/test_wheels/dockerfiles` no longer use `:`.
+Mappings:
+
+- `debian:11` -> `debian-11`
+- `ubuntu:22.04` -> `ubuntu-22.04`
+- `ubuntu:24.04` -> `ubuntu-24.04`
+
+The CLI accepts both forms for `--docker-os` (e.g., `ubuntu:22.04` or `ubuntu-22.04`) but
+uses hyphenated names for filesystem paths and image tags (e.g., `test-opm-wheels-ubuntu-22.04`).
+
 **Important:** This package requires access to the `python_versions.json` configuration file in the opm-simulators repository. Choose one of these installation methods:
 
 ### Option 1: Install within repository (Recommended)
@@ -66,7 +77,7 @@ $ opm-wheels build-docker-image --docker-os="debian:11"
 ```
 
 ### Available options for `build-docker-image`:
-- `--docker-os`, `-d` - OS for Docker image (default: ubuntu:22.04)
+- `--docker-os`, `-d` - OS for Docker image (default: ubuntu-22.04; legacy colon form accepted)
   - Supported: `3.8,3.9,3.10,3.11,3.12,3.13`
 - `--opm-simulators-repo`, `-osr` - OPM simulators repository URL
 - `--opm-common-repo`, `-ocr` - OPM common repository URL
@@ -101,7 +112,7 @@ $ opm-wheels run-docker-image \
 ```
 
 ### Available options for `run-docker-image`:
-- `--docker-os`, `-d` - OS for Docker image (default: ubuntu:22.04)
+- `--docker-os`, `-d` - OS for Docker image (default: ubuntu-22.04; legacy colon form accepted)
 - `--wheel-dir` - Directory containing wheel files (default: python/wheelhouse)
 - `--python-versions`, `-p` - Python versions for testing
   - Supported: `3.8,3.9,3.10,3.11,3.12,3.13`
@@ -207,4 +218,3 @@ host-tests-dir/
 ├── opm-common/python/     # Must exist with test files
 └── omp-simulators/python/ # Must exist with test files
 ```
-
