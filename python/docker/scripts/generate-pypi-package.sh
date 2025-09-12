@@ -8,6 +8,10 @@
 #
 set -e
 
+# Silence pip's root-user warning inside manylinux build containers. This is a
+# controlled, ephemeral environment and we intentionally run as root.
+export PIP_ROOT_USER_ACTION=ignore
+
 VERSION_COMMON=${1:-"master"}
 VERSION_GRID=${2:-"master"}
 VERSION_SIMULATORS=${3:-"master"}
@@ -85,7 +89,10 @@ fi
 for python_bin in ${python_versions[*]}
 do
   ${python_bin} -m pip install pip --upgrade
-  ${python_bin} -m pip install wheel setuptools twine pytest-runner auditwheel scikit-build cmake numpy
+  # NOTE (2025-09-12): Removed pytest-runner; we no longer use setup_requires
+  # and do not need it at build time. Keep the minimal toolchain for wheel
+  # building and auditwheel repair.
+  ${python_bin} -m pip install wheel setuptools twine auditwheel scikit-build cmake numpy
 done
 
 DIR=`pwd`
@@ -142,7 +149,14 @@ do
 
     # Package opm-common bindings
     cd opm-common/python
-    ${python_versions[$tag]} setup.py sdist bdist_wheel --plat-name $MANYLINUX_PLATFORM --python-tag $tag
+    # NOTE (2025-09-12): Switch to the modern PEP 517 build frontend.
+    # - Avoids setuptools deprecation warnings from direct setup.py usage.
+    # - Uses isolated builds honoring pyproject.toml build-system requires.
+    # - We intentionally drop --plat-name/--python-tag; environment tags and
+    #   auditwheel will set/normalize these appropriately.
+    # Ensure the 'build' frontend is available for this interpreter.
+    ${python_versions[$tag]} -m pip -q install --upgrade build
+    ${python_versions[$tag]} -m build --sdist --wheel
 
     # Set LD_LIBRARY_PATH so auditwheel can find and bundle OPM libraries, important when using shared==1
     export LD_LIBRARY_PATH="${PWD}/../lib:${PWD}/../../opm-grid/lib:${PWD}/../../opm-simulators/lib:$LD_LIBRARY_PATH"
@@ -152,7 +166,8 @@ do
 
     # Package opm-simulators bindings
     cd opm-simulators/python
-    ${python_versions[$tag]} setup.py sdist bdist_wheel --plat-name $MANYLINUX_PLATFORM --python-tag $tag
+    # (build already installed for this interpreter above)
+    ${python_versions[$tag]} -m build --sdist --wheel
 
     # Set LD_LIBRARY_PATH so auditwheel can find and bundle OPM libraries, important when using shared==1
     export LD_LIBRARY_PATH="${PWD}/../lib:${PWD}/../../opm-common/lib:${PWD}/../../opm-grid/lib:$LD_LIBRARY_PATH"

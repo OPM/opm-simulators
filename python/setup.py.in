@@ -14,6 +14,12 @@ with open("README.md", "r") as fh:
 with open("requirements.txt", "r") as fh:
     requires = [line.rstrip() for line in fh]
 
+# NOTE (2025-09-12): Removed legacy `setup_requires` and `test_suite` arguments.
+# - `setup_requires` triggers setuptools' deprecated fetch_build_eggs path
+#   (_DeprecatedInstaller). We build via PEP 517 (see pyproject.toml with
+#   scikit-build), so build-time deps must be declared there instead.
+# - `test_suite` is not a supported distribution option and produced
+#   "Unknown distribution option: 'test_suite'" warnings.
 setup(
     name='opm-simulators',
     version = '@opm-simulators_VERSION@' + '@opm-simulators_PYTHON_PACKAGE_VERSION@',
@@ -29,13 +35,13 @@ setup(
             ],
     package_data={'opm' : ['$<TARGET_FILE_NAME:simulators>']},
     include_package_data=True,
-    license='Open Source',
-    test_suite='tests',
-    setup_requires=["pytest-runner", 'setuptools_scm'],
+    # SPDX license expression to replace deprecated license classifier usage.
+    license='GPL-3.0-or-later',
     install_requires=requires,
     python_requires='>=3.8',
+    # NOTE (2025-09-12): Remove deprecated license classifier in favor of
+    # SPDX license expression above. Keep non-license classifiers only.
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     ],
 )
