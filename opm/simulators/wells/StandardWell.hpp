@@ -457,9 +457,8 @@ namespace Opm
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
 
-        // reduce broadcasts in getRefDensity by caching,
-        // zero means nothing is cached
-        mutable Scalar cachedRefDensity{0};
+        // density of the first perforation, might not be from this rank
+        Scalar cachedRefDensity{0};
     };
 
 }

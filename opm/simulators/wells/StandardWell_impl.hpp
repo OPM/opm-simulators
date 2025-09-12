@@ -1334,11 +1334,9 @@ namespace Opm
             .computeProperties(stopped_or_zero_rate_target, well_state,
                                prop_func, props, deferred_logger);
         // denity was updated
-        if (this->parallel_well_info_.communication().size()==1)
-            cachedRefDensity = this->connections_.rho(0);
-        else {
-            // no cached value => getRefDensity will communicate
-            cachedRefDensity = 0;
+        cachedRefDensity = this->connections_.rho(0);
+        if (this->parallel_well_info_.communication().size()>1) {
+            cachedRefDensity = this->parallel_well_info_.broadcastFirstPerforationValue(cachedRefDensity);
         }
     }
 
@@ -1825,10 +1823,6 @@ namespace Opm
     StandardWell<TypeTag>::
     getRefDensity() const
     {
-        if (cachedRefDensity == 0) {
-            Scalar density = this->connections_.rho(0);
-            cachedRefDensity = this->parallel_well_info_.broadcastFirstPerforationValue(density);
-        }
         return cachedRefDensity;
     }
 
