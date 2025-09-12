@@ -29,6 +29,15 @@
 #include <algorithm>
 #include <cmath>
 
+#if HAVE_CUDA
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/detail/cpr_amg_operations.hpp>
+#else
+#include <opm/simulators/linalg/gpuistl/detail/cpr_amg_operations.hpp>
+#endif
+#endif
+
+
 namespace Opm
 {
 
@@ -99,6 +108,45 @@ namespace Amg
         getQuasiImpesWeights(matrix, pressureVarIndex, transpose, weights);
         return weights;
     }
+
+#if HAVE_CUDA
+    template <typename T>
+    std::vector<int> precomputeDiagonalIndices(const gpuistl::GpuSparseMatrix<T>& matrix) {
+        std::vector<int> diagonalIndices(matrix.N(), -1);
+        const auto rowIndices = matrix.getRowIndices().asStdVector();
+        const auto colIndices = matrix.getColumnIndices().asStdVector();
+
+        for (auto row = 0; row < Opm::gpuistl::detail::to_int(matrix.N()); ++row) {
+            for (auto i = rowIndices[row]; i < rowIndices[row+1]; ++i) {
+                if (colIndices[i] == row) {
+                    diagonalIndices[row] = i;
+                    break;
+                }
+            }
+        }
+        return diagonalIndices;
+    }
+
+    // GPU version that delegates to the GPU implementation
+    template <typename T, bool transpose>
+    void getQuasiImpesWeights(const gpuistl::GpuSparseMatrix<T>& matrix,
+                             const int pressureVarIndex,
+                             gpuistl::GpuVector<T>& weights,
+                             const gpuistl::GpuVector<int>& diagonalIndices)
+    {
+        gpuistl::detail::getQuasiImpesWeights<T, transpose>(matrix, pressureVarIndex, weights, diagonalIndices);
+    }
+
+    template <typename T, bool transpose>
+    gpuistl::GpuVector<T> getQuasiImpesWeights(const gpuistl::GpuSparseMatrix<T>& matrix,
+                                              const int pressureVarIndex,
+                                              const gpuistl::GpuVector<int>& diagonalIndices)
+    {
+        gpuistl::GpuVector<T> weights(matrix.N() * matrix.blockSize());
+        getQuasiImpesWeights<T, transpose>(matrix, pressureVarIndex, weights, diagonalIndices);
+        return weights;
+    }
+#endif
 
     template<class Vector, class ElementContext, class Model, class ElementChunksType>
     void getTrueImpesWeights(int pressureVarIndex, Vector& weights,

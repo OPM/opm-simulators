@@ -67,13 +67,15 @@ template <class T>
 GpuVector<T>&
 GpuVector<T>::operator=(const GpuVector<T>& other)
 {
-    assertHasElements();
-    assertSameSize(other);
-
-    OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
-                                  other.m_dataOnDevice,
-                                  detail::to_size_t(m_numberOfElements) * sizeof(T),
-                                  cudaMemcpyDeviceToDevice));
+    // Only copy data if both vectors have elements and same size
+    if (m_numberOfElements > 0 && other.m_numberOfElements > 0) {
+        assertSameSize(other);
+        OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
+                                      other.m_dataOnDevice,
+                                      detail::to_size_t(m_numberOfElements) * sizeof(T),
+                                      cudaMemcpyDeviceToDevice));
+    }
+    // If both are zero-sized, assignment is trivial (do nothing)
     return *this;
 }
 
@@ -81,12 +83,15 @@ template <class T>
 GpuVector<T>::GpuVector(const GpuVector<T>& other)
     : GpuVector(other.m_numberOfElements)
 {
-    assertHasElements();
-    assertSameSize(other);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
-                                  other.m_dataOnDevice,
-                                  detail::to_size_t(m_numberOfElements) * sizeof(T),
-                                  cudaMemcpyDeviceToDevice));
+    // Only copy data if both vectors have elements and same size
+    if (m_numberOfElements > 0) {
+        assertSameSize(other);
+        OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
+                                      other.m_dataOnDevice,
+                                      detail::to_size_t(m_numberOfElements) * sizeof(T),
+                                      cudaMemcpyDeviceToDevice));
+    }
+    // If other is zero-sized, assignment is trivial (do nothing)
 }
 
 template <class T>
@@ -112,6 +117,47 @@ GpuVector<T>::dim() const
     // We also doubt that this will lead to any performance penality, but should this prove
     // to be false, this can be replaced by a simple cast to size_t
     return detail::to_size_t(m_numberOfElements);
+}
+
+template <typename T>
+void
+GpuVector<T>::resize(size_t new_size)
+{
+    const int new_elements = detail::to_int(new_size);
+
+    if (new_elements == m_numberOfElements) {
+        return;
+    }
+
+    if (new_elements == 0) {
+        // Free existing memory and set to empty state
+        if (m_dataOnDevice != nullptr) {
+            OPM_GPU_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
+            m_dataOnDevice = nullptr;
+        }
+        m_numberOfElements = 0;
+        return;
+    }
+
+    // Allocate new memory
+    T* new_data = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&new_data, sizeof(T) * new_size));
+
+    if (m_dataOnDevice != nullptr && m_numberOfElements > 0) {
+        // Copy existing data (up to the minimum of old and new size)
+        const size_t copy_elements = std::min(detail::to_size_t(m_numberOfElements), new_size);
+        if (copy_elements > 0) {
+            OPM_GPU_SAFE_CALL(cudaMemcpy(new_data, m_dataOnDevice,
+                                          sizeof(T) * copy_elements,
+                                          cudaMemcpyDeviceToDevice));
+        }
+
+        // Free old memory
+        OPM_GPU_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
+    }
+
+    m_dataOnDevice = new_data;
+    m_numberOfElements = new_elements;
 }
 
 template <typename T>
