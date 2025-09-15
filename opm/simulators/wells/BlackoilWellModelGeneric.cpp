@@ -1317,7 +1317,15 @@ updateAndCommunicateGroupData(const int reportStepIdx,
 
     // This builds some necessary lookup structures, so it must be called
     // before we copy to well_state_nupcol_.
-    this->wellState().updateGlobalIsGrup(comm_);
+    // Wells may be temporarily stopped due to convergence or operability issues
+    // during local well solves. Temporarily stopped wells do not contribute
+    // to groups and are therefore not considered in the group target calculations.
+    std::vector<WellStatus> well_status(this->numLocalWells(), WellStatus::SHUT);
+    for (const auto& well : well_container_generic_) {
+        well_status[well->indexOfWell()] = well->wellStatus();
+    }
+
+    this->wellState().updateGlobalIsGrup(comm_, well_status);
 
     if (iterationIdx < nupcol) {
         OPM_TIMEBLOCK(updateNupcol);
