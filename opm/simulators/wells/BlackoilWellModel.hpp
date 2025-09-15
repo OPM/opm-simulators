@@ -255,7 +255,7 @@ template<class Scalar> class WellContributions;
 #endif
 
             // Check if well equations is converged.
-            ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkWellGroupControls = false) const;
+            ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkWellGroupControlsAndNetwork = false) const;
 
             const SimulatorReportSingle& lastReport() const;
 
@@ -438,6 +438,9 @@ template<class Scalar> class WellContributions;
 
             SimulatorReportSingle last_report_{};
             GuideRateHandler<Scalar, IndexTraits> guide_rate_handler_{};
+
+            // A flag to tell the convergence report whether we need to take another newton step
+            bool network_needs_more_balancing_force_another_newton_iteration_{false};
 
             // Pre-step network solve at static reservoir conditions (group and well states might be updated)
             void doPreStepNetworkRebalance(DeferredLogger& deferred_logger);
