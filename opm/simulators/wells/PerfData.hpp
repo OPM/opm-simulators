@@ -21,6 +21,7 @@
 #define OPM_PERFDATA_HEADER_INCLUDED
 
 #include <opm/simulators/wells/ConnFiltrateData.hpp>
+#include <opm/simulators/wells/ConnFractureData.hpp>
 #include <opm/simulators/wells/ConnFracStatistics.hpp>
 
 #include <cstddef>
@@ -79,6 +80,7 @@ public:
         serializer(skin_pressure);
         serializer(water_velocity);
         serializer(filtrate_data);
+        serializer(fracture_data);
         serializer(connFracStatistics);
         serializer(gas_mass_rates);
         serializer(wat_mass_rates);
@@ -120,6 +122,7 @@ public:
     std::vector<Scalar> water_velocity{};
 
     ConnFiltrateData<Scalar> filtrate_data{};
+    ConnFractureData<Scalar> fracture_data{};
     std::vector<ConnFracStatistics<Scalar>> connFracStatistics{};
 };
 
