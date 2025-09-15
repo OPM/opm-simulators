@@ -735,6 +735,9 @@ private:
         const unsigned int numCells = domain.cells.size();
         const bool on_full_domain = (numCells == model_().numTotalDof());
 
+        // Fetch timestepsize used later in accumulation term.
+        const double dt = simulator_().timeStepSize();
+
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -782,7 +785,6 @@ private:
             }
 
             // Accumulation term.
-            const double dt = simulator_().timeStepSize();
             const double volume = model_().dofTotalVolume(globI);
             const Scalar storefac = volume / dt;
             adres = 0.0;
