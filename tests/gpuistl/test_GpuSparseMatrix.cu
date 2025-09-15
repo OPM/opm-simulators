@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 
 #include <opm/common/utility/pointerArithmetic.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/ILU_variants_helper_kernels.hpp>
 
 #include <dune/istl/bcrsmatrix.hh>
 

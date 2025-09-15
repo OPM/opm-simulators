@@ -76,9 +76,7 @@ namespace
             diagIndices[rawIdx] = diagIdx;
         }
     }
-
 } // namespace
-
 
 template <class T>
 void
@@ -118,14 +116,13 @@ computeDiagIndices(const int* rowIndices,
         <<<nThreadBlocks, threadBlockSize>>>(rowIndices, colIndices, reorderedToNatural, rows, diagIndices);
 }
 
-
 } // namespace Opm::gpuistl::detail
 
 #define DEFINE_KERNEL_WRAPPERS_FOR_TYPES(T)                                                                            \
     template void Opm::gpuistl::detail::computeDiagIndicesNoReorder<T>(                                                \
         const int*, const int*, const size_t*, int, size_t*);                                                \
     template void Opm::gpuistl::detail::computeDiagIndices<T>(                                                         \
-        const int*, const int*, const int*, int, size_t*);
+        const int*, const int*, const int*, int, size_t*);                                               \
 
 DEFINE_KERNEL_WRAPPERS_FOR_TYPES(float)
 DEFINE_KERNEL_WRAPPERS_FOR_TYPES(double)
