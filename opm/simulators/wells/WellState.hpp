@@ -419,6 +419,9 @@ private:
     void reportConnectionFilterCake(const std::size_t well_index,
                                     std::vector<data::Connection>& connections) const;
 
+    void reportConnectionFracture(const std::size_t well_index,
+                                    std::vector<data::Connection>& connections) const;
+
     void reportFractureStatistics(const std::vector<ConnFracStatistics<Scalar>>& stats,
                                   std::vector<data::Connection>& connections) const;
 };
