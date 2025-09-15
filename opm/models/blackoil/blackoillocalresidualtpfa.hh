@@ -47,6 +47,11 @@
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
+
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
+#include <opm/common/utility/gpuistl_if_available.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
@@ -419,7 +424,6 @@ public:
                 const auto& invB
                     = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx, fsys);
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
-
                 evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
                 if constexpr (enableFullyImplicitThermal) {
                     EnergyModule::template
@@ -544,44 +548,45 @@ public:
 
     template <class BoundaryConditionData, class RateVectorLocal, class LocalProblem>
     OPM_HOST_DEVICE static void computeBoundaryFlux(RateVectorLocal& bdyFlux,
-                                                    const LocalProblem& problem,
-                                                    const BoundaryConditionData& bdyInfo,
-                                                    const IntensiveQuantities& insideIntQuants,
-                                                    unsigned globalSpaceIdx)
+                                    const LocalProblem& problem,
+                                    const BoundaryConditionData& bdyInfo,
+                                    const IntensiveQuantities& insideIntQuants,
+                                    unsigned globalSpaceIdx)
     {
-#if OPM_IS_INSIDE_HOST_FUNCTION
-        switch (bdyInfo.type) {
-        case BCType::NONE:
-            bdyFlux = 0.0;
-            break;
-        case BCType::RATE:
-            computeBoundaryFluxRate(bdyFlux, bdyInfo);
-            break;
-        case BCType::FREE:
-        case BCType::DIRICHLET:
-            computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-            break;
-        case BCType::THERMAL:
-            computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-            break;
-        default:
-            throw std::logic_error("Unknown boundary condition type " +
-                                   std::to_string(static_cast<int>(bdyInfo.type)) +
-                                   " in computeBoundaryFlux()." );
+        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+        if constexpr (usesStaticFluidSystem)
+        {
+            switch (bdyInfo.type) {
+            case BCType::NONE:
+                bdyFlux = 0.0;
+                break;
+            case BCType::RATE:
+                computeBoundaryFluxRate(bdyFlux, bdyInfo);
+                break;
+            case BCType::FREE:
+            case BCType::DIRICHLET:
+                computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            case BCType::THERMAL:
+                computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            default:
+                throw std::logic_error("Unknown boundary condition type " +
+                                    std::to_string(static_cast<int>(bdyInfo.type)) +
+                                    " in computeBoundaryFlux()." );
+            }
+        } else {
+            switch (bdyInfo.type) {
+            case BCType::NONE:
+                bdyFlux = 0.0;
+                break;
+            case BCType::THERMAL:
+                computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            default:
+                OPM_THROW(std::logic_error, "Only THERMAL BC supported when FluidSystem is non-static.");
+            }
         }
-#else // TODO: support all boundary conditions on GPU as well to unify this code
-        switch (bdyInfo.type) {
-        case BCType::NONE:
-            bdyFlux = 0.0;
-            break;
-        case BCType::THERMAL:
-            computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-            break;
-        default:
-            OPM_THROW(std::logic_error, "Boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type)) +
-                                    " is not supported for GPU fluid systems in computeBoundaryFlux().");
-        }
-#endif
     }
 
     template <class BoundaryConditionData>
@@ -938,6 +943,16 @@ public:
     OPM_HOST_DEVICE static void adaptMassConservationQuantities_(ScalarVector& container,
                                                                  unsigned pvtRegionIdx,
                                                                  const FsysType& fsys)
+    {
+        // Delegate to the generic overload using a default-constructed static FluidSystem
+        // instance. Valid because the static FluidSystem is stateless (std::is_empty_v).
+        adaptMassConservationQuantities_(container, pvtRegionIdx, FluidSystem{});
+    }
+
+    template <class ScalarVector, class FsysType>
+    OPM_HOST_DEVICE static void adaptMassConservationQuantities_(ScalarVector& container,
+                                                 unsigned pvtRegionIdx,
+                                                 const FsysType& fsys)
     {
         if constexpr (!blackoilConserveSurfaceVolume) {
             // convert "surface volume" to mass. this is complicated a bit by the fact that

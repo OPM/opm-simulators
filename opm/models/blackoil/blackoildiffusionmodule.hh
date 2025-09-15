@@ -465,11 +465,23 @@ public:
     { return diffusionCoefficient_[phaseIdx][compIdx]; }
 
     /*!
+     * \brief Returns all the diffusion coefficients
+     */
+    OPM_HOST_DEVICE const std::array<std::array<Evaluation, numComponents>, numPhases>& diffusionCoefficients() const
+    { return diffusionCoefficient_; }
+
+    /*!
      * \brief Returns the tortuousity of the sub-domain of a fluid
      *        phase in the porous medium.
      */
     OPM_HOST_DEVICE Evaluation tortuosity(unsigned phaseIdx) const
     { return tortuosity_[phaseIdx]; }
+
+    /*!
+     * \brief Returns all the tortuosities
+     */
+    OPM_HOST_DEVICE const std::array<Evaluation, numPhases>& tortuosities() const
+    { return tortuosity_; }
 
     /*!
      * \brief Returns the effective molecular diffusion coefficient of
@@ -697,9 +709,9 @@ protected:
     }
 
 public:
-    static void update(EvaluationArray& effectiveDiffusionCoefficient,
-                       const IntensiveQuantities& intQuantsInside,
-                       const IntensiveQuantities& intQuantsOutside)
+    OPM_HOST_DEVICE static void update(EvaluationArray& effectiveDiffusionCoefficient,
+                                       const IntensiveQuantities& intQuantsInside,
+                                       const IntensiveQuantities& intQuantsOutside)
     {
         const FluidSystem& fsys = intQuantsInside.getFluidSystem();
 
