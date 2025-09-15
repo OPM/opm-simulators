@@ -999,7 +999,7 @@ getConvergence(const SimulatorTimerInterface& timer,
     {
         OPM_TIMEBLOCK(getWellConvergence);
         report += wellModel().getWellConvergence(B_avg,
-                                                 /*checkWellGroupControls*/report.converged());
+                                                 /*checkWellGroupControlsAndNetwork*/report.converged());
     }
 
     conv_monitor_.checkPenaltyCard(report, iteration);

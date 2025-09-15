@@ -251,6 +251,7 @@ namespace Opm
             , res_failures_{}
             , well_failures_{}
             , wellGroupTargetsViolated_(false)
+            , network_needs_more_balancing_force_another_newton_iteration_(false)
         {}
 
         void clear()
@@ -259,6 +260,7 @@ namespace Opm
             res_failures_.clear();
             well_failures_.clear();
             wellGroupTargetsViolated_ = false;
+            network_needs_more_balancing_force_another_newton_iteration_ = false;
         }
 
         void setReservoirFailed(const ReservoirFailure& rf)
@@ -290,6 +292,11 @@ namespace Opm
             wellGroupTargetsViolated_ = wellGroupTargetsViolated;
         }
 
+        void setNetworkNotYetBalancedForceAnotherNewtonIteration(const bool network_needs_more_balancing_force_another_newton_iteration)
+        {
+            network_needs_more_balancing_force_another_newton_iteration_ = network_needs_more_balancing_force_another_newton_iteration;
+        }
+
         void setCnvPoreVolSplit(const CnvPvSplit& cnvPvSplit,
                                 const double eligiblePoreVolume)
         {
@@ -308,6 +315,8 @@ namespace Opm
             assert(reservoirFailed() != res_failures_.empty());
             assert(wellFailed() != well_failures_.empty());
             wellGroupTargetsViolated_ = (wellGroupTargetsViolated_ || other.wellGroupTargetsViolated_);
+            network_needs_more_balancing_force_another_newton_iteration_ = (network_needs_more_balancing_force_another_newton_iteration_
+                || other.network_needs_more_balancing_force_another_newton_iteration_);
 
             // Note regarding the CNV pore-volume split: We depend on the
             // fact that the quantities have already been aggregated across
@@ -343,7 +352,9 @@ namespace Opm
 
         bool converged() const
         {
-            return (status_ == AllGood) && !wellGroupTargetsViolated_;
+            return (status_ == AllGood)
+                && !wellGroupTargetsViolated_
+                && !network_needs_more_balancing_force_another_newton_iteration_;
         }
 
         bool reservoirFailed() const
@@ -422,6 +433,7 @@ namespace Opm
             serializer(this->res_convergence_);
             serializer(this->well_convergence_);
             serializer(this->wellGroupTargetsViolated_);
+            serializer(this->network_needs_more_balancing_force_another_newton_iteration_);
             serializer(this->cnvPvSplit_);
             serializer(this->eligiblePoreVolume_);
             serializer(this->penaltyCard_);
@@ -438,6 +450,7 @@ namespace Opm
         std::vector<ReservoirConvergenceMetric> res_convergence_;
         std::vector<WellConvergenceMetric> well_convergence_;
         bool wellGroupTargetsViolated_;
+        bool network_needs_more_balancing_force_another_newton_iteration_;
         CnvPvSplit cnvPvSplit_{};
         double eligiblePoreVolume_{};
         PenaltyCard penaltyCard_;
