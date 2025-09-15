@@ -735,7 +735,7 @@ private:
         const unsigned int numCells = domain.cells.size();
         const bool on_full_domain = (numCells == model_().numTotalDof());
 
-        // Accumulation term independent of cell
+        // Fetch timestepsize used later in accumulation term.
         const double dt = simulator_().timeStepSize();
 
 #ifdef _OPENMP
