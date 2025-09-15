@@ -119,6 +119,7 @@ public:
 
     void stopWell() { this->wellStatus_ = Well::Status::STOP; }
     void openWell() { this->wellStatus_ = Well::Status::OPEN; }
+    Well::Status wellStatus() { return this->wellStatus_;}
 
     bool wellIsStopped() const { return this->wellStatus_ == Well::Status::STOP; }
 
