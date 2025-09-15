@@ -879,6 +879,165 @@ private:
             ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *diagMatAddress_[globI] += bMat;
         }
+//         // This check should be removed once this is addressed by
+//         // for example storing the previous timesteps' values for
+//         // rsmax (for DRSDT) and similar.
+//         if (!problem_().recycleFirstIterationStorage()) {
+//             if (!model_().storeIntensiveQuantities() && !model_().enableStorageCache()) {
+//                 OPM_THROW(std::runtime_error, "Must have cached either IQs or storage when we cannot recycle.");
+//             }
+//         }
+
+//         OPM_TIMEBLOCK(linearize);
+
+//         // We do not call resetSystem_() here, since that will set
+//         // the full system to zero, not just our part.
+//         // Instead, that must be called before starting the linearization.
+//         const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
+//         const unsigned int numCells = domain.cells.size();
+//         const bool on_full_domain = (numCells == model_().numTotalDof());
+
+// #ifdef _OPENMP
+// #pragma omp parallel for
+// #endif
+//         for (unsigned ii = 0; ii < numCells; ++ii) {
+//             OPM_TIMEBLOCK_LOCAL(linearizationForEachCell);
+//             const unsigned globI = domain.cells[ii];
+//             const auto& nbInfos = neighborInfo_[globI];
+//             VectorBlock res(0.0);
+//             MatrixBlock bMat(0.0);
+//             ADVectorBlock adres(0.0);
+//             ADVectorBlock darcyFlux(0.0);
+//             const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+
+//             // Flux term.
+//             {
+//                 OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);
+//                 short loc = 0;
+//                 for (const auto& nbInfo : nbInfos) {
+//                     OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
+//                     const unsigned globJ = nbInfo.neighbor;
+//                     assert(globJ != globI);
+//                     res = 0.0;
+//                     bMat = 0.0;
+//                     adres = 0.0;
+//                     darcyFlux = 0.0;
+//                     const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+//                     LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+//                                                nbInfo.res_nbinfo,  problem_().moduleParams());
+//                     adres *= nbInfo.res_nbinfo.faceArea;
+//                     if (dispersionActive || enableMICP) {
+//                         for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
+//                             velocityInfo_[globI][loc].velocity[phaseIdx] =
+//                                 darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+//                         }
+//                     }
+//                     setResAndJacobi(res, bMat, adres);
+//                     residual_[globI] += res;
+//                     //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
+//                     *diagMatAddress_[globI] += bMat;
+//                     bMat *= -1.0;
+//                     //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+//                     *nbInfo.matBlockAddress += bMat;
+//                     ++loc;
+//                 }
+//             }
+
+//             // Accumulation term.
+//             const double dt = simulator_().timeStepSize();
+//             const double volume = model_().dofTotalVolume(globI);
+//             const Scalar storefac = volume / dt;
+//             adres = 0.0;
+//             {
+//                 OPM_TIMEBLOCK_LOCAL(computeStorage);
+//                 LocalResidual::computeStorage(adres, intQuantsIn);
+//             }
+//             setResAndJacobi(res, bMat, adres);
+//             // Either use cached storage term, or compute it on the fly.
+//             if (model_().enableStorageCache()) {
+//                 // The cached storage for timeIdx 0 (current time) is not
+//                 // used, but after storage cache is shifted at the end of the
+//                 // timestep, it will become cached storage for timeIdx 1.
+//                 model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
+//                 if (model_().newtonMethod().numIterations() == 0) {
+//                     // Need to update the storage cache.
+//                     if (problem_().recycleFirstIterationStorage()) {
+//                         // Assumes nothing have changed in the system which
+//                         // affects masses calculated from primary variables.
+//                         if (on_full_domain) {
+//                             // This is to avoid resetting the start-of-step storage
+//                             // to incorrect numbers when we do local solves, where the iteration
+//                             // number will start from 0, but the starting state may not be identical
+//                             // to the start-of-step state.
+//                             // Note that a full assembly must be done before local solves
+//                             // otherwise this will be left un-updated.
+//                             model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
+//                         }
+//                     }
+//                     else {
+//                         Dune::FieldVector<Scalar, numEq> tmp;
+//                         const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+//                         LocalResidual::computeStorage(tmp, intQuantOld);
+//                         model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
+//                     }
+//                 }
+//                 res -= model_().cachedStorage(globI, 1);
+//             }
+//             else {
+//                 OPM_TIMEBLOCK_LOCAL(computeStorage0);
+//                 Dune::FieldVector<Scalar, numEq> tmp;
+//                 const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+//                 LocalResidual::computeStorage(tmp, intQuantOld);
+//                 // assume volume do not change
+//                 res -= tmp;
+//             }
+//             res *= storefac;
+//             bMat *= storefac;
+//             residual_[globI] += res;
+//             //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+//             *diagMatAddress_[globI] += bMat;
+
+//             // Cell-wise source terms.
+//             // This will include well sources if SeparateSparseSourceTerms is false.
+//             res = 0.0;
+//             bMat = 0.0;
+//             adres = 0.0;
+//             if (separateSparseSourceTerms_) {
+//                 LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
+//             }
+//             else {
+//                 LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+//             }
+//             adres *= -volume;
+//             setResAndJacobi(res, bMat, adres);
+//             residual_[globI] += res;
+//             //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+//             *diagMatAddress_[globI] += bMat;
+//         } // end of loop for cell globI.
+
+//         // Add sparse source terms. For now only wells.
+//         if (separateSparseSourceTerms_) {
+//             problem_().wellModel().addReservoirSourceTerms(residual_, diagMatAddress_);
+//         }
+
+//         // Boundary terms. Only looping over cells with nontrivial bcs.
+//         for (const auto& bdyInfo : boundaryInfo_) {
+//             if (bdyInfo.bcdata.type == BCType::NONE) {
+//                 continue;
+//             }
+
+//             VectorBlock res(0.0);
+//             MatrixBlock bMat(0.0);
+//             ADVectorBlock adres(0.0);
+//             const unsigned globI = bdyInfo.cell;
+//             const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+//             LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+//             adres *= bdyInfo.bcdata.faceArea;
+//             setResAndJacobi(res, bMat, adres);
+//             residual_[globI] += res;
+//             ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+//             *diagMatAddress_[globI] += bMat;
+//         }
     }
 
     void updateStoredTransmissibilities()
