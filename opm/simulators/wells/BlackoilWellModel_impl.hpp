@@ -365,10 +365,7 @@ namespace Opm {
         this->resetWGState();
 
         const int reportStepIdx = simulator_.episodeIndex();
-        this->updateAndCommunicateGroupData(reportStepIdx,
-                                            simulator_.model().newtonMethod().numIterations(),
-                                            param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false,
-                                            local_deferredLogger);
+
 
         this->wellState().updateWellsDefaultALQ(this->schedule(), reportStepIdx, this->summaryState());
         this->wellState().gliftTimeStepInit();
@@ -381,6 +378,13 @@ namespace Opm {
 
             // create the well container
             createWellContainer(reportStepIdx);
+
+            // we need to update the group data after the well is created
+            // to make sure we get the correct mapping.
+            this->updateAndCommunicateGroupData(reportStepIdx,
+                                    simulator_.model().newtonMethod().numIterations(),
+                                    param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false,
+                                    local_deferredLogger);
 
             // Wells are active if they are active wells on at least one process.
             const Grid& grid = simulator_.vanguard().grid();
