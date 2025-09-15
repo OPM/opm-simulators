@@ -185,11 +185,10 @@ namespace Dune {
     /** Specialization of FieldTraits for all PrimaryVariables derived from Opm::FvBasePrimaryVariables */
     template <class TypeTag, template <class> class EwomsPrimaryVariable>
     requires std::is_base_of_v<Opm::FvBasePrimaryVariables<TypeTag>,
-                               EwomsPrimaryVariable<TypeTag> >
-    struct FieldTraits<EwomsPrimaryVariable<TypeTag> >
+                               EwomsPrimaryVariable<TypeTag>>
+    struct FieldTraits<EwomsPrimaryVariable<TypeTag>>
         : public FieldTraitsImpl<TypeTag, true>
-    {
-    };
+    {};
 
 } // namespace Dune
 
