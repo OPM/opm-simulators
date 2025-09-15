@@ -36,6 +36,21 @@ GpuBuffer<T>::GpuBuffer(const std::vector<T>& data)
 {
 }
 
+// Specialization for std::vector<bool> is needed as vec<bool>::data() is deleted
+template <>
+GpuBuffer<bool>::GpuBuffer(const std::vector<bool>& data)
+    : GpuBuffer(data.size())
+{
+    assert(data.size() > 0);
+
+    bool* tmp = new bool[m_numberOfElements];
+    for (size_t i = 0; i < m_numberOfElements; ++i) {
+        tmp[i] = static_cast<bool>(data[i]);
+    }
+    OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice, tmp, m_numberOfElements * sizeof(bool), cudaMemcpyHostToDevice));
+    delete[] tmp;
+}
+
 template <class T>
 GpuBuffer<T>::GpuBuffer(const size_t numberOfElements)
     : m_numberOfElements(numberOfElements)
@@ -190,6 +205,27 @@ GpuBuffer<T>::copyFromHost(const std::vector<T>& data)
     copyFromHost(data.data(), data.size());
 }
 
+template <>
+void
+GpuBuffer<bool>::copyFromHost(const std::vector<bool>& data)
+{
+    if (data.size() > size()) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Requesting to copy too many elements. buffer has {} elements, while {} was requested.",
+                              size(), data.size()));
+    }
+    if (data.empty()) {
+        return;
+    }
+
+    bool* tmp = new bool[data.size()];
+    for (size_t i = 0; i < data.size(); ++i) {
+        tmp[i] = static_cast<bool>(data[i]);
+    }
+    copyFromHost(tmp, data.size());
+    delete[] tmp;
+}
+
 template <class T>
 void
 GpuBuffer<T>::copyToHost(std::vector<T>& data) const
@@ -197,10 +233,28 @@ GpuBuffer<T>::copyToHost(std::vector<T>& data) const
     copyToHost(data.data(), data.size());
 }
 
+template <>
+void
+GpuBuffer<bool>::copyToHost(std::vector<bool>& data) const
+{
+    assertSameSize(data.size());
+    if (data.empty()) {
+        return;
+    }
+
+    bool* tmp = new bool[data.size()];
+    copyToHost(tmp, data.size());
+    for (size_t i = 0; i < data.size(); ++i) {
+        data[i] = static_cast<bool>(tmp[i]);
+    }
+    delete[] tmp;
+}
+
 template class GpuBuffer<size_t>;
 template class GpuBuffer<double>;
 template class GpuBuffer<float>;
 template class GpuBuffer<int>;
+template class GpuBuffer<bool>;
 template class GpuBuffer<std::byte>;
 template class GpuBuffer<std::array<double, 3>>;
 template class GpuBuffer<std::array<float, 3>>;
