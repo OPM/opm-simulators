@@ -731,9 +731,6 @@ private:
         // Make sure we have can have the domain on the GPU.
         if constexpr (std::is_same_v<SubDomainType, FullDomain>) {
 
-            // Ensure we can have the domain  on the GPU.
-            auto gpu_domain = copy_to_gpu(domain);
-
             // This check should be removed once this is addressed by
             // for example storing the previous timesteps' values for
             // rsmax (for DRSDT) and similar.
@@ -745,11 +742,14 @@ private:
 
             OPM_TIMEBLOCK(linearize);
 
+            // Ensure we can have the domain  on the GPU.
+            auto gpu_domain = copy_to_gpu(domain);
+
             // We do not call resetSystem_() here, since that will set
             // the full system to zero, not just our part.
             // Instead, that must be called before starting the linearization.
             const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
-            const unsigned int numCells = domain.cells.size();
+            const unsigned int numCells = gpu_domain.cells.size();
             const bool on_full_domain = (numCells == model_().numTotalDof());
 
             for (unsigned ii = 0; ii < numCells; ++ii) {
