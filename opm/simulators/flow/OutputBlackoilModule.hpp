@@ -1831,7 +1831,7 @@ private:
                                                    model.delstress(ectx.globalDofIdx));
 
                               mech.assignDisplacement(ectx.globalDofIdx,
-                                                      model.disp(ectx.globalDofIdx, /*include_fracture*/true));
+                                                      model.disp(ectx.globalDofIdx));
 
                               // is the tresagii stress which make rock fracture
                               mech.assignFracStress(ectx.globalDofIdx,
@@ -1846,11 +1846,15 @@ private:
                                                          model.mechPotentialTempForce(ectx.globalDofIdx));
 
                               mech.assignStrain(ectx.globalDofIdx,
-                                                model.strain(ectx.globalDofIdx, /*include_fracture*/true));
+                                                model.strain(ectx.globalDofIdx));
 
-                              // Total stress is not stored but calculated result is Voigt notation
+                              // Total stress is not stored but calculated
+                              // result is Voigt notation.
+                              //
+                              // outputstress may be different from stress
+                              // if initial_stress_ is changed.
                               mech.assignStress(ectx.globalDofIdx,
-                                                model.stress(ectx.globalDofIdx, /*include_fracture*/true));
+                                                model.outputstress(ectx.globalDofIdx));
                            }
                     }
                 );
