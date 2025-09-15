@@ -18,12 +18,15 @@
 #define OPM_FLEXIBLESOLVERWRAPPER_HEADER_INCLUDED
 
 #include <functional>
+#include <memory>
+#include <type_traits>
 
-
+#include <dune/common/parallel/communication.hh>
 #include <dune/istl/operators.hh>
 #include <dune/istl/solver.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>
 
 namespace Opm::gpuistl::detail
 {
@@ -47,6 +50,10 @@ public:
 
     using AbstractOperatorPtrType = std::unique_ptr<AbstractOperatorType>;
     using AbstractSolverPtrType = std::unique_ptr<AbstractSolverType>;
+    using GpuCommunicationType = std::conditional_t<
+        std::is_same_v<Comm, Dune::Communication<int>>,
+        int, // Dummy type for serial case
+        GpuOwnerOverlapCopy<typename Matrix::field_type, Comm>>;
 
     FlexibleSolverWrapper(const Matrix& matrix,
                           bool parallel,
@@ -65,9 +72,10 @@ private:
     AbstractSolverPtrType m_solver;
 
     AbstractPreconditionerType& m_preconditioner;
+    std::shared_ptr<GpuCommunicationType> m_gpuCommunication;
 
     FlexibleSolverWrapper(
-        std::tuple<AbstractOperatorPtrType, AbstractSolverPtrType, std::reference_wrapper<AbstractPreconditionerType>>&&
+        std::tuple<AbstractOperatorPtrType, AbstractSolverPtrType, std::reference_wrapper<AbstractPreconditionerType>, std::shared_ptr<GpuCommunicationType>>&&
             solverTuple);
 };
 } // namespace Opm::gpuistl::detail
