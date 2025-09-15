@@ -24,7 +24,7 @@ git submodule init
 git submodule update
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=$shared -DCMAKE_POSITION_INDEPENDENT_CODE=1
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=$shared -DCMAKE_POSITION_INDEPENDENT_CODE=1 -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=1
 cmake --build . -j ${BUILD_JOBS}
 cmake --build . --target install
 popd
