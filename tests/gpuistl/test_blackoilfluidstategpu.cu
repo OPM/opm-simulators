@@ -30,14 +30,6 @@ namespace
 template <class ScalarT>
 struct DummyFluidSystem {
     static constexpr auto numPhases = 3u;
-    static constexpr auto numComponents = 1;
-    static constexpr auto waterPhaseIdx = 0;
-    static constexpr auto oilPhaseIdx = 1;
-    static constexpr auto gasPhaseIdx = 2;
-    static constexpr auto waterCompIdx = 0;
-    static constexpr auto oilCompIdx = 0;
-    static constexpr auto gasCompIdx = 0;
-
 
     static auto reservoirTemperature(int)
     {
@@ -89,14 +81,6 @@ struct DummyFluidSystem {
 template <class ScalarT>
 struct DummyFluidSystemDynamic {
     static constexpr auto numPhases = 3u;
-    static constexpr auto numComponents = 1;
-    static constexpr auto waterPhaseIdx = 0;
-    static constexpr auto oilPhaseIdx = 1;
-    static constexpr auto gasPhaseIdx = 2;
-    static constexpr auto waterCompIdx = 0;
-    static constexpr auto oilCompIdx = 0;
-    static constexpr auto gasCompIdx = 0;
-
 
     OPM_HOST_DEVICE auto reservoirTemperature(int) const
     {
