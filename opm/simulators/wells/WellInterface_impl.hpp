@@ -1079,12 +1079,12 @@ namespace Opm
         OPM_TIMEFUNCTION();
         if (this->param_.local_well_solver_control_switching_) {
             const bool success = updateWellOperabilityFromWellEq(simulator, well_state, deferred_logger);
-            if (success) {
-                return;
-            } else {
+            if (!success) {
+                this->operability_status_.solvable = false;
                 deferred_logger.debug("Operability check using well equations did not converge for well "
-                                      + this->name() + ", reverting to classical approach." );
+                                      + this->name() + ". Mark the well as unsolvable." );
             }
+            return;
         }
         this->operability_status_.resetOperability();
 
