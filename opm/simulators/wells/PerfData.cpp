@@ -65,6 +65,7 @@ void PerfData<Scalar>::prepareInjectorContainers()
     this->skin_pressure.resize(num_perf);
     this->water_velocity.resize(num_perf);
     this->filtrate_data.resize(num_perf);
+    this->fracture_data.resize(num_perf);
 }
 
 template<class Scalar>
@@ -93,6 +94,7 @@ PerfData<Scalar> PerfData<Scalar>::serializationTestObject()
     result.skin_pressure = {27.0, 28.0};
     result.water_velocity = {29.0, 30.0};
     result.filtrate_data = ConnFiltrateData<Scalar>::serializationTestObject();
+    result.fracture_data = ConnFractureData<Scalar>::serializationTestObject();
     result.connFracStatistics.assign(3, ConnFracStatistics<Scalar>::serializationTestObject());
     result.gas_mass_rates = {31.0};
     result.wat_mass_rates = {32.0};
@@ -138,6 +140,7 @@ bool PerfData<Scalar>::try_assign(const PerfData& other)
     this->skin_pressure = other.skin_pressure;
     this->water_velocity = other.water_velocity;
     this->filtrate_data = other.filtrate_data;
+    this->fracture_data = other.fracture_data;
     this->connFracStatistics = other.connFracStatistics;
     this->gas_mass_rates = other.gas_mass_rates;
     this->wat_mass_rates = other.wat_mass_rates;
@@ -170,6 +173,7 @@ bool PerfData<Scalar>::operator==(const PerfData& rhs) const
         && (this->skin_pressure == rhs.skin_pressure)
         && (this->water_velocity == rhs.water_velocity)
         && (this->filtrate_data == rhs.filtrate_data)
+        && (this->fracture_data == rhs.fracture_data)
         && (this->connFracStatistics == rhs.connFracStatistics)
         && (this->gas_mass_rates == rhs.gas_mass_rates)
         && (this->wat_mass_rates == rhs.wat_mass_rates)
