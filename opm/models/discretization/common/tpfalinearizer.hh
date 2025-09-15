@@ -64,8 +64,10 @@
 #if HAVE_CUDA
 #if USE_HIP
 #include <opm/simulators/linalg/gpuistl_hip/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuView.hpp>
 #else
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #endif
 #endif
 
@@ -727,9 +729,9 @@ private:
     template <class SubDomainType>
     void linearize_(const SubDomainType& domain)
     {
-#if HAVE_CUDA
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
         // Make sure we have can have the domain on the GPU.
-        if constexpr (std::is_same_v<SubDomainType, FullDomain>) {
+        if constexpr (std::is_same_v<SubDomainType, FullDomain<>>) {
 
             // This check should be removed once this is addressed by
             // for example storing the previous timesteps' values for
@@ -740,17 +742,26 @@ private:
                 }
             }
 
-            OPM_TIMEBLOCK(linearize);
+            const double dt = simulator_().timeStepSize();
 
-            // Ensure we can have the domain  on the GPU.
-            auto gpu_domain = copy_to_gpu(domain);
+            OPM_TIMEBLOCK(linearize);
 
             // We do not call resetSystem_() here, since that will set
             // the full system to zero, not just our part.
             // Instead, that must be called before starting the linearization.
             const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
-            const unsigned int numCells = gpu_domain.cells.size();
+            const unsigned int numCells = domain.cells.size();
             const bool on_full_domain = (numCells == model_().numTotalDof());
+
+            // Ensure we can have the domain  on the GPU.
+            auto domain_buffer = copy_to_gpu(domain);
+            auto domain_view = make_view(domain_buffer);
+            linearize_kernel<<<( numCells + 255 ) / 256, 256>>>(
+                dispersionActive,
+                numCells,
+                on_full_domain,
+                domain_view
+            );
 
             for (unsigned ii = 0; ii < numCells; ++ii) {
                 OPM_TIMEBLOCK_LOCAL(linearizationForEachCell);
@@ -796,7 +807,6 @@ private:
                 }
 
                 // Accumulation term.
-                const double dt = simulator_().timeStepSize();
                 const double volume = model_().dofTotalVolume(globI);
                 const Scalar storefac = volume / dt;
                 adres = 0.0;
@@ -1059,6 +1069,24 @@ private:
 #endif
     }
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    template<class DomainType>
+    __global__ void linearize_kernel(
+        const bool dispersionActive,
+        const unsigned int numCells,
+        const bool on_full_domain,
+        const DomainType domain)
+    {
+        // Get the index of the cell
+        const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
+
+        if (ii < numCells)
+        {
+            const unsigned globI = domain.cells[ii];
+        }
+    }
+#endif
+
     void updateStoredTransmissibilities()
     {
         if (neighborInfo_.empty()) {
@@ -1139,28 +1167,35 @@ private:
 
     bool separateSparseSourceTerms_ = false;
 
+    template<class Storage = std::vector<int>>
     struct FullDomain
     {
-        std::vector<int> cells;
+        Storage cells;
     };
-    FullDomain fullDomain_;
+    FullDomain<> fullDomain_;
 
-#if HAVE_CUDA
-    struct FullDomainGPU
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    FullDomain<gpuistl::GpuBuffer<int>> copy_to_gpu(FullDomain<> CPUDomain)
     {
-        gpuistl::GpuBuffer<int> cells;
-    };
-
-    FullDomainGPU copy_to_gpu(FullDomain CPUDomain)
-    {
-        if (CPUDomain.cells.empty()) {
+        if (CPUDomain.cells.size() == 0) {
             OPM_THROW(std::runtime_error, "Cannot copy empty full domain to GPU.");
         }
-        return FullDomainGPU{
+        return FullDomain<gpuistl::GpuBuffer<int>>{
             gpuistl::GpuBuffer<int>(CPUDomain.cells)
         };
     };
+
+    FullDomain<gpuistl::GpuView<int>> make_view(FullDomain<gpuistl::GpuBuffer<int>>& buffer)
+    {
+        if (buffer.cells.size() == 0) {
+            OPM_THROW(std::runtime_error, "Cannot make view of empty full domain buffer.");
+        }
+        return FullDomain<gpuistl::GpuView<int>>{
+            gpuistl::make_view(buffer.cells)
+        };
+    };
 #endif
+
 };
 } // namespace Opm
 
