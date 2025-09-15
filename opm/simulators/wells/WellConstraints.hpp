@@ -26,6 +26,7 @@
 
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
+#include <cstdint>
 #include <functional>
 #include <vector>
 #include <optional>
@@ -39,8 +40,8 @@ class Rates;
 template<typename Scalar, typename IndexTraits> class SingleWellState;
 class SummaryState;
 template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
-enum class WellInjectorCMode;
-enum class WellProducerCMode;
+enum class WellInjectorCMode : std::uint16_t;
+enum class WellProducerCMode : std::uint16_t;
 
 //! \brief Class for computing well group constraints.
 template<typename Scalar, typename IndexTraits>
