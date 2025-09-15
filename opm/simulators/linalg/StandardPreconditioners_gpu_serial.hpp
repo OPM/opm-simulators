@@ -17,9 +17,12 @@
 #ifndef OPM_STANDARDPRECONDITIONERS_GPU_SERIAL_HEADER
 #define OPM_STANDARDPRECONDITIONERS_GPU_SERIAL_HEADER
 
+#include <opm/simulators/linalg/gpuistl/detail/gpu_preconditioner_utils.hpp>
 
 #include <dune/istl/bcrsmatrix.hh>
+
 #include <type_traits>
+
 
 
 namespace Opm
@@ -64,8 +67,10 @@ struct StandardPreconditioners<Operator,
         // dispatch the creation of the preconditioner based on the block size. 
         //
         // Note that this dispatching is not needed in the future, since we will have a constructor taking GPU matrices directly.
-        F::addCreator("opmilu0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
-            return dispatchOnBlockSize<maxblocksize>(op, [&](const auto& cpuMatrix) {
+        F::addCreator("opmilu0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) -> PrecPtr {
+            return op.getmat().dispatchOnBlocksize([&](auto blockSizeVal) -> PrecPtr {
+                constexpr int blockSize = decltype(blockSizeVal)::value;
+                const auto cpuMatrix = gpuistl::detail::makeCPUMatrix<O, Dune::FieldMatrix<field_type, blockSize, blockSize>>(op);
                 const bool split_matrix = prm.get<bool>("split_matrix", true);
                 const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
                 const int mixed_precision_scheme = prm.get<int>("mixed_precision_scheme", 0);
@@ -77,8 +82,10 @@ struct StandardPreconditioners<Operator,
             });
         });
 
-        F::addCreator("dilu", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
-            return dispatchOnBlockSize<maxblocksize>(op, [&](const auto& cpuMatrix) {
+        F::addCreator("dilu", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) -> PrecPtr {
+            return op.getmat().dispatchOnBlocksize([&](auto blockSizeVal) -> PrecPtr {
+                constexpr int blockSize = decltype(blockSizeVal)::value;
+                const auto cpuMatrix = gpuistl::detail::makeCPUMatrix<O, Dune::FieldMatrix<field_type, blockSize, blockSize>>(op);
                 const bool split_matrix = prm.get<bool>("split_matrix", true);
                 const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
                 const int mixed_precision_scheme = prm.get<int>("mixed_precision_scheme", 0);
@@ -125,79 +132,6 @@ struct StandardPreconditioners<Operator,
     }
 
 
-private:
-
-    /**
-     * This function creates a CPU matrix from the operator holding a GPU matrix.
-     * 
-     * This is a workaround for now since some of the GPU preconditioners need a 
-     * CPU matrix for the intial setup (graph coloring). The CPU matrix is only
-     * used in the constructor, **not** in the update function or the apply function.
-     */
-    template<class BlockType>
-    static Dune::BCRSMatrix<BlockType> makeCPUMatrix(const O& op) {
-        // TODO: Make this more efficient. Maybe we can simply copy the memory areas directly?
-        //       Do note that this function is anyway going away when we have a GPU
-        //       constructor for the preconditioners, so it is not a priority.
-        const auto& gpuMatrix = op.getmat();
-
-        const auto nonZeros = gpuMatrix.getNonZeroValues().asStdVector();
-        const auto rowIndices = gpuMatrix.getRowIndices().asStdVector();
-        const auto columnIndices = gpuMatrix.getColumnIndices().asStdVector();
-
-        const auto numberOfNonZeroes = gpuMatrix.nonzeroes();
-        const auto N = gpuMatrix.N();
-
-        Dune::BCRSMatrix<BlockType> matrix(N, N, numberOfNonZeroes, Dune::BCRSMatrix<BlockType>::row_wise);
-        for (auto row = matrix.createbegin(); row != matrix.createend(); ++row) {
-
-            for (auto j = rowIndices[row.index()]; j != rowIndices[row.index() + 1]; ++j) {
-                const auto columnIndex = columnIndices[j];
-                row.insert(columnIndex);
-            }
-        }
-
-        for (std::size_t i = 0; i < N; ++i) {
-            for (auto j = rowIndices[i]; j != rowIndices[i + 1]; ++j) {
-                const auto columnIndex = columnIndices[j];
-                // Now it gets a bit tricky, first we need to fetch the block matrix
-                BlockType blockMatrix;
-                constexpr static auto rows = BlockType::rows;
-
-                for (std::size_t k = 0; k < rows; ++k) {
-                    for (std::size_t l = 0; l < rows; ++l) {
-                        blockMatrix[k][l] = nonZeros[j * rows * rows + k * rows + l];
-                    }
-                }
-                matrix[i][columnIndex] = blockMatrix;
-            }
-        }
-
-        return matrix;
-    }
-
-    /**
-     * This function dispatches the creation of the preconditioner based on the block size.
-     * 
-     * Note that this is needed since the GPU operators/matrices do not hold the block size compile time.
-     * 
-     * Also note that this function is not expected to be used in the future, since we will 
-     * have a GPU constructor for the preconditioners (DILU and OPMILU0), hence removing the need
-     * for a CPU matrix and for this function.
-     */
-    template<int blocksizeCompileTime, class CreateType>
-    static PrecPtr dispatchOnBlockSize(const O& op, CreateType create) {
-        if (op.getmat().blockSize() == blocksizeCompileTime) {
-            const auto cpuMatrix = makeCPUMatrix<Dune::FieldMatrix<field_type, blocksizeCompileTime, blocksizeCompileTime>>(op);
-            return create(cpuMatrix);
-        } 
-        if constexpr (blocksizeCompileTime > 1) {
-            return dispatchOnBlockSize<blocksizeCompileTime - 1>(op, create);
-        }
-        else {
-            throw std::runtime_error(fmt::format("Unsupported block size: {}. Max blocksize supported is {}.", op.getmat().blockSize(), maxblocksize));
-        }
-    }
     
 };
 
