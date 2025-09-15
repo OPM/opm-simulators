@@ -133,6 +133,12 @@ class TpfaLinearizer
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static const bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    // We cannot support DUNE matrices/vectors on the GPU, so use our own implementations
+    using MatrixBlockGPU = Opm::gpuistl::MiniMatrix<Scalar, numEq * numEq>;
+    using VectorBlockGPU = Opm::gpuistl::MiniVector<Scalar, numEq>;
+#endif
+
     // copying the linearizer is not a good idea
     TpfaLinearizer(const TpfaLinearizer&) = delete;
 //! \endcond
@@ -1083,6 +1089,9 @@ private:
         if (ii < numCells)
         {
             const unsigned globI = domain.cells[ii];
+            // access some more info thing
+            VectorBlockGPU res(0.0);
+            MatrixBlockGPU bMat(0.0);
         }
     }
 #endif
