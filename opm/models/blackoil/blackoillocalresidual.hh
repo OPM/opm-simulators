@@ -183,7 +183,7 @@ public:
         PolymerModule::addStorage(storage, intQuants);
 
         // deal with energy (if present)
-        EnergyModule::addStorage(storage, intQuants);
+        EnergyModule::template addStorage<LhsEval>(storage, intQuants);
 
         // deal with foam (if present)
         FoamModule::addStorage(storage, intQuants);

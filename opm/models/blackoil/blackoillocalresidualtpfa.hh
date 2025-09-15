@@ -47,11 +47,16 @@
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
+
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <array>
 #include <cassert>
 #include <stdexcept>
 #include <string>
+
+#include <opm/common/utility/gpuistl_if_available.hpp>
 
 namespace Opm {
 /*!
@@ -59,6 +64,7 @@ namespace Opm {
  *
  * \brief Calculates the local residual of the black oil model.
  */
+
 template <class TypeTag>
 class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLocalResidual>
 {
@@ -151,24 +157,31 @@ public:
                         unsigned timeIdx) const
     {
         const IntensiveQuantities& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
-        computeStorage(storage, intQuants);
+        computeStorage<LhsEval>(storage, intQuants);
     }
 
-    template <class LhsEval>
-    static void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
-                               const IntensiveQuantities& intQuants)
+    // The nice pattern of having a fluidSystem() function as used in fluidState
+    // Does not work as nicely here when we are dealing with static functions
+    // and a class without any fluidsystem member... Should find way to avoid duplicating
+    // the content of this function.
+    template <class LhsEval, class StorageType, class IntensiveQuantitiesType = IntensiveQuantities>
+    OPM_HOST_DEVICE static void computeStorage(StorageType& storage,
+                               const IntensiveQuantitiesType& intQuants)
     {
-        OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
+        // OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
         // retrieve the intensive quantities for the SCV at the specified point in time
         const auto& fs = intQuants.fluidState();
         storage = 0.0;
 
+        FluidSystem const* fsysptr = &intQuants.getFluidSystem();
+        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+            if (!fsysptr->phaseIsActive(phaseIdx)) {
                 continue;
             }
             unsigned activeCompIdx =
-                FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                fsysptr->canonicalToActiveCompIdx(fsysptr->solventComponentIndex(phaseIdx));
             LhsEval surfaceVolume =
                 Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
                 Toolbox::template decay<LhsEval>(fs.invB(phaseIdx)) *
@@ -177,60 +190,71 @@ public:
             storage[conti0EqIdx + activeCompIdx] += surfaceVolume;
 
             // account for dissolved gas
-            if (phaseIdx == oilPhaseIdx && FluidSystem::enableDissolvedGas()) {
-                unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
+            if (phaseIdx == oilPhaseIdx && fsysptr->enableDissolvedGas()) {
+                unsigned activeGasCompIdx = fsysptr->canonicalToActiveCompIdx(gasCompIdx);
                 storage[conti0EqIdx + activeGasCompIdx] +=
                     Toolbox::template decay<LhsEval>(intQuants.fluidState().Rs()) *
                     surfaceVolume;
             }
 
             // account for dissolved gas in water
-            if (phaseIdx == waterPhaseIdx && FluidSystem::enableDissolvedGasInWater()) {
-                unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
+            if (phaseIdx == waterPhaseIdx && fsysptr->enableDissolvedGasInWater()) {
+                unsigned activeGasCompIdx = fsysptr->canonicalToActiveCompIdx(gasCompIdx);
                 storage[conti0EqIdx + activeGasCompIdx] +=
                     Toolbox::template decay<LhsEval>(intQuants.fluidState().Rsw()) *
                     surfaceVolume;
             }
 
             // account for vaporized oil
-            if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedOil()) {
-                unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
+            if (phaseIdx == gasPhaseIdx && fsysptr->enableVaporizedOil()) {
+                unsigned activeOilCompIdx = fsysptr->canonicalToActiveCompIdx(oilCompIdx);
                 storage[conti0EqIdx + activeOilCompIdx] +=
                     Toolbox::template decay<LhsEval>(intQuants.fluidState().Rv()) *
                     surfaceVolume;
             }
 
             // account for vaporized water
-            if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedWater()) {
-                unsigned activeWaterCompIdx = FluidSystem::canonicalToActiveCompIdx(waterCompIdx);
+            if (phaseIdx == gasPhaseIdx && fsysptr->enableVaporizedWater()) {
+                unsigned activeWaterCompIdx = fsysptr->canonicalToActiveCompIdx(waterCompIdx);
                 storage[conti0EqIdx + activeWaterCompIdx] +=
                     Toolbox::template decay<LhsEval>(intQuants.fluidState().Rvw()) *
                     surfaceVolume;
             }
         }
 
-        adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex());
+        adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex(), fsysptr);
 
-        // deal with solvents (if present)
-        SolventModule::addStorage(storage, intQuants);
+        // These have to be protected because I have not bothered to change the signature
+        // in each of these classes to be generic in terms of storage type.
+        if constexpr (usesStaticFluidSystem)
+        {
 
-        // deal with zFracton (if present)
-        ExtboModule::addStorage(storage, intQuants);
+            // deal with solvents (if present)
+            SolventModule::addStorage(storage, intQuants);
 
-        // deal with polymer (if present)
-        PolymerModule::addStorage(storage, intQuants);
+            // deal with zFracton (if present)
+            ExtboModule::addStorage(storage, intQuants);
 
+            // deal with polymer (if present)
+            PolymerModule::addStorage(storage, intQuants);
+        }
+
+        // TODO: figure out why the energumodule gives really wrong answers on gpu (a couple orders of magnitutde)
         // deal with energy (if present)
-        EnergyModule::addStorage(storage, intQuants);
+        EnergyModule::template addStorage<LhsEval>(storage, intQuants);
 
-        // deal with foam (if present)
-        FoamModule::addStorage(storage, intQuants);
+        if constexpr (usesStaticFluidSystem)
+        {
+            // deal with foam (if present)
+            FoamModule::addStorage(storage, intQuants);
 
-        // deal with salt (if present)
-        BrineModule::addStorage(storage, intQuants);
+            // deal with salt (if present)
+            BrineModule::addStorage(storage, intQuants);
 
-        // deal with bioeffects (if present)
-        BioeffectsModule::addStorage(storage, intQuants);
+            // deal with bioeffects (if present)
+            BioeffectsModule::addStorage(storage, intQuants);
+
+        }
     }
 
     /*!
@@ -238,14 +262,15 @@ public:
      * one main difference: The darcy flux is calculated here, not
      * read from the extensive quantities of the element context.
      */
-    static void computeFlux(RateVector& flux,
-                            RateVector& darcy,
+    template <class ModuleParamsT, class RateVectorT, class IntensiveQuantitiesT, class ResidualNBInfoT>
+    OPM_HOST_DEVICE static void computeFlux(RateVectorT& flux,
+                            RateVectorT& darcy,
                             const unsigned globalIndexIn,
                             const unsigned globalIndexEx,
-                            const IntensiveQuantities& intQuantsIn,
-                            const IntensiveQuantities& intQuantsEx,
-                            const ResidualNBInfo& nbInfo,
-                            const ModuleParams& moduleParams)
+                            const IntensiveQuantitiesT& intQuantsIn,
+                            const IntensiveQuantitiesT& intQuantsEx,
+                            const ResidualNBInfoT& nbInfo,
+                            const ModuleParamsT& moduleParams)
     {
         OPM_TIMEBLOCK_LOCAL(computeFlux, Subsystem::Assembly);
         flux = 0.0;
@@ -332,16 +357,17 @@ public:
                          problem.moduleParams());
     }
 
-    static void calculateFluxes_(RateVector& flux,
-                                 RateVector& darcy,
-                                 const IntensiveQuantities& intQuantsIn,
-                                 const IntensiveQuantities& intQuantsEx,
+    template <class RateVectorT, class IntensiveQuantitiesT, class ResidualNBInfoT, class ModuleParamsT>
+    OPM_HOST_DEVICE static void calculateFluxes_(RateVectorT& flux,
+                                 RateVectorT& darcy,
+                                 const IntensiveQuantitiesT& intQuantsIn,
+                                 const IntensiveQuantitiesT& intQuantsEx,
                                  const unsigned& globalIndexIn,
                                  const unsigned& globalIndexEx,
-                                 const ResidualNBInfo& nbInfo,
-                                 const ModuleParams& moduleParams)
+                                 const ResidualNBInfoT& nbInfo,
+                                 const ModuleParamsT& moduleParams)
     {
-        OPM_TIMEBLOCK_LOCAL(calculateFluxes, Subsystem::Assembly);
+        // OPM_TIMEBLOCK_LOCAL(calculateFluxes, Subsystem::Assembly);
         const Scalar Vin = nbInfo.Vin;
         const Scalar Vex = nbInfo.Vex;
         const Scalar distZg = nbInfo.dZg;
@@ -350,8 +376,11 @@ public:
         const Scalar faceArea = nbInfo.faceArea;
         FaceDir::DirEnum facedir = nbInfo.faceDir;
 
+        // TODO: this can be made cleaner by centralizing this logic in the getter
+        FluidSystem fsys = intQuantsIn.getFluidSystem();
+
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+            if (!fsys.phaseIsActive(phaseIdx)) {
                 continue;
             }
             // darcy flux calculation
@@ -386,6 +415,7 @@ public:
             if constexpr (enableBioeffects || enableSaltPrecipitation) {
                 transMult *= (intQuantsIn.permFactor() + Toolbox::value(intQuantsEx.permFactor())) / 2;
             }
+
             Evaluation darcyFlux;
             if (globalUpIndex == globalIndexIn) {
                     darcyFlux = pressureDifference * up.mobility(phaseIdx, facedir) * transMult * (-trans / faceArea);
@@ -395,7 +425,7 @@ public:
             }
 
             unsigned activeCompIdx =
-                FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                fsys.canonicalToActiveCompIdx(fsys.solventComponentIndex(phaseIdx));
             // NB! For the FLORES fluxes without derivatives
             darcy[conti0EqIdx + activeCompIdx] = darcyFlux.value() * faceArea;
 
@@ -403,8 +433,9 @@ public:
             // if (upIdx == globalFocusDofIdx){
             if (globalUpIndex == globalIndexIn) {
                 const auto& invB
-                    = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx);
+                    = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx, fsys);
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
+                // This line causes divergence between CPU and GPU in residual
                 evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
                 if constexpr (enableFullyImplicitThermal) {
                     EnergyModule::template
@@ -419,7 +450,7 @@ public:
                         addBrineFluxes_<Evaluation, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
                 }
             } else {
-                const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx);
+                const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx, fsys);
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
                 evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
                 if constexpr (enableFullyImplicitThermal) {
@@ -488,7 +519,7 @@ public:
             EnergyModule::addHeatFlux(flux, heatFlux);
         }
         // NB need to be tha last energy call since it does scaling
-        // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx); // TODO: write a new computeFlux that does not use elemCtx
 
         // deal with foam (if present)
         static_assert(!enableFoam,
@@ -509,17 +540,17 @@ public:
         }
 
         // deal with dispersion (if present). opm-models expects per area flux (added in the tmpdispersivity).
-        if constexpr (enableDispersion) {
-            typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
-            DispersionModule::ExtensiveQuantities::update(normVelocityAvg, intQuantsIn, intQuantsEx);
-            const Scalar dispersivity = nbInfo.dispersivity;
-            const Scalar tmpdispersivity = dispersivity / faceArea;
-            DispersionModule::addDispersiveFlux(flux,
-                                                intQuantsIn,
-                                                intQuantsEx,
-                                                tmpdispersivity,
-                                                normVelocityAvg);
-        }
+        // if constexpr (enableDispersion) {
+        //     typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
+        //     DispersionModule::ExtensiveQuantities::update(normVelocityAvg, intQuantsIn, intQuantsEx);
+        //     const Scalar dispersivity = nbInfo.dispersivity;
+        //     const Scalar tmpdispersivity = dispersivity / faceArea;
+        //     DispersionModule::addDispersiveFlux(flux,
+        //                                         intQuantsIn,
+        //                                         intQuantsEx,
+        //                                         tmpdispersivity,
+        //                                         normVelocityAvg);
+        // }
 
         // apply the scaling for the urea equation in MICP
         if constexpr (enableMICP) {
@@ -527,31 +558,46 @@ public:
         }
     }
 
-    template <class BoundaryConditionData>
-    static void computeBoundaryFlux(RateVector& bdyFlux,
-                                    const Problem& problem,
+    template <class BoundaryConditionData, class RateVectorLocal, class LocalProblem>
+    OPM_HOST_DEVICE static void computeBoundaryFlux(RateVectorLocal& bdyFlux,
+                                    const LocalProblem& problem,
                                     const BoundaryConditionData& bdyInfo,
                                     const IntensiveQuantities& insideIntQuants,
                                     unsigned globalSpaceIdx)
     {
-        switch (bdyInfo.type) {
-        case BCType::NONE:
-            bdyFlux = 0.0;
-            break;
-        case BCType::RATE:
-            computeBoundaryFluxRate(bdyFlux, bdyInfo);
-            break;
-        case BCType::FREE:
-        case BCType::DIRICHLET:
-            computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-            break;
-        case BCType::THERMAL:
-            computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-            break;
-        default:
-            throw std::logic_error("Unknown boundary condition type " +
-                                   std::to_string(static_cast<int>(bdyInfo.type)) +
-                                   " in computeBoundaryFlux()." );
+        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+        if constexpr (usesStaticFluidSystem)
+        {
+            switch (bdyInfo.type) {
+            case BCType::NONE:
+                bdyFlux = 0.0;
+                break;
+            case BCType::RATE:
+                computeBoundaryFluxRate(bdyFlux, bdyInfo);
+                break;
+            case BCType::FREE:
+            case BCType::DIRICHLET:
+                computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            case BCType::THERMAL:
+                computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            default:
+                throw std::logic_error("Unknown boundary condition type " +
+                                    std::to_string(static_cast<int>(bdyInfo.type)) +
+                                    " in computeBoundaryFlux()." );
+            }
+        } else {
+            switch (bdyInfo.type) {
+            case BCType::NONE:
+                bdyFlux = 0.0;
+                break;
+            case BCType::THERMAL:
+                computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            default:
+                assert(false && "Only THERMAL BC supported when FluidSystem is non-static.");
+            }
         }
     }
 
@@ -660,8 +706,10 @@ public:
         static_assert(!enablePolymer,
                       "Relevant treatment of boundary conditions must be implemented before enabling.");
 
+        FluidSystem const* fsysptr = &insideIntQuants.getFluidSystem();
+
         // make sure that the right mass conservation quantities are used
-        adaptMassConservationQuantities_(bdyFlux, insideIntQuants.pvtRegionIndex());
+        adaptMassConservationQuantities_(bdyFlux, insideIntQuants.pvtRegionIndex(), fsysptr);
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
@@ -671,9 +719,9 @@ public:
 #endif
     }
 
-    template <class BoundaryConditionData>
-    static void computeBoundaryThermal(const Problem& problem,
-                                       RateVector& bdyFlux,
+    template <class ProblemLocal, class BoundaryConditionData, class RateVectorLocal>
+    OPM_HOST_DEVICE static void computeBoundaryThermal(const ProblemLocal& problem,
+                                       RateVectorLocal& bdyFlux,
                                        const BoundaryConditionData& bdyInfo,
                                        const IntensiveQuantities& insideIntQuants,
                                        [[maybe_unused]] unsigned globalSpaceIdx)
@@ -686,8 +734,14 @@ public:
         if constexpr (enableFullyImplicitThermal) {
             Evaluation heatFlux;
             // avoid overload of functions with same numeber of elements in eclproblem
-            Scalar alpha =
-                problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+            bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+            Scalar alpha;
+            if constexpr (usesStaticFluidSystem)
+            {
+                alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+            } else {
+                alpha = problem.getAlpha(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+            }
             unsigned inIdx = 0;//dummy
             // always calculated with derivatives of this cell
             EnergyModule::ExtensiveQuantities::updateEnergyBoundary(heatFlux,
@@ -863,6 +917,92 @@ public:
         }
     }
 
+    template <class UpEval, class RateVectorT, class Eval,class FluidState>
+    OPM_HOST_DEVICE static void evalPhaseFluxes_(RateVectorT& flux,
+                                 unsigned phaseIdx,
+                                 unsigned pvtRegionIdx,
+                                 const Eval& surfaceVolumeFlux,
+                                 const FluidState& upFs)
+    {
+        // TODO: this can be made cleaner by centralizing this logic in the getter
+        FluidSystem fsys = upFs.fluidSystem();
+
+
+        unsigned activeCompIdx =
+            fsys.canonicalToActiveCompIdx(fsys.solventComponentIndex(phaseIdx));
+
+        if constexpr (blackoilConserveSurfaceVolume) {
+            flux[conti0EqIdx + activeCompIdx] += surfaceVolumeFlux;
+        }
+        else {
+            flux[conti0EqIdx + activeCompIdx] += surfaceVolumeFlux *
+                                                 fsys.referenceDensity(phaseIdx, pvtRegionIdx);
+        }
+
+        if (phaseIdx == oilPhaseIdx) {
+            // dissolved gas (in the oil phase).
+            if (fsys.enableDissolvedGas()) {
+                const auto& Rs = BlackOil::getRs_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
+
+                const unsigned activeGasCompIdx = fsys.canonicalToActiveCompIdx(gasCompIdx);
+                if constexpr (blackoilConserveSurfaceVolume) {
+                    flux[conti0EqIdx + activeGasCompIdx] += Rs * surfaceVolumeFlux;
+                }
+                else {
+                    flux[conti0EqIdx + activeGasCompIdx] +=
+                        Rs * surfaceVolumeFlux *
+                        fsys.referenceDensity(gasPhaseIdx, pvtRegionIdx);
+                }
+            }
+        }
+        else if (phaseIdx == waterPhaseIdx) {
+            // dissolved gas (in the water phase).
+            if (fsys.enableDissolvedGasInWater()) {
+                const auto& Rsw = BlackOil::getRsw_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
+
+                const unsigned activeGasCompIdx = fsys.canonicalToActiveCompIdx(gasCompIdx);
+                if constexpr (blackoilConserveSurfaceVolume) {
+                    flux[conti0EqIdx + activeGasCompIdx] += Rsw * surfaceVolumeFlux;
+                }
+                else {
+                    flux[conti0EqIdx + activeGasCompIdx] +=
+                        Rsw * surfaceVolumeFlux *
+                        fsys.referenceDensity(gasPhaseIdx, pvtRegionIdx);
+                }
+            }
+        }
+        else if (phaseIdx == gasPhaseIdx) {
+            // vaporized oil (in the gas phase).
+            if (fsys.enableVaporizedOil()) {
+                const auto& Rv = BlackOil::getRv_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
+
+                const unsigned activeOilCompIdx = fsys.canonicalToActiveCompIdx(oilCompIdx);
+                if constexpr (blackoilConserveSurfaceVolume) {
+                    flux[conti0EqIdx + activeOilCompIdx] += Rv * surfaceVolumeFlux;
+                }
+                else {
+                    flux[conti0EqIdx + activeOilCompIdx] +=
+                        Rv * surfaceVolumeFlux *
+                        fsys.referenceDensity(oilPhaseIdx, pvtRegionIdx);
+                }
+            }
+             // vaporized water (in the gas phase).
+            if (fsys.enableVaporizedWater()) {
+                const auto& Rvw = BlackOil::getRvw_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
+
+                const unsigned activeWaterCompIdx = fsys.canonicalToActiveCompIdx(waterCompIdx);
+                if constexpr (blackoilConserveSurfaceVolume) {
+                    flux[conti0EqIdx + activeWaterCompIdx] += Rvw * surfaceVolumeFlux;
+                }
+                else {
+                    flux[conti0EqIdx + activeWaterCompIdx] +=
+                        Rvw * surfaceVolumeFlux *
+                        fsys.referenceDensity(waterPhaseIdx, pvtRegionIdx);
+                }
+            }
+        }
+    }
+
     /*!
      * \brief Helper function to convert the mass-related parts of a Dune::FieldVector
      *        that stores conservation quantities in terms of "surface-volume" to the
@@ -899,6 +1039,36 @@ public:
                 const unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
                 container[conti0EqIdx + activeOilCompIdx] *=
                     FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
+            }
+        }
+    }
+
+    template <class ScalarVector, class FsysType>
+    OPM_HOST_DEVICE static void adaptMassConservationQuantities_(ScalarVector& container,
+                                                 unsigned pvtRegionIdx,
+                                                 FsysType* fsysptr)
+    {
+        if constexpr (!blackoilConserveSurfaceVolume) {
+            // convert "surface volume" to mass. this is complicated a bit by the fact that
+            // not all phases are necessarily enabled. (we here assume that if a fluid phase
+            // is disabled, its respective "main" component is not considered as well.)
+
+            if constexpr (waterEnabled) {
+                const unsigned activeWaterCompIdx = fsysptr->canonicalToActiveCompIdx(waterCompIdx);
+                container[conti0EqIdx + activeWaterCompIdx] *=
+                    fsysptr->referenceDensity(waterPhaseIdx, pvtRegionIdx);
+            }
+
+            if constexpr (gasEnabled) {
+                const unsigned activeGasCompIdx = fsysptr->canonicalToActiveCompIdx(gasCompIdx);
+                container[conti0EqIdx + activeGasCompIdx] *=
+                    fsysptr->referenceDensity(gasPhaseIdx, pvtRegionIdx);
+            }
+
+            if constexpr (oilEnabled) {
+                const unsigned activeOilCompIdx = fsysptr->canonicalToActiveCompIdx(oilCompIdx);
+                container[conti0EqIdx + activeOilCompIdx] *=
+                    fsysptr->referenceDensity(oilPhaseIdx, pvtRegionIdx);
             }
         }
     }

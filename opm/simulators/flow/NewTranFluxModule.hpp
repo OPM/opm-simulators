@@ -49,6 +49,8 @@
 
 #include <opm/common/utility/gpuDecorators.hpp>
 
+#include <opm/common/utility/gpuDecorators.hpp>
+
 #include <array>
 
 namespace Opm {
@@ -309,7 +311,7 @@ public:
         }
     }
 
-    template<class EvalType>
+    template<class EvalType, class ModuleParamsT = ModuleParams>
     OPM_HOST_DEVICE static void calculatePhasePressureDiff_(short& upIdx,
                                             short& dnIdx,
                                             EvalType& pressureDifference,
@@ -324,7 +326,7 @@ public:
                                             const unsigned globalIndexEx,
                                             const Scalar distZg,
                                             const Scalar thpres,
-                                            const ModuleParams& moduleParams)
+                                            const ModuleParamsT& moduleParams)
     {
 
         // check shortcut: if the mobility of the phase is zero in the interior as

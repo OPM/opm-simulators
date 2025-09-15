@@ -42,7 +42,7 @@
 
 
 __global__ void fetchSparseTableValuesInKernel(Opm::SparseTable<int, Opm::gpuistl::GpuView> tableView,
-                                               std::array<int, 6>* output)
+                                               std::array<int, 7>* output)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx == 0) {
@@ -53,6 +53,7 @@ __global__ void fetchSparseTableValuesInKernel(Opm::SparseTable<int, Opm::gpuist
                 (*output)[offset++] = e;
             }
         }
+        (*output)[offset++] = tableView.dataSize();
     }
 }
 
@@ -83,11 +84,11 @@ BOOST_AUTO_TEST_CASE(TestUsingSparseTableInKernel)
     auto gpuBufferTable = Opm::gpuistl::copy_to_gpu<int>(cpuTable);
     auto gpuTableView = Opm::gpuistl::make_view(gpuBufferTable);
 
-    auto valuesFetchedFromGpu = Opm::gpuistl::make_gpu_unique_ptr<std::array<int, 6>>({-1});
+    auto valuesFetchedFromGpu = Opm::gpuistl::make_gpu_unique_ptr<std::array<int, 7>>({-1});
 
     fetchSparseTableValuesInKernel<<<1, 1>>>(gpuTableView, valuesFetchedFromGpu.get());
 
-    auto hostValues = Opm::gpuistl::copyFromGPU<std::array<int, 6>>(valuesFetchedFromGpu);
+    auto hostValues = Opm::gpuistl::copyFromGPU<std::array<int, 7>>(valuesFetchedFromGpu);
 
     BOOST_CHECK_EQUAL(hostValues[0], 1);
     BOOST_CHECK_EQUAL(hostValues[1], 2);
@@ -95,4 +96,5 @@ BOOST_AUTO_TEST_CASE(TestUsingSparseTableInKernel)
     BOOST_CHECK_EQUAL(hostValues[3], 4);
     BOOST_CHECK_EQUAL(hostValues[4], 5);
     BOOST_CHECK_EQUAL(hostValues[5], 6);
+    BOOST_CHECK_EQUAL(hostValues[6], 6);
 }
