@@ -21,6 +21,7 @@
 #define OPM_GLOBAL_WELL_INFO_HEADER_INCLUDED
 
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -29,9 +30,9 @@ namespace Opm {
 
 class Schedule;
 class Well;
-enum class WellInjectorCMode;
-enum class WellProducerCMode;
-enum class WellStatus;
+enum class WellInjectorCMode : std::uint16_t;
+enum class WellProducerCMode : std::uint16_t;
+enum class WellStatus : std::uint8_t;
 
 
 /*

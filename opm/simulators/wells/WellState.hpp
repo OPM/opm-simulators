@@ -57,7 +57,7 @@ template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
 template<class Scalar> class ConnFracStatistics;
 class Schedule;
-enum class WellStatus;
+enum class WellStatus : std::uint8_t;
 
 /// The state of a set of wells, tailored for use by the fully
 /// implicit blackoil simulator.
