@@ -36,9 +36,6 @@
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilextbomodules.hh>
-#include <opm/models/blackoil/blackoilfoammodules.hh>
-#include <opm/models/blackoil/blackoilmicpmodules.hh>
-#include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 
@@ -122,11 +119,8 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
     using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
     using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     using EnergyModule = BlackOilEnergyModule<TypeTag, enableEnergy>;
-    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
-    using MICPModule = BlackOilMICPModule<TypeTag, enableMICP>;
 
     static_assert(numPhases == 3, "The black-oil model assumes three phases!");
     static_assert(numComponents == 3, "The black-oil model assumes three components!");
@@ -679,7 +673,7 @@ public:
         if (BrineModule::hasPcfactTables() && primaryVarsMeaningBrine() == BrineMeaning::Sp) {
             const unsigned satnumRegionIdx = problem.satnumRegionIndex(globalDofIdx);
             const Scalar Sp = saltConcentration_();
-            const Scalar porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
+            const Scalar porosityFactor  = std::min(1.0 - Sp, 1.0); //phi/phi_0
             const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
             pcFactor_ = pcfactTable.eval(porosityFactor, /*extrapolation=*/true);
         }
@@ -727,7 +721,7 @@ public:
                                                                               saltConcentration);
                     setPrimaryVarsMeaningWater(WaterMeaning::Rsw);
                     const Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
-                    (*this)[Indices::waterSwitchIdx] = min(rswSat, rswMax); //primary variable becomes Rsw
+                    (*this)[Indices::waterSwitchIdx] = std::min(rswSat, rswMax); //primary variable becomes Rsw
                     setPrimaryVarsMeaningPressure(PressureMeaning::Pw);
                     this->setScaledPressure_(pw);
                     changed = true;
@@ -774,7 +768,7 @@ public:
 
                 const Scalar rsw = (*this)[Indices::waterSwitchIdx];
                 const Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
-                if (rsw > min(rswSat, rswMax)) {
+                if (rsw > std::min(rswSat, rswMax)) {
                     // the gas phase appears, i.e., switch the primary variables to WaterMeaning::Sw
                     setPrimaryVarsMeaningWater(WaterMeaning::Sw);
                     (*this)[Indices::waterSwitchIdx] = 1.0; // hydrocarbon water saturation
