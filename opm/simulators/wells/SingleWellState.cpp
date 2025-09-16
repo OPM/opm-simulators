@@ -122,8 +122,12 @@ void SingleWellState<Scalar, IndexTraits>::open()
 }
 
 template<typename Scalar, typename IndexTraits>
-void SingleWellState<Scalar, IndexTraits>::updateStatus(Well::Status new_status)
+bool SingleWellState<Scalar, IndexTraits>::updateStatus(Well::Status new_status)
 {
+    if (this->status == new_status) {
+        return false;
+    }
+
     switch (new_status) {
     case Well::Status::OPEN:
         this->open();
@@ -137,6 +141,7 @@ void SingleWellState<Scalar, IndexTraits>::updateStatus(Well::Status new_status)
     default:
         throw std::logic_error("Invalid well status");
     }
+    return true;
 }
 
 template<typename Scalar, typename IndexTraits>
