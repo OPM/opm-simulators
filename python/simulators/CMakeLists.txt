@@ -49,6 +49,12 @@ pybind11_add_module(GasWater ${PYBIND11_SYSTEM}
   ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
   )
 
+# Create a convenience target to build all Python simulator modules
+add_custom_target(python_simulator_modules
+  DEPENDS BlackOil GasWater
+  COMMENT "Building all Python simulator modules (BlackOil, GasWater, etc.)"
+)
+
 find_file(PYTHON_INSTALL_PY install.py
   PATHS ${opm-common_DIR} ${opm-common_PYTHON_COMMON_DIR}
   PATH_SUFFIXES python NO_DEFAULT_PATH REQUIRED)
