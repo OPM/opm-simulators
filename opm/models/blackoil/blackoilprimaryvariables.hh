@@ -28,17 +28,12 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilextbomodules.hh>
-#include <opm/models/blackoil/blackoilfoammodules.hh>
-#include <opm/models/blackoil/blackoilmicpmodules.hh>
-#include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 
@@ -122,11 +117,8 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
     using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
     using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     using EnergyModule = BlackOilEnergyModule<TypeTag, enableEnergy>;
-    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
-    using MICPModule = BlackOilMICPModule<TypeTag, enableMICP>;
 
     static_assert(numPhases == 3, "The black-oil model assumes three phases!");
     static_assert(numComponents == 3, "The black-oil model assumes three components!");
@@ -302,89 +294,6 @@ public:
      */
     void setPrimaryVarsMeaningSolvent(SolventMeaning newMeaning)
     { primaryVarsMeaningSolvent_ = newMeaning; }
-
-    /*!
-     * \copydoc ImmisciblePrimaryVariables::assignMassConservative
-     */
-    template <class FluidState>
-    void assignMassConservative(const FluidState& fluidState,
-                                const MaterialLawParams& matParams,
-                                bool isInEquilibrium = false)
-    {
-        using ConstEvaluation = std::remove_reference_t<typename FluidState::Scalar>;
-        using FsEvaluation = std::remove_const_t<ConstEvaluation>;
-        using FsToolbox = MathToolbox<FsEvaluation>;
-
-#ifndef NDEBUG
-        // make sure the temperature is the same in all fluid phases
-        for (unsigned phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
-            Valgrind::CheckDefined(fluidState.temperature(0));
-            Valgrind::CheckDefined(fluidState.temperature(phaseIdx));
-
-            assert(fluidState.temperature(0) == fluidState.temperature(phaseIdx));
-        }
-#endif // NDEBUG
-
-        // for the equilibrium case, we don't need complicated
-        // computations.
-        if (isInEquilibrium) {
-            assignNaive(fluidState);
-            return;
-        }
-
-        // If your compiler bails out here, you're probably not using a suitable black
-        // oil fluid system.
-        typename FluidSystem::template ParameterCache<Scalar> paramCache;
-        paramCache.setRegionIndex(pvtRegionIdx_);
-        paramCache.setMaxOilSat(FsToolbox::value(fluidState.saturation(oilPhaseIdx)));
-
-        // create a mutable fluid state with well defined densities based on the input
-        using NcpFlash = NcpFlash<Scalar, FluidSystem>;
-        using FlashFluidState = CompositionalFluidState<Scalar, FluidSystem>;
-        FlashFluidState fsFlash;
-        fsFlash.setTemperature(FsToolbox::value(fluidState.temperature(/*phaseIdx=*/0)));
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            fsFlash.setPressure(phaseIdx, FsToolbox::value(fluidState.pressure(phaseIdx)));
-            fsFlash.setSaturation(phaseIdx, FsToolbox::value(fluidState.saturation(phaseIdx)));
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                fsFlash.setMoleFraction(phaseIdx, compIdx,
-                                        FsToolbox::value(fluidState.moleFraction(phaseIdx, compIdx)));
-            }
-        }
-
-        paramCache.updateAll(fsFlash);
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                continue;
-            }
-
-            const Scalar rho =
-                FluidSystem::template density<FlashFluidState, Scalar>(fsFlash, paramCache, phaseIdx);
-            fsFlash.setDensity(phaseIdx, rho);
-        }
-
-        // calculate the "global molarities"
-        ComponentVector globalMolarities(0.0);
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                globalMolarities[compIdx] +=
-                    fsFlash.saturation(phaseIdx) * fsFlash.molarity(phaseIdx, compIdx);
-            }
-        }
-
-        // use a flash calculation to calculate a fluid state in
-        // thermodynamic equilibrium
-
-        // run the flash calculation
-        NcpFlash::template solve<MaterialLaw>(fsFlash, matParams, paramCache, globalMolarities);
-
-        // use the result to assign the primary variables
-        assignNaive(fsFlash);
-    }
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::assignNaive
@@ -679,7 +588,7 @@ public:
         if (BrineModule::hasPcfactTables() && primaryVarsMeaningBrine() == BrineMeaning::Sp) {
             const unsigned satnumRegionIdx = problem.satnumRegionIndex(globalDofIdx);
             const Scalar Sp = saltConcentration_();
-            const Scalar porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
+            const Scalar porosityFactor  = std::min(1.0 - Sp, 1.0); //phi/phi_0
             const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
             pcFactor_ = pcfactTable.eval(porosityFactor, /*extrapolation=*/true);
         }
@@ -727,7 +636,7 @@ public:
                                                                               saltConcentration);
                     setPrimaryVarsMeaningWater(WaterMeaning::Rsw);
                     const Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
-                    (*this)[Indices::waterSwitchIdx] = min(rswSat, rswMax); //primary variable becomes Rsw
+                    (*this)[Indices::waterSwitchIdx] = std::min(rswSat, rswMax); //primary variable becomes Rsw
                     setPrimaryVarsMeaningPressure(PressureMeaning::Pw);
                     this->setScaledPressure_(pw);
                     changed = true;
@@ -774,7 +683,7 @@ public:
 
                 const Scalar rsw = (*this)[Indices::waterSwitchIdx];
                 const Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
-                if (rsw > min(rswSat, rswMax)) {
+                if (rsw > std::min(rswSat, rswMax)) {
                     // the gas phase appears, i.e., switch the primary variables to WaterMeaning::Sw
                     setPrimaryVarsMeaningWater(WaterMeaning::Sw);
                     (*this)[Indices::waterSwitchIdx] = 1.0; // hydrocarbon water saturation
