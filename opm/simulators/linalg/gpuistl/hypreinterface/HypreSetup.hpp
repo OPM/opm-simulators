@@ -86,7 +86,7 @@ std::vector<HYPRE_Int> computeRowIndexesWithMappingCpu(const MatrixType& matrix,
  * @throws HypreError if initialization fails
  */
 inline void
-initialize(bool use_gpu_backend)
+initialize([[maybe_unused]] bool use_gpu_backend)
 {
     // Set memory location and execution policy
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
