@@ -26,6 +26,8 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/common/dynmatrix.hh>
 
+#include <cstdint>
+
 namespace Opm {
 
 template<class Scalar> class ParallelWellInfo;
