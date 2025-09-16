@@ -957,17 +957,21 @@ namespace Opm
             }
         }
         this->changed_to_open_this_step_ = false;
-        const bool well_operable = this->operability_status_.isOperableAndSolvable();
+        changed_to_stopped_this_step_ = false;
 
-        if (!well_operable && old_well_operable) {
-            deferred_logger.debug(" well " + this->name() + " gets STOPPED during iteration ");
+        const bool well_operable = this->operability_status_.isOperableAndSolvable();
+        if (!well_operable) {
             this->stopWell();
-            changed_to_stopped_this_step_ = true;
-        } else if (well_operable && !old_well_operable) {
-            deferred_logger.debug(" well " + this->name() + " gets REVIVED during iteration ");
+            if (old_well_operable) {
+                deferred_logger.debug(" well " + this->name() + " gets STOPPED during iteration ");
+                changed_to_stopped_this_step_ = true;
+            }
+        } else if (well_state.isOpen(this->name())) {
             this->openWell();
-            changed_to_stopped_this_step_ = false;
-            this->changed_to_open_this_step_ = true;
+            if (!old_well_operable) {
+                deferred_logger.debug(" well " + this->name() + " gets REVIVED during iteration ");
+                this->changed_to_open_this_step_ = true;
+            }
         }
     }
 
