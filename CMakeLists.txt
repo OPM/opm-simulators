@@ -784,6 +784,7 @@ if(CUDA_FOUND)
                        gpu_resources
                        gpu_smart_pointers
                        is_gpu_pointer
+                       minivector
                        throw_macros_on_gpu
                        preconditioner_factory_gpu
                        gpuBlackOilFluidSystem
