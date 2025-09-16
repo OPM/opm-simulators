@@ -80,13 +80,15 @@ int PyBaseSimulator<TypeTag>::currentStep()
 }
 
 template<class TypeTag>
-py::array_t<double> PyBaseSimulator<TypeTag>::getCellVolumes() {
+py::array_t<double> PyBaseSimulator<TypeTag>::getCellVolumes()
+{
     auto vector = getMaterialState().getCellVolumes();
     return py::array(vector.size(), vector.data());
 }
 
 template<class TypeTag>
-double PyBaseSimulator<TypeTag>::getDT() {
+double PyBaseSimulator<TypeTag>::getDT()
+{
     return getFlowMain().getPreviousReportStepSize();
 }
 
@@ -133,13 +135,6 @@ getPrimaryVarMeaningMap(const std::string &variable) const
     return getFluidState().getPrimaryVarMeaningMap(variable);
 }
 
-// template<class TypeTag>
-// int PyBaseSimulator<TypeTag>::run()
-// {
-//     auto main_object = Opm::Main( this->deck_filename_ );
-//     return main_object.runStatic<Opm::Properties::TTag::FlowGasWaterProblem>();
-// }
-
 template<class TypeTag>
 void PyBaseSimulator<TypeTag>::setPorosity( py::array_t<double,
     py::array::c_style | py::array::forcecast> array)
@@ -185,8 +180,6 @@ int PyBaseSimulator<TypeTag>::step()
     if(checkSimulationFinished()) {
         throw std::logic_error("step() called, but simulation is done");
     }
-    //if (this->debug_)
-    //    this->mainEbos_->getSimTimer()->report(std::cout);
     auto result = getFlowMain().executeStep();
     return result;
 }
@@ -201,7 +194,6 @@ int PyBaseSimulator<TypeTag>::stepCleanup()
 template<class TypeTag>
 int PyBaseSimulator<TypeTag>::stepInit()
 {
-
     if (this->has_run_init_) {
         // Running step_init() multiple times is not implemented yet,
         if (this->has_run_cleanup_) {

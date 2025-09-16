@@ -36,7 +36,7 @@ private:
 public:
     PyBlackOilSimulator(const std::string& deck_filename,
                         const std::vector<std::string>& args)
-    : BaseType(deck_filename, args)
+        : BaseType(deck_filename, args)
     {}
 
     PyBlackOilSimulator(std::shared_ptr<Opm::Deck> deck,
@@ -44,7 +44,7 @@ public:
                         std::shared_ptr<Opm::Schedule> schedule,
                         std::shared_ptr<Opm::SummaryConfig> summary_config,
                         const std::vector<std::string>& args)
-    : BaseType(deck, state, schedule, summary_config, args)
+        : BaseType(deck, state, schedule, summary_config, args)
     {}
 
 };

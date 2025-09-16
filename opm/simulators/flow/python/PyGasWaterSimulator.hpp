@@ -35,7 +35,7 @@ private:
 public:
     PyGasWaterSimulator(const std::string& deck_filename,
                         const std::vector<std::string>& args)
-    : BaseType(deck_filename, args)
+        : BaseType(deck_filename, args)
     {}
 
     PyGasWaterSimulator(std::shared_ptr<Opm::Deck> deck,
@@ -43,10 +43,11 @@ public:
                         std::shared_ptr<Opm::Schedule> schedule,
                         std::shared_ptr<Opm::SummaryConfig> summary_config,
                         const std::vector<std::string>& args)
-    : BaseType(deck, state, schedule, summary_config, args)
+        : BaseType(deck, state, schedule, summary_config, args)
     {}
 
 };
 
 } // namespace Opm::Pybind
+
 #endif // OPM_PY_GASWATER_SIMULATOR_HEADER_INCLUDED

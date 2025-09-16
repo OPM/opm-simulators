@@ -68,7 +68,7 @@ namespace Opm {
 
 template class PyMain<Opm::Properties::TTag::FlowGasWaterProblem>;
 template std::unique_ptr<FlowMain<Opm::Properties::TTag::FlowGasWaterProblem>>
-  flowMainInit<Opm::Properties::TTag::FlowGasWaterProblem>(
+flowMainInit<Opm::Properties::TTag::FlowGasWaterProblem>(
     int argc, char** argv, bool outputCout, bool outputFiles);
 
 }  // namespace Opm
