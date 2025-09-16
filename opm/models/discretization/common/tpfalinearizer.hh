@@ -452,7 +452,7 @@ private:
         const Scalar gravity = problem_().gravity()[dimWorld - 1];
         unsigned numCells = model.numTotalDof();
         neighborInfo_.reserve(numCells, 6 * numCells);
-        std::vector<NeighborInfo> loc_nbinfo;
+        std::vector<NeighborInfo<MatrixBlock>> loc_nbinfo;
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
 
@@ -488,7 +488,7 @@ private:
                         if constexpr (enableDispersion) {
                             nbinfo.dispersivity = problem_().dispersivity(myIdx, neighborIdx);
                         }
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, nbinfo, nullptr};
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo<MatrixBlock>{neighborIdx, nbinfo, nullptr};
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
@@ -1092,6 +1092,8 @@ private:
             // access some more info thing
             VectorBlockGPU res(0.0);
             MatrixBlockGPU bMat(0.0);
+
+            NeighborInfo<MatrixBlockGPU> NeighborInfoGPU;
         }
     }
 #endif
@@ -1129,13 +1131,14 @@ private:
     LinearizationType linearizationType_{};
 
     using ResidualNBInfo = typename LocalResidual::ResidualNBInfo;
+    template <class BlockType = MatrixBlock>
     struct NeighborInfo
     {
         unsigned int neighbor;
         ResidualNBInfo res_nbinfo;
-        MatrixBlock* matBlockAddress;
+        BlockType* matBlockAddress;
     };
-    SparseTable<NeighborInfo> neighborInfo_{};
+    SparseTable<NeighborInfo<MatrixBlock>> neighborInfo_{};
     std::vector<MatrixBlock*> diagMatAddress_{};
 
     struct FlowInfo
