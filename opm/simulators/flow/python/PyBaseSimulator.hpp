@@ -48,13 +48,12 @@ private:
 
 public:
     PyBaseSimulator(const std::string& deckFilename,
-        const std::vector<std::string>& args);
-    PyBaseSimulator(
-    std::shared_ptr<Opm::Deck> deck,
-    std::shared_ptr<Opm::EclipseState> state,
-    std::shared_ptr<Opm::Schedule> schedule,
-    std::shared_ptr<Opm::SummaryConfig> summary_config,
-    const std::vector<std::string>& args);
+                    const std::vector<std::string>& args);
+    PyBaseSimulator(std::shared_ptr<Opm::Deck> deck,
+                    std::shared_ptr<Opm::EclipseState> state,
+                    std::shared_ptr<Opm::Schedule> schedule,
+                    std::shared_ptr<Opm::SummaryConfig> summary_config,
+                    const std::vector<std::string>& args);
 
     void advance(int report_step);
     bool checkSimulationFinished();
@@ -77,8 +76,6 @@ public:
     int step();
     int stepCleanup();
     int stepInit();
-
-    // void initMain();
 
 protected:
     Opm::FlowMain<TypeTag>& getFlowMain() const;

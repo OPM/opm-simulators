@@ -42,7 +42,7 @@ namespace Opm {
 
 template class PyMain<Opm::Properties::TTag::FlowProblemTPFA>;
 template std::unique_ptr<FlowMain<Opm::Properties::TTag::FlowProblemTPFA>>
-  flowMainInit<Opm::Properties::TTag::FlowProblemTPFA>(
+flowMainInit<Opm::Properties::TTag::FlowProblemTPFA>(
     int argc, char** argv, bool outputCout, bool outputFiles);
 
 }  // namespace Opm
