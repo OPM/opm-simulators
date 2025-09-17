@@ -337,9 +337,14 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         void initPrepare(const Matrix& M, Vector& b)
         {
             const bool firstcall = (matrix_ == nullptr);
+            const bool matrix_changed = &M != matrix_;
+
+            if (matrix_changed) {
+                force_recreate_ = true;
+            }
 
             // update matrix entries for solvers.
-            if (firstcall) {
+            if (firstcall || matrix_changed) {
                 // model will not change the matrix object. Hence simply store a pointer
                 // to the original one with a deleter that does nothing.
                 // Outch! We need to be able to scale the linear system! Hence const_cast
@@ -510,10 +515,15 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         /// Return true if we should (re)create the whole solver,
         /// instead of just calling update() on the preconditioner.
-        bool shouldCreateSolver() const
+        bool shouldCreateSolver()
         {
             // Decide if we should recreate the solver or just do
             // a minimal preconditioner update.
+            if (force_recreate_) {
+                force_recreate_ = false;
+                return true;
+            }
+
             if (flexibleSolver_.empty()) {
                 return true;
             }
@@ -667,6 +677,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         std::shared_ptr< CommunicationType > comm_;
         std::unique_ptr<ElementChunksType> element_chunks_;
+        bool force_recreate_ = false;
     }; // end ISTLSolver
 
 } // namespace Opm
