@@ -66,7 +66,7 @@ pybind11_add_module(OnePhase ${PYBIND11_SYSTEM}
 
 # Create a convenience target to build all Python simulator modules
 add_custom_target(python_simulator_modules
-  DEPENDS BlackOil GasWater
+  DEPENDS BlackOil GasWater OnePhase
   COMMENT "Building all Python simulator modules (BlackOil, GasWater, etc.)"
 )
 
