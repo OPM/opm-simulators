@@ -863,8 +863,10 @@ namespace Opm {
                 const auto well_status = this->schedule()
                     .getWell(well_name, report_step).getStatus();
 
-                const bool shut_event = this->wellState().well(w).events.hasEvent(ScheduleEvents::REQUEST_SHUT_WELL);
-                const bool open_event = this->wellState().well(w).events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL);
+                const bool shut_event = this->wellState().well(w).events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)
+                                    && well_status == Well::Status::SHUT;
+                const bool open_event = this->wellState().well(w).events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)
+                                    && well_status == Well::Status::OPEN;
                 const auto& ws = this->wellState().well(well_name);
 
                 if (shut_event && ws.status != Well::Status::SHUT) {
