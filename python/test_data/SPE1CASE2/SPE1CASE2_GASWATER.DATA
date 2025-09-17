@@ -1,0 +1,226 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Copyright (C) 2021 Equinor
+---
+---------------------------------------------------------------------------
+------------------------ SPE1 - CASE 2 ------------------------------------
+---------------------------------------------------------------------------
+
+RUNSPEC
+-- -------------------------------------------------------------------------
+
+TITLE
+   SPE1 - CASE 2 - 2Phase GAS-WATER case 
+
+DIMENS
+   10 10 3 /
+
+-- The number of equilibration regions is inferred from the EQLDIMS
+-- keyword.
+EQLDIMS
+/
+
+-- The number of PVTW tables is inferred from the TABDIMS keyword;
+-- when no data is included in the keyword the default values are used.
+TABDIMS
+/
+
+-- oil is removed to facilitate a gas water test case 
+WATER
+GAS
+
+FIELD
+
+START
+   1 'JAN' 2015 /
+
+WELLDIMS
+-- Item 1: maximum number of wells in the model
+-- 	   - there are two wells in the problem; injector and producer
+-- Item 2: maximum number of grid blocks connected to any one well
+-- 	   - must be one as the wells are located at specific grid blocks
+-- Item 3: maximum number of groups in the model
+-- 	   - we are dealing with only one 'group'
+-- Item 4: maximum number of wells in any one group
+-- 	   - there must be two wells in a group as there are two wells in total
+   2 3 1 2 /
+
+UNIFIN
+UNIFOUT
+
+GRID
+
+-- The INIT keyword is used to request an .INIT file. The .INIT file
+-- is written before the simulation actually starts, and contains grid
+-- properties and saturation tables as inferred from the input
+-- deck. There are no other keywords which can be used to configure
+-- exactly what is written to the .INIT file.
+INIT
+
+-- -------------------------------------------------------------------------
+NOECHO
+
+DX 
+-- There are in total 300 cells with length 1000ft in x-direction	
+   	300*1000 /
+DY
+-- There are in total 300 cells with length 1000ft in y-direction	
+	300*1000 /
+DZ
+-- The layers are 20, 30 and 50 ft thick, in each layer there are 100 cells
+	100*20 100*30 100*50 /
+
+TOPS
+-- The depth of the top of each grid block
+	100*8325 /
+
+PORO
+-- Constant porosity of 0.3 throughout all 300 grid cells
+   	300*0.3 /
+
+PERMX
+-- The layers have perm. 500mD, 50mD and 200mD, respectively.
+	100*500 100*50 100*200 /
+
+PERMY
+-- Equal to PERMX
+	100*500 100*50 100*200 /
+
+PERMZ
+-- Cannot find perm. in z-direction in Odeh's paper
+-- For the time being, we will assume PERMZ equal to PERMX and PERMY:
+	100*500 100*50 100*200 /
+ECHO
+
+PROPS
+-- -------------------------------------------------------------------------
+
+ROCK
+-- Item 1: reference pressure (psia)
+-- Item 2: rock compressibility (psi^{-1})
+
+-- Using values from table 1 in Odeh:
+	14.7 3E-6 /
+
+-- Define here the capillairy pressures
+SWFN
+    .25    .0    0.0
+    .7    1.0    0.0
+/
+
+-- Set the capillairy pressure to zero in this table
+SGFN
+    .3     .0    0.0
+    .75   1.0    0.0
+/
+
+PVTW
+  .0  1.0  3.03E-06  .5  0.0 /
+
+DENSITY
+-- Density (lb per ft³) at surface cond. of 
+-- oil, water and gas, respectively (in that order)
+
+-- Using values from Norne:
+-- In METRIC units:
+--      859.5 1033.0 0.854 /
+-- In FIELD units:
+      	53.66 64.49 0.0533 /
+
+PVDG
+-- Column 1: gas phase pressure (psia)
+-- Column 2: gas formation volume factor (rb per Mscf)
+-- 	     - in Odeh's paper the units are said to be given in rb per bbl, 
+-- 	       but this is assumed to be a mistake: FVF-values in Odeh's paper 
+--	       are given in rb per scf, not rb per bbl. This will be in 
+--	       agreement with conventions
+-- Column 3: gas viscosity (cP)
+
+-- Using values from lower right table in Odeh's table 2:
+14.700	166.666	0.008000
+264.70	12.0930	0.009600
+514.70	6.27400	0.011200
+1014.7	3.19700	0.014000
+2014.7	1.61400	0.018900
+2514.7	1.29400	0.020800
+3014.7	1.08000	0.022800
+4014.7	0.81100	0.026800
+5014.7	0.64900	0.030900
+9014.7	0.38600	0.047000 /
+
+
+SOLUTION
+-- -------------------------------------------------------------------------
+PRESSURE
+300*4700 /
+
+SWAT
+100*0.7  100*0.5 100*0.3 /
+	
+SUMMARY
+-- -------------------------------------------------------------------------	 
+
+-- 2b) Gas saturation at grid points given in Odeh's paper
+BGSAT
+1  1  1 /
+1  1  2 /
+1  1  3 /
+10 1  1 /
+10 1  2 /
+10 1  3 /
+10 10 1 /
+10 10 2 /
+10 10 3 /
+/
+
+WWPR
+/
+
+WGPR
+/
+
+WGIR
+/
+
+WBHP
+/
+
+SCHEDULE
+-- -------------------------------------------------------------------------
+RPTSCHED
+	'PRES' 'SGAS' /
+
+RPTRST
+	'BASIC=1' 'ALLPROPS' /
+
+WELSPECS
+-- Item #: 1	 2	3	4	5	 6
+	'PROD'	'G1'	10	10	8400	'WATER' /
+	'INJ'	'G1'	1	1	8335	'GAS' /
+/
+
+COMPDAT
+-- Item #: 1	2	3	4	5	6	7	8	9
+	'PROD'	10	10	3	3	'OPEN'	1*	1*	0.5 /
+	'INJ'	1	1	1	1	'OPEN'	1*	1*	0.5 /
+/
+
+WCONPROD
+-- Item #:1	2      3     4	   5     9
+	'PROD' 'OPEN' 'BHP' 1*     1* 3* 4000 /
+/
+
+WCONINJE
+-- Item #:1	 2	 3	 4	5      6  7
+	'INJ'	'GAS'	'OPEN'	'RATE'	10000 1* 9014 /
+/
+
+TSTEP
+--Advance the simulater once a month for ONE year:
+31 28 31 30 31 30 31 31 30 31 30 31/ 
+
+
+END

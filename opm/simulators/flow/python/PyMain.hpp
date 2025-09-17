@@ -20,14 +20,11 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_PYMAIN_HEADER_INCLUDED
-#define OPM_PYMAIN_HEADER_INCLUDED
+#ifndef OPM_PYMAINBO_HEADER_INCLUDED
+#define OPM_PYMAINBO_HEADER_INCLUDED
 
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
-
-#include <flow/flow_blackoil.hpp>
 
 #include <cstddef>
 #include <cstdlib>
@@ -37,12 +34,23 @@
 
 namespace Opm {
 
-// ----------------- Python Main class -----------------
+template<class TypeTag>
+std::unique_ptr<FlowMain<TypeTag>>
+flowMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    return std::make_unique<FlowMain<TypeTag>>(argc, argv, outputCout, outputFiles);
+}
+
 // Adds a python-only initialization method
+template<class TypeTag>
 class PyMain : public Main
 {
 public:
-    using FlowMainType = FlowMain<Properties::TTag::FlowProblemTPFA>;
+    using FlowMainType = FlowMain<TypeTag>;
 
     using Main::Main;
 
@@ -83,8 +91,7 @@ public:
             // case. E.g. check that number of phases == 3
             this->setupVanguard();
 
-            return flowBlackoilTpfaMainInit
-                (argc_, argv_, outputCout_, outputFiles_);
+            return flowMainInit<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
         }
 
         // NOTE: exitCode was set by initialize_() above;
@@ -97,4 +104,4 @@ private:
 
 } // namespace Opm
 
-#endif // OPM_PYMAIN_HEADER_INCLUDED
+#endif // OPM_PYMAINBO_HEADER_INCLUDED

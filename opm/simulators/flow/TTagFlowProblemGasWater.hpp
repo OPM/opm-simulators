@@ -1,4 +1,6 @@
 /*
+  Copyright 2025 Equinor ASA.
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -14,25 +16,25 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef FLOW_GASWATER_HPP
-#define FLOW_GASWATER_HPP
 
-#include <opm/simulators/flow/TTagFlowProblemGasWater.hpp>
+#ifndef TTAG_FLOW_PROBLEM_GASWATER_HPP
+#define TTAG_FLOW_PROBLEM_GASWATER_HPP
 
-#include <memory>
+#include <tuple>
 
-namespace Opm {
+namespace Opm::Properties::TTag {
 
-//! \brief Main function used in flow binary.
-int flowGasWaterMain(int argc, char** argv, bool outputCout, bool outputFiles);
+    struct FlowProblem;
 
-//! \brief Main function used in flow_gaswater binary.
-int flowGasWaterMainStandalone(int argc, char** argv);
+    
+    /// Specialized type tag for gas-water simulations.
+    ///
+    /// All properties are otherwise the same as for the regular
+    /// FlowProblem.
+    struct FlowGasWaterProblem {
+        using InheritsFrom = std::tuple<FlowProblem>;
+  };
 
-template<class TypeTag> class FlowMain;
+} // namespace Opm::Properties::TTag
 
-std::unique_ptr<FlowMain<Properties::TTag::FlowGasWaterProblem>>
-flowGasWaterMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
-}
-
-#endif // FLOW_GASWATER_HPP
+#endif // TTAG_FLOW_PROBLEM_GASWATER_HPP
