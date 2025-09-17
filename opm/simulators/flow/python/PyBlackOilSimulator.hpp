@@ -46,8 +46,8 @@ public:
                         const std::vector<std::string>& args)
         : BaseType(deck, state, schedule, summary_config, args)
     {}
-
 };
 
 } // namespace Opm::Pybind
+
 #endif // OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED

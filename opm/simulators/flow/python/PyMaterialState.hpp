@@ -26,7 +26,6 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <cstddef>
-#include <memory>
 
 namespace Opm::Pybind
 {
@@ -42,11 +41,13 @@ namespace Opm::Pybind
 
     public:
         PyMaterialState(Simulator* simulator)
-            : simulator_(simulator) { }
+            : simulator_(simulator)
+        {}
 
         std::vector<double> getCellVolumes();
         std::vector<double> getPorosity();
-        void setPorosity(const double *poro, std::size_t size);
+        void setPorosity(const double* poro, std::size_t size);
+
     private:
         Simulator* simulator_;
     };

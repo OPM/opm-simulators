@@ -24,9 +24,13 @@
 #include <config.h>
 #include <opm/simulators/flow/python/PyBaseSimulator.hpp>
 #endif
+
+#include <stdexcept>
+
 namespace py = pybind11;
 
 namespace Opm::Pybind {
+
 template<class TypeTag>
 PyBaseSimulator<TypeTag>::PyBaseSimulator(const std::string& deck_filename,
                                           const std::vector<std::string>& args)
@@ -36,13 +40,12 @@ PyBaseSimulator<TypeTag>::PyBaseSimulator(const std::string& deck_filename,
 }
 
 template<class TypeTag>
-PyBaseSimulator<TypeTag>::PyBaseSimulator(
-    std::shared_ptr<Opm::Deck> deck,
-    std::shared_ptr<Opm::EclipseState> state,
-    std::shared_ptr<Opm::Schedule> schedule,
-    std::shared_ptr<Opm::SummaryConfig> summary_config,
-    const std::vector<std::string>& args
-)
+PyBaseSimulator<TypeTag>::
+PyBaseSimulator(std::shared_ptr<Deck> deck,
+                std::shared_ptr<EclipseState> state,
+                std::shared_ptr<Schedule> schedule,
+                std::shared_ptr<SummaryConfig> summary_config,
+                const std::vector<std::string>& args)
     : deck_{std::move(deck)}
     , eclipse_state_{std::move(state)}
     , schedule_{std::move(schedule)}
@@ -80,7 +83,8 @@ int PyBaseSimulator<TypeTag>::currentStep()
 }
 
 template<class TypeTag>
-py::array_t<double> PyBaseSimulator<TypeTag>::getCellVolumes()
+py::array_t<double>
+PyBaseSimulator<TypeTag>::getCellVolumes()
 {
     auto vector = getMaterialState().getCellVolumes();
     return py::array(vector.size(), vector.data());
@@ -93,7 +97,8 @@ double PyBaseSimulator<TypeTag>::getDT()
 }
 
 template<class TypeTag>
-py::array_t<double> PyBaseSimulator<TypeTag>::getPorosity()
+py::array_t<double>
+PyBaseSimulator<TypeTag>::getPorosity()
 {
     auto vector = getMaterialState().getPorosity();
     return py::array(vector.size(), vector.data());
@@ -102,7 +107,7 @@ py::array_t<double> PyBaseSimulator<TypeTag>::getPorosity()
 template<class TypeTag>
 py::array_t<double>
 PyBaseSimulator<TypeTag>::
-getFluidStateVariable(const std::string &name) const
+getFluidStateVariable(const std::string& name) const
 {
     auto vector = getFluidState().getFluidStateVariable(name);
     return py::array(vector.size(), vector.data());
@@ -111,7 +116,7 @@ getFluidStateVariable(const std::string &name) const
 template<class TypeTag>
 py::array_t<double>
 PyBaseSimulator<TypeTag>::
-getPrimaryVariable(const std::string &variable) const
+getPrimaryVariable(const std::string& variable) const
 {
     auto vector = getFluidState().getPrimaryVariable(variable);
     return py::array(vector.size(), vector.data());
@@ -120,7 +125,7 @@ getPrimaryVariable(const std::string &variable) const
 template<class TypeTag>
 py::array_t<int>
 PyBaseSimulator<TypeTag>::
-getPrimaryVarMeaning(const std::string &variable) const
+getPrimaryVarMeaning(const std::string& variable) const
 {
     auto vector = getFluidState().getPrimaryVarMeaning(variable);
     return py::array(vector.size(), vector.data());
@@ -129,15 +134,14 @@ getPrimaryVarMeaning(const std::string &variable) const
 template<class TypeTag>
 std::map<std::string, int>
 PyBaseSimulator<TypeTag>::
-getPrimaryVarMeaningMap(const std::string &variable) const
+getPrimaryVarMeaningMap(const std::string& variable) const
 {
 
     return getFluidState().getPrimaryVarMeaningMap(variable);
 }
 
 template<class TypeTag>
-void PyBaseSimulator<TypeTag>::setPorosity( py::array_t<double,
-    py::array::c_style | py::array::forcecast> array)
+void PyBaseSimulator<TypeTag>::setPorosity(PyCArray array)
 {
     std::size_t size_ = array.size();
     const double *poro = array.data();
@@ -147,11 +151,8 @@ void PyBaseSimulator<TypeTag>::setPorosity( py::array_t<double,
 template<class TypeTag>
 void
 PyBaseSimulator<TypeTag>::
-setPrimaryVariable(
-    const std::string &variable,
-    py::array_t<double,
-    py::array::c_style | py::array::forcecast> array
-)
+setPrimaryVariable(const std::string& variable,
+                   PyCArray array)
 {
     std::size_t size_ = array.size();
     const double *data = array.data();
@@ -159,7 +160,8 @@ setPrimaryVariable(
 }
 
 template<class TypeTag>
-void PyBaseSimulator<TypeTag>::setupMpi(bool mpi_init, bool mpi_finalize)
+void PyBaseSimulator<TypeTag>::
+setupMpi(bool mpi_init, bool mpi_finalize)
 {
     if (this->has_run_init_) {
         throw std::logic_error("mpi_init() called after step_init()");
@@ -204,7 +206,7 @@ int PyBaseSimulator<TypeTag>::stepInit()
         }
     }
     if (this->deck_) {
-        this->main_ = std::make_unique<Opm::PyMain<TypeTag>>(
+        this->main_ = std::make_unique<PyMain<TypeTag>>(
             this->deck_->getDataFile(),
             this->eclipse_state_,
             this->schedule_,
@@ -214,7 +216,7 @@ int PyBaseSimulator<TypeTag>::stepInit()
         );
     }
     else {
-        this->main_ = std::make_unique<Opm::PyMain<TypeTag>>(
+        this->main_ = std::make_unique<PyMain<TypeTag>>(
             this->deck_filename_,
             this->mpi_init_,
             this->mpi_finalize_
@@ -224,7 +226,7 @@ int PyBaseSimulator<TypeTag>::stepInit()
     int exit_code = EXIT_SUCCESS;
     this->flow_main_ = this->main_->initFlowBlackoil(exit_code);
     if (this->flow_main_) {
-        int result = this->flow_main_->executeInitStep();
+        const int result = this->flow_main_->executeInitStep();
         this->has_run_init_ = true;
         this->simulator_ = this->flow_main_->getSimulatorPtr();
         this->fluid_state_ = std::make_unique<PyFluidState<TypeTag>>(this->simulator_);
@@ -239,22 +241,24 @@ int PyBaseSimulator<TypeTag>::stepInit()
 template<class TypeTag>
 int PyBaseSimulator<TypeTag>::run()
 {
-    auto main_object = Opm::Main( this->deck_filename_ );
+    auto main_object = Main( this->deck_filename_ );
     return main_object.runStatic<TypeTag>();
 }
 
 // Private methods
 // ---------------
 template<class TypeTag>
-Opm::FlowMain<TypeTag>&
+FlowMain<TypeTag>&
 PyBaseSimulator<TypeTag>::getFlowMain() const
 {
     if (this->flow_main_) {
         return *this->flow_main_;
     }
     else {
-        throw std::runtime_error("BlackOilSimulator not initialized: "
-            "Cannot get reference to FlowMain object" );
+        throw std::runtime_error(
+           "BlackOilSimulator not initialized: "
+           "Cannot get reference to FlowMain object"
+        );
     }
 }
 
@@ -266,8 +270,10 @@ PyBaseSimulator<TypeTag>::getFluidState() const
         return *this->fluid_state_;
     }
     else {
-        throw std::runtime_error("BlackOilSimulator not initialized: "
-            "Cannot get reference to FlowMainEbos object" );
+        throw std::runtime_error(
+            "BlackOilSimulator not initialized: "
+            "Cannot get reference to fluid state object"
+        );
     }
 }
 
@@ -279,11 +285,12 @@ PyBaseSimulator<TypeTag>::getMaterialState() const
         return *this->material_state_;
     }
     else {
-        throw std::runtime_error("BlackOilSimulator not initialized: "
-            "Cannot get reference to FlowMain object" );
+        throw std::runtime_error(
+            "BlackOilSimulator not initialized: "
+            "Cannot get reference to material state object"
+        );
     }
 }
-
 
 }  // namespace Opm::Pybind
 

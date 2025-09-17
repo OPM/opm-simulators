@@ -23,10 +23,8 @@
 #include <tuple>
 
 namespace Opm::Properties::TTag {
-
     struct FlowProblem;
 
-    
     /// Specialized type tag for gas-water simulations.
     ///
     /// All properties are otherwise the same as for the regular

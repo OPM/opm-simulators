@@ -16,16 +16,28 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_PY_FLUID_STATE_IMPL_HEADER_INCLUDED
+#define OPM_PY_FLUID_STATE_IMPL_HEADER_INCLUDED
+
+// Improve IDE experience
+#ifndef OPM_PY_FLUID_STATE_HEADER_INCLUDED
+#include <config.h>
+#include <opm/simulators/flow/python/PyFluidState.hpp>
+#endif
+
+#include <opm/material/common/MathToolbox.hpp>
+
+#include <stdexcept>
+
 #include <fmt/format.h>
 
 namespace Opm::Pybind {
 
 template <class TypeTag>
 PyFluidState<TypeTag>::
-PyFluidState(Simulator* simulator) : simulator_(simulator)
-{
-
-}
+PyFluidState(Simulator* simulator)
+    : simulator_(simulator)
+{}
 
 // Public methods alphabetically sorted
 // ------------------------------------
@@ -37,7 +49,7 @@ getPrimaryVarMeaning(const std::string& variable) const
 {
     Model& model = this->simulator_->model();
     auto& sol = model.solution(/*timeIdx*/0);
-    auto size = model.numGridDof();
+    const auto size = model.numGridDof();
     std::vector<int> array(size);
     for (unsigned dof_idx = 0; dof_idx < size; ++dof_idx) {
         auto primary_vars = sol[dof_idx];
@@ -112,7 +124,7 @@ PyFluidState<TypeTag>::
 getFluidStateVariable(const std::string& name) const
 {
     Model& model = this->simulator_->model();
-    auto size = model.numGridDof();
+    const auto size = model.numGridDof();
     std::vector<double> array(size);
     const auto& grid_view = this->simulator_->vanguard().gridView();
     /* NOTE: grid_view.size(0) should give the same value as
@@ -141,7 +153,7 @@ getPrimaryVariable(const std::string& idx_name) const
     std::size_t primary_var_idx = getPrimaryVarIndex_(idx_name);
     Model& model = this->simulator_->model();
     auto& sol = model.solution(/*timeIdx*/0);
-    auto size = model.numGridDof();
+    const auto size = model.numGridDof();
     std::vector<double> array(size);
     for (unsigned dof_idx = 0; dof_idx < size; ++dof_idx) {
         auto primary_vars = sol[dof_idx];
@@ -153,12 +165,14 @@ getPrimaryVariable(const std::string& idx_name) const
 template <class TypeTag>
 void
 PyFluidState<TypeTag>::
-setPrimaryVariable(const std::string& idx_name, const double* data, std::size_t size)
+setPrimaryVariable(const std::string& idx_name,
+                   const double* data,
+                   std::size_t size)
 {
-    std::size_t primary_var_idx = getPrimaryVarIndex_(idx_name);
+    const std::size_t primary_var_idx = getPrimaryVarIndex_(idx_name);
     Model& model = this->simulator_->model();
     auto& sol = model.solution(/*timeIdx*/0);
-    auto model_size = model.numGridDof();
+    const auto model_size = model.numGridDof();
     if (model_size != size) {
         const std::string msg = fmt::format(
             "Cannot set primary variable. Expected array of size {} but got array of size: {}",
@@ -177,7 +191,7 @@ setPrimaryVariable(const std::string& idx_name, const double* data, std::size_t 
 template <class TypeTag>
 std::size_t
 PyFluidState<TypeTag>::
-getPrimaryVarIndex_(const std::string &idx_name) const
+getPrimaryVarIndex_(const std::string& idx_name) const
 {
     if (idx_name.compare("pressure") == 0) {
         return Indices::pressureSwitchIdx;
@@ -197,7 +211,8 @@ getPrimaryVarIndex_(const std::string &idx_name) const
 template <class TypeTag>
 int
 PyFluidState<TypeTag>::
-getVariableMeaning_(PrimaryVariables& primary_vars, const std::string& variable) const
+getVariableMeaning_(PrimaryVariables& primary_vars,
+                    const std::string& variable) const
 {
     if (variable.compare("pressure") == 0) {
         return static_cast<int>(primary_vars.primaryVarsMeaningPressure());
@@ -223,21 +238,20 @@ typename PyFluidState<TypeTag>::VariableType
 PyFluidState<TypeTag>::
 getVariableType_(const std::string& name) const
 {
-    static std::map<std::string, VariableType> variable_type_map =
-       {
-           {"Sw", VariableType::Sw},
-           {"Sg", VariableType::Sg},
-           {"So", VariableType::So},
-           {"pw", VariableType::pw},
-           {"pg", VariableType::pg},
-           {"po", VariableType::po},
-           {"Rs", VariableType::Rs},
-           {"Rv", VariableType::Rv},
-           {"rho_w", VariableType::rho_w},
-           {"rho_g", VariableType::rho_g},
-           {"rho_o", VariableType::rho_o},
-           {"T", VariableType::T}
-       };
+    static std::map<std::string, VariableType> variable_type_map{
+       {"Sw", VariableType::Sw},
+       {"Sg", VariableType::Sg},
+       {"So", VariableType::So},
+       {"pw", VariableType::pw},
+       {"pg", VariableType::pg},
+       {"po", VariableType::po},
+       {"Rs", VariableType::Rs},
+       {"Rv", VariableType::Rv},
+       {"rho_w", VariableType::rho_w},
+       {"rho_g", VariableType::rho_g},
+       {"rho_o", VariableType::rho_o},
+       {"T", VariableType::T}
+    };
 
     if (variable_type_map.count(name) == 0) {
         variableNotFoundError_(name);
@@ -249,60 +263,39 @@ template <class TypeTag>
 template <class FluidState>
 double
 PyFluidState<TypeTag>::
-getVariableValue_(FluidState& fs, VariableType var_type, const std::string& name) const
+getVariableValue_(FluidState& fs,
+                  VariableType var_type,
+                  const std::string& name) const
 {
-    double value;
     switch(var_type) {
     case VariableType::pw :
-        value = Opm::getValue(
-            fs.pressure(FluidSystem::waterPhaseIdx));
-        break;
+        return getValue(fs.pressure(FluidSystem::waterPhaseIdx));
     case VariableType::pg :
-        value = Opm::getValue(
-            fs.pressure(FluidSystem::gasPhaseIdx));
-        break;
+        return getValue(fs.pressure(FluidSystem::gasPhaseIdx));
     case VariableType::po :
-        value = Opm::getValue(
-            fs.pressure(FluidSystem::oilPhaseIdx));
-        break;
+        return getValue(fs.pressure(FluidSystem::oilPhaseIdx));
     case VariableType::rho_w :
-        value = Opm::getValue(
-            fs.density(FluidSystem::waterPhaseIdx));
-        break;
+        return getValue(fs.density(FluidSystem::waterPhaseIdx));
     case VariableType::rho_g :
-        value = Opm::getValue(
-            fs.density(FluidSystem::gasPhaseIdx));
-        break;
+        return getValue(fs.density(FluidSystem::gasPhaseIdx));
     case VariableType::rho_o :
-        value = Opm::getValue(
-            fs.density(FluidSystem::oilPhaseIdx));
-        break;
+        return getValue(fs.density(FluidSystem::oilPhaseIdx));
     case VariableType::Rs :
-        value = Opm::getValue(fs.Rs());
-        break;
+        return getValue(fs.Rs());
     case VariableType::Rv :
-        value = Opm::getValue(fs.Rv());
-        break;
+        return getValue(fs.Rv());
     case VariableType::Sw :
-        value = Opm::getValue(
-            fs.saturation(FluidSystem::waterPhaseIdx));
-        break;
+        return getValue(fs.saturation(FluidSystem::waterPhaseIdx));
     case VariableType::Sg :
-        value = Opm::getValue(
-            fs.saturation(FluidSystem::gasPhaseIdx));
-        break;
+        return getValue(fs.saturation(FluidSystem::gasPhaseIdx));
     case VariableType::So :
-        value = Opm::getValue(
-            fs.saturation(FluidSystem::oilPhaseIdx));
-        break;
+        return getValue(fs.saturation(FluidSystem::oilPhaseIdx));
     case VariableType::T :
-        value = Opm::getValue(
-            fs.temperature(FluidSystem::waterPhaseIdx));
-        break;
+        return getValue(fs.temperature(FluidSystem::waterPhaseIdx));
     default:
         variableNotFoundError_(name);
+        return 0.0; // unreachable, shut up compiler
     }
-    return value;
 }
 
 template <class TypeTag>
@@ -315,3 +308,5 @@ variableNotFoundError_(const std::string& name) const
 }
 
 } // namespace Opm::Pybind
+
+#endif // OPM_PY_FLUID_STATE_IMPL_HEADER_INCLUDED
