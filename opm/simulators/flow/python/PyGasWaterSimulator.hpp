@@ -26,11 +26,11 @@
 
 namespace Opm::Pybind {
 
-class PyGasWaterSimulator : public PyBaseSimulator<Opm::Properties::TTag::FlowGasWaterProblem>
+class PyGasWaterSimulator : public PyBaseSimulator<Properties::TTag::FlowGasWaterProblem>
 {
 private:
-    using BaseType = PyBaseSimulator<Opm::Properties::TTag::FlowGasWaterProblem>;
-    using TypeTag = Opm::Properties::TTag::FlowGasWaterProblem;
+    using BaseType = PyBaseSimulator<Properties::TTag::FlowGasWaterProblem>;
+    using TypeTag = Properties::TTag::FlowGasWaterProblem;
 
 public:
     PyGasWaterSimulator(const std::string& deck_filename,
@@ -38,14 +38,13 @@ public:
         : BaseType(deck_filename, args)
     {}
 
-    PyGasWaterSimulator(std::shared_ptr<Opm::Deck> deck,
-                        std::shared_ptr<Opm::EclipseState> state,
-                        std::shared_ptr<Opm::Schedule> schedule,
-                        std::shared_ptr<Opm::SummaryConfig> summary_config,
+    PyGasWaterSimulator(std::shared_ptr<Deck> deck,
+                        std::shared_ptr<EclipseState> state,
+                        std::shared_ptr<Schedule> schedule,
+                        std::shared_ptr<SummaryConfig> summary_config,
                         const std::vector<std::string>& args)
         : BaseType(deck, state, schedule, summary_config, args)
     {}
-
 };
 
 } // namespace Opm::Pybind

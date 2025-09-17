@@ -44,65 +44,78 @@ template<class TypeTag>
 class PyBaseSimulator
 {
 private:
-    using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
 public:
     PyBaseSimulator(const std::string& deckFilename,
                     const std::vector<std::string>& args);
-    PyBaseSimulator(std::shared_ptr<Opm::Deck> deck,
-                    std::shared_ptr<Opm::EclipseState> state,
-                    std::shared_ptr<Opm::Schedule> schedule,
-                    std::shared_ptr<Opm::SummaryConfig> summary_config,
+
+    PyBaseSimulator(std::shared_ptr<Deck> deck,
+                    std::shared_ptr<EclipseState> state,
+                    std::shared_ptr<Schedule> schedule,
+                    std::shared_ptr<SummaryConfig> summary_config,
                     const std::vector<std::string>& args);
 
     void advance(int report_step);
+
     bool checkSimulationFinished();
+
     int currentStep();
-    py::array_t<double> getFluidStateVariable(const std::string &name) const;
+
+    py::array_t<double>
+    getFluidStateVariable(const std::string& name) const;
+
     py::array_t<double> getCellVolumes();
+
     double getDT();
+
     py::array_t<double> getPorosity();
-    py::array_t<double> getPrimaryVariable(const std::string &variable) const;
-    py::array_t<int> getPrimaryVarMeaning(const std::string &variable) const;
-    std::map<std::string, int> getPrimaryVarMeaningMap(const std::string &variable) const;
+
+    py::array_t<double> getPrimaryVariable(const std::string& variable) const;
+    py::array_t<int> getPrimaryVarMeaning(const std::string& variable) const;
+
+    std::map<std::string, int>
+    getPrimaryVarMeaningMap(const std::string& variable) const;
+
     int run();
-    void setPorosity(
-         py::array_t<double, py::array::c_style | py::array::forcecast> array);
-    void setPrimaryVariable(
-        const std::string &idx_name,
-        py::array_t<double,
-        py::array::c_style | py::array::forcecast> array);
+
+    using PyCArray = py::array_t<double, py::array::c_style | py::array::forcecast>;
+
+    void setPorosity(PyCArray array);
+
+    void setPrimaryVariable(const std::string& idx_name,
+                            PyCArray array);
+
     void setupMpi(bool init_mpi, bool finalize_mpi);
     int step();
     int stepCleanup();
     int stepInit();
 
 protected:
-    Opm::FlowMain<TypeTag>& getFlowMain() const;
+    FlowMain<TypeTag>& getFlowMain() const;
     PyFluidState<TypeTag>& getFluidState() const;
     PyMaterialState<TypeTag>& getMaterialState() const;
 
-    const std::string deck_filename_;
-    bool has_run_init_ = false;
-    bool has_run_cleanup_ = false;
-    bool mpi_init_ = true;
-    bool mpi_finalize_ = true;
-    //bool debug_ = false;
+    const std::string deck_filename_{};
+    bool has_run_init_{false};
+    bool has_run_cleanup_{false};
+    bool mpi_init_{true};
+    bool mpi_finalize_{true};
 
     // NOTE: the main_ pointer *must* be declared before the flow_main_ pointer
     // to ensure that it is destroyed before the main object since the main object
     // destructor will call MPI_Finalize() and flow_main_ object destructor will call
     // MPI_Comm_free().
-    std::unique_ptr<Opm::PyMain<TypeTag>> main_;
-    std::unique_ptr<Opm::FlowMain<TypeTag>> flow_main_;
-    Simulator* simulator_;
-    std::unique_ptr<PyFluidState<TypeTag>> fluid_state_;
-    std::unique_ptr<PyMaterialState<TypeTag>> material_state_;
-    std::shared_ptr<Opm::Deck> deck_;
-    std::shared_ptr<Opm::EclipseState> eclipse_state_;
-    std::shared_ptr<Opm::Schedule> schedule_;
-    std::shared_ptr<Opm::SummaryConfig> summary_config_;
-    std::vector<std::string> args_;
+    std::unique_ptr<PyMain<TypeTag>> main_{};
+    std::unique_ptr<FlowMain<TypeTag>> flow_main_{};
+    Simulator* simulator_{nullptr};
+    std::unique_ptr<PyFluidState<TypeTag>> fluid_state_{};
+    std::unique_ptr<PyMaterialState<TypeTag>> material_state_{};
+    std::shared_ptr<Deck> deck_{};
+    std::shared_ptr<EclipseState> eclipse_state_{};
+    std::shared_ptr<Schedule> schedule_{};
+    std::shared_ptr<SummaryConfig> summary_config_{};
+    std::vector<std::string> args_{};
 };  // class PyBaseSimulator
 
 }  // namespace Opm::Pybind
