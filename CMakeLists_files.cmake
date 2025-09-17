@@ -93,6 +93,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/blackoil/blackoilpolymerparams.cpp
   opm/models/blackoil/blackoilsolventparams.cpp
   opm/models/io/vtkblackoilbioeffectsparams.cpp
+  opm/models/discretization/common/tpfalinearizer_gpu.hip
   opm/models/io/vtkblackoilenergyparams.cpp
   opm/models/io/vtkblackoilpolymerparams.cpp
   opm/models/io/vtkblackoilparams.cpp
@@ -777,6 +778,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/discretization/common/linearizationtype.hh
   opm/models/discretization/common/restrictprolong.hh
   opm/models/discretization/common/tpfalinearizer.hh
+  opm/models/discretization/common/tpfalinearizer_gpu.hh
   opm/models/discretization/ecfv/ecfvbaseoutputmodule.hh
   opm/models/discretization/ecfv/ecfvdiscretization.hh
   opm/models/discretization/ecfv/ecfvgridcommhandlefactory.hh
