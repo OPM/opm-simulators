@@ -540,7 +540,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         /// Return true if we should (re)create the whole solver,
         /// instead of just calling update() on the preconditioner.
-        bool shouldCreateSolver() const
+        bool shouldCreateSolver()
         {
             // Decide if we should recreate the solver or just do
             // a minimal preconditioner update.
