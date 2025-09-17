@@ -149,7 +149,7 @@ parse_arguments() {
     VERSION_GRID="master"
     VERSION_SIMULATORS="master"
     TARGET_COMMON="opmcommon_python"
-    TARGET_SIMULATORS="simulators"
+    TARGET_SIMULATORS="python_simulator_modules"
     VERSION_TAG=""
     NO_BUILDX=false
 
