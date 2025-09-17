@@ -21,7 +21,7 @@
 
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseResource.hpp>
@@ -124,7 +124,7 @@ private:
     //! This is the storage for the LU composition.
     //! Initially this will have the values of A, but will be
     //! modified in the constructor to be the proper LU decomposition.
-    GpuSparseMatrix<field_type> m_LU;
+    GpuSparseMatrixWrapper<field_type> m_LU;
 
     GpuVector<field_type> m_temporaryStorage;
 
@@ -155,7 +155,7 @@ template <typename T, typename std::enable_if_t<!is_gpu_matrix_v<T>, int>>
 GpuSeqILU0<M, X, Y, l>::GpuSeqILU0(const M& A, field_type w)
     : m_underlyingMatrix(A)
     , m_w(w)
-    , m_LU(GpuSparseMatrix<field_type>::fromMatrix(detail::makeMatrixWithNonzeroDiagonal(A)))
+    , m_LU(GpuSparseMatrixWrapper<field_type>::fromMatrix(detail::makeMatrixWithNonzeroDiagonal(A)))
     , m_temporaryStorage(m_LU.N() * m_LU.blockSize())
     , m_descriptionL(detail::createLowerDiagonalDescription())
     , m_descriptionU(detail::createUpperDiagonalDescription())
