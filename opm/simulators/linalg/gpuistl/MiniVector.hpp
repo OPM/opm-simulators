@@ -73,7 +73,7 @@ public:
      */
     OPM_HOST_DEVICE constexpr explicit MiniVector(const value_type& value)
     {
-        data_.fill(value);
+        fill(value);
     }
 
     /**
@@ -175,7 +175,9 @@ public:
      */
     OPM_HOST_DEVICE constexpr void fill(const value_type& value)
     {
-        data_.fill(value);
+        for (auto& x : data_) {
+            x = value;
+        }
     }
 
     /** @return `true` if all components compare equal. */

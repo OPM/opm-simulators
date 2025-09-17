@@ -15,13 +15,17 @@
 */
 
 // Minimal fixed-size matrix class for CUDA kernels
-#pragma once
+#ifndef OPM_MINIMATRIX_HPP
+#define OPM_MINIMATRIX_HPP
 #include <array>
 #include <cstddef>
 #include <initializer_list>
 
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
+
+namespace Opm::gpuistl
+{
 
 /**
  * @brief A small fixed-size square matrix class for use in CUDA kernels.
@@ -68,7 +72,7 @@ public:
 	}
 
     OPM_HOST_DEVICE MiniMatrix(const T& value) {
-        data_.fill(value);
+        fill(value);
     }
 
 	/**
@@ -193,3 +197,7 @@ public:
 private:
 	array_type data_;
 };
+
+} // namespace Opm::gpuistl
+
+#endif // OPM_MINIMATRIX_HPP
