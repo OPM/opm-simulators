@@ -1,9 +1,8 @@
 set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
 
-# Set the path to the input docstrings.json file and the output .hpp file
+# Set the path to the input docstrings.json file and the output .hpp files
 set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings_simulators.json")
 set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyBlackOilSimulatorDoc.hpp")
-set(PYTHON_GW_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings_gw_simulators.json")
 set(PYTHON_GW_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyGasWaterSimulatorDoc.hpp")
 #  Note: If the new find_package(Python3) is used in the top level CMakeLists.txt, the variable
 #    ${PYTHON_EXECUTABLE} is set there to ${Python3_EXECUTABLE}
@@ -26,8 +25,8 @@ add_custom_command(
     OUTPUT ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP}
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
             ${PYTHON_EXECUTABLE} ${PYTHON_GENERATE_DOCSTRINGS_PY}
-            ${PYTHON_GW_DOCSTRINGS_FILE} ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP} PYGASWATERSIMULATORDOC_HPP "Opm::Pybind::DocStrings"
-    DEPENDS ${PYTHON_GW_DOCSTRINGS_FILE}
+            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP} PYGASWATERSIMULATORDOC_HPP "Opm::Pybind::DocStrings" "GasWater"
+    DEPENDS ${PYTHON_DOCSTRINGS_FILE}
     COMMENT "Generating PyGasWaterSimulatorDoc.hpp from JSON file"
 )
 # NOTE: The variable ${PYBIND11_SYSTEM} is set in python/CMakeLists.txt
