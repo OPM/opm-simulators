@@ -53,6 +53,7 @@ namespace HypreTestHelpers {
  * Ensures each test starts with a clean HYPRE state by reinitializing
  * the library before each test and cleaning up afterwards.
  */
+#if HYPRE_RELEASE_NUMBER >= 22900
 struct HypreTestFixture {
     HypreTestFixture()
     {
@@ -60,15 +61,8 @@ struct HypreTestFixture {
         if (HYPRE_Initialized()) {
             HYPRE_Finalize();
         }
-
-        // Re-initialize HYPRE for this test
-#if HYPRE_RELEASE_NUMBER >= 22900
         HYPRE_Initialize();
-#else
-        HYPRE_Init();
-#endif
     }
-
     ~HypreTestFixture()
     {
         // Clean state after test
@@ -77,6 +71,31 @@ struct HypreTestFixture {
         }
     }
 };
+#else
+struct HypreTestFixture {
+    static bool hypre_is_initialized;
+
+    HypreTestFixture()
+    {
+        // For older versions, we need to track initialization state manually
+        if (hypre_is_initialized) {
+            HYPRE_Finalize();
+            hypre_is_initialized = false;
+        }
+        HYPRE_Init();
+        hypre_is_initialized = true;
+    }
+    ~HypreTestFixture()
+    {
+        // Clean state after test
+        if (hypre_is_initialized) {
+            HYPRE_Finalize();
+            hypre_is_initialized = false;
+        }
+    }
+};
+bool HypreTestFixture::hypre_is_initialized = false;
+#endif
 
 /**
  * @brief Setup a 2D Laplace operator matrix for testing
