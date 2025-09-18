@@ -1516,7 +1516,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     break;
                 }
                 default:
-                    assert(false); //programming error
+                    throw std::logic_error("MULTI-phase injection is not supported, but was requested for well " + well->name());
                 }
                 group_target =
                     WellGroupHelpersType::getWellGroupTargetInjector(well->name(),
