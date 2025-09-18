@@ -257,7 +257,7 @@ struct EnableExtbo<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
     static constexpr bool value = false;
 };
 template<class TypeTag, int NumComp, bool EnableWater>
-struct EnableMICP<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
+struct EnableBioeffects<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
     static constexpr bool value = false;
 };
 

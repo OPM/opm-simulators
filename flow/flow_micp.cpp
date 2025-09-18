@@ -29,6 +29,11 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
 namespace Opm {
+/*!
+ * \brief Single-phase (water) flow problem including microbially induced calcite precipitation (MICP)
+ * effects (three transported quantities: suspended microbes, oxygen, and urea, and two solid phases:
+ * biofilm and calcite).
+ */
 namespace Properties {
 namespace TTag {
 struct FlowMICPProblem {
@@ -36,7 +41,7 @@ struct FlowMICPProblem {
 };
 }
 template<class TypeTag>
-struct EnableMICP<TypeTag, TTag::FlowMICPProblem> {
+struct EnableBioeffects<TypeTag, TTag::FlowMICPProblem> {
     static constexpr bool value = true;
 };
 template<class TypeTag>

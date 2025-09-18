@@ -856,6 +856,14 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          DIR parallel_fieldprops
                          TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0)
 
+add_test_compareECLFiles(CASENAME h2store_biofilm
+                         FILENAME H2STORE_BIOFILM
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR h2store
+                         TEST_ARGS --enable-opm-rst-file=true --initial-time-step-in-days=0.01)
+
 add_test_compareECLFiles(CASENAME micp
                          FILENAME MICP
                          SIMULATOR flow

@@ -577,7 +577,7 @@ set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
                 gasoil_energy brine_saltprecipitation
                 gaswater_saltprec_vapwat gaswater_saltprec_energy brine_precsalt_vapwat
                 blackoil_legacyassembly gasoildiffuse gaswater_dissolution
-                gaswater_dissolution_diffuse gaswater_energy gaswater_solvent)
+                gaswater_dissolution_diffuse gaswater_energy gaswater_solvent biofilm)
 set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 
 set(FLOW_TGTS)

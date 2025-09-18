@@ -86,7 +86,7 @@ struct EnableSaltPrecipitation<TypeTag, TTag::FlowProblem>
 { static constexpr bool value = false; };
 
 template<class TypeTag>
-struct EnableMICP<TypeTag, TTag::FlowProblem>
+struct EnableBioeffects<TypeTag, TTag::FlowProblem>
 { static constexpr bool value = false; };
 
 template<class TypeTag>

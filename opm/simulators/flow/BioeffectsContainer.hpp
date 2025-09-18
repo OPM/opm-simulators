@@ -23,51 +23,54 @@
  * \file
  * \copydoc Opm::OutputBlackOilModule
  */
-#ifndef OPM_MICP_CONTAINER_HPP
-#define OPM_MICP_CONTAINER_HPP
+#ifndef OPM_BIOEFFECTS_CONTAINER_HPP
+#define OPM_BIOEFFECTS_CONTAINER_HPP
 
 #include <vector>
 
 namespace Opm {
 
 namespace data { class Solution; }
-template<class Scalar> struct MICPSolutionContainer;
+template<class Scalar> struct BioeffectsSolutionContainer;
 
 template<class Scalar>
-class MICPContainer
+class BioeffectsContainer
 {
     using ScalarBuffer = std::vector<Scalar>;
 
 public:
-    void allocate(const unsigned bufferSize);
+    void allocate(const unsigned bufferSize, const bool isMICP);
 
     void assign(const unsigned globalDofIdx,
-                 const Scalar microbialConcentration,
-                 const Scalar oxygenConcentration,
-                 const Scalar ureaConcentration,
-                 const Scalar biofilmConcentration,
-                 const Scalar calciteConcentration);
+                const Scalar oxygenConcentration,
+                const Scalar ureaConcentration,
+                const Scalar calciteConcentration);
 
-    MICPSolutionContainer<Scalar> getSolution() const;
+    void assign(const unsigned globalDofIdx,
+                const Scalar microbialConcentration,
+                const Scalar biofilmConcentration);
 
-    void outputRestart(data::Solution& sol);
+    BioeffectsSolutionContainer<Scalar> getSolution() const;
+
+    void outputRestart(data::Solution& sol, const bool isMICP);
 
     void readRestart(const unsigned globalDofIdx,
                      const unsigned elemIdx,
-                     const data::Solution& sol);
+                     const data::Solution& sol,
+                     const bool isMICP);
 
     bool allocated() const
     { return allocated_; }
 
 private:
     bool allocated_ = false;
-    ScalarBuffer cMicrobes_;
-    ScalarBuffer cOxygen_;
-    ScalarBuffer cUrea_;
-    ScalarBuffer cBiofilm_;
-    ScalarBuffer cCalcite_;
+    ScalarBuffer cMicrobes_{};
+    ScalarBuffer cOxygen_{};
+    ScalarBuffer cUrea_{};
+    ScalarBuffer cBiofilm_{};
+    ScalarBuffer cCalcite_{};
 };
 
 } // namespace Opm
 
-#endif // OPM_MICP_CONTAINER_HPP
+#endif // OPM_BIOEFFECTS_CONTAINER_HPP
