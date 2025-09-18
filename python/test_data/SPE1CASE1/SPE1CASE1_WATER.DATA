@@ -1,0 +1,203 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Copyright (C) 2019 SINTEF
+-- Copyright (C) 2020 Equinor
+
+-- This simulation deck is for flow_onephase 
+-- to simulate  water injection/production
+-- in a water single-phase system
+
+---------------------------------------------------------------------------
+------------------------ SPE1 - CASE 1 ------------------------------------
+---------------------------------------------------------------------------
+
+RUNSPEC
+-- -------------------------------------------------------------------------
+
+TITLE
+   SPE1 - CASE 1
+
+DIMENS
+   10 10 3 /
+
+-- The number of equilibration regions is inferred from the EQLDIMS
+-- keyword.
+EQLDIMS
+/
+
+-- The number of PVTW tables is inferred from the TABDIMS keyword;
+-- when no data is included in the keyword the default values are used.
+TABDIMS
+/
+
+WATER
+
+
+FIELD
+
+START
+   1 'JAN' 2015 /
+
+WELLDIMS
+-- Item 1: maximum number of wells in the model
+-- 	   - there are two wells in the problem; injector and producer
+-- Item 2: maximum number of grid blocks connected to any one well
+-- 	   - must be one as the wells are located at specific grid blocks
+-- Item 3: maximum number of groups in the model
+-- 	   - we are dealing with only one 'group'
+-- Item 4: maximum number of wells in any one group
+-- 	   - there must be two wells in a group as there are two wells in total
+   2 1 1 2 /
+
+UNIFIN
+UNIFOUT
+
+GRID
+
+-- The INIT keyword is used to request an .INIT file. The .INIT file
+-- is written before the simulation actually starts, and contains grid
+-- properties and saturation tables as inferred from the input
+-- deck. There are no other keywords which can be used to configure
+-- exactly what is written to the .INIT file.
+INIT
+
+
+-- -------------------------------------------------------------------------
+NOECHO
+
+DX 
+-- There are in total 300 cells with length 1000ft in x-direction	
+   	300*1000 /
+DY
+-- There are in total 300 cells with length 1000ft in y-direction	
+	300*1000 /
+DZ
+-- The layers are 20, 30 and 50 ft thick, in each layer there are 100 cells
+	100*20 100*30 100*50 /
+
+TOPS
+-- The depth of the top of each grid block
+	100*8325 /
+
+PORO
+-- Constant porosity of 0.3 throughout all 300 grid cells
+   	300*0.3 /
+
+PERMX
+-- The layers have perm. 500mD, 50mD and 200mD, respectively.
+	100*500 100*50 100*200 /
+
+PERMY
+-- Equal to PERMX
+	100*500 100*50 100*200 /
+
+PERMZ
+	100*500 100*50 100*200 /
+ECHO
+
+PROPS
+-- -------------------------------------------------------------------------
+
+PVTW
+-- Item 1: pressure reference (psia)
+-- Item 2: water FVF (rb per bbl or rb per stb)
+-- Item 3: water compressibility (psi^{-1})
+-- Item 4: water viscosity (cp)
+-- Item 5: water 'viscosibility' (psi^{-1})
+
+-- Using values from Norne:
+-- In METRIC units:
+-- 	277.0 1.038 4.67E-5 0.318 0.0 /
+-- In FIELD units:
+    	4017.55 1.038 3.22E-6 0.318 0.0 /
+
+ROCK
+-- Item 1: reference pressure (psia)
+-- Item 2: rock compressibility (psi^{-1})
+
+-- Using values from table 1 in Odeh:
+	14.7 3E-6 /
+
+DENSITY
+-- Density (lb per ft³) at surface cond. of 
+-- oil, water and gas, respectively (in that order)
+
+-- Using values from Norne:
+-- In METRIC units:
+--      859.5 1033.0 0.854 /
+-- In FIELD units:
+      	53.66 64.49 0.0533 /
+
+SOLUTION
+-- -------------------------------------------------------------------------
+PRESSURE
+300*4800
+/
+
+SUMMARY
+-- -------------------------------------------------------------------------	 
+WBHP
+  'INJ'
+  'PROD'
+/
+WWIR
+  'INJ'
+/
+WWIT
+  'INJ'
+/
+WWPR
+  'PROD'
+/
+WWPT
+  'PROD'
+/
+SCHEDULE
+-- -------------------------------------------------------------------------
+RPTSCHED
+	'PRES' /
+
+RPTRST
+	'BASIC=1' /
+
+WELSPECS
+-- Item #: 1	 2	3	4	5	 6
+	'PROD'	'G1'	10	10	8400	'WATER' /
+	'INJ'	'G1'	1	1	8335	'WATER' /
+/
+-- Coordinates in item 3-4 are retrieved from Odeh's figure 1 and 2
+-- Note that the depth at the midpoint of the well grid blocks
+-- has been used as reference depth for bottom hole pressure in item 5
+
+COMPDAT
+-- Item #: 1	2	3	4	5	6	7	8	9
+	'PROD'	10	10	3	3	'OPEN'	1*	1*	0.5 /
+	'INJ'	1	1	1	1	'OPEN'	1*	1*	0.5 /
+/
+-- Coordinates in item 2-5 are retreived from Odeh's figure 1 and 2 
+-- Item 9 is the well bore internal diameter, 
+-- the radius is given to be 0.25ft in Odeh's paper
+
+
+WCONPROD
+-- Item #:1	2      3     4	   5  9
+	'PROD' 'OPEN' 'BHP' 1* 1* 1* 1* 1* 1000 /
+/
+
+
+WCONINJE
+-- Item #:1	 2	 3	 4	5      6  7
+	'INJ'	'WATER'	'OPEN'	'RATE'	100000 1* 9014 /
+/
+-- Stated in Odeh that gas inj. rate (item 5) is 100MMscf per day
+-- BHP upper limit (item 7) should not be exceeding the highest
+-- pressure in the PVT table=9014.7psia (default is 100 000psia)
+
+TSTEP
+--Advance the simulater once a month for ONE years:
+31 28 31 30 31 30 31 31 30 31 30 31 /
+
+END

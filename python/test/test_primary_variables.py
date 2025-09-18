@@ -11,6 +11,7 @@ class TestBasic(unittest.TestCase):
         #   it up in multiple test functions
         test_dir = Path(os.path.dirname(__file__))
         cls.data_dir_bo = test_dir.parent.joinpath("test_data/SPE1CASE1a")
+        cls.data_dir_op = test_dir.parent.joinpath("test_data/SPE1CASE1")
         cls.data_dir_gw = test_dir.parent.joinpath("test_data/SPE1CASE2")
 
     # IMPORTANT: Since all the python unittests run in the same process we must be
@@ -44,6 +45,30 @@ class TestBasic(unittest.TestCase):
             gas_meaning_map = sim.get_primary_variable_meaning_map(
                 variable='gas')
             self.assertEqual(gas_meaning[0], gas_meaning_map["Sg"])
+            brine_meaning = sim.get_primary_variable_meaning(
+                variable='brine')
+            brine_meaning_map = sim.get_primary_variable_meaning_map(
+                variable='brine')
+            self.assertEqual(brine_meaning[0], brine_meaning_map["Disabled"])
+
+    def test_02_onephase(self):
+        with pushd(self.data_dir_op):
+            sim = OnePhaseSimulator("SPE1CASE1_WATER.DATA")
+            sim.setup_mpi(False, False)
+            sim.step_init()
+            sim.step()
+            pressure = sim.get_primary_variable(variable='pressure')
+            self.assertAlmostEqual(pressure[0], 44780102.277570, delta=1e4, msg='value of pressure')
+            pressure_meaning = sim.get_primary_variable_meaning(
+                variable='pressure')
+            pressure_meaning_map = sim.get_primary_variable_meaning_map(
+                variable='pressure')
+            self.assertEqual(pressure_meaning[0], pressure_meaning_map["Pw"])
+            water_meaning = sim.get_primary_variable_meaning(
+                variable='water')
+            water_meaning_map = sim.get_primary_variable_meaning_map(
+                variable='water')
+            self.assertEqual(water_meaning[0], water_meaning_map["Disabled"])
             brine_meaning = sim.get_primary_variable_meaning(
                 variable='brine')
             brine_meaning_map = sim.get_primary_variable_meaning_map(
