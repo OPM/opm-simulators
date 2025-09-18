@@ -426,7 +426,7 @@ computeDensitiesForStoppedProducer(const DensityPropertyFunctions& prop_func)
 {
     const auto np = this->well_.numPhases();
 
-    const auto modPhIx = [this, np]() {
+    const auto modPhIx = [np]() {
         auto phIx = std::vector<int>(np);
 
         for (auto p = 0*np; p < np; ++p) {
