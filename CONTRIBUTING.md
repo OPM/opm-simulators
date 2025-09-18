@@ -37,6 +37,18 @@ Before contributing, please:
    git remote add upstream https://github.com/OPM/opm-simulators.git
    ```
 
+### Building
+
+Before making changes, ensure you can build the project successfully. For detailed build instructions, see the [OPM build documentation](https://opm-project.org/?page_id=231).
+
+Quick build steps:
+```bash
+mkdir build
+cd build
+cmake ..
+make -j$(nproc)
+```
+
 ### Create a Feature Branch
 
 Always create a new branch for your changes:
@@ -54,13 +66,29 @@ We use `clang-format` for C++ code formatting. Key settings include:
 
 - **Line length**: Maximum 120 characters
 - **Indentation**: 4 spaces (no tabs)
-- **Braces**: Linux style (opening brace on same line for functions)
+- **Braces**: Linux style (opening brace on next line for functions and classes)
 - **Based on**: WebKit style with modifications
 
-Run clang-format on your C++ files:
+Apply clang-format to your C++ code:
+
+**For new files:**
 ```bash
-clang-format -i path/to/your/file.cpp
+clang-format -i path/to/your/new_file.cpp
 ```
+
+**For existing files:**
+Only format the lines you modify to avoid creating noisy diffs. Most editors can format selections:
+- **VS Code**: Select code → Right-click → "Format Selection"
+- **vim**: Visual select → `=` to format
+- **Command line**: Use `git clang-format` to format only staged changes:
+  ```bash
+  git add your_modified_file.cpp
+  git clang-format
+  ```
+  Note: `git clang-format` is a separate tool (Python script) that uses `clang-format` internally
+  to format only the changed lines. Both tools need to be installed.
+
+This ensures your functional changes aren't obscured by formatting changes elsewhere in the file.
 
 ### Include File Organization
 
@@ -228,6 +256,7 @@ When reporting issues, please provide:
    - Compiler and version
    - OPM version or commit hash
 5. **Build logs** if relevant (see below)
+6. **Input data deck** demonstrating the issue, if possible
 
 ### Capturing Build Logs
 
