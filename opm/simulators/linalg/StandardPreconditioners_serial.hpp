@@ -31,6 +31,19 @@
 
 namespace Opm {
 
+template <class X, class Y>
+class TrivialPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
+{
+    public:
+    TrivialPreconditioner(){};
+    virtual void update() override {};
+    virtual bool hasPerfectUpdate() const override {return true;}
+    virtual void pre (X& x, Y& y) override {};
+    virtual void post (X& x) override {};
+    virtual void apply (X& x, const Y& y) override {};
+    virtual Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
+};
+
 
 template <class Operator>
 struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typename std::enable_if_t<!Opm::is_gpu_operator_v<Operator>>>
@@ -70,6 +83,14 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
         F::addCreator("dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
             return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat());
+        });
+        F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            DUNE_UNUSED_PARAMETER(prm);
+            return std::make_shared<TrivialPreconditioner<V,V>>();
+        });
+        F::addCreator("mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            DUNE_UNUSED_PARAMETER(prm);
+            return std::make_shared<TrivialPreconditioner<V,V>>();
         });
         F::addCreator("jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);

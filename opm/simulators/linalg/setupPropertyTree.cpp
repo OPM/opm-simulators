@@ -408,6 +408,7 @@ setupMixedILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverPa
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
     prm.put("solver", "mixed-bicgstab"s);
+    prm.put("preconditioner.type", "trivial"s);
     return prm;
 }
 
