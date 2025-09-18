@@ -309,15 +309,16 @@ namespace {
         for (const auto& groupname : schedule.groupNames(sz - 1)) {
             const auto& group = schedule.getGroup(groupname, sz - 1);
             if (group.hasSatelliteProduction()) {
-                for (size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
+                for (std::size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
                     if (parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ false)) {
                         OPM_THROW(std::logic_error,
                             fmt::format("Satellite production group {} is not allowed to have parent group controlled by RESV", groupname));
                         return;
                     }
                 }
-            } else if (group.hasSatelliteInjection()) {
-                for (size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
+            }
+            if (group.hasSatelliteInjection()) {
+                for (std::size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
                     if (parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ true)) {
                         OPM_THROW(std::logic_error,
                             fmt::format("Satellite injection group {} is not allowed to have parent group controlled by RESV/VREP", groupname));
