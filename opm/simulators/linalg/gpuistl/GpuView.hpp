@@ -87,7 +87,6 @@ public:
     return m_dataPtr[idx];
     }
 
-
     /**
      * @brief GpuView allocates new GPU memory of size numberOfElements * sizeof(T) and copies numberOfElements from
      * data

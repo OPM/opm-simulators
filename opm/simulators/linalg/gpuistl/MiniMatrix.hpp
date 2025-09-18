@@ -23,6 +23,7 @@
 
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
+#include <opm/simulators/linalg/matrixblock.hh>
 
 namespace Opm::gpuistl
 {
@@ -70,6 +71,21 @@ public:
 			data_[i] = *it;
         }
 	}
+
+    // We need a conversion from CPU based matrix block to these GPU-friendly MiniMatrices
+    // Some copy-to-gpu routines will convert types using this ctor
+    template <class Type, int n, int m>
+    MiniMatrix(MatrixBlock<Type, n, m> mb) {
+        static_assert(n == m, "MiniMatrix can only be constructed from square MatrixBlock");
+        static_assert(n == dimension, "MiniMatrix dimension must match MatrixBlock dimension");
+        for (size_type i = 0; i < dimension; ++i)
+        {
+            for (size_type j = 0; j < dimension; ++j)
+            {
+                (*this)(i, j) = mb(i, j);
+            }
+        }
+    }
 
     OPM_HOST_DEVICE MiniMatrix(const T& value) {
         fill(value);

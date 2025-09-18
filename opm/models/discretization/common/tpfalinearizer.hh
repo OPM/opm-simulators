@@ -116,6 +116,22 @@ struct FullDomain
     };
 #endif
 
+template <class ResidualNBInfoType,class BlockType>
+struct NeighborInfoStruct
+{
+    unsigned int neighbor;
+    ResidualNBInfoType res_nbinfo;
+    BlockType* matBlockAddress;
+
+    template <class OtherBlockType>
+    NeighborInfoStruct(const NeighborInfoStruct<ResidualNBInfoType,OtherBlockType>& other)
+        : neighbor(other.neighbor)
+        , res_nbinfo(other.res_nbinfo)
+        , matBlockAddress(reinterpret_cast<BlockType*>(other.matBlockAddress))
+    {
+    }
+};
+
 /*!
  * \ingroup FiniteVolumeDiscretizations
  *
@@ -490,7 +506,7 @@ private:
         const Scalar gravity = problem_().gravity()[dimWorld - 1];
         unsigned numCells = model.numTotalDof();
         neighborInfo_.reserve(numCells, 6 * numCells);
-        std::vector<NeighborInfo<MatrixBlock>> loc_nbinfo;
+        std::vector<NeighborInfoCPU> loc_nbinfo;
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
 
@@ -526,7 +542,7 @@ private:
                         if constexpr (enableDispersion) {
                             nbinfo.dispersivity = problem_().dispersivity(myIdx, neighborIdx);
                         }
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo<MatrixBlock>{neighborIdx, nbinfo, nullptr};
+                        loc_nbinfo[dofIdx - 1] = NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
@@ -805,6 +821,8 @@ private:
             // Ensure we can have the domain  on the GPU.
             auto domain_buffer = copy_to_gpu(domain);
             auto domain_view = make_view(domain_buffer);
+            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlock, MatrixBlockGPU, ResidualNBInfo, NeighborInfoStruct>(neighborInfo_);
+            auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
 
             linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view);
             hipDeviceSynchronize();
@@ -1135,7 +1153,7 @@ private:
             VectorBlockGPU res(0.0);
             MatrixBlockGPU bMat(0.0);
 
-            printf("inside\n");
+            printf("ld%u\n", globI);
         }
     }
 #endif
@@ -1173,14 +1191,9 @@ private:
     LinearizationType linearizationType_{};
 
     using ResidualNBInfo = typename LocalResidual::ResidualNBInfo;
-    template <class BlockType = MatrixBlock>
-    struct NeighborInfo
-    {
-        unsigned int neighbor;
-        ResidualNBInfo res_nbinfo;
-        BlockType* matBlockAddress;
-    };
-    SparseTable<NeighborInfo<MatrixBlock>> neighborInfo_{};
+    using NeighborInfoCPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlock>;
+
+    SparseTable<NeighborInfoCPU> neighborInfo_{};
     std::vector<MatrixBlock*> diagMatAddress_{};
 
     struct FlowInfo

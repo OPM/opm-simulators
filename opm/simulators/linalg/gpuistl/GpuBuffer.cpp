@@ -20,6 +20,11 @@
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
+
+#include <opm/models/discretization/common/tpfalinearizer.hh>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <fmt/core.h>
@@ -250,6 +255,8 @@ GpuBuffer<bool>::copyToHost(std::vector<bool>& data) const
     delete[] tmp;
 }
 
+// TODO: do we have to instantiate everything like this?
+
 template class GpuBuffer<size_t>;
 template class GpuBuffer<double>;
 template class GpuBuffer<float>;
@@ -286,5 +293,15 @@ template GpuView<const std::array<double, 3>> make_view(const GpuBuffer<std::arr
 template GpuView<const std::array<float, 3>> make_view(const GpuBuffer<std::array<float, 3>>&);
 template GpuView<const std::array<double, 9>> make_view(const GpuBuffer<std::array<double, 9>>&);
 template GpuView<const std::array<float, 9>> make_view(const GpuBuffer<std::array<float, 9>>&);
+
+using ThreeByThree = MiniMatrix<double, 3>;
+using TwoByTwo = MiniMatrix<double, 2>;
+using ThreeByThreeNeighborInfo = NeighborInfoStruct<ResidualNBInfoStruct<true, true ,true>, ThreeByThree>;
+using TwoByTwoNeighborInfo = NeighborInfoStruct<ResidualNBInfoStruct<true, true ,true>, TwoByTwo>;
+
+template GpuView<ThreeByThreeNeighborInfo> make_view(GpuBuffer<ThreeByThreeNeighborInfo>&);
+template GpuView<const ThreeByThreeNeighborInfo> make_view(const GpuBuffer<ThreeByThreeNeighborInfo>&);
+template GpuView<TwoByTwoNeighborInfo> make_view(GpuBuffer<TwoByTwoNeighborInfo>&);
+template GpuView<const TwoByTwoNeighborInfo> make_view(const GpuBuffer<TwoByTwoNeighborInfo>&);
 
 } // namespace Opm::gpuistl
