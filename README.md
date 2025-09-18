@@ -86,3 +86,47 @@ You can capture such a log from the build using the `script' utility, e.g.:
     cat CMakeCache.txt CMakeFiles/CMake*.log >> $LOGFILE
 
 The resulting file can be uploaded to for instance gist.github.com.
+
+
+CONTRIBUTING
+------------
+
+We welcome contributions to the OPM Simulators project! To ensure code quality and consistency, we recommend using automated formatting tools.
+
+### Pre-commit Hooks (Recommended)
+
+We provide pre-commit hooks that automatically format your code before each commit:
+
+**Setup:**
+1. Install pre-commit:
+   ```bash
+   pip install pre-commit
+   # or: conda install -c conda-forge pre-commit
+   # or: apt install pre-commit (Ubuntu/Debian)
+   # or: brew install pre-commit (macOS)
+   ```
+
+2. Install hooks in your local repository:
+   ```bash
+   pre-commit install
+   ```
+
+**What it does:**
+- Removes trailing whitespace (preserves Markdown line breaks)
+- Ensures files end with exactly one newline
+- Runs automatically on every commit
+- Supports C/C++, Python, shell scripts, YAML, CMake, and Markdown files
+
+**Manual usage:**
+```bash
+# Run on all files
+pre-commit run --all-files
+
+# Skip hooks for a specific commit
+git commit --no-verify
+
+# Update hook versions
+pre-commit autoupdate
+```
+
+This automated formatting helps maintain consistent code style and reduces review time by catching formatting issues before they reach code review.
