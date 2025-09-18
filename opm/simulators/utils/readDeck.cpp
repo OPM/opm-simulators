@@ -276,17 +276,21 @@ namespace {
                                 const bool isInj)
     {
         const auto& parent = schedule.getGroup(parentname, stepIdx);
-        if (isInj && parent.isInjectionGroup()) {
-            for (const auto& phase : {Opm::Phase::WATER, Opm::Phase::GAS, Opm::Phase::OIL}) {
-                if (parent.has_control(phase, Opm::Group::InjectionCMode::RESV) ||
-                    parent.has_control(phase, Opm::Group::InjectionCMode::VREP)) {
-                    return true;
+        if (isInj) {
+            if (parent.isInjectionGroup()) {
+                for (const auto& phase : {Opm::Phase::WATER, Opm::Phase::GAS, Opm::Phase::OIL}) {
+                    if (parent.has_control(phase, Opm::Group::InjectionCMode::RESV) ||
+                        parent.has_control(phase, Opm::Group::InjectionCMode::VREP)) {
+                        return true;
+                    }
                 }
             }
-        } else if (parent.isProductionGroup()) {
-            if (parent.has_control(Opm::Group::ProductionCMode::RESV) ||
-                parent.has_control(Opm::Group::ProductionCMode::PRBL)) { // PRBL is currently not supported
-                return true;
+        } else {
+            if (parent.isProductionGroup()) {
+                if (parent.has_control(Opm::Group::ProductionCMode::RESV) ||
+                    parent.has_control(Opm::Group::ProductionCMode::PRBL)) { // PRBL is currently not supported
+                    return true;
+                }
             }
         }
         if (parentname == "FIELD") {
