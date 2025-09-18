@@ -32,6 +32,9 @@
 #include <opm/simulators/linalg/gpuistl/PinnedMemoryHolder.hpp>
 #endif
 
+#include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
+#include <opm/simulators/linalg/ParallelIstlInformation.hpp>
+#include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/FlexibleSolverWrapper.hpp>
 #include <opm/simulators/linalg/printlinearsolverparameter.hpp>
 
@@ -57,6 +60,7 @@ public:
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Matrix = typename SparseMatrixAdapter::IstlMatrix;
 
     using real_type = typename Vector::field_type;
@@ -88,6 +92,23 @@ public:
         : m_parameters(parameters)
         , m_forceSerial(forceSerial)
     {
+#if HAVE_MPI
+        m_comm = std::make_shared<CommunicationType>(simulator.vanguard().grid().comm());
+        // Extract parallel grid information to populate index sets
+        extractParallelGridInformationToISTL(simulator.vanguard().grid(), m_parallelInformation);
+        // Set up element mapper manually
+        ElementMapper elemMapper(simulator.vanguard().gridView(), Dune::mcmgElementLayout());
+        // Overlap rows are needed for making overlap rows invalid in parallel mode
+        Opm::detail::findOverlapAndInterior(simulator.vanguard().grid(), elemMapper, m_overlapRows, m_interiorRows);
+        if (isParallel()) {
+            const std::size_t size = simulator.vanguard().grid().leafGridView().size(0);
+            // Copy parallel information to communication object (index sets and remote indices)
+            Opm::detail::copyParValues(m_parallelInformation, size, *m_comm);
+        }
+
+#else
+        m_comm = std::make_shared<CommunicationType>(simulator.gridView().comm());
+#endif
         m_parameters.init(simulator.vanguard().eclState().getSimulationConfig().useCPR());
         m_propertyTree = setupPropertyTree(m_parameters,
                                            Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
@@ -162,6 +183,9 @@ public:
     void prepare(const Matrix& M, Vector& b) override
     {
         try {
+            if (isParallel() && !m_overlapRows.empty()) {
+                Opm::detail::makeOverlapRowsInvalid(const_cast<Matrix&>(M), m_overlapRows);
+            }
             updateMatrix(M);
             updateRhs(b);
         }
@@ -264,11 +288,24 @@ public:
     /**
      * \copydoc AbstractISTLSolver::comm
      */
-    const CommunicationType* comm() const override
-    {
-        // TODO: Implement this if needed
-        OPM_THROW(std::logic_error, "Communication not implemented for GPU ISTL solver.");
-    }
+     const CommunicationType* comm() const override
+     {
+         return m_comm.get();
+     }
+
+     /**
+      * \brief Check if we are running in parallel mode.
+      *
+      * \return true if running with multiple MPI processes and not forced to serial, false otherwise.
+      */
+     bool isParallel() const
+     {
+ #if HAVE_MPI
+         return !m_forceSerial && m_comm->communicator().size() > 1;
+ #else
+         return false;
+ #endif
+     }
 
     /**
      * \copydoc AbstractISTLSolver::getSolveCount
@@ -294,9 +331,8 @@ private:
                 M.nonzeroes() * M[0][0].N() * M[0][0].M()
             );
             std::function<GPUVector()> weightsCalculator = {};
-            const bool parallel = false;
             m_gpuSolver = std::make_unique<SolverType>(
-                *m_matrix, parallel, m_propertyTree, pressureIndex, weightsCalculator, m_forceSerial, nullptr);
+                *m_matrix, isParallel(), m_propertyTree, pressureIndex, weightsCalculator, m_forceSerial, m_comm.get());
         } else {
             m_matrix->updateNonzeroValues(M, true);
             m_gpuSolver->update();
@@ -334,7 +370,11 @@ private:
     std::unique_ptr<PinnedMemoryHolder<real_type>> m_pinnedRhsMemory;
     std::unique_ptr<PinnedMemoryHolder<real_type>> m_pinnedXMemory;
 
+    std::shared_ptr<CommunicationType> m_comm;
     const bool m_forceSerial;
+    std::vector<int> m_interiorRows;
+    std::vector<int> m_overlapRows;
+    std::any m_parallelInformation;
 };
 } // namespace Opm::gpuistl
 
