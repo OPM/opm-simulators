@@ -37,6 +37,7 @@ PropertyTree setupCPRW(const std::string& conf, const FlowLinearSolverParameters
 PropertyTree setupCPR(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupAMG(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupILU(const std::string& conf, const FlowLinearSolverParameters& p);
+PropertyTree setupMixedILU(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupDILU(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupUMFPack(const std::string& conf, const FlowLinearSolverParameters& p);
 

@@ -48,6 +48,113 @@
 #endif
 #endif
 
+#include <opm/simulators/linalg/HaugenLabs.h>
+
+namespace Dune
+{
+template <class X, class M>
+class MixedSolver : public InverseOperator<X,X>
+{
+    public:
+
+    MixedSolver()
+    {
+        printf("MixedSolver::MixedSolver()\n");getchar();
+    }
+
+    MixedSolver(double tol, int maxiter)
+    {
+        printf("tol=%.4e\n",tol);
+        printf("maxiter=%d\n",maxiter);
+        printf("MixedSolver::MixedSolver()\n");
+        getchar();
+    }
+
+    MixedSolver(M A, double tol, int maxiter)
+    {
+        int nrows = A.N();
+        int nnz   = A.nonzeroes();
+        int b     = A[0][0].N();
+
+        // create jacobian matrix object and allocate various arrays
+        jacobian_ = bsr_new();
+        bsr_init(jacobian_,nrows,nnz,b);
+
+        // initialize sparsity pattern
+        int *rows = jacobian_->rowptr;
+        int *cols = jacobian_->colidx;
+
+        int irow = 0;
+        int icol = 0;
+        rows[0]  = 0;
+        for(auto row=A.begin(); row!=A.end(); row++)
+        {
+            for(unsigned int i=0; i<row->getsize(); i++)
+            {
+                cols[icol++] = row->getindexptr()[i];
+            }
+            rows[irow+1]     = rows[irow]+row->getsize();
+            irow++;
+        }
+
+        // print select information
+        bsr_info(jacobian_);
+        bsr_sparsity(jacobian_,"jacobian");
+
+        // allocate and intialize solver memory
+        mem_ =bslv_new();
+        bslv_init(mem_, tol, maxiter, jacobian_);
+
+        //pointer to nonzero blocks
+        data_ = &A[0][0][0][0];
+
+    }
+
+    virtual void apply (X& x, X& b, InverseOperatorResult& res) override
+    {
+        // transpose each dense block to make them column-major
+        double B[9];
+        for(int k=0;k<jacobian_->nnz;k++)
+        {
+            for(int i=0;i<3;i++) for(int j=0;j<3;j++) B[3*j+i] = data_[9*k + 3*i + j];
+            for(int i=0;i<9;i++)
+            {
+                jacobian_->dbl[9*k + i] = B[i];
+                //jacobian_->flt[9*k + i] = B[i];
+            }
+        }
+
+        // downcast to allow mixed precision
+        bsr_downcast(jacobian_);
+
+        // solve linear system
+        int count = bslv_pbicgstab3(mem_, jacobian_, &b[0][0], &x[0][0]);
+        //bslv_info(mem_,count);
+
+        // return convergence information
+        res.converged  = 1;
+        res.reduction  = mem_->e[count];
+        res.iterations = count;
+        //getchar();
+    }
+
+    virtual void apply (X& x, X& b, double reduction, InverseOperatorResult& res) override
+    {
+        x=0;
+        b=0;
+        res.reduction = reduction;
+        OPM_THROW(std::invalid_argument, "MixedSolver::apply(4) not implemented yet.");
+
+    }
+
+    private:
+    bsr_matrix  *jacobian_;
+    bslv_memory *mem_;
+    double const *data_;
+};
+
+}
+
 namespace Dune
 {
     /// Create a sequential solver.
@@ -181,6 +288,12 @@ namespace Dune
                                                                             tol, // desired residual reduction factor
                                                                             maxiter, // maximum number of iterations
                                                                             verbosity);
+        } else if (solver_type == "mixed-bicgstab") {
+            using MatrixType = decltype(linearoperator_for_solver_->getmat());
+            linsolver_ = std::make_shared<Dune::MixedSolver<VectorType,MatrixType>>(
+                                                                            linearoperator_for_solver_->getmat(),
+                                                                            tol,
+                                                                            maxiter);
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
                                                                         *scalarproduct_,
@@ -197,7 +310,6 @@ namespace Dune
                                                                                   restart,
                                                                                   maxiter, // maximum number of iterations
                                                                                   verbosity);
-
         } else {
             if constexpr (!Opm::is_gpu_operator_v<Operator>) {
                 if (solver_type == "flexgmres") {

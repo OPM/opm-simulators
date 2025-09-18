@@ -541,16 +541,16 @@ solveJacobianSystem(BVector& x)
             int *rows = bsr_jacobian_->rowptr;
             int *cols = bsr_jacobian_->colidx;
 
-            int irow=0;
-            int icol=0;
-            rows[0]=0;
+            int irow = 0;
+            int icol = 0;
+            rows[0]  = 0;
             for(auto row=jacobian.begin(); row!=jacobian.end(); row++)
             {
-                for(unsigned int i=0;i<row->getsize();i++)
+                for(unsigned int i=0; i<row->getsize(); i++)
                 {
-                    cols[icol++]=row->getindexptr()[i];
+                    cols[icol++] = row->getindexptr()[i];
                 }
-                rows[irow+1]= rows[irow]+row->getsize();
+                rows[irow+1]     = rows[irow]+row->getsize();
                 irow++;
             }
 
@@ -576,8 +576,8 @@ solveJacobianSystem(BVector& x)
 
 
 
-        //linSolver.prepare(jacobian, residual); // what happens here?
-
+        linSolver.prepare(jacobian, residual); // what happens here?
+/*
 
         // transpose each dense block to make them column-major
         double M[9];
@@ -593,13 +593,13 @@ solveJacobianSystem(BVector& x)
         }
 
         //bsr_downcast(bsr_jacobian_);
-
+*/
 
 
         linear_solve_setup_time_ = perfTimer.stop();
 
 
-        //linSolver.setResidual(residual);
+        linSolver.setResidual(residual);
 
 
 
@@ -616,7 +616,7 @@ solveJacobianSystem(BVector& x)
         // copy residual before calling solve
         BVector r(residual);
 */
-
+/*
         //solve Ax=b, where A=jacobian and b=r
         int count = bslv_pbicgstab3(slv_memory_, bsr_jacobian_, &residual[0][0], &x[0][0]);
         linSolver.set_iterations(count);
@@ -624,8 +624,8 @@ solveJacobianSystem(BVector& x)
 //        vec_copy(&residual[0][0], slv_memory_->dtmp[3],n);
         //bslv_info(slv_memory_,count);
         if(count >= slv_memory_->max_iter) printf("------------------------------> %d\n",count);
-
-        //linSolver.solve(x);
+*/
+        linSolver.solve(x);
 /*
         //compute r-Ax, where A=jacobian
         jacobian.mmv(x,r);
