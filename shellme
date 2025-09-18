@@ -1,0 +1,1 @@
+guix shell -L ~/repos/nrseman/aaguix --share=$PWD/.. -CD opm-simulators
