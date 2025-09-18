@@ -22,18 +22,17 @@
 
 #include <tuple>
 
-namespace Opm {
-namespace Properties {
-namespace TTag {
-
+namespace Opm::Properties::TTag {
     struct FlowProblem;
 
+    /// Specialized type tag for one phase (water) simulations.
+    ///
+    /// All properties are otherwise the same as for the regular
+    /// FlowProblem.
     struct FlowOnePhaseProblem {
       using InheritsFrom = std::tuple<FlowProblem>;
   };
-}
 
+}  // namespace Opm::Properties::TTag
 
-} // namespace Opm::Properties::TTag
-}
 #endif // TTAG_FLOW_ONE_PHASE_HPP
