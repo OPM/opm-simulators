@@ -780,6 +780,8 @@ if(CUDA_FOUND)
                        gpuBlackOilFluidSystem
                        blackoilfluidstategpu
                        conditional_storage
+                       GpuPressureTransferPolicy
+                       deviceBlockOperations
                        PROPERTIES LABELS ${gpu_label})
   if(MPI_FOUND)
     set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})

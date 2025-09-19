@@ -131,6 +131,11 @@ public:
     GpuVector& operator=(T scalar);
 
     /**
+     * @brief GpuVector default constructor creates a zero-sized vector (no GPU memory allocated)
+     */
+    GpuVector() : m_dataOnDevice(nullptr), m_numberOfElements(0), m_cuBlasHandle(detail::CuBlasHandle::getInstance()) {}
+
+    /**
      * @brief GpuVector allocates new GPU memory of size numberOfElements * sizeof(T)
      *
      * @note For now numberOfElements needs to be within the limits of int due to restrictions in cublas
@@ -449,6 +454,15 @@ public:
      */
     size_type dim() const;
 
+    /**
+     * @brief resize changes the size of the vector, preserving existing data if new size is larger
+     * @param new_size the new number of elements
+     * @note If new_size is larger, existing data is preserved and new elements are uninitialized
+     * @note If new_size is smaller, data is truncated
+     * @note If new_size equals current size, no operation is performed
+     * @note For now new_size needs to be within the limits of int due to restrictions in cublas
+     */
+    void resize(size_t new_size);
 
     /**
      * @brief creates an std::vector of the same size and copies the GPU data to this std::vector
@@ -457,8 +471,8 @@ public:
     std::vector<T> asStdVector() const;
 
     /**
-     * @brief creates an std::vector of the same size and copies the GPU data to this std::vector
-     * @return an std::vector containing the elements copied from the GPU.
+     * @brief creates a Dune::BlockVector of the same size and copies the GPU data to this Dune::BlockVector
+     * @return a Dune::BlockVector containing the elements copied from the GPU.
      */
     template <int blockSize>
     Dune::BlockVector<Dune::FieldVector<T, blockSize>> asDuneBlockVector() const
@@ -506,7 +520,7 @@ private:
 
     // Note that we store this as int to make sure we are always cublas compatible.
     // This gives the added benefit that a size_t to int conversion error occurs during construction.
-    const int m_numberOfElements;
+    int m_numberOfElements;
     detail::CuBlasHandle& m_cuBlasHandle;
 
     void assertSameSize(const GpuVector<T>& other) const;
@@ -515,5 +529,16 @@ private:
     void assertHasElements() const;
 };
 
+} // namespace Opm::gpuistl
+
+// ADL bridge: convert GPU vector to Dune BlockVector and delegate to Dune's writer
+namespace Opm::gpuistl
+{
+template <typename T>
+inline void writeMatrixMarket(const GpuVector<T>& vectorOnDevice, std::ostream& ostr)
+{
+    const auto hostBlockVector = vectorOnDevice.template asDuneBlockVector<1>();
+    writeMatrixMarket(hostBlockVector, ostr);
+}
 } // namespace Opm::gpuistl
 #endif

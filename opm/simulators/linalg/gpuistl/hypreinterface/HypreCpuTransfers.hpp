@@ -67,7 +67,7 @@ void
 transferCpuVectorToHypre(const VectorType& cpu_vec,
                          HYPRE_IJVector hypre_vec,
                          HypreHostDataArrays& host_arrays,
-                         const HypreDeviceDataArrays& device_arrays,
+                         [[maybe_unused]] const HypreDeviceDataArrays& device_arrays,
                          const ParallelInfo& par_info,
                          bool use_gpu_backend)
 {
@@ -127,7 +127,7 @@ void
 transferHypreToCpuVector(HYPRE_IJVector hypre_vec,
                          VectorType& cpu_vec,
                          HypreHostDataArrays& host_arrays,
-                         const HypreDeviceDataArrays& device_arrays,
+                         [[maybe_unused]] const HypreDeviceDataArrays& device_arrays,
                          const ParallelInfo& par_info,
                          bool use_gpu_backend)
 {
@@ -188,17 +188,17 @@ updateMatrixFromCpuMatrix(const MatrixType& cpu_matrix,
                           HYPRE_IJMatrix hypre_matrix,
                           const SparsityPattern& sparsity_pattern,
                           const HypreHostDataArrays& host_arrays,
-                          const HypreDeviceDataArrays& device_arrays,
+                          [[maybe_unused]] const HypreDeviceDataArrays& device_arrays,
                           bool use_gpu_backend)
 {
     const auto N = sparsity_pattern.rows.size();
-    const auto nnz = cpu_matrix.nonzeroes(); // Total entries including ghost
 
     using T = typename MatrixType::field_type;
     const T* values = &(cpu_matrix[0][0][0][0]);
 
     if (use_gpu_backend) {
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
+        const auto nnz = cpu_matrix.nonzeroes(); // Total entries including ghost
         hypre_TMemcpy(
             device_arrays.matrix_buffer_device, values, HYPRE_Real, nnz, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
         OPM_HYPRE_SAFE_CALL(HYPRE_IJMatrixSetValues2(hypre_matrix,

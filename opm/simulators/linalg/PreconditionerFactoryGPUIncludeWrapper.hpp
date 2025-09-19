@@ -24,6 +24,7 @@
 #if USE_HIP
 #include <opm/simulators/linalg/gpuistl_hip/GpuBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuDILU.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuPressureTransferPolicy.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/OpmGpuILU0.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuJac.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuSeqILU0.hpp>
@@ -33,6 +34,7 @@
 #else
 #include <opm/simulators/linalg/gpuistl/GpuBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuDILU.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuPressureTransferPolicy.hpp>
 #include <opm/simulators/linalg/gpuistl/OpmGpuILU0.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuJac.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSeqILU0.hpp>

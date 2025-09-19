@@ -486,6 +486,12 @@ public:
 
   void pre(FineDomainType& x, FineRangeType& b)
   {
+    if (x.dim() != u_.dim()) {
+      u_.resize(x.dim());
+    }
+    if (b.dim() != rhs_.dim()) {
+      rhs_.resize(b.dim());
+    }
     smoother_->pre(x,b);
   }
 
@@ -501,15 +507,15 @@ public:
 
   void apply(FineDomainType& v, const FineRangeType& d)
   {
-    FineDomainType u(v);
-    FineRangeType rhs(d);
+    u_ = v;
+    rhs_ = d;
     LevelContext context;
     SequentialInformation info;
     context.pinfo=&info;
-    context.lhs=&u;
+    context.lhs=&u_;
     context.update=&v;
     context.smoother=smoother_;
-    context.rhs=&rhs;
+    context.rhs=&rhs_;
     context.matrix=operator_;
     // Presmoothing
     presmooth(context, preSteps_);
@@ -574,6 +580,10 @@ private:
   std::size_t preSteps_;
   /** @brief The number of postsmoothing steps to apply. */
   std::size_t postSteps_;
+  /** @brief Temporary vector for the left-hand side. */
+  mutable FineDomainType u_;
+  /** @brief Temporary vector for the right-hand side. */
+  mutable FineRangeType rhs_;
 };
 }// end namespace Amg
 }// end namespace Dune
