@@ -366,7 +366,7 @@ assignToSolution(data::Solution& sol)
     addEntry(baseSolutionVector, "RSSAT",    UnitSystem::measure::gas_oil_ratio,                         gasDissolutionFactor_);
     addEntry(baseSolutionVector, "RV",       UnitSystem::measure::oil_gas_ratio,                         rv_);
     addEntry(baseSolutionVector, "RVSAT",    UnitSystem::measure::oil_gas_ratio,                         oilVaporizationFactor_);
-    addEntry(baseSolutionVector, "SALT",     UnitSystem::measure::salinity,                              cSalt_);
+    addEntry(baseSolutionVector, "SALT",     UnitSystem::measure::concentration,                         cSalt_);
     addEntry(baseSolutionVector, "SGMAX",    UnitSystem::measure::identity,                              sgmax_);
     addEntry(baseSolutionVector, "SHMAX",    UnitSystem::measure::identity,                              shmax_);
     addEntry(baseSolutionVector, "SOMAX",    UnitSystem::measure::identity,                              soMax_);
