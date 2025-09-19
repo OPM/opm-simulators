@@ -24,17 +24,20 @@ Before contributing, please:
 
 ### Fork and Clone
 
-1. Fork the repository on GitHub
-2. Clone your fork locally:
+1. Fork the repository on GitHub to your account
+2. Clone the official OPM repository:
    ```bash
-   git clone https://github.com/YOUR-USERNAME/opm-simulators.git
+   git clone https://github.com/OPM/opm-simulators.git
    cd opm-simulators
    ```
 
-3. Add the upstream repository:
+3. Add your fork as a remote:
    ```bash
-   git remote add upstream https://github.com/OPM/opm-simulators.git
+   git remote add fork https://github.com/YOUR-USERNAME/opm-simulators.git
    ```
+
+   Note: If you already have a clone of the official repo, you can simply add your fork
+   as a remote. The default 'origin' will track the official OPM repository.
 
 ### Building
 
@@ -231,13 +234,13 @@ Fixes #789
 
 1. **Update your branch** with latest upstream changes:
    ```bash
-   git fetch upstream
-   git rebase upstream/master
+   git fetch origin
+   git rebase origin/master
    ```
 
 2. **Push your changes** to your fork:
    ```bash
-   git push origin feature/your-feature-name
+   git push fork feature/your-feature-name
    ```
 
 3. **Create a Pull Request** on GitHub:
