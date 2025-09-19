@@ -1267,12 +1267,16 @@ namespace Opm {
         const int reportStepIdx = simulator_.episodeIndex();
         this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, 
             param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ true, local_deferredLogger);
+        // We need to call updateWellControls before we update the network as
+        // network updates are only done on thp controlled wells.
+        // Note that well controls are allowed to change during updateNetwork
+        // and in prepareWellsBeforeAssembling during well solves.
+        bool well_group_control_changed = updateWellControls(local_deferredLogger);
         const auto [more_inner_network_update, network_imbalance] =
                 updateNetworks(mandatory_network_balance,
                                local_deferredLogger,
                                relax_network_tolerance);
 
-        bool well_group_control_changed = updateWellControls(local_deferredLogger);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
