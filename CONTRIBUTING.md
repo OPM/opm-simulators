@@ -97,29 +97,29 @@ This ensures your functional changes aren't obscured by formatting changes elsew
 
 Organize `#include` directives in the following order, with blank lines between groups:
 
-1. **System headers** (C standard library, C++ STL):
+1. **Local OPM headers** (from this module):
    ```cpp
-   #include <algorithm>
-   #include <cmath>
-   #include <iostream>
+   #include <opm/models/common/multiphasebaseproperties.hh>
+   #include <opm/models/flash/flashproperties.hh>
    ```
 
-2. **External library headers** (Dune, etc.):
-   ```cpp
-   #include <dune/common/fmatrix.hh>
-   #include <dune/common/fvector.hh>
-   ```
-
-3. **OPM headers from other modules**:
+2. **OPM headers from other modules**:
    ```cpp
    #include <opm/common/Exceptions.hpp>
    #include <opm/material/Constants.hpp>
    ```
 
-4. **Local OPM headers** (from this module):
+3. **External library headers** (Dune, etc.):
    ```cpp
-   #include <opm/models/common/multiphasebaseproperties.hh>
-   #include <opm/models/flash/flashproperties.hh>
+   #include <dune/common/fmatrix.hh>
+   #include <dune/common/fvector.hh>
+   ```
+
+4. **System headers** (C standard library, C++ STL):
+   ```cpp
+   #include <algorithm>
+   #include <cmath>
+   #include <iostream>
    ```
 
 Within each group, maintain **alphabetical order**.
