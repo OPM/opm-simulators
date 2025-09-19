@@ -311,7 +311,7 @@ public:
         else if constexpr (enableBioeffects) {
             if (BioeffectsModule::hasPcfactTables() && referencePorosity_ > 0) {
                 unsigned satnumRegionIdx = problem.satnumRegionIndex(globalSpaceIdx);
-                const Evaluation Sb = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx);
+                const Evaluation Sb = priVars.makeEvaluation(Indices::biofilmVolumeFractionIdx, timeIdx);
                 const Evaluation porosityFactor  = min(1.0 - Sb/referencePorosity_, 1.0); //phi/phi_0
                 const auto& pcfactTable = BioeffectsModule::pcfactTable(satnumRegionIdx);
                 const Evaluation pcFactor = pcfactTable.eval(porosityFactor, /*extrapolation=*/true);
@@ -580,11 +580,11 @@ public:
 
         // deal with bioeffects (minimum porosity of 1e-8 to prevent numerical issues)
         if constexpr (enableBioeffects) {
-            const Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx,
+            const Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmVolumeFractionIdx,
                                                                timeIdx, linearizationType);
             Evaluation calcite_ = 0.0;
             if constexpr (enableMICP) {
-                calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType); 
+                calcite_ = priVars.makeEvaluation(Indices::calciteVolumeFractionIdx, timeIdx, linearizationType); 
             }
             porosity_ -= min(biofilm_ + calcite_, referencePorosity_ - 1e-8);
         }

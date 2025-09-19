@@ -163,12 +163,12 @@ struct BlackOilOnePhaseIndices
         numMICPs > 2 ? oxygenConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the fourth MICP component
-    static constexpr int biofilmConcentrationIdx =
+    static constexpr int biofilmVolumeFractionIdx =
         numMICPs > 3 ? ureaConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the fifth MICP component
-    static constexpr int calciteConcentrationIdx =
-        numMICPs > 4 ? biofilmConcentrationIdx + 1 : -1000;
+    static constexpr int calciteVolumeFractionIdx =
+        numMICPs > 4 ? biofilmVolumeFractionIdx + 1 : -1000;
 
     //! Index of the primary variable for the foam
     static constexpr int foamConcentrationIdx =

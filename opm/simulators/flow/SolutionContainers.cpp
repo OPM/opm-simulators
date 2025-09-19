@@ -65,8 +65,8 @@ void BioeffectsSolutionContainer<Scalar>::resize(const unsigned numElems)
     microbialConcentration.resize(numElems, 0.0);
     oxygenConcentration.resize(numElems, 0.0);
     ureaConcentration.resize(numElems, 0.0);
-    biofilmConcentration.resize(numElems, 0.0);
-    calciteConcentration.resize(numElems, 0.0);
+    biofilmVolumeFraction.resize(numElems, 0.0);
+    calciteVolumeFraction.resize(numElems, 0.0);
 }
 
 template<class Scalar>
@@ -76,8 +76,8 @@ operator==(const BioeffectsSolutionContainer<Scalar>& rhs) const
     return this->microbialConcentration == rhs.microbialConcentration &&
            this->oxygenConcentration == rhs.oxygenConcentration &&
            this->ureaConcentration == rhs.ureaConcentration &&
-           this->biofilmConcentration == rhs.biofilmConcentration &&
-           this->calciteConcentration == rhs.calciteConcentration;
+           this->biofilmVolumeFraction == rhs.biofilmVolumeFraction &&
+           this->calciteVolumeFraction == rhs.calciteVolumeFraction;
 }
 
 #define INSTANTIATE_TYPE(T) \
