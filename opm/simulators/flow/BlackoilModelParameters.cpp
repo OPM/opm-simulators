@@ -64,7 +64,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     max_niter_inner_well_iter_ = Parameters::Get<Parameters::MaxNewtonIterationsWithInnerWellIterations>();
     shut_unsolvable_wells_ = Parameters::Get<Parameters::ShutUnsolvableWells>();
     max_inner_iter_wells_ = Parameters::Get<Parameters::MaxInnerIterWells>();
-    max_well_status_switch_ = Parameters::Get<Parameters::MaxWellStatusSwitchInInnerIterWells>();
+    max_well_status_switch_inner_iter_ = Parameters::Get<Parameters::MaxWellStatusSwitchInInnerIterWells>();
+    max_well_status_switch_ = Parameters::Get<Parameters::MaxWellStatusSwitchForWells>();
     maxSinglePrecisionTimeStep_ = Parameters::Get<Parameters::MaxSinglePrecisionDays<Scalar>>() * 24 * 60 * 60;
     min_strict_cnv_iter_ = Parameters::Get<Parameters::MinStrictCnvIter>();
     min_strict_mb_iter_ = Parameters::Get<Parameters::MinStrictMbIter>();
@@ -189,7 +190,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
     Parameters::Register<Parameters::MaxInnerIterWells>
         ("Maximum number of inner iterations for standard wells");
     Parameters::Register<Parameters::MaxWellStatusSwitchInInnerIterWells>
-        ("Maximum number of status switching (shut<->open) in inner iterations for wells");
+        ("Maximum number of status switching (stop<->open) for a well during inner iterations.");
+    Parameters::Register<Parameters::MaxWellStatusSwitchForWells>
+        ("Maximum number of status switching (stop<->open) for a well during a time-step.");
     Parameters::Register<Parameters::AlternativeWellRateInit>
         ("Use alternative well rate initialization procedure");
     Parameters::Register<Parameters::RegularizationFactorWells<Scalar>>

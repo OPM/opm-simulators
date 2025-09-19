@@ -104,6 +104,7 @@ struct MaxNewtonIterationsWithInnerWellIterations { static constexpr int value =
 struct MaxInnerIterMsWells { static constexpr int value = 100; };
 struct MaxInnerIterWells { static constexpr int value = 50; };
 struct MaxWellStatusSwitchInInnerIterWells { static constexpr int value = 99; };
+struct MaxWellStatusSwitchForWells { static constexpr int value = 99; };
 struct ShutUnsolvableWells { static constexpr bool value = true; };
 struct AlternativeWellRateInit { static constexpr bool value = true; };
 struct StrictOuterIterWells { static constexpr int value = 6; };
@@ -325,7 +326,10 @@ public:
     /// Maximum number of iterations in the well/group switch algorithm
     int well_group_constraints_max_iterations_;
 
-    /// Maximum number of status switches (open<->shut> in local well iterations
+    /// Maximum number of status switches (open<->stop> in local well iterations
+    int max_well_status_switch_inner_iter_;
+
+    /// Maximum number of status switches (open<->stop> during a time step
     int max_well_status_switch_;
 
     /// Nonlinear solver type: newton or nldd
