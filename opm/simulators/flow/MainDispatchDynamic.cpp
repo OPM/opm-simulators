@@ -28,6 +28,7 @@
 #include <flow/flow_blackoil.hpp>
 #include <flow/flow_blackoil_legacyassembly.hpp>
 #include <flow/flow_brine.hpp>
+#include <flow/flow_brine_energy.hpp>
 #include <flow/flow_brine_precsalt_vapwat.hpp>
 #include <flow/flow_brine_saltprecipitation.hpp>
 #include <flow/flow_energy.hpp>
@@ -411,6 +412,11 @@ int Opm::Main::runThermal(const Phases& phases)
         }
 
         return flowGasWaterEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+    }
+
+    // brine-energy
+    if (phases.active(Phase::BRINE)) {
+        return flowBrineEnergyMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     return flowEnergyMain(argc_, argv_, outputCout_, outputFiles_);
