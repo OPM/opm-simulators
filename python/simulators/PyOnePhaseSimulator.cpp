@@ -1,5 +1,5 @@
 /*
-  Copyright 2020 Equinor ASA.
+  Copyright 2025 Equinor ASA.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -49,7 +49,7 @@ namespace Opm::Properties {
                                              getPropValue<TypeTag, Properties::EnableBrine>(),
                                              /*PVOffset=*/0,
                                              /*enabledCompIdx=*/FluidSystem::waterCompIdx,
-                                             getPropValue<TypeTag, Properties::EnableMICP>()>;
+                                             getPropValue<TypeTag, Properties::EnableBioeffects>()>;
     };  // struct Indices
 
 }  // namespace Opm::Properties
