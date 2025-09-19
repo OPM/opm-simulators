@@ -55,21 +55,21 @@ void BioeffectsContainer<Scalar>::
 assign(const unsigned globalDofIdx,
        const Scalar oxygenConcentration,
        const Scalar ureaConcentration,
-       const Scalar calciteConcentration)
+       const Scalar calciteVolumeFraction)
 {
     cOxygen_[globalDofIdx] = oxygenConcentration;
     cUrea_[globalDofIdx] = ureaConcentration;
-    cCalcite_[globalDofIdx] = calciteConcentration;
+    cCalcite_[globalDofIdx] = calciteVolumeFraction;
 }
 
 template<class Scalar>
 void BioeffectsContainer<Scalar>::
 assign(const unsigned globalDofIdx,
        const Scalar microbialConcentration,
-       const Scalar biofilmConcentration)
+       const Scalar biofilmVolumeFraction)
 {
     cMicrobes_[globalDofIdx] = microbialConcentration;
-    cBiofilm_[globalDofIdx] = biofilmConcentration;
+    cBiofilm_[globalDofIdx] = biofilmVolumeFraction;
 }
 
 template<class Scalar>

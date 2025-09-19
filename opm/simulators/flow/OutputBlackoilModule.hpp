@@ -1590,12 +1590,12 @@ private:
                   {
                       bioeffectsC.assign(ectx.globalDofIdx,
                                          ectx.intQuants.microbialConcentration().value(),
-                                         ectx.intQuants.biofilmConcentration().value());
+                                         ectx.intQuants.biofilmVolumeFraction().value());
                       if (Indices::enableMICP) {
                           bioeffectsC.assign(ectx.globalDofIdx,
                                              ectx.intQuants.oxygenConcentration().value(),
                                              ectx.intQuants.ureaConcentration().value(),
-                                             ectx.intQuants.calciteConcentration().value());
+                                             ectx.intQuants.calciteVolumeFraction().value());
                       }
                   }, this->bioeffectsC_.allocated()
             },

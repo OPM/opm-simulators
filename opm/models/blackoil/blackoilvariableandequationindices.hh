@@ -142,8 +142,8 @@ struct BlackOilVariableAndEquationIndices
     static constexpr int microbialConcentrationIdx = -1000;
     static constexpr int oxygenConcentrationIdx = -1000;
     static constexpr int ureaConcentrationIdx = -1000;
-    static constexpr int biofilmConcentrationIdx = -1000;
-    static constexpr int calciteConcentrationIdx = -1000;
+    static constexpr int biofilmVolumeFractionIdx = -1000;
+    static constexpr int calciteVolumeFractionIdx = -1000;
 
     //! Index of the primary variable for the foam
     static constexpr int foamConcentrationIdx =

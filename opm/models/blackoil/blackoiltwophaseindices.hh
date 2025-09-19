@@ -155,13 +155,13 @@ struct BlackOilTwoPhaseIndices
         enableBiofilm ? PVOffset + numPhases + numSolvents : -1000;
 
     //! Index of the primary variable for the biofilm component
-    static constexpr int biofilmConcentrationIdx =
+    static constexpr int biofilmVolumeFractionIdx =
         enableBiofilm ? PVOffset + numPhases + numSolvents + 1 : -1000;
 
     //! MICP only available for one phase indices
     static constexpr int oxygenConcentrationIdx = -1000;
     static constexpr int ureaConcentrationIdx = -1000;
-    static constexpr int calciteConcentrationIdx = -1000;
+    static constexpr int calciteVolumeFractionIdx = -1000;
 
     //! Index of the primary variable for the foam
     static constexpr int foamConcentrationIdx =

@@ -211,7 +211,7 @@ protected:
         static constexpr bool enableEnergy = Indices::temperatureIdx >= 0;
         static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
         static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
-        static constexpr bool enableBioeffects = Indices::biofilmConcentrationIdx >= 0;
+        static constexpr bool enableBioeffects = Indices::biofilmVolumeFractionIdx >= 0;
         static constexpr bool enableMICP = Indices::enableMICP;
 
         currentValue.checkDefined();
@@ -397,7 +397,7 @@ protected:
                 if (pvIdx == Indices::microbialConcentrationIdx) {
                     nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                 }
-                if (pvIdx == Indices::biofilmConcentrationIdx) {
+                if (pvIdx == Indices::biofilmVolumeFractionIdx) {
                     nextValue[pvIdx] = std::clamp(nextValue[pvIdx],
                                                   Scalar{0.0},
                                                   this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
@@ -409,7 +409,7 @@ protected:
                     if (pvIdx == Indices::ureaConcentrationIdx) {
                         nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                     }
-                    if (pvIdx == Indices::calciteConcentrationIdx) {
+                    if (pvIdx == Indices::calciteVolumeFractionIdx) {
                         nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0},
                                                                         this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
                     }
