@@ -117,8 +117,8 @@ private:
         double maxTimeStep_() const;
         SimulatorReport runStepOriginal_();
 #ifdef RESERVOIR_COUPLING_ENABLED
-        ReservoirCouplingMaster& reservoirCouplingMaster_();
-        ReservoirCouplingSlave& reservoirCouplingSlave_();
+        ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster_();
+        ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave_();
         SimulatorReport runStepReservoirCouplingMaster_();
         SimulatorReport runStepReservoirCouplingSlave_();
 #endif

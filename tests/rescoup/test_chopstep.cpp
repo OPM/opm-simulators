@@ -161,7 +161,7 @@ struct SimulatorFixture
     }
 
     void checkEq(double a, double b) const { BOOST_CHECK_CLOSE(a, b, 1e-16); }
-    const Opm::ReservoirCouplingMaster& getRcMaster() const { return rc_master_; }
+    const Opm::ReservoirCouplingMaster<double>& getRcMaster() const { return rc_master_; }
     double getStartDate() const { return start_date_; }
     double runChopSubStep(double report_time_step_size) const {
         return rc_master_.maybeChopSubStep(report_time_step_size, /*elapsed_time=*/0.0);
@@ -177,7 +177,7 @@ private:
     OpmSimulatorTestCase simulator_wrapper_;
     Simulator *simulator_;
     Opm::Schedule& schedule_;
-    Opm::ReservoirCouplingMaster rc_master_;
+    Opm::ReservoirCouplingMaster<double> rc_master_;
     double start_date_;
 };
 
