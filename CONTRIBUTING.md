@@ -138,6 +138,14 @@ Within each group, maintain **alphabetical order**.
 
 We recommend using pre-commit hooks to automatically format your code before commits.
 
+### What is Pre-commit?
+
+Pre-commit is a framework for managing git hooks that automatically run code formatters and linters before each commit.
+It only modifies files you're about to commit (staged files), not your entire codebase. The hooks fix common issues
+like trailing whitespace and missing newlines automatically. When pre-commit makes changes, it will fail the commit
+and report which files were modified - you'll need to review the changes, re-stage the files (`git add`), and commit
+again. This ensures you see exactly what was changed before it's committed.
+
 ### Pre-commit Setup
 
 1. **Install pre-commit**:
