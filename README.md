@@ -15,17 +15,17 @@
   <a href="https://doi.org/10.5281/zenodo.12637570"><img src="https://img.shields.io/badge/Zenodo_src_backup-10.5281%2Fzenodo.12637570-ff2222" alt="Zenodo"></a>
 </p>
 
-> 💡 The `opm-Simulators` repository containes the OPM Flow reservoir simulator which uses automatic differentation and standard input-formats to simulate reservoirs of industrial complexity on real assets by commercial actors. It is cooperatively developed by multiple industry-partners and academic institutions under the GPL 3 license.
+> 💡 The `opm-simulators` repository containes the OPM Flow reservoir simulator which uses automatic differentation and standard input-formats to simulate reservoirs of industrial complexity on real assets by commercial actors. It is cooperatively developed by multiple industry-partners and academic institutions under the GPL 3 license.
 > 
-> Flow is a fully implicit black-oil simulators which also supports CO2 storage, H2 storage, thermal simulations, solvents, as well as polymers. It works with the Eclipse formats, making it easy to integrate into existing workflows. The automatic differentation is implemented in [opm-common](https://github.com/OPM/opm-common). The manual can be found here on the OPM [home page](https://opm-project.org/?page_id=955).
+> Flow is a fully implicit black-oil simulators which also supports CO2 storage, H2 storage, thermal simulations, solvents, as well as polymers. It works with the Eclipse formats, making it easy to integrate into existing workflows. The automatic differentation is implemented in [opm-common](OPM/opm-common). The manual can be found here on the OPM [home page](https://opm-project.org/?page_id=955).
 
-🌍 Supported Platforms
+🖥️ Supported Platforms
 ---------
-- ✅ RHEL 8+
-- ✅ Ubuntu 22.04 LTS and 24.04 LTS
-- ✅ Debian
-- ✅ Mac OS X
-- 🚫 Windows
+- RHEL 8+
+- Ubuntu 22.04 LTS and 24.04 LTS
+- Debian
+- Mac OS X
+- Windows (with WSL2)
 
 ⬇️ [Download binaries here](https://opm-project.org/?page_id=36) ⬇️
 
@@ -34,8 +34,8 @@
 ------------
 
 `opm-simulators` Depends on:
-- [opm-common](https://github.com/OPM/opm-common)
-- [opm-grid](https://github.com/OPM/opm-grid)
+- [opm-common](OPM/opm-common)
+- [opm-grid](OPM/opm-grid)
 - [Dune, and other depencies kept track of on the home page](https://opm-project.org/?page_id=239)
 
 [Follow the build instructions on the home page](http://opm-project.org/?page_id=36).
@@ -66,7 +66,7 @@ The resulting file can be uploaded to for instance gist.github.com.
 
 📑 **Citing**
 ---------------------
-To cite OPM Flow we primarily use the following publication introducing the software in the `Computers & Mathematics with Applications` Journal:
+To cite OPM Flow we primarily use the following [publication](https://doi.org/10.1016/j.camwa.2020.05.014) introducing the software in the `Computers & Mathematics with Applications` Journal and the [Zenodo repository](https://zenodo.org/records/15573878):
 ```bibtex
 @article{OPMFLOW,
  title = {The {Open} {Porous} {Media} {Flow} reservoir simulator},
@@ -80,3 +80,5 @@ To cite OPM Flow we primarily use the following publication introducing the soft
  url = {https://www.sciencedirect.com/science/article/pii/S0898122120302182},
  author = {Atgeirr Flø Rasmussen and Tor Harald Sandve and Kai Bao and Andreas Lauser and Joakim Hove and Bård Skaflestad and Robert Klöfkorn and Markus Blatt and Alf Birger Rustad and Ove Sævareid and Knut-Andreas Lie and Andreas Thune}
 }
+```
+A page keeping track of scientific publications that have used OPM Flow to conduct simulations is kept track of [here](https://opm-project.org/?page_id=39).
