@@ -82,6 +82,7 @@ clang-format -i path/to/your/new_file.cpp
 Only format the lines you modify to avoid creating noisy diffs. Most editors can format selections:
 - **VS Code**: Select code → Right-click → "Format Selection"
 - **vim**: Visual select → `=` to format
+- **emacs**: Select region → `M-x clang-format-region`
 - **Command line**: Use `git clang-format` to format only staged changes:
   ```bash
   git add your_modified_file.cpp
