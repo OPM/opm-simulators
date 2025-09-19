@@ -294,10 +294,12 @@ template GpuView<const std::array<float, 3>> make_view(const GpuBuffer<std::arra
 template GpuView<const std::array<double, 9>> make_view(const GpuBuffer<std::array<double, 9>>&);
 template GpuView<const std::array<float, 9>> make_view(const GpuBuffer<std::array<float, 9>>&);
 
-using ThreeByThree = MiniMatrix<double, 3>;
-using TwoByTwo = MiniMatrix<double, 2>;
+using ThreeByThree = MiniMatrix<double, 9>;
+using TwoByTwo = MiniMatrix<double, 4>;
 using ThreeByThreeNeighborInfo = NeighborInfoStruct<ResidualNBInfoStruct<true, true ,true>, ThreeByThree>;
 using TwoByTwoNeighborInfo = NeighborInfoStruct<ResidualNBInfoStruct<true, true ,true>, TwoByTwo>;
+
+template class GpuBuffer<ThreeByThreeNeighborInfo>;
 
 template GpuView<ThreeByThreeNeighborInfo> make_view(GpuBuffer<ThreeByThreeNeighborInfo>&);
 template GpuView<const ThreeByThreeNeighborInfo> make_view(const GpuBuffer<ThreeByThreeNeighborInfo>&);

@@ -127,7 +127,26 @@ struct NeighborInfoStruct
     NeighborInfoStruct(const NeighborInfoStruct<ResidualNBInfoType,OtherBlockType>& other)
         : neighbor(other.neighbor)
         , res_nbinfo(other.res_nbinfo)
-        , matBlockAddress(reinterpret_cast<BlockType*>(other.matBlockAddress))
+        , matBlockAddress(nullptr)
+    {
+        if (other.matBlockAddress) {
+            matBlockAddress = reinterpret_cast<BlockType*>(other.matBlockAddress);
+        }
+    }
+
+    template <class PtrType>
+    NeighborInfoStruct(unsigned int n, const ResidualNBInfoType& r, PtrType ptr)
+        : neighbor(n)
+        , res_nbinfo(r)
+        , matBlockAddress(static_cast<BlockType*>(ptr))
+    {
+    }
+
+    // Add a default constructor
+    NeighborInfoStruct()
+        : neighbor(0)
+        , res_nbinfo()
+        , matBlockAddress(nullptr)
     {
     }
 };
@@ -819,13 +838,13 @@ private:
             const bool on_full_domain = (numCells == model_().numTotalDof());
 
             // Ensure we can have the domain  on the GPU.
-            auto domain_buffer = copy_to_gpu(domain);
-            auto domain_view = make_view(domain_buffer);
-            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlock, MatrixBlockGPU, ResidualNBInfo, NeighborInfoStruct>(neighborInfo_);
-            auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
+            // auto domain_buffer = copy_to_gpu(domain);
+            // auto domain_view = make_view(domain_buffer);
+            // auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlock, MatrixBlockGPU, ResidualNBInfo, NeighborInfoStruct>(neighborInfo_);
+            // auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
 
-            linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view);
-            hipDeviceSynchronize();
+            // linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view);
+            // hipDeviceSynchronize();
             
             for (unsigned ii = 0; ii < numCells; ++ii) {
                 OPM_TIMEBLOCK_LOCAL(linearizationForEachCell);
