@@ -18,8 +18,7 @@ Thank you for your interest in contributing to the Open Porous Media (OPM) Simul
 Before contributing, please:
 
 1. Read the [OPM Project Documentation](https://opm-project.org)
-2. Review the [OPM Manual](https://opm-project.org/?page_id=955)
-3. Ensure you have the necessary [prerequisites](https://opm-project.org/?page_id=239) installed
+2. Ensure you have the necessary [prerequisites](https://opm-project.org/?page_id=239) installed
 
 ## Development Process
 
