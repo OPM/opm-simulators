@@ -1,0 +1,13 @@
+#!/bin/bash
+# Pre-commit hooks: currently only a single hook is installed:
+# - format-source-files.py: fixes trailing newlines and whitespace in staged source files
+#
+#
+# Installation:
+# - git config core.hooksPath .githooks
+# To disable:
+# - git config --unset core.hooksPath
+# To skip for a single commit:
+# - git commit --no-verify
+
+python3 .githooks/scripts/format-source-files.py
