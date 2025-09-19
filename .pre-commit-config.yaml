@@ -1,0 +1,42 @@
+# Pre-commit configuration for OPM Simulators
+# This configuration uses the pre-commit framework to automatically format source files
+# before commits, ensuring consistent code style across the project.
+#
+# Installation:
+# -------------
+# 1. Install pre-commit (choose one method):
+#    - Via pip: pip install pre-commit
+#    - Via conda: conda install -c conda-forge pre-commit
+#    - Via homebrew (macOS): brew install pre-commit
+#    - Via package manager (Ubuntu/Debian): apt install pre-commit
+#
+# 2. Install the hooks in your local repository:
+#    pre-commit install
+#
+# Usage:
+# ------
+# - Hooks run automatically on every commit
+# - To run manually on all files: pre-commit run --all-files
+# - To run on specific files: pre-commit run --files <file1> <file2>
+# - To skip hooks for a commit: git commit --no-verify
+# - To update hook versions: pre-commit autoupdate
+#
+# What these hooks do:
+# -------------------
+# - trailing-whitespace: Removes trailing whitespace from lines
+#   (preserves Markdown hard line breaks with --markdown-linebreak-ext=md)
+# - end-of-file-fixer: Ensures files end with exactly one newline
+#
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0  # Latest release as of August 2025
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+        types_or: [c, c++, python, shell, yaml, cmake, markdown]
+        exclude: '^(build/|\.git/)'
+
+      - id: end-of-file-fixer
+        types_or: [c, c++, python, shell, yaml, cmake, markdown]
+        exclude: '^(build/|\.git/)'
