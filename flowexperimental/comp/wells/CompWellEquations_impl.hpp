@@ -17,6 +17,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_COMP_WELL_EQUATIONS_IMPL_HPP
+#define OPM_COMP_WELL_EQUATIONS_IMPL_HPP
+
+// Improve IDE experience
+#ifndef OPM_COMP_WELL_EQUATIONS_HPP
+#include <config.h>
+#include <flowexperimental/comp/wells/CompWellEquations.hpp>
+#endif
+
 #include <opm/simulators/linalg/matrixblock.hh>
 
 namespace Opm {
@@ -136,3 +145,5 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 }
 
 } // end of namespace Opm
+
+#endif
