@@ -192,14 +192,14 @@ public:
     Scalar ureaConcentration(unsigned elemIdx) const;
 
     /*!
-     * \brief Returns the initial biofilm concentration for a given a cell index
+     * \brief Returns the initial biofilm volume fraction for a given a cell index
      */
-    Scalar biofilmConcentration(unsigned elemIdx) const;
+    Scalar biofilmVolumeFraction(unsigned elemIdx) const;
 
     /*!
-     * \brief Returns the initial calcite concentration for a given a cell index
+     * \brief Returns the initial calcite volume fraction for a given a cell index
      */
-    Scalar calciteConcentration(unsigned elemIdx) const;
+    Scalar calciteVolumeFraction(unsigned elemIdx) const;
 
     /*!
      * \brief Returns the index the relevant PVT region given a cell index

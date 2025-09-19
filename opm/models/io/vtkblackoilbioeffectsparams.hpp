@@ -33,8 +33,8 @@ namespace Opm::Parameters {
 struct VtkWriteMicrobialConcentration { static constexpr bool value = true; };
 struct VtkWriteOxygenConcentration { static constexpr bool value = true; };
 struct VtkWriteUreaConcentration { static constexpr bool value = true; };
-struct VtkWriteBiofilmConcentration { static constexpr bool value = true; };
-struct VtkWriteCalciteConcentration { static constexpr bool value = true; };
+struct VtkWriteBiofilmVolumeFraction { static constexpr bool value = true; };
+struct VtkWriteCalciteVolumeFraction { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 
@@ -54,8 +54,8 @@ struct VtkBlackOilBioeffectsParams
     bool microbialConcentrationOutput_;
     bool oxygenConcentrationOutput_;
     bool ureaConcentrationOutput_;
-    bool biofilmConcentrationOutput_;
-    bool calciteConcentrationOutput_;
+    bool biofilmVolumeFractionOutput_;
+    bool calciteVolumeFractionOutput_;
 };
 
 } // namespace Opm

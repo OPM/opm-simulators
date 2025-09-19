@@ -103,8 +103,8 @@ public:
             if (params_.microbialConcentrationOutput_) {
                 this->resizeScalarBuffer_(microbialConcentration_, BufferType::Dof);
             }
-            if (params_.biofilmConcentrationOutput_) {
-                this->resizeScalarBuffer_(biofilmConcentration_, BufferType::Dof);
+            if (params_.biofilmVolumeFractionOutput_) {
+                this->resizeScalarBuffer_(biofilmVolumeFraction_, BufferType::Dof);
             }
             if constexpr (enableMICP) {
                 if (params_.oxygenConcentrationOutput_) {
@@ -113,8 +113,8 @@ public:
                 if (params_.ureaConcentrationOutput_) {
                     this->resizeScalarBuffer_(ureaConcentration_, BufferType::Dof);
                 }
-                if (params_.calciteConcentrationOutput_) {
-                    this->resizeScalarBuffer_(calciteConcentration_, BufferType::Dof);
+                if (params_.calciteVolumeFractionOutput_) {
+                    this->resizeScalarBuffer_(calciteVolumeFraction_, BufferType::Dof);
                 }
             }
         }
@@ -139,9 +139,9 @@ public:
                     microbialConcentration_[globalDofIdx] =
                         scalarValue(intQuants.microbialConcentration());
                 }
-                if (params_.biofilmConcentrationOutput_) {
-                    biofilmConcentration_[globalDofIdx] =
-                        scalarValue(intQuants.biofilmConcentration());
+                if (params_.biofilmVolumeFractionOutput_) {
+                    biofilmVolumeFraction_[globalDofIdx] =
+                        scalarValue(intQuants.biofilmVolumeFraction());
                 }
                 if constexpr (enableMICP) {
                     if (params_.oxygenConcentrationOutput_) {
@@ -152,9 +152,9 @@ public:
                         ureaConcentration_[globalDofIdx] =
                             scalarValue(intQuants.ureaConcentration());
                     }
-                    if (params_.calciteConcentrationOutput_) {
-                        calciteConcentration_[globalDofIdx] =
-                            scalarValue(intQuants.calciteConcentration());
+                    if (params_.calciteVolumeFractionOutput_) {
+                        calciteVolumeFraction_[globalDofIdx] =
+                            scalarValue(intQuants.calciteVolumeFraction());
                     }
                 }
             }
@@ -175,9 +175,9 @@ public:
                 this->commitScalarBuffer_(baseWriter, "microbial concentration",
                                           microbialConcentration_, BufferType::Dof);
             }
-            if (params_.biofilmConcentrationOutput_) {
-                this->commitScalarBuffer_(baseWriter, "biofilm fraction",
-                                          biofilmConcentration_, BufferType::Dof);
+            if (params_.biofilmVolumeFractionOutput_) {
+                this->commitScalarBuffer_(baseWriter, "biofilm voulme fraction",
+                                          biofilmVolumeFraction_, BufferType::Dof);
             }
             if constexpr (enableMICP) {
                 if (params_.oxygenConcentrationOutput_) {
@@ -188,9 +188,9 @@ public:
                     this->commitScalarBuffer_(baseWriter, "urea concentration",
                                               ureaConcentration_, BufferType::Dof);
                 }
-                if (params_.calciteConcentrationOutput_) {
-                    this->commitScalarBuffer_(baseWriter, "calcite fraction",
-                                              calciteConcentration_, BufferType::Dof);
+                if (params_.calciteVolumeFractionOutput_) {
+                    this->commitScalarBuffer_(baseWriter, "calcite volume fraction",
+                                              calciteVolumeFraction_, BufferType::Dof);
                 }
             }
         }
@@ -201,8 +201,8 @@ private:
     ScalarBuffer microbialConcentration_{};
     ScalarBuffer oxygenConcentration_{};
     ScalarBuffer ureaConcentration_{};
-    ScalarBuffer biofilmConcentration_{};
-    ScalarBuffer calciteConcentration_{};
+    ScalarBuffer biofilmVolumeFraction_{};
+    ScalarBuffer calciteVolumeFraction_{};
 };
 
 } // namespace Opm

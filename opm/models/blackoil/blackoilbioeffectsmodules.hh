@@ -115,8 +115,8 @@ class BlackOilBioeffectsModule
     static constexpr unsigned microbialConcentrationIdx = Indices::microbialConcentrationIdx;
     static constexpr unsigned oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
     static constexpr unsigned ureaConcentrationIdx = Indices::ureaConcentrationIdx;
-    static constexpr unsigned biofilmConcentrationIdx = Indices::biofilmConcentrationIdx;
-    static constexpr unsigned calciteConcentrationIdx = Indices::calciteConcentrationIdx;
+    static constexpr unsigned biofilmVolumeFractionIdx = Indices::biofilmVolumeFractionIdx;
+    static constexpr unsigned calciteVolumeFractionIdx = Indices::calciteVolumeFractionIdx;
     static constexpr unsigned contiMicrobialEqIdx = Indices::contiMicrobialEqIdx;
     static constexpr unsigned contiOxygenEqIdx = Indices::contiOxygenEqIdx;
     static constexpr unsigned contiUreaEqIdx = Indices::contiUreaEqIdx;
@@ -191,7 +191,7 @@ public:
             const LhsEval accumulationMicrobes = surfaceVolumeWater * Toolbox::template decay<LhsEval>(intQuants.microbialConcentration());
             storage[contiMicrobialEqIdx] += accumulationMicrobes;
             // biofilm
-            const LhsEval accumulationBiofilm = Toolbox::template decay<LhsEval>(intQuants.biofilmConcentration());
+            const LhsEval accumulationBiofilm = Toolbox::template decay<LhsEval>(intQuants.biofilmVolumeFraction());
             storage[contiBiofilmEqIdx] += accumulationBiofilm;
             if constexpr (enableMICP) {
                 // oxygen in water phase
@@ -202,7 +202,7 @@ public:
                 storage[contiUreaEqIdx] += accumulationUrea;
                 storage[contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
                 // calcite
-                const LhsEval accumulationCalcite = Toolbox::template decay<LhsEval>(intQuants.calciteConcentration());
+                const LhsEval accumulationCalcite = Toolbox::template decay<LhsEval>(intQuants.calciteVolumeFraction());
                 storage[contiCalciteEqIdx] += accumulationCalcite;
             }
         }
@@ -318,20 +318,20 @@ public:
                 // see https://doi.org/10.1016/j.ijggc.2021.103256 for the MICP processes in the model
                 source[Indices::contiMicrobialEqIdx] += intQuants.microbialConcentration() * intQuants.porosity() *
                                                         b * (Y * k_g - k_d - k_a) +
-                                                        rho_b * intQuants.biofilmConcentration() * k_str * pow(normVelocityCell / intQuants.porosity(), eta);
+                                                        rho_b * intQuants.biofilmVolumeFraction() * k_str * pow(normVelocityCell / intQuants.porosity(), eta);
 
                 source[Indices::contiOxygenEqIdx] -= (intQuants.microbialConcentration() * intQuants.porosity() * 
-                                                    b + rho_b * intQuants.biofilmConcentration()) * F * k_g;
+                                                    b + rho_b * intQuants.biofilmVolumeFraction()) * F * k_g;
 
-                source[Indices::contiUreaEqIdx] -= rho_b * intQuants.biofilmConcentration() * k_c;
+                source[Indices::contiUreaEqIdx] -= rho_b * intQuants.biofilmVolumeFraction() * k_c;
 
-                source[Indices::contiBiofilmEqIdx] += intQuants.biofilmConcentration() * (Y * k_g - k_d -
+                source[Indices::contiBiofilmEqIdx] += intQuants.biofilmVolumeFraction() * (Y * k_g - k_d -
                                                     k_str * pow(normVelocityCell / intQuants.porosity(), eta) - Y_uc * (rho_b / rho_c) * 
-                                                    intQuants.biofilmConcentration() * k_c / (intQuants.porosity() + 
-                                                    intQuants.biofilmConcentration())) + k_a * intQuants.microbialConcentration() *
+                                                    intQuants.biofilmVolumeFraction() * k_c / (intQuants.porosity() + 
+                                                    intQuants.biofilmVolumeFraction())) + k_a * intQuants.microbialConcentration() *
                                                     intQuants.porosity() * b / rho_b;
 
-                source[Indices::contiCalciteEqIdx] += (rho_b / rho_c) * intQuants.biofilmConcentration() * Y_uc * k_c;
+                source[Indices::contiCalciteEqIdx] += (rho_b / rho_c) * intQuants.biofilmVolumeFraction() * Y_uc * k_c;
                 
                 // since the urea concentration can be much larger than 1, then we apply a scaling factor
                 source[Indices::contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
@@ -351,7 +351,7 @@ public:
 
                 const auto& xG = RswToMassFraction(pvtRegionIndex, Rsw);
 
-                // get porosity, biofilm concentration, and gas density for convenience
+                // get the porosity and and gas density for convenience
                 const Evaluation& poro = intQuants.porosity();
                 Scalar rho_gRef = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIndex);
 
@@ -365,16 +365,16 @@ public:
                 // decay, detachment, and attachment rate of suspended microbes
                 source[contiMicrobialEqIdx] += Sw * intQuants.microbialConcentration() * intQuants.porosity() * b
                                                * (- k_a - k_d)
-                                               + intQuants.biofilmConcentration() * rho_b * k_str
+                                               + intQuants.biofilmVolumeFraction() * rho_b * k_str
                                                * pow(normVelocityCell / intQuants.porosity(), eta);
                 // biofilm growth and decay rate
                 source[contiBiofilmEqIdx] += (k_g - k_d - k_str * pow(normVelocityCell / intQuants.porosity(), eta))
-                                             * intQuants.biofilmConcentration()
+                                             * intQuants.biofilmVolumeFraction()
                                              + k_a * Sw * intQuants.microbialConcentration() * intQuants.porosity() * b / rho_b;
 
                 // biofilm consumption of dissolved gas is proportional to biofilm growth rate
                 unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
-                source[activeGasCompIdx] -= intQuants.biofilmConcentration() * rho_b * k_g / (Y * rho_gRef);
+                source[activeGasCompIdx] -= intQuants.biofilmVolumeFraction() * rho_b * k_g / (Y * rho_gRef);
             }
         }
     }
@@ -531,8 +531,8 @@ class BlackOilBioeffectsIntensiveQuantities
     static constexpr int microbialConcentrationIdx = Indices::microbialConcentrationIdx;
     static constexpr int oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
     static constexpr int ureaConcentrationIdx = Indices::ureaConcentrationIdx;
-    static constexpr int biofilmConcentrationIdx = Indices::biofilmConcentrationIdx;
-    static constexpr int calciteConcentrationIdx = Indices::calciteConcentrationIdx;
+    static constexpr int biofilmVolumeFractionIdx = Indices::biofilmVolumeFractionIdx;
+    static constexpr int calciteVolumeFractionIdx = Indices::calciteVolumeFractionIdx;
     static constexpr int temperatureIdx = Indices::temperatureIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr bool enableMICP = Indices::enableMICP;
@@ -554,16 +554,16 @@ public:
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
 
         microbialConcentration_ = priVars.makeEvaluation(microbialConcentrationIdx, timeIdx, linearizationType);
-        biofilmConcentration_ = priVars.makeEvaluation(biofilmConcentrationIdx, timeIdx, linearizationType);
-        biofilmMass_ = biofilmConcentration_ * BioeffectsModule::densityBiofilm(satnumRegionIdx);
-        calciteConcentration_ = 0.0;
+        biofilmVolumeFraction_ = priVars.makeEvaluation(biofilmVolumeFractionIdx, timeIdx, linearizationType);
+        biofilmMass_ = biofilmVolumeFraction_ * BioeffectsModule::densityBiofilm(satnumRegionIdx);
+        calciteVolumeFraction_ = 0.0;
         if constexpr (enableMICP) {
             oxygenConcentration_ = priVars.makeEvaluation(oxygenConcentrationIdx, timeIdx, linearizationType);
             ureaConcentration_ = priVars.makeEvaluation(ureaConcentrationIdx, timeIdx, linearizationType);
-            calciteConcentration_ = priVars.makeEvaluation(calciteConcentrationIdx, timeIdx, linearizationType);
-            calciteMass_ = calciteConcentration_ * BioeffectsModule::densityCalcite(satnumRegionIdx);
+            calciteVolumeFraction_ = priVars.makeEvaluation(calciteVolumeFractionIdx, timeIdx, linearizationType);
+            calciteMass_ = calciteVolumeFraction_ * BioeffectsModule::densityCalcite(satnumRegionIdx);
         }
-        const Evaluation poroFact = min(1.0 - (biofilmConcentration_ + calciteConcentration_) /
+        const Evaluation poroFact = min(1.0 - (biofilmVolumeFraction_ + calciteVolumeFraction_) /
                                               (referencePorosity_), 1.0); //phi/phi_0
 
         const auto& permfactTable = BioeffectsModule::permfactTable(satnumRegionIdx);
@@ -579,11 +579,11 @@ public:
     const Evaluation& ureaConcentration() const
     { return ureaConcentration_; }
 
-    const Evaluation& biofilmConcentration() const
-    { return biofilmConcentration_; }
+    const Evaluation& biofilmVolumeFraction() const
+    { return biofilmVolumeFraction_; }
 
-    const Evaluation& calciteConcentration() const
-    { return calciteConcentration_; }
+    const Evaluation& calciteVolumeFraction() const
+    { return calciteVolumeFraction_; }
 
     const Evaluation biofilmMass() const
     { return biofilmMass_; }
@@ -598,8 +598,8 @@ protected:
     Evaluation microbialConcentration_;
     Evaluation oxygenConcentration_;
     Evaluation ureaConcentration_;
-    Evaluation biofilmConcentration_;
-    Evaluation calciteConcentration_;
+    Evaluation biofilmVolumeFraction_;
+    Evaluation calciteVolumeFraction_;
     Evaluation biofilmMass_;
     Evaluation calciteMass_;
     Evaluation permFactor_;
@@ -629,11 +629,11 @@ public:
     const Evaluation& ureaConcentration() const
     { throw std::logic_error("ureaConcentration() called but MICP is disabled"); }
 
-    const Evaluation& biofilmConcentration() const
-    { throw std::logic_error("biofilmConcentration() called but biofilm/MICP is disabled"); }
+    const Evaluation& biofilmVolumeFraction() const
+    { throw std::logic_error("biofilmVolumeFraction() called but biofilm/MICP is disabled"); }
 
-    const Evaluation& calciteConcentration() const
-    { throw std::logic_error("calciteConcentration() called but MICP is disabled"); }
+    const Evaluation& calciteVolumeFraction() const
+    { throw std::logic_error("calciteVolumeFraction() called but MICP is disabled"); }
 
     const Evaluation& biofilmMass() const
     { throw std::logic_error("biofilmMass() called but biofilm/MICP is disabled"); }
