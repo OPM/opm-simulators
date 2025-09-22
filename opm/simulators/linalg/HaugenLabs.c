@@ -157,8 +157,46 @@ bildu_prec *bildu_new()
     P->L=bsr_new();
     P->D=bsr_new();
     P->U=bsr_new();
+
+    P->noffsets=-1;
+    P->offsets=NULL;
+
     return P;
 }
+
+int bildu_analyze(bsr_matrix *M, int (*offsets)[3])
+{
+    int count=0;
+    for(int i=0;i<M->nrows;i++)
+    {
+        for(int z=M->rowptr[i];z<M->rowptr[i+1];z++)
+        {
+            int j = M->colidx[z];
+            int match=0;
+            for(int m=M->rowptr[j];m<M->rowptr[j+1];m++)
+            {
+                int k = M->colidx[m];
+                for(int n=M->rowptr[i];n<M->rowptr[i+1];n++)
+                {
+                    int jjj=M->colidx[n];
+                    match += (k==jjj);
+                    if(k==jjj)
+                    {
+                        if(offsets)
+                        {
+                            offsets[count][0]=z;//ij
+                            offsets[count][1]=n;//ik
+                            offsets[count][2]=m;//jk
+                        }
+                        count++;
+                    }
+                }
+            }
+        }
+    }
+    return count;
+}
+
 
 void bildu_init(bildu_prec *P, bsr_matrix const *A)
 {
@@ -200,16 +238,22 @@ void bildu_init(bildu_prec *P, bsr_matrix const *A)
     D->rowptr[nrows]=nrows;
     U->rowptr[nrows]=nnz;
 
+    // replace with asserts?
     L->nnz=nnz;
     D->nnz=nrows;
     U->nnz=nnz;
 
-    // allocate values arrays
-    //int bb=b*b;
-    //L->dbl = malloc(bb*nnz*sizeof(double));
-    //D->dbl = malloc(bb*nrows*sizeof(double));
-    //U->dbl = malloc(bb*nnz*sizeof(double));
+
+    // offsets for off-diagonal updates
+    int count;
+    count = bildu_analyze(U,NULL);
+    P->offsets = malloc(3*(count+1)*sizeof(int));
+    count = bildu_analyze(U,P->offsets);
+    P->offsets[count][0]=U->nnz;
+    P->noffsets=count;
 }
+
+
 
 void vec_copy(double *y, double const * x, int n)
 {
@@ -456,6 +500,86 @@ void bildu_factorize(bildu_prec *P, bsr_matrix *A)
     }
 }
 
+void bildu_factorize2(bildu_prec *P, bsr_matrix *A)
+{
+    int nrows = A->nrows;
+    int b     = A->b;
+    int bb    = b*b;
+
+    bsr_matrix *L=P->L;
+    bsr_matrix *D=P->D;
+    bsr_matrix *U=P->U;
+
+    // Splitting values of A into L, D, and U, respectively
+    int kU=0;
+    for(int i=0;i<nrows;i++)
+    {
+        for (int k=A->rowptr[i];k<A->rowptr[i+1];k++)
+        {
+            int j=A->colidx[k];
+            if(j<i)       // struct-transpose of L
+            {
+                int kL = L->rowptr[j];
+                vec_copy9(L->dbl + bb*kL, A->dbl + bb*k);
+                L->rowptr[j]++;
+            }
+            else if(j==i) // struct-copy of D
+            {
+                vec_copy9(D->dbl + bb*i, A->dbl + bb*k);
+            }
+            else if(j>i) // struct-copy of U
+            {
+                vec_copy9(U->dbl + bb*kU, A->dbl + bb*k);
+                kU++;
+            }
+        }
+    }
+    // reset rowptr of L
+    for(int i=nrows;i>0;i--) L->rowptr[i]=L->rowptr[i-1];
+    L->rowptr[0]=0;
+
+    // Factorizing
+    int idx=0;
+    int next = P->offsets[idx][0];
+    double scale[9]; //hard-coded to 3x3 blocks for now
+    for(int i=0;i<A->nrows;i++)
+    {
+        mat3_inv(scale,D->dbl+i*bb);
+        vec_copy9(D->dbl+bb*i, scale); //store inverse instead to simplify application
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            //scale column i of L
+            mat3_rmul(L->dbl+k*bb,scale);
+
+            //update diagonal D
+            int j=L->colidx[k];
+            mat3_vfms(D->dbl+j*bb,L->dbl+k*bb,U->dbl+k*bb);
+        }
+
+        while(next<U->rowptr[i+1])
+        {
+            int ij = P->offsets[idx][0];
+            int ik = P->offsets[idx][1];
+            int jk = P->offsets[idx][2];
+
+            //update off-diagonals L and U
+            mat3_vfms(U->dbl+jk*bb,L->dbl+ij*bb,U->dbl+ik*bb);
+            mat3_vfms(L->dbl+jk*bb,L->dbl+ik*bb,U->dbl+ij*bb);
+
+            //update marker
+            next=P->offsets[++idx][0];
+        }
+
+
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            //scale row i of U
+            mat3_lmul(scale,U->dbl+k*bb);
+        }
+
+    }
+}
+
 
 inline void mat3_vecmul(const double *A, double *x)
 {
@@ -699,7 +823,8 @@ int bslv_pbicgstab3(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
           double * restrict x_j = x;
 
     bildu_prec * restrict P = mem->P;
-    bildu_factorize(P,A);
+    //bildu_factorize(P,A); // block-diagonal ilu0
+    bildu_factorize2(P,A); //full block ilu0
     bildu_downcast(P);
 
     vec_fill(x_j,0.0,n);
