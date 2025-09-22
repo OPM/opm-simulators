@@ -15,7 +15,7 @@
 - Ubuntu 22.04 LTS and 24.04 LTS
 - Debian
 - Mac OS X
-- Windows (with WSL2)
+- WSL2
 
 [Download binaries here](https://opm-project.org/?page_id=36)
 
