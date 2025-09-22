@@ -62,6 +62,7 @@ namespace
 
     // Populate Hypre BoomerAMG defaults under the given root prefix.
     // These defaults mirror HyprePreconditioner.hpp
+#if HAVE_HYPRE && (HYPRE_USING_CUDA || HYPRE_USING_HIP)
     inline void setupHypreAMG(PropertyTree& prm, const std::string& root, bool useGpu)
     {
         prm.put(root + "print_level", prm.get<int>(root + "print_level", 0));
@@ -85,7 +86,9 @@ namespace
             prm.put(root + "agg_interp_type", prm.get<int>(root + "agg_interp_type", 4));
         }
     }
+#endif
 
+#if HAVE_AMGX
     // Populate AMGX AMG defaults under the given root prefix.
     // These defaults mirror AmgxPreconditioner.hpp (AmgxConfig)
     inline void setupAMGXAMG(PropertyTree& prm, const std::string& root)
@@ -104,11 +107,15 @@ namespace
         prm.put(root + "strength_threshold", prm.get<double>(root + "strength_threshold", 0.5));
         prm.put(root + "max_iters", prm.get<int>(root + "max_iters", 1));
         prm.put(root + "setup_frequency",
-                prm.get<int>(root + "setup_frequency", Opm::Parameters::Get<Opm::Parameters::CprReuseInterval>()));
+                prm.get<int>(root + "setup_frequency",
+                             Opm::Parameters::Get<Opm::Parameters::CprReuseInterval>()));
     }
+#endif
 
     // Decide and configure the GPU AMG backend. Throws if none available.
-    inline void setupGpuAmgBackend(PropertyTree& prm, const std::string& typeKey, const std::string& root)
+    inline void setupGpuAmgBackend(PropertyTree& prm,
+                                   const std::string& typeKey,
+                                   [[maybe_unused]] const std::string& root)
     {
         using namespace std::string_literals;
 
