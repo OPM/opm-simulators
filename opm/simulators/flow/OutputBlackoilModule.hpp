@@ -236,7 +236,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        OPM_TIMEBLOCK_LOCAL(processElement);
+        OPM_TIMEBLOCK_LOCAL(processElement, Subsystem::Output);
         if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
             return;
         }
@@ -282,7 +282,7 @@ public:
 
     void processElementBlockData(const ElementContext& elemCtx)
     {
-        OPM_TIMEBLOCK_LOCAL(processElementBlockData);
+        OPM_TIMEBLOCK_LOCAL(processElementBlockData, Subsystem::Output);
         if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
             return;
         }
@@ -445,7 +445,7 @@ public:
                        ActiveIndex&&         activeIndex,
                        CartesianIndex&&      cartesianIndex)
     {
-        OPM_TIMEBLOCK_LOCAL(processFluxes);
+        OPM_TIMEBLOCK_LOCAL(processFluxes, Subsystem::Output);
         const auto identifyCell = [&activeIndex, &cartesianIndex](const Element& elem)
             -> InterRegFlowMap::Cell
         {
@@ -676,7 +676,7 @@ private:
                              const IntensiveQuantities& intQuants,
                              const double               totVolume)
     {
-        OPM_TIMEBLOCK_LOCAL(updateFluidInPlace);
+        OPM_TIMEBLOCK_LOCAL(updateFluidInPlace, Subsystem::Output);
 
         this->updateTotalVolumesAndPressures_(globalDofIdx, intQuants, totVolume);
 

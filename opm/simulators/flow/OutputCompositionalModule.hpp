@@ -247,7 +247,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        OPM_TIMEBLOCK_LOCAL(processElement);
+        OPM_TIMEBLOCK_LOCAL(processElement, Subsystem::Output);
         if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
             return;
         }
@@ -272,14 +272,14 @@ public:
 
     void processElementFlows(const ElementContext& /* elemCtx */)
     {
-        OPM_TIMEBLOCK_LOCAL(processElementBlockData);
+        OPM_TIMEBLOCK_LOCAL(processElementBlockData, Subsystem::Output);
         if (!std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>)
             return;
     }
 
     void processElementBlockData(const ElementContext& /* elemCtx */)
     {
-        OPM_TIMEBLOCK_LOCAL(processElementBlockData);
+        OPM_TIMEBLOCK_LOCAL(processElementBlockData, Subsystem::Output);
         if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
             return;
     }
