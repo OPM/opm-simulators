@@ -1289,7 +1289,7 @@ reportConnectionFilterCake(const std::size_t well_index,
 template<typename Scalar, typename IndexTraits>
 void WellState<Scalar, IndexTraits>::
 reportConnectionFracture(const std::size_t well_index,
-                          std::vector<data::Connection>& connections) const
+                         std::vector<data::Connection>& connections) const
 {
     const auto& perf_data = this->well(well_index).perf_data;
     const auto num_perf_well = perf_data.size();
@@ -1303,12 +1303,16 @@ reportConnectionFracture(const std::size_t well_index,
         fracture.flux = data.flux[i];
         fracture.height = data.height[i];
         fracture.length = data.length[i];
-        
+        fracture.WI = data.WI[i];
+        fracture.volume = data.volume[i];
+        fracture.filter_volume = data.filter_volume[i];
+        fracture.avg_width = data.avg_width[i];
+        fracture.avg_filter_width = data.avg_filter_width[i];
     }
 }
 
 template<typename Scalar, typename IndexTraits>
-void WellState<Scalar, IndexTraits>::  
+void WellState<Scalar, IndexTraits>::
 reportFractureStatistics(const std::vector<ConnFracStatistics<Scalar>>& stats,
                          std::vector<data::Connection>& connections) const
 {
