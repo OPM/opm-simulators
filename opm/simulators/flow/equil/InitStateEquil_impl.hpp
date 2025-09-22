@@ -141,6 +141,25 @@ Scalar cellCenterDepth(const Element& element)
 }
 
 template <class Scalar, class Element>
+std::pair<Scalar,Scalar> cellCenterXY(const Element& element)
+{
+    typedef typename Element::Geometry Geometry;
+    static constexpr int xCoord = Element::dimension - 3;
+    static constexpr int yCoord = Element::dimension - 2;
+    Scalar yy = 0.0;
+    Scalar xx = 0.0;
+        
+
+    const Geometry& geometry = element.geometry();
+    const int corners = geometry.corners();
+    for (int i=0; i < corners; ++i) {
+        xx += geometry.corner(i)[xCoord];
+        yy += geometry.corner(i)[yCoord];
+    }
+    return  std::make_pair(xx/corners, yy/corners);
+}
+
+template <class Scalar, class Element>
 std::pair<Scalar,Scalar> cellZSpan(const Element& element)
 {
     typedef typename Element::Geometry Geometry;
@@ -179,37 +198,22 @@ std::pair<Scalar,Scalar> cellZMinMax(const Element& element)
 }
 
 template<class Scalar>
-void computeBlockDip(const std::array<Scalar, 8>& cornerDepths,
+void computeBlockDip(const Scalar& cellThickness, const std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>>&cellCornersXY,
                     Scalar& dipAngle, Scalar& dipAzimuth)
 {
-    // Calculate top face dip
-    Scalar top_dx1 = cornerDepths[1] - cornerDepths[0]; // x-difference along y=0
-    Scalar top_dx2 = cornerDepths[3] - cornerDepths[2]; // x-difference along y=1
-    Scalar top_dy1 = cornerDepths[2] - cornerDepths[0]; // y-difference along x=0
-    Scalar top_dy2 = cornerDepths[3] - cornerDepths[1]; // y-difference along x=1
-
-    Scalar top_dx = (top_dx1 + top_dx2) / 2;
-    Scalar top_dy = (top_dy1 + top_dy2) / 2;
-
-    // Calculate bottom face dip
-    Scalar bot_dx1 = cornerDepths[5] - cornerDepths[4];
-    Scalar bot_dx2 = cornerDepths[7] - cornerDepths[6];
-    Scalar bot_dy1 = cornerDepths[6] - cornerDepths[4];
-    Scalar bot_dy2 = cornerDepths[7] - cornerDepths[5];
-
-    Scalar bot_dx = (bot_dx1 + bot_dx2) / 2;
-    Scalar bot_dy = (bot_dy1 + bot_dy2) / 2;
-
-    // Average top and bottom dips
-    Scalar dx = (top_dx + bot_dx) / 2;
-    Scalar dy = (top_dy + bot_dy) / 2;
+    auto [Xc, Yc, Zc] = cellCornersXY;
+   // Calculate actual cell dimensions
+    Scalar dx = std::max(Xc[1] - Xc[0],
+                 Xc[3] - Xc[2]);
+    Scalar dy = std::max(Yc[2] - Yc[0],
+                 Yc[3] - Yc[1]);
 
     // Compute dip parameters
     const Scalar lateralDist = std::sqrt(dx*dx + dy*dy);
     if (lateralDist > 1e-3) {
-        dipAngle = std::atan2(lateralDist, 1.0); // Using 1.0 as reference thickness
+        dipAngle = std::atan2(lateralDist, cellThickness); // Using 1.0 as reference thickness
         dipAzimuth = std::atan2(dy, dx);
-        const Scalar maxDip = M_PI/2 - 1e-4;
+        const Scalar maxDip = (M_PI/2 - 1e-4);
         dipAngle = std::clamp(dipAngle, -maxDip, maxDip);
     } else {
         dipAngle = 0.0;
@@ -236,24 +240,27 @@ std::array<Scalar, 8> getCellCornerDepths(const Element& element)
 }
 
 template <class Scalar, class Element>
-std::pair<std::array<Scalar, 8>, std::array<Scalar, 8>> getCellCornerXY(const Element& element)
+std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>> getCellCornerXY(const Element& element)
 {
     typedef typename Element::Geometry Geometry;
     const Geometry& geometry = element.geometry();
+    static constexpr int zCoord = Element::dimension - 1;
     static constexpr int yCoord = Element::dimension - 2;
-        static constexpr int xCoord = Element::dimension - 3;
+    static constexpr int xCoord = Element::dimension - 3;
     const int corners = geometry.corners();
     assert(corners == 8);
     std::array<Scalar, 8> X {};
     std::array<Scalar, 8> Y {};
+    std::array<Scalar, 8> Z {};
     // Get all 8 corners of the hexahedral cell (maybe expensive)
     for (int i = 0; i < corners; ++i) {
          auto corner = geometry.corner(i);
          X[i] = corner[xCoord];
          Y[i] = corner[yCoord];
+         Z[i] = corner[zCoord];
     }
 
-    return {X, Y};
+    return {X, Y, Z};
 }
 template<class Scalar>
 Scalar calculateTrueVerticalDepth(Scalar z, Scalar x, Scalar y,
@@ -261,9 +268,12 @@ Scalar calculateTrueVerticalDepth(Scalar z, Scalar x, Scalar y,
                                 const std::array<Scalar, 3>& referencePoint)
 {
     // Calculate dist from a reference point (we need to check if im correct)
-    const Scalar dx = x - referencePoint[0];
-    const Scalar dy = y - referencePoint[1];
+    const Scalar dx = std::abs(x-referencePoint[0]);
+    const Scalar dy = std::abs(y-referencePoint[1]);
     const Scalar dz = z - referencePoint[2];
+
+   // const Scalar maxDip = M_PI/2 - 1e-4;
+   // dipAngle = std::clamp(dipAngle, -maxDip, maxDip);
 
     // Project along dip direction
     const Scalar lateral = dx*std::cos(dipAzimuth) + dy*std::sin(dipAzimuth);
@@ -271,7 +281,11 @@ Scalar calculateTrueVerticalDepth(Scalar z, Scalar x, Scalar y,
     // Tune Vertical Depth calculation
     const Scalar costheta = std::cos(dipAngle);
     const Scalar sintheta = std::sin(dipAngle);
-    return referencePoint[2] + dz*costheta + lateral*sintheta;
+    if (std::abs(dipAngle) >M_PI/4) {
+       return referencePoint[2] + dz + lateral*std::tan(dipAngle);
+    } else {
+       return referencePoint[2] + dz*costheta + lateral*sintheta;
+    }
 }
 
 template<class Scalar, class RHS>
@@ -1822,6 +1836,7 @@ updateCellProps_(const GridView& gridView,
     ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
     int numElements = gridView.size(/*codim=*/0);
     cellCenterDepth_.resize(numElements);
+    cellCenterXY_.resize(numElements);
     cellCornersDepth_.resize(numElements);
     cellCornersXY_.resize(numElements);
     cellZSpan_.resize(numElements);
@@ -1834,6 +1849,7 @@ updateCellProps_(const GridView& gridView,
         const Element& element = *elemIt;
         const unsigned int elemIdx = elemMapper.index(element);
         cellCenterDepth_[elemIdx] = Details::cellCenterDepth<Scalar>(element);
+        cellCenterXY_[elemIdx] = Details::cellCenterXY<Scalar>(element);
         cellCornersDepth_[elemIdx] = Details::getCellCornerDepths<Scalar>(element);
         cellCornersXY_[elemIdx] = Details::getCellCornerXY<Scalar>(element);
         const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
@@ -2316,9 +2332,10 @@ equilibrateTitledBlocks(const CellRange& cells, const EquilReg<Scalar>& eqreg,
         const auto& [zmin, zmax] = cellZMinMax_[cell];
         const auto& topbot = cellZSpan_[cell];
         const Scalar cellHeight = zmax - zmin;
-
+        auto [Xc, Yc, Zc] = cellCornersXY_[cell];
         // 1. Compute cross-sectional areas at N levels
         std::vector<Scalar> areas(2*numLevels);
+        std::vector<Scalar> zdepths(2*numLevels);
         for (int half = 0; half < 2; ++half) {
             Scalar z0 = (half == 0) ? zmin : (zmin + zmax)/2;
             Scalar z1 = (half == 0) ? (zmin + zmax)/2 : zmax;
@@ -2327,55 +2344,92 @@ equilibrateTitledBlocks(const CellRange& cells, const EquilReg<Scalar>& eqreg,
                 Scalar z = z0 + i*(z1 - z0)/(numLevels - 1);
 
                 // Interpolate corner points at this z-level
-                std::array<std::array<Scalar,2>,4> polygon;
+                std::array<std::array<Scalar,3>,4> polygon;
                 for (int c = 0; c < 4; ++c) {
                     // Bottom (c) to top (c+4) edge interpolation
                     Scalar t = (z - cellCornersDepth_[cell][c]) /
                               (cellCornersDepth_[cell][c+4] - cellCornersDepth_[cell][c]);
                     t = std::clamp(t, 0.0, 1.0);
-                    polygon[c][0] = (1-t)*cellCornersXY_[cell].first[c] + t*cellCornersXY_[cell].first[c+4];
-                    polygon[c][1] = (1-t)*cellCornersXY_[cell].second[c] + t*cellCornersXY_[cell].second[c+4];
+                    polygon[c][0] = (1-t)*Xc[c] + t*Xc[c+4];
+                    polygon[c][1] = (1-t)*Yc[c] + t*Yc[c+4];
+                    polygon[c][2] = (1-t)*Zc[c] + t*Zc[c+4];
                 }
 
-                // Compute area using shoelace formula
-                std::array<int, 4> idx = {0, 1, 3, 2};  // reordered traversal
+                // Helper for cross product
+auto cross = [](const std::array<Scalar, 3>& a, const std::array<Scalar, 3>& b) {
+    return std::array<Scalar, 3>{
+        a[1]*b[2] - a[2]*b[1],
+        a[2]*b[0] - a[0]*b[2],
+        a[0]*b[1] - a[1]*b[0]
+    };
+};
 
-               Scalar area = 0.0;
-               for (int j = 0; j < 4; ++j) {
-                   int k = (j + 1) % 4;
-               area += polygon[idx[j]][0] * polygon[idx[k]][1]
-                       - polygon[idx[k]][0] * polygon[idx[j]][1];
-               }
-               area = 0.5 * std::abs(area);
+// Helper for vector subtraction
+auto sub = [](const std::array<Scalar, 3>& a, const std::array<Scalar, 3>& b) {
+    return std::array<Scalar, 3>{ a[0]-b[0], a[1]-b[1], a[2]-b[2] };
+};
 
-               areas[half*numLevels + i] = std::abs(area)/2.0;
+// Helper for norm
+auto norm = [](const std::array<Scalar, 3>& v) {
+    return std::sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+};
+
+std::array<int, 4> idx = {0, 1, 3, 2};  // reordered traversal
+
+Scalar area = 0.0;
+Scalar zdepth = 0.0;
+
+// Triangle 1: idx[0], idx[1], idx[2]
+{
+    auto v1 = sub(polygon[idx[1]], polygon[idx[0]]);
+    auto v2 = sub(polygon[idx[2]], polygon[idx[0]]);
+    area += 0.5 * norm(cross(v1, v2));
+}
+
+// Triangle 2: idx[2], idx[1], idx[3]
+{
+    auto v1 = sub(polygon[idx[1]], polygon[idx[2]]);
+    auto v2 = sub(polygon[idx[3]], polygon[idx[2]]);
+    area += 0.5 * norm(cross(v1, v2));
+}
+
+// Average z-depth
+for (int j = 0; j < 4; ++j) {
+    zdepth += polygon[idx[j]][2];
+}
+
+areas[half * numLevels + i] = area;
+zdepths[half * numLevels + i] = zdepth / 4.0;
+
             }
         }
 
         // 2. Compute block dip from corner points
         Scalar dipAngle, dipAzimuth;
-        Details::computeBlockDip(cellCornersDepth_[cell], dipAngle, dipAzimuth);
+        Details::computeBlockDip(cellHeight, cellCornersXY_[cell], dipAngle, dipAzimuth);
 
         // 3. Reference point at cell center (ECLIPSE convention)
         std::array<Scalar, 3> referencePoint = {
-            centroids_[cell][0],
-            centroids_[cell][1],
-            (zmin + zmax)/2
+            cellCenterXY_[cell].first,
+            cellCenterXY_[cell].second,
+            cellCenterDepth_[cell]
         };
 
         // 4. N-level integration with area weighting
         for (int half = 0; half < 2; ++half) {
             Scalar z0 = (half == 0) ? topbot.first : (topbot.first + topbot.second)/2;
             Scalar z1 = (half == 0) ? (topbot.first + topbot.second)/2 : topbot.second;
+            Scalar totalArea = std::accumulate(areas.begin(), areas.end(), Scalar(0));
 
             for (int i = 0; i < numLevels; ++i) {
-                Scalar z = z0 + (i + 0.5)*(z1 - z0)/numLevels;
-                Scalar weight = areas[half*numLevels + i];
+                Scalar z = z0 + i*(z1 - z0)/(numLevels - 1);// z0 + (i + 0.5)*(z1 - z0)/numLevels;
+                Scalar weight = areas[half*numLevels + i]/ totalArea;
+                Scalar tvd = zdepths[half*numLevels + i];
 
                 // Calculate TVD with dip correction
-                Scalar tvd = Details::calculateTrueVerticalDepth(
-                    z, centroids_[cell][0], centroids_[cell][1],
-                    dipAngle, dipAzimuth, referencePoint);
+                //Scalar tvd = Details::calculateTrueVerticalDepth(
+                //    z, Xc[7], Yc[7] ,
+                //    dipAngle, dipAzimuth, referencePoint);
 
                 // Accumulate weighted properties
                 const auto pos = CellPos{cell, tvd};
