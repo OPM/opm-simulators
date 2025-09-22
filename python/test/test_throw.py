@@ -12,7 +12,7 @@ class TestBasic(unittest.TestCase):
 
     def test_all(self):
         with pushd(self.data_dir):
-            sim = BlackOilSimulator("SPE1CASE1.DATA")
+            sim = BlackOilSimulator(args=['--enable-async-ecl-output=false'], filename="SPE1CASE1.DATA")
             # NOTE: The following call should throw an exception since the simulation
             #   has not been initialized
             with self.assertRaises(RuntimeError):

@@ -30,7 +30,7 @@ class TestBasic(unittest.TestCase):
             self.assertEqual(dt.datetime(2015, 1, 1),   self.schedule.start)
             self.assertEqual(dt.datetime(2016, 1, 1), self.schedule.end)
             self.sim = BlackOilSimulator(
-                self.deck, state, self.schedule, summary_config  )
+                self.deck, state, self.schedule, summary_config, args=['--enable-async-ecl-output=false'])
             tsteps = self.schedule.timesteps
             self.assertEqual(dt.datetime(2015, 1, 1), tsteps[0])
             last_step = len(tsteps) - 1
