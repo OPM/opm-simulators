@@ -33,6 +33,11 @@ void ConnFractureData<Scalar>::resize(std::size_t num_perf)
     this->flux.resize(num_perf);
     this->height.resize(num_perf);
     this->length.resize(num_perf);
+    this->WI.resize(num_perf);
+    this->volume.resize(num_perf);
+    this->filter_volume.resize(num_perf);
+    this->avg_width.resize(num_perf);
+    this->avg_filter_width.resize(num_perf);
 }
 
 template<class Scalar>
@@ -44,16 +49,27 @@ ConnFractureData<Scalar>::serializationTestObject()
     result.flux = {100.};
     result.height = {0.5};
     result.length = {0.05};
+    result.WI = {10.0};
+    result.volume = {4.0};
+    result.filter_volume = {0.4};
+    result.avg_width = {0.5};
+    result.avg_filter_width = {0.05};
     return result;
 }
 
 template<class Scalar>
 bool ConnFractureData<Scalar>::operator==(const ConnFractureData& rhs) const
 {
-    return this->area == rhs.area &&
-           this->flux == rhs.flux &&
-           this->height == rhs.height &&
-           this->length == rhs.length; 
+    return (this->area == rhs.area)
+        && (this->flux == rhs.flux)
+        && (this->height == rhs.height)
+        && (this->length == rhs.length)
+        && (this->WI == rhs.WI)
+        && (this->volume == rhs.volume)
+        && (this->filter_volume == rhs.filter_volume)
+        && (this->avg_width == rhs.avg_width)
+        && (this->avg_filter_width == rhs.avg_filter_width)
+        ;
 }
 
 template struct ConnFractureData<double>;
