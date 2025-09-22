@@ -6,9 +6,9 @@
 [![Main Article - 10.1016/j.camwa.2020.05.014](https://img.shields.io/badge/Main_Article-10.1016%2Fj.camwa.2020.05.014-FF9900)](#)
 [![Zenodo](https://img.shields.io/badge/Zenodo_Src-10.5281%2Fzenodo.12637570-ff2222)](https://doi.org/10.5281/zenodo.12637570)
 
-> The `opm-simulators` repository containes the OPM Flow reservoir simulator which uses automatic differentation and standard input-formats to simulate reservoirs of industrial complexity on real assets by commercial actors. It is cooperatively developed by multiple industry-partners and academic institutions under the GPL 3 license.
+> The `opm-simulators` repository contains the OPM Flow reservoir simulator which uses automatic differentiation and standard input-formats to simulate reservoirs of industrial complexity on real assets by commercial actors. It is cooperatively developed by multiple industry-partners and academic institutions under the GPL 3 license.
 > 
-> Flow is a fully implicit black-oil simulators which also supports CO2 storage, H2 storage, thermal simulations, solvents, as well as polymers. It works with the Eclipse formats, making it easy to integrate into existing workflows. The automatic differentation is implemented in [opm-common](OPM/opm-common). The manual can be found here on the OPM [home page](https://opm-project.org/?page_id=955).
+> Flow is a fully implicit black-oil simulators which also supports CO2 storage, H2 storage, thermal simulations, solvents, as well as polymers. It works with the Eclipse formats, making it easy to integrate into existing workflows. The automatic differentiation is implemented in [opm-common](OPM/opm-common). The manual can be found here on the OPM [home page](https://opm-project.org/?page_id=955).
 
 ## Supported Platforms
 - RHEL 8+
@@ -24,7 +24,7 @@
 `opm-simulators` Depends on:
 - [opm-common](OPM/opm-common)
 - [opm-grid](OPM/opm-grid)
-- [Dune, and other depencies kept track of on the home page](https://opm-project.org/?page_id=239)
+- [Dune and all other dependencies are listed and tracked on the home page](https://opm-project.org/?page_id=239)
 
 [Follow the build instructions on the home page](http://opm-project.org/?page_id=36).
 
@@ -34,7 +34,7 @@ In addition to providing the [manual](https://opm-project.org/?page_id=955) we a
 
 
 ## Reporting Issues
-Issues can either be reported here on [github repository](https://github.com/OPM/opm-simulators/issues), or using the [OPM mailing list](https://opm-project.org/?page_id=358)
+Issues can either be reported here on [GitHub repository](https://github.com/OPM/opm-simulators/issues), or using the [OPM mailing list](https://opm-project.org/?page_id=358)
 
 To help diagnose build errors, please provide a link to a build log together
 with the issue description.
