@@ -792,10 +792,11 @@ private:
     const CartesianIndexMapper& cartesianIndexMapper_;
     Vec swatInit_;
     Vec cellCenterDepth_;
+    std::vector<std::pair<Scalar,Scalar>> cellCenterXY_;
     std::vector<std::pair<Scalar,Scalar>> cellZSpan_;
     std::vector<std::pair<Scalar,Scalar>> cellZMinMax_;
     std::vector<std::array<Scalar, 8>> cellCornersDepth_;
-    std::vector<std::pair<std::array<Scalar, 8>, std::array<Scalar, 8>>> cellCornersXY_;
+    std::vector<std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>>> cellCornersXY_;
     int num_pressure_points_;
     static const int dimensionworld = Grid::dimensionworld;
     std::vector<std::array<double, 3>> centroids_;
