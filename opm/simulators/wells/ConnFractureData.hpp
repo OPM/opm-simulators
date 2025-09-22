@@ -36,6 +36,11 @@ struct ConnFractureData {
         serializer(flux);
         serializer(height);
         serializer(length);
+        serializer(WI);
+        serializer(volume);
+        serializer(filter_volume);
+        serializer(avg_width);
+        serializer(avg_filter_width);
     }
 
     static ConnFractureData serializationTestObject();
@@ -46,6 +51,11 @@ struct ConnFractureData {
     std::vector<Scalar> flux;
     std::vector<Scalar> height;
     std::vector<Scalar> length;
+    std::vector<Scalar> WI;
+    std::vector<Scalar> volume;
+    std::vector<Scalar> filter_volume;
+    std::vector<Scalar> avg_width;
+    std::vector<Scalar> avg_filter_width;
 };
 
 }
