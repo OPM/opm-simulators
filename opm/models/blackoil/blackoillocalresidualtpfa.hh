@@ -162,7 +162,7 @@ public:
     static void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
                                const IntensiveQuantities& intQuants)
     {
-        OPM_TIMEBLOCK_LOCAL(computeStorage);
+        OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
         // retrieve the intensive quantities for the SCV at the specified point in time
         const auto& fs = intQuants.fluidState();
         storage = 0.0;
@@ -251,7 +251,7 @@ public:
                             const ResidualNBInfo& nbInfo,
                             const ModuleParams& moduleParams)
     {
-        OPM_TIMEBLOCK_LOCAL(computeFlux);
+        OPM_TIMEBLOCK_LOCAL(computeFlux, Subsystem::Assembly);
         flux = 0.0;
         darcy = 0.0;
 
@@ -273,7 +273,7 @@ public:
                             unsigned scvfIdx,
                             unsigned timeIdx)
     {
-        OPM_TIMEBLOCK_LOCAL(computeFlux);
+        OPM_TIMEBLOCK_LOCAL(computeFlux, Subsystem::Assembly);
         assert(timeIdx == 0);
 
         flux = 0.0;
@@ -345,7 +345,7 @@ public:
                                  const ResidualNBInfo& nbInfo,
                                  const ModuleParams& moduleParams)
     {
-        OPM_TIMEBLOCK_LOCAL(calculateFluxes);
+        OPM_TIMEBLOCK_LOCAL(calculateFluxes, Subsystem::Assembly);
         const Scalar Vin = nbInfo.Vin;
         const Scalar Vex = nbInfo.Vex;
         const Scalar distZg = nbInfo.dZg;
@@ -570,7 +570,7 @@ public:
                                         const IntensiveQuantities& insideIntQuants,
                                         unsigned globalSpaceIdx)
     {
-        OPM_TIMEBLOCK_LOCAL(computeBoundaryFluxFree);
+        OPM_TIMEBLOCK_LOCAL(computeBoundaryFluxFree, Subsystem::Assembly);
         std::array<short, numPhases> upIdx;
         std::array<short, numPhases> dnIdx;
         std::array<Evaluation, numPhases> volumeFlux;
@@ -679,7 +679,7 @@ public:
                                        const IntensiveQuantities& insideIntQuants,
                                        [[maybe_unused]] unsigned globalSpaceIdx)
     {
-        OPM_TIMEBLOCK_LOCAL(computeBoundaryThermal);
+        OPM_TIMEBLOCK_LOCAL(computeBoundaryThermal, Subsystem::Assembly);
         // only heat is allowed to flow through this boundary
         bdyFlux = 0.0;
 
@@ -714,7 +714,7 @@ public:
                               unsigned globalSpaceIdex,
                               unsigned timeIdx)
     {
-        OPM_TIMEBLOCK_LOCAL(computeSource);
+        OPM_TIMEBLOCK_LOCAL(computeSource, Subsystem::Assembly);
         // retrieve the source term intrinsic to the problem
         problem.source(source, globalSpaceIdex, timeIdx);
 
@@ -753,7 +753,7 @@ public:
                        unsigned dofIdx,
                        unsigned timeIdx) const
     {
-        OPM_TIMEBLOCK_LOCAL(computeSource);
+        OPM_TIMEBLOCK_LOCAL(computeSource, Subsystem::Assembly);
         // retrieve the source term intrinsic to the problem
         elemCtx.problem().source(source, elemCtx, dofIdx, timeIdx);
 

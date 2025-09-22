@@ -702,7 +702,7 @@ public:
     template <class LhsEval>
     LhsEval permFactTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        OPM_TIMEBLOCK_LOCAL(permFactTransMultiplier);
+        OPM_TIMEBLOCK_LOCAL(permFactTransMultiplier, Subsystem::PvtProps);
         if constexpr (enableSaltPrecipitation) {
             const auto& fs = intQuants.fluidState();
             unsigned tableIdx = this->simulator().problem().satnumRegionIndex(elementIdx);
@@ -740,7 +740,7 @@ public:
 
     InitialFluidState boundaryFluidState(unsigned globalDofIdx, const int directionId) const
     {
-        OPM_TIMEBLOCK_LOCAL(boundaryFluidState);
+        OPM_TIMEBLOCK_LOCAL(boundaryFluidState, Subsystem::Assembly);
         const auto& bcprop = this->simulator().vanguard().schedule()[this->episodeIndex()].bcprop;
         if (bcprop.size() > 0) {
             FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
@@ -965,7 +965,7 @@ public:
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
-        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary);
+        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary, Subsystem::Assembly);
         if (!context.intersection(spaceIdx).boundary())
             return;
 

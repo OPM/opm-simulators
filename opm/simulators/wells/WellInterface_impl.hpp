@@ -1714,7 +1714,7 @@ namespace Opm
               const Scalar                   trans_mult,
               const SingleWellStateType& ws) const
     {
-        OPM_TIMEFUNCTION_LOCAL();
+        OPM_TIMEFUNCTION_LOCAL(Subsystem::Wells);
         // Add a Forchheimer term to the gas phase CTF if the run uses
         // either of the WDFAC or the WDFACCOR keywords.
         if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {

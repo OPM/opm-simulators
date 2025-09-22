@@ -453,6 +453,7 @@ public:
 
     void updateMobilityAndInvB()
     {
+        OPM_TIMEBLOCK_LOCAL(updateMobilityAndInvB, Subsystem::PvtProps);
         const unsigned pvtRegionIdx = fluidState_.pvtRegionIndex();
 
         // compute the phase densities and transform the phase permeabilities into mobilities
@@ -706,7 +707,7 @@ public:
     template <class ...Args>
     void updateCommonPart(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
     {
-        OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
+        OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate, Subsystem::SatProps | Subsystem::PvtProps);
 
         const auto& linearizationType = problem.model().linearizer().getLinearizationType();
         const unsigned pvtRegionIdx = priVars.pvtRegionIndex();

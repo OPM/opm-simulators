@@ -307,7 +307,7 @@ public:
                   unsigned spaceIdx,
                   unsigned /* timeIdx */) const
     {
-        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary);
+        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary, Subsystem::Assembly);
         if (!context.intersection(spaceIdx).boundary())
             return;
 
