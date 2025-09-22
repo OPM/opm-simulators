@@ -18,7 +18,7 @@ public:
 
     IntensiveQuantities intensiveQuantities(unsigned globalIdx, unsigned timeIdx) const
     {
-        OPM_TIMEBLOCK_LOCAL(intensiveQuantitiesNoCache);
+        OPM_TIMEBLOCK_LOCAL(intensiveQuantitiesNoCache, Subsystem::PvtProps | Subsystem::SatProps);
         const auto& primaryVar = this->solution(timeIdx)[globalIdx];
         const auto& problem = this->simulator_.problem();
         if (!(this->enableIntensiveQuantityCache_) ||
