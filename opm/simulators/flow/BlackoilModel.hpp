@@ -98,8 +98,8 @@ public:
     static constexpr int microbialConcentrationIdx = Indices::microbialConcentrationIdx;
     static constexpr int oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
     static constexpr int ureaConcentrationIdx = Indices::ureaConcentrationIdx;
-    static constexpr int biofilmConcentrationIdx = Indices::biofilmConcentrationIdx;
-    static constexpr int calciteConcentrationIdx = Indices::calciteConcentrationIdx;
+    static constexpr int biofilmVolumeFractionIdx = Indices::biofilmVolumeFractionIdx;
+    static constexpr int calciteVolumeFractionIdx = Indices::calciteVolumeFractionIdx;
 
     using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
     using MatrixBlockType = typename SparseMatrixAdapter::MatrixBlock;

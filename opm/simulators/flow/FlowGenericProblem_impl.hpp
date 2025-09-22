@@ -528,9 +528,9 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
             bioeffects_.microbialConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SBIOF")) {
-            bioeffects_.biofilmConcentration = getArray(eclState_.fieldProps().get_double("SBIOF"));
+            bioeffects_.biofilmVolumeFraction = getArray(eclState_.fieldProps().get_double("SBIOF"));
         } else {
-            bioeffects_.biofilmConcentration.resize(numDof, 0.0);
+            bioeffects_.biofilmVolumeFraction.resize(numDof, 0.0);
         }
         if (enableMICP) {
             if (eclState_.fieldProps().has_double("SOXYG")) {
@@ -544,9 +544,9 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
                 bioeffects_.ureaConcentration.resize(numDof, 0.0);
             }
             if (eclState_.fieldProps().has_double("SCALC")) {
-                bioeffects_.calciteConcentration = getArray(eclState_.fieldProps().get_double("SCALC"));
+                bioeffects_.calciteVolumeFraction = getArray(eclState_.fieldProps().get_double("SCALC"));
             } else {
-                bioeffects_.calciteConcentration.resize(numDof, 0.0);
+                bioeffects_.calciteVolumeFraction.resize(numDof, 0.0);
             }
         }
     }
@@ -672,25 +672,25 @@ ureaConcentration(unsigned elemIdx) const
 template<class GridView, class FluidSystem>
 typename FlowGenericProblem<GridView,FluidSystem>::Scalar
 FlowGenericProblem<GridView,FluidSystem>::
-biofilmConcentration(unsigned elemIdx) const
+biofilmVolumeFraction(unsigned elemIdx) const
 {
-    if (bioeffects_.biofilmConcentration.empty()) {
+    if (bioeffects_.biofilmVolumeFraction.empty()) {
         return 0;
     }
 
-    return bioeffects_.biofilmConcentration[elemIdx];
+    return bioeffects_.biofilmVolumeFraction[elemIdx];
 }
 
 template<class GridView, class FluidSystem>
 typename FlowGenericProblem<GridView,FluidSystem>::Scalar
 FlowGenericProblem<GridView,FluidSystem>::
-calciteConcentration(unsigned elemIdx) const
+calciteVolumeFraction(unsigned elemIdx) const
 {
-    if (bioeffects_.calciteConcentration.empty()) {
+    if (bioeffects_.calciteVolumeFraction.empty()) {
         return 0;
     }
 
-    return bioeffects_.calciteConcentration[elemIdx];
+    return bioeffects_.calciteVolumeFraction[elemIdx];
 }
 
 template<class GridView, class FluidSystem>

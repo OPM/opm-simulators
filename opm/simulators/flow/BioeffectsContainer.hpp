@@ -44,11 +44,11 @@ public:
     void assign(const unsigned globalDofIdx,
                 const Scalar oxygenConcentration,
                 const Scalar ureaConcentration,
-                const Scalar calciteConcentration);
+                const Scalar calciteVolumeFraction);
 
     void assign(const unsigned globalDofIdx,
                 const Scalar microbialConcentration,
-                const Scalar biofilmConcentration);
+                const Scalar biofilmVolumeFraction);
 
     BioeffectsSolutionContainer<Scalar> getSolution() const;
 

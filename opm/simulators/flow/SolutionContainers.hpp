@@ -58,8 +58,8 @@ struct BioeffectsSolutionContainer {
     std::vector<Scalar> microbialConcentration;
     std::vector<Scalar> oxygenConcentration;
     std::vector<Scalar> ureaConcentration;
-    std::vector<Scalar> biofilmConcentration;
-    std::vector<Scalar> calciteConcentration;
+    std::vector<Scalar> biofilmVolumeFraction;
+    std::vector<Scalar> calciteVolumeFraction;
 
     static BioeffectsSolutionContainer serializationTestObject();
 
@@ -72,8 +72,8 @@ struct BioeffectsSolutionContainer {
         serializer(microbialConcentration);
         serializer(oxygenConcentration);
         serializer(ureaConcentration);
-        serializer(biofilmConcentration);
-        serializer(calciteConcentration);
+        serializer(biofilmVolumeFraction);
+        serializer(calciteVolumeFraction);
     }
 
     bool operator==(const BioeffectsSolutionContainer& rhs) const;
