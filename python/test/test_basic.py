@@ -1,13 +1,14 @@
 import os
 import unittest
 from pathlib import Path
-from .pytest_common import pushd, create_black_oil_simulator, create_gas_water_simulator
+from .pytest_common import pushd, create_black_oil_simulator, create_gas_water_simulator, create_onephase_simulator
 
 class TestBasic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         test_dir = Path(os.path.dirname(__file__))
         cls.data_dir_bo = test_dir.parent.joinpath("test_data/SPE1CASE1a")
+        cls.data_dir_op = test_dir.parent.joinpath("test_data/SPE1CASE1")
         cls.data_dir_gw = test_dir.parent.joinpath("test_data/SPE1CASE2")
 
     # IMPORTANT: Since all the python unittests run in the same process we must be
@@ -34,6 +35,26 @@ class TestBasic(unittest.TestCase):
             self.assertEqual(len(vol), 300, 'length of volume vector')
             # NOTE: The volume should be 1000 ft x 1000 ft x 20 ft * 0.3 (porosity) 
             #  = 600000 ft^3 = 566336.93 m^3
+            self.assertAlmostEqual(vol[0], 566336.93, places=2, msg='value of volume')
+            poro = sim.get_porosity()
+            self.assertEqual(len(poro), 300, 'length of porosity vector')
+            self.assertAlmostEqual(poro[0], 0.3, places=7, msg='value of porosity')
+            poro = poro *.95
+            sim.set_porosity(poro)
+            sim.step()
+            poro2 = sim.get_porosity()
+            self.assertAlmostEqual(poro2[0], 0.285, places=7, msg='value of porosity 2')
+    
+    def test_02_onephase(self):
+        with pushd(self.data_dir_op):
+            sim = create_onephase_simulator(args=['--linear-solver=ilu0'], filename="SPE1CASE1_WATER.DATA")
+            sim.setup_mpi(init=False, finalize=False)
+            sim.step_init()
+            sim.step()
+            dt = sim.get_dt()  # 31 days = 31 * 24 * 60 * 60 = 2678400 seconds
+            self.assertAlmostEqual(dt, 2678400., places=7, msg='value of timestep')
+            vol = sim.get_cell_volumes()
+            self.assertEqual(len(vol), 300, 'length of volume vector')
             self.assertAlmostEqual(vol[0], 566336.93, places=2, msg='value of volume')
             poro = sim.get_porosity()
             self.assertEqual(len(poro), 300, 'length of porosity vector')

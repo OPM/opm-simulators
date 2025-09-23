@@ -1,13 +1,14 @@
 import os
 import unittest
 from pathlib import Path
-from .pytest_common import pushd, create_black_oil_simulator, create_gas_water_simulator
+from .pytest_common import pushd, create_black_oil_simulator, create_gas_water_simulator, create_onephase_simulator
 
 class TestBasic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         test_dir = Path(os.path.dirname(__file__))
         cls.data_dir_bo = test_dir.parent.joinpath("test_data/SPE1CASE1a")
+        cls.data_dir_op = test_dir.parent.joinpath("test_data/SPE1CASE1")
         cls.data_dir_gw = test_dir.parent.joinpath("test_data/SPE1CASE2")
 
     # IMPORTANT: Since all the python unittests run in the same process we must be
@@ -48,6 +49,19 @@ class TestBasic(unittest.TestCase):
             self.assertAlmostEqual(Sg[0], 0.055138968544, places=3, msg='value of gas saturation')
             T = sim.get_fluidstate_variable(name='T')
             self.assertAlmostEqual(T[0], 288.705, places=3, msg='value of temperature')
+
+    def test_02_onephase(self):
+        with pushd(self.data_dir_op):
+            sim = create_onephase_simulator("SPE1CASE1_WATER.DATA")
+            sim.setup_mpi(False, False)
+            sim.step_init()
+            sim.step()
+            water_pressure = sim.get_fluidstate_variable(name='pw')
+            self.assertAlmostEqual(water_pressure[0], 44780102.277570, delta=1e4, msg='value of water pressure')
+            rho_w = sim.get_fluidstate_variable(name='rho_w')
+            self.assertAlmostEqual(rho_w[0], 1003.182858, places=3, msg='value of water density')
+            Sw = sim.get_fluidstate_variable(name='Sw')
+            self.assertAlmostEqual(Sw[0], 1.0, places=5, msg='value of water saturation')
 
     # IMPORTANT: This test must be run last since it calls MPI_Finalize()
     def test_99_gaswater(self):

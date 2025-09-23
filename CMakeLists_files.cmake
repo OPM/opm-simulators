@@ -959,6 +959,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/SubDomain.hpp
   opm/simulators/flow/TTagFlowProblemTPFA.hpp
   opm/simulators/flow/TTagFlowProblemGasWater.hpp
+  opm/simulators/flow/TTagFlowProblemOnePhase.hpp
   opm/simulators/flow/TracerContainer.hpp
   opm/simulators/flow/TracerModel.hpp
   opm/simulators/flow/Transmissibility.hpp
