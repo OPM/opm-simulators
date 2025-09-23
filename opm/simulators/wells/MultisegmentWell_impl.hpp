@@ -170,6 +170,17 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
+    scaleSegmentRatesAndPressure(WellStateType& well_state) const
+    {
+        this->scaleSegmentRatesWithWellRates(this->segments_.inlets(),
+                                             this->segments_.perforations(),
+                                             well_state);
+        this->scaleSegmentPressuresWithBhp(well_state);
+    }
+
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
     updateWellStateWithTarget(const Simulator& simulator,
                               const GroupState<Scalar>& group_state,
                               WellStateType& well_state,
@@ -183,7 +194,6 @@ namespace Opm
                                              well_state);
         this->scaleSegmentPressuresWithBhp(well_state);
     }
-
 
 
 
