@@ -77,13 +77,21 @@ def show_wheel_files(name: str, wheel_dir: str) -> None:
     default=False,
     help="Show Docker progress output."
 )
+@click.option(
+    "--python-versions", "-p",
+    type=str,
+    callback=click_helpers.validate_python_versions,
+    help="Python versions to install in the Docker image. Valid values are: "
+            f"{', '.join(PythonVersion.valid_versions())}. If not specified, all supported versions are installed."
+)
 def build_docker_image(
     docker_os: str,
     opm_simulators_repo: str,
     opm_common_repo: str,
     opm_simulators_branch: str,
     opm_common_branch: str,
-    docker_progress: bool
+    docker_progress: bool,
+    python_versions: list[PythonVersion] = None
 ) -> None:
     """Build the Docker image. The option "--docker-os specifies the name of the OS to use
     in the Docker image. Supported: ubuntu:22.04, ubuntu:24.04, debian:11. If option --docker-progress
@@ -112,7 +120,8 @@ def build_docker_image(
         opm_common_branch,
         build_ctxt_dir=docker_root,
         docker_file=dockerfile,
-        docker_progress=docker_progress
+        docker_progress=docker_progress,
+        python_versions=python_versions
     )
 
 @main.command()
