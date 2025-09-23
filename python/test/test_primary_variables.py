@@ -1,7 +1,7 @@
 import os
 import unittest
 from pathlib import Path
-from .pytest_common import pushd, create_black_oil_simulator, create_gas_water_simulator
+from .pytest_common import pushd, create_black_oil_simulator, create_gas_water_simulator, create_onephase_simulator
 
 class TestBasic(unittest.TestCase):
     @classmethod
@@ -53,7 +53,7 @@ class TestBasic(unittest.TestCase):
 
     def test_02_onephase(self):
         with pushd(self.data_dir_op):
-            sim = OnePhaseSimulator("SPE1CASE1_WATER.DATA")
+            sim = create_onephase_simulator("SPE1CASE1_WATER.DATA")
             sim.setup_mpi(False, False)
             sim.step_init()
             sim.step()
