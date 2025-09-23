@@ -554,7 +554,7 @@ namespace Opm
             : Well::ProductionControls(0);
         
         // prepare/modify well state and control
-        well_copy.prepareForPotentialCalculations(summary_state, well_state_copy, inj_controls, prod_controls);
+        well_copy.onlyKeepBHPandTHPcontrols(summary_state, well_state_copy, inj_controls, prod_controls);
         
         well_copy.scaleSegmentPressuresWithBhp(well_state_copy);
 
