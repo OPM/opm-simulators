@@ -76,7 +76,7 @@ def run_opm_common_tests(python_bin: str) -> bool:
                 print("Some opm-common specific tests failed", file=sys.stderr)
             return all_passed
         else:
-            # Run all tests (original behavior)
+            # Run all tests
             result = subprocess.run([
                 python_bin, "-m", "unittest", "discover",
                 "-s", test_dir,
@@ -109,7 +109,7 @@ def run_opm_common_tests(python_bin: str) -> bool:
                 print("Some opm-common specific tests failed", file=sys.stderr)
             return all_passed
         else:
-            # Original strategy: run from cloned repos (opm directory was moved to opm_original during build)
+            # Run from cloned repos (opm directory was moved to opm_original during build)
             result = subprocess.run([
                 python_bin, "-m", "unittest", "discover",
                 "-s", "/test/opm-common/python",  # path to the tests
@@ -158,7 +158,7 @@ def run_opm_simulators_tests(python_bin: str) -> bool:
                 print("Some opm-simulators specific tests failed", file=sys.stderr)
             return all_passed
         else:
-            # Run all tests (original behavior)
+            # Run all tests
             result = subprocess.run([
                 python_bin, "-m", "unittest", "discover",
                 "-s", test_dir,
@@ -191,7 +191,7 @@ def run_opm_simulators_tests(python_bin: str) -> bool:
                 print("Some opm-simulators specific tests failed", file=sys.stderr)
             return all_passed
         else:
-            # Original strategy: run from cloned repos (opm directory was moved to opm_original during build)
+            # Run from cloned repos (opm directory was moved to opm_original during build)
             result = subprocess.run([
                 python_bin, "-m", "unittest", "discover",
                 "-s", "/test/opm-simulators/python",  # path to the tests
@@ -257,7 +257,7 @@ def install_and_test(python_version, pyenv_full_version):
         # Track overall test success
         overall_success = True
 
-        # If no specific test cases are specified, run all tests (original behavior)
+        # If no specific test cases are specified, run all tests
         if not test_cases_common and not test_cases_simulators:
             simulators_success = run_opm_simulators_tests(python_bin)
             common_success = run_opm_common_tests(python_bin)
