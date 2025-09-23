@@ -21,6 +21,10 @@ RUN /test/common/setup_pyenv.sh
 # Switch to bash for pyenv usage
 SHELL ["/bin/bash", "-c"]
 
+# Accept Python versions build argument and set as environment variable
+ARG BUILD_PYTHON_VERSIONS
+ENV BUILD_PYTHON_VERSIONS=${BUILD_PYTHON_VERSIONS}
+
 RUN /usr/bin/python3 /test/common/install_python_versions.py
 
 # Clone opm-common and opm-simulators to get the unit tests

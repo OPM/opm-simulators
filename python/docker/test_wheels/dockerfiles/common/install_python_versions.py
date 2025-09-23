@@ -9,8 +9,25 @@ try:
     config_file = "/test/python_versions.json"
     with open(config_file) as f:
         config = json.load(f)
-    version_map = config["supported_versions"]
-    print(f"📋 Using Python versions from python_versions.json: {list(version_map.keys())}")
+    full_version_map = config["supported_versions"]
+
+    # Check if specific Python versions were requested via build argument
+    build_versions = os.environ.get("BUILD_PYTHON_VERSIONS")
+    if build_versions:
+        requested_versions = [v.strip() for v in build_versions.split(",")]
+        version_map = {v: full_version_map[v] for v in requested_versions if v in full_version_map}
+        print(f"📋 Using requested Python versions: {list(version_map.keys())}")
+
+        # Validate that all requested versions are supported
+        missing_versions = [v for v in requested_versions if v not in full_version_map]
+        if missing_versions:
+            print(f"Error: Unsupported Python version(s): {missing_versions}")
+            print(f"Supported versions: {list(full_version_map.keys())}")
+            exit(1)
+    else:
+        version_map = full_version_map
+        print(f"📋 Using all Python versions from python_versions.json: {list(version_map.keys())}")
+
 except FileNotFoundError:
     print("Error: python_versions.json not found!")
     exit(1)

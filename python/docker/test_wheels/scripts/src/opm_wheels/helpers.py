@@ -89,26 +89,37 @@ def run_docker_build(
     build_ctxt_dir: Path,
     docker_file: Path,
     docker_progress: bool = False,
+    python_versions: list[PythonVersion] = None,
 ) -> None:
     if docker_progress:
         progress="plain"
     else:
         progress="auto"
+    # Build Docker command with base arguments
+    docker_cmd = [
+        "docker", "build",
+        "--progress", progress,
+        "--build-arg", "opm_simulators_repo=" + opm_simulators_repo,
+        "--build-arg", "opm_common_repo=" + opm_common_repo,
+        "--build-arg", "opm_simulators_branch=" + opm_simulators_branch,
+        "--build-arg", "opm_common_branch=" + opm_common_branch,
+    ]
+
+    # Add Python versions build argument if specified
+    if python_versions:
+        python_versions_str = ",".join([str(v) for v in python_versions])
+        docker_cmd.extend(["--build-arg", f"BUILD_PYTHON_VERSIONS={python_versions_str}"])
+        logging.info(f"Building Docker image with Python versions: {python_versions_str}")
+
+    # Add tag and context
+    docker_cmd.extend([
+        "-t", docker_tag,
+        "-f", str(docker_file),
+        str(build_ctxt_dir)
+    ])
+
     try:
-        result = subprocess.run(
-            [
-                "docker", "build",
-                "--progress", progress,
-                "--build-arg", "opm_simulators_repo=" + opm_simulators_repo,
-                "--build-arg", "opm_common_repo=" + opm_common_repo,
-                "--build-arg", "opm_simulators_branch=" + opm_simulators_branch,
-                "--build-arg", "opm_common_branch=" + opm_common_branch,
-                "-t", docker_tag,
-                "-f", str(docker_file),
-                str(build_ctxt_dir)
-            ],
-            check=True,  # Raise an exception if the process returns a non-zero exit code
-        )
+        result = subprocess.run(docker_cmd, check=True)
         logging.info(f"Docker image with tag {docker_tag} built successfully.")
     except subprocess.CalledProcessError as e:
         logging.error(f"Error building Docker image for tag {docker_tag}: {e}")
