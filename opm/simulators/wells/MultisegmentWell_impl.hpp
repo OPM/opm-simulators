@@ -1631,8 +1631,8 @@ namespace Opm
         // The optimal number here is subject to further investigation, but it has been observerved 
         // that unless this number is >1, we may get stuck in a cycle 
         const int min_its_after_switch = 3;
-        // We also want to restrict the number of status switches to avoid oscillation between STOP<->OPEN
-        const int max_status_switch = this->param_.max_well_status_switch_inner_iter_;
+        // We also want to restrict the number of switches to avoid oscillation between controls and status
+        const int max_inner_switch = this->param_.max_well_switch_inner_iter_;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
         int status_switch_count = 0;
@@ -1652,7 +1652,7 @@ namespace Opm
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             ++its_since_last_switch;
-            if (allow_switching && its_since_last_switch >= min_its_after_switch && status_switch_count < max_status_switch){
+            if (allow_switching && its_since_last_switch >= min_its_after_switch && switch_count < max_inner_switch){
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
                 bool changed = this->updateWellControlAndStatusLocalIteration(simulator, well_state, group_state,
                                                                               inj_controls, prod_controls, wqTotal,
@@ -1671,7 +1671,7 @@ namespace Opm
                 } else {
                     final_check = false;
                 }
-                if (status_switch_count == max_status_switch) {
+                if (status_switch_count == max_inner_switch) {
                     this->wellStatus_ = well_status_orig;
                 }
             }
