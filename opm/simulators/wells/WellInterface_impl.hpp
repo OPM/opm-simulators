@@ -405,7 +405,7 @@ namespace Opm
         // We test the well as an open well during the well testing
         ws.open();
 
-        updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
+        scaleSegmentRatesAndPressure(well_state_copy);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
 
@@ -1152,6 +1152,14 @@ namespace Opm
         // equations should be converged at this stage, so only one it is needed
         bool converged = iterateWellEquations(simulator, dt, well_state_copy, group_state, deferred_logger);
         return converged;
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    scaleSegmentRatesAndPressure(WellStateType& well_state) const
+    {
+        // only relevant for MSW
     }
 
     template<typename TypeTag>
