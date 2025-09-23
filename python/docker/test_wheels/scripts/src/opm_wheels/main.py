@@ -170,7 +170,7 @@ def build_docker_image(
 def run_docker_image(
     docker_os: str,
     wheel_dir: str,
-    python_versions: list[PythonVersion],
+    python_versions: list[PythonVersion] | None,
     host_tests_dir: Path = None,
     test_cases_common: str = None,
     test_cases_simulators: str = None,

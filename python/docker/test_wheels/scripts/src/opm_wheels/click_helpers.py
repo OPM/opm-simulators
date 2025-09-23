@@ -6,9 +6,10 @@ from opm_wheels import helpers
 
 def validate_python_versions(
     ctx: click.Context, param: Union[click.Option, click.Parameter], value: str
-) -> list[PythonVersion]:
+) -> list[PythonVersion] | None:
     if value is None:
-        value = ",".join(PythonVersion.valid_versions())
+        # Return None to allow runtime auto-detection of installed versions
+        return None
     versions = value.split(",")
     versions = [PythonVersion.from_str(str(v)) for v in versions]
     valid_versions = [PythonVersion.from_str(v) for v in PythonVersion.values()]
