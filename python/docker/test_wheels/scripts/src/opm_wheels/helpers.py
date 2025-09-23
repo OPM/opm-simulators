@@ -89,26 +89,37 @@ def run_docker_build(
     build_ctxt_dir: Path,
     docker_file: Path,
     docker_progress: bool = False,
+    python_versions: list[PythonVersion] = None,
 ) -> None:
     if docker_progress:
         progress="plain"
     else:
         progress="auto"
+    # Build Docker command with base arguments
+    docker_cmd = [
+        "docker", "build",
+        "--progress", progress,
+        "--build-arg", "opm_simulators_repo=" + opm_simulators_repo,
+        "--build-arg", "opm_common_repo=" + opm_common_repo,
+        "--build-arg", "opm_simulators_branch=" + opm_simulators_branch,
+        "--build-arg", "opm_common_branch=" + opm_common_branch,
+    ]
+
+    # Add Python versions build argument if specified
+    if python_versions:
+        python_versions_str = ",".join([str(v) for v in python_versions])
+        docker_cmd.extend(["--build-arg", f"BUILD_PYTHON_VERSIONS={python_versions_str}"])
+        logging.info(f"Building Docker image with Python versions: {python_versions_str}")
+
+    # Add tag and context
+    docker_cmd.extend([
+        "-t", docker_tag,
+        "-f", str(docker_file),
+        str(build_ctxt_dir)
+    ])
+
     try:
-        result = subprocess.run(
-            [
-                "docker", "build",
-                "--progress", progress,
-                "--build-arg", "opm_simulators_repo=" + opm_simulators_repo,
-                "--build-arg", "opm_common_repo=" + opm_common_repo,
-                "--build-arg", "opm_simulators_branch=" + opm_simulators_branch,
-                "--build-arg", "opm_common_branch=" + opm_common_branch,
-                "-t", docker_tag,
-                "-f", str(docker_file),
-                str(build_ctxt_dir)
-            ],
-            check=True,  # Raise an exception if the process returns a non-zero exit code
-        )
+        result = subprocess.run(docker_cmd, check=True)
         logging.info(f"Docker image with tag {docker_tag} built successfully.")
     except subprocess.CalledProcessError as e:
         logging.error(f"Error building Docker image for tag {docker_tag}: {e}")
@@ -118,16 +129,26 @@ def run_docker_build(
 def run_docker_run(
     docker_tag: str,
     wheel_dir: Path,
-    python_versions: list[PythonVersion],
-    host_tests_dir: Path = None
+    python_versions: list[PythonVersion] | None,
+    host_tests_dir: Path = None,
+    test_cases_common: str = None,
+    test_cases_simulators: str = None,
+    stop_on_error: bool = False
 ) -> None:
     # Build Docker run command
     docker_cmd = [
         "docker", "run",
         "--rm",
         "-v", str(wheel_dir) + ":/test/wheels/",
-        "-e", "PYTHON_VERSIONS=" + ",".join([str(v) for v in python_versions])
     ]
+
+    # Only set PYTHON_VERSIONS environment variable if explicitly specified
+    # If not specified (None), let the container auto-detect installed versions
+    if python_versions is not None:
+        docker_cmd.extend(["-e", "PYTHON_VERSIONS=" + ",".join([str(v) for v in python_versions])])
+        logging.info(f"Using specified Python versions: {','.join([str(v) for v in python_versions])}")
+    else:
+        logging.info("Using auto-detected Python versions from container")
 
     # Add host test directory mounts if specified
     if host_tests_dir:
@@ -150,6 +171,22 @@ def run_docker_run(
 
         # Signal to entrypoint that host directories are mounted
         docker_cmd.extend(["-e", "USE_HOST_TESTS=1"])
+
+    # Add test selection environment variables if specified
+    if test_cases_common:
+        docker_cmd.extend(["-e", f"TEST_CASES_COMMON={test_cases_common}"])
+        logging.info(f"Running only opm-common tests: {test_cases_common}")
+
+    if test_cases_simulators:
+        docker_cmd.extend(["-e", f"TEST_CASES_SIMULATORS={test_cases_simulators}"])
+        logging.info(f"Running only opm-simulators tests: {test_cases_simulators}")
+
+    # Add stop on error environment variable
+    if stop_on_error:
+        docker_cmd.extend(["-e", "STOP_ON_ERROR=1"])
+        logging.info("Running with stop-on-error enabled")
+    else:
+        logging.info("Running with continue-on-error (default behavior)")
 
     # Add the Docker image tag
     docker_cmd.append(docker_tag)

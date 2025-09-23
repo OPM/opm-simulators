@@ -77,13 +77,21 @@ def show_wheel_files(name: str, wheel_dir: str) -> None:
     default=False,
     help="Show Docker progress output."
 )
+@click.option(
+    "--python-versions", "-p",
+    type=str,
+    callback=click_helpers.validate_python_versions,
+    help="Python versions to install in the Docker image. Valid values are: "
+            f"{', '.join(PythonVersion.valid_versions())}. If not specified, all supported versions are installed."
+)
 def build_docker_image(
     docker_os: str,
     opm_simulators_repo: str,
     opm_common_repo: str,
     opm_simulators_branch: str,
     opm_common_branch: str,
-    docker_progress: bool
+    docker_progress: bool,
+    python_versions: list[PythonVersion] = None
 ) -> None:
     """Build the Docker image. The option "--docker-os specifies the name of the OS to use
     in the Docker image. Supported: ubuntu:22.04, ubuntu:24.04, debian:11. If option --docker-progress
@@ -112,7 +120,8 @@ def build_docker_image(
         opm_common_branch,
         build_ctxt_dir=docker_root,
         docker_file=dockerfile,
-        docker_progress=docker_progress
+        docker_progress=docker_progress,
+        python_versions=python_versions
     )
 
 @main.command()
@@ -140,11 +149,32 @@ def build_docker_image(
          "If specified, tests will be run from host directories instead of cloned repos. "
          "Expected structure: host-tests-dir/opm-common/python and host-tests-dir/opm-simulators/python"
 )
+@click.option(
+    "--test-cases-common",
+    type=str,
+    help="Comma-separated list of specific test case patterns to run for opm-common (e.g., 'eclfile,esmry'). "
+         "Will run test_<pattern>.py files. If not specified, all tests are run."
+)
+@click.option(
+    "--test-cases-simulators",
+    type=str,
+    help="Comma-separated list of specific test case patterns to run for opm-simulators (e.g., 'basic,mpi'). "
+         "Will run test_<pattern>.py files. If not specified, all tests are run."
+)
+@click.option(
+    "--stop-on-error",
+    is_flag=True,
+    default=False,
+    help="Stop execution on first test failure. If not specified, all tests will run even if some fail."
+)
 def run_docker_image(
     docker_os: str,
     wheel_dir: str,
-    python_versions: list[PythonVersion],
+    python_versions: list[PythonVersion] | None,
     host_tests_dir: Path = None,
+    test_cases_common: str = None,
+    test_cases_simulators: str = None,
+    stop_on_error: bool = False,
 ) -> None:
     f"""Run the Docker image. The option "--docker-tag" specifies the tag of the Docker
     image to run. The option "--python-versions" specifies the Python versions to
@@ -154,4 +184,4 @@ def run_docker_image(
     wheel_dir = helpers.get_wheel_abs_dir(wheel_dir)
     canonical_os = helpers.canonicalize_docker_os(docker_os)
     docker_tag = helpers.get_docker_tag(canonical_os)
-    helpers.run_docker_run(docker_tag, wheel_dir, python_versions, host_tests_dir)
+    helpers.run_docker_run(docker_tag, wheel_dir, python_versions, host_tests_dir, test_cases_common, test_cases_simulators, stop_on_error)

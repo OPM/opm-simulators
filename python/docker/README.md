@@ -120,6 +120,12 @@ The target parameters accept space-separated CMake target names:
 See [test_wheels/scripts/README.md](test_wheels/scripts/README.md) for documentation on testing the generated
 wheels. The test framework installs the generated wheels in a clean Docker container and runs the complete test suites from both opm-common and opm-simulators to verify functionality.
 
+**For debugging failed tests**, see the [Debugging section](test_wheels/scripts/README.md#debugging) for:
+- Python version selection to speed up builds
+- Focused test case execution for isolation
+- Continue-on-error mode to see all failures at once
+- Host test directory integration for faster iterations
+
 ## Python Version Configuration
 
 Python versions are configured in [`python_versions.json`](python_versions.json) as the **single source of truth**.
