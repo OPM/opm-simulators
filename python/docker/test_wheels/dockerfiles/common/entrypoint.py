@@ -304,7 +304,32 @@ def main():
         print(f"Error: Invalid JSON in {version_map_file}: {e}")
         sys.exit(1)
 
-    default_versions = ",".join(version_map.keys())
+    # Auto-detect actually installed Python versions instead of using all from JSON
+    # This allows runtime to use only the versions that were installed during build
+    try:
+        result = subprocess.run(["pyenv", "versions", "--bare"],
+                              capture_output=True, text=True, check=True)
+        installed_versions = []
+        for line in result.stdout.strip().split('\n'):
+            if line.strip():
+                # Extract short version (e.g., "3.12.9" -> "3.12")
+                full_version = line.strip()
+                short_version = '.'.join(full_version.split('.')[:2])
+                if short_version in version_map:
+                    installed_versions.append(short_version)
+
+        if installed_versions:
+            default_versions = ",".join(sorted(set(installed_versions)))
+            print(f"Auto-detected installed Python versions: {default_versions}")
+        else:
+            # Fallback to JSON versions if detection fails
+            default_versions = ",".join(version_map.keys())
+            print(f"Could not detect installed versions, using all from JSON: {default_versions}")
+    except Exception as e:
+        # Fallback to JSON versions if detection fails
+        default_versions = ",".join(version_map.keys())
+        print(f"Could not detect installed versions ({e}), using all from JSON: {default_versions}")
+
     python_versions_env = os.environ.get("PYTHON_VERSIONS", default_versions)
 
     print(f"Running tests.. Requested Python versions: {python_versions_env}")
