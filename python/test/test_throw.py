@@ -1,8 +1,7 @@
 import os
 import unittest
 from pathlib import Path
-from opm.simulators import BlackOilSimulator
-from .pytest_common import pushd
+from .pytest_common import pushd, create_black_oil_simulator
 
 class TestBasic(unittest.TestCase):
     @classmethod
@@ -12,7 +11,7 @@ class TestBasic(unittest.TestCase):
 
     def test_all(self):
         with pushd(self.data_dir):
-            sim = BlackOilSimulator("SPE1CASE1.DATA")
+            sim = create_black_oil_simulator(filename="SPE1CASE1.DATA")
             # NOTE: The following call should throw an exception since the simulation
             #   has not been initialized
             with self.assertRaises(RuntimeError):

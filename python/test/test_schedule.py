@@ -3,7 +3,7 @@ import unittest
 import datetime as dt
 from pathlib import Path
 import re
-from opm.simulators import BlackOilSimulator
+from .pytest_common import create_black_oil_simulator
 from opm.io.parser import Parser
 from opm.io.ecl_state import EclipseState
 from opm.io.schedule import Schedule
@@ -29,8 +29,8 @@ class TestBasic(unittest.TestCase):
             self.assertTrue('INJ'  in self.schedule)
             self.assertEqual(dt.datetime(2015, 1, 1),   self.schedule.start)
             self.assertEqual(dt.datetime(2016, 1, 1), self.schedule.end)
-            self.sim = BlackOilSimulator(
-                self.deck, state, self.schedule, summary_config  )
+            self.sim = create_black_oil_simulator(
+                self.deck, state, self.schedule, summary_config)
             tsteps = self.schedule.timesteps
             self.assertEqual(dt.datetime(2015, 1, 1), tsteps[0])
             last_step = len(tsteps) - 1
