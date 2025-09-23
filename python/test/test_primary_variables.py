@@ -1,8 +1,7 @@
 import os
 import unittest
 from pathlib import Path
-from opm.simulators import BlackOilSimulator, GasWaterSimulator
-from .pytest_common import pushd
+from .pytest_common import pushd, create_black_oil_simulator, create_gas_water_simulator
 
 class TestBasic(unittest.TestCase):
     @classmethod
@@ -24,7 +23,7 @@ class TestBasic(unittest.TestCase):
     # IMPORTANT:This test must be run first since it calls MPI_Init()
     def test_01_blackoil(self):
         with pushd(self.data_dir_bo):
-            sim = BlackOilSimulator(args=['--enable-async-ecl-output=false'], filename="SPE1CASE1.DATA")
+            sim = create_black_oil_simulator(filename="SPE1CASE1.DATA")
             sim.setup_mpi(True, False)
             sim.step_init()
             sim.step()
@@ -54,7 +53,7 @@ class TestBasic(unittest.TestCase):
     # IMPORTANT: This test must be run last since it calls MPI_Finalize()
     def test_99_gaswater(self):
         with pushd(self.data_dir_gw):
-            sim = GasWaterSimulator(args=['--enable-async-ecl-output=false'], filename="SPE1CASE2_GASWATER.DATA")
+            sim = create_gas_water_simulator(filename="SPE1CASE2_GASWATER.DATA")
             sim.setup_mpi(False, True)
             sim.step_init()
             sim.step()
