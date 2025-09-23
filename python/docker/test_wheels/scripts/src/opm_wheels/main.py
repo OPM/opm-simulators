@@ -161,6 +161,12 @@ def build_docker_image(
     help="Comma-separated list of specific test case patterns to run for opm-simulators (e.g., 'basic,mpi'). "
          "Will run test_<pattern>.py files. If not specified, all tests are run."
 )
+@click.option(
+    "--stop-on-error",
+    is_flag=True,
+    default=False,
+    help="Stop execution on first test failure. If not specified, all tests will run even if some fail."
+)
 def run_docker_image(
     docker_os: str,
     wheel_dir: str,
@@ -168,6 +174,7 @@ def run_docker_image(
     host_tests_dir: Path = None,
     test_cases_common: str = None,
     test_cases_simulators: str = None,
+    stop_on_error: bool = False,
 ) -> None:
     f"""Run the Docker image. The option "--docker-tag" specifies the tag of the Docker
     image to run. The option "--python-versions" specifies the Python versions to
@@ -177,4 +184,4 @@ def run_docker_image(
     wheel_dir = helpers.get_wheel_abs_dir(wheel_dir)
     canonical_os = helpers.canonicalize_docker_os(docker_os)
     docker_tag = helpers.get_docker_tag(canonical_os)
-    helpers.run_docker_run(docker_tag, wheel_dir, python_versions, host_tests_dir, test_cases_common, test_cases_simulators)
+    helpers.run_docker_run(docker_tag, wheel_dir, python_versions, host_tests_dir, test_cases_common, test_cases_simulators, stop_on_error)

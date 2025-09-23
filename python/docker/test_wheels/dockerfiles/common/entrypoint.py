@@ -13,6 +13,10 @@ import shutil
 import subprocess
 import sys
 
+def should_stop_on_error() -> bool:
+    """Check if we should stop on test errors based on environment variable."""
+    return os.environ.get("STOP_ON_ERROR") == "1"
+
 def copy_essential_directories(source_dir: str, dest_dir: str, essential_items: list) -> None:
     """Copy essential directories from source to destination, avoiding problematic items.
 
@@ -33,10 +37,11 @@ def copy_essential_directories(source_dir: str, dest_dir: str, essential_items: 
             else:
                 shutil.copy2(item_path, dest_path)
 
-def run_opm_common_tests(python_bin: str) -> None:
+def run_opm_common_tests(python_bin: str) -> bool:
     """Run all unittests in opm-common/python/tests"""
     # Check for specific test selection
     test_cases = os.environ.get("TEST_CASES_COMMON")
+    stop_on_error = should_stop_on_error()
 
     if os.environ.get("USE_HOST_TESTS"):
         # Copy strategy for host-mounted directories:
@@ -54,43 +59,74 @@ def run_opm_common_tests(python_bin: str) -> None:
         # Run tests from clean location (preserves package structure for relative imports)
         if test_cases:
             # Run specific test files
+            all_passed = True
             for test_case in test_cases.split(","):
                 test_case = test_case.strip()
                 print(f"Running opm-common test: {test_case}")
-                subprocess.run([
+                result = subprocess.run([
                     python_bin, "-m", "unittest", f"tests.test_{test_case}",
                     "-v"
-                ], cwd=test_dir, check=True)
+                ], cwd=test_dir, check=False)
+                if result.returncode != 0:
+                    print(f"Test {test_case} failed with return code {result.returncode}", file=sys.stderr)
+                    all_passed = False
+                    if stop_on_error:
+                        raise subprocess.CalledProcessError(result.returncode, result.args)
+            if not all_passed:
+                print("Some opm-common specific tests failed", file=sys.stderr)
+            return all_passed
         else:
             # Run all tests (original behavior)
-            subprocess.run([
+            result = subprocess.run([
                 python_bin, "-m", "unittest", "discover",
                 "-s", test_dir,
                 "-p", "test_*.py",
                 "-v"
-            ], cwd=test_dir, check=True)
+            ], cwd=test_dir, check=False)
+            if result.returncode != 0:
+                print(f"opm-common tests failed with return code {result.returncode}", file=sys.stderr)
+                if stop_on_error:
+                    raise subprocess.CalledProcessError(result.returncode, result.args)
+                return False
+            return True
     else:
         if test_cases:
             # Run specific test files in cloned repo environment
+            all_passed = True
             for test_case in test_cases.split(","):
                 test_case = test_case.strip()
                 print(f"Running opm-common test: {test_case}")
-                subprocess.run([
+                result = subprocess.run([
                     python_bin, "-m", "unittest", f"test_{test_case}",
                     "-v"
-                ], cwd="/test/opm-common/python", check=True)
+                ], cwd="/test/opm-common/python", check=False)
+                if result.returncode != 0:
+                    print(f"Test {test_case} failed with return code {result.returncode}", file=sys.stderr)
+                    all_passed = False
+                    if stop_on_error:
+                        raise subprocess.CalledProcessError(result.returncode, result.args)
+            if not all_passed:
+                print("Some opm-common specific tests failed", file=sys.stderr)
+            return all_passed
         else:
             # Original strategy: run from cloned repos (opm directory was moved to opm_original during build)
-            subprocess.run([
+            result = subprocess.run([
                 python_bin, "-m", "unittest", "discover",
                 "-s", "/test/opm-common/python",  # path to the tests
                 "-v"  # verbose output
-            ], check=True)
+            ], check=False)
+            if result.returncode != 0:
+                print(f"opm-common tests failed with return code {result.returncode}", file=sys.stderr)
+                if stop_on_error:
+                    raise subprocess.CalledProcessError(result.returncode, result.args)
+                return False
+            return True
 
-def run_opm_simulators_tests(python_bin: str) -> None:
+def run_opm_simulators_tests(python_bin: str) -> bool:
     """Run all unittests in opm-simulators/python/test"""
     # Check for specific test selection
     test_cases = os.environ.get("TEST_CASES_SIMULATORS")
+    stop_on_error = should_stop_on_error()
 
     if os.environ.get("USE_HOST_TESTS"):
         # Copy strategy for host-mounted directories:
@@ -105,38 +141,68 @@ def run_opm_simulators_tests(python_bin: str) -> None:
         # Use parent directory as start and specify test pattern to make relative imports work
         if test_cases:
             # Run specific test files
+            all_passed = True
             for test_case in test_cases.split(","):
                 test_case = test_case.strip()
                 print(f"Running opm-simulators test: {test_case}")
-                subprocess.run([
+                result = subprocess.run([
                     python_bin, "-m", "unittest", f"test.test_{test_case}",
                     "-v"
-                ], cwd=test_dir, check=True)
+                ], cwd=test_dir, check=False)
+                if result.returncode != 0:
+                    print(f"Test {test_case} failed with return code {result.returncode}", file=sys.stderr)
+                    all_passed = False
+                    if stop_on_error:
+                        raise subprocess.CalledProcessError(result.returncode, result.args)
+            if not all_passed:
+                print("Some opm-simulators specific tests failed", file=sys.stderr)
+            return all_passed
         else:
             # Run all tests (original behavior)
-            subprocess.run([
+            result = subprocess.run([
                 python_bin, "-m", "unittest", "discover",
                 "-s", test_dir,
                 "-p", "test_*.py",
                 "-v"
-            ], cwd=test_dir, check=True)
+            ], cwd=test_dir, check=False)
+            if result.returncode != 0:
+                print(f"opm-simulators tests failed with return code {result.returncode}", file=sys.stderr)
+                if stop_on_error:
+                    raise subprocess.CalledProcessError(result.returncode, result.args)
+                return False
+            return True
     else:
         if test_cases:
             # Run specific test files in cloned repo environment
+            all_passed = True
             for test_case in test_cases.split(","):
                 test_case = test_case.strip()
                 print(f"Running opm-simulators test: {test_case}")
-                subprocess.run([
+                result = subprocess.run([
                     python_bin, "-m", "unittest", f"test.test_{test_case}",
                     "-v"
-                ], cwd="/test/opm-simulators/python", check=True)
+                ], cwd="/test/opm-simulators/python", check=False)
+                if result.returncode != 0:
+                    print(f"Test {test_case} failed with return code {result.returncode}", file=sys.stderr)
+                    all_passed = False
+                    if stop_on_error:
+                        raise subprocess.CalledProcessError(result.returncode, result.args)
+            if not all_passed:
+                print("Some opm-simulators specific tests failed", file=sys.stderr)
+            return all_passed
         else:
             # Original strategy: run from cloned repos (opm directory was moved to opm_original during build)
-            subprocess.run([
+            result = subprocess.run([
                 python_bin, "-m", "unittest", "discover",
                 "-s", "/test/opm-simulators/python",  # path to the tests
                 "-v"  # verbose output
-            ], check=True)
+            ], check=False)
+            if result.returncode != 0:
+                print(f"opm-simulators tests failed with return code {result.returncode}", file=sys.stderr)
+                if stop_on_error:
+                    raise subprocess.CalledProcessError(result.returncode, result.args)
+                return False
+            return True
 
 
 def install_and_test(python_version, pyenv_full_version):
@@ -188,20 +254,35 @@ def install_and_test(python_version, pyenv_full_version):
         test_cases_common = os.environ.get("TEST_CASES_COMMON")
         test_cases_simulators = os.environ.get("TEST_CASES_SIMULATORS")
 
+        # Track overall test success
+        overall_success = True
+
         # If no specific test cases are specified, run all tests (original behavior)
         if not test_cases_common and not test_cases_simulators:
-            run_opm_simulators_tests(python_bin)
-            run_opm_common_tests(python_bin)
+            simulators_success = run_opm_simulators_tests(python_bin)
+            common_success = run_opm_common_tests(python_bin)
+            overall_success = simulators_success and common_success
         else:
             # Run only the requested test suites
             if test_cases_simulators or not test_cases_common:
                 # Run simulators tests if explicitly requested OR if common tests not specified
-                run_opm_simulators_tests(python_bin)
+                simulators_success = run_opm_simulators_tests(python_bin)
+                overall_success = overall_success and simulators_success
             if test_cases_common or not test_cases_simulators:
                 # Run common tests if explicitly requested OR if simulators tests not specified
-                run_opm_common_tests(python_bin)
+                common_success = run_opm_common_tests(python_bin)
+                overall_success = overall_success and common_success
 
-        return True  # All good!
+        # Report overall result
+        if overall_success:
+            return True
+        elif should_stop_on_error():
+            # When stop_on_error is True, failures should stop execution
+            return False
+        else:
+            # When stop_on_error is False, continue even if tests failed
+            print(f"Tests failed for Python {python_version}, but continuing due to continue-on-error mode", file=sys.stderr)
+            return True
 
     except subprocess.CalledProcessError:
         print(f"Installation or test failed for Python {python_version}", file=sys.stderr)

@@ -132,7 +132,8 @@ def run_docker_run(
     python_versions: list[PythonVersion],
     host_tests_dir: Path = None,
     test_cases_common: str = None,
-    test_cases_simulators: str = None
+    test_cases_simulators: str = None,
+    stop_on_error: bool = False
 ) -> None:
     # Build Docker run command
     docker_cmd = [
@@ -172,6 +173,13 @@ def run_docker_run(
     if test_cases_simulators:
         docker_cmd.extend(["-e", f"TEST_CASES_SIMULATORS={test_cases_simulators}"])
         logging.info(f"Running only opm-simulators tests: {test_cases_simulators}")
+
+    # Add stop on error environment variable
+    if stop_on_error:
+        docker_cmd.extend(["-e", "STOP_ON_ERROR=1"])
+        logging.info("Running with stop-on-error enabled")
+    else:
+        logging.info("Running with continue-on-error (default behavior)")
 
     # Add the Docker image tag
     docker_cmd.append(docker_tag)
