@@ -119,7 +119,9 @@ def run_docker_run(
     docker_tag: str,
     wheel_dir: Path,
     python_versions: list[PythonVersion],
-    host_tests_dir: Path = None
+    host_tests_dir: Path = None,
+    test_cases_common: str = None,
+    test_cases_simulators: str = None
 ) -> None:
     # Build Docker run command
     docker_cmd = [
@@ -150,6 +152,15 @@ def run_docker_run(
 
         # Signal to entrypoint that host directories are mounted
         docker_cmd.extend(["-e", "USE_HOST_TESTS=1"])
+
+    # Add test selection environment variables if specified
+    if test_cases_common:
+        docker_cmd.extend(["-e", f"TEST_CASES_COMMON={test_cases_common}"])
+        logging.info(f"Running only opm-common tests: {test_cases_common}")
+
+    if test_cases_simulators:
+        docker_cmd.extend(["-e", f"TEST_CASES_SIMULATORS={test_cases_simulators}"])
+        logging.info(f"Running only opm-simulators tests: {test_cases_simulators}")
 
     # Add the Docker image tag
     docker_cmd.append(docker_tag)
