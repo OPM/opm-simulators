@@ -35,6 +35,9 @@ def copy_essential_directories(source_dir: str, dest_dir: str, essential_items: 
 
 def run_opm_common_tests(python_bin: str) -> None:
     """Run all unittests in opm-common/python/tests"""
+    # Check for specific test selection
+    test_cases = os.environ.get("TEST_CASES_COMMON")
+
     if os.environ.get("USE_HOST_TESTS"):
         # Copy strategy for host-mounted directories:
         # When using --host-tests-dir, the host directories contain 'opm/' source code
@@ -49,22 +52,46 @@ def run_opm_common_tests(python_bin: str) -> None:
         copy_essential_directories("/test/opm-common/python", test_dir, ["tests", "test", "examples"])
 
         # Run tests from clean location (preserves package structure for relative imports)
-        subprocess.run([
-            python_bin, "-m", "unittest", "discover",
-            "-s", test_dir,
-            "-p", "test_*.py",
-            "-v"
-        ], cwd=test_dir, check=True)
+        if test_cases:
+            # Run specific test files
+            for test_case in test_cases.split(","):
+                test_case = test_case.strip()
+                print(f"Running opm-common test: {test_case}")
+                subprocess.run([
+                    python_bin, "-m", "unittest", f"tests.test_{test_case}",
+                    "-v"
+                ], cwd=test_dir, check=True)
+        else:
+            # Run all tests (original behavior)
+            subprocess.run([
+                python_bin, "-m", "unittest", "discover",
+                "-s", test_dir,
+                "-p", "test_*.py",
+                "-v"
+            ], cwd=test_dir, check=True)
     else:
-        # Original strategy: run from cloned repos (opm directory was moved to opm_original during build)
-        subprocess.run([
-            python_bin, "-m", "unittest", "discover",
-            "-s", "/test/opm-common/python",  # path to the tests
-            "-v"  # verbose output
-        ], check=True)
+        if test_cases:
+            # Run specific test files in cloned repo environment
+            for test_case in test_cases.split(","):
+                test_case = test_case.strip()
+                print(f"Running opm-common test: {test_case}")
+                subprocess.run([
+                    python_bin, "-m", "unittest", f"test_{test_case}",
+                    "-v"
+                ], cwd="/test/opm-common/python", check=True)
+        else:
+            # Original strategy: run from cloned repos (opm directory was moved to opm_original during build)
+            subprocess.run([
+                python_bin, "-m", "unittest", "discover",
+                "-s", "/test/opm-common/python",  # path to the tests
+                "-v"  # verbose output
+            ], check=True)
 
 def run_opm_simulators_tests(python_bin: str) -> None:
     """Run all unittests in opm-simulators/python/test"""
+    # Check for specific test selection
+    test_cases = os.environ.get("TEST_CASES_SIMULATORS")
+
     if os.environ.get("USE_HOST_TESTS"):
         # Copy strategy for host-mounted directories:
         # Same issue as opm-common - host 'opm/' directories conflict with installed wheels.
@@ -76,19 +103,40 @@ def run_opm_simulators_tests(python_bin: str) -> None:
 
         # Run tests from clean location (preserves package structure for relative imports)
         # Use parent directory as start and specify test pattern to make relative imports work
-        subprocess.run([
-            python_bin, "-m", "unittest", "discover",
-            "-s", test_dir,
-            "-p", "test_*.py",
-            "-v"
-        ], cwd=test_dir, check=True)
+        if test_cases:
+            # Run specific test files
+            for test_case in test_cases.split(","):
+                test_case = test_case.strip()
+                print(f"Running opm-simulators test: {test_case}")
+                subprocess.run([
+                    python_bin, "-m", "unittest", f"test.test_{test_case}",
+                    "-v"
+                ], cwd=test_dir, check=True)
+        else:
+            # Run all tests (original behavior)
+            subprocess.run([
+                python_bin, "-m", "unittest", "discover",
+                "-s", test_dir,
+                "-p", "test_*.py",
+                "-v"
+            ], cwd=test_dir, check=True)
     else:
-        # Original strategy: run from cloned repos (opm directory was moved to opm_original during build)
-        subprocess.run([
-            python_bin, "-m", "unittest", "discover",
-            "-s", "/test/opm-simulators/python",  # path to the tests
-            "-v"  # verbose output
-        ], check=True)
+        if test_cases:
+            # Run specific test files in cloned repo environment
+            for test_case in test_cases.split(","):
+                test_case = test_case.strip()
+                print(f"Running opm-simulators test: {test_case}")
+                subprocess.run([
+                    python_bin, "-m", "unittest", f"test.test_{test_case}",
+                    "-v"
+                ], cwd="/test/opm-simulators/python", check=True)
+        else:
+            # Original strategy: run from cloned repos (opm directory was moved to opm_original during build)
+            subprocess.run([
+                python_bin, "-m", "unittest", "discover",
+                "-s", "/test/opm-simulators/python",  # path to the tests
+                "-v"  # verbose output
+            ], check=True)
 
 
 def install_and_test(python_version, pyenv_full_version):
@@ -136,9 +184,22 @@ def install_and_test(python_version, pyenv_full_version):
             check=True
         )
 
-        # 3) Run all unittests
-        run_opm_simulators_tests(python_bin)
-        run_opm_common_tests(python_bin)
+        # 3) Run unittests based on what's requested
+        test_cases_common = os.environ.get("TEST_CASES_COMMON")
+        test_cases_simulators = os.environ.get("TEST_CASES_SIMULATORS")
+
+        # If no specific test cases are specified, run all tests (original behavior)
+        if not test_cases_common and not test_cases_simulators:
+            run_opm_simulators_tests(python_bin)
+            run_opm_common_tests(python_bin)
+        else:
+            # Run only the requested test suites
+            if test_cases_simulators or not test_cases_common:
+                # Run simulators tests if explicitly requested OR if common tests not specified
+                run_opm_simulators_tests(python_bin)
+            if test_cases_common or not test_cases_simulators:
+                # Run common tests if explicitly requested OR if simulators tests not specified
+                run_opm_common_tests(python_bin)
 
         return True  # All good!
 

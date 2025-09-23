@@ -140,11 +140,25 @@ def build_docker_image(
          "If specified, tests will be run from host directories instead of cloned repos. "
          "Expected structure: host-tests-dir/opm-common/python and host-tests-dir/opm-simulators/python"
 )
+@click.option(
+    "--test-cases-common",
+    type=str,
+    help="Comma-separated list of specific test case patterns to run for opm-common (e.g., 'eclfile,esmry'). "
+         "Will run test_<pattern>.py files. If not specified, all tests are run."
+)
+@click.option(
+    "--test-cases-simulators",
+    type=str,
+    help="Comma-separated list of specific test case patterns to run for opm-simulators (e.g., 'basic,mpi'). "
+         "Will run test_<pattern>.py files. If not specified, all tests are run."
+)
 def run_docker_image(
     docker_os: str,
     wheel_dir: str,
     python_versions: list[PythonVersion],
     host_tests_dir: Path = None,
+    test_cases_common: str = None,
+    test_cases_simulators: str = None,
 ) -> None:
     f"""Run the Docker image. The option "--docker-tag" specifies the tag of the Docker
     image to run. The option "--python-versions" specifies the Python versions to
@@ -154,4 +168,4 @@ def run_docker_image(
     wheel_dir = helpers.get_wheel_abs_dir(wheel_dir)
     canonical_os = helpers.canonicalize_docker_os(docker_os)
     docker_tag = helpers.get_docker_tag(canonical_os)
-    helpers.run_docker_run(docker_tag, wheel_dir, python_versions, host_tests_dir)
+    helpers.run_docker_run(docker_tag, wheel_dir, python_versions, host_tests_dir, test_cases_common, test_cases_simulators)
