@@ -61,3 +61,19 @@ def create_gas_water_simulator(*args, **kwargs):
 
     return GasWaterSimulator(*args, **kwargs)
 
+def create_onephase_simulator(*args, **kwargs):
+    """Create OnePhaseSimulator with test-safe default arguments.
+
+    Automatically disables async ECL output to prevent race conditions
+    with pushd context manager in tests.
+    """
+    from opm.simulators import OnePhaseSimulator
+
+    flag_to_add = ENABLE_ASYNC_ECL_OUTPUT_FLAG
+    # Add our flag to args
+    kwargs['args'] = kwargs.get('args', [])
+    if flag_to_add not in kwargs['args']:
+        kwargs['args'].append(flag_to_add)
+
+    return OnePhaseSimulator(*args, **kwargs)
+
