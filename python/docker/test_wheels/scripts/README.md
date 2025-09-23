@@ -78,7 +78,11 @@ $ opm-wheels build-docker-image --docker-os="debian:11"
 
 ### Available options for `build-docker-image`:
 - `--docker-os`, `-d` - OS for Docker image (default: ubuntu-22.04; legacy colon form accepted)
+  - Supported: `ubuntu-22.04`, `ubuntu-24.04`, `debian-11`
+- `--python-versions`, `-p` - Python versions to install in container
   - Supported: `3.8,3.9,3.10,3.11,3.12,3.13`
+  - Format: comma-separated list without spaces (e.g., `3.11,3.12`)
+  - Default: installs all supported versions
 - `--opm-simulators-repo`, `-osr` - OPM simulators repository URL
 - `--opm-common-repo`, `-ocr` - OPM common repository URL
 - `--opm-simulators-branch`, `-osb` - Simulators branch (default: master)
@@ -116,10 +120,16 @@ $ opm-wheels run-docker-image \
 - `--wheel-dir` - Directory containing wheel files (default: python/wheelhouse)
 - `--python-versions`, `-p` - Python versions for testing
   - Supported: `3.8,3.9,3.10,3.11,3.12,3.13`
-  - Format: comma-separated list without spaces
+  - Format: comma-separated list without spaces (e.g., `3.11,3.12`)
 - `--host-tests-dir` - Use test directories from host instead of cloned repos
   - Expects: `host-tests-dir/opm-common/python` and `host-tests-dir/opm-simulators/python`
   - Eliminates need for repository cloning and nightly container rebuilds
+- `--test-cases-common` - Run specific opm-common test cases
+  - Format: comma-separated test patterns (e.g., `eclfile,esmry`)
+- `--test-cases-simulators` - Run specific opm-simulators test cases
+  - Format: comma-separated test patterns (e.g., `basic,mpi`)
+- `--stop-on-error` - Stop execution on first test failure
+  - Default: continue running all tests even if some fail
 
 ## CI/CD Usage
 
@@ -165,6 +175,123 @@ your-repos-dir/
 - **Version consistency**: Tests run against exact workspace codebase
 - **Faster execution**: Skip repository cloning step
 - **Debugging friendly**: Test failures map directly to workspace files
+
+## Debugging
+
+The `opm-wheels` tool provides several options specifically designed to streamline debugging workflows:
+
+### Debugging Features Overview
+
+1. **Python Version Selection** - Build and test only specific Python versions
+2. **Focused Test Selection** - Run specific test cases instead of entire test suites
+3. **Continue-on-Error Mode** - Run all tests to see all failures at once
+4. **Host Test Directories** - Test against local code without container rebuilds
+
+### Python Version Selection
+
+Speed up debugging iterations by building/testing only the Python versions you need:
+
+```bash
+# Build container with only Python 3.12 (much faster than all versions)
+$ opm-wheels build-docker-image --docker-os="ubuntu-24.04" --python-versions="3.12"
+
+# Test only Python 3.11 and 3.12
+$ opm-wheels run-docker-image --docker-os="ubuntu-24.04" --python-versions="3.11,3.12"
+
+# Debug single version in detail
+$ opm-wheels run-docker-image --docker-os="ubuntu-24.04" --python-versions="3.13"
+```
+
+**Benefits:**
+- Faster Docker builds when changing entrypoint.py or test configuration
+- Reduced test execution time during development
+- Focus debugging on specific Python versions showing issues
+
+### Focused Test Selection
+
+Target specific test cases to isolate issues:
+
+```bash
+# Run only specific opm-common tests
+$ opm-wheels run-docker-image \
+    --docker-os="ubuntu-24.04" \
+    --python-versions="3.12" \
+    --test-cases-common="eclfile,esmry"
+
+# Run only specific opm-simulators tests
+$ opm-wheels run-docker-image \
+    --docker-os="ubuntu-24.04" \
+    --python-versions="3.12" \
+    --test-cases-simulators="basic,mpi"
+
+# Combine both for targeted debugging
+$ opm-wheels run-docker-image \
+    --docker-os="ubuntu-24.04" \
+    --python-versions="3.12" \
+    --test-cases-common="eclfile" \
+    --test-cases-simulators="basic"
+```
+
+**Test Case Patterns:**
+- opm-common: `eclfile`, `esmry`, `restart_runs_ext` (runs `test_<pattern>.py`)
+- opm-simulators: `basic`, `mpi`, `fluidstate_variables` (runs `test/test_<pattern>.py`)
+
+### Continue-on-Error Mode
+
+By default, tests continue running even if some fail, showing all issues at once:
+
+```bash
+# Default: Continue running all tests (recommended for debugging)
+$ opm-wheels run-docker-image --docker-os="ubuntu-24.04" --python-versions="3.12"
+# Output shows: opm-simulators failures + opm-common results
+
+# Stop on first error (legacy behavior)
+$ opm-wheels run-docker-image \
+    --docker-os="ubuntu-24.04" \
+    --python-versions="3.12" \
+    --stop-on-error
+# Output: stops after first test suite failure
+```
+
+**Default Behavior:**
+- ✅ Run opm-simulators tests (may fail)
+- ✅ Run opm-common tests regardless of previous failures
+- ✅ Show comprehensive failure summary
+- ✅ Continue with additional Python versions if specified
+
+**With `--stop-on-error`:**
+- ❌ Stop at first test failure
+- ❌ No comprehensive failure view
+- ❌ Must fix issues one by one
+
+### Complete Debugging Workflow
+
+Here's a recommended debugging workflow combining all features:
+
+```bash
+# 1. Build lightweight container for single Python version
+$ opm-wheels build-docker-image --docker-os="ubuntu-24.04" --python-versions="3.12"
+
+# 2. Get comprehensive test results without stopping on errors
+$ opm-wheels run-docker-image \
+    --docker-os="ubuntu-24.04" \
+    --wheel-dir="wheelhouse-static2" \
+    --python-versions="3.12" \
+    --host-tests-dir="/path/to/opm-repos"
+
+# 3. Focus on specific failing tests
+$ opm-wheels run-docker-image \
+    --docker-os="ubuntu-24.04" \
+    --python-versions="3.12" \
+    --test-cases-simulators="fluidstate_variables" \
+    --host-tests-dir="/path/to/opm-repos"
+
+# 4. Verify fixes with full test suite
+$ opm-wheels run-docker-image \
+    --docker-os="ubuntu-24.04" \
+    --python-versions="3.12" \
+    --host-tests-dir="/path/to/opm-repos"
+```
 
 ## Additional commands
 
