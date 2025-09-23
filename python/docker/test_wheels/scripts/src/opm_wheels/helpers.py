@@ -129,7 +129,7 @@ def run_docker_build(
 def run_docker_run(
     docker_tag: str,
     wheel_dir: Path,
-    python_versions: list[PythonVersion],
+    python_versions: list[PythonVersion] | None,
     host_tests_dir: Path = None,
     test_cases_common: str = None,
     test_cases_simulators: str = None,
@@ -140,8 +140,15 @@ def run_docker_run(
         "docker", "run",
         "--rm",
         "-v", str(wheel_dir) + ":/test/wheels/",
-        "-e", "PYTHON_VERSIONS=" + ",".join([str(v) for v in python_versions])
     ]
+
+    # Only set PYTHON_VERSIONS environment variable if explicitly specified
+    # If not specified (None), let the container auto-detect installed versions
+    if python_versions is not None:
+        docker_cmd.extend(["-e", "PYTHON_VERSIONS=" + ",".join([str(v) for v in python_versions])])
+        logging.info(f"Using specified Python versions: {','.join([str(v) for v in python_versions])}")
+    else:
+        logging.info("Using auto-detected Python versions from container")
 
     # Add host test directory mounts if specified
     if host_tests_dir:
