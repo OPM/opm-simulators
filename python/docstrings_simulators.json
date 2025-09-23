@@ -10,6 +10,11 @@
             "class": "PyGasWaterSimulator",
             "name": "GasWaterSimulator",
             "doc": "The GasWaterSimulator class to run simulations using a given Deck."
+        },
+        "OnePhase": {
+            "class": "PyOnePhaseSimulator",
+            "name": "OnePhaseSimulator",
+            "doc": "The OnePhaseSimulator class to run simulations using a given Deck."
         }
     },
     "constructors": {

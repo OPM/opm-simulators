@@ -4,7 +4,6 @@ set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulato
 set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings_simulators.json")
 set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyBlackOilSimulatorDoc.hpp")
 set(PYTHON_GW_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyGasWaterSimulatorDoc.hpp")
-set(PYTHON_OP_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings_op_simulators.json")
 set(PYTHON_OP_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyOnePhaseSimulatorDoc.hpp")
 #  Note: If the new find_package(Python3) is used in the top level CMakeLists.txt, the variable
 #    ${PYTHON_EXECUTABLE} is set there to ${Python3_EXECUTABLE}
@@ -35,8 +34,8 @@ add_custom_command(
     OUTPUT ${PYTHON_OP_DOCSTRINGS_GENERATED_HPP}
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
             ${PYTHON_EXECUTABLE} ${PYTHON_GENERATE_DOCSTRINGS_PY}
-            ${PYTHON_OP_DOCSTRINGS_FILE} ${PYTHON_OP_DOCSTRINGS_GENERATED_HPP} PYONEPHASESIMULATORDOC_HPP "Opm::Pybind::DocStrings"
-    DEPENDS ${PYTHON_OP_DOCSTRINGS_FILE}
+            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_OP_DOCSTRINGS_GENERATED_HPP} PYONEPHASESIMULATORDOC_HPP "Opm::Pybind::DocStrings" "OnePhase"
+    DEPENDS ${PYTHON_DOCSTRINGS_FILE}
     COMMENT "Generating PyOnePhaseSimulatorDoc.hpp from JSON file"
 )
 # NOTE: The variable ${PYBIND11_SYSTEM} is set in python/CMakeLists.txt
