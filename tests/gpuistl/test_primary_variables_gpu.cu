@@ -13,17 +13,12 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define HAVE_ECL_INPUT 1
 #include <config.h>
-
-
-#include <stdexcept>
 
 #define BOOST_TEST_MODULE TestPrimaryVariablesGPU
 
 #include <boost/test/unit_test.hpp>
-#include <cuda.h>
-#include <cuda_runtime.h>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
@@ -42,9 +37,6 @@
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
-#include <cmath>
-#include <type_traits>
-
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystemNonStatic.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
@@ -52,7 +44,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
-
+#include <cuda_runtime.h>
 static constexpr const char* deckString1 = "-- =============== RUNSPEC\n"
                                            "RUNSPEC\n"
                                            "DIMENS\n"
