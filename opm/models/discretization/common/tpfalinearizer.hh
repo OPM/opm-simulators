@@ -838,13 +838,13 @@ private:
             const bool on_full_domain = (numCells == model_().numTotalDof());
 
             // Ensure we can have the domain  on the GPU.
-            // auto domain_buffer = copy_to_gpu(domain);
-            // auto domain_view = make_view(domain_buffer);
-            // auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlock, MatrixBlockGPU, ResidualNBInfo, NeighborInfoStruct>(neighborInfo_);
-            // auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
+            auto domain_buffer = copy_to_gpu(domain);
+            auto domain_view = make_view(domain_buffer);
+            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlock, MatrixBlockGPU, ResidualNBInfo, NeighborInfoStruct>(neighborInfo_);
+            auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
 
-            // linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view);
-            // hipDeviceSynchronize();
+            linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view, neighborInfo_view);
+            hipDeviceSynchronize();
             
             for (unsigned ii = 0; ii < numCells; ++ii) {
                 OPM_TIMEBLOCK_LOCAL(linearizationForEachCell);
@@ -1154,25 +1154,23 @@ private:
     }
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
-    template<class DomainType>
+    template<class DomainType, class NeighborSparseTable>
     __global__ static void linearize_kernel(
         const bool dispersionActive,
         const unsigned int numCells,
         const bool on_full_domain,
-        const DomainType domain)
+        const DomainType domain,
+        const NeighborSparseTable& neighborInfo)
     {
         // Get the index of the cell
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
-
-        printf("outside\n");
+        printf("in kernel");
         if (ii < numCells)
         {
             const unsigned globI = domain.cells[ii];
             // access some more info thing
             VectorBlockGPU res(0.0);
             MatrixBlockGPU bMat(0.0);
-
-            printf("ld%u\n", globI);
         }
     }
 #endif
