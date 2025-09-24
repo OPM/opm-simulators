@@ -89,6 +89,7 @@ WellInterfaceGeneric(const Well& well,
     assert(std::ranges::is_sorted(perf_data,
                                   [](const auto& perf1, const auto& perf2)
                                   { return perf1.ecl_index < perf2.ecl_index; }));
+
     if (time_step < 0) {
         OPM_THROW(std::invalid_argument, "Negative time step is used to construct WellInterface");
     }
@@ -104,7 +105,11 @@ WellInterfaceGeneric(const Well& well,
     {
         well_cells_.resize(number_of_local_perforations_);
         well_index_.resize(number_of_local_perforations_);
+
+        // Initialize to zero can be changed by fracture code
+        well_index_fracture_.resize(number_of_local_perforations_, 0.0);
         saturation_table_number_.resize(number_of_local_perforations_);
+
         int perf = 0;
         for (const auto& pd : perf_data) {
             well_cells_[perf] = pd.cell_index;
@@ -411,6 +416,8 @@ closeCompletions(const WellTestState& wellTestState)
         if (connection.state() == Connection::State::OPEN) {
             if (wellTestState.completion_is_closed(name(), connection.complnum())) {
                 this->well_index_[perfIdx] = 0.0;
+                // NB: also close fracture connection need test
+                this->well_index_fracture_[perfIdx] = 0.0;
             }
             perfIdx++;
         }
@@ -689,14 +696,18 @@ void WellInterfaceGeneric<Scalar, IndexTraits>::resetWellOperability()
 }
 
 template<typename Scalar, typename IndexTraits>
-void WellInterfaceGeneric<Scalar, IndexTraits>::addPerforations(const std::vector<RuntimePerforation>& perfs)
+void WellInterfaceGeneric<Scalar, IndexTraits>::
+addFracturePerforations(const std::vector<RuntimePerforation>& perfs)
 {
     for (const auto& perf : perfs) {
         const auto it = std::ranges::find(well_cells_, perf.cell);
         if (it != this->well_cells_.end()) {
             // If perforation to cell already exists, just add contribution.
+            // assume uniqe well_fracture index
+            // NB: assume onely one fracture cross a cell
+
             const auto ind = std::distance(this->well_cells_.begin(), it);
-            this->well_index_[ind] += static_cast<Scalar>(perf.ctf);
+            this->well_index_fracture_[ind] = static_cast<Scalar>(perf.ctf);
         }
         else {
             std::cout << "Perforation to cell " << perf.cell

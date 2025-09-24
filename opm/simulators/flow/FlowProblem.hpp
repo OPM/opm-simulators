@@ -78,6 +78,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Opm {
@@ -1128,34 +1129,43 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        auto obtain = [](const auto& value)
-                      {
-                          if constexpr (std::is_same_v<LhsEval, Scalar>) {
-                              return getValue(value);
-                          } else {
-                              return value;
-                          }
-                      };
-        return rockCompTransMultiplier<LhsEval>(intQuants, elementIdx, obtain);
+        if constexpr (std::is_same_v<LhsEval, Scalar>) {
+            return this->rockCompTransMultiplier<LhsEval>
+                (intQuants, elementIdx, [](const auto& value) { return getValue(value); });
+        }
+        else {
+            return this->rockCompTransMultiplier<LhsEval>
+                (intQuants, elementIdx, [](const auto& value) { return value; });
+        }
     }
 
     template <class LhsEval, class Callback>
-    LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx, Callback& obtain) const
+    LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants,
+                                    const unsigned elementIdx,
+                                    Callback&& obtain) const
     {
-        const bool implicit = !this->explicitRockCompaction_;
-        return implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx, obtain)
-                        : this->simulator().problem().getRockCompTransMultVal(elementIdx);
+        return this->explicitRockCompaction_
+            ? this->simulator().problem().getRockCompTransMultVal(elementIdx)
+            : this->simulator().problem()
+            .template computeRockCompTransMultiplier_<LhsEval>
+            (intQuants, elementIdx, std::forward<Callback>(obtain));
     }
 
     template <class LhsEval, class Callback>
-    LhsEval wellTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx, Callback& obtain) const
+    LhsEval wellTransMultiplier(const IntensiveQuantities& intQuants,
+                                const unsigned elementIdx,
+                                Callback&& obtain) const
     {
         OPM_TIMEBLOCK_LOCAL(wellTransMultiplier, Subsystem::Wells);
 
-        const bool implicit = !this->explicitRockCompaction_;
-        LhsEval trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx, obtain)
-                                      : this->simulator().problem().getRockCompTransMultVal(elementIdx);
-        trans_mult *= this->simulator().problem().template permFactTransMultiplier<LhsEval>(intQuants, elementIdx, obtain);
+        LhsEval trans_mult = this->explicitRockCompaction_
+            ? this->simulator().problem().getRockCompTransMultVal(elementIdx)
+            : this->simulator().problem()
+            .template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx, obtain);
+
+        trans_mult *= this->simulator().problem().
+            template permFactTransMultiplier<LhsEval>
+            (intQuants, elementIdx, std::forward<Callback>(obtain));
 
         return trans_mult;
     }
@@ -1718,54 +1728,65 @@ protected:
     template <class LhsEval>
     LhsEval computeRockCompTransMultiplier_(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        auto obtain = [](const auto& value)
-                      {
-                          if constexpr (std::is_same_v<LhsEval, Scalar>) {
-                              return getValue(value);
-                          } else {
-                              return value;
-                          }
-                      };
-
-        return computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx, obtain);
+        if constexpr (std::is_same_v<LhsEval, Scalar>) {
+            return this->computeRockCompTransMultiplier_<LhsEval>
+                (intQuants, elementIdx, [](const auto& value) { return getValue(value); });
+        }
+        else {
+            return this->computeRockCompTransMultiplier_<LhsEval>
+                (intQuants, elementIdx, [](const auto& value) { return value; });
+        }
     }
 
     template <class LhsEval, class Callback>
-    LhsEval computeRockCompTransMultiplier_(const IntensiveQuantities& intQuants, unsigned elementIdx, Callback& obtain) const
+    LhsEval computeRockCompTransMultiplier_(const IntensiveQuantities& intQuants,
+                                            unsigned elementIdx,
+                                            Callback&& obtain) const
     {
         OPM_TIMEBLOCK_LOCAL(computeRockCompTransMultiplier, Subsystem::PvtProps);
-        if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty())
-            return 1.0;
 
-        unsigned tableIdx = 0;
-        if (!this->rockTableIdx_.empty())
-            tableIdx = this->rockTableIdx_[elementIdx];
+        if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty()) {
+            return 1.0;
+        }
+
+        const auto tableIdx = !this->rockTableIdx_.empty()
+            ? this->rockTableIdx_[elementIdx]
+            : 0u;
 
         const auto& fs = intQuants.fluidState();
-        LhsEval effectivePressure = obtain(fs.pressure(refPressurePhaseIdx_()));
-        const auto& rock_config = this->simulator().vanguard().eclState().getSimulationConfig().rock_config();
-        if (!this->minRefPressure_.empty())
+
+        auto effectivePressure = obtain(fs.pressure(refPressurePhaseIdx_()));
+
+        if (!this->minRefPressure_.empty()) {
             // The pore space change is irreversible
             effectivePressure =
                 min(obtain(fs.pressure(refPressurePhaseIdx_())),
                     this->minRefPressure_[elementIdx]);
+        }
 
-        if (!this->overburdenPressure_.empty())
+        if (!this->overburdenPressure_.empty()) {
             effectivePressure -= this->overburdenPressure_[elementIdx];
+        }
 
-        if (rock_config.store()) {
+        if (const auto& rock_config = this->simulator().vanguard().eclState().getSimulationConfig().rock_config();
+            rock_config.store())
+        {
             effectivePressure -= asImp_().initialFluidState(elementIdx).pressure(refPressurePhaseIdx_());
         }
 
-        if (!this->rockCompTransMult_.empty())
-            return this->rockCompTransMult_[tableIdx].eval(effectivePressure, /*extrapolation=*/true);
+        if (!this->rockCompTransMult_.empty()) {
+            return this->rockCompTransMult_[tableIdx]
+                .eval(effectivePressure, /*extrapolation=*/true);
+        }
 
         // water compaction
         assert(!this->rockCompTransMultWc_.empty());
+
         LhsEval SwMax = max(obtain(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
         LhsEval SwDeltaMax = SwMax - asImp_().initialFluidStates()[elementIdx].saturation(waterPhaseIdx);
 
-        return this->rockCompTransMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
+        return this->rockCompTransMultWc_[tableIdx]
+            .eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
     }
 
     typename Vanguard::TransmissibilityType transmissibilities_;

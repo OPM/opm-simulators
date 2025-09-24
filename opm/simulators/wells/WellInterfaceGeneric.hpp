@@ -209,7 +209,8 @@ public:
     virtual Scalar connectionDensity(const int globalConnIdx,
                                      const int openConnIdx) const = 0;
 
-    void addPerforations(const std::vector<RuntimePerforation>& perfs);
+    void addFracturePerforations(const std::vector<RuntimePerforation>& perfs);
+    const std::vector<Scalar>& wellIndexFracture() const { return well_index_fracture_; }
 
 protected:
     bool getAllowCrossFlow() const;
@@ -336,6 +337,7 @@ protected:
 
     // well index for each perforation
     std::vector<Scalar> well_index_;
+    std::vector<Scalar> well_index_fracture_;
 
     // number of the perforations for this well on this process
     int number_of_local_perforations_;
