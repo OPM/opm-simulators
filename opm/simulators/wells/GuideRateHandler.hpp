@@ -54,7 +54,7 @@ class GuideRateHandler {
 public:
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-    using Potentials = ReservoirCoupling::Potentials;
+    using Potentials = ReservoirCoupling::Potentials<Scalar>;
 #endif
 
     /**
@@ -127,14 +127,14 @@ public:
 
 #ifdef RESERVOIR_COUPLING_ENABLED
         bool isReservoirCouplingMaster() const { return this->parent_.isReservoirCouplingMaster(); }
-        ReservoirCouplingMaster& reservoirCouplingMaster() {
+        ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {
             return this->parent_.reservoirCouplingMaster();
         }
 #endif
-       const Parallel::Communication &comm() const { return this->parent_.comm_; }
+        const Parallel::Communication &comm() const { return this->parent_.comm_; }
         DeferredLogger &deferredLogger() { return this->parent_.deferredLogger(); }
         GuideRate &guideRate() { return this->parent_.guide_rate_; }
-        const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_.wellModel().phaseUsage(); }
+        const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_.phaseUsage(); }
         const SummaryState &summaryState() const { return this->parent_.summary_state_; }
         const Schedule &schedule() const { return this->parent_.schedule_; }
         /**
@@ -186,13 +186,13 @@ public:
         return this->reservoir_coupling_slave_ != nullptr;
     }
     void receiveMasterGroupPotentialsFromSlaves();
-    ReservoirCouplingMaster& reservoirCouplingMaster() { return *(this->reservoir_coupling_master_); }
-    ReservoirCouplingSlave& reservoirCouplingSlave() { return *(this->reservoir_coupling_slave_); }
+    ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() { return *(this->reservoir_coupling_master_); }
+    ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() { return *(this->reservoir_coupling_slave_); }
     void sendSlaveGroupPotentialsToMaster(const GroupState<Scalar>& group_state);
-    void setReservoirCouplingMaster(ReservoirCouplingMaster *reservoir_coupling_master) {
+    void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar> *reservoir_coupling_master) {
         this->reservoir_coupling_master_ = reservoir_coupling_master;
     }
-    void setReservoirCouplingSlave(ReservoirCouplingSlave *reservoir_coupling_slave) {
+    void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar> *reservoir_coupling_slave) {
         this->reservoir_coupling_slave_ = reservoir_coupling_slave;
     }
 #endif
@@ -207,8 +207,11 @@ public:
      */
     void debugDumpGuideRates(const int report_step_idx, const double sim_time);
     const Parallel::Communication& getComm() const { return comm_; }
+    const GuideRate& guideRate() { return guide_rate_; }
+    const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->wellModel().phaseUsage(); }
     void setLogger(DeferredLogger *deferred_logger);
     const Schedule& schedule() const { return schedule_; }
+    const SummaryState& summaryState() const { return summary_state_; }
     /**
      * @brief Updates guide rates for the current simulation step.
      *
@@ -223,6 +226,7 @@ public:
                           GroupState<Scalar>& group_state);
 
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel() const { return well_model_; }
+    BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel() { return well_model_; }
 private:
     void debugDumpGuideRatesRecursive_(const Group& group) const;
     BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model_;
@@ -232,8 +236,10 @@ private:
     GuideRate& guide_rate_;
     DeferredLogger *deferred_logger_ = nullptr;
 #ifdef RESERVOIR_COUPLING_ENABLED
-    ReservoirCouplingMaster *reservoir_coupling_master_ = nullptr;
-    ReservoirCouplingSlave *reservoir_coupling_slave_ = nullptr;
+    // These will be set after construction by the init() method in
+    //   SimulatorFullyImplicitBlackoil.hpp
+    ReservoirCouplingMaster<Scalar> *reservoir_coupling_master_ = nullptr;
+    ReservoirCouplingSlave<Scalar> *reservoir_coupling_slave_ = nullptr;
 #endif
 };
 
