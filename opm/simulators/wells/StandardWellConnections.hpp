@@ -162,7 +162,8 @@ private:
                                      const int                  perf,
                                      const std::vector<Scalar>& q_out_perf,
                                      const std::vector<Scalar>& currentMixture,
-                                     std::vector<Scalar>&       previousMixture) const;
+                                     std::vector<Scalar>&       previousMixture,
+                                     DeferredLogger&            deferred_logger) const;
 
     std::vector<Scalar>
     copyInPerforationRates(const Properties&       props,
