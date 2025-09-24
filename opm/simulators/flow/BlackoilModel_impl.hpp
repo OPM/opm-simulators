@@ -78,9 +78,6 @@ BlackoilModel(Simulator& simulator,
         OPM_THROW(std::runtime_error, "Unknown nonlinear solver option: " +
                                       param_.nonlinear_solver_);
     }
-
-    bsr_jacobian_ = bsr_new();
-    slv_memory_   = bslv_new();
 }
 
 template <class TypeTag>
@@ -285,20 +282,8 @@ nonlinearIterationNewton(const int iteration,
             wellModel().linearize(simulator().model().linearizer().jacobian(),
                                   simulator().model().linearizer().residual());
 
-
+/*
             // Looks like a good place to export the linear system
-/*
-            printf("+++++++++++++++++++++++++++++ BlackOilModel::nonlinearIterationNewton ++++++++++++++++++++++++\n");
-
-            printf("N         = %lu\n",x.N());         //number of blocks
-            printf("dimension = %lu\n",x.dim());       //number of elements
-            printf("blocksize = %lu\n",x.dim()/x.N()); //block size
-
-            printf( "bytes    = %lu\n",sizeof( *(x.begin()->begin()) ) );
-            printf( "episode  = %d\n",simulator_.episodeIndex());
-            printf( "newton   = %d\n",report.total_newton_iterations);
-*/
-/*
             char tag[16];
             int idx = simulator_.episodeIndex();
             simulator_.model().linearizer().exportSystem(idx,tag);
@@ -529,117 +514,14 @@ solveJacobianSystem(BVector& x)
 
         Dune::Timer perfTimer;
         perfTimer.start();
-/*
-        if(bsr_jacobian_->nnz==0)
-        {
-            int nrows = jacobian.N();
-            int nnz   = jacobian.nonzeroes();
-            int b     = jacobian[0][0].N();
-
-            bsr_init(bsr_jacobian_,nrows,nnz,b);
-
-            int *rows = bsr_jacobian_->rowptr;
-            int *cols = bsr_jacobian_->colidx;
-
-            int irow = 0;
-            int icol = 0;
-            rows[0]  = 0;
-            for(auto row=jacobian.begin(); row!=jacobian.end(); row++)
-            {
-                for(unsigned int i=0; i<row->getsize(); i++)
-                {
-                    cols[icol++] = row->getindexptr()[i];
-                }
-                rows[irow+1]     = rows[irow]+row->getsize();
-                irow++;
-            }
-
-            double tol      = linSolver.getParameters().linear_solver_reduction_;
-            int    max_iter = linSolver.getParameters().linear_solver_maxiter_;
-            printf("linear_solver_reduction_ = %.4e\n",tol);
-            printf("linear_solver_maxiter_   = %4d\n",max_iter);
-            //getchar();
-
-            bslv_init(slv_memory_, tol, max_iter, bsr_jacobian_);
-
-            //y_ = (double*) malloc(b*nrows*sizeof(double));
-
-        }
-*/
-/*
-        else
-        {
-            printf("bsr_jacobian already initialized\n");
-            bsr_info(bsr_jacobian_);
-            //bsr_nonzeros(bsr_jacobian_,"A->dbl");
-        }
-*/
-
-
-
         linSolver.prepare(jacobian, residual); // what happens here?
-/*
-
-        // transpose each dense block to make them column-major
-        double M[9];
-        double const *data = &jacobian[0][0][0][0];// assuming c-contiguous ndarray
-        for(int k=0;k<bsr_jacobian_->nnz;k++)
-        {
-            for(int i=0;i<3;i++) for(int j=0;j<3;j++) M[3*j+i] = data[9*k + 3*i + j];
-            for(int i=0;i<9;i++)
-            {
-                bsr_jacobian_->dbl[9*k + i] = M[i];
-                bsr_jacobian_->flt[9*k + i] = M[i];
-            }
-        }
-
-        //bsr_downcast(bsr_jacobian_);
-*/
-
-
         linear_solve_setup_time_ = perfTimer.stop();
-
-
         linSolver.setResidual(residual);
-
-
-
         // actually, the error needs to be calculated after setResidual in order to
         // account for parallelization properly. since the residual of ECFV
         // discretizations does not need to be synchronized across processes to be
         // consistent, this is not relevant for OPM-flow...
-
-
-/*
-        // compute initial residual norm
-        double  norm_r0 = residual.two_norm();
-
-        // copy residual before calling solve
-        BVector r(residual);
-*/
-/*
-        //solve Ax=b, where A=jacobian and b=r
-        int count = bslv_pbicgstab3(slv_memory_, bsr_jacobian_, &residual[0][0], &x[0][0]);
-        linSolver.set_iterations(count);
-//        int n = (bsr_jacobian_->b)*(bsr_jacobian_->nrows);
-//        vec_copy(&residual[0][0], slv_memory_->dtmp[3],n);
-        //bslv_info(slv_memory_,count);
-        if(count >= slv_memory_->max_iter) printf("------------------------------> %d\n",count);
-*/
         linSolver.solve(x);
-/*
-        //compute r-Ax, where A=jacobian
-        jacobian.mmv(x,r);
-        //jacobian.umv(x,r);
-
-        //compare norms of r and r0 - Ax
-        double  norm_r1 = residual.two_norm();
-        double  norm_rA = r.two_norm();
-        printf("norm_r0 = %.4e\n",norm_r0);
-        printf("norm_r1 = %.4e (%.4e)\n", norm_r1, norm_r1/norm_r0);
-        printf("norm_rA = %.4e (%.4e)\n", norm_rA, norm_rA/norm_r0);
-*/
-        //getchar();
     }
 }
 
