@@ -39,6 +39,12 @@ partiallySupported()
             },
          },
          {
+            "DUMPCUPL",
+            {
+               {1,{true, allow_values<std::string> {"F", "U"}, "DUMPCUPL(VALUE): only option F and U are supported"}},  // VALUE
+            },
+         },
+         {
             "EDITNNC",
             {
                {12,{true, allow_values<std::string> {"NONE"}, "EDITNNC(FACE1): not supported use default."}}, // FACE_FLOW12
@@ -214,6 +220,13 @@ partiallySupported()
             "SPECGRID",
             {
                {5,{true, allow_values<std::string> {"F"}, "SPECGRID(TYPE): only option F (Cartesian grids supported) supported"}}, // COORD_TYPE
+            },
+         },
+         {
+            "SLAVES",
+            {
+                {1,{true, [](const std::string& val){ return val.size()<=8;}, "SLAVES(SLAVE_RESERVOIR): Only names of slave reservoirs of up to 8 characters are supported."}},
+                {3,{true, allow_values<std::string> {}, "SLAVES(HOST_NAME): should be defaulted. A specific host name is not implemented yet"}}, // HOST_NAME
             },
          },
          {
@@ -427,6 +440,12 @@ partiallySupported()
                {6,{false, allow_values<int> {1}, "REGDIMS(NTCREG): COAL regions not supported - value ignored"}}, // NTCREG
                {8,{false, allow_values<int> {0}, "REGDIMS(NWKDREG): should be equal to 0 - value ignored"}}, // MAX_OPERATE_DWORK
                {9,{false, allow_values<int> {0}, "REGDIMS(NWKIREG): should be equal to 0 - value ignored"}}, // MAX_OPERATE_IWORK
+            },
+         },
+         {
+            "SLAVES",
+            {
+               {5,{true, [](int x) { return x >= 1; }, "SLAVES(NUM_PE): only values greater than or equal to 1 are supported"}}, // NUM_PE
             },
          },
          {
