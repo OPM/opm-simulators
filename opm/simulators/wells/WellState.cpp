@@ -672,14 +672,8 @@ reportConnections(std::vector<data::Connection>& connections,
 
     if (! ws.producer) {
         this->reportConnectionFilterCake(well_index, connections);
+        this->reportConnectionFracture(well_index, connections);
     }
-
-    //if (! perf_data.connFracQuantities.empty()) {
-    if (! ws.producer) {
-         this->reportConnectionFracture(well_index,
-                                        connections);
-    }
-         //}
 
     if (! perf_data.connFracStatistics.empty()) {
         this->reportFractureStatistics(perf_data.connFracStatistics,
@@ -1282,6 +1276,8 @@ reportConnectionFilterCake(const std::size_t well_index,
         filtrate.perm = filtrate_data.perm[i];
         filtrate.radius = filtrate_data.radius[i];
         filtrate.area_of_flow = filtrate_data.area_of_flow[i];
+        filtrate.flow_factor = filtrate_data.flow_factor[i];
+        filtrate.fracture_rate = filtrate_data.fracture_rate[i];
     }
 }
 
