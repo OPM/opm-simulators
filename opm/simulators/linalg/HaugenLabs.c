@@ -749,9 +749,11 @@ bslv_memory *bslv_new()
     return mem;
 }
 
-void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A)
+void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, bool use_dilu)
 {
     int n=(A->nrows * A->b);
+
+    mem->use_dilu = use_dilu;
 
     mem->tol = tol;
     mem->max_iter = max_iter;
@@ -823,8 +825,7 @@ int bslv_pbicgstab3(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
           double * restrict x_j = x;
 
     bildu_prec * restrict P = mem->P;
-    bildu_factorize(P,A); // block-diagonal ilu0
-    //bildu_factorize2(P,A); //full block ilu0
+    mem->use_dilu ? bildu_factorize(P,A) : bildu_factorize2(P,A); // choose dilu or ilu0
     bildu_downcast(P);
 
     vec_fill(x_j,0.0,n);

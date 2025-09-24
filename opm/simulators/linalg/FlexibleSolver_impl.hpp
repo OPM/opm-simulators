@@ -70,7 +70,7 @@ class MixedSolver : public InverseOperator<X,X>
         getchar();
     }
 
-    MixedSolver(M A, double tol, int maxiter)
+    MixedSolver(M A, double tol, int maxiter, bool use_dilu)
     {
         int nrows = A.N();
         int nnz   = A.nonzeroes();
@@ -97,17 +97,12 @@ class MixedSolver : public InverseOperator<X,X>
             irow++;
         }
 
-        // print select information
-        //bsr_info(jacobian_);
-        //bsr_sparsity(jacobian_,"jacobian");
-
         // allocate and intialize solver memory
         mem_ =bslv_new();
-        bslv_init(mem_, tol, maxiter, jacobian_);
+        bslv_init(mem_, tol, maxiter, jacobian_, use_dilu);
 
         //pointer to nonzero blocks
         data_ = &A[0][0][0][0];
-
     }
 
     virtual void apply (X& x, X& b, InverseOperatorResult& res) override
@@ -129,13 +124,11 @@ class MixedSolver : public InverseOperator<X,X>
 
         // solve linear system
         int count = bslv_pbicgstab3(mem_, jacobian_, &b[0][0], &x[0][0]);
-        //bslv_info(mem_,count);
 
         // return convergence information
         res.converged  = (mem_->e[count] < mem_->tol);
         res.reduction  = mem_->e[count];
         res.iterations = count;
-        //getchar();
     }
 
     virtual void apply (X& x, X& b, double reduction, InverseOperatorResult& res) override
@@ -289,11 +282,15 @@ namespace Dune
                                                                             maxiter, // maximum number of iterations
                                                                             verbosity);
         } else if (solver_type == "mixed-bicgstab") {
+            const std::string prec_type = prm.get<std::string>("preconditioner.type", "error");
+            bool use_mixed_dilu= (prec_type=="mixed-dilu");
             using MatrixType = decltype(linearoperator_for_solver_->getmat());
             linsolver_ = std::make_shared<Dune::MixedSolver<VectorType,MatrixType>>(
                                                                             linearoperator_for_solver_->getmat(),
                                                                             tol,
-                                                                            maxiter);
+                                                                            maxiter,
+                                                                            use_mixed_dilu
+                                                                        );
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
                                                                         *scalarproduct_,
