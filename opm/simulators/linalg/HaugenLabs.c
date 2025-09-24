@@ -823,8 +823,8 @@ int bslv_pbicgstab3(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
           double * restrict x_j = x;
 
     bildu_prec * restrict P = mem->P;
-    //bildu_factorize(P,A); // block-diagonal ilu0
-    bildu_factorize2(P,A); //full block ilu0
+    bildu_factorize(P,A); // block-diagonal ilu0
+    //bildu_factorize2(P,A); //full block ilu0
     bildu_downcast(P);
 
     vec_fill(x_j,0.0,n);
