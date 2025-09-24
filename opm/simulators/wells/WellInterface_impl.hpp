@@ -202,17 +202,20 @@ namespace Opm
         const auto& well = this->well_ecl_;
         auto& ws = well_state.well(this->index_of_well_);
         std::string from;
+        bool is_grup = false;
         if (well.isInjector()) {
             from = WellInjectorCMode2String(ws.injection_cmode);
+            is_grup = ws.injection_cmode == Well::InjectorCMode::GRUP;
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
+            is_grup = ws.production_cmode == Well::ProducerCMode::GRUP;
         }
 
         const int episodeIdx = simulator.episodeIndex();
         const int iterationIdx = simulator.model().newtonMethod().numIterations();
         const int nupcol = schedule[episodeIdx].nupcol();
         const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
-        if (oscillating) {
+        if (oscillating && !is_grup) { // we would like to avoid ending up as GRUP
             // only output first time
             const bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == this->param_.max_number_of_well_switches_;
             if (output) {
