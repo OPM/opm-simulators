@@ -37,6 +37,8 @@ void ConnFiltrateData<Scalar>::resize(std::size_t num_perf)
     this->poro.resize(num_perf);
     this->radius.resize(num_perf);
     this->area_of_flow.resize(num_perf);
+    this->flow_factor.resize(num_perf);
+    this->fracture_rate.resize(num_perf);
 }
 
 template<class Scalar>
@@ -52,6 +54,8 @@ ConnFiltrateData<Scalar>::serializationTestObject()
     result.poro = {0.3};
     result.radius = {0.05};
     result.area_of_flow = {0.7};
+    result.flow_factor = {0.1};
+    result.fracture_rate = {7.};
     return result;
 }
 
@@ -65,7 +69,9 @@ bool ConnFiltrateData<Scalar>::operator==(const ConnFiltrateData& rhs) const
            this->perm == rhs.perm &&
            this->poro == rhs.poro &&
            this->radius == rhs.radius &&
-           this->area_of_flow == rhs.area_of_flow;
+           this->area_of_flow == rhs.area_of_flow &&
+           this->flow_factor == rhs.flow_factor &&
+           this->fracture_rate == rhs.fracture_rate;
 }
 
 template struct ConnFiltrateData<double>;
