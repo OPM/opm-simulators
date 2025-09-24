@@ -1859,19 +1859,43 @@ namespace Opm
     template <typename TypeTag>
     std::vector<typename WellInterface<TypeTag>::Scalar>
     WellInterface<TypeTag>::
-    wellIndex(const int                      perf,
-              const IntensiveQuantities&     intQuants,
-              const Scalar                   trans_mult,
+    wellIndex(const int                  perf,
+              const IntensiveQuantities& intQuants,
+              const Scalar               trans_mult,
               const SingleWellStateType& ws) const
     {
         OPM_TIMEFUNCTION_LOCAL(Subsystem::Wells);
+
         // Add a Forchheimer term to the gas phase CTF if the run uses
         // either of the WDFAC or the WDFACCOR keywords.
         if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
-            OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - possibly wellIndex was called with a global instead of a local perforation index!");
+            OPM_THROW(std::invalid_argument,
+                      "The perforation index exceeds the size of "
+                      "the local containers - possibly wellIndex "
+                      "was called with a global instead "
+                      "of a local perforation index!");
         }
+
         auto wi = std::vector<Scalar>
             (this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
+
+        // formation multiplier assume this should not be multiplied with d
+        // factor contributions
+        int local_perf_index = perf;
+        if (this->isInjector() && !this->inj_fc_multiplier_.empty()) {
+            const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
+            const auto& connections = this->well_ecl_.getConnections();
+            const auto& connection = connections[perf_ecl_index];
+            if (connection.filterCakeActive()) {
+                std::transform(wi.begin(), wi.end(), wi.begin(),
+                               [mult = this->inj_fc_multiplier_[local_perf_index]](const auto val)
+                               { return val * mult; });
+            }
+        }
+
+        std::transform(wi.begin(), wi.end(), wi.begin(),
+                       [frac_wi = this->well_index_fracture_[local_perf_index]](const auto val)
+                       { return val + frac_wi; });
 
         if constexpr (! Indices::gasEnabled) {
             return wi;
@@ -1932,7 +1956,11 @@ namespace Opm
                 consistent_Q = xp2;
             }
         }
-        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (consistent_Q/2 * d / scaling));
+
+        // NB add filtercake modifiction also consistent with fracture
+        wi[gas_comp_idx] = 1.0 /
+            (1.0 / (trans_mult * this->well_index_[perf]) +
+             (consistent_Q/2 * d / scaling));
 
         return wi;
     }
@@ -2105,17 +2133,6 @@ namespace Opm
             // this may not work if viscosity and relperms has been modified?
             if constexpr (has_solvent) {
                 OPM_DEFLOG_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent", deferred_logger);
-            }
-        }
-
-        if (this->isInjector() && !this->inj_fc_multiplier_.empty()) {
-            const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
-            const auto& connections = this->well_ecl_.getConnections();
-            const auto& connection = connections[perf_ecl_index];
-            if (connection.filterCakeActive()) {
-                std::transform(mob.begin(), mob.end(), mob.begin(),
-                               [mult = this->inj_fc_multiplier_[local_perf_index] ](const auto val)
-                               { return val * mult; });
             }
         }
     }
