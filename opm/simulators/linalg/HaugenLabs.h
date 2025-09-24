@@ -4,6 +4,8 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 typedef
 struct bsr_matrix
 {
@@ -54,8 +56,9 @@ void bildu_info(bildu_prec *P);
 typedef
 struct bslv_memory
 {
-    double tol;
+    bool use_dilu;
 
+    double tol;
     int    max_iter;
     double *e;
 
@@ -68,7 +71,7 @@ struct bslv_memory
 bslv_memory;
 
 bslv_memory *bslv_new();
-void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A);
+void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, bool use_dilu);
 int  bslv_pbicgstab3(bslv_memory *mem, bsr_matrix *A, const double *b, double *x);
 void bslv_info(bslv_memory *mem, int count);
 
