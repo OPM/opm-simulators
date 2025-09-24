@@ -707,13 +707,6 @@ reportConnections(std::vector<data::Connection>& connections,
         this->reportConnectionFracture(well_index, connections);
     }
 
-    //if (! perf_data.connFracQuantities.empty()) {
-    if (! ws.producer) {
-         this->reportConnectionFracture(well_index,
-                                        connections);
-    }
-         //}
-
     if (! perf_data.connFracStatistics.empty()) {
         this->reportFractureStatistics(perf_data.connFracStatistics,
                                        connections);
