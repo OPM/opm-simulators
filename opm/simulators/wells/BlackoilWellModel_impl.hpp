@@ -511,8 +511,10 @@ namespace Opm {
 
                 if (event || dyn_status_change) {
                     try {
-                        well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), local_deferredLogger);
+                        well->scaleSegmentRatesAndPressure(this->wellState());
                         well->calculateExplicitQuantities(simulator_, this->wellState(), local_deferredLogger);
+                        well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), local_deferredLogger);
+                        well->updatePrimaryVariables(simulator_, this->wellState(), local_deferredLogger);
                         well->solveWellEquation(simulator_, this->wellState(), this->groupState(), local_deferredLogger);
                     } catch (const std::exception& e) {
                         const std::string msg = "Compute initial well solution for new well " + well->name() + " failed. Continue with zero initial rates";
