@@ -86,15 +86,9 @@ public:
      * @param prm The property tree containing configuration parameters.
      * @param comm Parallel communicator.
      */
-    // template <typename Prm = std::enable_if_t<std::is_same_v<Comm, Dune::Amg::SequentialInformation>, ::Opm::PropertyTree>>
-    // HyprePreconditioner (const M& A, const Prm& prm)
-    //     : HyprePreconditioner(A, prm, Dune::Amg::SequentialInformation())
-    // {
-    //     //NB if this is used comm_ can never be used
-    // }
-
-    HyprePreconditioner (const M& A, const Opm::PropertyTree prm, const Comm& comm)
-        : A_(A),comm_(comm)
+    HyprePreconditioner(const M& A, const Opm::PropertyTree prm, const Comm& comm)
+        : A_(A)
+        , comm_(comm)
     {
         OPM_TIMEBLOCK(prec_construct);
         int size;
@@ -111,6 +105,8 @@ public:
             assert(size == comm.communicator().size());
             assert(rank == comm.communicator().rank());
         }
+        // Set use_gpu_backend_ to user value if specified, otherwise match input type
+        use_gpu_backend_ = prm.get<bool>("use_gpu", Opm::gpuistl::is_gpu_type<M>::value);
 
         // Initialize Hypre library with backend configuration
         HypreInterface::initialize(use_gpu_backend_);
