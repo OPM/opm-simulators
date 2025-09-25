@@ -270,6 +270,65 @@ namespace {
         }
     }
 
+    bool parentHasResVolControl(const Opm::Schedule& schedule,
+                                const std::string& parentname,
+                                const int stepIdx,
+                                const bool isInj)
+    {
+        const auto& parent = schedule.getGroup(parentname, stepIdx);
+        if (isInj) {
+            if (parent.isInjectionGroup()) {
+                for (const auto& phase : {Opm::Phase::WATER, Opm::Phase::GAS, Opm::Phase::OIL}) {
+                    if (parent.has_control(phase, Opm::Group::InjectionCMode::RESV) ||
+                        parent.has_control(phase, Opm::Group::InjectionCMode::VREP)) {
+                        return true;
+                    }
+                }
+            }
+        } else {
+            if (parent.isProductionGroup()) {
+                if (parent.has_control(Opm::Group::ProductionCMode::RESV) ||
+                    parent.has_control(Opm::Group::ProductionCMode::PRBL)) { // PRBL is currently not supported
+                    return true;
+                }
+            }
+        }
+        if (parentname == "FIELD") {
+            return false;
+        } else {
+            return parentHasResVolControl(schedule, parent.parent(), stepIdx, isInj);
+        }
+    }
+
+    void checkSatelliteGroupParentControls(const Opm::Schedule& schedule)
+    {
+        // Check that no satellite group has a parent group controlled by RESV or VREP
+        // Loop over all groups present in last step, and if there exists satellite groups,
+        // check their parent controls recursively for each step.
+        const auto sz = schedule.size();
+        for (const auto& groupname : schedule.groupNames(sz - 1)) {
+            const auto& group = schedule.getGroup(groupname, sz - 1);
+            if (group.hasSatelliteProduction()) {
+                for (std::size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
+                    if (parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ false)) {
+                        OPM_THROW(std::logic_error,
+                            fmt::format("Satellite production group {} is not allowed to have parent group controlled by RESV", groupname));
+                        return;
+                    }
+                }
+            }
+            if (group.hasSatelliteInjection()) {
+                for (std::size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
+                    if (parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ true)) {
+                        OPM_THROW(std::logic_error,
+                            fmt::format("Satellite injection group {} is not allowed to have parent group controlled by RESV/VREP", groupname));
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     void readOnIORank(Opm::Parallel::Communication         comm,
                       const std::string&                   deckFilename,
                       const Opm::ParseContext*             parseContext,
@@ -324,6 +383,7 @@ namespace {
         }
 
         checkScheduleKeywordConsistency(*schedule);
+        checkSatelliteGroupParentControls(*schedule);
         eclipseState->appendAqufluxSchedule(schedule->getAquiferFluxSchedule());
 
         if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) {
