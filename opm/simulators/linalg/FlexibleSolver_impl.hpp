@@ -140,6 +140,8 @@ class MixedSolver : public InverseOperator<X,X>
 
     }
 
+    virtual Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
+
     private:
     bsr_matrix  *jacobian_;
     bslv_memory *mem_;
