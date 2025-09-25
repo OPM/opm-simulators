@@ -230,7 +230,8 @@ protected:
     ///
     /// \param cartesianToCompressed Vector containing the compressed index (or -1 for inactive
     ///                              cells) as the element at the cartesian index.
-    void applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed);
+    void applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed,
+                                   bool applyNncMultregT);
 
     /// \brief Multiplies the grid transmissibilities according to EDITNNC.
     void applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal);
