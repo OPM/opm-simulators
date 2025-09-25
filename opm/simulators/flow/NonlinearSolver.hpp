@@ -26,6 +26,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/nonlinear/newtonmethodparams.hpp>
 #include <opm/models/nonlinear/newtonmethodproperties.hh>
@@ -128,6 +129,7 @@ struct NonlinearSolverParameters
 
         SimulatorReportSingle step(const SimulatorTimerInterface& timer, const TimeStepControlInterface *timeStepControl)
         {
+            OPM_TIMEFUNCTION();
             SimulatorReportSingle report;
             report.global_time = timer.simulationTimeElapsed();
             report.timestep_length = timer.currentStepLength();

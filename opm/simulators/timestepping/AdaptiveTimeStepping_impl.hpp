@@ -33,6 +33,7 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/grid/utility/StopWatch.hpp>
 
@@ -888,6 +889,7 @@ run()
 
             report += substep_report;
 
+            OPM_TIMEBLOCK(convergenceSucceeded);
             ++this->substep_timer_;   // advance by current dt
 
             const int iterations = getNumIterations_(substep_report);
@@ -914,6 +916,7 @@ run()
             this->substep_timer_.setLastStepFailed(false);
         }
         else { // in case of no convergence or time step tolerance test failure
+            OPM_TIMEBLOCK(convergenceFailed);
             report += substep_report;
             this->substep_timer_.setLastStepFailed(true);
             checkTimeStepMaxRestartLimit_(restarts);
@@ -1325,6 +1328,7 @@ SimulatorReportSingle
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
 runSubStep_()
 {
+    OPM_TIMEFUNCTION();
     SimulatorReportSingle substep_report;
 
     auto handleFailure = [this, &substep_report]
