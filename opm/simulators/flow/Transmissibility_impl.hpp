@@ -1056,10 +1056,10 @@ void
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
 {
-    // First scale NNCs with EDITNNC.
-    const auto& nnc_input = eclState_.getPinchNNC();
+    const auto& pinchNnc = eclState_.getPinchNNC();
+    const auto& transMult = this->eclState_.getTransMult();
 
-    for (const auto& nncEntry : nnc_input) {
+    for (const auto& nncEntry : pinchNnc) {
         auto c1 = nncEntry.cell1;
         auto c2 = nncEntry.cell2;
         auto lowIt = cartesianToCompressed.find(c1);
@@ -1088,7 +1088,9 @@ applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianTo
             if (candidate != trans_.end()) {
                 // the correctly calculated transmissibility is stored in
                 // the NNC. Overwrite previous value with it.
-               candidate->second = nncEntry.trans;
+                // taking the region multiplier into account.
+                const auto mult = transMult.getRegionMultiplierNNC(c1, c2);
+                candidate->second = nncEntry.trans * mult;
             }
         }
     }
