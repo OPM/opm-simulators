@@ -7,6 +7,9 @@
 #include <math.h>
 #include <immintrin.h>
 
+#pragma GCC push_options
+#pragma GCC target("avx2")
+
 void bsr_hello()
 {
     printf("HaugenLabs\n");
@@ -949,3 +952,5 @@ void headtail(double *x, int n, char const *name)
     printf("]\n");
 
 }
+
+#pragma GCC pop_options
