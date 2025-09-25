@@ -107,65 +107,6 @@ debugDumpGuideRates(const int report_step_idx, const double sim_time)
 }
 
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-template<typename Scalar, typename IndexTraits>
-void
-GuideRateHandler<Scalar, IndexTraits>::
-receiveMasterGroupPotentialsFromSlaves()
-{
-    assert(this->isReservoirCouplingMaster());
-    auto& rescoup_master = this->reservoirCouplingMaster();
-    rescoup_master.receivePotentialsFromSlaves();
-}
-#endif
-
-#ifdef RESERVOIR_COUPLING_ENABLED
-template<typename Scalar, typename IndexTraits>
-void
-GuideRateHandler<Scalar, IndexTraits>::
-sendSlaveGroupPotentialsToMaster(const GroupState<Scalar>& group_state)
-{
-    assert(this->isReservoirCouplingSlave());
-    if (this->comm_.rank() == 0) {
-        // NOTE: Traversing a std::map is guaranteed to iterate the keys in lexical order for
-        //   std::string keys, so the master can from this order determine which potentials
-        //   correspond to which slave group.
-        auto& rescoup_slave = this->reservoirCouplingSlave();
-        const auto& slave_master_group_map = rescoup_slave.getSlaveToMasterGroupNameMap();
-        std::vector<Potentials> potentials;
-        for (const auto& item : slave_master_group_map) {
-            const auto& slave_group_name = item.first;
-            Potentials pot;
-            // For injection groups, we do not have potentials. In that case,
-            //  we will send dummy values (0.0) for the potentials.
-            if (this->guide_rate_.hasPotentials(slave_group_name)) {
-                const auto& gr_pot = group_state.get_production_group_potential(slave_group_name);
-                pot[Potentials::Phase::Oil] = gr_pot.oil_rate;
-                pot[Potentials::Phase::Gas] = gr_pot.gas_rate;
-                pot[Potentials::Phase::Water] = gr_pot.water_rate;
-            }
-            potentials.push_back(pot);
-        }
-        rescoup_slave.sendPotentialsToMaster(potentials);
-    }
-}
-#endif
-
-template<typename Scalar, typename IndexTraits>
-void
-GuideRateHandler<Scalar, IndexTraits>::setLogger(DeferredLogger *deferred_logger)
-{
-    deferred_logger_ = deferred_logger;
-#ifdef RESERVOIR_COUPLING_ENABLED
-    if (reservoir_coupling_master_) {
-        reservoir_coupling_master_->setDeferredLogger(deferred_logger);
-    }
-    if (reservoir_coupling_slave_) {
-        reservoir_coupling_slave_->setDeferredLogger(deferred_logger);
-    }
-#endif
-}
-
 template<typename Scalar, typename IndexTraits>
 void
 GuideRateHandler<Scalar, IndexTraits>::
@@ -717,9 +658,9 @@ updateProductionGroupPotentialFromSlaveGroup_(const Group& group, std::vector<Sc
     const auto& pu = this->phaseUsage();
     // TODO: Here we should check that the master uses the same phases as the
     //   slave.
-    pot[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = slave_pot[Potentials::Phase::Oil];
-    pot[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = slave_pot[Potentials::Phase::Gas];
-    pot[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = slave_pot[Potentials::Phase::Water];
+    pot[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = slave_pot[ReservoirCoupling::Phase::Oil];
+    pot[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = slave_pot[ReservoirCoupling::Phase::Gas];
+    pot[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = slave_pot[ReservoirCoupling::Phase::Water];
 }
 #endif
 

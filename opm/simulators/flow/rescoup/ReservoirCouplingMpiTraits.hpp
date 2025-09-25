@@ -22,7 +22,7 @@
 
 #include <dune/common/parallel/mpitraits.hh>
 
-#include <opm/simulators/flow/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 
 #include <array>
 #include <mutex>  // For std::call_once
@@ -152,13 +152,25 @@ using StructMPITraits = StructMPITraitsImpl<Struct, Members...>;
 
 } // namespace Dune::detail
 
-// Trait for Potentials
-template<>
-struct MPITraits<::Opm::ReservoirCoupling::Potentials>
+// Trait for SlaveGroupProductionData
+template<class Scalar>
+struct MPITraits<::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>>
     : detail::StructMPITraits<
-          ::Opm::ReservoirCoupling::Potentials,
-          &::Opm::ReservoirCoupling::Potentials::rate>  { };
+          ::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>,
+          &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::potentials,
+          &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::surface_rates,
+          &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::voidage_rate,
+          &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::gas_reinjection_rate
+        >  { };
 
+// Trait for SlaveGroupInjectionData
+template<class Scalar>
+struct MPITraits<::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>>
+    : detail::StructMPITraits<
+          ::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>,
+          &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::surface_rates,
+          &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::reservoir_rates
+        >  { };
 } // namespace Dune
 
 #endif // OPM_RESERVOIR_COUPLING_MPI_TRAITS_HPP
