@@ -86,3 +86,9 @@ You can capture such a log from the build using the `script' utility, e.g.:
     cat CMakeCache.txt CMakeFiles/CMake*.log >> $LOGFILE
 
 The resulting file can be uploaded to for instance gist.github.com.
+
+
+CONTRIBUTING
+------------
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
