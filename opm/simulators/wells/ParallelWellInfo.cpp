@@ -630,6 +630,9 @@ T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
 {
 #if HAVE_MPI
     T res = t;
+    if (comm_->size() == 1) {
+        return res;
+    }
     if (rankWithFirstPerf_ >= 0) {
 #ifndef NDEBUG
         assert(rankWithFirstPerf_ < comm_->size());
