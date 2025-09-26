@@ -641,6 +641,16 @@ opm_add_test(flow_blackoil_polyhedralgrid
   flow/flow_blackoil_polyhedralgrid.cpp
   $<TARGET_OBJECTS:moduleVersion>)
 
+opm_add_test(flow_blackoil_nohyst
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEFAULT_ENABLE_IF ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF}
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
+  SOURCES
+  flow/flow_blackoil_nohyst.cpp
+  $<TARGET_OBJECTS:moduleVersion>)
+
 opm_add_test(flow_distribute_z
   ONLY_COMPILE
   ALWAYS_ENABLE
