@@ -315,6 +315,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         // nothing to clean here
         void eraseMatrix() override
         {
+            matrix_ = nullptr;
+            //NB maybe full initialization should be done
         }
 
         void setActiveSolver(const int num) override
