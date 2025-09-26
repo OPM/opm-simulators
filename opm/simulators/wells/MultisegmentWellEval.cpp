@@ -53,7 +53,7 @@ namespace Opm
 
 template<typename FluidSystem, typename Indices>
 MultisegmentWellEval<FluidSystem,Indices>::
-MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const ParallelWellInfo<Scalar>& pw_info)
+MultisegmentWellEval(WellInterfaceIndices<FluidSystem, Indices::numEq>& baseif, const ParallelWellInfo<Scalar>& pw_info)
     :  MultisegmentWellGeneric<Scalar, IndexTraits>(baseif)
     , pw_info_(pw_info)
     , baseif_(baseif)
@@ -214,12 +214,12 @@ assembleAccelerationPressureLoss(const int seg,
     
     const int seg_upwind = segments_.upwinding_segment(seg);
     // acceleration term is *subtracted* from pressure equation
-    MultisegmentWellAssemble(baseif_).
+    MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
         assembleAccelerationTerm(seg, seg, seg_upwind, signed_velocity_head, linSys_);
     if (seg != seg_upwind) {// special treatment for reverse flow
         // extra derivatives are *added* to Jacobian (hence minus)
         const EvalWell extra_derivatives = -segments_.accelerationPressureLossContribution(seg, seg_area, /*extra_derivatives*/ true);
-        MultisegmentWellAssemble(baseif_).
+        MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
             assemblePressureEqExtraDerivatives(seg, seg_upwind, extra_derivatives, linSys_);
     }
 
@@ -232,13 +232,13 @@ assembleAccelerationPressureLoss(const int seg,
         segments.pressure_drop_accel[seg] -= signed_velocity_head_inlet.value();
 
         const int inlet_upwind = segments_.upwinding_segment(inlet); 
-        MultisegmentWellAssemble(baseif_).
+        MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
             assembleAccelerationTerm(seg, inlet, inlet_upwind, -signed_velocity_head_inlet, linSys_);
         if (inlet != inlet_upwind) {// special treatment for reverse flow
             // extra derivatives are *added* to Jacobian (hence minus minus)
             const EvalWell extra_derivatives_inlet = segments_.accelerationPressureLossContribution(inlet, inlet_area, /*extra_derivatives*/ true);
             // in this case inlet_upwind = seg
-            MultisegmentWellAssemble(baseif_).
+            MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
                 assemblePressureEqExtraDerivatives(seg, inlet_upwind, extra_derivatives_inlet, linSys_);
         }
     }
@@ -269,7 +269,7 @@ assembleDefaultPressureEq(const int seg,
         if (reverseFlow){
             // call function once again to obtain/assemble remaining derivatives
             extra_derivatives = -segments_.getFrictionPressureLoss(seg, /*extra_reverse_flow_derivatives*/ true);
-            MultisegmentWellAssemble(baseif_).
+            MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
                 assemblePressureEqExtraDerivatives(seg, seg_upwind, extra_derivatives, linSys_);
         }
         pressure_equation -= friction_pressure_drop;
@@ -281,7 +281,7 @@ assembleDefaultPressureEq(const int seg,
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = primary_variables_.getSegmentPressure(outlet_segment_index);
 
-    MultisegmentWellAssemble(baseif_).
+    MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure, linSys_);
 
@@ -305,7 +305,7 @@ assembleICDPressureEq(const int seg,
     if (const auto& segment = this->segmentSet()[seg];
        (segment.segmentType() == Segment::SegmentType::VALVE) &&
        (segment.valve().status() == Opm::ICDStatus::SHUT) ) { // we use a zero rate equation to handle SHUT valve
-        MultisegmentWellAssemble(baseif_).
+        MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
             assembleTrivialEq(seg, this->primary_variables_.eval(seg)[WQTotal].value(), linSys_);
 
         auto& ws = well_state.well(baseif_.indexOfWell());
@@ -351,7 +351,7 @@ assembleICDPressureEq(const int seg,
         }
     }
     if (reverseFlow){
-        MultisegmentWellAssemble(baseif_).
+        MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
             assemblePressureEqExtraDerivatives(seg, seg_upwind, extra_derivatives, linSys_);
     }
 
@@ -363,7 +363,7 @@ assembleICDPressureEq(const int seg,
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = primary_variables_.getSegmentPressure(outlet_segment_index);
 
-    MultisegmentWellAssemble(baseif_).
+    MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure,
                            linSys_);
@@ -388,15 +388,15 @@ assembleAccelerationAndHydroPressureLosses(const int seg,
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
     if (!use_average_density){
-        MultisegmentWellAssemble(baseif_).
+        MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
             assembleHydroPressureLoss(seg, seg, hydro_pressure_drop_seg, linSys_);
         segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop_seg.value();
     } else {
         const int seg_outlet = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
         const auto hydro_pressure_drop_outlet = segments_.getHydroPressureLoss(seg, seg_outlet);
-        MultisegmentWellAssemble(baseif_).
+        MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
             assembleHydroPressureLoss(seg, seg, 0.5*hydro_pressure_drop_seg, linSys_);
-        MultisegmentWellAssemble(baseif_).
+        MultisegmentWellAssemble<FluidSystem, Indices>(baseif_).
             assembleHydroPressureLoss(seg, seg_outlet, 0.5*hydro_pressure_drop_outlet, linSys_);
         segments.pressure_drop_hydrostatic[seg] = 0.5*hydro_pressure_drop_seg.value() + 0.5*hydro_pressure_drop_outlet.value();
     }

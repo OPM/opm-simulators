@@ -38,7 +38,7 @@ class DeferredLogger;
 class Schedule;
 class SummaryState;
 template<class Scalar> class WellContributions;
-template<class FluidSystem, class Indices> class WellInterfaceIndices;
+template<class FluidSystem, int numEq> class WellInterfaceIndices;
 template<typename FluidSystem, typename Indices> class WellState;
 
 template<class FluidSystem, class Indices>
@@ -69,9 +69,9 @@ public:
     { return linSys_; }
 
 protected:
-    explicit StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif);
+    explicit StandardWellEval(const WellInterfaceIndices<FluidSystem, Indices::numEq>& baseif);
 
-    const WellInterfaceIndices<FluidSystem,Indices>& baseif_;
+    const WellInterfaceIndices<FluidSystem, Indices::numEq>& baseif_;
 
     EvalWell extendEval(const Eval& in) const;
 
