@@ -30,9 +30,14 @@
 #include "HypreTestHelper.hpp"
 #include "MpiFixture.hpp"
 
-#if HAVE_CUDA || HAVE_HIP
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#if HAVE_CUDA
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuVector.hpp>
+#else
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#endif
 #endif
 
 using namespace HypreTestHelpers;
@@ -58,7 +63,7 @@ BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_GpuInputGpuBackend, HypreTestFix
 
     constexpr int N = 100; // 100x100 grid
     using CpuMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
-    using GpuMatrixType = GpuSparseMatrix<double>;
+    using GpuMatrixType = GpuSparseMatrixWrapper<double>;
     using GpuVectorType = GpuVector<double>;
 
     // Create matrix on CPU first
@@ -77,7 +82,7 @@ BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_GpuInputCpuBackend, HypreTestFix
 
     constexpr int N = 100; // 100x100 grid
     using CpuMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
-    using GpuMatrixType = GpuSparseMatrix<double>;
+    using GpuMatrixType = GpuSparseMatrixWrapper<double>;
     using GpuVectorType = GpuVector<double>;
 
     // Create matrix on CPU first
