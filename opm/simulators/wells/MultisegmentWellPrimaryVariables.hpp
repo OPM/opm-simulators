@@ -37,7 +37,7 @@ namespace Opm
 
 class DeferredLogger;
 template <typename Scalar, typename IndexTraits> class MultisegmentWellGeneric;
-template<class FluidSystem, class Indices> class WellInterfaceIndices;
+template<class FluidSystem, int numEq> class WellInterfaceIndices;
 template<typename Scalar, typename IndexTraits> class WellState;
 
 template<class FluidSystem, class Indices>
@@ -75,7 +75,7 @@ public:
     using Equations = MultisegmentWellEquations<Scalar,IndexTraits,numWellEq,Indices::numEq>;
     using BVectorWell = typename Equations::BVectorWell;
 
-    explicit MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
+    explicit MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem, Indices::numEq>& well)
         : well_(well)
     {}
 
@@ -165,7 +165,7 @@ private:
     //! \details Contains derivatives and are used in AD calculation
     std::vector<std::array<EvalWell, numWellEq>> evaluation_;
 
-    const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well interface
+    const WellInterfaceIndices<FluidSystem, Indices::numEq>& well_; //!< Reference to well interface
 
     static constexpr double bhp_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
     static constexpr double seg_pres_lower_limit = 0.;

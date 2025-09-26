@@ -29,7 +29,7 @@
 
 namespace Opm {
 
-template<class FluidSystem, class Indices>
+template<class FluidSystem, int numEq>
 class WellInterfaceIndices : public WellInterfaceFluidSystem<FluidSystem>
 {
 public:
@@ -37,7 +37,7 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Oil;
     using WellInterfaceFluidSystem<FluidSystem>::Water;
     using Scalar = typename FluidSystem::Scalar;
-    using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
+    using Eval = DenseAd::Evaluation<Scalar, numEq>;
     using ModelParameters = typename WellInterfaceFluidSystem<FluidSystem>::ModelParameters;
 
     Scalar scalingFactor(const int phaseIdx) const;
@@ -47,7 +47,7 @@ public:
     {
         Eval out = 0.0;
         out.setValue(in.value());
-        for (int eqIdx = 0; eqIdx < Indices::numEq; ++eqIdx) {
+        for (int eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             out.setDerivative(eqIdx, in.derivative(eqIdx));
         }
         return out;

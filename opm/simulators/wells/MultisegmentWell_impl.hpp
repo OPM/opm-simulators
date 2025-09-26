@@ -70,7 +70,7 @@ namespace Opm
                      const int index_of_well,
                      const std::vector<PerforationData<Scalar>>& perf_data)
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_conservation_quantities, num_phases, index_of_well, perf_data)
-    , MSWEval(static_cast<WellInterfaceIndices<FluidSystem,Indices>&>(*this), pw_info)
+    , MSWEval(static_cast<WellInterfaceIndices<FluidSystem, Indices::numEq>&>(*this), pw_info)
     , regularize_(false)
     , segment_fluid_initial_(this->numberOfSegments(), std::vector<Scalar>(this->num_conservation_quantities_, 0.0))
     {
@@ -1865,7 +1865,7 @@ namespace Opm
 
                     this->connectionRates_[local_perf_index][comp_idx] = Base::restrictEval(cq_s_effective);
 
-                    MultisegmentWellAssemble(*this).
+                    MultisegmentWellAssemble<FluidSystem, Indices>(*this).
                         assemblePerforationEq(seg, local_perf_index, comp_idx, cq_s_effective, this->linSys_);
                 }
             }
@@ -1894,7 +1894,7 @@ namespace Opm
                 for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
                     const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx)
                                                      - segment_fluid_initial_[seg][comp_idx]) / dt;
-                    MultisegmentWellAssemble(*this).
+                    MultisegmentWellAssemble<FluidSystem, Indices>(*this).
                         assembleAccumulationTerm(seg, comp_idx, accumulation_term, this->linSys_);
                 }
             }
@@ -1907,7 +1907,7 @@ namespace Opm
                                                                          seg_upwind,
                                                                          comp_idx) *
                         this->well_efficiency_factor_;
-                    MultisegmentWellAssemble(*this).
+                    MultisegmentWellAssemble<FluidSystem, Indices>(*this).
                         assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
                 }
             }
@@ -1922,7 +1922,7 @@ namespace Opm
                                                                              inlet_upwind,
                                                                              comp_idx) *
                             this->well_efficiency_factor_;
-                        MultisegmentWellAssemble(*this).
+                        MultisegmentWellAssemble<FluidSystem, Indices>(*this).
                             assembleInflowTerm(seg, inlet, inlet_upwind, comp_idx, inlet_rate, this->linSys_);
                     }
                 }
@@ -1933,7 +1933,7 @@ namespace Opm
                 const auto& summaryState = simulator.vanguard().summaryState();
                 const Schedule& schedule = simulator.vanguard().schedule();
                 const bool stopped_or_zero_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
-                MultisegmentWellAssemble(*this).
+                MultisegmentWellAssemble<FluidSystem, Indices>(*this).
                         assembleControlEq(well_state,
                                         group_state,
                                         schedule,
