@@ -2017,7 +2017,7 @@ protected:
     // while these are logically bools, concurrent writes to vector<bool> are not thread safe.
     mutable std::vector<std::vector<unsigned char>> intensiveQuantityCacheUpToDate_;
 
-    mutable std::array<std::unique_ptr<DiscreteFunction>, historySize> solution_;
+    std::array<std::unique_ptr<DiscreteFunction>, historySize> solution_;
 
     std::list<std::unique_ptr<BaseOutputModule<TypeTag>>> outputModules_;
 
