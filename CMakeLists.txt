@@ -370,8 +370,12 @@ macro (sources_hook)
   endif()
   if(QuadMath_FOUND)
     get_target_property(qm_defs QuadMath::QuadMath INTERFACE_COMPILE_DEFINITIONS)
-    list(APPEND qm_defs HAVE_QUAD=1)
     get_target_property(qm_options QuadMath::QuadMath INTERFACE_COMPILE_OPTIONS)
+    if(qm_defs)
+      list(APPEND qm_defs HAVE_QUAD=1)
+    else()
+      set(qm_defs HAVE_QUAD=1)
+    endif()
     set_source_files_properties(opm/models/nonlinear/newtonmethodparams.cpp
                                 opm/models/utils/parametersystem.cpp
                                 opm/models/utils/simulatorutils.cpp
