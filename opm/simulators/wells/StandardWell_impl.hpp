@@ -60,7 +60,7 @@ namespace Opm
                  const int index_of_well,
                  const std::vector<PerforationData<Scalar>>& perf_data)
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_conservation_quantities, num_phases, index_of_well, perf_data)
-    , StdWellEval(static_cast<const WellInterfaceIndices<FluidSystem,Indices>&>(*this))
+    , StdWellEval(static_cast<const WellInterfaceIndices<FluidSystem, Indices::numEq>&>(*this))
     , regularize_(false)
     {
         assert(this->num_conservation_quantities_ == numWellConservationEq);

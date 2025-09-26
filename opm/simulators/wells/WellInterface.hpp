@@ -72,10 +72,10 @@ class WellProductionProperties;
 
 template<typename TypeTag>
 class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Properties::FluidSystem>,
-                                                  GetPropType<TypeTag, Properties::Indices>>
+                                                  GetPropType<TypeTag, Properties::Indices>::numEq>
 {
     using Base = WellInterfaceIndices<GetPropType<TypeTag, Properties::FluidSystem>,
-                                      GetPropType<TypeTag, Properties::Indices>>;
+                                      GetPropType<TypeTag, Properties::Indices>::numEq>;
 public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;

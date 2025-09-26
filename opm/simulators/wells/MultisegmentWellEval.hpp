@@ -39,7 +39,7 @@ class ConvergenceReport;
 class Schedule;
 class SummaryState;
 
-template<class FluidSystem, class Indices> class WellInterfaceIndices;
+template<class FluidSystem, int numEq> class WellInterfaceIndices;
 template<typename Scalar, typename IndexTraits> class WellState;
 
 template<typename FluidSystem, typename Indices>
@@ -73,7 +73,7 @@ public:
     const ParallelWellInfo<Scalar>& pw_info_;
 
 protected:
-    MultisegmentWellEval(WellInterfaceIndices<FluidSystem, Indices>& baseif, const ParallelWellInfo<Scalar>& pw_info);
+    MultisegmentWellEval(WellInterfaceIndices<FluidSystem, Indices::numEq>& baseif, const ParallelWellInfo<Scalar>& pw_info);
 
     void initMatrixAndVectors();
 
@@ -137,7 +137,7 @@ protected:
     // convert a Eval from reservoir to contain the derivative related to wells
     EvalWell extendEval(const Eval& in) const;
 
-    const WellInterfaceIndices<FluidSystem,Indices>& baseif_;
+    const WellInterfaceIndices<FluidSystem, Indices::numEq>& baseif_;
 
     Equations linSys_; //!< The equation system
     PrimaryVariables primary_variables_; //!< The primary variables
