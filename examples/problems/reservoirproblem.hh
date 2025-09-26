@@ -93,7 +93,9 @@ private:
         ThreePhaseMaterialTraits<Scalar,
                                  /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
                                  /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                 /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
+                                 /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx,
+                                 /* hysteresis */ false,
+                                 /* endpointscaling */ false>;
 
 public:
     using type = Opm::LinearMaterial<Traits>;

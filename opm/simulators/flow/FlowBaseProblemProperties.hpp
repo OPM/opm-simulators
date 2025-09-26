@@ -77,6 +77,12 @@ struct EnableApiTracking { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableDebuggingChecks { using type = Properties::UndefinedProperty; };
 
+template<class TypeTag, class MyTypeTag>
+struct EnableHysteresis { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct EnableEndpointScaling { using type = Properties::UndefinedProperty; };
+
 // Avoid using ElementContext-based code if possible.
 template<class TypeTag, class MyTypeTag>
 struct AvoidElementContext { using type = Properties::UndefinedProperty; };
@@ -243,6 +249,14 @@ struct EnableExperiments<TypeTag, TTag::FlowBaseProblem>
 // By default, we enable the debugging checks if we're compiled in debug mode
 template<class TypeTag>
 struct EnableDebuggingChecks<TypeTag, TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct EnableHysteresis<TypeTag, TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct EnableEndpointScaling<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
 
 // Most modules are implemented only in terms of element contexts,

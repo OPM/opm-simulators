@@ -72,7 +72,9 @@ private:
     using Traits = ThreePhaseMaterialTraits<Scalar,
                                             /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
                                             /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                            /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
+                                            /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx,
+                                            /* hysteresis */ true,
+                                            /* endpointscaling */ true>;
 
 public:
     using EclMaterialLawManager = ::Opm::EclMaterialLaw::Manager<Traits>;
