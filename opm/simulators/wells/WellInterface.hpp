@@ -219,6 +219,8 @@ public:
                                            WellStateType& well_state,
                                            DeferredLogger& deferred_logger) const;
 
+    virtual void scaleSegmentRatesAndPressure(WellStateType& well_state) const;
+
     virtual void computeWellRatesWithBhpIterations(const Simulator& simulator,
                                                    const Scalar& bhp,
                                                    std::vector<Scalar>& well_flux,

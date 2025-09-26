@@ -236,10 +236,11 @@ protected:
                                      const bool checkOperability,
                                      DeferredLogger& deferred_logger);
 
-    void prepareForPotentialCalculations(const SummaryState& summary_state,
-                                         WellStateType& well_state,
-                                         Well::InjectionControls& inj_controls,
-                                         Well::ProductionControls& prod_controls) const;
+    // Remove all other controls than THP and BHP
+    void onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
+                                   WellStateType& well_state,
+                                   Well::InjectionControls& inj_controls,
+                                   Well::ProductionControls& prod_controls) const;
 
     void resetDampening() {
         std::fill(this->inj_multiplier_damp_factor_.begin(), this->inj_multiplier_damp_factor_.end(), 1.0);
