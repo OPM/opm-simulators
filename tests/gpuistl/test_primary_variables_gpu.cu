@@ -15,6 +15,16 @@
 */
 #include <config.h>
 
+#ifdef __HIP_PLATFORM_AMD__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
+#endif
+
+#include <boost/test/unit_test.hpp>
+
+#ifdef __HIP_PLATFORM_AMD__
+#pragma clang diagnostic pop
+#endif
 #define BOOST_TEST_MODULE TestPrimaryVariablesGPU
 
 #include <boost/test/unit_test.hpp>
