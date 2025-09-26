@@ -265,9 +265,9 @@ protected:
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
-    enum { gasCompIdx = FluidSystem::gasCompIdx };
-    enum { oilCompIdx = FluidSystem::oilCompIdx };
-    enum { waterCompIdx = FluidSystem::waterCompIdx };
+//    enum { gasCompIdx = FluidSystem::gasCompIdx };
+//    enum { oilCompIdx = FluidSystem::oilCompIdx };
+//    enum { waterCompIdx = FluidSystem::waterCompIdx };
     using Dir = FaceDir::DirEnum;
 
     GenericOutputBlackoilModule(const EclipseState& eclState,
