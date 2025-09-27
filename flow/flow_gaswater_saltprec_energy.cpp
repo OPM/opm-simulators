@@ -19,7 +19,9 @@
 #include <flow/flow_gaswater_saltprec_energy.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
@@ -55,6 +57,16 @@ struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
     static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> { 
+    using type = TpfaLinearizer<TypeTag>;
+};
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
+    using type = BlackOilLocalResidualTPFA<TypeTag>;
 };
 
 //! The indices required by the model

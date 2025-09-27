@@ -197,26 +197,43 @@ public:
                             [[maybe_unused]] const ElementContext& elemCtx,
                             [[maybe_unused]] unsigned scvfIdx,
                             [[maybe_unused]] unsigned timeIdx)
-
     {
         if constexpr (enableBrine) {
             const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+            unsigned focusIdx = elemCtx.focusDofIndex();
+            unsigned upIdx = extQuants.upstreamIndex(waterPhaseIdx);
+            flux[contiBrineEqIdx] = 0.0;
+            if (upIdx == focusIdx)
+                addBrineFluxes_<Evaluation>(flux, elemCtx, scvfIdx, timeIdx);
+            else
+                addBrineFluxes_<Scalar>(flux, elemCtx, scvfIdx, timeIdx);
+        }
+    }
 
-            const unsigned upIdx = extQuants.upstreamIndex(FluidSystem::waterPhaseIdx);
-            const unsigned inIdx = extQuants.interiorIndex();
-            const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
+    template <class UpstreamEval>
+    static void addBrineFluxes_(RateVector& flux,
+                                const ElementContext& elemCtx,
+                                unsigned scvfIdx,
+                                unsigned timeIdx)
+    {
+        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+        unsigned upIdx = extQuants.upstreamIndex(waterPhaseIdx);
+        const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
+        const auto& volFlux = extQuants.volumeFlux(waterPhaseIdx);
+        addBrineFluxes_<UpstreamEval>(flux, waterPhaseIdx, volFlux, up);
+    }
 
-            if (upIdx == inIdx) {
+    template <class UpEval>
+    static void addBrineFluxes_(RateVector& flux,
+                                unsigned phaseIdx,
+                                const Evaluation& volumeFlux,
+                                const IntensiveQuantities& upFs)
+    {
+        if constexpr (enableBrine) { 
+            if (phaseIdx == waterPhaseIdx) {
                 flux[contiBrineEqIdx] =
-                        extQuants.volumeFlux(waterPhaseIdx) *
-                        up.fluidState().invB(waterPhaseIdx) *
-                        up.fluidState().saltConcentration();
-            }
-            else {
-                flux[contiBrineEqIdx] =
-                        extQuants.volumeFlux(waterPhaseIdx) *
-                        decay<Scalar>(up.fluidState().invB(waterPhaseIdx)) *
-                        decay<Scalar>(up.fluidState().saltConcentration());
+                    decay<UpEval>(upFs.saltConcentration())
+                    * volumeFlux;
             }
         }
     }
