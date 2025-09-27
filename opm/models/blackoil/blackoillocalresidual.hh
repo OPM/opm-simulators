@@ -250,7 +250,7 @@ public:
         DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with convective mixing (if enabled)
-        ConvectiveMixingModule::addConvectiveMixingFlux(flux,elemCtx, scvfIdx, timeIdx);
+        ConvectiveMixingModule::addConvectiveMixingFlux(flux, elemCtx, scvfIdx, timeIdx);
     }
 
     /*!

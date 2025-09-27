@@ -106,6 +106,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
+    static constexpr bool enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool enableMICP = Indices::enableMICP;
 
@@ -387,7 +388,7 @@ public:
             // Use arithmetic average (more accurate with harmonic, but that requires recomputing the transmissbility)
             Evaluation transMult = (intQuantsIn.rockCompTransMultiplier() +
                                     Toolbox::value(intQuantsEx.rockCompTransMultiplier())) / 2;
-            if constexpr (enableBioeffects) {
+            if constexpr (enableBioeffects || enableSaltPrecipitation) {
                 transMult *= (intQuantsIn.permFactor() + Toolbox::value(intQuantsEx.permFactor())) / 2;
             }
             Evaluation darcyFlux;
@@ -415,8 +416,12 @@ public:
                         addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
                 }
                 if constexpr (enableBioeffects) {
-                    BioeffectsModule::template addBioeffectsFluxes_<Evaluation, Evaluation, IntensiveQuantities>
-                        (flux, phaseIdx, darcyFlux, up);
+                    BioeffectsModule::template
+                        addBioeffectsFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
+                }
+                if constexpr (enableBrine) {
+                    BrineModule::template
+                        addBrineFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
                 }
             } else {
                 const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx);
@@ -424,11 +429,15 @@ public:
                 evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
                 if constexpr (enableEnergy) {
                     EnergyModule::template
-                        addPhaseEnthalpyFluxes_<Scalar>(flux,phaseIdx,darcyFlux, up.fluidState());
+                        addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
                 }
                 if constexpr (enableBioeffects) {
-                    BioeffectsModule::template addBioeffectsFluxes_<Scalar, Evaluation, IntensiveQuantities>
-                        (flux, phaseIdx, darcyFlux, up);
+                    BioeffectsModule::template
+                        addBioeffectsFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
+                }
+                if constexpr (enableBrine) {
+                    BrineModule::template
+                        addBrineFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
                 }
             }
         }
@@ -490,11 +499,6 @@ public:
         static_assert(!enableFoam,
                       "Relevant computeFlux() method must be implemented for this module before enabling.");
         // FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
-
-        // deal with salt (if present)
-        static_assert(!enableBrine,
-                      "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).
         if constexpr (enableDiffusion) {
