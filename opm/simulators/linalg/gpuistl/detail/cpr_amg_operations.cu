@@ -179,7 +179,7 @@ namespace
 
 template <typename T, bool transpose, int blocksize>
 void
-dispatchQuasiImpesWeights(const GpuSparseMatrix<T>& matrix,
+dispatchQuasiImpesWeights(const GpuSparseMatrixWrapper<T>& matrix,
                           std::size_t pressureVarIndex,
                           GpuVector<T>& weights,
                           const GpuVector<int>& diagonalIndices,
@@ -209,7 +209,7 @@ dispatchQuasiImpesWeights(const GpuSparseMatrix<T>& matrix,
 // Implementation of getQuasiImpesWeights for GPU
 template <typename T, bool transpose>
 void
-getQuasiImpesWeights(const GpuSparseMatrix<T>& matrix,
+getQuasiImpesWeights(const GpuSparseMatrixWrapper<T>& matrix,
                      std::size_t pressureVarIndex,
                      GpuVector<T>& weights,
                      const GpuVector<int>& diagonalIndices)
@@ -228,8 +228,8 @@ getQuasiImpesWeights(const GpuSparseMatrix<T>& matrix,
 
 template <typename T, bool transpose>
 void
-calculateCoarseEntries(const GpuSparseMatrix<T>& fineMatrix,
-                       GpuSparseMatrix<T>& coarseMatrix,
+calculateCoarseEntries(const GpuSparseMatrixWrapper<T>& fineMatrix,
+                       GpuSparseMatrixWrapper<T>& coarseMatrix,
                        const GpuVector<T>& weights,
                        std::size_t pressureVarIndex)
 {
@@ -285,12 +285,12 @@ prolongateVector(const GpuVector<T>& coarse,
 }
 
 #define INSTANTIATE_CPR_AMG_FUNCTIONS(ScalarType, TransposeMode)                                                       \
-    template void getQuasiImpesWeights<ScalarType, TransposeMode>(const GpuSparseMatrix<ScalarType>& matrix,           \
+    template void getQuasiImpesWeights<ScalarType, TransposeMode>(const GpuSparseMatrixWrapper<ScalarType>& matrix,           \
                                                                   std::size_t pressureVarIndex,                        \
                                                                   GpuVector<ScalarType>& weights,                      \
                                                                   const GpuVector<int>& diagonalIndices);              \
-    template void calculateCoarseEntries<ScalarType, TransposeMode>(const GpuSparseMatrix<ScalarType>& fineMatrix,     \
-                                                                    GpuSparseMatrix<ScalarType>& coarseMatrix,         \
+    template void calculateCoarseEntries<ScalarType, TransposeMode>(const GpuSparseMatrixWrapper<ScalarType>& fineMatrix,     \
+                                                                    GpuSparseMatrixWrapper<ScalarType>& coarseMatrix,         \
                                                                     const GpuVector<ScalarType>& weights,              \
                                                                     std::size_t pressureVarIndex);                     \
     template void restrictVector<ScalarType, TransposeMode>(const GpuVector<ScalarType>& fine,                         \

@@ -111,7 +111,7 @@ namespace Amg
 
 #if HAVE_CUDA
     template <typename T>
-    std::vector<int> precomputeDiagonalIndices(const gpuistl::GpuSparseMatrix<T>& matrix) {
+    std::vector<int> precomputeDiagonalIndices(const gpuistl::GpuSparseMatrixWrapper<T>& matrix) {
         std::vector<int> diagonalIndices(matrix.N(), -1);
         const auto rowIndices = matrix.getRowIndices().asStdVector();
         const auto colIndices = matrix.getColumnIndices().asStdVector();
@@ -129,7 +129,7 @@ namespace Amg
 
     // GPU version that delegates to the GPU implementation
     template <typename T, bool transpose>
-    void getQuasiImpesWeights(const gpuistl::GpuSparseMatrix<T>& matrix,
+    void getQuasiImpesWeights(const gpuistl::GpuSparseMatrixWrapper<T>& matrix,
                              const int pressureVarIndex,
                              gpuistl::GpuVector<T>& weights,
                              const gpuistl::GpuVector<int>& diagonalIndices)
@@ -138,7 +138,7 @@ namespace Amg
     }
 
     template <typename T, bool transpose>
-    gpuistl::GpuVector<T> getQuasiImpesWeights(const gpuistl::GpuSparseMatrix<T>& matrix,
+    gpuistl::GpuVector<T> getQuasiImpesWeights(const gpuistl::GpuSparseMatrixWrapper<T>& matrix,
                                               const int pressureVarIndex,
                                               const gpuistl::GpuVector<int>& diagonalIndices)
     {
