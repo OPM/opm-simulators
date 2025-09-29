@@ -131,6 +131,6 @@ To cite OPM Flow we primarily use the paper `The Open Porous Media Flow reservoi
 
 We try to keep track of all publications having used OPM Flow in their scientific papers [here](https://opm-project.org/?page_id=39). Reach out to the contact point mentioned on the page if you want your article there.
 
-## CONTRIBUTING
+## Contributing
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
