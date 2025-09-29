@@ -415,8 +415,8 @@ public:
                         addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
                 }
                 if constexpr (enableBioeffects) {
-                    BioeffectsModule::template addBioeffectsFluxes_<Evaluation, Evaluation, IntensiveQuantities>
-                        (flux, phaseIdx, darcyFlux, up);
+                    BioeffectsModule::template
+                        addBioeffectsFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
                 }
                 if constexpr (enableBrine) {
                     BrineModule::template
@@ -431,8 +431,8 @@ public:
                         addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
                 }
                 if constexpr (enableBioeffects) {
-                    BioeffectsModule::template addBioeffectsFluxes_<Scalar, Evaluation, IntensiveQuantities>
-                        (flux, phaseIdx, darcyFlux, up);
+                    BioeffectsModule::template
+                        addBioeffectsFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
                 }
                 if constexpr (enableBrine) {
                     BrineModule::template

@@ -208,23 +208,26 @@ public:
         }
     }
 
-    template <class UpEval, class Eval, class IntensiveQuantities>
+    template <class UpEval>
     static void addBioeffectsFluxes_(RateVector& flux,
                                      unsigned phaseIdx,
-                                     const Eval& volumeFlux,
+                                     const Evaluation& volumeFlux,
                                      const IntensiveQuantities& upFs)
     {
         if (phaseIdx == waterPhaseIdx) {
             if constexpr (enableBioeffects) {
                 flux[contiMicrobialEqIdx] =
                     decay<UpEval>(upFs.microbialConcentration())
+                    * decay<UpEval>(upFs.fluidState().invB(waterPhaseIdx))
                     * volumeFlux;
                 if constexpr (enableMICP) {
                     flux[contiOxygenEqIdx] =
                         decay<UpEval>(upFs.oxygenConcentration())
+                        * decay<UpEval>(upFs.fluidState().invB(waterPhaseIdx))
                         * volumeFlux;
                     flux[contiUreaEqIdx] =
                         decay<UpEval>(upFs.ureaConcentration())
+                        * decay<UpEval>(upFs.fluidState().invB(waterPhaseIdx))
                         * volumeFlux;
                 }
             }
@@ -262,16 +265,15 @@ public:
 
     template <class UpstreamEval>
     static void addBioeffectsFluxes_(RateVector& flux,
-                               const ElementContext& elemCtx,
-                               unsigned scvfIdx,
-                               unsigned timeIdx)
+                                     const ElementContext& elemCtx,
+                                     unsigned scvfIdx,
+                                     unsigned timeIdx)
     {
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         unsigned upIdx = extQuants.upstreamIndex(waterPhaseIdx);
         const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
-        const auto& fs = up.fluidState();
         const auto& volFlux = extQuants.volumeFlux(waterPhaseIdx);
-        addBioeffectsFluxes_<UpstreamEval>(flux, volFlux, fs);
+        addBioeffectsFluxes_<UpstreamEval>(flux, waterPhaseIdx, volFlux, up);
     }
 
     static void addSource(RateVector& source,
