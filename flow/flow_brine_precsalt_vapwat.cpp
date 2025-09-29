@@ -19,6 +19,9 @@
 #include <flow/flow_brine_precsalt_vapwat.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
+
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
@@ -43,6 +46,16 @@ struct EnableSaltPrecipitation<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
 template<class TypeTag>
 struct EnableVapwat<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
     static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> { 
+    using type = TpfaLinearizer<TypeTag>;
+};
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
+    using type = BlackOilLocalResidualTPFA<TypeTag>;
 };
 }}
 

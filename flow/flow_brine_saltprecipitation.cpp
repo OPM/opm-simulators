@@ -19,6 +19,9 @@
 #include <flow/flow_brine_saltprecipitation.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
+
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
@@ -30,6 +33,7 @@ struct FlowBrineSaltPrecipitationProblem {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
+
 template<class TypeTag>
 struct EnableBrine<TypeTag, TTag::FlowBrineSaltPrecipitationProblem> {
     static constexpr bool value = true;
@@ -38,6 +42,16 @@ struct EnableBrine<TypeTag, TTag::FlowBrineSaltPrecipitationProblem> {
 template<class TypeTag>
 struct EnableSaltPrecipitation<TypeTag, TTag::FlowBrineSaltPrecipitationProblem> {
     static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowBrineSaltPrecipitationProblem> { 
+    using type = TpfaLinearizer<TypeTag>;
+};
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowBrineSaltPrecipitationProblem> {
+    using type = BlackOilLocalResidualTPFA<TypeTag>;
 };
 }}
 
