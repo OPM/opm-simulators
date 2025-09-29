@@ -257,6 +257,32 @@ public:
      */
     void updateNonzeroValues(const GpuSparseMatrixGeneric<T>& matrix);
 
+    /**
+     * @brief Dispatches a function based on the block size of the matrix.
+     *
+     * This method allows executing different code paths depending on the block size
+     * of the matrix, up to the maximum block size specified by max_block_size.
+     *
+     * Use this function if you need the block size to be known at compile time.
+     *
+     * @tparam FunctionType Type of the function to be dispatched
+     * @param function The function to be executed based on the block size
+     * @return The result of the function execution
+     *
+     * You can use this function as
+     *
+     * \code{.cpp}
+     * matrix.dispatchOnBlocksize([](auto val) {
+     *    constexpr int blockSize = decltype(val)::value;
+     * });
+     * \endcode
+     */
+     template<class FunctionType>
+     auto dispatchOnBlocksize(FunctionType function) const
+     {
+        return dispatchOnBlocksizeImpl<max_block_size>(function);
+     }
+
 private:
     GpuVector<T> m_nonZeroElements;
     GpuVector<int> m_columnIndices;
@@ -296,6 +322,20 @@ private:
         } else {
             static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>, "Only float and double are supported");
             return CUDA_R_32F; // Unreachable, but needed to compile
+        }
+    }
+
+    template<int blockSizeCompileTime, class FunctionType>
+    auto dispatchOnBlocksizeImpl(FunctionType function) const
+    {
+        if (blockSizeCompileTime == m_blockSize) {
+            return function(std::integral_constant<int, blockSizeCompileTime>());
+        }
+
+        if constexpr (blockSizeCompileTime > 1) {
+            return dispatchOnBlocksizeImpl<blockSizeCompileTime - 1>(function);
+        } else {
+            OPM_THROW(std::runtime_error, fmt::format("Unsupported block size: {}", m_blockSize));
         }
     }
 };
