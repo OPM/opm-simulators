@@ -3,7 +3,7 @@
 [![Home Page](https://img.shields.io/badge/Home_Page-opm--project.org-8888FF)](https://opm-project.org/)
 [![License](https://img.shields.io/badge/License-GPL_V.3%2B-2ea44f)](#)
 [![Documentation](https://img.shields.io/badge/docs-manual-999999)](https://opm-project.org/?page_id=955)
-[![Main Article - 10.1016/j.camwa.2020.05.014](https://img.shields.io/badge/Main_Article-10.1016%2Fj.camwa.2020.05.014-FF9900)](#)
+[![Main Article - 10.1016/j.camwa.2020.05.014](https://img.shields.io/badge/Main_Article-10.1016%2Fj.camwa.2020.05.014-FF9900)](https://doi.org/10.1016/j.camwa.2020.05.014)
 [![Zenodo](https://img.shields.io/badge/Zenodo_Src-10.5281%2Fzenodo.12637570-ff2222)](https://doi.org/10.5281/zenodo.12637570)
 
 > The `opm-simulators` repository contains the OPM Flow reservoir simulator which uses automatic differentiation and standard input-formats to simulate reservoirs of industrial complexity on real assets by commercial actors. It is cooperatively developed by multiple industry-partners and academic institutions under the GPL 3 license.
