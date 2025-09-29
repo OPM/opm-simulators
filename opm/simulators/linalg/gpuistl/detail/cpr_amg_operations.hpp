@@ -19,7 +19,7 @@
 #ifndef OPM_GPU_CPR_AMG_OPERATIONS_HPP
 #define OPM_GPU_CPR_AMG_OPERATIONS_HPP
 
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
 #include <cstddef>
@@ -36,7 +36,7 @@ namespace Opm::gpuistl::detail
  * @tparam transpose Whether to use the transpose mode for calculation
  */
 template <typename T, bool transpose>
-void getQuasiImpesWeights(const GpuSparseMatrix<T>& matrix,
+void getQuasiImpesWeights(const GpuSparseMatrixWrapper<T>& matrix,
                           std::size_t pressureVarIndex,
                           GpuVector<T>& weights,
                           const GpuVector<int>& diagonalIndices);
@@ -50,8 +50,8 @@ void getQuasiImpesWeights(const GpuSparseMatrix<T>& matrix,
  * @tparam transpose Whether to use the transpose representation or not
  */
 template <typename T, bool transpose>
-void calculateCoarseEntries(const GpuSparseMatrix<T>& fineMatrix,
-                            GpuSparseMatrix<T>& coarseMatrix,
+void calculateCoarseEntries(const GpuSparseMatrixWrapper<T>& fineMatrix,
+                            GpuSparseMatrixWrapper<T>& coarseMatrix,
                             const GpuVector<T>& weights,
                             std::size_t pressureVarIndex);
 

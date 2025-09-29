@@ -32,9 +32,9 @@
 
 #if HAVE_CUDA
 #if USE_HIP
-#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
 #else
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #endif
 #endif // HAVE_CUDA
 

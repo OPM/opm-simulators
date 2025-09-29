@@ -22,7 +22,7 @@
 
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cpr_amg_operations.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
@@ -34,7 +34,7 @@ namespace Opm
 namespace Details
 {
     template <class Scalar>
-    using GpuPressureMatrixType = gpuistl::GpuSparseMatrix<Scalar>;
+    using GpuPressureMatrixType = gpuistl::GpuSparseMatrixWrapper<Scalar>;
     template <class Scalar>
     using GpuPressureVectorType = gpuistl::GpuVector<Scalar>;
     template <class Scalar>
