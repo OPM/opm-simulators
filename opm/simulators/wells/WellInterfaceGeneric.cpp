@@ -912,10 +912,10 @@ checkNegativeWellPotentials(std::vector<Scalar>& well_potentials,
 
 template<typename Scalar, typename IndexTraits>
 void WellInterfaceGeneric<Scalar, IndexTraits>::
-prepareForPotentialCalculations(const SummaryState& summary_state,
-                                WellState<Scalar, IndexTraits>& well_state,
-                                Well::InjectionControls& inj_controls,
-                                Well::ProductionControls& prod_controls) const
+onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
+                          WellState<Scalar, IndexTraits>& well_state,
+                          Well::InjectionControls& inj_controls,
+                          Well::ProductionControls& prod_controls) const
 {
     const bool has_thp = this->wellHasTHPConstraints(summary_state);
     auto& ws = well_state.well(this->index_of_well_);

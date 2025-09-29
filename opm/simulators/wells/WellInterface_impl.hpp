@@ -405,7 +405,7 @@ namespace Opm
         // We test the well as an open well during the well testing
         ws.open();
 
-        updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
+        scaleSegmentRatesAndPressure(well_state_copy);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
 
@@ -763,7 +763,31 @@ namespace Opm
     {
         OPM_TIMEFUNCTION();
         const double dt = simulator.timeStepSize();
-        const bool converged = iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger);
+
+        const auto& summary_state = simulator.vanguard().summaryState();
+        auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+        auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+        this->onlyKeepBHPandTHPcontrols(summary_state, well_state, inj_controls, prod_controls);
+
+        bool converged = false;
+        try {
+            // TODO: the following two functions will be refactored to be one to reduce the code duplication
+            if (!this->param_.local_well_solver_control_switching_){
+                converged = this->iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            } else {
+                if (this->param_.use_implicit_ipr_ && this->well_ecl_.isProducer() && (well_state.well(this->index_of_well_).status == WellStatus::OPEN)) {
+                    converged = solveWellWithOperabilityCheck(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+                } else {
+                    converged = this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+                }
+            }
+
+        } catch (NumericalProblem& e ) {
+            const std::string msg = "Inner well iterations failed for well " + this->name() + " Treat the well as unconverged. ";
+            deferred_logger.warning("INNER_ITERATION_FAILED", msg);
+            converged = false;
+        }
+
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged");
             return true;
@@ -1152,6 +1176,14 @@ namespace Opm
         // equations should be converged at this stage, so only one it is needed
         bool converged = iterateWellEquations(simulator, dt, well_state_copy, group_state, deferred_logger);
         return converged;
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    scaleSegmentRatesAndPressure([[maybe_unused]] WellStateType& well_state) const
+    {
+        // only relevant for MSW
     }
 
     template<typename TypeTag>
