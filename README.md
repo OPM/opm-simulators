@@ -8,7 +8,7 @@
 
 > The `opm-simulators` repository contains the OPM Flow reservoir simulator which uses automatic differentiation and standard input-formats to simulate reservoirs of industrial complexity on real assets by commercial actors. It is cooperatively developed by multiple industry-partners and academic institutions under the GPL 3 license.
 > 
-> Flow is a fully implicit black-oil simulators which also supports CO2 storage, H2 storage, thermal simulations, solvents, as well as polymers. It works with the Eclipse formats, making it easy to integrate into existing workflows. The automatic differentiation is implemented in [opm-common](OPM/opm-common). The manual can be found here on the OPM [home page](https://opm-project.org/?page_id=955).
+> Flow is a fully implicit black-oil simulators which also supports CO2 storage, H2 storage, thermal simulations, solvents, as well as polymers. It works with the Eclipse formats, making it easy to integrate into existing workflows. The automatic differentiation is implemented in [opm-common](https://github.com/OPM/opm-common). The manual can be found here on the OPM [home page](https://opm-project.org/?page_id=955).
 
 ## Supported Platforms
 - RHEL 8+
@@ -22,8 +22,8 @@
 
 ## Building from Source
 `opm-simulators` Depends on:
-- [opm-common](OPM/opm-common)
-- [opm-grid](OPM/opm-grid)
+- [opm-common](https://github.com/OPM/opm-common)
+- [opm-grid](https://github.com/OPM/opm-grid)
 - [Dune and all other dependencies are listed and tracked on the home page](https://opm-project.org/?page_id=239)
 
 [Follow the build instructions on the home page](http://opm-project.org/?page_id=36).
