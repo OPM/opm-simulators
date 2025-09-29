@@ -52,6 +52,16 @@ class GpuSparseMatrixGeneric
 public:
     using field_type = T;
 
+    /**
+    * @brief Maximum block size supported by this implementation.
+    * 
+    * This constant defines an upper bound on the block size to ensure reasonable compilation times.
+    * While this class itself could support larger values, functions that call dispatchOnBlocksize() 
+    * might have limitations. This value can be increased if needed, but will increase compilation time
+    * due to template instantiations.
+    */
+    static constexpr int max_block_size = 6;
+
     //! Create the sparse matrix specified by the raw data.
     //!
     //! \param[in] nonZeroElements the non-zero values of the matrix
