@@ -1834,6 +1834,7 @@ namespace Opm
     StandardWell<TypeTag>::
     getRefDensity() const
     {
+        assert(cachedRefDensity > 0.1);
         return cachedRefDensity;
     }
 
