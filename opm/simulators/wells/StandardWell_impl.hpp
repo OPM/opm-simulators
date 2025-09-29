@@ -1335,7 +1335,7 @@ namespace Opm
                                prop_func, props, deferred_logger);
         // density was updated
         cachedRefDensity = this->connections_.rho(0);
-        if (this->parallel_well_info_.communication().size()>1) {
+        if (this->parallel_well_info_.communication().size() > 1) {
             cachedRefDensity = this->parallel_well_info_.broadcastFirstPerforationValue(cachedRefDensity);
         }
     }
@@ -2237,8 +2237,9 @@ namespace Opm
             max_pressure = std::max(max_pressure, pressure_cell);
         }
         const auto& comm = this->parallel_well_info_.communication();
-        if (comm.size()>1)
+        if (comm.size() > 1) {
             max_pressure = comm.max(max_pressure);
+        }
         auto bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(frates,
                                                                                summary_state,
                                                                                max_pressure,
