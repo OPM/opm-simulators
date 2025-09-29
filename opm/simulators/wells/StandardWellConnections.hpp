@@ -84,12 +84,6 @@ public:
                            const Properties&               props,
                            DeferredLogger&                 deferred_logger);
 
-    //! \brief Returns density for first perforation.
-    Scalar rho() const
-    {
-        return this->rho(0);
-    }
-
     //! \brief Returns density for specific perforation/connection.
     //!
     //! \param[in] i Connection index
