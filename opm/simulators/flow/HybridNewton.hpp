@@ -30,7 +30,6 @@
 #include <opm/ml/ml_model.hpp>
 
 #include <string>         
-#include <fstream>
 #include <vector>
 
 namespace Opm {
@@ -88,19 +87,21 @@ public:
         
         validateFluidSystem();
 
-        // Load configs if not yet loaded
         if (!configsLoaded_) {
-            configs_ = HybridNewtonConfig::parseHybridNewtonConfigs(Parameters::Get<Parameters::HyNeConfigFile>());  // note: plural
+            std::string config_file = Parameters::Get<Parameters::HyNeConfigFile>();
+            PropertyTree pt(config_file);
+            for (const auto& model_key : pt.get_child_keys()) {
+                HybridNewtonConfig config(pt.get_child(model_key));
+                config.validateConfig(compositionSwitchEnabled);
+                configs_.push_back(std::move(config));
+            }
             configsLoaded_ = true;
-            validateAllConfigs();
         }
 
         Scalar current_time = simulator_.time();
         // Find and apply all models that should run at this time
-        auto applicable_models = getApplicableModels(current_time);
-        
-        if (!applicable_models.empty()) {
-            for (const auto& config : applicable_models) {
+        for (const auto& config : configs_) {
+            if (shouldApplyHybridNewton(current_time, config)) {
                 runHybridNewton(config);
             }
         }
@@ -123,14 +124,9 @@ private:
     */
     void runHybridNewton(const HybridNewtonConfig& config)
     {
-        // Load cell indices from file at runtime
-        std::vector<int> cell_indices = config.loadCellIndicesFromFile();
-        const std::size_t n_cells = cell_indices.size();
-
-        // Pass cells to each stage
-        auto input  = constructInputTensor(config, cell_indices);
-        auto output = constructOutputTensor(input, config, n_cells);
-        updateInitialGuess(output, config, cell_indices);
+        auto input  = constructInputTensor(config);
+        auto output = constructOutputTensor(input, config);
+        updateInitialGuess(output, config);
     }
 
 protected:
@@ -150,19 +146,6 @@ protected:
             OPM_THROW(std::runtime_error, 
                 "HybridNewton: Unsupported fluid system. Only three-phase black oil is supported.");
         }
-    }
-
-    std::vector<HybridNewtonConfig> getApplicableModels(Scalar current_time)
-    {
-        std::vector<HybridNewtonConfig> applicable;
-        
-        for (const auto& config : configs_) {
-            if (shouldApplyHybridNewton(current_time, config)) {
-                applicable.push_back(config);
-            }
-        }
-        
-        return applicable;
     }
 
     /*!
@@ -205,30 +188,6 @@ protected:
         return false;
     }
 
-    void validateAllConfigs() const
-    {
-        for (const auto& config : configs_) {
-            // Check if RS or RV features appear in this config
-            bool hasRsFeature = 
-                config.hasInputFeature("RS") ||
-                config.hasOutputFeature("RS") ||
-                config.hasOutputFeature("DELTA_RS");
-            
-            bool hasRvFeature =
-                config.hasInputFeature("RV") ||
-                config.hasOutputFeature("RV") ||
-                config.hasOutputFeature("DELTA_RV");
-
-            // If RS or RV appear, ensure compositionSwitchEnabled is true
-            if ((hasRsFeature || hasRvFeature) && !compositionSwitchEnabled) {
-                OPM_THROW(std::runtime_error,
-                    "HybridNewton: RS or RV features detected but compositionSwitchEnabled is false. "
-                    "Composition support required for RS/RV."
-                );
-            }
-        }
-    }
-
     
     /*!
     * \brief Construct the input feature tensor for the Hybrid Newton model.
@@ -239,54 +198,66 @@ protected:
     * a row-major 2D tensor.
     *
     * \param config The HybridNewtonConfig containing feature definitions.
-    * \param cell_indices The list of cell indices to process.
-    * \param n_cells The number of cells (typically cell_indices.size()).
     * \return A tensor of shape [n_cells x n_input_features], where rows
     *         correspond to cells and columns correspond to input features.
     */
     ML::Tensor<Evaluation> constructInputTensor(
-        const HybridNewtonConfig& config,
-        const std::vector<int>& cell_indices
+        const HybridNewtonConfig& config
     )
-    {   
-        const std::size_t n_cells = cell_indices.size();
+    {
         const auto& features = config.input_features;
-        std::size_t num_scalar_features = 0, num_per_cell_features = 0;
+        std::size_t num_scalar_features = 0;
+        std::size_t num_per_cell_features = 0;
 
-        for (const auto& [name, spec] : features)
-            if (name == "TIMESTEP") ++num_scalar_features;
-            else ++num_per_cell_features;
+        for (const auto& feature : features) {
+            const FeatureSpec& spec = feature.second;
+            if (spec.actual_name == "TIMESTEP") {
+                ++num_scalar_features;
+            } else {
+                ++num_per_cell_features;
+            }
+        }
 
-        ML::Tensor<Evaluation> input(num_scalar_features + num_per_cell_features * n_cells);
+        ML::Tensor<Evaluation> input(num_scalar_features + num_per_cell_features * config.n_cells);
         std::size_t offset = 0;
 
         // Scalar features
-        for (const auto& [name, spec] : features)
-            if (name == "TIMESTEP")
-                input(offset++) = static_cast<Evaluation>(getScalarFeatureValue(name, spec));
-
-        // Per-cell features
-        for (const auto& [name, spec] : features) {
-            if (name == "TIMESTEP") continue;
-
-            for (std::size_t i = 0; i < n_cells; ++i)
-                input(offset + i) = static_cast<Evaluation>(getPerCellFeatureValue(name, spec, cell_indices[i]));
-
-            offset += n_cells;
+        for (const auto& feature: features) {
+            const FeatureSpec& spec = feature.second;
+            if (spec.actual_name == "TIMESTEP") {
+                auto value = static_cast<Evaluation>(getScalarFeatureValue(spec));
+                input(offset++) = value;
+            }
         }
 
+        // Per-cell features
+        for (const auto& feature: features) {
+            const FeatureSpec& spec = feature.second;
+
+            if (spec.actual_name == "TIMESTEP") {
+                continue;
+            }
+            
+            for (std::size_t i = 0; i < config.n_cells; ++i) {
+                auto value = static_cast<Evaluation>(
+                    getPerCellFeatureValue(spec, config.cell_indices[i])
+                );
+                input(offset + i) = value;
+            }
+            offset += config.n_cells;
+        }
         return input;
     }
 
 
-    Scalar getScalarFeatureValue(const std::string& name, const FeatureSpec& spec)
+    Scalar getScalarFeatureValue(const FeatureSpec& spec)
     {
         Scalar value = 0.0;
 
-        if (name == "TIMESTEP") {
+        if (spec.actual_name == "TIMESTEP") {
             value = simulator_.timeStepSize();
         } else {
-            OPM_THROW(std::runtime_error, "Unknown scalar feature: " + name);
+            OPM_THROW(std::runtime_error, "Unknown scalar feature: " + spec.actual_name);
         }
 
         value = spec.transform.apply(value);
@@ -294,7 +265,7 @@ protected:
     }
 
 
-    Scalar getPerCellFeatureValue(const std::string& name, const FeatureSpec& spec, int cell_index)
+    Scalar getPerCellFeatureValue(const FeatureSpec& spec, int cell_index)
     {
         const auto& intQuants = simulator_.model().intensiveQuantities(cell_index, 0);
         const auto& fs = intQuants.fluidState();
@@ -302,33 +273,34 @@ protected:
 
         Scalar value = 0.0;
 
-        if (name == "PRESSURE") {
+        if (spec.actual_name == "PRESSURE") {
             value = getValue(fs.pressure(oilPhaseIdx));
             value = unitSyst.from_si(UnitSystem::measure::pressure, value);
-        } else if (name == "SWAT") {
-             value = getValue(fs.saturation(waterPhaseIdx));
-        } else if (name == "SGAS") {
+        } else if (spec.actual_name == "SWAT") {
+            value = getValue(fs.saturation(waterPhaseIdx));
+        } else if (spec.actual_name == "SGAS") {
             value = getValue(fs.saturation(gasPhaseIdx));
-        } else if (name == "SOIL") {
+        } else if (spec.actual_name == "SOIL") {
             value = getValue(fs.saturation(oilPhaseIdx));
-        } else if (name == "RS") {
+        } else if (spec.actual_name == "RS") {
             value = getValue(fs.Rs());
             value = unitSyst.from_si(UnitSystem::measure::gas_oil_ratio, value);
-        } else if (name == "RV") {
+        } else if (spec.actual_name == "RV") {
             value = getValue(fs.Rv());
             value = unitSyst.from_si(UnitSystem::measure::oil_gas_ratio, value);
-        } else if (name == "PERMX") {
+        } else if (spec.actual_name == "PERMX") {
             const auto& eclState = simulator_.vanguard().eclState();
             const auto& fp = eclState.fieldProps();
             auto permX = fp.get_double("PERMX");
             value = permX[cell_index];
             value = unitSyst.from_si(UnitSystem::measure::permeability, value);
         } else {
-            OPM_THROW(std::runtime_error, "Unknown per-cell feature: " + name);
+            OPM_THROW(std::runtime_error, "Unknown per-cell feature: " + spec.actual_name);
         }
 
-        value = spec.transform.apply(value);
-        return spec.scaler.scale(value);
+        Scalar transformed = spec.transform.apply(value);
+        Scalar scaled = spec.scaler.scale(transformed);
+        return scaled;
     }
 
 
@@ -350,7 +322,7 @@ protected:
     *         output tensor does not match the expected feature layout.
     */
     ML::Tensor<Evaluation>
-    constructOutputTensor(const ML::Tensor<Evaluation>& input, const HybridNewtonConfig& config, std::size_t n_cells)
+    constructOutputTensor(const ML::Tensor<Evaluation>& input, const HybridNewtonConfig& config)
     {
         const auto& features = config.output_features;
         const int n_features = features.size();
@@ -358,7 +330,7 @@ protected:
         ML::NNModel<Evaluation> model;
         model.loadModel(config.model_path);
 
-        ML::Tensor<Evaluation> output(1, n_cells * n_features);
+        ML::Tensor<Evaluation> output(1, config.n_cells * n_features);
         model.apply(input, output);
 
         return output; 
@@ -378,27 +350,23 @@ protected:
     *        and columns correspond to output features.
     * \param config The HybridNewtonConfig specifying model path and output
     *        feature definitions.
-    * \param cell_indices The list of cells whose initial guesses are updated.
-    * \param n_cells The number of cells (should match cell_indices.size()).
     *
     * \throws std::runtime_error if an expected output feature is missing
     *         or if state update fails for any cell.
     */
     void updateInitialGuess(
         ML::Tensor<Evaluation>& output, 
-        const HybridNewtonConfig& config, 
-        const std::vector<int>& cell_indices
+        const HybridNewtonConfig& config 
     )
     {   
-        const std::size_t n_cells = cell_indices.size();
         const auto& features = config.output_features;
 
         FeatureFlags flags = flagFeatures(features);
 
         const auto& unitSyst = simulator_.vanguard().schedule().getUnits();
 
-        for (std::size_t i = 0; i < n_cells; ++i) {
-            const int cell_idx = cell_indices[i];
+        for (std::size_t i = 0; i < config.n_cells; ++i) {
+            const int cell_idx = config.cell_indices[i];
             const auto& intQuants = simulator_.model().intensiveQuantities(cell_idx, /*timeIdx*/0);
             auto fs = intQuants.fluidState();
 
@@ -412,7 +380,7 @@ protected:
 
             for (const auto& [name, spec] : features) {
 
-                auto scaled_value = getValue(output(feature_idx * n_cells + i));
+                auto scaled_value = getValue(output(feature_idx * config.n_cells + i));
                 
                 // Inverse scaling
                 Scalar raw_value = spec.scaler.unscale(scaled_value);
@@ -478,9 +446,9 @@ protected:
                     sg = 1.0 - sw - so;
                 }
 
-                sw = max(0.0, min(sw, 1.0));
-                so = max(0.0, min(so, 1.0));
-                sg = max(0.0, min(sg, 1.0));
+                sw = std::max(0.0, std::min(sw, 1.0));
+                so = std::max(0.0, std::min(so, 1.0));
+                sg = std::max(0.0, std::min(sg, 1.0));
 
                 Scalar sum = sw + so + sg;
                 if (sum <= 1e-12) {

@@ -109,11 +109,45 @@ class HybridNewtonConfig {
 public:
     std::string model_path;
     std::string cell_indices_file;
+    std::vector<int> cell_indices;
+    std::size_t n_cells = 0;
     std::vector<double> apply_times;
     std::vector<std::pair<std::string, FeatureSpec>> input_features;
     std::vector<std::pair<std::string, FeatureSpec>> output_features;
 
+    // Default constructor
     HybridNewtonConfig() = default;
+
+    // Construct config from a PropertyTree (single model)
+    explicit HybridNewtonConfig(const PropertyTree& model_config)
+    {
+        model_path = model_config.get<std::string>("model_path", "");
+        if (model_path.empty())
+            throw std::runtime_error("Missing 'model_path' in HybridNewton config");
+
+        cell_indices_file = model_config.get<std::string>("cell_indices_file", "");
+        if (cell_indices_file.empty())
+            throw std::runtime_error("Missing 'cell_indices_file' in HybridNewton config");
+
+        // Load cell indices immediately
+        cell_indices = loadCellIndicesFromFile(cell_indices_file);
+        n_cells = cell_indices.size();
+
+        // Load apply times
+        auto applyTimesOpt = model_config.get_child_optional("apply_times");
+        if (!applyTimesOpt)
+            throw std::runtime_error("Missing 'apply_times' in HybridNewton config");
+
+        for (const auto& key : applyTimesOpt->get_child_keys())
+            apply_times.push_back(applyTimesOpt->get_child(key).get<double>(""));
+
+        if (apply_times.empty())
+            throw std::runtime_error("'apply_times' must contain at least one value");
+
+        // Parse features
+        parseFeatures(model_config, "features.inputs", input_features);
+        parseFeatures(model_config, "features.outputs", output_features);
+    }
 
     bool hasInputFeature(const std::string& name) const {
         return std::any_of(input_features.begin(), input_features.end(),
@@ -125,12 +159,31 @@ public:
                            [&](const auto& p) { return p.first == name; });
     }
 
-    std::vector<int> loadCellIndicesFromFile() const {
-        std::vector<int> indices;
-        std::ifstream cellFile(cell_indices_file);
-        if (!cellFile.is_open()) {
-            throw std::runtime_error("Cannot open cell indices file: " + cell_indices_file);
+    // In HybridNewtonConfig
+    void validateConfig(bool compositionSwitchEnabled) const
+    {
+        bool hasRsFeature = hasInputFeature("RS") ||
+                            hasOutputFeature("RS") ||
+                            hasOutputFeature("DELTA_RS");
+
+        bool hasRvFeature = hasInputFeature("RV") ||
+                            hasOutputFeature("RV") ||
+                            hasOutputFeature("DELTA_RV");
+
+        if ((hasRsFeature || hasRvFeature) && !compositionSwitchEnabled) {
+            OPM_THROW(std::runtime_error,
+                "HybridNewton: RS or RV features detected but composition support is disabled. "
+                "CompositionSwitch must be enabled for RS/RV features."
+            );
         }
+    }
+    
+private:
+    std::vector<int> loadCellIndicesFromFile(const std::string& filename) const {
+        std::vector<int> indices;
+        std::ifstream cellFile(filename);
+        if (!cellFile.is_open())
+            throw std::runtime_error("Cannot open cell indices file: " + filename);
 
         std::string line;
         int lineNumber = 0;
@@ -140,17 +193,16 @@ public:
             try { indices.push_back(std::stoi(line)); }
             catch (...) {
                 throw std::runtime_error("Invalid cell index at line " + std::to_string(lineNumber) +
-                                         " in file " + cell_indices_file + ": " + line);
+                                         " in file " + filename + ": " + line);
             }
         }
 
-        if (indices.empty()) {
-            throw std::runtime_error("No valid cell indices found in file: " + cell_indices_file);
-        }
+        if (indices.empty())
+            throw std::runtime_error("No valid cell indices found in file: " + filename);
+
         return indices;
     }
 
-private:
     void parseFeatures(const PropertyTree& pt, const std::string& path,
                        std::vector<std::pair<std::string, FeatureSpec>>& features) {
         auto subtreeOpt = pt.get_child_optional(path);
@@ -160,6 +212,7 @@ private:
             const PropertyTree& ft = subtreeOpt->get_child(name);
             FeatureSpec spec;
             spec.transform = Transform(ft.get<std::string>("feature_engineering", "none"));
+
             if (auto sOpt = ft.get_child_optional("scaling_params")) {
                 const PropertyTree& s = *sOpt;
                 if (s.get_child_optional("mean") && s.get_child_optional("std")) {
@@ -173,62 +226,15 @@ private:
                 } else {
                     spec.scaler.type = Scaler::Type::None;
                 }
+            } else {
+                spec.scaler.type = Scaler::Type::None;
             }
 
-            spec.is_delta = (name.size() >= 6 && std::memcmp(name.data(), "DELTA_", 6) == 0);
-            spec.actual_name = spec.is_delta ? name.substr(6) : name; 
+            spec.is_delta = name.compare(0, 6, "DELTA_") == 0;
+            spec.actual_name = spec.is_delta ? name.substr(6) : name;
 
             features.emplace_back(name, std::move(spec));
         }
-    }
-
-public:
-    /*!
-     * \brief Parse a JSON config file containing one or multiple HybridNewton configs.
-     * \param path Path to the JSON configuration file.
-     * \return A vector of HybridNewtonConfig objects, one per model.
-     */
-    static std::vector<HybridNewtonConfig> parseHybridNewtonConfigs(const std::string& path) {
-        std::vector<HybridNewtonConfig> configs;
-        PropertyTree pt(path);
-
-        for (const auto& model_key : pt.get_child_keys()) {
-            const PropertyTree mt = pt.get_child(model_key);
-            HybridNewtonConfig cfg;
-
-            cfg.model_path = mt.get<std::string>("model_path", "");
-            if (cfg.model_path.empty()) {
-                throw std::runtime_error("Missing 'model_path' for model " + model_key + " in file: " + path);
-            }
-
-            cfg.cell_indices_file = mt.get<std::string>("cell_indices_file", "");
-            if (cfg.cell_indices_file.empty()) {
-                throw std::runtime_error("Missing 'cell_indices_file' for model " + model_key + " in file: " + path);
-            }
-
-            auto applyTimesOpt = mt.get_child_optional("apply_times");
-            if (!applyTimesOpt) {
-                throw std::runtime_error("Missing 'apply_times' for model " + model_key + " in file: " + path);
-            }
-            for (const auto& key : applyTimesOpt->get_child_keys()) {
-                cfg.apply_times.push_back(applyTimesOpt->get_child(key).get<double>(""));
-            }
-
-            if (cfg.apply_times.empty()) {
-                throw std::runtime_error("'apply_times' must contain at least one value for model " + model_key);
-            }
-
-            cfg.parseFeatures(mt, "features.inputs", cfg.input_features);
-            cfg.parseFeatures(mt, "features.outputs", cfg.output_features);
-
-            configs.push_back(std::move(cfg));
-        }
-
-        if (configs.empty()) {
-            throw std::runtime_error("No models found in HybridNewton config file: " + path);
-        }
-
-        return configs;
     }
 };
 
