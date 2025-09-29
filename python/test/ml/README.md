@@ -1,7 +1,3 @@
-
-
-
-
 requirements (same as opm-common/python/opm/ml/ml_tools/requirements.txt)
 
 # Python v.3.9.0 and above
