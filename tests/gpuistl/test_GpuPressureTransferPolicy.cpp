@@ -34,7 +34,7 @@
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
 #include <opm/simulators/linalg/gpuistl/GpuPressureTransferPolicy.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cpr_amg_operations.hpp>
 
@@ -56,7 +56,7 @@ struct TestFixture {
     using CommInfo = Dune::Amg::SequentialInformation;
 
     // Define GPU types
-    using GpuMatrixType = Opm::gpuistl::GpuSparseMatrix<Scalar>;
+    using GpuMatrixType = Opm::gpuistl::GpuSparseMatrixWrapper<Scalar>;
     using GpuVectorType = Opm::gpuistl::GpuVector<Scalar>;
     using GpuVectorIntType = Opm::gpuistl::GpuVector<int>;
 
