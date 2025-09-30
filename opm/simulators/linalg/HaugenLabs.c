@@ -809,7 +809,7 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
 
 }
 
-int bslv_pbicgstab3(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
+int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
 {
 
     double tol = mem->tol;

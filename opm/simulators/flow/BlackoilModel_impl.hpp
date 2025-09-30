@@ -284,20 +284,25 @@ nonlinearIterationNewton(const int iteration,
 
 /*
             // Looks like a good place to export the linear system
-            char tag[16];
-            int idx = simulator_.episodeIndex();
-            simulator_.model().linearizer().exportSystem(idx,tag);
+            char tag[64];
+            int idx = simulator_.episodeIndex(); printf("idx = %d\n",idx);
+            bool cond = (idx>30);
+
+            if(cond) simulator_.model().linearizer().exportSystem(idx,tag);
 */
+
+
             // ---- Solve linear system ----
             solveJacobianSystem(x);
+
 
             report.linear_solve_setup_time += linear_solve_setup_time_;
             report.linear_solve_time += perfTimer.stop();
             report.total_linear_iterations += linearIterationsLastSolve();
 /*
             // Solution vector must be exported after solver converges
-            simulator_.model().linearizer().exportVector(x,tag);
-            getchar();
+            if(cond) simulator_.model().linearizer().exportVector(x,tag);
+            //getchar();
 */
         }
         catch (...) {
@@ -521,7 +526,14 @@ solveJacobianSystem(BVector& x)
         // account for parallelization properly. since the residual of ECFV
         // discretizations does not need to be synchronized across processes to be
         // consistent, this is not relevant for OPM-flow...
+        double r0 = residual.two_norm();
+
         linSolver.solve(x);
+
+        int count = linSolver.iterations();
+        double rr = residual.two_norm();
+        printf("--> %04d: %.4e %.4e\n",count, r0, rr/r0);
+
     }
 }
 
