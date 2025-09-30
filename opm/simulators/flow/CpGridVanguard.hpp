@@ -30,8 +30,8 @@
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
-
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericCpGridVanguard.hpp>
@@ -139,11 +139,11 @@ public:
 
         // check for correct module setup
         if (config.isThermal()) {
-            if (getPropValue<TypeTag, Properties::EnableEnergy>() == false) {
+            if (getPropValue<TypeTag, Properties::EnergyModuleType>() != EnergyModules::FullyImplicitThermal) {
                 throw std::runtime_error("Input specifies energy while simulator has disabled it, try xxx_energy");
             }
         } else {
-            if (getPropValue<TypeTag, Properties::EnableEnergy>() == true) {
+            if (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal) {
                 throw std::runtime_error("Input specifies no energy while simulator has energy, try run without _energy");
             }
         }
@@ -331,7 +331,7 @@ protected:
                                                     this->cartesianIndexMapper(),
                                                     this->grid(),
                                                     this->cellCentroids(),
-                                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
                                                     getPropValue<TypeTag, Properties::EnableDiffusion>(),
                                                     getPropValue<TypeTag, Properties::EnableDispersion>()));
         globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans);

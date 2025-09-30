@@ -819,12 +819,13 @@ public:
                         //single (water) phase
                         fluidState.setPressure(phaseIdx, pressure);
                 }
-
-                double temperature = initialFluidStates_[globalDofIdx].temperature(0); // we only have one temperature
-                const auto temperature_input = bc.temperature;
-                if(temperature_input)
-                    temperature = *temperature_input;
-                fluidState.setTemperature(temperature);
+                if constexpr (enableEnergy || enableTemperature) {
+                    double temperature = initialFluidStates_[globalDofIdx].temperature(0); // we only have one temperature
+                    const auto temperature_input = bc.temperature;
+                    if(temperature_input)
+                        temperature = *temperature_input;
+                    fluidState.setTemperature(temperature);
+                }
 
                 if constexpr (enableDissolvedGas) {
                     if (FluidSystem::enableDissolvedGas()) {
@@ -1074,11 +1075,12 @@ public:
             }
 
             // For CO2STORE and H2STORE we need to set the initial temperature for isothermal simulations
-            bool isThermal = eclState.getSimulationConfig().isThermal();
-            bool needTemperature = (eclState.runspec().co2Storage() || eclState.runspec().h2Storage());
-            if (!isThermal && needTemperature) {
-                const auto& fp = simulator.vanguard().eclState().fieldProps();
-                elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);
+            if constexpr (enableTemperature) {
+                bool needTemperature = (eclState.runspec().co2Storage() || eclState.runspec().h2Storage());
+                if (needTemperature) {
+                    const auto& fp = simulator.vanguard().eclState().fieldProps();
+                    elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);
+                }
             }
 
             this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
@@ -1393,10 +1395,12 @@ protected:
             //////
             // set temperature
             //////
-            Scalar temperatureLoc = tempiData[dofIdx];
-            if (!std::isfinite(temperatureLoc) || temperatureLoc <= 0)
-                temperatureLoc = FluidSystem::surfaceTemperature;
-            dofFluidState.setTemperature(temperatureLoc);
+            if constexpr (enableEnergy || enableTemperature) {
+                Scalar temperatureLoc = tempiData[dofIdx];
+                if (!std::isfinite(temperatureLoc) || temperatureLoc <= 0)
+                    temperatureLoc = FluidSystem::surfaceTemperature;
+                dofFluidState.setTemperature(temperatureLoc);
+            }
 
             //////
             // set salt concentration

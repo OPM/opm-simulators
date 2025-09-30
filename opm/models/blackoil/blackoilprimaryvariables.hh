@@ -107,8 +107,9 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    enum { enableEnergy = (energyModuleType == EnergyModules::FullyImplicitThermal) };
+    enum { enableTemperature = (energyModuleType == EnergyModules::ConstantTemperature) };
     enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
     enum { enableMICP = Indices::enableMICP };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
@@ -119,7 +120,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
     using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
     using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
-    using EnergyModule = BlackOilEnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag, energyModuleType>;
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
 

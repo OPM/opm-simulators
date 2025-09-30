@@ -756,7 +756,7 @@ doAllocBuffers(const unsigned bufferSize,
        Entry{&fluidPressure_,             "PRESSURE", true},
        // If TEMP is set in RPTRST we output temperature even if THERMAL
        // is not activated
-       Entry{&temperature_,                   "TEMP", enableEnergy_ || rstKeywords["TEMP"] > 0},
+       Entry{&temperature_,                   "TEMP", enableEnergy_ || (enableTemperature_ && rstKeywords["TEMP"] > 0)},
        Entry{&rs_,                              "RS", FluidSystem::enableDissolvedGas()},
        Entry{&rsw_,                            "RSW", FluidSystem::enableDissolvedGasInWater()},
        Entry{&rv_,                              "RV", FluidSystem::enableVaporizedOil()},
