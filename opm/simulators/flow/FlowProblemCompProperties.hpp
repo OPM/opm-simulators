@@ -30,10 +30,10 @@
 
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
 
 #include <tuple>
 
@@ -60,6 +60,10 @@ template<class TypeTag>
 struct TracerModel<TypeTag, TTag::FlowBaseProblemComp> {
     using type = ::Opm::TracerModel<TypeTag>;
 };
+
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowBaseProblemComp>
+{ static constexpr EnergyModules value = EnergyModules::NoTemperature; };
 
 // Set the material law for fluid fluxes
 template<class TypeTag>

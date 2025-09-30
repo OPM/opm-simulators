@@ -200,11 +200,6 @@ template<class TypeTag>
 struct EnableApiTracking<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
-// store temperature (but do not conserve energy, as long as EnableEnergy is false)
-template<class TypeTag>
-struct EnableTemperature<TypeTag, TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
 template<class TypeTag>
 struct EnableMech<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
@@ -217,10 +212,6 @@ struct EnablePolymer<TypeTag, TTag::FlowBaseProblem>
 
 template<class TypeTag>
 struct EnableSolvent<TypeTag, TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
 template<class TypeTag>

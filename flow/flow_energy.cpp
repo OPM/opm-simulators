@@ -22,9 +22,9 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
-
 namespace Opm {
 namespace Properties {
 namespace TTag {
@@ -34,9 +34,10 @@ struct FlowEnergyProblem {
 }
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowEnergyProblem> {
-    static constexpr bool value = true;
-};
+struct EnergyModuleType<TypeTag, TTag::FlowEnergyProblem>
+{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
+
+
 template<class TypeTag>
 struct Linearizer<TypeTag, TTag::FlowEnergyProblem> { using type = TpfaLinearizer<TypeTag>; };
 template<class TypeTag>

@@ -31,8 +31,8 @@
 
 #include <opm/material/densead/Math.hpp>
 
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
-
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
@@ -63,8 +63,7 @@ class VtkBlackOilEnergyModule : public BaseOutputModule<TypeTag>
 
     static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
-
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
     using BufferType = typename ParentType::BufferType;
@@ -75,9 +74,7 @@ public:
     explicit VtkBlackOilEnergyModule(const Simulator& simulator)
         : ParentType(simulator)
     {
-        if constexpr (enableEnergy) {
-            params_.read();
-        }
+        params_.read();
     }
 
     /*!
@@ -86,9 +83,7 @@ public:
      */
     static void registerParameters()
     {
-        if constexpr (enableEnergy) {
-            VtkBlackoilEnergyParams::registerParameters();
-        }
+        VtkBlackoilEnergyParams::registerParameters();
     }
 
     /*!
@@ -97,23 +92,21 @@ public:
      */
     void allocBuffers() override
     {
-        if constexpr (enableEnergy) {
-            if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
-                return;
-            }
+        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
+            return;
+        }
 
-            if (params_.rockInternalEnergyOutput_) {
-                this->resizeScalarBuffer_(rockInternalEnergy_, BufferType::Dof);
-            }
-            if (params_.totalThermalConductivityOutput_) {
-                this->resizeScalarBuffer_(totalThermalConductivity_, BufferType::Dof);
-            }
-            if (params_.fluidInternalEnergiesOutput_) {
-                this->resizePhaseBuffer_(fluidInternalEnergies_, BufferType::Dof);
-            }
-            if (params_.fluidEnthalpiesOutput_) {
-                this->resizePhaseBuffer_(fluidEnthalpies_, BufferType::Dof);
-            }
+        if (params_.rockInternalEnergyOutput_) {
+            this->resizeScalarBuffer_(rockInternalEnergy_, BufferType::Dof);
+        }
+        if (params_.totalThermalConductivityOutput_) {
+            this->resizeScalarBuffer_(totalThermalConductivity_, BufferType::Dof);
+        }
+        if (params_.fluidInternalEnergiesOutput_) {
+            this->resizePhaseBuffer_(fluidInternalEnergies_, BufferType::Dof);
+        }
+        if (params_.fluidEnthalpiesOutput_) {
+            this->resizePhaseBuffer_(fluidEnthalpies_, BufferType::Dof);
         }
     }
 
@@ -123,36 +116,34 @@ public:
      */
     void processElement(const ElementContext& elemCtx) override
     {
-        if constexpr (enableEnergy) {
-            if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
-                return;
+        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
+            return;
+        }
+
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+            const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+            const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+
+            if (params_.rockInternalEnergyOutput_) {
+                rockInternalEnergy_[globalDofIdx] =
+                    scalarValue(intQuants.rockInternalEnergy());
             }
 
-            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-                const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+            if (params_.totalThermalConductivityOutput_) {
+                totalThermalConductivity_[globalDofIdx] =
+                    scalarValue(intQuants.totalThermalConductivity());
+            }
 
-                if (params_.rockInternalEnergyOutput_) {
-                    rockInternalEnergy_[globalDofIdx] =
-                        scalarValue(intQuants.rockInternalEnergy());
-                }
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (FluidSystem::phaseIsActive(phaseIdx)) {
+                    if (params_.fluidInternalEnergiesOutput_) {
+                        fluidInternalEnergies_[phaseIdx][globalDofIdx] =
+                            scalarValue(intQuants.fluidState().internalEnergy(phaseIdx));
+                    }
 
-                if (params_.totalThermalConductivityOutput_) {
-                    totalThermalConductivity_[globalDofIdx] =
-                        scalarValue(intQuants.totalThermalConductivity());
-                }
-
-                for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    if (FluidSystem::phaseIsActive(phaseIdx)) {
-                        if (params_.fluidInternalEnergiesOutput_) {
-                            fluidInternalEnergies_[phaseIdx][globalDofIdx] =
-                                scalarValue(intQuants.fluidState().internalEnergy(phaseIdx));
-                        }
-
-                        if (params_.fluidEnthalpiesOutput_) {
-                            fluidEnthalpies_[phaseIdx][globalDofIdx] =
-                                scalarValue(intQuants.fluidState().enthalpy(phaseIdx));
-                        }
+                    if (params_.fluidEnthalpiesOutput_) {
+                        fluidEnthalpies_[phaseIdx][globalDofIdx] =
+                            scalarValue(intQuants.fluidState().enthalpy(phaseIdx));
                     }
                 }
             }
@@ -164,30 +155,28 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        if constexpr (enableEnergy) {
-            if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
-                return;
-            }
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
+            return;
+        }
 
-            if (params_.rockInternalEnergyOutput_) {
-                this->commitScalarBuffer_(baseWriter, "volumetric internal energy rock",
-                                          rockInternalEnergy_, BufferType::Dof);
-            }
+        if (params_.rockInternalEnergyOutput_) {
+            this->commitScalarBuffer_(baseWriter, "volumetric internal energy rock",
+                                        rockInternalEnergy_, BufferType::Dof);
+        }
 
-            if (params_.totalThermalConductivityOutput_) {
-                this->commitScalarBuffer_(baseWriter, "total thermal conductivity",
-                                          totalThermalConductivity_, BufferType::Dof);
-            }
+        if (params_.totalThermalConductivityOutput_) {
+            this->commitScalarBuffer_(baseWriter, "total thermal conductivity",
+                                        totalThermalConductivity_, BufferType::Dof);
+        }
 
-            if (params_.fluidInternalEnergiesOutput_) {
-                this->commitPhaseBuffer_(baseWriter, "internal energy_%s",
-                                         fluidInternalEnergies_, BufferType::Dof);
-            }
+        if (params_.fluidInternalEnergiesOutput_) {
+            this->commitPhaseBuffer_(baseWriter, "internal energy_%s",
+                                        fluidInternalEnergies_, BufferType::Dof);
+        }
 
-            if (params_.fluidEnthalpiesOutput_) {
-                this->commitPhaseBuffer_(baseWriter, "enthalpy_%s",
-                                         fluidEnthalpies_, BufferType::Dof);
-            }
+        if (params_.fluidEnthalpiesOutput_) {
+            this->commitPhaseBuffer_(baseWriter, "enthalpy_%s",
+                                        fluidEnthalpies_, BufferType::Dof);
         }
     }
 

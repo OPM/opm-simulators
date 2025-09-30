@@ -37,6 +37,7 @@
 #include <opm/models/common/quantitycallbacks.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
 #include <opm/models/io/vtkblackoilenergymodule.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -46,6 +47,7 @@
 #include <stdexcept>
 #include <string>
 
+
 namespace Opm {
 
 /*!
@@ -53,7 +55,7 @@ namespace Opm {
  * \brief Contains the high level supplements required to extend the black oil
  *        model by energy.
  */
-template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
+template <class TypeTag, EnergyModules activeModule = getPropValue<TypeTag, Properties::EnergyModuleType>()>
 class BlackOilEnergyModule
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -71,7 +73,7 @@ class BlackOilEnergyModule
     static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
-    static constexpr unsigned enableEnergy = enableEnergyV;
+    static constexpr unsigned enableEnergy = (activeModule == EnergyModules::FullyImplicitThermal);
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr unsigned numPhases = FluidSystem::numPhases;
 
@@ -328,7 +330,7 @@ public:
     }
 };
 
-template <class TypeTag, bool enableEnergyV>
+template <class TypeTag, EnergyModules activeModule>
 class BlackOilEnergyIntensiveQuantities;
 
 /*!
@@ -339,7 +341,7 @@ class BlackOilEnergyIntensiveQuantities;
  *        energys extension of the black-oil model.
  */
 template <class TypeTag>
-class BlackOilEnergyIntensiveQuantities<TypeTag, /*enableEnergyV=*/true>
+class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThermal>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
@@ -447,7 +449,7 @@ protected:
 };
 
 template <class TypeTag>
-class BlackOilEnergyIntensiveQuantities<TypeTag, false>
+class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::ConstantTemperature>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
@@ -457,20 +459,15 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, false>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     using Problem = GetPropType<TypeTag, Properties::Problem>;
-    static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
 
 public:
     void updateTemperature_([[maybe_unused]] const ElementContext& elemCtx,
                             [[maybe_unused]] unsigned dofIdx,
                             [[maybe_unused]] unsigned timeIdx)
     {
-        if constexpr (enableTemperature) {
-            // even if energy is conserved, the temperature can vary over the spatial
-            // domain if the EnableTemperature property is set to true
-            auto& fs = asImp_().fluidState_;
-            const Scalar T = elemCtx.problem().temperature(elemCtx, dofIdx, timeIdx);
-            fs.setTemperature(T);
-        }
+        auto& fs = asImp_().fluidState_;
+        const Scalar T = elemCtx.problem().temperature(elemCtx, dofIdx, timeIdx);
+        fs.setTemperature(T);
     }
 
     template<class Problem>
@@ -481,13 +478,9 @@ public:
                             [[maybe_unused]] const LinearizationType& lintype
         )
     {
-        if constexpr (enableTemperature) {
-            auto& fs = asImp_().fluidState_;
-            // even if energy is conserved, the temperature can vary over the spatial
-            // domain if the EnableTemperature property is set to true
-            const Scalar T = problem.temperature(globalDofIdx, timeIdx);
-            fs.setTemperature(T);
-        }
+        auto& fs = asImp_().fluidState_;
+        const Scalar T = problem.temperature(globalDofIdx, timeIdx);
+        fs.setTemperature(T);
     }
 
     void updateEnergyQuantities_(const ElementContext&,
@@ -513,7 +506,56 @@ protected:
     { return *static_cast<Implementation*>(this); }
 };
 
-template <class TypeTag, bool enableEnergyV>
+template <class TypeTag>
+class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::NoTemperature>
+{
+    using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+
+public:
+    void updateTemperature_([[maybe_unused]] const ElementContext& elemCtx,
+                            [[maybe_unused]] unsigned dofIdx,
+                            [[maybe_unused]] unsigned timeIdx)
+    {
+    }
+
+    template<class Problem>
+    void updateTemperature_([[maybe_unused]] const Problem& problem,
+                            [[maybe_unused]] const PrimaryVariables& priVars,
+                            [[maybe_unused]] unsigned globalDofIdx,
+                            [[maybe_unused]] unsigned timeIdx,
+                            [[maybe_unused]] const LinearizationType& lintype)
+    {
+    }
+
+    void updateEnergyQuantities_(const ElementContext&,
+                                 unsigned,
+                                 unsigned,
+                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
+    {}
+
+    const Evaluation& rockInternalEnergy() const
+    {
+        throw std::logic_error("Requested the rock internal energy, which is "
+                             "unavailable because energy is not conserved");
+    }
+
+    const Evaluation& totalThermalConductivity() const
+    {
+        throw std::logic_error("Requested the total thermal conductivity, which is "
+                             "unavailable because energy is not conserved");
+    }
+
+protected:
+    Implementation& asImp_()
+    { return *static_cast<Implementation*>(this); }
+};
+
+template <class TypeTag, EnergyModules activeModule>
 class BlackOilEnergyExtensiveQuantities;
 
 /*!
@@ -524,7 +566,7 @@ class BlackOilEnergyExtensiveQuantities;
  *        module's extensive quantities.
  */
 template <class TypeTag>
-class BlackOilEnergyExtensiveQuantities<TypeTag, /*enableEnergyV=*/true>
+class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::FullyImplicitThermal>
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
@@ -689,7 +731,56 @@ private:
 };
 
 template <class TypeTag>
-class BlackOilEnergyExtensiveQuantities<TypeTag, false>
+class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::ConstantTemperature>
+{
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
+public:
+    template<class FluidState>
+    static void updateEnergy(Evaluation& /*energyFlux*/,
+                             const unsigned& /*focusDofIndex*/,
+                             const unsigned& /*inIdx*/,
+                             const unsigned& /*exIdx*/,
+                             const IntensiveQuantities& /*inIq*/,
+                             const IntensiveQuantities& /*exIq*/,
+                             const FluidState& /*inFs*/,
+                             const FluidState& /*exFs*/,
+                             const Scalar& /*inAlpha*/,
+                             const Scalar& /*outAlpha*/,
+                             const Scalar& /*faceArea*/)
+    {}
+
+    void updateEnergy(const ElementContext&,
+                      unsigned,
+                      unsigned)
+    {}
+
+    template <class Context, class BoundaryFluidState>
+    void updateEnergyBoundary(const Context&,
+                              unsigned,
+                              unsigned,
+                              const BoundaryFluidState&)
+    {}
+
+    template <class BoundaryFluidState>
+    static void updateEnergyBoundary(Evaluation& /*heatFlux*/,
+                                     const IntensiveQuantities& /*inIq*/,
+                                     unsigned /*focusDofIndex*/,
+                                     unsigned /*inIdx*/,
+                                     unsigned /*timeIdx*/,
+                                     Scalar /*alpha*/,
+                                     const BoundaryFluidState& /*boundaryFs*/)
+    {}
+
+    const Evaluation& energyFlux()  const
+    { throw std::logic_error("Requested the energy flux, but energy is not conserved"); }
+};
+
+template <class TypeTag>
+class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::NoTemperature>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
