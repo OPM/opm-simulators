@@ -284,7 +284,10 @@ protected:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
-            unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+
+            const unsigned activeCompIdx =
+                FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+
             bool inIsUp = darcyFlux[activeCompIdx] > 0;
             const IntensiveQuantities& up = inIsUp ? intQuantsIn : intQuantsEx;
             const auto& fs = up.fluidState();
