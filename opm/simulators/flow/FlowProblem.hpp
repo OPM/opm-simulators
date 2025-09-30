@@ -61,6 +61,7 @@
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
+#include <opm/simulators/flow/TemperatureModel.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
@@ -163,7 +164,7 @@ protected:
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
-
+    using TemperatureModel = GetPropType<TypeTag, Properties::TemperatureModel>;
     using TracerModel = GetPropType<TypeTag, Properties::TracerModel>;
     using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
 
@@ -223,13 +224,14 @@ public:
                               simulator.vanguard().cartesianIndexMapper(),
                               simulator.vanguard().grid(),
                               simulator.vanguard().cellCentroids(),
-                              enableEnergy,
+                              enableEnergy || enableTemperature,
                               enableDiffusion,
                               enableDispersion)
         , wellModel_(simulator)
         , aquiferModel_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
+        , temperatureModel_(simulator)
     {
         if (! Parameters::Get<Parameters::CheckSatfuncConsistency>()) {
             // User did not enable the "new" saturation function consistency
@@ -376,6 +378,7 @@ public:
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
+        temperatureModel_.beginTimeStep();
 
     }
 
@@ -431,6 +434,7 @@ public:
         this->wellModel_.endTimeStep();
         this->aquiferModel_.endTimeStep();
         this->tracerModel_.endTimeStep();
+        this->temperatureModel_.endTimeStep();
 
         // Compute flux for output
         this->model().linearizer().updateFlowsInfo();
@@ -875,6 +879,9 @@ public:
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        if (enableTemperature)
+            return temperatureModel_.temperature(globalDofIdx);
+
         return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
@@ -883,7 +890,10 @@ public:
     {
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
-         return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
+        if (enableTemperature)
+            return temperatureModel_.temperature(globalDofIdx);
+
+        return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
     const SolidEnergyLawParams&
@@ -1375,7 +1385,7 @@ protected:
 
     void readThermalParameters_()
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableTemperature || enableEnergy)
         {
             const auto& simulator = this->simulator();
             const auto& vanguard = simulator.vanguard();
@@ -1685,6 +1695,7 @@ protected:
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
+    TemperatureModel temperatureModel_;
 
     template<class T>
     struct BCData
@@ -1740,3 +1751,4 @@ protected:
 } // namespace Opm
 
 #endif // OPM_FLOW_PROBLEM_HPP
+

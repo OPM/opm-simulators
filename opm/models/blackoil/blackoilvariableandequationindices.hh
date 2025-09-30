@@ -39,6 +39,7 @@ template<unsigned numSolventsV,
          unsigned numExtbosV,
          unsigned numPolymersV,
          unsigned numEnergyV,
+         bool enableTemperature,
          bool enableFoam,
          bool enableBrine,
          unsigned PVOffset,
@@ -91,6 +92,9 @@ struct BlackOilVariableAndEquationIndices
     //! The number of equations
     static constexpr int numEq = numPhases + numSolvents + numExtbos + numPolymers +
                                  numEnergy + numFoam + numBrine;
+
+    static constexpr int numDerivatives = numEq + enableTemperature;
+
 
     ////////
     // Primary variable indices
@@ -155,7 +159,7 @@ struct BlackOilVariableAndEquationIndices
 
     //! Index of the primary variable for temperature
     static constexpr int temperatureIdx  =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam + numBrine : - 1000;
+        (enableTemperature || enableEnergy) ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam + numBrine : - 1000;
 
 
     ////////

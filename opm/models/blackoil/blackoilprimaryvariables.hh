@@ -1000,12 +1000,49 @@ private:
         if constexpr (enableEnergy) {
             return (*this)[Indices::temperatureIdx];
         }
-        else if constexpr (enableTemperature) {
+        else {
             return problem.temperature(globalDofIdx, /*timeIdx*/ 0);
         }
-        else {
-            return FluidSystem::reservoirTemperature();
-        }
+    }
+
+    Scalar microbialConcentration_() const
+    {
+        if constexpr (enableMICP)
+            return (*this)[Indices::microbialConcentrationIdx];
+        else
+            return 0.0;
+    }
+
+    Scalar oxygenConcentration_() const
+    {
+        if constexpr (enableMICP)
+            return (*this)[Indices::oxygenConcentrationIdx];
+        else
+            return 0.0;
+    }
+
+    Scalar ureaConcentration_() const
+    {
+        if constexpr (enableMICP)
+            return (*this)[Indices::ureaConcentrationIdx];
+        else
+            return 0.0;
+    }
+
+    Scalar biofilmConcentration_() const
+    {
+        if constexpr (enableMICP)
+            return (*this)[Indices::biofilmConcentrationIdx];
+        else
+            return 0.0;
+    }
+
+    Scalar calciteConcentration_() const
+    {
+        if constexpr (enableMICP)
+            return (*this)[Indices::calciteConcentrationIdx];
+        else
+            return 0.0;
     }
 
     template <class Container>
