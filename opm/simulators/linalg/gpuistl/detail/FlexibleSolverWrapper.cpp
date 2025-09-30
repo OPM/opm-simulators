@@ -24,7 +24,7 @@
 #include <dune/istl/schwarz.hh>
 
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>
 
 namespace Opm::gpuistl::detail
@@ -78,8 +78,8 @@ namespace
                 // time for GPU
                 using CudaCommunication = GpuOwnerOverlapCopy<real_type, Comm>;
                 using SchwarzOperator
-                    = Dune::OverlappingSchwarzOperator<GpuSparseMatrix<real_type>, Vector, Vector, CudaCommunication>;
-  
+                    = Dune::OverlappingSchwarzOperator<GpuSparseMatrixWrapper<real_type>, Vector, Vector, CudaCommunication>;
+                
                 using SolverType = Dune::FlexibleSolver<SchwarzOperator>;
 
                 // Create the communication object that will handle the GPU and MPI communication
@@ -152,7 +152,7 @@ using CommunicationType = Dune::Communication<int>;
 #endif
 
 #define INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER(real_type)                                                                 \
-    template class ::Opm::gpuistl::detail::FlexibleSolverWrapper<::Opm::gpuistl::GpuSparseMatrix<real_type>,           \
+    template class ::Opm::gpuistl::detail::FlexibleSolverWrapper<::Opm::gpuistl::GpuSparseMatrixWrapper<real_type>,           \
                                                                  ::Opm::gpuistl::GpuVector<real_type>,                 \
                                                                  CommunicationType>
 

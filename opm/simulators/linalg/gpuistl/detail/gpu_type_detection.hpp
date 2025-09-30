@@ -29,7 +29,7 @@ namespace Opm::gpuistl
 template <typename T>
 class GpuVector;
 template <typename T>
-class GpuSparseMatrix;
+class GpuSparseMatrixWrapper;
 template <typename T>
 class GpuSparseMatrixGeneric;
 
@@ -46,7 +46,7 @@ struct is_gpu_type<GpuVector<T>> : std::true_type {
 };
 
 template <typename T>
-struct is_gpu_type<GpuSparseMatrix<T>> : std::true_type {
+struct is_gpu_type<GpuSparseMatrixWrapper<T>> : std::true_type {
 };
 
 template <typename T>

@@ -169,22 +169,23 @@ GpuSparseMatrixGeneric<T>::preprocessSpMV()
                                                    CUSPARSE_SPMV_ALG_DEFAULT,
                                                    &bufferSize));
 
-    m_buffer.resize(bufferSize);
-
+    if (bufferSize > 0) {
 #if CUDA_VERSION >= 12040
-    // Preprocess SpMV operation to optimize for this sparsity pattern (requires CUDA 12.4+)
-    // TODO: Does the value of the alpha and beta matter in this preprocessing?
-    OPM_CUSPARSE_SAFE_CALL(cusparseSpMV_preprocess(m_cusparseHandle.get(),
-                                                   CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                                   &alpha,
-                                                   *m_matrixDescriptor,
-                                                   *tempVecX,
-                                                   &beta,
-                                                   *tempVecY,
-                                                   getDataType(),
-                                                   CUSPARSE_SPMV_ALG_DEFAULT,
-                                                   m_buffer.data()));
+        m_buffer.resize(bufferSize);
+        // Preprocess SpMV operation to optimize for this sparsity pattern (requires CUDA 12.4+)
+        // TODO: Does the value of the alpha and beta matter in this preprocessing?
+        OPM_CUSPARSE_SAFE_CALL(cusparseSpMV_preprocess(m_cusparseHandle.get(),
+                                                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                                    &alpha,
+                                                    *m_matrixDescriptor,
+                                                    *tempVecX,
+                                                    &beta,
+                                                    *tempVecY,
+                                                    getDataType(),
+                                                    CUSPARSE_SPMV_ALG_DEFAULT,
+                                                    m_buffer.data()));
 #endif
+    }
 
     // Descriptors automatically cleaned up by unique_ptr destructors
 }

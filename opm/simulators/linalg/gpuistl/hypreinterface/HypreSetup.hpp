@@ -32,9 +32,9 @@
 
 #if HAVE_CUDA
 #if USE_HIP
-#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
 #else
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #endif
 #endif // HAVE_CUDA
 
@@ -51,12 +51,12 @@ namespace Opm::gpuistl::HypreInterface
 
 // GPU-specific helper functions
 template <typename T>
-SparsityPattern setupSparsityPatternFromGpuMatrix(const GpuSparseMatrix<T>& gpu_matrix,
+SparsityPattern setupSparsityPatternFromGpuMatrix(const GpuSparseMatrixWrapper<T>& gpu_matrix,
                                                   const ParallelInfo& par_info,
                                                   bool owner_first);
 
 template <typename T>
-std::vector<HYPRE_Int> computeRowIndexesWithMappingGpu(const GpuSparseMatrix<T>& gpu_matrix,
+std::vector<HYPRE_Int> computeRowIndexesWithMappingGpu(const GpuSparseMatrixWrapper<T>& gpu_matrix,
                                                        const std::vector<int>& local_dune_to_local_hypre);
 
 // Serial helper functions
@@ -549,7 +549,7 @@ setupSparsityPatternFromCpuMatrix(const MatrixType& matrix, const ParallelInfo& 
  */
 template <typename T>
 SparsityPattern
-setupSparsityPatternFromGpuMatrix(const GpuSparseMatrix<T>& gpu_matrix,
+setupSparsityPatternFromGpuMatrix(const GpuSparseMatrixWrapper<T>& gpu_matrix,
                                   const ParallelInfo& par_info,
                                   bool owner_first)
 {
@@ -714,7 +714,7 @@ computeRowIndexesWithMappingCpu(const MatrixType& matrix, const std::vector<int>
  */
 template <typename T>
 std::vector<HYPRE_Int>
-computeRowIndexesWithMappingGpu(const GpuSparseMatrix<T>& gpu_matrix, const std::vector<int>& local_dune_to_local_hypre)
+computeRowIndexesWithMappingGpu(const GpuSparseMatrixWrapper<T>& gpu_matrix, const std::vector<int>& local_dune_to_local_hypre)
 {
     const int N = std::count_if(
         local_dune_to_local_hypre.begin(), local_dune_to_local_hypre.end(), [](int val) { return val >= 0; });

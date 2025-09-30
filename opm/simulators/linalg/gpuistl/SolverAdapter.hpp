@@ -28,7 +28,7 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/gpuistl/GpuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/has_function.hpp>
@@ -81,7 +81,7 @@ public:
                   const Comm& comm)
         : Dune::IterativeSolver<X, X>(op, sp, *prec, reduction, maxit, verbose)
         , m_opOnCPUWithMatrix(op)
-        , m_matrix(GpuSparseMatrix<real_type>::fromMatrix(op.getmat()))
+        , m_matrix(GpuSparseMatrixWrapper<real_type>::fromMatrix(op.getmat()))
         , m_underlyingSolver(constructSolver(prec, reduction, maxit, verbose, comm))
     {
         OPM_ERROR_IF(
@@ -135,7 +135,7 @@ public:
 
 private:
     Operator& m_opOnCPUWithMatrix;
-    GpuSparseMatrix<real_type> m_matrix;
+    GpuSparseMatrixWrapper<real_type> m_matrix;
 
     UnderlyingSolver<XGPU> m_underlyingSolver;
 
@@ -179,7 +179,7 @@ private:
 
         using CudaCommunication = GpuOwnerOverlapCopy<real_type, Comm>;
         using SchwarzOperator
-            = Dune::OverlappingSchwarzOperator<GpuSparseMatrix<real_type>, XGPU, XGPU, CudaCommunication>;
+            = Dune::OverlappingSchwarzOperator<GpuSparseMatrixWrapper<real_type>, XGPU, XGPU, CudaCommunication>;
         auto cudaCommunication = makeGpuOwnerOverlapCopy<real_type, block_size, Comm>(communication);
 
         auto mpiPreconditioner = std::make_shared<GpuBlockPreconditioner<XGPU, XGPU, CudaCommunication>>(
@@ -230,7 +230,7 @@ private:
         }
         auto preconditionerOnGPU = precAsHolder->getUnderlyingPreconditioner();
 
-        auto matrixOperator = std::make_shared<Dune::MatrixAdapter<GpuSparseMatrix<real_type>, XGPU, XGPU>>(m_matrix);
+        auto matrixOperator = std::make_shared<Dune::MatrixAdapter<GpuSparseMatrixWrapper<real_type>, XGPU, XGPU>>(m_matrix);
         auto scalarProduct = std::make_shared<Dune::SeqScalarProduct<XGPU>>();
         return UnderlyingSolver<XGPU>(matrixOperator, scalarProduct, preconditionerOnGPU, reduction, maxit, verbose);
     }

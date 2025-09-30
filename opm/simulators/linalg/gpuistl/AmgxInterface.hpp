@@ -21,7 +21,7 @@
 #define OPM_AMGX_INTERFACE_HPP
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_type_detection.hpp>
@@ -405,16 +405,16 @@ public:
     }
 
     /**
-     * @brief Update an AMGX matrix from a GpuSparseMatrix (device-to-device transfer)
+     * @brief Update an AMGX matrix from a GpuSparseMatrixWrapper (device-to-device transfer)
      *
-     * Uploads the entire matrix structure and values from GpuSparseMatrix to AMGX.
+     * Uploads the entire matrix structure and values from GpuSparseMatrixWrapper to AMGX.
      *
      * @param gpuSparseMatrix The source GpuSparseMatrix
      * @param amgxMatrix The AMGX matrix to update
      * @throws AmgxError if the transfer fails
      */
     template <typename T>
-    static void updateAmgxMatrixFromGpuSparseMatrix(const GpuSparseMatrix<T>& gpuSparseMatrix,
+    static void updateAmgxMatrixFromGpuSparseMatrix(const GpuSparseMatrixWrapper<T>& gpuSparseMatrix,
                                                     AMGX_matrix_handle amgxMatrix)
     {
         // Get matrix dimensions and sparsity information
@@ -438,12 +438,12 @@ public:
      * Updates just the coefficient values of an AMGX matrix without changing its sparsity pattern.
      * This is more efficient when the matrix structure remains the same.
      *
-     * @param gpuSparseMatrix The source GpuSparseMatrix with updated values
+     * @param gpuSparseMatrix The source GpuSparseMatrixWrapper with updated values
      * @param amgxMatrix The AMGX matrix to update
      * @throws AmgxError if the update fails
      */
     template <typename T>
-    static void updateAmgxMatrixCoefficientsFromGpuSparseMatrix(const GpuSparseMatrix<T>& gpuSparseMatrix,
+    static void updateAmgxMatrixCoefficientsFromGpuSparseMatrix(const GpuSparseMatrixWrapper<T>& gpuSparseMatrix,
                                                                 AMGX_matrix_handle amgxMatrix)
     {
         // Get matrix dimensions and sparsity information
@@ -458,20 +458,20 @@ public:
     }
 
     /**
-     * @brief Update a GpuSparseMatrix from an AMGX matrix (device-to-device transfer)
+     * @brief Update a GpuSparseMatrixWrapper from an AMGX matrix (device-to-device transfer)
      *
-     * Downloads the matrix data from AMGX and updates the GpuSparseMatrix with the values.
+     * Downloads the matrix data from AMGX and updates the GpuSparseMatrixWrapper with the values.
      * The sparsity pattern is assumed to be identical, so only values are updated.
      *
      * @note This function is intended primarily for testing purposes and should not be used in performance-critical code paths,
      *       as it may involve unnecessary device-to-device transfers and temporary allocations.
      *
      * @param amgxMatrix The source AMGX matrix
-     * @param gpuSparseMatrix The GpuSparseMatrix to update
+     * @param gpuSparseMatrix The GpuSparseMatrixWrapper to update
      * @throws AmgxError if the transfer fails
      */
     template <typename T>
-    static void updateGpuSparseMatrixFromAmgxMatrix(AMGX_matrix_handle amgxMatrix, GpuSparseMatrix<T>& gpuSparseMatrix)
+    static void updateGpuSparseMatrixFromAmgxMatrix(AMGX_matrix_handle amgxMatrix, GpuSparseMatrixWrapper<T>& gpuSparseMatrix)
     {
         // Get matrix dimensions from AMGX
         int n, nnz, block_sizex, block_sizey;
@@ -507,7 +507,7 @@ public:
      *
      * Selects the transfer method based on the matrix type.
      *
-     * @param matrix Source matrix (typically BCRSMatrix (CPU) or GpuSparseMatrix (GPU))
+     * @param matrix Source matrix (typically BCRSMatrix (CPU) or GpuSparseMatrixWrapper (GPU))
      * @param amgx_matrix Destination AMGX matrix
      * @throws AmgxError if initialization fails
      */

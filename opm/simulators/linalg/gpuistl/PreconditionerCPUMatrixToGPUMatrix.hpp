@@ -18,7 +18,7 @@
 */
 #ifndef OPM_PRECONDITIONERCPUMATRIXTOGPUMATRIX_HPP
 #define OPM_PRECONDITIONERCPUMATRIXTOGPUMATRIX_HPP
-#include "opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp"
+#include "opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp"
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
@@ -52,7 +52,7 @@ public:
     template <typename... Args>
     explicit PreconditionerCPUMatrixToGPUMatrix(const CPUMatrixType& A, Args&&... args)
         : m_cpuMatrix(A)
-        , m_gpuMatrix(GpuSparseMatrix<field_type>::fromMatrix(A))
+        , m_gpuMatrix(GpuSparseMatrixWrapper<field_type>::fromMatrix(A))
         , m_underlyingPreconditioner(m_gpuMatrix, std::forward<Args>(args)...)
     {
     }
@@ -117,7 +117,7 @@ public:
 
 private:
     const CPUMatrixType& m_cpuMatrix;
-    GpuSparseMatrix<field_type> m_gpuMatrix;
+    GpuSparseMatrixWrapper<field_type> m_gpuMatrix;
 
     //! \brief the underlying preconditioner to use
     CudaPreconditionerType m_underlyingPreconditioner;
