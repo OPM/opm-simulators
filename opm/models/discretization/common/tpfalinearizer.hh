@@ -60,6 +60,21 @@
 #include <unordered_map>
 #include <vector>
 
+#include <opm/common/utility/gpuDecorators.hpp>
+#if HAVE_CUDA
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/MiniMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/MiniVector.hpp>
+#else
+#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
+#endif
+#endif
+
 namespace Opm::Parameters {
 
 struct SeparateSparseSourceTerms { static constexpr bool value = false; };
@@ -71,6 +86,70 @@ namespace Opm {
 // forward declarations
 template<class TypeTag>
 class EcfvDiscretization;
+
+// Moved these structs out of the class to make them visible in the GPU code.
+template<class Storage = std::vector<int>>
+struct FullDomain
+{
+    Storage cells;
+};
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    FullDomain<gpuistl::GpuBuffer<int>> copy_to_gpu(FullDomain<> CPUDomain)
+    {
+        if (CPUDomain.cells.size() == 0) {
+            OPM_THROW(std::runtime_error, "Cannot copy empty full domain to GPU.");
+        }
+        return FullDomain<gpuistl::GpuBuffer<int>>{
+            gpuistl::GpuBuffer<int>(CPUDomain.cells)
+        };
+    };
+
+    FullDomain<gpuistl::GpuView<int>> make_view(FullDomain<gpuistl::GpuBuffer<int>>& buffer)
+    {
+        if (buffer.cells.size() == 0) {
+            OPM_THROW(std::runtime_error, "Cannot make view of empty full domain buffer.");
+        }
+        return FullDomain<gpuistl::GpuView<int>>{
+            gpuistl::make_view(buffer.cells)
+        };
+    };
+#endif
+
+template <class ResidualNBInfoType,class BlockType>
+struct NeighborInfoStruct
+{
+    unsigned int neighbor;
+    ResidualNBInfoType res_nbinfo;
+    BlockType* matBlockAddress;
+
+    template <class OtherBlockType>
+    NeighborInfoStruct(const NeighborInfoStruct<ResidualNBInfoType,OtherBlockType>& other)
+        : neighbor(other.neighbor)
+        , res_nbinfo(other.res_nbinfo)
+        , matBlockAddress(nullptr)
+    {
+        if (other.matBlockAddress) {
+            matBlockAddress = reinterpret_cast<BlockType*>(other.matBlockAddress);
+        }
+    }
+
+    template <class PtrType>
+    NeighborInfoStruct(unsigned int n, const ResidualNBInfoType& r, PtrType ptr)
+        : neighbor(n)
+        , res_nbinfo(r)
+        , matBlockAddress(static_cast<BlockType*>(ptr))
+    {
+    }
+
+    // Add a default constructor
+    NeighborInfoStruct()
+        : neighbor(0)
+        , res_nbinfo()
+        , matBlockAddress(nullptr)
+    {
+    }
+};
 
 /*!
  * \ingroup FiniteVolumeDiscretizations
@@ -114,6 +193,11 @@ class TpfaLinearizer
     using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
     using VectorBlock = Dune::FieldVector<Scalar, numEq>;
     using ADVectorBlock = GetPropType<TypeTag, Properties::RateVector>;
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    using MatrixBlockGPU = gpuistl::MiniMatrix<Scalar, numEq * numEq>;
+    using VectorBlockGPU = gpuistl::MiniVector<Scalar, numEq>;
+#endif
 
     static constexpr bool linearizeNonLocalElements =
         getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
@@ -435,7 +519,7 @@ private:
         const Scalar gravity = problem_().gravity()[dimWorld - 1];
         unsigned numCells = model.numTotalDof();
         neighborInfo_.reserve(numCells, 6 * numCells);
-        std::vector<NeighborInfo> loc_nbinfo;
+        std::vector<NeighborInfoCPU> loc_nbinfo;
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
 
@@ -471,7 +555,7 @@ private:
                         if constexpr (enableDispersion) {
                             nbinfo.dispersivity = problem_().dispersivity(myIdx, neighborIdx);
                         }
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, nbinfo, nullptr};
+                        loc_nbinfo[dofIdx - 1] = NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
@@ -914,13 +998,9 @@ private:
     LinearizationType linearizationType_{};
 
     using ResidualNBInfo = typename LocalResidual::ResidualNBInfo;
-    struct NeighborInfo
-    {
-        unsigned int neighbor;
-        ResidualNBInfo res_nbinfo;
-        MatrixBlock* matBlockAddress;
-    };
-    SparseTable<NeighborInfo> neighborInfo_{};
+    using NeighborInfoCPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlock>;
+
+    SparseTable<NeighborInfoCPU> neighborInfo_{};
     std::vector<MatrixBlock*> diagMatAddress_{};
 
     struct FlowInfo
@@ -961,14 +1041,8 @@ private:
 
     bool separateSparseSourceTerms_ = false;
 
-    struct FullDomain
-    {
-        std::vector<int> cells;
-        std::vector<bool> interior;
-    };
-    FullDomain fullDomain_;
+    FullDomain<> fullDomain_;
 };
-
 } // namespace Opm
 
 #endif // TPFA_LINEARIZER
