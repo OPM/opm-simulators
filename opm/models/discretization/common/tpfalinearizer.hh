@@ -418,7 +418,7 @@ public:
         // assume double precision and contiguous data
         const double *data = &x[0][0];
 
-        char filename[256];
+        char filename[512];
         sprintf(filename,"%s%s.f64",name,tag);
         FILE *out =fopen(filename,"w");
         fwrite(data, sizeof(double), x.dim(),out);

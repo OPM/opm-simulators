@@ -72,7 +72,7 @@ bslv_memory;
 
 bslv_memory *bslv_new();
 void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, bool use_dilu);
-int  bslv_pbicgstab3(bslv_memory *mem, bsr_matrix *A, const double *b, double *x);
+int  bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x);
 void bslv_info(bslv_memory *mem, int count);
 
 double __attribute__((noinline)) vec_inner2(const double *a, const double *b, int n);
