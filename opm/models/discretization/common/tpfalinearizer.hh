@@ -872,7 +872,7 @@ private:
                         LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
                                                 nbInfo.res_nbinfo,  problem_().moduleParams());
                         adres *= nbInfo.res_nbinfo.faceArea;
-                        if (dispersionActive || enableMICP) {
+                        if (dispersionActive || enableBioeffects) {
                             for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
                                 velocityInfo_[globI][loc].velocity[phaseIdx] =
                                     darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
