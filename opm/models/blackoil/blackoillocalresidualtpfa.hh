@@ -53,6 +53,23 @@
 #include <string>
 
 namespace Opm {
+
+template<bool enableEnergy, bool enableDiffusion, bool enableDispersion>
+struct ResidualNBInfoStruct
+{
+    double trans;
+    double faceArea;
+    double thpres;
+    double dZg;
+    FaceDir::DirEnum faceDir;
+    double Vin;
+    double Vex;
+    ConditionalStorage<enableEnergy, double> inAlpha;
+    ConditionalStorage<enableEnergy, double> outAlpha;
+    ConditionalStorage<enableDiffusion, double> diffusivity;
+    ConditionalStorage<enableDispersion, double> dispersivity;
+};
+
 /*!
  * \ingroup BlackOilModel
  *
@@ -124,22 +141,9 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
 
     using Toolbox = MathToolbox<Evaluation>;
 
-public:
-    struct ResidualNBInfo
-    {
-        double trans;
-        double faceArea;
-        double thpres;
-        double dZg;
-        FaceDir::DirEnum faceDir;
-        double Vin;
-        double Vex;
-        ConditionalStorage<enableEnergy, double> inAlpha;
-        ConditionalStorage<enableEnergy, double> outAlpha;
-        ConditionalStorage<enableDiffusion, double> diffusivity;
-        ConditionalStorage<enableDispersion, double> dispersivity;
-    };
 
+public:
+    using ResidualNBInfo = ResidualNBInfoStruct<enableEnergy, enableDiffusion, enableDispersion>;
     struct ModuleParams
     {
         ConvectiveMixingModuleParam convectiveMixingModuleParam;
