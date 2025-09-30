@@ -34,6 +34,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 
 #include <algorithm>
@@ -373,14 +374,11 @@ relativeChange() const
     std::array<Scalar,4> r{};
     auto& [resultDeltaPressure, resultDenomPressure, resultDeltaSaturation, resultDenomSaturation] = r;
 
-    const auto version = this->param_.relative_change_version_;
-
     const auto& elemMapper = simulator_.model().elementMapper();
     const auto& gridView = simulator_.gridView();
     for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
         unsigned globalElemIdx = elemMapper.index(elem);
         const auto& priVarsNew = simulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
-        const double elemVolume = elem.geometry().volume();
 
         Scalar pressureNew;
         pressureNew = priVarsNew[Indices::pressureSwitchIdx];
@@ -409,6 +407,8 @@ relativeChange() const
         }
 
         const auto& priVarsOld = simulator_.model().solution(/*timeIdx=*/1)[globalElemIdx];
+
+        const double elemVolume = elem.geometry().volume();
 
         Scalar pressureOld;
         pressureOld = priVarsOld[Indices::pressureSwitchIdx];
@@ -450,7 +450,9 @@ relativeChange() const
 
     gridView.comm().sum(r.data(), r.size());
 
-    switch(version) {
+    const auto relative_change_version = this->param_.relative_change_version_;
+
+    switch(relative_change_version) {
         case RelativeChangeApproaches::Pressure:
             if (resultDenomPressure > 0.0)
                 return std::sqrt(resultDeltaPressure / resultDenomPressure);

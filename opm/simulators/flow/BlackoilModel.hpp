@@ -28,7 +28,6 @@
 
 #include <opm/simulators/flow/BlackoilModelConvergenceMonitor.hpp>
 #include <opm/simulators/flow/BlackoilModelNldd.hpp>
-#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/BlackoilModelProperties.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
