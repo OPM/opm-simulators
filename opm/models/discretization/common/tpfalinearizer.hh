@@ -847,7 +847,7 @@ private:
             hipDeviceSynchronize();
             
             for (unsigned ii = 0; ii < numCells; ++ii) {
-                OPM_TIMEBLOCK_LOCAL(linearizationForEachCell);
+                OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
                 const unsigned globI = domain.cells[ii];
                 const auto& nbInfos = neighborInfo_[globI];
                 VectorBlock res(0.0);
@@ -858,10 +858,10 @@ private:
 
                 // Flux term.
                 {
-                    OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);
+                    OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell, Subsystem::Assembly);
                     short loc = 0;
                     for (const auto& nbInfo : nbInfos) {
-                        OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
+                        OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace, Subsystem::Assembly);
                         const unsigned globJ = nbInfo.neighbor;
                         assert(globJ != globI);
                         res = 0.0;
@@ -894,7 +894,7 @@ private:
                 const Scalar storefac = volume / dt;
                 adres = 0.0;
                 {
-                    OPM_TIMEBLOCK_LOCAL(computeStorage);
+                    OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
                     LocalResidual::computeStorage(adres, intQuantsIn);
                 }
                 setResAndJacobi(res, bMat, adres);
@@ -929,7 +929,7 @@ private:
                     res -= model_().cachedStorage(globI, 1);
                 }
                 else {
-                    OPM_TIMEBLOCK_LOCAL(computeStorage0);
+                    OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
                     Dune::FieldVector<Scalar, numEq> tmp;
                     const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
                     LocalResidual::computeStorage(tmp, intQuantOld);

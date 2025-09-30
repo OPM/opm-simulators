@@ -93,7 +93,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/blackoil/blackoilpolymerparams.cpp
   opm/models/blackoil/blackoilsolventparams.cpp
   opm/models/io/vtkblackoilbioeffectsparams.cpp
-  opm/models/discretization/common/tpfalinearizer_gpu.hip
   opm/models/io/vtkblackoilenergyparams.cpp
   opm/models/io/vtkblackoilpolymerparams.cpp
   opm/models/io/vtkblackoilparams.cpp
