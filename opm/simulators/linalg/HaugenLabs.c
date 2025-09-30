@@ -817,8 +817,8 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     int n = mem->n;
 
     double * restrict e = mem->e;
-    //const double *r0 = b;
-    const double * restrict r0  = mem->dtmp[0]; //access randomly initialized one-dimensional shadow space
+    const double *r0 = b;
+    //const double * restrict r0  = mem->dtmp[0]; //access randomly initialized one-dimensional shadow space
           double * restrict p_j = mem->dtmp[1];
           double * restrict q_j = mem->dtmp[2];
           double * restrict r_j = mem->dtmp[3];
@@ -877,9 +877,7 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     }
     bildu_mapply3c(P,x_j);                                       //x_j=P.x_j;
 
-    j++;
-    //printf("pbicgstab: iterations=%d residual=%.2e\n",j,e[j]);
-    return j;
+    return j == max_iter ? j : ++j;
 }
 
 void bslv_info(bslv_memory *mem, int count)
