@@ -1726,8 +1726,9 @@ updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor, con
                 SingleWellState<Scalar, IndexTraits>& ws = this->wellState()[well->indexOfWell()];
                 const Scalar pressure_tolerance = balance.pressure_tolerance();
                 // We only re-compute the solution if the thp has changed more than
-                // the pressure_tolerance
-                bool needs_update = std::abs(new_limit - ws.thp) > pressure_tolerance;
+                // 1% of the pressure_tolerance
+                Scalar update_well_threshold = 1e-2;
+                bool needs_update = std::abs(new_limit - ws.thp) > pressure_tolerance*update_well_threshold;
                 if (needs_update) {
                     updated_wells.push_back(well->name());
                 }

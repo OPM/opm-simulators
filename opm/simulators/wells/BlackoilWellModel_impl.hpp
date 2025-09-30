@@ -1903,10 +1903,7 @@ namespace Opm {
                     const auto it = this->node_pressures_.find(well->wellEcl().groupName());
                     if (it != this->node_pressures_.end()) {
                         const auto& ws = this->wellState().well(well->indexOfWell());
-                        const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
-                        if (thp_is_limit) {
-                            well->prepareWellBeforeAssembling(this->simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
-                        }
+                        well->prepareWellBeforeAssembling(this->simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
                     }
                 }
                 this->updateAndCommunicateGroupData(episodeIdx, iterationIdx, param_.nupcol_group_rate_tolerance_,
