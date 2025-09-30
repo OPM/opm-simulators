@@ -68,6 +68,9 @@ template<class TypeTag>
 struct LocalResidual<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
     using type = BlackOilLocalResidualTPFA<TypeTag>;
 };
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem>
+{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
 
 //! The indices required by the model
 template<class TypeTag>

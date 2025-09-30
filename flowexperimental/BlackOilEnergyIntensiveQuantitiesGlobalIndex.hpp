@@ -32,7 +32,7 @@
 
 namespace Opm {
 
-template <class TypeTag, bool enableEnergyV>
+template <class TypeTag, EnergyModules value>
 class BlackOilEnergyIntensiveQuantitiesGlobalIndex;
 
 /*!
@@ -41,10 +41,10 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex;
  *        model by energy using global indices.
  */
 template <class TypeTag>
-class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, true>
-    : public BlackOilEnergyIntensiveQuantities<TypeTag,true>
+class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::FullyImplicitThermal>
+    : public BlackOilEnergyIntensiveQuantities<TypeTag,EnergyModules::FullyImplicitThermal>
 {
-    using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, true>;
+    using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThermal>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
@@ -104,10 +104,10 @@ public:
 };
 
 template <class TypeTag>
-class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, false>
-    : public BlackOilEnergyIntensiveQuantities<TypeTag, false>
+class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::ConstantTemperature>
+    : public BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::ConstantTemperature>
 {
-    using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, false>;
+    using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::ConstantTemperature>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;

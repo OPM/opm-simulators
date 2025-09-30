@@ -38,6 +38,7 @@
 #include <opm/models/blackoil/blackoildarcyfluxmodule.hh>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
 #include <opm/models/blackoil/blackoildispersionmodule.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilextbomodules.hh>
 #include <opm/models/blackoil/blackoilextensivequantities.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
@@ -209,6 +210,10 @@ struct EnableTemperature<TypeTag, TTag::BlackOilModel>
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::BlackOilModel>
 { static constexpr bool value = false; };
+
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::BlackOilModel>
+{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
 
 //! disable diffusion by default
 template<class TypeTag>

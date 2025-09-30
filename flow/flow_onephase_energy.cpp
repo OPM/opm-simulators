@@ -38,6 +38,10 @@ template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::FlowWaterOnlyEnergyProblem> {
     static constexpr bool value = true;
 };
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowWaterOnlyEnergyProblem>
+{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowWaterOnlyEnergyProblem>

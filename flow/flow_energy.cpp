@@ -23,6 +23,7 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
 namespace Opm {
@@ -37,6 +38,12 @@ template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::FlowEnergyProblem> {
     static constexpr bool value = true;
 };
+
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowEnergyProblem>
+{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
+
+
 template<class TypeTag>
 struct Linearizer<TypeTag, TTag::FlowEnergyProblem> { using type = TpfaLinearizer<TypeTag>; };
 template<class TypeTag>
