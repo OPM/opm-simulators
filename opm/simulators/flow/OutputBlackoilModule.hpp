@@ -115,6 +115,8 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     static constexpr int oilCompIdx = FluidSystem::oilCompIdx;
     static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
+    enum { enableTemperature = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature };
+
     enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
     enum { enableMICP = Indices::enableMICP };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
@@ -143,7 +145,7 @@ public:
                    { return simulator_.problem().eclWriter().collectOnIORank().localIdxToGlobalIdx(idx); },
                    simulator.vanguard().grid().comm(),
                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
-                   getPropValue<TypeTag, Properties::EnableTemperature>(),
+                   getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature,
                    getPropValue<TypeTag, Properties::EnableMech>(),
                    getPropValue<TypeTag, Properties::EnableSolvent>(),
                    getPropValue<TypeTag, Properties::EnablePolymer>(),
@@ -535,8 +537,10 @@ public:
             }
         }
 
-        if (!this->temperature_.empty())
-            fs.setTemperature(this->temperature_[elemIdx]);
+        if constexpr (enableEnergy || enableTemperature) {
+            if (!this->temperature_.empty())
+                fs.setTemperature(this->temperature_[elemIdx]);
+        }
         if constexpr (enableDissolvedGas) {
             if (!this->rs_.empty())
                 fs.setRs(this->rs_[elemIdx]);

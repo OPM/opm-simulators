@@ -33,6 +33,7 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
@@ -46,15 +47,6 @@
 #include <stdexcept>
 #include <string>
 
-
-namespace Opm::Properties {
-
-    template<class TypeTag, class MyTypeTag>
-    struct EnergyModuleType {
-        using type = UndefinedProperty;
-    };
-
-} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -480,8 +472,6 @@ public:
                             [[maybe_unused]] unsigned dofIdx,
                             [[maybe_unused]] unsigned timeIdx)
     {
-        // even if energy is conserved, the temperature can vary over the spatial
-        // domain if the EnableTemperature property is set to true
         auto& fs = asImp_().fluidState_;
         const Scalar T = elemCtx.problem().temperature(elemCtx, dofIdx, timeIdx);
         fs.setTemperature(T);
@@ -496,8 +486,6 @@ public:
         )
     {
         auto& fs = asImp_().fluidState_;
-        // even if energy is conserved, the temperature can vary over the spatial
-        // domain if the EnableTemperature property is set to true
         const Scalar T = problem.temperature(globalDofIdx, timeIdx);
         fs.setTemperature(T);
     }

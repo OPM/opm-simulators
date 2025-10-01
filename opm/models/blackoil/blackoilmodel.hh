@@ -202,18 +202,9 @@ template<class TypeTag>
 struct EnableBioeffects<TypeTag, TTag::BlackOilModel>
 { static constexpr bool value = false; };
 
-//! By default, the blackoil model is isothermal and does not conserve energy
-template<class TypeTag>
-struct EnableTemperature<TypeTag, TTag::BlackOilModel>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::BlackOilModel>
-{ static constexpr bool value = false; };
-
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::BlackOilModel>
-{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+{ static constexpr EnergyModules value = EnergyModules::NoTemperature; };
 
 //! disable diffusion by default
 template<class TypeTag>

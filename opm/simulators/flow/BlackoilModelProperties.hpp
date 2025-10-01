@@ -66,14 +66,6 @@ struct EnableSolvent<TypeTag, TTag::FlowProblem>
 { static constexpr bool value = false; };
 
 template<class TypeTag>
-struct EnableTemperature<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
 struct EnableFoam<TypeTag, TTag::FlowProblem>
 { static constexpr bool value = false; };
 

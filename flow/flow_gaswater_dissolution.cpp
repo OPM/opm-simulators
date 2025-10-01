@@ -54,6 +54,10 @@ struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterDissolutionProblem> {
 };
 
 template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterDissolutionProblem>
+{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+
+template<class TypeTag>
 struct EnableVapwat<TypeTag, TTag::FlowGasWaterDissolutionProblem> {
     static constexpr bool value = true;
 };

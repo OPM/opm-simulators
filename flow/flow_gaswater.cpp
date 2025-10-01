@@ -43,6 +43,10 @@ struct LocalResidual<TypeTag, TTag::FlowGasWaterProblem> { using type = BlackOil
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowGasWaterProblem> { static constexpr bool value = false; };
 
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterProblem>
+{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowGasWaterProblem>

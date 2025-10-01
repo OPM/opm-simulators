@@ -61,6 +61,10 @@ struct EnableVapwat<TypeTag, TTag::FlowGasWaterDissolutionDiffuseProblem> {
     static constexpr bool value = true;
 };
 
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterDissolutionDiffuseProblem>
+{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowGasWaterDissolutionDiffuseProblem>

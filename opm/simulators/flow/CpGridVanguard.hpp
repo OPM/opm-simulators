@@ -139,11 +139,11 @@ public:
 
         // check for correct module setup
         if (config.isThermal()) {
-            if (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal) {
+            if (getPropValue<TypeTag, Properties::EnergyModuleType>() != EnergyModules::FullyImplicitThermal) {
                 throw std::runtime_error("Input specifies energy while simulator has disabled it, try xxx_energy");
             }
         } else {
-            if (getPropValue<TypeTag, Properties::EnergyModuleType>() != EnergyModules::FullyImplicitThermal) {
+            if (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal) {
                 throw std::runtime_error("Input specifies no energy while simulator has energy, try run without _energy");
             }
         }

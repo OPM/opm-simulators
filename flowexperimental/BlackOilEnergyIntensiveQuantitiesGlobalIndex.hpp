@@ -119,8 +119,6 @@ public:
                             [[maybe_unused]] unsigned globalSpaceIdx,
                             [[maybe_unused]] unsigned timeIdx)
     {
-        // even if energy is conserved, the temperature can vary over the spatial
-        // domain if the EnableTemperature property is set to true
         auto& fs = this->asImp_().fluidState_;
         Scalar T = problem.temperature(globalSpaceIdx, timeIdx);
         fs.setTemperature(T);
