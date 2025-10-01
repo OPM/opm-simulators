@@ -30,8 +30,8 @@
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
-
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericCpGridVanguard.hpp>
@@ -331,7 +331,7 @@ protected:
                                                     this->cartesianIndexMapper(),
                                                     this->grid(),
                                                     this->cellCentroids(),
-                                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
                                                     getPropValue<TypeTag, Properties::EnableDiffusion>(),
                                                     getPropValue<TypeTag, Properties::EnableDispersion>()));
         globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans);

@@ -43,6 +43,7 @@
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/parametersystem.hpp>
@@ -141,7 +142,7 @@ public:
                    [this](const int idx)
                    { return simulator_.problem().eclWriter().collectOnIORank().localIdxToGlobalIdx(idx); },
                    simulator.vanguard().grid().comm(),
-                   getPropValue<TypeTag, Properties::EnableEnergy>(),
+                   getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
                    getPropValue<TypeTag, Properties::EnableTemperature>(),
                    getPropValue<TypeTag, Properties::EnableMech>(),
                    getPropValue<TypeTag, Properties::EnableSolvent>(),

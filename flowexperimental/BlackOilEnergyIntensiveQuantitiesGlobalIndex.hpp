@@ -53,8 +53,7 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::Fully
     using SolidEnergyLaw = GetPropType<TypeTag, Properties::SolidEnergyLaw>;
     using ThermalConductionLaw  = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
     using ParamCache = typename FluidSystem::template ParameterCache<Evaluation>;
-    static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
-
+    
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned numPhases = FluidSystem::numPhases;
@@ -113,7 +112,6 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::Const
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
 
 public:
     void updateTemperature_([[maybe_unused]] const Problem& problem,
@@ -121,13 +119,11 @@ public:
                             [[maybe_unused]] unsigned globalSpaceIdx,
                             [[maybe_unused]] unsigned timeIdx)
     {
-        if constexpr (enableTemperature) {
-            // even if energy is conserved, the temperature can vary over the spatial
-            // domain if the EnableTemperature property is set to true
-            auto& fs = this->asImp_().fluidState_;
-            Scalar T = problem.temperature(globalSpaceIdx, timeIdx);
-            fs.setTemperature(T);
-        }
+        // even if energy is conserved, the temperature can vary over the spatial
+        // domain if the EnableTemperature property is set to true
+        auto& fs = this->asImp_().fluidState_;
+        Scalar T = problem.temperature(globalSpaceIdx, timeIdx);
+        fs.setTemperature(T);
     }
 
     void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
