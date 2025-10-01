@@ -181,9 +181,9 @@ public:
                 const double saltDensity = intQuants.saltDensity(); // Solid salt density kg/m3
                 const LhsEval solidSalt =
                               Toolbox::template decay<LhsEval>(intQuants.porosity()) /
-                              (1.0 - Toolbox::template decay<LhsEval>(intQuants.saltSaturation()) + 1.e-8) *
+                              (1.0 - Toolbox::template decay<LhsEval>(fs.saltSaturation()) + 1.e-8) *
                               saltDensity *
-                              Toolbox::template decay<LhsEval>(intQuants.saltSaturation());
+                              Toolbox::template decay<LhsEval>(fs.saltSaturation());
 
                 storage[contiBrineEqIdx] += massBrine + solidSalt;
             }
@@ -443,7 +443,7 @@ public:
                                [[maybe_unused]] unsigned timeIdx)
     {
         if constexpr (enableSaltPrecipitation) {
-            const Evaluation porosityFactor  = min(1.0 - saltSaturation(), 1.0); //phi/phi_0
+            const Evaluation porosityFactor  = min(1.0 - asImp_().fluidState_.saltSaturation(), 1.0); //phi/phi_0
 
             const auto& permfactTable = BrineModule::permfactTable(elemCtx, dofIdx, timeIdx);
 
@@ -458,14 +458,8 @@ public:
         }
     }
 
-    const Evaluation& saltConcentration() const
-    { return saltConcentration_; }
-
     const Evaluation& brineRefDensity() const
     { return refDensity_; }
-
-    const Evaluation& saltSaturation() const
-    { return saltSaturation_; }
 
     Scalar saltSolubility() const
     { return saltSolubility_; }
@@ -506,14 +500,8 @@ public:
                                   unsigned)
     {}
 
-    const Evaluation& saltConcentration() const
-    { throw std::runtime_error("saltConcentration() called but brine are disabled"); }
-
     const Evaluation& brineRefDensity() const
     { throw std::runtime_error("brineRefDensity() called but brine are disabled"); }
-
-    const Evaluation& saltSaturation() const
-    { throw std::logic_error("saltSaturation() called but salt precipitation is disabled"); }
 
     const Scalar saltSolubility() const
     { throw std::logic_error("saltSolubility() called but salt precipitation is disabled"); }

@@ -58,8 +58,6 @@ class BlackOilDiffusionExtensiveQuantities;
 template <class TypeTag>
 class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/false>
 {
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
 public:
@@ -105,7 +103,6 @@ class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/true>
     using BioeffectsParams = BlackOilBioeffectsParams<TypeTag>;
 
     enum { numPhases = FluidSystem::numPhases };
-    enum { numComponents = FluidSystem::numComponents };
     enum { conti0EqIdx = Indices::conti0EqIdx };
 
     enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
@@ -348,7 +345,6 @@ class BlackOilDiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/false>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
     /*!
@@ -636,23 +632,15 @@ class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/true>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using Toolbox = MathToolbox<Evaluation>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
     enum { enableMICP = Indices::enableMICP };
     enum { numBioInWat = Indices::numBioInWat };
-    
-    static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
-
-    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
-    using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
 
 public:
     using EvaluationArray = std::array<std::array<Evaluation, numComponents>, numPhases>;

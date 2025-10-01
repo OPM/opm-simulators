@@ -93,10 +93,8 @@ class BlackOilIntensiveQuantities
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
     using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
 
-    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
@@ -113,14 +111,12 @@ class BlackOilIntensiveQuantities
     enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
     enum { enableMICP = Indices::enableMICP };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    enum { dimWorld = GridView::dimensionworld };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
 
     static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
@@ -129,7 +125,6 @@ class BlackOilIntensiveQuantities
     static constexpr bool oilEnabled = Indices::oilEnabled;
 
     using Toolbox = MathToolbox<Evaluation>;
-    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
     using DispersionIntensiveQuantities = BlackOilDispersionIntensiveQuantities<TypeTag, enableDispersion>;

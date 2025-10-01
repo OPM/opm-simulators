@@ -66,7 +66,6 @@ class BlackOilPolymerModule
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Model = GetPropType<TypeTag, Properties::Model>;
@@ -90,7 +89,6 @@ class BlackOilPolymerModule
     static constexpr bool enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>();
 
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
-    static constexpr unsigned numPhases = FluidSystem::numPhases;
 
 public:
     //! \brief Set parameters.
@@ -588,7 +586,6 @@ class BlackOilPolymerIntensiveQuantities<TypeTag, /*enablePolymerV=*/true>
 
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
 
-    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr bool enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>();
@@ -725,7 +722,6 @@ class BlackOilPolymerIntensiveQuantities<TypeTag, false>
 {
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
     void polymerPropertiesUpdate_(const ElementContext&,
@@ -773,19 +769,12 @@ class BlackOilPolymerExtensiveQuantities<TypeTag, /*enablePolymerV=*/true>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static constexpr unsigned gasPhaseIdx = FluidSystem::gasPhaseIdx;
-    static constexpr int dimWorld = GridView::dimensionworld;
     static constexpr unsigned waterPhaseIdx =  FluidSystem::waterPhaseIdx;
 
-    using Toolbox = MathToolbox<Evaluation>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
-    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
-    using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
 
 public:
     /*!

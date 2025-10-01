@@ -60,7 +60,6 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
