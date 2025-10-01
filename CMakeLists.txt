@@ -577,7 +577,8 @@ set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
                 gasoil_energy brine_saltprecipitation
                 gaswater_saltprec_vapwat gaswater_saltprec_energy brine_precsalt_vapwat
                 blackoil_legacyassembly gasoildiffuse gaswater_dissolution
-                gaswater_dissolution_diffuse gaswater_energy gaswater_solvent biofilm)
+                gaswater_dissolution_diffuse gaswater_energy gaswater_solvent biofilm
+                blackoil_nohyst)
 set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 
 set(FLOW_TGTS)
@@ -639,16 +640,6 @@ opm_add_test(flow_blackoil_polyhedralgrid
   LIBRARIES opmsimulators
   SOURCES
   flow/flow_blackoil_polyhedralgrid.cpp
-  $<TARGET_OBJECTS:moduleVersion>)
-
-opm_add_test(flow_blackoil_nohyst
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEFAULT_ENABLE_IF ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF}
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flow/flow_blackoil_nohyst.cpp
   $<TARGET_OBJECTS:moduleVersion>)
 
 opm_add_test(flow_distribute_z
