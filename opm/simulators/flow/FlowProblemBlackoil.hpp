@@ -806,7 +806,7 @@ public:
                         //single (water) phase
                         fluidState.setPressure(phaseIdx, pressure);
                 }
-                if constexpr (enableEnergy) {
+                if constexpr (enableEnergy || enableTemperature) {
                     double temperature = initialFluidStates_[globalDofIdx].temperature(0); // we only have one temperature
                     const auto temperature_input = bc.temperature;
                     if(temperature_input)
