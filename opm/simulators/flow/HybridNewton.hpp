@@ -79,6 +79,23 @@ public:
         , configsLoaded_(false)
     {}
 
+    /*!
+    * \brief Attempt to apply the Hybrid Newton correction at the current timestep.
+    *
+    * This function acts as the entry point for Hybrid Newton corrections.
+    * It first checks whether the Hybrid Newton mechanism is enabled
+    * (via `Parameters::UseHyNe`). If enabled, it validates the fluid system
+    * and loads model configurations from the parameter-specified
+    * configuration file (if not already loaded).
+    *
+    * At each timestep, it iterates over all loaded configurations and applies
+    * those that match the current simulation time.
+    *
+    * Typical call site: at the beginning of a nonlinear solve for each timestep.
+    *
+    * \throws std::runtime_error if configuration validation fails or if an
+    *         invalid fluid system is encountered.
+    */
     void tryApplyHybridNewton()
     {   
         // Check if flag activated 
@@ -192,64 +209,82 @@ protected:
     /*!
     * \brief Construct the input feature tensor for the Hybrid Newton model.
     *
-    * For each cell listed in \p cell_indices, this function extracts
-    * all input features defined in the configuration, applies the
-    * necessary transformations and scaling, and assembles them into
-    * a row-major 2D tensor.
+    * The tensor is constructed in the exact order specified by
+    * `config.input_features`:
+    *   - Scalar features (e.g., TIMESTEP) contribute one entry each.
+    *   - Per-cell features (e.g., PRESSURE, SGAS) contribute a block of
+    *     `n_cells` entries, one per cell index in `config.cell_indices`.
     *
-    * \param config The HybridNewtonConfig containing feature definitions.
-    * \return A tensor of shape [n_cells x n_input_features], where rows
-    *         correspond to cells and columns correspond to input features.
+    * Example:
+    *   Suppose `config.input_features = [SGAS, TIMESTEP, PRESSURE]`
+    *   and `config.n_cells = 3`. The resulting tensor layout is:
+    *
+    *     [ SGAS(cell0), SGAS(cell1), SGAS(cell2),
+    *       TIMESTEP,
+    *       PRESSURE(cell0), PRESSURE(cell1), PRESSURE(cell2) ]
+    *
+    * Thus, the tensor length equals:
+    *
+    *     (# of scalar features) + (# of per-cell features × n_cells).
+    *
+    * \param config  HybridNewtonConfig containing feature definitions and cell indices.
+    * \return        A 1D tensor of Evaluation values with the computed layout.
     */
     ML::Tensor<Evaluation> constructInputTensor(
         const HybridNewtonConfig& config
     )
     {
         const auto& features = config.input_features;
-        std::size_t num_scalar_features = 0;
-        std::size_t num_per_cell_features = 0;
 
+        // compute total length directly
+        std::size_t input_tensor_length = 0;
         for (const auto& feature : features) {
             const FeatureSpec& spec = feature.second;
             if (spec.actual_name == "TIMESTEP") {
-                ++num_scalar_features;
+                input_tensor_length += 1;
             } else {
-                ++num_per_cell_features;
+                input_tensor_length += config.n_cells;
             }
         }
 
-        ML::Tensor<Evaluation> input(num_scalar_features + num_per_cell_features * config.n_cells);
+        ML::Tensor<Evaluation> input(input_tensor_length);
         std::size_t offset = 0;
 
-        // Scalar features
+        // fill in exact feature order from config
         for (const auto& feature: features) {
             const FeatureSpec& spec = feature.second;
+
             if (spec.actual_name == "TIMESTEP") {
                 auto value = static_cast<Evaluation>(getScalarFeatureValue(spec));
                 input(offset++) = value;
+            } else {
+                for (std::size_t i = 0; i < config.n_cells; ++i) {
+                    auto value = static_cast<Evaluation>(
+                        getPerCellFeatureValue(spec, config.cell_indices[i])
+                    );
+                    input(offset + i) = value;
+                }
+                offset += config.n_cells;
             }
         }
 
-        // Per-cell features
-        for (const auto& feature: features) {
-            const FeatureSpec& spec = feature.second;
-
-            if (spec.actual_name == "TIMESTEP") {
-                continue;
-            }
-            
-            for (std::size_t i = 0; i < config.n_cells; ++i) {
-                auto value = static_cast<Evaluation>(
-                    getPerCellFeatureValue(spec, config.cell_indices[i])
-                );
-                input(offset + i) = value;
-            }
-            offset += config.n_cells;
-        }
         return input;
     }
 
-
+    /*!
+    * \brief Retrieve and transform a scalar feature (global across the domain).
+    *
+    * Supported scalar feature:
+    *   - "TIMESTEP": current timestep size.
+    *
+    * The raw value is passed through the feature's transformation
+    * and scaling functions before being returned.
+    *
+    * \param spec The feature specification, including transform and scaling.
+    * \return The transformed and scaled feature value.
+    *
+    * \throws std::runtime_error if the feature is unknown.
+    */
     Scalar getScalarFeatureValue(const FeatureSpec& spec)
     {
         Scalar value = 0.0;
@@ -264,7 +299,23 @@ protected:
         return spec.scaler.scale(value);
     }
 
-
+    /*!
+    * \brief Retrieve and transform a per-cell feature value.
+    *
+    * Supported per-cell features include:
+    *   - PRESSURE, SWAT, SOIL, SGAS, RS, RV, PERMX.
+    *
+    * The raw value is taken from the simulator state,
+    * converted into the configured unit system,
+    * then passed through the feature's transformation
+    * and scaling functions.
+    *
+    * \param spec The feature specification, including transform and scaling.
+    * \param cell_index The cell index for which to retrieve the value.
+    * \return The transformed and scaled feature value.
+    *
+    * \throws std::runtime_error if the feature is unknown.
+    */
     Scalar getPerCellFeatureValue(const FeatureSpec& spec, int cell_index)
     {
         const auto& intQuants = simulator_.model().intensiveQuantities(cell_index, 0);
@@ -336,23 +387,32 @@ protected:
         return output; 
     }
 
-
     /*!
-    * \brief Update the nonlinear solver's initial guess using model predictions.
+    * \brief Update the nonlinear solver's initial guess using ML predictions.
     *
-    * For each cell listed in \p cell_indices, this function applies the
-    * corresponding row from the \p output tensor to update the initial
-    * guess of the simulation state. The mapping between tensor columns
-    * and state variables is defined by the configuration's output features.
+    * For each target cell, this function:
+    *   1. Reads predicted output features from the ML tensor,
+    *   2. Applies inverse scaling and transformations,
+    *   3. If marked as delta values (`spec.is_delta == true`),
+    *      adds the predicted delta to the current simulator state,
+    *   4. Updates fluid state variables accordingly:
+    *        - PRESSURE: replaces oil-phase pressure and reconstructs
+    *          other phase pressures using capillary pressure relations,
+    *        - SWAT, SOIL, SGAS: updates saturations with closure rules
+    *          if fewer than 3 are predicted,
+    *        - RS, RV: updates dissolved/volatilized gas-oil ratios
+    *          if composition-switching is enabled.
     *
-    * \param output The model output tensor of shape
-    *        [n_cells x n_output_features], where rows correspond to cells
-    *        and columns correspond to output features.
-    * \param config The HybridNewtonConfig specifying model path and output
-    *        feature definitions.
+    * Special handling:
+    *   - Saturations are clamped to [0,1] and normalized to ensure
+    *     their sum is unity.
+    *   - Invalid states (e.g., zero saturation sum) raise exceptions.
     *
-    * \throws std::runtime_error if an expected output feature is missing
-    *         or if state update fails for any cell.
+    * \param output The ML output tensor [n_cells x n_output_features].
+    * \param config The model configuration specifying output feature mappings.
+    *
+    * \throws std::runtime_error if an unknown output feature is encountered
+    *         or if state consistency cannot be enforced.
     */
     void updateInitialGuess(
         ML::Tensor<Evaluation>& output, 
@@ -446,9 +506,9 @@ protected:
                     sg = 1.0 - sw - so;
                 }
 
-                sw = std::max(0.0, std::min(sw, 1.0));
-                so = std::max(0.0, std::min(so, 1.0));
-                sg = std::max(0.0, std::min(sg, 1.0));
+                sw = max(0.0, min(sw, 1.0));
+                so = max(0.0, min(so, 1.0));
+                sg = max(0.0, min(sg, 1.0));
 
                 Scalar sum = sw + so + sg;
                 if (sum <= 1e-12) {

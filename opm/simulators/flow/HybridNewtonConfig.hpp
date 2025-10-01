@@ -22,17 +22,22 @@
 #ifndef HYBRID_NEWTON_CONFIG_HPP
 #define HYBRID_NEWTON_CONFIG_HPP
 
-#include <string>
-#include <vector>
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <string>
 #include <stdexcept>
+#include <vector>
 
 #include <opm/simulators/linalg/PropertyTree.hpp>
 
 namespace Opm {
 
+/*!
+ * \brief Represents scaling information for a feature.
+ *
+ * Supports standard (mean/std) and min-max scaling.
+ */
 struct Scaler {
     enum class Type { None, Standard, MinMax } type = Type::None;
     double mean = 0.0;
@@ -64,6 +69,12 @@ struct Scaler {
     }
 };
 
+/*!
+ * \brief Represents a transformation applied to a feature.
+ *
+ * Supports log, log10, log1p, and no transform. Provides forward
+ * and inverse methods.
+ */
 struct Transform {
     enum class Type { None, Log, Log10, Log1p } type = Type::None;
 
@@ -96,6 +107,11 @@ struct Transform {
     }
 };
 
+/*!
+ * \brief Metadata for a single feature (input or output).
+ *
+ * Includes transformation, scaling, delta flag, and actual feature name.
+ */
 struct FeatureSpec {
     Transform transform;
     Scaler scaler;
@@ -105,6 +121,12 @@ struct FeatureSpec {
     FeatureSpec() = default;
 };
 
+/*!
+ * \brief Configuration for a Hybrid Newton ML model.
+ *
+ * Encapsulates model path, cell indices, apply times, input/output
+ * features, and validation. Can be constructed from a PropertyTree.
+ */
 class HybridNewtonConfig {
 public:
     std::string model_path;
@@ -118,7 +140,12 @@ public:
     // Default constructor
     HybridNewtonConfig() = default;
 
-    // Construct config from a PropertyTree (single model)
+    /*!
+    * \brief Construct configuration from a PropertyTree.
+    *
+    * Loads model path, cell indices, apply times, and features from
+    * the provided PropertyTree. Throws on missing or invalid entries.
+    */
     explicit HybridNewtonConfig(const PropertyTree& model_config)
     {
         model_path = model_config.get<std::string>("model_path", "");
@@ -159,7 +186,12 @@ public:
                            [&](const auto& p) { return p.first == name; });
     }
 
-    // In HybridNewtonConfig
+    /*!
+    * \brief Validate feature compatibility with simulator settings.
+    *
+    * Ensures RS/RV features are only used if composition support is enabled.
+    * Throws std::runtime_error otherwise.
+    */
     void validateConfig(bool compositionSwitchEnabled) const
     {
         bool hasRsFeature = hasInputFeature("RS") ||
@@ -179,6 +211,12 @@ public:
     }
     
 private:
+    /*!
+    * \brief Load cell indices from a plain text file.
+    *
+    * Each line must contain one integer index. Lines starting with '#' or
+    * empty lines are ignored. Throws if the file is missing, invalid, or empty.
+    */
     std::vector<int> loadCellIndicesFromFile(const std::string& filename) const {
         std::vector<int> indices;
         std::ifstream cellFile(filename);
@@ -203,6 +241,16 @@ private:
         return indices;
     }
 
+    /*!
+    * \brief Parse feature specifications from a PropertyTree.
+    *
+    * Reads transform, scaling parameters, and delta flag.
+    * Stores the results in the given `features` vector.
+    *
+    * \param pt       PropertyTree containing the model configuration.
+    * \param path     Path to the feature subtree ("features.inputs" or "features.outputs").
+    * \param features Destination vector of (name, FeatureSpec) pairs.
+    */
     void parseFeatures(const PropertyTree& pt, const std::string& path,
                        std::vector<std::pair<std::string, FeatureSpec>>& features) {
         auto subtreeOpt = pt.get_child_optional(path);
