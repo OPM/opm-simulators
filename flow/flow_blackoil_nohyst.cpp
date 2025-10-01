@@ -1,4 +1,6 @@
 /*
+  Copyright 2025 Equinor ASA.
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -30,38 +32,61 @@
 namespace Opm {
 namespace Properties {
     namespace TTag {
-        struct FlowProblemNoHystNoEps {
+        struct FlowProblemNohyst {
             using InheritsFrom = std::tuple<FlowProblem>;
         };
     }
     template<class TypeTag>
-    struct Linearizer<TypeTag, TTag::FlowProblemNoHystNoEps> { using type = TpfaLinearizer<TypeTag>; };
+    struct Linearizer<TypeTag, TTag::FlowProblemNohyst> { using type = TpfaLinearizer<TypeTag>; };
 
     template<class TypeTag>
-    struct LocalResidual<TypeTag, TTag::FlowProblemNoHystNoEps> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+    struct LocalResidual<TypeTag, TTag::FlowProblemNohyst> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
     template<class TypeTag>
-    struct EnableDiffusion<TypeTag, TTag::FlowProblemNoHystNoEps> { static constexpr bool value = false; };
+    struct EnableDiffusion<TypeTag, TTag::FlowProblemNohyst> { static constexpr bool value = false; };
 
     template<class TypeTag>
-    struct EnableHysteresis<TypeTag, TTag::FlowProblemNoHystNoEps> { static constexpr bool value = false; };
+    struct EnableHysteresis<TypeTag, TTag::FlowProblemNohyst> { static constexpr bool value = false; };
 
     template<class TypeTag>
-    struct EnableEndpointScaling<TypeTag, TTag::FlowProblemNoHystNoEps> { static constexpr bool value = true; };
+    struct EnableEndpointScaling<TypeTag, TTag::FlowProblemNohyst> { static constexpr bool value = true; };
 
     template<class TypeTag>
-    struct AvoidElementContext<TypeTag, TTag::FlowProblemNoHystNoEps> { static constexpr bool value = true; };
+    struct AvoidElementContext<TypeTag, TTag::FlowProblemNohyst> { static constexpr bool value = true; };
 
 }
-} // namespace Opm
 
-
-int main(int argc, char** argv)
+std::unique_ptr<FlowMain<Properties::TTag::FlowProblemNohyst>>
+flowBlackoilTpfaNohystMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
-    using TypeTag = Opm::Properties::TTag::FlowProblemNoHystNoEps;
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    return std::make_unique<FlowMain<Properties::TTag::FlowProblemNohyst>>(
+        argc, argv, outputCout, outputFiles);
+}
+
+// ----------------- Main program -----------------
+int flowBlackoilTpfaNohystMain(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    FlowMain<Properties::TTag::FlowProblemNohyst>
+        mainfunc {argc, argv, outputCout, outputFiles};
+    return mainfunc.execute();
+}
+
+int flowBlackoilTpfaNohystMainStandalone(int argc, char** argv)
+{
+    using TypeTag = Opm::Properties::TTag::FlowProblemNohyst;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
     mainObject.reset();
     return ret;
 }
+
+} // namespace Opm

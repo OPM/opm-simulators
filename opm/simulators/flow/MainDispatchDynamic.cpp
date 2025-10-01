@@ -27,6 +27,7 @@
 #include <flow/flow_biofilm.hpp>
 #include <flow/flow_blackoil.hpp>
 #include <flow/flow_blackoil_legacyassembly.hpp>
+#include <flow/flow_blackoil_nohyst.hpp>
 #include <flow/flow_brine.hpp>
 #include <flow/flow_brine_precsalt_vapwat.hpp>
 #include <flow/flow_brine_saltprecipitation.hpp>
@@ -423,6 +424,10 @@ int Opm::Main::runBlackOil()
         // support the diffusion module yet.
         return flowBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
     }
-
-    return flowBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
+    if (this->eclipseState_->runspec().hysterPar().active()) {
+        return flowBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
+    } else {
+        // Use variant without hysteresis support to save memory.
+        return flowBlackoilTpfaNohystMain(argc_, argv_, outputCout_, outputFiles_);
+    }
 }
