@@ -772,6 +772,16 @@ private:
      void equilibrateTitledBlocks(const CellRange& cells, const EquilReg<Scalar>& eqreg,
                        const GridView& gridView, const int numLevels,
                        const PressTable& ptable, PhaseSat& psat);
+      
+     template<class CellRange, class PressTable, class PhaseSat>
+     void equilibrateTiltedFaultBlocks(const CellRange& cells, const EquilReg<Scalar>& eqreg,
+                       const GridView& gridView, const int numLevels,
+                       const PressTable& ptable, PhaseSat& psat);
+                       
+       template<class CellRange, class PressTable, class PhaseSat>
+     void equilibrateTiltedFaultBlockss(const CellRange& cells, const EquilReg<Scalar>& eqreg,
+                       const GridView& gridView, const int numLevels,
+                       const PressTable& ptable, PhaseSat& psat);
 
     std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rvFunc_;
