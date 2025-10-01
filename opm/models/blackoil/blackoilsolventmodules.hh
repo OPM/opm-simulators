@@ -70,7 +70,6 @@ class BlackOilSolventModule
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Model = GetPropType<TypeTag, Properties::Model>;
@@ -91,7 +90,6 @@ class BlackOilSolventModule
     static constexpr unsigned contiSolventEqIdx = Indices::contiSolventEqIdx;
     static constexpr unsigned enableSolvent = enableSolventV;
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
-    static constexpr unsigned numPhases = FluidSystem::numPhases;
     static constexpr bool blackoilConserveSurfaceVolume =
         getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;

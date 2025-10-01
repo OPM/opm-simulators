@@ -353,11 +353,8 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, /*enableEnergyV=*/true>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
-    using EnergyModule = BlackOilEnergyModule<TypeTag>;
-
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr int temperatureIdx = Indices::temperatureIdx;
-    static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
 public:
     /*!
@@ -535,17 +532,6 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, /*enableEnergyV=*/true>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
-
-    using Toolbox = MathToolbox<Evaluation>;
-
-    using EnergyModule = BlackOilEnergyModule<TypeTag>;
-
-    static constexpr int dimWorld = GridView::dimensionworld;
-    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
-    using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
 
 public:
     template<class FluidState>

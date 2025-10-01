@@ -71,15 +71,9 @@ template <class TypeTag>
 class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/false>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using Indices = GetPropType<TypeTag, Properties::Indices>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
-
-    enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { dimWorld = GridView::dimensionworld };
 
 public:
     struct ConvectiveMixingModuleParam

@@ -348,7 +348,6 @@ private:
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = FluidSystem::numComponents };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
