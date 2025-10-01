@@ -198,27 +198,80 @@ std::pair<Scalar,Scalar> cellZMinMax(const Element& element)
 }
 
 template<class Scalar>
-void computeBlockDip(const Scalar& cellThickness, const std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>>&cellCornersXY,
+void computeBlockDip(const Scalar& cellThickness, 
+                    const std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>>& cellCornersXY,
                     Scalar& dipAngle, Scalar& dipAzimuth)
 {
     auto [Xc, Yc, Zc] = cellCornersXY;
-   // Calculate actual cell dimensions
-    Scalar dx = std::max(Xc[1] - Xc[0],
-                 Xc[3] - Xc[2]);
-    Scalar dy = std::max(Yc[2] - Yc[0],
-                 Yc[3] - Yc[1]);
-
-    // Compute dip parameters
-    const Scalar lateralDist = std::sqrt(dx*dx + dy*dy);
-    if (lateralDist > 1e-3) {
-        dipAngle = std::atan2(lateralDist, cellThickness); // Using 1.0 as reference thickness
-        dipAzimuth = std::atan2(dy, dx);
-        const Scalar maxDip = (M_PI/2 - 1e-4);
-        dipAngle = std::clamp(dipAngle, -maxDip, maxDip);
+    
+    // Calculate cell centroid
+    Scalar x_centroid = std::accumulate(Xc.begin(), Xc.end(), 0.0) / Xc.size();
+    Scalar y_centroid = std::accumulate(Yc.begin(), Yc.end(), 0.0) / Yc.size();
+    Scalar z_centroid = std::accumulate(Zc.begin(), Zc.end(), 0.0) / Zc.size();
+    
+    // Calculate covariance matrix for plane fitting
+    Scalar xx = 0.0, yy = 0.0, zz = 0.0, xy = 0.0, xz = 0.0, yz = 0.0;
+    
+    for (size_t i = 0; i < 8; ++i) {
+        Scalar dx = Xc[i] - x_centroid;
+        Scalar dy = Yc[i] - y_centroid;
+        Scalar dz = Zc[i] - z_centroid;
+        
+        xx += dx * dx;
+        yy += dy * dy;
+        zz += dz * dz;
+        xy += dx * dy;
+        xz += dx * dz;
+        yz += dy * dz;
+    }
+    
+    // Find the normal vector using principal component analysis
+    // The normal is the eigenvector corresponding to the smallest eigenvalue
+    // For simplicity, we'll use the cross product of two cell vectors
+    
+    // Use three non-collinear points to define the cell plane
+    // Typically use corners 0, 1, and 2 (bottom face)
+    Scalar v1x = Xc[1] - Xc[0];
+    Scalar v1y = Yc[1] - Yc[0];
+    Scalar v1z = Zc[1] - Zc[0];
+    
+    Scalar v2x = Xc[2] - Xc[0];
+    Scalar v2y = Yc[2] - Yc[0];
+    Scalar v2z = Zc[2] - Zc[0];
+    
+    // Cross product to get normal vector
+    Scalar nx = v1y * v2z - v1z * v2y;
+    Scalar ny = v1z * v2x - v1x * v2z;
+    Scalar nz = v1x * v2y - v1y * v2x;
+    
+    // Normalize the normal vector
+    Scalar norm = std::sqrt(nx*nx + ny*ny + nz*nz);
+    
+    if (norm > 1e-10) {
+        nx /= norm;
+        ny /= norm;
+        nz /= norm;
+        
+        // Dip angle is the angle between normal and vertical (0,0,1)
+        dipAngle = std::acos(std::abs(nz)); // acos(|n·(0,0,1)|)
+        
+        // Dip azimuth (direction of dip)
+        if (std::abs(nx) > 1e-10 || std::abs(ny) > 1e-10) {
+            dipAzimuth = std::atan2(ny, nx);
+            // Convert to compass bearing (0° = North, 90° = East)
+            dipAzimuth = std::fmod(dipAzimuth + 2*M_PI, 2*M_PI);
+        } else {
+            dipAzimuth = 0.0; // Vertical cell
+        }
+        
+        // Clamp dip angle to reasonable values
+        const Scalar maxDip = M_PI/2 - 1e-6;
+        dipAngle = std::min(dipAngle, maxDip);
     } else {
+        // Degenerate cell - assume horizontal
         dipAngle = 0.0;
         dipAzimuth = 0.0;
-    };
+    }
 }
 
 template <class Scalar, class Element>
@@ -262,30 +315,44 @@ std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>> 
 
     return {X, Y, Z};
 }
+
 template<class Scalar>
 Scalar calculateTrueVerticalDepth(Scalar z, Scalar x, Scalar y,
                                 Scalar dipAngle, Scalar dipAzimuth,
                                 const std::array<Scalar, 3>& referencePoint)
 {
-    // Calculate dist from a reference point (we need to check if im correct)
-    const Scalar dx = std::abs(x-referencePoint[0]);
-    const Scalar dy = std::abs(y-referencePoint[1]);
-    const Scalar dz = z - referencePoint[2];
-
-   // const Scalar maxDip = M_PI/2 - 1e-4;
-   // dipAngle = std::clamp(dipAngle, -maxDip, maxDip);
-
-    // Project along dip direction
-    const Scalar lateral = dx*std::cos(dipAzimuth) + dy*std::sin(dipAzimuth);
-
-    // Tune Vertical Depth calculation
-    const Scalar costheta = std::cos(dipAngle);
-    const Scalar sintheta = std::sin(dipAngle);
-    if (std::abs(dipAngle) >M_PI/4) {
-       return referencePoint[2] + dz + lateral*std::tan(dipAngle);
-    } else {
-       return referencePoint[2] + dz*costheta + lateral*sintheta;
+    // For True Vertical Depth calculation:
+    // TVD = reference_depth + (z - reference_z) * cos(dipAngle) 
+    //       + lateral_distance * sin(dipAngle) * cos(azimuth_difference)
+    
+    // Calculate lateral displacement from reference point
+    Scalar dx = x - referencePoint[0];
+    Scalar dy = y - referencePoint[1];
+    Scalar dz = z - referencePoint[2];
+    
+    // If no dip, TVD is simply the depth
+    if (std::abs(dipAngle) < 1e-10) {
+        return referencePoint[2] + dz;
     }
+    
+    // Calculate the direction from reference point to current point
+    Scalar pointAzimuth = std::atan2(dy, dx);
+    
+    // Calculate the angle between dip direction and point direction
+    Scalar azimuthDiff = pointAzimuth - dipAzimuth;
+    
+    // Calculate lateral distance
+    Scalar lateralDist = std::sqrt(dx*dx + dy*dy);
+    
+    // Project lateral distance onto dip direction
+    Scalar lateralInDipDir = lateralDist * std::cos(azimuthDiff);
+    
+    // True Vertical Depth calculation
+    // TVD increases with depth (more negative z means deeper)
+    // For a dipping plane: TVD = vertical_component + dip_component
+    Scalar tvd = referencePoint[2] + dz * std::cos(dipAngle) + lateralInDipDir * std::sin(dipAngle);
+    
+    return tvd;
 }
 
 template<class Scalar, class RHS>
@@ -2005,7 +2072,7 @@ calcPressSatRsRv(const RMap& reg,
             ptable.equilibrate(eqreg, vspan);
             // For titled blocks, we use both vertical and horizontal subdivision
             // The accuracy value determines the number of subdivisions in each direction
-            this->equilibrateTitledBlocks(cells, eqreg, gridView, acc, ptable, psat);
+            this->equilibrateTiltedFaultBlockss(cells, eqreg, gridView, acc, ptable, psat);
         }
         else if (acc == 0) {
             if (cells.empty()) {
@@ -2295,27 +2362,121 @@ equilibrateHorizontalVertical(const CellRange&        cells,
     });
 }
 
-
-
 template<class FluidSystem, class Grid, class GridView, class ElementMapper, class CartesianIndexMapper>
 template<class CellRange, class PressTable, class PhaseSat>
 void InitialStateComputer<FluidSystem, Grid, GridView, ElementMapper, CartesianIndexMapper>::
 equilibrateTitledBlocks(const CellRange& cells, const EquilReg<Scalar>& eqreg,
-                       const GridView& gridView, const int numLevels,
+                       const GridView& gridView, const int numSubdiv,
                        const PressTable& ptable, PhaseSat& psat)
 {
     using CellPos = typename PhaseSat::Position;
-    using CellID  = std::remove_cv_t<std::remove_reference_t<
-    decltype(std::declval<CellPos>().cell)>>;
-    // Element mapper setup
-    ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
-    std::unordered_map<unsigned int, const Element*> elementsByIndex;
-    for (const auto& element : elements(gridView)) {
-        elementsByIndex[elemMapper.index(element)] = &element;
-    }
+    using CellID = std::remove_cv_t<std::remove_reference_t<
+        decltype(std::declval<CellPos>().cell)>>;
 
-    // Main equilibration loop
-    this->cellLoop(cells, [this, numLevels, &eqreg, &ptable, &psat, &elementsByIndex]
+    this->cellLoop(cells, [this, numSubdiv, &eqreg, &ptable, &psat]
+        (const CellID cell,
+         Details::PhaseQuantityValue<Scalar>& pressures,
+         Details::PhaseQuantityValue<Scalar>& saturations,
+         Scalar& Rs,
+         Scalar& Rv,
+         Scalar& Rvw) -> void
+    {
+        pressures.reset();
+        saturations.reset();
+        Scalar totfrac = 0.0;
+
+        // Get cell geometry data
+        const auto& [zmin, zmax] = cellZMinMax_[cell];
+        const Scalar cellThickness = zmax - zmin;
+        
+        // Calculate cell dip parameters once per cell
+        Scalar dipAngle, dipAzimuth;
+        Details::computeBlockDip(cellThickness, cellCornersXY_[cell], dipAngle, dipAzimuth);
+        
+        // Use cell center as reference point for TVD calculations
+        std::array<Scalar, 3> referencePoint = {
+            cellCenterXY_[cell].first,
+            cellCenterXY_[cell].second,
+            cellCenterDepth_[cell]
+        };
+
+        // Perform horizontal subdivision at multiple levels within the cell
+        const int numVerticalLevels = std::max(1, numSubdiv / 2); // Adjust vertical resolution
+        Scalar totalWeight = 0.0;
+        
+        for (int level = 0; level < numVerticalLevels; ++level) {
+            // Calculate vertical position within cell (from top to bottom)
+            Scalar zLevel = zmin + (level + 0.5) * cellThickness / numVerticalLevels;
+            
+            // Create a horizontal slice at this depth level
+            std::pair<Scalar, Scalar> horizontalSlice{zLevel, zLevel};
+            
+            // Subdivide horizontally at this level
+            auto subdivisions = Details::horizontalSubdivision(cell, horizontalSlice, numSubdiv);
+            
+            for (const auto& [depth, frac] : subdivisions) {
+                // Calculate True Vertical Depth for this subdivision point
+                const auto& [x, y] = cellCenterXY_[cell]; // Use cell center XY for simplicity
+                Scalar tvd = Details::calculateTrueVerticalDepth(
+                    depth, x, y, dipAngle, dipAzimuth, referencePoint);
+                
+                // Use TVD for pressure/saturation calculations
+                const auto pos = CellPos{cell, tvd};
+                
+                // Get properties at this TVD
+                auto localSaturations = psat.deriveSaturations(pos, eqreg, ptable);
+                auto localPressures = psat.correctedPhasePressures();
+                
+                // Weight by horizontal fraction and vertical level importance
+                // Cells with larger dip angles should give more weight to TVD variations
+                Scalar weight = frac;
+                if (std::abs(dipAngle) > 1e-3) {
+                    // Increase weight for tilted cells to account for TVD variations
+                    weight *= (1.0 + std::abs(dipAngle) * 2.0);
+                }
+                
+                saturations.axpy(localSaturations, weight);
+                pressures.axpy(localPressures, weight);
+                totalWeight += weight;
+            }
+        }
+
+        // Normalize results
+        if (totalWeight > 0.0) {
+            saturations /= totalWeight;
+            pressures /= totalWeight;
+        } else {
+            // Fallback to center point method
+            const auto pos = CellPos{cell, cellCenterDepth_[cell]};
+            saturations = psat.deriveSaturations(pos, eqreg, ptable);
+            pressures = psat.correctedPhasePressures();
+        }
+
+        // Compute solution ratios at cell center depth
+        const auto temp = this->temperature_[cell];
+        const auto cz = cellCenterDepth_[cell];
+        
+        Rs = eqreg.dissolutionCalculator()(cz, pressures.oil, temp, saturations.gas);
+        Rv = eqreg.evaporationCalculator()(cz, pressures.gas, temp, saturations.oil);
+        Rvw = eqreg.waterEvaporationCalculator()(cz, pressures.gas, temp, saturations.water);
+    });
+}
+
+template<class FluidSystem, class Grid, class GridView, class ElementMapper, class CartesianIndexMapper>
+template<class CellRange, class PressTable, class PhaseSat>
+void InitialStateComputer<FluidSystem, Grid, GridView, ElementMapper, CartesianIndexMapper>::
+equilibrateTiltedFaultBlocks(const CellRange&        cells,
+                             const EquilReg<Scalar>& eqreg,
+                             const GridView&         gridView,  // Add this parameter
+                             const int               acc,
+                             const PressTable&       ptable,
+                             PhaseSat&               psat)
+{
+    using CellPos = typename PhaseSat::Position;
+    using CellID  = std::remove_cv_t<std::remove_reference_t<
+        decltype(std::declval<CellPos>().cell)>>;
+
+    this->cellLoop(cells, [this, acc, &eqreg, &ptable, &psat]
         (const CellID                 cell,
          Details::PhaseQuantityValue<Scalar>& pressures,
          Details::PhaseQuantityValue<Scalar>& saturations,
@@ -2325,138 +2486,178 @@ equilibrateTitledBlocks(const CellRange& cells, const EquilReg<Scalar>& eqreg,
     {
         pressures.reset();
         saturations.reset();
-        Scalar totfrac = 0.0;
+        Scalar totalWeight = 0.0;
 
-        // Get cell geometry data
-        const auto& element = *(elementsByIndex[cell]);
+        // For tilted fault blocks: Use True Vertical Depth (TVD) instead of measured depth
         const auto& [zmin, zmax] = cellZMinMax_[cell];
-        const auto& topbot = cellZSpan_[cell];
-        const Scalar cellHeight = zmax - zmin;
-        auto [Xc, Yc, Zc] = cellCornersXY_[cell];
-        // 1. Compute cross-sectional areas at N levels
-        std::vector<Scalar> areas(2*numLevels);
-        std::vector<Scalar> zdepths(2*numLevels);
-        for (int half = 0; half < 2; ++half) {
-            Scalar z0 = (half == 0) ? zmin : (zmin + zmax)/2;
-            Scalar z1 = (half == 0) ? (zmin + zmax)/2 : zmax;
+        const Scalar cellThickness = zmax - zmin;
 
-            for (int i = 0; i < numLevels; ++i) {
-                Scalar z = z0 + i*(z1 - z0)/(numLevels - 1);
-
-                // Interpolate corner points at this z-level
-                std::array<std::array<Scalar,3>,4> polygon;
-                for (int c = 0; c < 4; ++c) {
-                    // Bottom (c) to top (c+4) edge interpolation
-                    Scalar t = (z - cellCornersDepth_[cell][c]) /
-                              (cellCornersDepth_[cell][c+4] - cellCornersDepth_[cell][c]);
-                    t = std::clamp(t, 0.0, 1.0);
-                    polygon[c][0] = (1-t)*Xc[c] + t*Xc[c+4];
-                    polygon[c][1] = (1-t)*Yc[c] + t*Yc[c+4];
-                    polygon[c][2] = (1-t)*Zc[c] + t*Zc[c+4];
-                }
-
-                // Helper for cross product
-auto cross = [](const std::array<Scalar, 3>& a, const std::array<Scalar, 3>& b) {
-    return std::array<Scalar, 3>{
-        a[1]*b[2] - a[2]*b[1],
-        a[2]*b[0] - a[0]*b[2],
-        a[0]*b[1] - a[1]*b[0]
-    };
-};
-
-// Helper for vector subtraction
-auto sub = [](const std::array<Scalar, 3>& a, const std::array<Scalar, 3>& b) {
-    return std::array<Scalar, 3>{ a[0]-b[0], a[1]-b[1], a[2]-b[2] };
-};
-
-// Helper for norm
-auto norm = [](const std::array<Scalar, 3>& v) {
-    return std::sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-};
-
-std::array<int, 4> idx = {0, 1, 3, 2};  // reordered traversal
-
-Scalar area = 0.0;
-Scalar zdepth = 0.0;
-
-// Triangle 1: idx[0], idx[1], idx[2]
-{
-    auto v1 = sub(polygon[idx[1]], polygon[idx[0]]);
-    auto v2 = sub(polygon[idx[2]], polygon[idx[0]]);
-    area += 0.5 * norm(cross(v1, v2));
-}
-
-// Triangle 2: idx[2], idx[1], idx[3]
-{
-    auto v1 = sub(polygon[idx[1]], polygon[idx[2]]);
-    auto v2 = sub(polygon[idx[3]], polygon[idx[2]]);
-    area += 0.5 * norm(cross(v1, v2));
-}
-
-// Average z-depth
-for (int j = 0; j < 4; ++j) {
-    zdepth += polygon[idx[j]][2];
-}
-
-areas[half * numLevels + i] = area;
-zdepths[half * numLevels + i] = zdepth / 4.0;
-
-            }
-        }
-
-        // 2. Compute block dip from corner points
+        // Calculate dip parameters for this cell
         Scalar dipAngle, dipAzimuth;
-        Details::computeBlockDip(cellHeight, cellCornersXY_[cell], dipAngle, dipAzimuth);
+        Details::computeBlockDip(cellThickness, cellCornersXY_[cell], dipAngle, dipAzimuth);
 
-        // 3. Reference point at cell center (ECLIPSE convention)
+        // Reference point for TVD calculations (usually cell center)
         std::array<Scalar, 3> referencePoint = {
             cellCenterXY_[cell].first,
             cellCenterXY_[cell].second,
             cellCenterDepth_[cell]
         };
 
-        // 4. N-level integration with area weighting
-        for (int half = 0; half < 2; ++half) {
-            Scalar z0 = (half == 0) ? topbot.first : (topbot.first + topbot.second)/2;
-            Scalar z1 = (half == 0) ? (topbot.first + topbot.second)/2 : topbot.second;
-            Scalar totalArea = std::accumulate(areas.begin(), areas.end(), Scalar(0));
+        // Same horizontal subdivision as negative EQLOPT3, but using TVD
+        const int numSubdivisions = std::min(20, std::abs(acc)); // Max 20 as per OPM
+        auto subdivisions = Details::horizontalSubdivision(cell, cellZSpan_[cell], numSubdivisions);
 
-            for (int i = 0; i < numLevels; ++i) {
-                Scalar z = z0 + i*(z1 - z0)/(numLevels - 1);// z0 + (i + 0.5)*(z1 - z0)/numLevels;
-                Scalar weight = areas[half*numLevels + i]/ totalArea;
-                Scalar tvd = zdepths[half*numLevels + i];
+        for (const auto& [depth, frac] : subdivisions) {
+            // Convert measured depth to True Vertical Depth for tilted blocks
+            const auto& [x, y] = cellCenterXY_[cell];
+            Scalar tvd = Details::calculateTrueVerticalDepth(
+                depth, x, y, dipAngle, dipAzimuth, referencePoint);
 
-                // Calculate TVD with dip correction
-                //Scalar tvd = Details::calculateTrueVerticalDepth(
-                //    z, Xc[7], Yc[7] ,
-                //    dipAngle, dipAzimuth, referencePoint);
+            const auto pos = CellPos{cell, tvd};
 
-                // Accumulate weighted properties
-                const auto pos = CellPos{cell, tvd};
-                saturations.axpy(psat.deriveSaturations(pos, eqreg, ptable), weight);
-                pressures.axpy(psat.correctedPhasePressures(), weight);
-                totfrac += weight;
-            }
+            auto localSaturations = psat.deriveSaturations(pos, eqreg, ptable);
+            auto localPressures = psat.correctedPhasePressures();
+
+            // Apply weighting
+            saturations.axpy(localSaturations, frac);
+            pressures.axpy(localPressures, frac);
+            totalWeight += frac;
         }
 
-        // Normalization
-        if (totfrac > 0.) {
-            saturations /= totfrac;
-            pressures /= totfrac;
+        // Normalize results
+        if (totalWeight > 1e-10) {
+            saturations /= totalWeight;
+            pressures /= totalWeight;
         } else {
+            // Fallback to center point method
             const auto pos = CellPos{cell, cellCenterDepth_[cell]};
             saturations = psat.deriveSaturations(pos, eqreg, ptable);
             pressures = psat.correctedPhasePressures();
         }
 
-        // Compute solution ratios
+        // Compute solution ratios at cell center depth
         const auto temp = this->temperature_[cell];
         const auto cz = cellCenterDepth_[cell];
+
         Rs = eqreg.dissolutionCalculator()(cz, pressures.oil, temp, saturations.gas);
         Rv = eqreg.evaporationCalculator()(cz, pressures.gas, temp, saturations.oil);
         Rvw = eqreg.waterEvaporationCalculator()(cz, pressures.gas, temp, saturations.water);
     });
 }
+
+template<class FluidSystem, class Grid, class GridView, class ElementMapper, class CartesianIndexMapper>
+template<class CellRange, class PressTable, class PhaseSat>
+void InitialStateComputer<FluidSystem, Grid, GridView, ElementMapper, CartesianIndexMapper>::
+equilibrateTiltedFaultBlockss(const CellRange&        cells,
+                             const EquilReg<Scalar>& eqreg,
+                             const GridView&         gridView,
+                             const int               acc,  // Positive EQLOPT > 0
+                             const PressTable&       ptable,
+                             PhaseSat&               psat)
+{
+    using CellPos = typename PhaseSat::Position;
+    using CellID  = std::remove_cv_t<std::remove_reference_t<
+        decltype(std::declval<CellPos>().cell)>>;
+
+    this->cellLoop(cells, [this, acc, &eqreg, &ptable, &psat, &gridView]
+        (const CellID                 cell,
+         Details::PhaseQuantityValue<Scalar>& pressures,
+         Details::PhaseQuantityValue<Scalar>& saturations,
+         Scalar&                      Rs,
+         Scalar&                      Rv,
+         Scalar&                      Rvw) -> void
+    {
+        pressures.reset();
+        saturations.reset();
+        Scalar totalWeight = 0.0;
+
+        // POSITIVE EQLOPT: "grid blocks are treated as being tilted"
+        const auto& [zmin, zmax] = cellZMinMax_[cell];
+        const Scalar cellThickness = zmax - zmin;
+        const Scalar halfThickness = cellThickness / 2.0;
+
+        // Calculate dip parameters from corner point geometry
+        Scalar dipAngle, dipAzimuth;
+        Details::computeBlockDip(cellThickness, cellCornersXY_[cell], dipAngle, dipAzimuth);
+
+        // Reference point for TVD calculations (seismic datum)
+        //std::array<Scalar, 3> referencePoint = {0.0, 0.0, eqreg.datumDepth()};
+                std::array<Scalar, 3> referencePoint = {
+            cellCenterXY_[cell].first,
+            cellCenterXY_[cell].second,
+            cellCenterDepth_[cell]
+        };
+
+        // "average of the conditions at N levels within each half (upper and lower) of the block"
+        const int numLevelsPerHalf = std::min(20, acc); // Max 20 as per manual
+        
+        // Create subdivisions for upper and lower halves with cross-section weighting
+        std::vector<std::pair<Scalar, Scalar>> levels;
+        
+        // Subdivide upper and lower halves separately
+        for (int half = 0; half < 2; ++half) {
+            Scalar halfStart = (half == 0) ? zmin : zmin + halfThickness;
+            
+            for (int i = 0; i < numLevelsPerHalf; ++i) {
+                // Calculate depth at the center of this subdivision
+                Scalar depth = halfStart + (i + 0.5) * (halfThickness / numLevelsPerHalf);
+                
+                // Estimate cross-section weight based on dip angle
+                // For horizontal cells: weight = 1.0, for tilted cells: weight decreases with dip
+                Scalar crossSectionWeight = (halfThickness / numLevelsPerHalf);
+                
+                // Apply dip correction to weight (cross-section area decreases with dip)
+                if (std::abs(dipAngle) > 1e-10) {
+                    crossSectionWeight *= std::cos(dipAngle);
+                }
+                
+                levels.emplace_back(depth, crossSectionWeight);
+            }
+        }
+
+        for (const auto& [depth, weight] : levels) {
+            // Convert measured depth to True Vertical Depth for tilted blocks
+            const auto& [x, y] = cellCenterXY_[cell];
+            Scalar tvd = Details::calculateTrueVerticalDepth(
+                depth, x, y, dipAngle, dipAzimuth, referencePoint);
+
+            const auto pos = CellPos{cell, tvd};
+
+            auto localSaturations = psat.deriveSaturations(pos, eqreg, ptable);
+            auto localPressures = psat.correctedPhasePressures();
+
+            // Apply cross-section weighted averaging as per Eclipse manual
+            saturations.axpy(localSaturations, weight);
+            pressures.axpy(localPressures, weight);
+            totalWeight += weight;
+        }
+
+        // Normalize results
+        if (totalWeight > 1e-10) {
+            saturations /= totalWeight;
+            pressures /= totalWeight;
+        } else {
+            // Fallback to center point method using TVD
+            const auto& [x, y] = cellCenterXY_[cell];
+            Scalar tvdCenter = Details::calculateTrueVerticalDepth(
+                cellCenterDepth_[cell], x, y, dipAngle, dipAzimuth, referencePoint);
+            const auto pos = CellPos{cell, tvdCenter};
+            saturations = psat.deriveSaturations(pos, eqreg, ptable);
+            pressures = psat.correctedPhasePressures();
+        }
+
+        // Compute solution ratios at cell center TVD
+        const auto temp = this->temperature_[cell];
+        const auto& [x, y] = cellCenterXY_[cell];
+        Scalar tvdCenter = Details::calculateTrueVerticalDepth(
+            cellCenterDepth_[cell], x, y, dipAngle, dipAzimuth, referencePoint);
+
+        Rs = eqreg.dissolutionCalculator()(tvdCenter, pressures.oil, temp, saturations.gas);
+        Rv = eqreg.evaporationCalculator()(tvdCenter, pressures.gas, temp, saturations.oil);
+        Rvw = eqreg.waterEvaporationCalculator()(tvdCenter, pressures.gas, temp, saturations.water);
+    });
+}
+
 
 }
 } // namespace EQUIL
