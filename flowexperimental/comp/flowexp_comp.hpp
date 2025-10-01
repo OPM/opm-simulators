@@ -211,7 +211,6 @@ template<class TypeTag, int NumComp, bool EnableWater>
 struct EnableTemperature<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
     static constexpr bool value = false;
 };
-
 template<class TypeTag, int NumComp, bool EnableWater>
 struct EnableSaltPrecipitation<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
     static constexpr bool value = false;
@@ -242,10 +241,6 @@ struct EnableVapwat<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
 
 template<class TypeTag, int NumComp, bool EnableWater>
 struct EnableSolvent<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
-    static constexpr bool value = false;
-};
-template<class TypeTag, int NumComp, bool EnableWater>
-struct EnableEnergy<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
     static constexpr bool value = false;
 };
 template<class TypeTag, int NumComp, bool EnableWater>

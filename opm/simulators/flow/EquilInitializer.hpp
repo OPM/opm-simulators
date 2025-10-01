@@ -33,6 +33,7 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
@@ -75,7 +76,7 @@ class EquilInitializer
 
     enum { dimWorld = GridView::dimensionworld };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
     enum { enableDissolution = Indices::compositionSwitchIdx >= 0 };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };

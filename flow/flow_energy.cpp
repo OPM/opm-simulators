@@ -35,11 +35,6 @@ struct FlowEnergyProblem {
 }
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowEnergyProblem> {
-    static constexpr bool value = true;
-};
-
-template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowEnergyProblem>
 { static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
 

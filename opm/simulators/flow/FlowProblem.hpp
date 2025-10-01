@@ -121,7 +121,7 @@ protected:
     enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
     enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };

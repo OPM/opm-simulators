@@ -114,7 +114,7 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     static constexpr int gasCompIdx = FluidSystem::gasCompIdx;
     static constexpr int oilCompIdx = FluidSystem::oilCompIdx;
     static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
     enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
     enum { enableMICP = Indices::enableMICP };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
