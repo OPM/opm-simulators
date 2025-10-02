@@ -289,7 +289,7 @@ public:
         }
 
         // make the weight of the temperature primary variable inversly proportional to its value
-        return std::max(1.0 / 1000,
+        return std::max(static_cast<Scalar>(1.0) / 1000,
                         1.0 / model.solution(/*timeIdx=*/0)[globalDofIdx][temperatureIdx]);
     }
 
@@ -306,7 +306,7 @@ public:
 
         // approximate change of internal energy of 1kg of liquid water for a temperature
         // change of 30K
-        return 1.0 / (4.184e3 * 30.0);
+        return static_cast<Scalar>(1.0) / (4.184e3 * 30.0);
     }
 
     /*!
