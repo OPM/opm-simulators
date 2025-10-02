@@ -28,6 +28,7 @@ void bildu_factorize2(bildu_prec *P, bsr_matrix *A);
 void bildu_apply3(bildu_prec *P, double *x);
 void bildu_apply3c(bildu_prec *P, double *x);
 void bildu_mapply3c(bildu_prec *P, double *x);
+void bildu_dapply3c(bildu_prec *P, double *x);
 void bildu_downcast(bildu_prec *P);
 void bildu_info(bildu_prec *P);
 
