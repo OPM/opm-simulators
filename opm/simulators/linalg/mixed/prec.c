@@ -1,5 +1,7 @@
 #include "prec.h"
+//#include "vec.h"
 
+#include <stdio.h>
 #include <immintrin.h>
 
 #pragma GCC push_options
@@ -109,16 +111,6 @@ void bildu_init(bildu_prec *P, bsr_matrix const *A)
 }
 
 
-
-void vec_copy(double *y, double const * x, int n)
-{
-    for(int i=0;i<n;i++) y[i]=x[i];
-}
-
-void vec_fill(double *y, double x, int n)
-{
-    for(int i=0;i<n;i++) y[i]=x;
-}
 
 void mat3_view(double const *M, char const *name)
 {
