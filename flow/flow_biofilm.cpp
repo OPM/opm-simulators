@@ -72,6 +72,10 @@ struct Linearizer<TypeTag, TTag::FlowBiofilmProblem> { using type = TpfaLineariz
 template<class TypeTag>
 struct LocalResidual<TypeTag, TTag::FlowBiofilmProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowBiofilmProblem>
+{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowBiofilmProblem>
