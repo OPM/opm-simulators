@@ -26,7 +26,7 @@ template<class M>
 void test_milu0(M& A)
 {
     auto ILU = A;
-    
+
     std::shared_ptr<std::vector<typename M::block_type>> diagonal = nullptr;
     diagonal.reset(new std::vector<typename M::block_type>());
 
@@ -47,7 +47,7 @@ void test_milu0(M& A)
     A.mv(e, x1);
     // Compute L*U*e;
     // t=Ue
-    
+
     for ( auto irow = ILU.begin(), iend = ILU.end(); irow != iend; ++irow)
     {
         auto i = irow.index();
@@ -65,7 +65,7 @@ void test_milu0(M& A)
             col->umv(e[0], t[i]);
         }
     }
-            
+
     for ( auto irow = ILU.begin(), iend = ILU.end(); irow != iend; ++irow)
     {
         auto i = irow.index();
@@ -154,9 +154,9 @@ void setupLaplacian(Dune::BCRSMatrix<B,Alloc>& A, int N)
   for (typename Dune::BCRSMatrix<B,Alloc>::RowIterator i = A.begin(); i != A.end(); ++i) {
     int x = i.index()%N; // x coordinate in the 2d field
     int y = i.index()/N;  // y coordinate in the 2d field
-    
+
     i->operator[](i.index())=diagonal;
-    
+
     if(y>0)
         i->operator[](i.index()-N)=bone;
 

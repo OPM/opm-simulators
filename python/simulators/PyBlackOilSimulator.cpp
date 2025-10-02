@@ -106,4 +106,3 @@ PYBIND11_MODULE(BlackOil, m)
 }
 
 } // namespace Opm::Pybind
-

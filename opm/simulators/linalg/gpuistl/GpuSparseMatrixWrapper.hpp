@@ -92,7 +92,7 @@ public:
     * @brief Maximum block size supported by this implementation.
     *
     * This constant defines an upper bound on the block size to ensure reasonable compilation times.
-    * While this class itself could support larger values, functions that call dispatchOnBlocksize() 
+    * While this class itself could support larger values, functions that call dispatchOnBlocksize()
     * might have limitations. This value can be increased if needed, but will increase compilation time
     * due to template instantiations.
     */
@@ -385,15 +385,15 @@ public:
         m_matrix->updateNonzeroValues(matrix.get());
     }
 
-    
+
     /**
      * @brief Dispatches a function based on the block size of the matrix.
-     * 
+     *
      * This method allows executing different code paths depending on the block size
      * of the matrix, up to the maximum block size specified by max_block_size.
      *
      * Use this function if you need the block size to be known at compile time.
-     * 
+     *
      * @tparam FunctionType Type of the function to be dispatched
      * @param function The function to be executed based on the block size
      * @return The result of the function execution

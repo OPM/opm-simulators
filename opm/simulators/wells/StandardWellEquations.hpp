@@ -89,7 +89,7 @@ public:
 
     //! \brief Apply inverted D matrix to rhs and store in vector.
     void solve(const BVectorWell& rhs_well, BVectorWell& x_well) const;
-    
+
     //! \brief Invert D matrix.
     void invert();
 

@@ -230,7 +230,7 @@ public:
                                 const Evaluation& volFlux,
                                 const FluidState& upFs)
     {
-        if constexpr (enableBrine) { 
+        if constexpr (enableBrine) {
             if (phaseIdx == waterPhaseIdx) {
                 flux[contiBrineEqIdx] =
                     decay<UpEval>(upFs.saltConcentration())

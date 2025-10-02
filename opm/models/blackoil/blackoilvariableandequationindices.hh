@@ -181,7 +181,7 @@ struct BlackOilVariableAndEquationIndices
     //! Index of the continuity equation for the second polymer component (molecular weight)
     static constexpr int contiPolymerMWEqIdx =
         numPolymers > 1 ? contiPolymerEqIdx + 1 : -1000;
-    
+
     //! No bioeffects for three phase indices
     static constexpr int contiMicrobialEqIdx = -1000;
     static constexpr int contiOxygenEqIdx = -1000;

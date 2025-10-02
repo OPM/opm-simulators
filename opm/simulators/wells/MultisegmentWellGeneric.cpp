@@ -162,7 +162,7 @@ update_relaxation_factor(const std::vector<Scalar>& measure_history, Scalar& rel
     bool oscillate = (d1 < oscillaton_rel_tol) && (oscillaton_rel_tol < d2);
     if (!oscillate)
         return false;
-   
+
     const Scalar min_relaxation_factor = 0.6;
     std::ostringstream sstr;
     if (relaxation_factor == min_relaxation_factor) {

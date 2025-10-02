@@ -92,4 +92,3 @@ INSTANTIATE_TYPE(float)
 #endif
 
 } //namespace Opm
-

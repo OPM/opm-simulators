@@ -143,7 +143,7 @@ public:
     }
 
     /**
-     * Returns minimum bhp for given thp, wfr, gfr and alq 
+     * Returns minimum bhp for given thp, wfr, gfr and alq
      */
     Scalar minimumBHP(const int table_id, const Scalar thp,
                       const Scalar wfr, const Scalar gfr, const Scalar alq) const;

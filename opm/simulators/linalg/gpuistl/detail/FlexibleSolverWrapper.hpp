@@ -33,10 +33,10 @@ namespace Opm::gpuistl::detail
 
 /**
  * @brief FlexibleSolverWrapper is compilational trick to reduce compile time overhead
- * 
+ *
  * Essentially this class acts as a direct interface towards the FlexibleSolver class, but
  * we want to have a clear wall between the ISTLSolverGPUISTL and the FlexibleSolver to avoid
- * compilational overhead (the former is based on TypeTag the latter on operators). 
+ * compilational overhead (the former is based on TypeTag the latter on operators).
  *
  * This wrapper handles the mapping from matrices to concrete operator types.
  */

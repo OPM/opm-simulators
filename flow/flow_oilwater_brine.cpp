@@ -41,7 +41,7 @@ struct EnableBrine<TypeTag, TTag::FlowOilWaterBrineProblem> {
 };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowOilWaterBrineProblem> { 
+struct Linearizer<TypeTag, TTag::FlowOilWaterBrineProblem> {
     using type = TpfaLinearizer<TypeTag>;
 };
 

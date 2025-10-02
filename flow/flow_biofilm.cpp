@@ -33,7 +33,7 @@
 namespace Opm {
 /*!
  * \brief Two-phase (gas+water) flow problem including biofilm effects (one transported
- * quantity: suspended microbes and one solid phase: biofilm). 
+ * quantity: suspended microbes and one solid phase: biofilm).
  */
 namespace Properties {
 namespace TTag {

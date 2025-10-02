@@ -548,16 +548,16 @@ getProducerWellRates_(const Well* well, int well_index)
     Scalar gas_rate = gas_pot;
 
     if (controls.hasControl(Well::ProducerCMode::ORAT) && oil_rate > static_cast<Scalar>(controls.oil_rate)) {
-        water_rate *= (static_cast<Scalar>(controls.oil_rate) / oil_rate); 
+        water_rate *= (static_cast<Scalar>(controls.oil_rate) / oil_rate);
         oil_rate = static_cast<Scalar>(controls.oil_rate);
     }
-    
+
     if (controls.hasControl(Well::ProducerCMode::GRAT)) {
         gas_rate = std::min(static_cast<Scalar>(controls.gas_rate), gas_rate);
     }
-    
+
     if (controls.hasControl(Well::ProducerCMode::WRAT) && water_rate > static_cast<Scalar>(controls.water_rate)) {
-        oil_rate *= (static_cast<Scalar>(controls.water_rate) / water_rate); 
+        oil_rate *= (static_cast<Scalar>(controls.water_rate) / water_rate);
         water_rate = static_cast<Scalar>(controls.water_rate);
     }
     if (controls.hasControl(Well::ProducerCMode::LRAT)) {
@@ -675,7 +675,7 @@ initializeGroupRatesRecursive_(const Group& group)
         if (gas_target && gas_rate > *gas_target)
             gas_rate = *gas_target;
         if (water_target && water_rate > *water_target) {
-            oil_rate *= (*water_target/water_rate); 
+            oil_rate *= (*water_target/water_rate);
             water_rate = *water_target;
         }
         if (liquid_target) {

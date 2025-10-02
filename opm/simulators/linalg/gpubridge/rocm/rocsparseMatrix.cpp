@@ -34,7 +34,7 @@ namespace Opm::Accelerator {
 
 template<class Scalar>
 RocmMatrix<Scalar>::
-RocmMatrix(int Nb_, 
+RocmMatrix(int Nb_,
            int Mb_,
            int nnzbs_,
            unsigned int block_size_)
@@ -44,7 +44,7 @@ RocmMatrix(int Nb_,
       block_size(block_size_)
 {
     HIP_CHECK(hipMalloc((void**)&nnzValues, sizeof(Scalar) * block_size * block_size * nnzbs));
-        
+
     HIP_CHECK(hipMalloc((void**)&colIndices, sizeof(int) * nnzbs));
 
     HIP_CHECK(hipMalloc((void**)&rowPointers, sizeof(int) * (Nb + 1)));
@@ -109,9 +109,9 @@ RocmVector<Scalar>::~RocmVector() {
 template <class Scalar>
 void RocmVector<Scalar>::
 upload(Scalar *vals,
-       hipStream_t stream) 
+       hipStream_t stream)
 {
-    HIP_CHECK(hipMemcpyAsync(nnzValues, vals, sizeof(Scalar) * size, hipMemcpyHostToDevice, stream));    
+    HIP_CHECK(hipMemcpyAsync(nnzValues, vals, sizeof(Scalar) * size, hipMemcpyHostToDevice, stream));
 }
 
 #define INSTANTIATE_TYPE(T)       \

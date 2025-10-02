@@ -441,7 +441,7 @@ void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
 sumDistributed(Parallel::Communication comm)
 {
     // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
-    // we need to do this for all segments in the residual and on the diagonal of D 
+    // we need to do this for all segments in the residual and on the diagonal of D
     for (int seg = 0; seg < well_.numberOfSegments(); ++seg)
         Opm::wellhelpers::sumDistributedWellEntries(duneD_[seg][seg], resWell_[seg], comm);
 }

@@ -33,5 +33,3 @@ K& firstMatrixElement(MatrixBlock<K, n, m>& A)
 { return A[0][0]; }
 }
 #endif // EWOMS_ILU_FIRSTELEMENT_HH
-
-

@@ -33,7 +33,7 @@ class TestBasic(unittest.TestCase):
             self.assertAlmostEqual(dt, 86400., places=7, msg='value of timestep')
             vol = sim.get_cell_volumes()
             self.assertEqual(len(vol), 300, 'length of volume vector')
-            # NOTE: The volume should be 1000 ft x 1000 ft x 20 ft * 0.3 (porosity) 
+            # NOTE: The volume should be 1000 ft x 1000 ft x 20 ft * 0.3 (porosity)
             #  = 600000 ft^3 = 566336.93 m^3
             self.assertAlmostEqual(vol[0], 566336.93, places=2, msg='value of volume')
             poro = sim.get_porosity()
@@ -44,7 +44,7 @@ class TestBasic(unittest.TestCase):
             sim.step()
             poro2 = sim.get_porosity()
             self.assertAlmostEqual(poro2[0], 0.285, places=7, msg='value of porosity 2')
-    
+
     def test_02_onephase(self):
         with pushd(self.data_dir_op):
             sim = create_onephase_simulator(args=['--linear-solver=ilu0'], filename="SPE1CASE1_WATER.DATA")
@@ -85,6 +85,3 @@ class TestBasic(unittest.TestCase):
             sim.step()
             poro2 = sim.get_porosity()
             self.assertAlmostEqual(poro2[0], 0.285, places=7, msg='value of porosity 2')
-
-
-

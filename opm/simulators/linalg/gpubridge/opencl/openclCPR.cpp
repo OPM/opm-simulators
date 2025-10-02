@@ -99,13 +99,13 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_, BlockedMatrix<Scalar>* jacMat
 
     Dune::Timer t_amg;
     this->create_preconditioner_amg(this->mat); // already points to bilu0::rmat if needed
-    
+
     if (verbosity >= 3) {
         std::ostringstream out;
         out << "openclCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
         OpmLog::info(out.str());
     }
-    
+
     // initialize OpenclMatrices and Buffers if needed
     auto init_func = std::bind(&openclCPR::init_opencl_buffers, this);
     std::call_once(opencl_buffers_allocated, init_func);
@@ -134,7 +134,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_) {
         out << "openclCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
         OpmLog::info(out.str());
     }
-    
+
     // initialize OpenclMatrices and Buffers if needed
     auto init_func = std::bind(&openclCPR::init_opencl_buffers, this);
     std::call_once(opencl_buffers_allocated, init_func);

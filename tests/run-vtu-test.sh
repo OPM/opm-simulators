@@ -199,8 +199,8 @@ case "$TEST_TYPE" in
         fi
 
         cat > "paramfile-$RND.ini" <<EOF
-EndTime=100   
-  
+EndTime=100
+
 InitialTimeStepSize=100   # first in-line comment
 
   # full line comment

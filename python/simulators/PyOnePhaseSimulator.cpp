@@ -28,7 +28,7 @@
 #include <string>
 
 namespace Opm::Properties {
-    
+
     //! The indices required by the model
     template<class TypeTag>
     struct Indices<TypeTag, TTag::FlowOnePhaseProblem>

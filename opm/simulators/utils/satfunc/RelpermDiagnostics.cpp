@@ -899,7 +899,7 @@ namespace Opm {
 #if HAVE_DUNE_ALUGRID
 #if HAVE_MPI
     INSTANCE_DIAGNOSIS(Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>)
-#else    
+#else
     INSTANCE_DIAGNOSIS(Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>)
 #endif //HAVE_MPI
 #endif //HAVE_DUNE_ALUGRID

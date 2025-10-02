@@ -282,7 +282,7 @@ doInit(bool rst, std::size_t numGridDof,
                     free_tvdp.evaluate("TRACER_CONCENTRATION",
                                        centroids_(globalDofIdx)[2]);
             }
-        } 
+        }
         else {
             OpmLog::warning(fmt::format("No TBLKF or TVDPF given for free tracer {}. "
                                         "Initial values set to zero. ", tracer.name));
@@ -293,8 +293,8 @@ doInit(bool rst, std::size_t numGridDof,
         }
 
         // Solution tracer initialization only needed for gas/oil tracers with DISGAS/VAPOIL active
-        if (tracer.phase != Phase::WATER && 
-            ((tracer.phase == Phase::GAS && FluidSystem::enableDissolvedGas()) || 
+        if (tracer.phase != Phase::WATER &&
+            ((tracer.phase == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
              (tracer.phase == Phase::OIL && FluidSystem::enableVaporizedOil()))) {
             // TBLKS keyword
             if (tracer.solution_concentration.has_value()){
@@ -322,7 +322,7 @@ doInit(bool rst, std::size_t numGridDof,
                         solution_tvdp.evaluate("TRACER_CONCENTRATION",
                                             centroids_(globalDofIdx)[2]);
                 }
-            } 
+            }
             else {
                 // No solution tracers, default to zero
                 enableSolTracers_[tracerIdx] = false;

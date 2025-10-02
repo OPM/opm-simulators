@@ -39,7 +39,7 @@ void WellConvergence<Scalar, IndexTraits>::
 checkConvergenceControlEq(const WellState<Scalar, IndexTraits>& well_state,
                           const Tolerances& tolerances,
                           const Scalar well_control_residual,
-                          const bool well_is_stopped, 
+                          const bool well_is_stopped,
                           ConvergenceReport& report,
                           DeferredLogger& deferred_logger) const
 {

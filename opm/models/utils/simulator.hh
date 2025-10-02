@@ -101,7 +101,7 @@ public:
 
     explicit Simulator(bool verbose = true)
         : Simulator(Communication(), verbose)
-    {  
+    {
     }
 
     explicit Simulator(Communication comm, bool verbose = true)

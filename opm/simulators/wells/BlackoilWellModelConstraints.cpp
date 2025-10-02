@@ -684,9 +684,9 @@ updateGroupIndividualControl(const Group& group,
         if (changed_this.first != Group::ProductionCMode::NONE)
         {
             std::optional<std::string> worst_offending_well = std::nullopt;
-            changed = this->actionOnBrokenConstraints(group, reportStepIdx,              
+            changed = this->actionOnBrokenConstraints(group, reportStepIdx,
                                             controls.group_limit_action,
-                                            changed_this.first, well_state, 
+                                            changed_this.first, well_state,
                                             worst_offending_well,
                                             group_state, deferred_logger);
 
@@ -703,7 +703,7 @@ updateGroupIndividualControl(const Group& group,
                                                                               wellModel_.groupState(),
                                                                               well_state);
             } else if (worst_offending_well) {
-                closed_offending_wells.insert_or_assign(group.name(), 
+                closed_offending_wells.insert_or_assign(group.name(),
                             std::make_pair(Group::ProductionCMode2String(changed_this.first), *worst_offending_well));
             }
         }

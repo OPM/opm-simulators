@@ -57,7 +57,7 @@ Instead, version numbers indicate the year and month of release.
   opm/simulators/linalg). The namespace Ewoms was renamed to Opm.
 - Most files from opm/autodiff/ have been moved to
   opm/simulators/{aquifers,linalg,utils,wells}
-  
+
 ### Removed
 - Dependency on libecl
 
@@ -136,11 +136,3 @@ Instead, version numbers indicate the year and month of release.
 
 ### Fixed
 - Many small bugs have been fixed. In total more than two hundred pull requests have been merged since last release.
-
-
-
-
-
-
-
-

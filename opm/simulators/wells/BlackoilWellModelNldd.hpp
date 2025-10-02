@@ -122,15 +122,15 @@ public:
                                                const int domainIdx);
 
     // Get number of wells on this rank
-    int numLocalWells() const 
+    int numLocalWells() const
     {
-        return wellModel_.numLocalWells(); 
+        return wellModel_.numLocalWells();
     }
 
     // Get number of wells on this rank
-    int numLocalWellsEnd() const 
+    int numLocalWellsEnd() const
     {
-        return wellModel_.numLocalWellsEnd(); 
+        return wellModel_.numLocalWellsEnd();
     }
 
 private:

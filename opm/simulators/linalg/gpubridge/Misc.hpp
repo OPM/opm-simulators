@@ -61,7 +61,7 @@
             std::cerr << "rocsparseSolverBackend::rocsparse error: " << stat << std::endl;                        \
         }                                                \
     } while(0)
-    
+
 namespace Opm::Accelerator {
 
 unsigned int ceilDivision(const unsigned int A,

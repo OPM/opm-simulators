@@ -306,7 +306,7 @@ public:
     bool use_implicit_ipr_;
 
     /// Whether to allow checking/changing to group controls during inner well iterations
-    bool check_group_constraints_inner_well_iterations_; 
+    bool check_group_constraints_inner_well_iterations_;
 
     /// Maximum number of iterations in the network solver before relaxing tolerance
     int network_max_strict_outer_iterations_;
@@ -334,7 +334,7 @@ public:
 
     /// Nonlinear solver type: newton or nldd
     std::string nonlinear_solver_;
-  
+
     /// 'jacobi' and 'gauss-seidel' supported
     DomainSolveApproach local_solve_approach_{DomainSolveApproach::Jacobi};
 

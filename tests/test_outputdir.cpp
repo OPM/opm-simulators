@@ -105,7 +105,7 @@ BOOST_FIXTURE_TEST_CASE(WithOutputDir, Fixture)
             const std::string output_dbg_path = (Case.second / "INPUT.DBG");
             if (createFaultyFileWithDirectory) {
                 std::filesystem::create_directories(Case.second);
-                // Create file with faulty content 
+                // Create file with faulty content
                 std::string dummy = R"(dummy)";
                 std::ofstream of(output_dbg_path);
                 of << dummy << std::endl;
@@ -120,7 +120,7 @@ BOOST_FIXTURE_TEST_CASE(WithOutputDir, Fixture)
             Opm::Main main(3, const_cast<char**>(no_param), false);
 
             BOOST_CHECK_EQUAL(main.justInitialize(), EXIT_SUCCESS);
-            // Check if the files have been created at the right spot 
+            // Check if the files have been created at the right spot
             BOOST_CHECK(!std::filesystem::exists(input_path / "INPUT.PRT"));
             BOOST_CHECK(!std::filesystem::exists(input_path / "INPUT.DBG"));
             BOOST_CHECK(!std::filesystem::exists(Case.first / "INPUT.PRT"));
@@ -128,7 +128,7 @@ BOOST_FIXTURE_TEST_CASE(WithOutputDir, Fixture)
             BOOST_CHECK(std::filesystem::exists(Case.second / "INPUT.PRT"));
             BOOST_CHECK(std::filesystem::exists(output_dbg_path));
 
-            // Check if the file with the faulty content has been removed and replaced by a valid one 
+            // Check if the file with the faulty content has been removed and replaced by a valid one
             std::ifstream file(output_dbg_path);
             std::string line;
             std::getline(file, line);
@@ -146,7 +146,7 @@ BOOST_FIXTURE_TEST_CASE(NoOutputDir, Fixture)
         const std::string input_file_path = (Case / "INPUT.DATA");
 
         const std::string output_dbg_path = (Case / "INPUT.DBG");
-        // Create file with faulty content 
+        // Create file with faulty content
         std::string dummy = R"(dummy)";
         std::ofstream of(output_dbg_path);
         of << dummy << std::endl;
@@ -159,13 +159,13 @@ BOOST_FIXTURE_TEST_CASE(NoOutputDir, Fixture)
         Opm::Main main(2, const_cast<char**>(no_param), false);
 
         BOOST_CHECK_EQUAL(main.justInitialize(), EXIT_SUCCESS);
-        // Check if the files have been created at the right spot 
+        // Check if the files have been created at the right spot
         BOOST_CHECK(!std::filesystem::exists(input_path / "INPUT.PRT"));
         BOOST_CHECK(!std::filesystem::exists(input_path / "INPUT.DBG"));
         BOOST_CHECK(std::filesystem::exists(Case/ "INPUT.PRT"));
         BOOST_CHECK(std::filesystem::exists(output_dbg_path));
 
-        // Check if the file with the faulty content has been removed and replaced by a valid one 
+        // Check if the file with the faulty content has been removed and replaced by a valid one
         std::ifstream file(output_dbg_path);
         std::string line;
         std::getline(file, line);

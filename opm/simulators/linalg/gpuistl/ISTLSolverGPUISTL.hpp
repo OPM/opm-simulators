@@ -140,7 +140,7 @@ public:
 
     /**
      * \copydoc AbstractISTLSolver::eraseMatrix
-     * 
+     *
      * \note This method will not do anything.
      */
     void eraseMatrix() override
@@ -150,7 +150,7 @@ public:
 
     /**
      * \copydoc AbstractISTLSolver::setActiveSolver
-     * 
+     *
      * \note This method will throw an exception if the solver number is not 0,
      *       as only one solver is available for the GPU backend.
      */
@@ -163,7 +163,7 @@ public:
 
     /**
      * \copydoc AbstractISTLSolver::numAvailableSolvers
-     * 
+     *
      * \note This method always returns 1, as only one solver is available for the GPU backend.
      */
     int numAvailableSolvers() const override
@@ -207,7 +207,7 @@ public:
                                                 "Check for errors related to missing nodes.");
     }
 
-    /** 
+    /**
      * \copydoc AbstractISTLSolver::setResidual
      *
      * \note Unused in this implementation.
@@ -235,7 +235,7 @@ public:
 
     /**
      * \copydoc AbstractISTLSolver::setMatrix
-     * 
+     *
      * \note This method does not set the matrix directly, as it should be handled in prepare().
      */
     void setMatrix(const SparseMatrixAdapter&) override

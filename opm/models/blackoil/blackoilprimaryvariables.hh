@@ -601,7 +601,7 @@ public:
         else if constexpr (enableBioeffects) {
             if (BioeffectsModule::hasPcfactTables() && problem.referencePorosity(globalDofIdx, 0) > 0) {
                 unsigned satnumRegionIdx = problem.satnumRegionIndex(globalDofIdx);
-                Scalar Sb = biofilmVolumeFraction_() / 
+                Scalar Sb = biofilmVolumeFraction_() /
                             problem.referencePorosity(globalDofIdx, 0);
                 Scalar porosityFactor  = std::min(1.0 - Sb, 1.0); //phi/phi_0
                 const auto& pcfactTable = BioeffectsModule::pcfactTable(satnumRegionIdx);

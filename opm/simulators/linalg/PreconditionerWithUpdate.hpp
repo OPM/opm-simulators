@@ -108,7 +108,7 @@ struct GeneralPreconditionerMaker {
 template <class OriginalPreconditioner, class... Args>
 struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPreconditioner> {
     using GenericPreconditioner = Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>;
-    
+
     explicit PreconditionerMaker(Args&&... args)
         : args_(args...)
     {

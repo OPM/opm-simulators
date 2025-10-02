@@ -27,9 +27,9 @@ namespace Opm::DamarisOutput
 
     The entries in the map below will be filled by corresponding Damaris
     Keywords.
-    
+
     N.B. Ensure all text items that are to be replaced are quoted with double quotes
-    e.g. unit="_REPLACE_UNIT_"   
+    e.g. unit="_REPLACE_UNIT_"
     *not* unit=_REPLACE_UNIT_
 */
 std::string initDamarisXmlFile()
@@ -49,30 +49,30 @@ std::string initDamarisXmlFile()
     <parameter name="n_elements_local"     type="int" value="1" />
     <parameter name="n"     type="int" value="1" />
     <parameter name="path_string_length"     type="int" value="1" />
-    
+
     <layout   name="path_string_layout"  type="char" dimensions="path_string_length"    comment="The length of the output directory path string"  />
     <variable name="OUTPUTDIR"  layout="path_string_layout"  type="scalar"  visualizable="false" mesh="#"  unit=""  time-varying="false"  store="#"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
-    
-    
+
+
     <layout   name="zonal_layout_usmesh_integer"             type="int" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
     <variable name="GLOBAL_CELL_INDEX"    layout="zonal_layout_usmesh_integer"     type="scalar"  visualizable="false"  time-varying="false"  centering="zonal" store="_MYSTORE_OR_EMPTY_REGEX_" script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <layout   name="zonal_layout_usmesh"             type="double" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
     <variable name="PRESSURE"    layout="zonal_layout_usmesh"     type="scalar"  visualizable="true"  mesh="us_mesh"   unit="_PRESSURE_UNIT_"   centering="zonal" select-file="GLOBAL_CELL_INDEX" store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
 
-     
-    
+
+
     _MORE_VARIABLES_REGEX_
     <variable name="MPI_RANK"  layout="zonal_layout_usmesh_integer"   type="scalar"  visualizable="true" mesh="us_mesh" unit="rank"  centering="zonal"  store="_MYSTORE_MESH_OR_EMPTY_REGEX_" time-varying="false"  select-file="GLOBAL_CELL_INDEX"  script="_MAKE_AVAILABLE_IN_PYTHON_" comment="The MPI rank of each cell"/>
-    
+
     <variable name="FIPGAS"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <variable name="FIPOIL"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <variable name="FIPWAT"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
-    
+
     <variable name="KRNSW_GO"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"     time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"   script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <variable name="KRNSW_OW"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"     time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"   script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <variable name="PCSWM_GO"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"     time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"   script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <variable name="PCSWM_OW"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"     time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"   script="_MAKE_AVAILABLE_IN_PYTHON_" />
-    <variable name="PPCW"      layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit="Bar"  centering="zonal"  time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"   script="_MAKE_AVAILABLE_IN_PYTHON_" />    
+    <variable name="PPCW"      layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit="Bar"  centering="zonal"  time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"   script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <variable name="RS"        layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit="Bar"  centering="zonal"  time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"   script="_MAKE_AVAILABLE_IN_PYTHON_" comment="Dissolved Gas units Gas Oil Ratio" />
     <variable name="RV"        layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit="Bar"  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX" store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <variable name="SOMAX"     layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""     centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX" store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
@@ -89,45 +89,45 @@ std::string initDamarisXmlFile()
     <variable name="WAT_DEN"   layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <variable name="WAT_VISC"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
 
-    <variable name="2FBF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="4FBF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="DFBF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GCDI"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GCDM"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GIP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />      
-    <variable name="GIPG"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GIPL"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GIPR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GKDI"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GKDM"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GKMO"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GKTR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GMDS"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GMGP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GMIP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GMMO"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="GMTR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="HTOF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="OIP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />      
-    <variable name="OIPG"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="OIPL"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="OIPR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="RPV"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />      
-    <variable name="S36F"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="SEAF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="SGAS"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="SIP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />      
-    <variable name="SWAT"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="TFBF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="WCD"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />      
-    <variable name="WIP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />      
-    <variable name="WIPG"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="WIPL"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
-    <variable name="WIPR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />     
+    <variable name="2FBF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="4FBF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="DFBF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GCDI"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GCDM"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GIP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GIPG"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GIPL"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GIPR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GKDI"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GKDM"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GKMO"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GKTR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GMDS"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GMGP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GMIP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GMMO"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="GMTR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="HTOF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="OIP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="OIPG"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="OIPL"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="OIPR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="RPV"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="S36F"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="SEAF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="SGAS"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="SIP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="SWAT"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="TFBF"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="WCD"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="WIP"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"   time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="WIPG"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="WIPL"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="WIPR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
 
     <parameter name="n_coords_local"     type="int" value="1" />
     <layout    name="n_coords_layout"    type="double" dimensions="n_coords_local"   comment="For the individual x, y and z coordinates of the mesh vertices, these values are referenced in the topologies/topo/subelements/connectivity_pg data"  />
-    <group name="coordset/coords/values"> 
+    <group name="coordset/coords/values">
         <variable name="x"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" store="_MYSTORE_MESH_OR_EMPTY_REGEX_" />
         <variable name="y"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" store="_MYSTORE_MESH_OR_EMPTY_REGEX_" />
         <variable name="z"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" store="_MYSTORE_MESH_OR_EMPTY_REGEX_" />
@@ -144,7 +144,7 @@ std::string initDamarisXmlFile()
         <variable name="types"        layout="n_types_layout_ph"    type="scalar"  visualizable="false"    script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" store="_MYSTORE_MESH_OR_EMPTY_REGEX_" />
     </group>
 
-    <mesh name="us_mesh" type="unstructured" topology="3" time-varying="false" 
+    <mesh name="us_mesh" type="unstructured" topology="3" time-varying="false"
              comment="This Mesh definition is for connection with Paraview.
                       This definition references the variables that define an unstructured mesh specified above." >
         <coord                name="coordset/coords/values/x"  unit="m"    />
@@ -155,7 +155,7 @@ std::string initDamarisXmlFile()
         <section_types        name="topologies/topo/elements/types"        />
         <section_sizes        name="#"                                     />
         <section_connectivity name="topologies/topo/elements/connectivity" />
-        <polyhedral_cell_faces_connectivity  name="#"                      /> 
+        <polyhedral_cell_faces_connectivity  name="#"                      />
         <polyhedral_cell_faces_offsets       name="#"                      />
         <polyhedral_n_faces_per_cell         name="#"                      />
     </mesh>

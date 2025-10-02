@@ -390,9 +390,9 @@ protected:
 
             // keep the values above 0
             // for the biofilm and calcite, we set an upper limit equal to the initial porosity
-            // minus 1e-8. This prevents singularities (e.g., one of the calcite source term is 
+            // minus 1e-8. This prevents singularities (e.g., one of the calcite source term is
             // evaluated at 1/(iniPoro - calcite)). The value 1e-8 is taken from the salt precipitation
-            // clapping above. 
+            // clapping above.
             if constexpr (enableBioeffects) {
                 if (pvIdx == Indices::microbialConcentrationIdx) {
                     nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});

@@ -127,7 +127,7 @@ public:
         const auto& lgr_dim = this->grid().currentData()[lgr_level]->logicalCartesianSize();
         const auto lgr_cartesian_index = (lgr_ijk[2]*lgr_dim[0]*lgr_dim[1]) + (lgr_ijk[1]*lgr_dim[0]) + (lgr_ijk[0]);
         return ParentType::lgrMappers_.value()[lgr_level].at(lgr_cartesian_index);
-    }   
+    }
     /*!
      * Checking consistency of simulator
      */

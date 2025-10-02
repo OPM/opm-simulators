@@ -26,7 +26,7 @@
 namespace Opm::Parameters
 {
 
-/** 
+/**
  * For the CLI options.
  */
 struct LinearSolverAccelerator { static constexpr auto value = "cpu"; };

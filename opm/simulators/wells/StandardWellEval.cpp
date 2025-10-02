@@ -101,7 +101,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                    const Scalar tol_wells,
                    const Scalar relaxed_tolerance_flow,
                    const bool relax_tolerance,
-                   const bool well_is_stopped, 
+                   const bool well_is_stopped,
                    std::vector<Scalar>& res,
                    DeferredLogger& deferred_logger) const
 {
@@ -152,7 +152,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
         checkConvergenceControlEq(well_state,
                                   {1.e3, 1.e4, 1.e-4, 1.e-6, maxResidualAllowed},
                                   std::abs(this->linSys_.residual()[0][Bhp]),
-                                  well_is_stopped, 
+                                  well_is_stopped,
                                   report,
                                   deferred_logger);
 

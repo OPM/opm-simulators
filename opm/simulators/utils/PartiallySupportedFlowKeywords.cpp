@@ -97,7 +97,7 @@ partiallySupported()
             "GCONPROD",
             {
                {2,{true, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be NONE/FLD/ORAT/WRAT/GRAT/LRAT or RESV"}}, // CONTROL_MODE
-               {7,{true, allow_values<std::string> {"NONE", "RATE", "WELL"}, "GCONPROD(ACTION): Only NONE, RATE and WELL are supported"}}, 
+               {7,{true, allow_values<std::string> {"NONE", "RATE", "WELL"}, "GCONPROD(ACTION): Only NONE, RATE and WELL are supported"}},
                {11,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTWAT): Only NONE and RATE are supported"}}, // WATER_EXCEED_PROCEDURE
                {12,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTGAS): Only NONE and RATE are supported"}}, // GAS_EXCEED_PROCEDURE
                {13,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTLIQ): Only NONE and RATE are supported"}}, // LIQUID_EXCEED_PROCEDURE
@@ -197,8 +197,8 @@ partiallySupported()
          {
             "ROCKOPTS",
             {
-               {1,{true, allow_values<std::string> {"PRESSURE"}, "ROCKOPTS: only the PRESSURE options are supported"}}, 
-               {3,{true, allow_values<std::string> {"PVTNUM", "ROCKNUM"}, "ROCKOPTS: only PVTNUM and ROCKNUM are supported"}}, 
+               {1,{true, allow_values<std::string> {"PRESSURE"}, "ROCKOPTS: only the PRESSURE options are supported"}},
+               {3,{true, allow_values<std::string> {"PVTNUM", "ROCKNUM"}, "ROCKOPTS: only PVTNUM and ROCKNUM are supported"}},
             },
          },
          {
@@ -304,7 +304,7 @@ partiallySupported()
          {
             "WTEST",
             {
-               {3,{true, allow_values<std::string> {"E", "P", "G", "EP", "PE", "EG", "GE", "PG", "GP", "PEG", "PGE", "EPG", "EGP", "GEP", "GPE"}, 
+               {3,{true, allow_values<std::string> {"E", "P", "G", "EP", "PE", "EG", "GE", "PG", "GP", "PEG", "PGE", "EPG", "EGP", "GEP", "GPE"},
                   "WTEST(TEST): only the E (economic) and P (physical) and G (group) reason is currently supported"}}, // REASON
             },
          },
@@ -548,7 +548,7 @@ partiallySupported()
             },
          },
          {
-            "EHYSTR",   
+            "EHYSTR",
             {
                {3,{false, allow_values<double> {1.0}, "EHYSTR(HYSTREL): Killough’s option not supported and should be defaulted"}}, // curvature_param_killough_wetting
                {12,{true, allow_values<double> {0}, "EHYSTR(HYTHRESH): Killough’s option not supported and should be defaulted"}}, // threshold_saturation
@@ -615,7 +615,7 @@ partiallySupported()
             },
          },
          {
-            "PLYMAX",  
+            "PLYMAX",
             {
                {2,{false, allow_values<double> {}, "PLYMAX(SALTCON): option is ignored since BRINE and POLYMER combination is not implemented in OPM Flow"}}, // MAX_SALT_CONCENTRATION
             },

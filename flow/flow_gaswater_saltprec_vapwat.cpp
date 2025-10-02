@@ -55,7 +55,7 @@ struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem> {
 };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem> { 
+struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem> {
     using type = TpfaLinearizer<TypeTag>;
 };
 

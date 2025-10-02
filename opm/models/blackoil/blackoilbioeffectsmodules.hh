@@ -45,23 +45,23 @@ namespace Opm {
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
  *        model by bioeffects.
- * 
+ *
  * The two implemented model extensions are MICP and biofilm effects in
- * underground storage. For details on the mathematical models, refer to the 
+ * underground storage. For details on the mathematical models, refer to the
  * OPM Flow manual.
- * 
+ *
  * I) MICP (Microbially Induced Calcite Precipitation)
  * MICP is a novel and sustainable technology that leverages biochemical
  * processes to form barriers through calcium carbonate cementation. This
  * approach shows promise for sealing leakage zones in geological formations.
- * 
+ *
  * The conceptual model includes the following key mechanisms:
  * - Suspended microbes attach to pore walls, forming biofilm.
  * - A growth solution is introduced to stimulate biofilm development.
  * - The biofilm utilizes a cementation solution to produce calcite.
  * - Calcite precipitates reduce pore space, thereby decreasing rock
  *   permeability.
- * 
+ *
  * This implementation considers a single-phase (water) system with the
  * following primary variables:
  * - Pressure of the water phase
@@ -70,17 +70,17 @@ namespace Opm {
  * - Concentration of urea
  * - Volume fraction of biofilm
  * - Volume fraction of calcite
- * 
+ *
  * II) Biofilm effects in underground applications (e.g., hydrogen storage)
- * 
+ *
  * Biofilm-related effects in subsurface applications such as hydrogen
  * storage include reduced injectivity and hydrogen loss. The conceptual
  * model includes the following mechanisms:
- * 
+ *
  * - Biofilm is present in the storage site prior to injection.
  * - The biofilm consumes injected hydrogen/CO2, leading to clogging
  *   effects.
- * 
+ *
  * This implementation considers a two-phase (gas + water) system with the
  * following primary variables:
  * - Pressure of the gas phase
@@ -156,7 +156,7 @@ public:
     {
         if constexpr (enableBioeffects)
             if constexpr (enableMICP)
-                return eqIdx == contiMicrobialEqIdx || eqIdx == contiOxygenEqIdx || eqIdx == contiUreaEqIdx 
+                return eqIdx == contiMicrobialEqIdx || eqIdx == contiOxygenEqIdx || eqIdx == contiUreaEqIdx
                     || eqIdx == contiBiofilmEqIdx || eqIdx == contiCalciteEqIdx;
             else
                return eqIdx == contiMicrobialEqIdx || eqIdx == contiBiofilmEqIdx;
@@ -319,23 +319,23 @@ public:
                                                         b * (Y * k_g - k_d - k_a) +
                                                         rho_b * intQuants.biofilmVolumeFraction() * k_str * pow(normVelocityCell / intQuants.porosity(), eta);
 
-                source[Indices::contiOxygenEqIdx] -= (intQuants.microbialConcentration() * intQuants.porosity() * 
+                source[Indices::contiOxygenEqIdx] -= (intQuants.microbialConcentration() * intQuants.porosity() *
                                                     b + rho_b * intQuants.biofilmVolumeFraction()) * F * k_g;
 
                 source[Indices::contiUreaEqIdx] -= rho_b * intQuants.biofilmVolumeFraction() * k_c;
 
                 source[Indices::contiBiofilmEqIdx] += intQuants.biofilmVolumeFraction() * (Y * k_g - k_d -
-                                                    k_str * pow(normVelocityCell / intQuants.porosity(), eta) - Y_uc * (rho_b / rho_c) * 
-                                                    intQuants.biofilmVolumeFraction() * k_c / (intQuants.porosity() + 
+                                                    k_str * pow(normVelocityCell / intQuants.porosity(), eta) - Y_uc * (rho_b / rho_c) *
+                                                    intQuants.biofilmVolumeFraction() * k_c / (intQuants.porosity() +
                                                     intQuants.biofilmVolumeFraction())) + k_a * intQuants.microbialConcentration() *
                                                     intQuants.porosity() * b / rho_b;
 
                 source[Indices::contiCalciteEqIdx] += (rho_b / rho_c) * intQuants.biofilmVolumeFraction() * Y_uc * k_c;
-                
+
                 // since the urea concentration can be much larger than 1, then we apply a scaling factor
                 source[Indices::contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
             }
-            else {                
+            else {
                 const Scalar normVelocityCellG =
                 std::accumulate(velocityInfos.begin(), velocityInfos.end(), 0.0,
                                 [](const auto acc, const auto& info)
@@ -402,7 +402,7 @@ public:
 
     static const Scalar detachmentRate(unsigned satnumRegionIdx)
     {
-        return params_.detachmentRate_[satnumRegionIdx]; 
+        return params_.detachmentRate_[satnumRegionIdx];
     }
 
     static const Scalar detachmentExponent(unsigned satnumRegionIdx)

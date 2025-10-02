@@ -430,7 +430,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_skin421_DifferentCF)
         1.5         * 1.0 * expectCF,
         (8.0 / 3.0) * 2.0 * expectCF,
     };
-    
+
     const auto connPI = connectionProdIndStandard(wpiCalc, connMobility);
     BOOST_CHECK_CLOSE(connPI[0], expectPI[0], 1.0e-10);
     BOOST_CHECK_CLOSE(connPI[1], expectPI[1], 1.0e-10);

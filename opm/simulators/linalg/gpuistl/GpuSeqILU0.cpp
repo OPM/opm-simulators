@@ -43,7 +43,7 @@
 namespace Opm::gpuistl
 {
 
-    
+
 template <class M, class X, class Y, int l>
 void
 GpuSeqILU0<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
@@ -325,7 +325,7 @@ GpuSeqILU0<M, X, Y, l>::updateILUConfiguration()
     template class ::Opm::gpuistl::GpuSeqILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>
-   
+
 
 
 INSTANTIATE_GPUSEQILU0_DUNE(double, 1);

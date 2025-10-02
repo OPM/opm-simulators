@@ -26,7 +26,7 @@ Scalar get_absmax(const Scalar* data,
 
 // solve A^T * x = b
 template<class Scalar>
-void solve_transposed_3x3(const Scalar* A, 
+void solve_transposed_3x3(const Scalar* A,
                           const Scalar* b,
                           Scalar* x)
 {

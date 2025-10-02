@@ -364,7 +364,7 @@ template<class Scalar>
 Scalar VFPHelpers<Scalar>::
 findTHP(const std::vector<Scalar>& bhp_array,
         const std::vector<double>& thp_array,
-        Scalar bhp, 
+        Scalar bhp,
         const bool find_largest)
 {
     int nthp = thp_array.size();
@@ -434,12 +434,12 @@ findTHP(const std::vector<Scalar>& bhp_array,
     }
     //bhp_array not sorted, raw search.
     else {
-        //Here we're into damage prevention territory, and there may be any number of  
+        //Here we're into damage prevention territory, and there may be any number of
         //solutions (including zero). The well is currently not controlled by THP, and
-        //since we're doing severe extrapolaton we would also like, if possible, to prevent 
-        //it from switcing to THP. Accordingly, if there are multiple solutions, we return 
-        //the value for the intersection corresponding to the largest (smallest) THP-value 
-        //for producers (injectors). 
+        //since we're doing severe extrapolaton we would also like, if possible, to prevent
+        //it from switcing to THP. Accordingly, if there are multiple solutions, we return
+        //the value for the intersection corresponding to the largest (smallest) THP-value
+        //for producers (injectors).
 
         //first check which extrapolations are valid
         const bool first_slope_positive = bhp_array[1] >= bhp_array[0];
@@ -555,10 +555,10 @@ intersectWithIPR(const VFPProdTable& table,
                  const std::function<Scalar(const Scalar)>& adjust_bhp)
 {
     // Given fixed thp, wfr, gfr and alq, this function finds a stable (-flo, bhp)-intersection
-    // between the ipr-line and bhp(flo) from table, if such an intersection exists. For multiple 
+    // between the ipr-line and bhp(flo) from table, if such an intersection exists. For multiple
     // stable intersections, the one corresponding the largest flo is returned as long as this intersection
     // lies within the tabulated values. If the ipr-line lies above all (flo, bhp) points, the intersection
-    // is determined by extrapolation based on the last two points. 
+    // is determined by extrapolation based on the last two points.
     // The adjust_bhp-function is used to adjust the vfp-table bhp-values to actual bhp-values due
     // to vfp/well ref-depth differences and/or WVFPDP-related pressure adjustments.
 
@@ -601,9 +601,9 @@ intersectWithIPR(const VFPProdTable& table,
             flo0 = flo1;
             y0 = y1;
         } else if (y1 < 0 && y0 < y1 && flo_x < 0) { // at last interval
-            // If y0 < y1 < 0, there is a stable intersection above the largest flo-value by 
-            // extrapolation. If no previous stable intersections were found, i.e., ipr-line lies 
-            // above all (flo, bhp) points, then we return this intersection. Otherwise, we don't 
+            // If y0 < y1 < 0, there is a stable intersection above the largest flo-value by
+            // extrapolation. If no previous stable intersections were found, i.e., ipr-line lies
+            // above all (flo, bhp) points, then we return this intersection. Otherwise, we don't
             // trust it (avoid vfp-extrapolation whenever possible)
             Scalar w = -y0/(y1-y0); // w > 1.0
             flo_x = flo0 + w*(flo1 - flo0);

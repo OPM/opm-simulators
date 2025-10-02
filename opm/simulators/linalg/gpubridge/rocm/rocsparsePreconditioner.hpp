@@ -39,45 +39,45 @@ protected:
     rocsparse_direction dir = rocsparse_direction_row;
     rocsparse_operation operation = rocsparse_operation_none;
     rocsparse_mat_descr descr_L, descr_U;
-    
+
     hipStream_t stream;
-    
+
     rocsparsePreconditioner(int verbosity_) :
     Preconditioner<Scalar, block_size>(verbosity_)
     {};
-            
+
 public:
 
     int nnzbs_prec = 0; // number of nnz blocks in preconditioner matrix M
     bool useJacMatrix = false;
     std::shared_ptr<BlockedMatrix<Scalar>> jacMat{}; // matrix for preconditioner
-    
+
     virtual ~rocsparsePreconditioner() = default;
 
-    static std::unique_ptr<rocsparsePreconditioner<Scalar, block_size>> create(PreconditionerType type, 
+    static std::unique_ptr<rocsparsePreconditioner<Scalar, block_size>> create(PreconditionerType type,
                                                                                int verbosity);
 
     virtual bool initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
                             std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                             rocsparse_int* d_Arows,
                             rocsparse_int* d_Acols) = 0;
-    
+
     virtual void copy_system_to_gpu(Scalar* b) = 0;
 
     /// Update linear system to GPU
     /// \param[in] vals           Matrix values
     /// \param[in] b              input vector, contains N values
     virtual void update_system_on_gpu(Scalar* vals, Scalar* b)=0;
-    
+
     void set_matrix_analysis(rocsparse_mat_descr descr_L,
                              rocsparse_mat_descr descr_U);
-    
+
     void set_context(rocsparse_handle handle,
                      rocblas_handle blas_handle,
                      rocsparse_direction dir,
                      rocsparse_operation operation,
                      hipStream_t stream);
-    
+
     void setJacMat(const BlockedMatrix<Scalar>& jacMat);
 };
 } //namespace Opm
