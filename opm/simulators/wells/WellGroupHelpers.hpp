@@ -294,7 +294,7 @@ public:
                      const Schedule& schedule,
                      const int report_step);
 
-    
+
     // check if well/group bottom is a sub well/group of the group top
     static bool
     isInGroupChainTopBot(const std::string& bottom,

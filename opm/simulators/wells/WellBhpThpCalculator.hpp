@@ -103,18 +103,18 @@ public:
   bool isStableSolution(const WellState<Scalar, IndexTraits>& well_state,
                         const Well& well,
                         const std::vector<Scalar>& rates,
-                        const SummaryState& summaryState) const;   
+                        const SummaryState& summaryState) const;
 
   std::optional<Scalar>
   estimateStableBhp (const WellState<Scalar, IndexTraits>& well_state,
                     const Well& well,
                     const std::vector<Scalar>& rates,
                     const Scalar rho,
-                    const SummaryState& summaryState) const;    
+                    const SummaryState& summaryState) const;
 
   std::pair<Scalar, Scalar>
   getFloIPR(const WellState<Scalar, IndexTraits>& well_state,
-            const Well& well, 
+            const Well& well,
             const SummaryState& summary_state) const;
 
   //! \brief Find limits using brute-force solver.

@@ -37,7 +37,7 @@
 #include <opm/material/components/C1.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/BrooksCorey.hpp>
-#include <opm/material/constraintsolvers/PTFlash.hpp> 
+#include <opm/material/constraintsolvers/PTFlash.hpp>
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 #include <opm/material/common/Valgrind.hpp>
@@ -196,7 +196,7 @@ class CO2PTProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Model = GetPropType<TypeTag, Properties::Model>;
-    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;    
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
     using Toolbox = Opm::MathToolbox<Evaluation>;
     using CoordScalar = typename GridView::ctype;

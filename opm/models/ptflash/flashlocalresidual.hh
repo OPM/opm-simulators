@@ -88,7 +88,7 @@ public:
         // compute water storage term
         if (waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)) {
             const unsigned eqIdx = conti0EqIdx + numComponents;
-            storage[eqIdx] = 
+            storage[eqIdx] =
                 Toolbox::template decay<LhsEval>(fs.density(phaseIdx)) *
                 Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
                 Toolbox::template decay<LhsEval>(intQuants.porosity());
@@ -180,7 +180,7 @@ public:
                 const Evaluation tmp =
                     Toolbox::value(up.fluidState().density(phaseIdx)) *
                      extQuants.volumeFlux(phaseIdx);
-                
+
                 if (waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)) {
                     const unsigned eqIdx = conti0EqIdx + numComponents;
                     flux[eqIdx] = tmp;

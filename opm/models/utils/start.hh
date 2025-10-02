@@ -312,7 +312,7 @@ static inline int start(int argc, char **argv,  bool registerParams)
         simulator.run();
 
         if (myRank == 0) {
-            std::cout << "Simulation completed" << std::endl;                                 
+            std::cout << "Simulation completed" << std::endl;
         }
         return 0;
     }

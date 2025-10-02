@@ -234,7 +234,7 @@ void BlackoilModelParameters<Scalar>::registerParameters()
     Parameters::Register<Parameters::UseImplicitIpr>
         ("Compute implict IPR for stability checks and stable solution search");
     Parameters::Register<Parameters::CheckGroupConstraintsInnerWellIterations>
-        ("Allow checking of group constraints during inner well iterations");        
+        ("Allow checking of group constraints during inner well iterations");
     Parameters::Register<Parameters::NetworkMaxStrictOuterIterations>
         ("Maximum outer iterations in network solver before relaxing tolerance");
     Parameters::Register<Parameters::NetworkMaxOuterIterations>

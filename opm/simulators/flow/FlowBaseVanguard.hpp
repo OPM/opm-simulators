@@ -206,7 +206,7 @@ public:
         }
     }
 
-    virtual int compressedIndexForInteriorLGR([[maybe_unused]] const std::string& lgr_tag, 
+    virtual int compressedIndexForInteriorLGR([[maybe_unused]] const std::string& lgr_tag,
                                               [[maybe_unused]]  const Connection&    conn) const
     {
         throw std::runtime_error("compressedIndexForInteriorLGR not implemented");

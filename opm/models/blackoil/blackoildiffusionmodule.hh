@@ -117,7 +117,7 @@ class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/true>
 
 public:
     using ExtensiveQuantities = BlackOilDiffusionExtensiveQuantities<TypeTag,true>;
-    
+
     #if HAVE_ECL_INPUT
     /*!
      * \brief Initialize all internal data structures needed by the diffusion module
@@ -139,11 +139,11 @@ public:
      *        integration point. Following the notation in blackoilmodel.hh,
      *        the diffusive flux for component \f$\kappa\f$ in phase \f$\alpha\f$
      *        is given by: \f$-\phi b_\alpha S_\alpha D \mathbf{grad}X_\alpha^\kappa\f$,
-     *        where \f$b_\alpha\f$ is the shrinkage/expansion factor [-], 
+     *        where \f$b_\alpha\f$ is the shrinkage/expansion factor [-],
      *        \f$S_\alpha\f$ is the saturation [-] D is the diffusion coefficient [L/T^2]
-     *        and \f$X_\alpha^\kappa\f$ the component mass fraction [-] or molar fraction [-],  
+     *        and \f$X_\alpha^\kappa\f$ the component mass fraction [-] or molar fraction [-],
      *        depending on the input use_mole_fraction_ (default true)
-     *        Each component mass/molar fraction can be computed using \f$R_s,\;R_v,\;R_{sw},\;R_{vw}\f$. 
+     *        Each component mass/molar fraction can be computed using \f$R_s,\;R_v,\;R_{sw},\;R_{vw}\f$.
      *        For example the mass fraction are given by,
      *        \f$X_w^G=\frac{R_{sw}}{R_{sw}+\rho_w/\rho_g}\f$, where \f$\rho_w\f$ and \f$\rho_g\f$
      *        are the reference densities.
@@ -152,9 +152,9 @@ public:
      *        \f$-b_{w,ij}S_{w,ij}D_{w,ij}(\frac{1}{R_{sw,ij}+\rho_w/\rho_g})DT_{ij}(R_{sw,i}-R_{sw,j})\f$
      *        where \f$b_{w,ij}\f$, \f$S_{w,ij}\f$, \f$D_{w,ij}\f$, and \f$R_{sw,ij}\f$ are computed using the arithmetic mean, and
      *        the ratio \f$\frac{1}{R_{sw,ij}+\rho_w/\rho_g}\f$ is denoted as conversion factor. The diffusivity
-     *        \f$DT_{ij}\f$ is computed in ecltransmissibility_impl.hh, using the cells porosity, face area and distance between 
-     *        cell center and the integration point. 
-     *        For mol fraction the convertion factor is given by \f$\frac{1}{R_{sw,ij}+(Mm_g\rho_w)/(Mm_w\rho_g)}\f$ 
+     *        \f$DT_{ij}\f$ is computed in ecltransmissibility_impl.hh, using the cells porosity, face area and distance between
+     *        cell center and the integration point.
+     *        For mol fraction the convertion factor is given by \f$\frac{1}{R_{sw,ij}+(Mm_g\rho_w)/(Mm_w\rho_g)}\f$
      */
     template <class Context>
     static void addDiffusiveFlux(RateVector& flux, const Context& context,
@@ -277,7 +277,7 @@ public:
         Evaluation diffR = 0.0;
 
         // The diffusion coefficients are given for mass concentrations
-        Evaluation bAvg = (inFs.saturation(waterPhaseIdx) * inFs.invB(waterPhaseIdx) + 
+        Evaluation bAvg = (inFs.saturation(waterPhaseIdx) * inFs.invB(waterPhaseIdx) +
             Toolbox::value(exFs.saturation(waterPhaseIdx)) * Toolbox::value(exFs.invB(waterPhaseIdx))) / 2;
         diffR = inIq.microbialConcentration() - Toolbox::value(exIq.microbialConcentration());
         flux[contiMicrobialEqIdx] +=

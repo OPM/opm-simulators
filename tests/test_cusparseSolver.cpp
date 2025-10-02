@@ -130,7 +130,7 @@ testCusparseSolver(Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz>& bridge, Matrix<bz
     bridge.get_result(x);
 
     return x;
-} 
+}
 
 template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>

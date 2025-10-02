@@ -330,4 +330,3 @@ private:
 } // namespace Opm
 
 #endif
-

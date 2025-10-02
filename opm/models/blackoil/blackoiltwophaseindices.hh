@@ -91,7 +91,7 @@ struct BlackOilTwoPhaseIndices
     //! Number of salt equations to be considered
     static constexpr int numBrine = enableBrine? 1 : 0;
 
-    //! Number of biofilm equations to be considered 
+    //! Number of biofilm equations to be considered
     static constexpr int numBioComp = enableBiofilm ? numBioCompV : 0;
 
     //! Number of biocomponents in the water phase

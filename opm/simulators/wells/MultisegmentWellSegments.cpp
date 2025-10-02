@@ -505,7 +505,7 @@ getSurfaceVolume(const EvalWell& temperature,
 template<class FluidSystem, class Indices>
 typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices>::
-getFrictionPressureLoss(const int seg, 
+getFrictionPressureLoss(const int seg,
                         const bool extra_reverse_flow_derivatives /*false*/) const
 {
     EvalWell mass_rate = mass_rates_[seg];
@@ -594,10 +594,10 @@ pressureDropSpiralICD(const int seg,
     EvalWell density = densities_[seg_upwind];
     EvalWell mass_rate = mass_rates_[seg];
     // In the reverse flow case, we don't have enough slots for all derivatives, e.g.,
-    // upwind pressure and flow. We amend this by a second function call option, where 
+    // upwind pressure and flow. We amend this by a second function call option, where
     // only these remaining derivatives are considered.
-    // For reference: the pressure equation assumes pressure/flow derivatives are given 
-    // at segment node while fraction derivatives are given at upwind node.   
+    // For reference: the pressure equation assumes pressure/flow derivatives are given
+    // at segment node while fraction derivatives are given at upwind node.
     if (seg != seg_upwind) {
         constexpr int nvar = PrimaryVariables::numWellEq;
         std::vector<bool> zero_mask(nvar, false);
@@ -662,7 +662,7 @@ template<class FluidSystem, class Indices>
 typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices>::
 pressureDropAutoICD(const int seg,
-                    const UnitSystem& unit_system, 
+                    const UnitSystem& unit_system,
                     const bool extra_reverse_flow_derivatives /*false*/) const
 {
     const auto& segment_set = well_.wellEcl().getSegments();
@@ -706,10 +706,10 @@ pressureDropAutoICD(const int seg,
     EvalWell density = densities_[seg_upwind];
     EvalWell mass_rate = mass_rates_[seg];
     // In the reverse flow case, we don't have enough slots for all derivatives, e.g.,
-    // upwind pressure and flow. We amend this by a second function call option, where 
+    // upwind pressure and flow. We amend this by a second function call option, where
     // only these remaining derivatives are considered.
-    // For reference: the pressure equation assumes pressure/flow derivatives are given 
-    // at segment node while fraction derivatives are given at upwind node.   
+    // For reference: the pressure equation assumes pressure/flow derivatives are given
+    // at segment node while fraction derivatives are given at upwind node.
     if (seg != seg_upwind) {
         constexpr int nvar = PrimaryVariables::numWellEq;
         std::vector<bool> zero_mask(nvar, false);
@@ -787,10 +787,10 @@ pressureDropValve(const int seg,
     EvalWell visc = viscosities_[seg_upwind];
     EvalWell density = densities_[seg_upwind];
     // In the reverse flow case, we don't have enough slots for all derivatives, e.g.,
-    // upwind pressure and flow. We amend this by a second function call optioin, where 
+    // upwind pressure and flow. We amend this by a second function call optioin, where
     // only these remaining derivatives are considered.
-    // For reference: the pressure equation assumes pressure/flow derivatives are given 
-    // at segment node while fraction derivatives are given at upwind node. 
+    // For reference: the pressure equation assumes pressure/flow derivatives are given
+    // at segment node while fraction derivatives are given at upwind node.
     if (seg != seg_upwind) {
         if (!extra_reverse_flow_derivatives) {
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
@@ -840,11 +840,11 @@ accelerationPressureLossContribution(const int seg,
                                      const Scalar area,
                                      const bool extra_reverse_flow_derivatives /*false*/) const
 {
-    // Compute the *signed* velocity head for given segment (sign is positive for flow towards surface, i.e., negative rate) 
+    // Compute the *signed* velocity head for given segment (sign is positive for flow towards surface, i.e., negative rate)
     // Optionally return derivatives for reversed flow case
     EvalWell mass_rate = mass_rates_[seg];
     const int seg_upwind = upwinding_segments_[seg];
-    EvalWell density = densities_[seg_upwind];    
+    EvalWell density = densities_[seg_upwind];
     if (seg != seg_upwind) {
         if (!extra_reverse_flow_derivatives) {
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
@@ -865,7 +865,7 @@ accelerationPressureLossContribution(const int seg,
     }
     const Scalar sign = mass_rate > 0 ? -1.0 : 1.0;
     return sign * mswellhelpers::velocityHead(area, mass_rate, density);
-}                                     
+}
 
 template <class FluidSystem, class Indices>
 void

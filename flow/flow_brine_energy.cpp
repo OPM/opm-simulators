@@ -39,7 +39,7 @@ struct EnableEnergy<TypeTag, TTag::FlowBrineEnergyProblem> {
 };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowBrineEnergyProblem> { 
+struct Linearizer<TypeTag, TTag::FlowBrineEnergyProblem> {
     using type = TpfaLinearizer<TypeTag>;
 };
 

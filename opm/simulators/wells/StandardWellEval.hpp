@@ -84,7 +84,7 @@ protected:
                                          const Scalar tol_wells,
                                          const Scalar relaxed_tolerance_flow,
                                          const bool relax_tolerance,
-                                         const bool well_is_stopped, 
+                                         const bool well_is_stopped,
                                          std::vector<Scalar>& res,
                                          DeferredLogger& deferred_logger) const;
 

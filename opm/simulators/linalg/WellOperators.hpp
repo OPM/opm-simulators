@@ -390,9 +390,9 @@ protected:
 };
 
 /*!
-   \brief Dune linear operator that assumes ghost rows are ordered after 
+   \brief Dune linear operator that assumes ghost rows are ordered after
    interior rows. Avoids some computations because of this.
- 
+
    This is similar to WellModelGhostLastMatrixAdapter, with the difference that
    here we do not have a well model, and also do calcilate the interiorSize
    using the parallel index set. Created for use in AMG/CPR smoothers.
@@ -513,4 +513,3 @@ public:
 } // end namespace Dune
 
 #endif // OPM_WELLOPERATORS_HEADER_INCLUDED
-

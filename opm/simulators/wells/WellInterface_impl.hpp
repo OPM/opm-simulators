@@ -278,8 +278,8 @@ namespace Opm
                                              const Well::InjectionControls& inj_controls,
                                              const Well::ProductionControls& prod_controls,
                                              const Scalar wqTotal,
-                                             DeferredLogger& deferred_logger, 
-                                             const bool fixed_control, 
+                                             DeferredLogger& deferred_logger,
+                                             const bool fixed_control,
                                              const bool fixed_status)
     {
         OPM_TIMEFUNCTION();
@@ -306,13 +306,13 @@ namespace Opm
             } else {
                 bool changed = false;
                 if (!fixed_control) {
-                    // Changing to group controls here may lead to inconsistencies in the group handling which in turn 
+                    // Changing to group controls here may lead to inconsistencies in the group handling which in turn
                     // may result in excessive back and forth switching. However, we currently allow this by default.
                     // The switch check_group_constraints_inner_well_iterations_ is a temporary solution.
-                    
+
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
-                    bool isGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP; 
+                    bool isGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
                     if (! (isGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
                         changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
                     }
@@ -414,8 +414,8 @@ namespace Opm
             const auto report_step = simulator.episodeIndex();
             const auto& glo = schedule.glo(report_step);
             if (glo.active()) {
-                gliftBeginTimeStepWellTestUpdateALQ(simulator, 
-                                                    well_state_copy, 
+                gliftBeginTimeStepWellTestUpdateALQ(simulator,
+                                                    well_state_copy,
                                                     group_state,
                                                     ecl_well_map,
                                                     deferred_logger);
@@ -946,9 +946,9 @@ namespace Opm
             if (converged) {
                 const bool zero_target = this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger);
                 if (this->wellIsStopped() && !zero_target && nonzero_rate_original) {
-                    // Well had non-zero rate, but was stopped during local well-solve. We re-open the well 
+                    // Well had non-zero rate, but was stopped during local well-solve. We re-open the well
                     // for the next global iteration, but if the zero rate persists, it will be stopped.
-                    // This logic is introduced to prevent/ameliorate stopped/revived oscillations  
+                    // This logic is introduced to prevent/ameliorate stopped/revived oscillations
                     this->operability_status_.resetOperability();
                     this->openWell();
                     deferred_logger.debug("    " + this->name() + " is re-opened after being stopped during local solve");
@@ -1109,9 +1109,9 @@ namespace Opm
             if (!gl_well.use_glo()) {
                 msg = fmt::format(
                     "GLIFT WTEST: Well {} : Gas lift optimization deactivated. Setting ALQ to WLIFTOPT item 3 = {}",
-                    well_name, 
+                    well_name,
                     unit_system.from_si(UnitSystem::measure::gas_surface_rate, well_state.well(well_name).alq_state.get()));
-                
+
             }
             else {
                 msg = fmt::format(
@@ -2132,7 +2132,7 @@ namespace Opm
 
     template<typename TypeTag>
     template<class GasLiftSingleWell>
-    std::unique_ptr<GasLiftSingleWell> 
+    std::unique_ptr<GasLiftSingleWell>
     WellInterface<TypeTag>::
     initializeGliftWellTest_(const Simulator& simulator,
                              WellStateType& well_state,
@@ -2159,17 +2159,17 @@ namespace Opm
         // Return GasLiftSingleWell object to use the wellTestALQ() function
         std::set<int> sync_groups;
         const auto& summary_state = simulator.vanguard().summaryState();
-        return std::make_unique<GasLiftSingleWell>(*this, 
-                                                    simulator, 
+        return std::make_unique<GasLiftSingleWell>(*this,
+                                                    simulator,
                                                     summary_state,
-                                                    deferred_logger, 
-                                                    well_state, 
+                                                    deferred_logger,
+                                                    well_state,
                                                     group_state,
-                                                    group_info, 
-                                                    sync_groups, 
-                                                    comm, 
+                                                    group_info,
+                                                    sync_groups,
+                                                    comm,
                                                     false);
-        
+
     }
 
 } // namespace Opm

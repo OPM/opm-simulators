@@ -31,4 +31,3 @@ int main(int argc, char** argv)
     mainObject.reset();
     return ret;
 }
-

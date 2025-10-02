@@ -158,7 +158,7 @@ public:
     MatrixBlockType* blockAddress(const size_t rowIdx, const size_t colIdx) const
     { return &(*istlMatrix_)[rowIdx][colIdx]; }
 
-        
+
     /*!
      * \brief Set matrix block to given block.
      */

@@ -40,7 +40,7 @@ struct EnableBrine<TypeTag, TTag::FlowBrineProblem> {
 };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowBrineProblem> { 
+struct Linearizer<TypeTag, TTag::FlowBrineProblem> {
     using type = TpfaLinearizer<TypeTag>;
 };
 

@@ -47,9 +47,9 @@ initializeDamaris(const Parallel::Communication comm, const int mpiRank, const s
 
     /* Get the name of the Damaris input file from an environment variable if available */
     const char* cs_damaris_xml_file = getenv("FLOW_DAMARIS_XML_FILE");
-    if (cs_damaris_xml_file != NULL) 
+    if (cs_damaris_xml_file != NULL)
     {
-        OpmLog::info(std::string("Initializing Damaris from environment variable FLOW_DAMARIS_XML_FILE: ") + cs_damaris_xml_file); 
+        OpmLog::info(std::string("Initializing Damaris from environment variable FLOW_DAMARIS_XML_FILE: ") + cs_damaris_xml_file);
         dam_err = damaris_initialize(cs_damaris_xml_file, comm);
         if (dam_err != DAMARIS_OK) {
            OpmLog::error(fmt::format("ERORR: damariswriter::initializeDamaris()       : ( rank:{}) "
@@ -70,10 +70,10 @@ initializeDamaris(const Parallel::Communication comm, const int mpiRank, const s
         if (mpiRank == 0) {
             myMod.SaveXMLStringToFile(damaris_xml_filename_str);
         }
-        
-        OpmLog::info("Initializing Damaris using internally built file: " + damaris_xml_filename_str + 
+
+        OpmLog::info("Initializing Damaris using internally built file: " + damaris_xml_filename_str +
                      " (N.B. use environment variable FLOW_DAMARIS_XML_FILE to override)");
-                     
+
         dam_err = damaris_initialize(damaris_xml_filename_str.c_str(), comm);
         if (dam_err != DAMARIS_OK) {
             OpmLog::error(fmt::format("damariswriter::initializeDamaris()       : ( rank:{}) "

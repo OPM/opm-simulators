@@ -357,7 +357,7 @@ template<class Scalar> class WellContributions;
             int compressedIndexForInteriorLGR(const std::string& lgr_tag, const Connection& conn) const override
             {
                 return simulator_.vanguard().compressedIndexForInteriorLGR(lgr_tag, conn);
-            }            
+            }
 
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State

@@ -788,4 +788,3 @@ template class GuideRateHandler<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm
-

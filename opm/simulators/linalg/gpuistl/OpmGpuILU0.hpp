@@ -63,7 +63,7 @@ public:
 
     //! \brief The matrix type the preconditioner is for.
     using matrix_type = GpuMatrix;
-    
+
 
     //! \brief Constructor.
     //!

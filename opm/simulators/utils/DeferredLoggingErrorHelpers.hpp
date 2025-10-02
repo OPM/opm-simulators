@@ -193,7 +193,7 @@ catch (const Opm::NumericalProblem& e){                    \
 }                                                        \
 OPM_PARALLEL_CATCH_CLAUSE(obptc_exc_type, obptc_exc_msg);\
 checkForExceptionsAndThrow(obptc_exc_type,               \
-                           prefix + obptc_exc_msg, comm);                        
+                           prefix + obptc_exc_msg, comm);
 
 /// \brief Catch exception, log, and throw in a parallel try-catch clause
 ///

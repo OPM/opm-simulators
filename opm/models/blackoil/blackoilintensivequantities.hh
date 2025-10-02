@@ -580,7 +580,7 @@ public:
                                                                timeIdx, linearizationType);
             Evaluation calcite_ = 0.0;
             if constexpr (enableMICP) {
-                calcite_ = priVars.makeEvaluation(Indices::calciteVolumeFractionIdx, timeIdx, linearizationType); 
+                calcite_ = priVars.makeEvaluation(Indices::calciteVolumeFractionIdx, timeIdx, linearizationType);
             }
             porosity_ -= min(biofilm_ + calcite_, referencePorosity_ - 1e-8);
         }

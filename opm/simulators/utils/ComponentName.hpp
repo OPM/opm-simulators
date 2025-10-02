@@ -47,4 +47,3 @@ private:
 } // namespace Opm
 
 #endif
-

@@ -45,7 +45,7 @@ struct EnableSaltPrecipitation<TypeTag, TTag::FlowBrineSaltPrecipitationProblem>
 };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowBrineSaltPrecipitationProblem> { 
+struct Linearizer<TypeTag, TTag::FlowBrineSaltPrecipitationProblem> {
     using type = TpfaLinearizer<TypeTag>;
 };
 

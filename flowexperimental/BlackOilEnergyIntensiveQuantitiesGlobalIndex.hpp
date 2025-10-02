@@ -54,7 +54,7 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, true>
     using ThermalConductionLaw  = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
     using ParamCache = typename FluidSystem::template ParameterCache<Evaluation>;
     static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
-    
+
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned numPhases = FluidSystem::numPhases;
@@ -76,7 +76,7 @@ public:
                                  const ParamCache& paramCache)
     {
         auto& fs = Parent::asImp_().fluidState_;
-        
+
         // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
         // and the thermal conductivity coefficients
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -137,7 +137,7 @@ public:
                                  const typename FluidSystem::template ParameterCache<Evaluation>&)
     { }
 };
-    
+
 } // namespace Opm
 
-#endif    
+#endif

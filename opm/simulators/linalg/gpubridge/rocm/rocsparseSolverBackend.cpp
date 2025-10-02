@@ -65,11 +65,11 @@ rocsparseSolverBackend(int verbosity_, int maxit_, Scalar tolerance_,
 {
     int numDevices = 0;
     bool use_cpr;
-    
+
     if (linsolver.compare("ilu0") == 0) {
         use_cpr = false;
     } else if (linsolver.compare("cpr_quasiimpes") == 0) {
-        use_cpr = true; 
+        use_cpr = true;
     } else if (linsolver.compare("isai") == 0) {
         OPM_THROW(std::logic_error, "Error rocsparseSolver does not support --linear-solver=isai");
     } else if (linsolver.compare("cpr_trueimpes") == 0) {
@@ -77,7 +77,7 @@ rocsparseSolverBackend(int verbosity_, int maxit_, Scalar tolerance_,
     } else {
         OPM_THROW(std::logic_error, "Error unknown value for argument --linear-solver, " + linsolver);
     }
-    
+
     HIP_CHECK(hipGetDeviceCount(&numDevices));
     if (static_cast<int>(deviceID) >= numDevices) {
         OPM_THROW(std::runtime_error, "Invalid HIP device ID");
@@ -98,14 +98,14 @@ rocsparseSolverBackend(int verbosity_, int maxit_, Scalar tolerance_,
     HIP_CHECK(hipStreamCreate(&stream));
     ROCSPARSE_CHECK(rocsparse_set_stream(handle, stream));
     ROCBLAS_CHECK(rocblas_set_stream(blas_handle, stream));
-    
+
     using PCType = typename Opm::Accelerator::PreconditionerType;
     if (use_cpr) {
         prec = rocsparsePreconditioner<Scalar, block_size>::create(PCType::CPR, verbosity);
     } else {
         prec = rocsparsePreconditioner<Scalar, block_size>::create(PCType::BILU0, verbosity);
     }
-    
+
     prec->set_context(handle, blas_handle, dir, operation, stream);
 }
 
@@ -459,8 +459,8 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
 
     if (verbosity == 2) {
         std::ostringstream out;
-        out << "=== converged: " << res.converged << ", conv_rate: " 
-            << res.conv_rate << ", time: " << res.elapsed 
+        out << "=== converged: " << res.converged << ", conv_rate: "
+            << res.conv_rate << ", time: " << res.elapsed
             << ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
         OpmLog::info(out.str());
     }
@@ -485,7 +485,7 @@ initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
         prec->jacMat = matrix;
         prec->nnzbs_prec = this->nnzb;
     }
-    
+
 
     std::ostringstream out;
     out << "Initializing GPU, matrix size: "
@@ -527,9 +527,9 @@ void rocsparseSolverBackend<Scalar,block_size>::
 copy_system_to_gpu(Scalar *b)
 {
     HIP_CHECK(hipMemcpyAsync(d_Arows, mat->rowPointers,
-                             sizeof(rocsparse_int) * (Nb + 1), 
+                             sizeof(rocsparse_int) * (Nb + 1),
                              hipMemcpyHostToDevice, stream));
-    HIP_CHECK(hipMemcpyAsync(d_Acols, mat->colIndices, 
+    HIP_CHECK(hipMemcpyAsync(d_Acols, mat->colIndices,
                              sizeof(rocsparse_int) * nnzb,
                              hipMemcpyHostToDevice, stream));
     HIP_CHECK(hipMemcpyAsync(d_Avals, mat->nnzValues,
@@ -538,8 +538,8 @@ copy_system_to_gpu(Scalar *b)
     HIP_CHECK(hipMemsetAsync(d_x, 0, N * sizeof(Scalar), stream));
     HIP_CHECK(hipMemcpyAsync(d_b, b, N * sizeof(Scalar),
                              hipMemcpyHostToDevice, stream));
-    
-    prec->copy_system_to_gpu(d_Avals); 
+
+    prec->copy_system_to_gpu(d_Avals);
 } // end copy_system_to_gpu()
 
 // don't copy rowpointers and colindices, they stay the same
@@ -554,7 +554,7 @@ update_system_on_gpu(Scalar* vals, Scalar* b)
     HIP_CHECK(hipMemsetAsync(d_x, 0, N * sizeof(Scalar), stream));
     HIP_CHECK(hipMemcpyAsync(d_b, b, N* sizeof(Scalar),
                              hipMemcpyHostToDevice, stream));
-    
+
     prec->update_system_on_gpu(vals, d_Avals);
 } // end update_system_on_gpu()
 
@@ -569,7 +569,7 @@ analyze_matrix()
 #endif
 
     ROCSPARSE_CHECK(rocsparse_create_mat_descr(&descr_A));
-    
+
 #if HIP_VERSION >= 60000000
     if constexpr (std::is_same_v<Scalar,float>) {
       ROCSPARSE_CHECK(rocsparse_sbsrmv_analysis(handle, dir, operation,
@@ -604,7 +604,7 @@ analyze_matrix()
         OpmLog::info(out.str());
         return false;
     }
-    
+
     analysis_done = true;
 
     return true;
@@ -617,9 +617,9 @@ create_preconditioner()
     bool result;
     if (prec->useJacMatrix)
         result = prec->create_preconditioner(mat.get(), jacMat.get());
-    else 
+    else
         result = prec->create_preconditioner(mat.get());
-    
+
     return result;
 } // end create_preconditioner()
 
@@ -668,7 +668,7 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
         }
     }
     solve_system(wellContribs, res);
-    
+
     return SolverStatus::GPU_SOLVER_SUCCESS;
 }
 

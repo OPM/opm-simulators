@@ -540,7 +540,7 @@ public:
 
         // Increment timer, remember well state.
         ++timer;
-        
+
         if (terminalOutput_) {
             std::string msg =
                 "Time step took " + std::to_string(solverTimer_->secsSinceStart()) + " seconds; "

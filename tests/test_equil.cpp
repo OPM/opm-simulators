@@ -565,7 +565,7 @@ BOOST_AUTO_TEST_CASE(DeckAllDead)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
     EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
-                                    eclipseState, 
+                                    eclipseState,
                                     simulator->vanguard().grid(),
                                     simulator->vanguard().gridView(),
                                     simulator->vanguard().cartesianMapper(), 10.0);
@@ -644,7 +644,7 @@ BOOST_AUTO_TEST_CASE(DeckWithCapillary)
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
-                                   eclipseState, 
+                                   eclipseState,
                                    simulator->vanguard().grid(),
                                    simulator->vanguard().gridView(),
                                    simulator->vanguard().cartesianMapper(), 10.0);
@@ -963,13 +963,13 @@ BOOST_AUTO_TEST_CASE(DeckWithHumidWetGas)
 
     const int first = 0, last = grid.number_of_cells - 1;
     const double reltol = 1.0e-2;
-    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.480599988e7, reltol);  
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.480599988e7, reltol);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.549297524e7, reltol);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.489599988e7, reltol);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.550297524e7, reltol);
 
     const auto& sats = comp.saturation();
-    std::vector<double> s_opm[3]; 
+    std::vector<double> s_opm[3];
     s_opm[FluidSystem::waterPhaseIdx] = { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.35838026, 0.64069098, 0.9154626,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     s_opm[FluidSystem::oilPhaseIdx] =   { 0,   0,   0,   0,   0,   0,   0,   0,          0,      0.02738364, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0 };
     s_opm[FluidSystem::gasPhaseIdx] =   { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.64161973, 0.359309012, 0.057153701, 0,       0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -982,7 +982,7 @@ BOOST_AUTO_TEST_CASE(DeckWithHumidWetGas)
     }
 
     const auto& rv = comp.rv();
-    const std::vector<double> rv_opm { 
+    const std::vector<double> rv_opm {
         0.00024837999651755729, 0.00024869285236692635, 0.00024900604366769004, 0.00024931957094322978,
         0.00024963343471801471, 0.00024994763551760586, 0.00025026217386865733, 0.00025057705029892072,
         0.00025089226533724643, 0.00025120780158539152, 0.00025105, 0.00025105,
@@ -990,7 +990,7 @@ BOOST_AUTO_TEST_CASE(DeckWithHumidWetGas)
         0.00025105, 0.00025105, 0.00025105, 0.00025105};
 
     const auto& rvw = comp.rvw();
-    const std::vector<double> rvw_opm {  
+    const std::vector<double> rvw_opm {
         0.00024837999651755729, 0.00024869285236692635, 0.00024900604366769004, 0.00024931957094322978,
         0.00024963343471801471, 0.00024994763551760586, 0.00025026217386865733, 0.00025057705029892072,
         0.00025089226533724643, 0.00025120780158539152, 0.00025236969680655122, 0.00025384953117447344,
@@ -1220,13 +1220,13 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVDAndRVWVD)
 
     const int first = 0, last = grid.number_of_cells - 1;
     const double reltol = 1.0e-2;
-    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.483359963e7, reltol);  
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.483359963e7, reltol);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.549297524e7, reltol);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.492359963e7, reltol);
     BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.550297524e7, reltol);
 
     const auto& sats = comp.saturation();
-    std::vector<double> s_opm[3]; 
+    std::vector<double> s_opm[3];
     s_opm[FluidSystem::waterPhaseIdx] = { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.32527877578987319, 0.62976875867666171, 0.918795223850500588, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     s_opm[FluidSystem::oilPhaseIdx]   = { 0,   0,   0,   0,   0,   0,   0,   0,          0, 0.054786199472198836, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     s_opm[FluidSystem::gasPhaseIdx]   = { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.674721224210102681, 0.37023124132333829, 0.026418562022795279,    0,          0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -1242,13 +1242,13 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVDAndRVWVD)
     const auto& rs = comp.rs();
     const std::vector<double> rs_opm { // opm
         74.617998198796087,74.652774471604374, 74.687905898686935, 74.723393674854691,
-        74.759238999357947, 74.795443075905553, 74.832007112684167, 74.892422092838459, 
-        74.986801564438935, 75.088917653469338, 52.5, 57.5, 
+        74.759238999357947, 74.795443075905553, 74.832007112684167, 74.892422092838459,
+        74.986801564438935, 75.088917653469338, 52.5, 57.5,
         62.5, 67.5, 72.5, 76.528193441026076,
         76.774856836636729, 77.021525099679991, 77.268198230347295, 77.514876228830232};
 
     const auto& rv = comp.rv();
-    const std::vector<double> rv_opm { 
+    const std::vector<double> rv_opm {
         2.5000000000000002e-06, 7.5000000000000002e-06, 1.2500000000000001e-05, 1.7500000000000002e-05,
         2.2500000000000001e-05, 2.7500000000000004e-05, 3.2500000000000004e-05, 3.7500000000000003e-05,
         4.2500000000000003e-05, 0.00025116322680309166, 5.2500000000000002e-05, 5.7500000000000002e-05,
@@ -1256,7 +1256,7 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVDAndRVWVD)
         8.25e-05, 8.7500000000000013e-05, 9.2500000000000012e-05, 9.7499999999999998e-05};
 
     const auto& rvw = comp.rvw();
-    const std::vector<double> rvw_opm {  
+    const std::vector<double> rvw_opm {
         0.00024920798919277656, 0.00024941664682962629, 0.00024962743539212165, 0.00024984036204912818,
         0.00025005543399614773, 0.00025027265845543336, 0.000250492042676105, 0.00025071359393426718,
         0.00025093731953312241, 0.00025116322680309166, 0.00025236969680655122, 0.00025384953117447344,

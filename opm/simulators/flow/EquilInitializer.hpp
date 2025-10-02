@@ -182,7 +182,7 @@ public:
             // set the salt concentration
             if constexpr (enableBrine)
                 fluidState.setSaltConcentration(initialState.saltConcentration()[elemIdx]);
-                
+
             //set the (solid) salt saturation
             if constexpr (enableSaltPrecipitation)
                 fluidState.setSaltSaturation(initialState.saltSaturation()[elemIdx]);

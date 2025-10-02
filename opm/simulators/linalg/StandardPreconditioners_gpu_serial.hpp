@@ -32,7 +32,7 @@ namespace Opm
 template <class Operator>
 struct StandardPreconditioners<Operator,
                                Dune::Amg::SequentialInformation,
-                               typename std::enable_if_t<Opm::is_gpu_operator_v<Operator>>> 
+                               typename std::enable_if_t<Opm::is_gpu_operator_v<Operator>>>
 {
 
     using O = Operator;
@@ -62,9 +62,9 @@ struct StandardPreconditioners<Operator,
         });
 
         // The next two (OPMILU0 and DILU) are the GPU preconditioners that need CPU matrices.
-        // Since we are not storing the block size compile time for the GPU matrices 
+        // Since we are not storing the block size compile time for the GPU matrices
         // **and** we need the CPU matrix for the creation, we need to
-        // dispatch the creation of the preconditioner based on the block size. 
+        // dispatch the creation of the preconditioner based on the block size.
         //
         // Note that this dispatching is not needed in the future, since we will have a constructor taking GPU matrices directly.
         F::addCreator("opmilu0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) -> PrecPtr {
@@ -150,7 +150,7 @@ struct StandardPreconditioners<Operator,
         });
     }
 
-    
+
 };
 
 

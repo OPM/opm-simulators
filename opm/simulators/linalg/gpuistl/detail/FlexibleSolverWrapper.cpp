@@ -56,7 +56,7 @@ namespace
             auto solverPtr = std::make_unique<SolverType>(*operatorPtr, prm, weightCalculator, pressureIndex);
             auto preconditioner = std::ref(solverPtr->preconditioner());
 
-            return std::make_tuple(std::move(operatorPtr), std::move(solverPtr), preconditioner, 
+            return std::make_tuple(std::move(operatorPtr), std::move(solverPtr), preconditioner,
                                    std::shared_ptr<typename Wrapper::GpuCommunicationType>{});
         }
 #if HAVE_MPI
@@ -70,7 +70,7 @@ namespace
             // We need the block size at compile time to instantiate the correct types
             // hence we need to dispatch on the block size
             return matrix.dispatchOnBlocksize([&](auto blockSizeVal) -> return_type {
-                // Get the block size from the decltype of the blockSizeVal, 
+                // Get the block size from the decltype of the blockSizeVal,
                 // making it a compile time constant
                 constexpr int block_size = decltype(blockSizeVal)::value;
 
@@ -79,7 +79,7 @@ namespace
                 using CudaCommunication = GpuOwnerOverlapCopy<real_type, Comm>;
                 using SchwarzOperator
                     = Dune::OverlappingSchwarzOperator<GpuSparseMatrixWrapper<real_type>, Vector, Vector, CudaCommunication>;
-                
+
                 using SolverType = Dune::FlexibleSolver<SchwarzOperator>;
 
                 // Create the communication object that will handle the GPU and MPI communication

@@ -24,7 +24,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-#include <opm/simulators/linalg/gpubridge/rocm/rocsparseBILU0.hpp> 
+#include <opm/simulators/linalg/gpubridge/rocm/rocsparseBILU0.hpp>
 #include <opm/simulators/linalg/gpubridge/Reorder.hpp>
 #include <opm/simulators/linalg/gpubridge/Misc.hpp>
 
@@ -33,7 +33,7 @@
 #include <type_traits>
 
 extern std::shared_ptr<std::thread> copyThread;
-   
+
 #if HAVE_OPENMP
 #include <omp.h>
 #endif //HAVE_OPENMP
@@ -45,7 +45,7 @@ using Dune::Timer;
 
 template <class Scalar, unsigned int block_size>
 rocsparseBILU0<Scalar, block_size>::
-rocsparseBILU0(int verbosity_) : 
+rocsparseBILU0(int verbosity_) :
     Base(verbosity_)
 {
 }
@@ -75,8 +75,8 @@ bool rocsparseBILU0<Scalar, block_size>::
 initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
            std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
            rocsparse_int *d_Arows,
-           rocsparse_int *d_Acols) 
-{ 
+           rocsparse_int *d_Acols)
+{
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
     this->nnzb = matrix->nnzbs;
@@ -217,7 +217,7 @@ analyze_matrix()
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
-analyze_matrix(BlockedMatrix<Scalar> *mat) 
+analyze_matrix(BlockedMatrix<Scalar> *mat)
 {
     return analyze_matrix(mat, &(*this->jacMat));
 }
@@ -325,7 +325,7 @@ analyze_matrix(BlockedMatrix<Scalar>*,
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
-create_preconditioner(BlockedMatrix<Scalar> *mat) 
+create_preconditioner(BlockedMatrix<Scalar> *mat)
 {
     return create_preconditioner(mat, &*this->jacMat);
 }
@@ -354,7 +354,7 @@ create_preconditioner(BlockedMatrix<Scalar>*,
     // Check for zero pivot
     int zero_position = 0;
     rocsparse_status status = rocsparse_bsrilu0_zero_pivot(this->handle, ilu_info, &zero_position);
-    
+
     if (rocsparse_status_success != status)
     {
         printf("L has structural and/or numerical zero at L(%d,%d)\n", zero_position, zero_position);
@@ -366,7 +366,7 @@ create_preconditioner(BlockedMatrix<Scalar>*,
 
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-copy_system_to_gpu(Scalar *d_Avals) 
+copy_system_to_gpu(Scalar *d_Avals)
 {
     bool use_multithreading = true;
 
@@ -374,7 +374,7 @@ copy_system_to_gpu(Scalar *d_Avals)
     if (omp_get_max_threads() == 1)
         use_multithreading = false;
 #endif
-    
+
     if (this->useJacMatrix){
         if (use_multithreading && copyThread) {
             copyThread->join();
@@ -425,11 +425,11 @@ update_system_on_gpu(Scalar*, Scalar *d_Avals)
 
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-apply(const Scalar& y, Scalar& x, [[maybe_unused]] WellContributions<Scalar>& wellContribs) 
+apply(const Scalar& y, Scalar& x, [[maybe_unused]] WellContributions<Scalar>& wellContribs)
 {
     Scalar one  = 1.0;
 
-    HIP_CHECK(hipMemsetAsync(d_t, 0, N * sizeof(Scalar), this->stream)); 
+    HIP_CHECK(hipMemsetAsync(d_t, 0, N * sizeof(Scalar), this->stream));
 
     if constexpr (std::is_same_v<Scalar,float>) {
         ROCSPARSE_CHECK(rocsparse_sbsrsv_solve(this->handle, this->dir,

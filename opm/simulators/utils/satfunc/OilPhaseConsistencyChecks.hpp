@@ -383,7 +383,7 @@ namespace Opm::Satfunc::PhaseChecks::Oil {
 
         /// Minimum (connate) saturation.
         Scalar swu_{};
- 
+
         /// Run check against a set of saturation function end-points.
         ///
         /// \param[in] endPoints Set of saturation function end-points.

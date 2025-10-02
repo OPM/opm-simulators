@@ -328,7 +328,7 @@ private:
     {
       return amg_.category();
     }
-    
+
     ~AMGInverseOperator()
     {
       if(!first_)
@@ -420,7 +420,7 @@ public:
    * @brief The type of the fine level smoother.
    */
   typedef S SmootherType;
-  
+
   /**
    * @brief Constructs a two level method.
    *

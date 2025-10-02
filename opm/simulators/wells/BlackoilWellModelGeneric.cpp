@@ -384,10 +384,10 @@ initializeWellPerfData()
 
 
         for (const auto& connection : well.getConnections()) {
-    
+
             const int active_index = well.is_lgr_well()
                 ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
-                : this->compressedIndexForInterior(connection.global_index());       
+                : this->compressedIndexForInterior(connection.global_index());
             const auto connIsOpen =
                 connection.state() == Connection::State::OPEN;
 
@@ -794,7 +794,7 @@ checkGroupHigherConstraints(const Group& group,
                                                                 deferred_logger);
             if (is_changed) {
                 const auto group_limit_action = group.productionControls(summaryState_).group_limit_action;
-                std::optional<std::string> worst_offending_well = std::nullopt; 
+                std::optional<std::string> worst_offending_well = std::nullopt;
                 changed = BlackoilWellModelConstraints(*this).
                         actionOnBrokenConstraints(group, reportStepIdx, group_limit_action,
                                                   Group::ProductionCMode::FLD,
@@ -1335,7 +1335,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
             for (Phase phase : all) {
                 if (this->groupState().has_injection_control(gr_name, phase)) {
-                    if (this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP || 
+                    if (this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP ||
                         this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::REIN) {
 		        OPM_TIMEBLOCK(extraIterationsAfterNupcol);
                         const bool is_vrep = this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP;
@@ -1949,9 +1949,9 @@ getCellsForConnections(const Well& well) const
     for (const auto& connection : connectionSet)
     {
         int compressed_idx = well.is_lgr_well()
-            ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)    
-            : this->compressedIndexForInterior(connection.global_index());     
-        
+            ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
+            : this->compressedIndexForInterior(connection.global_index());
+
         if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
             wellCells.push_back(compressed_idx);
         }

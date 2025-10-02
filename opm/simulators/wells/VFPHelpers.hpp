@@ -189,7 +189,7 @@ public:
      */
     static Scalar findTHP(const std::vector<Scalar>& bhp_array,
                           const std::vector<double>& thp_array,
-                          Scalar bhp, 
+                          Scalar bhp,
                           const bool find_largest = true);
 
     /**

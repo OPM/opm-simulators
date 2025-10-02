@@ -27,7 +27,7 @@
 
 #if HAVE_CUDA
 #include <opm/simulators/linalg/gpuistl/ISTLSolverGPUISTL.hpp>
-#endif 
+#endif
 
 namespace Opm
 {
@@ -153,15 +153,15 @@ private:
 #else
             istlSolver_ = std::make_unique<ISTLSolver<TypeTag>>(simulator, std::forward<Args>(args)...);
 #endif
-        } 
+        }
 #if HAVE_CUDA
         else if (backend == Parameters::LinearSolverAcceleratorType::GPU) {
             istlSolver_ = std::make_unique<gpuistl::ISTLSolverGPUISTL<TypeTag>>(simulator, std::forward<Args>(args)...);
-        } 
+        }
 #endif
         else {
             // If we reach here, it means the backend is not supported. This could be because we have added a third backend
-            // that we need to handle. A user error would be handled in the linearSolverAcceleratorTypeFromString function called above. 
+            // that we need to handle. A user error would be handled in the linearSolverAcceleratorTypeFromString function called above.
             OPM_THROW(std::invalid_argument, fmt::format("Unknown backend: {}", Parameters::toString(backend)));
         }
     }

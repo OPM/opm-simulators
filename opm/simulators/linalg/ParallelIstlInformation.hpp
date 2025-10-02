@@ -118,10 +118,10 @@ public:
     /// one global communication.
     /// The possible functors needed can be constructed with Opm::Reduction::makeGlobalMaxFunctor(),
     /// Opm::Reduction::makeLInfinityNormFunctor(),
-    /// Opm::Reduction::makeGlobalMinFunctor(), and 
+    /// Opm::Reduction::makeGlobalMinFunctor(), and
     /// Opm::Reduction::makeGlobalSumFunctor().
     /// \tparam type of the container or the tuple of  containers.
-    /// \tparam tyoe of the operator or a tuple of operators, examples are e.g. 
+    /// \tparam tyoe of the operator or a tuple of operators, examples are e.g.
     /// Reduction::MaskIDOperator, Reduction::MaskToMinOperator,
     /// and Reduction::MaskToMaxOperator. Has to provide an operator() that takes three
     /// arguments (the last one is the mask value: 1 for a dof that we own, 0 otherwise),

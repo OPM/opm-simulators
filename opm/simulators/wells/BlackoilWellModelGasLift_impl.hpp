@@ -203,7 +203,7 @@ gasLiftOptimizationStage1(const Simulator& simulator,
             num_rates_to_sync = groups_to_sync.size();
         }
         {
-            OPM_TIMEBLOCK(WaitForGasLiftSyncGroups);  
+            OPM_TIMEBLOCK(WaitForGasLiftSyncGroups);
             num_rates_to_sync = comm.sum(num_rates_to_sync);
         }
         if (num_rates_to_sync > 0) {

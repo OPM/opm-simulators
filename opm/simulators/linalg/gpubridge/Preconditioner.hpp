@@ -55,7 +55,7 @@ protected:
 public:
 
     virtual ~Preconditioner() = default;
-    
+
     static std::unique_ptr<Preconditioner> create(PreconditionerType type,
                                                   bool opencl_ilu_parallel,
                                                   int verbosity);

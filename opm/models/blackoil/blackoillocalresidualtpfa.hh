@@ -467,7 +467,7 @@ public:
                                                             nbInfo.faceArea,
                                                             moduleParams.convectiveMixingModuleParam);
         }
-        
+
         // deal with energy (if present)
         if constexpr (enableEnergy) {
             const Scalar inAlpha = nbInfo.inAlpha;
@@ -523,7 +523,7 @@ public:
                                                 tmpdispersivity,
                                                 normVelocityAvg);
         }
-        
+
         // apply the scaling for the urea equation in MICP
         if constexpr (enableMICP) {
             BioeffectsModule::applyScaling(flux);

@@ -142,4 +142,3 @@ template class MultisegmentWellContribution<float>;
 #endif
 
 } //namespace Opm
-

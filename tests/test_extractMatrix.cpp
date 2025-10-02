@@ -34,7 +34,7 @@ using V = Dune::BlockVector<Dune::FieldVector<double, 2>>;
 M build3x3BlockMatrix()
 {
     // Build matrix with this pattern:
-    //   ( x     ) 
+    //   ( x     )
     //   (   x   )
     //   (   x x )
     M res(3, 3, 4, M::row_wise);

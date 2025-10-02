@@ -78,7 +78,7 @@ namespace {
         return wells;
     }
 
-    Dune::CpGrid createTestGrid(const std::array<int, 3>& dims, 
+    Dune::CpGrid createTestGrid(const std::array<int, 3>& dims,
                                const std::array<double, 3>& size) {
         Dune::CpGrid grid;
         grid.createCartesian(dims, size);

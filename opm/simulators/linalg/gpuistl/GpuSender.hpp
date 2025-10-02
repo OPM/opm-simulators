@@ -53,7 +53,7 @@ public:
     virtual ~GPUSender() = default;
 
     /**
-     * @brief copyOwnerToAll will copy the data in source to all processes. 
+     * @brief copyOwnerToAll will copy the data in source to all processes.
      *
      * @note Depending on the implementation, this may or may not use GPU aware MPI.
      *       If it does not use GPU aware MPI, the data will be copied to the

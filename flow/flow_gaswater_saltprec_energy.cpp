@@ -60,7 +60,7 @@ struct EnableEnergy<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
 };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> { 
+struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
     using type = TpfaLinearizer<TypeTag>;
 };
 

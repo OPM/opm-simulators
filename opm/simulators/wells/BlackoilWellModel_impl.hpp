@@ -1267,7 +1267,7 @@ namespace Opm {
         OPM_TIMEFUNCTION();
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const int reportStepIdx = simulator_.episodeIndex();
-        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, 
+        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx,
             param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ true, local_deferredLogger);
         // We need to call updateWellControls before we update the network as
         // network updates are only done on thp controlled wells.
@@ -1359,7 +1359,7 @@ namespace Opm {
                 bool fld_none = false;
                 if (cmode_tmp == Group::ProductionCMode::FLD || cmode_tmp == Group::ProductionCMode::NONE) {
                     fld_none = true;
-                    // Target is set for an ancestor group. Target for autochoke group to be 
+                    // Target is set for an ancestor group. Target for autochoke group to be
                     // derived via group guide rates
                     const Scalar efficiencyFactor = 1.0;
                     const Group& parentGroup = this->schedule().getGroup(group.parent(), reportStepIdx);
@@ -2028,7 +2028,7 @@ namespace Opm {
                     const auto episode_idx = simulator_.episodeIndex();
                     const auto follow_on_well = econ_production_limits.followonWell();
                     if (!this->schedule().hasWell(follow_on_well, episode_idx)) {
-                        const auto msg = fmt::format("Well {} was closed. But the given follow on well {} does not exist." 
+                        const auto msg = fmt::format("Well {} was closed. But the given follow on well {} does not exist."
                                                      "The simulator continues without opening a follow on well.",
                                                      wname, follow_on_well);
                         local_deferredLogger.warning(msg);

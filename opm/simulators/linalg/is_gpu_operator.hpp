@@ -19,7 +19,7 @@
 
 #include <type_traits>
 
-#if HAVE_CUDA // Avoid including GpuVector.hpp if CUDA 
+#if HAVE_CUDA // Avoid including GpuVector.hpp if CUDA
               // is not enabled to avoid linking errors.
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #endif
@@ -73,7 +73,7 @@ static constexpr bool is_gpu_operator_v = is_gpu_operator<T>::value;
      static constexpr bool value = false;
  #endif
  };
- 
+
  template <typename T>
  static constexpr bool is_gpu_matrix_v = is_gpu_matrix<T>::value;
 

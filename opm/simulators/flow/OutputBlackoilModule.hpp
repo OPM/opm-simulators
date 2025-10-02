@@ -937,7 +937,7 @@ private:
         }
 
         if constexpr(enableBioeffects) {
-            const auto surfVolWat = pv * getValue(fs.saturation(waterPhaseIdx)) * 
+            const auto surfVolWat = pv * getValue(fs.saturation(waterPhaseIdx)) *
                                          getValue(fs.invB(waterPhaseIdx));
             if (this->fipC_.hasMicrobialMass()) {
                 this->updateMicrobialMass(globalDofIdx, intQuants, surfVolWat);
@@ -1089,7 +1089,7 @@ private:
         const Scalar rhoW = FluidSystem::referenceDensity(waterPhaseIdx, fs.pvtRegionIndex());
 
         this->fipC_.assignWaterMass(globalDofIdx, fip, rhoW);
-    }   
+    }
 
     template <typename IntensiveQuantities>
     void updateMicrobialMass(const unsigned             globalDofIdx,
@@ -2247,7 +2247,7 @@ private:
                                   : FluidSystem::convertRvToXgO(getValue(ectx.fs.Rv()), ectx.intQuants.pvtRegionIndex());
                                   return (1.0 - xgW) *
                                          model.dofTotalVolume(ectx.globalDofIdx) *
-                                         getValue(ectx.intQuants.porosity()) * 
+                                         getValue(ectx.intQuants.porosity()) *
                                          getValue(ectx.fs.density(gasPhaseIdx)) *
                                          std::min(strandedGas, sg);
                               }
@@ -2271,7 +2271,7 @@ private:
                                   : FluidSystem::convertRvToXgO(getValue(ectx.fs.Rv()), ectx.intQuants.pvtRegionIndex());
                                   return (1.0 - xgW) *
                                          model.dofTotalVolume(ectx.globalDofIdx) *
-                                         getValue(ectx.intQuants.porosity()) * 
+                                         getValue(ectx.intQuants.porosity()) *
                                          getValue(ectx.fs.density(gasPhaseIdx)) *
                                          std::max(Scalar{0.0}, sg - strandedGas);
                               }
@@ -2293,7 +2293,7 @@ private:
                                   : FluidSystem::convertRvToXgO(getValue(ectx.fs.Rv()), ectx.intQuants.pvtRegionIndex());
                                   return (1.0 - xgW) *
                                          model.dofTotalVolume(ectx.globalDofIdx) *
-                                         getValue(ectx.intQuants.porosity()) * 
+                                         getValue(ectx.intQuants.porosity()) *
                                          getValue(ectx.fs.density(gasPhaseIdx)) *
                                          std::min(trappedGas, getValue(ectx.fs.saturation(gasPhaseIdx)));
                               }
@@ -2315,7 +2315,7 @@ private:
                                   : FluidSystem::convertRvToXgO(getValue(ectx.fs.Rv()), ectx.intQuants.pvtRegionIndex());
                                   return (1.0 - xgW) *
                                          model.dofTotalVolume(ectx.globalDofIdx) *
-                                         getValue(ectx.intQuants.porosity()) * 
+                                         getValue(ectx.intQuants.porosity()) *
                                          getValue(ectx.fs.density(gasPhaseIdx)) *
                                          std::max(Scalar{0.0}, getValue(ectx.fs.saturation(gasPhaseIdx)) - trappedGas);
                               }
@@ -2327,7 +2327,7 @@ private:
                               {
                                   const auto& scaledDrainageInfo = problem.materialLawManager()
                                                                    ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
-                                  const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));                                
+                                  const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));
                                   Scalar sgcr = scaledDrainageInfo.Sgcr;
                                   if (problem.materialLawManager()->enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
@@ -2342,7 +2342,7 @@ private:
                                       : FluidSystem::convertRvToXgO(getValue(ectx.fs.Rv()), ectx.intQuants.pvtRegionIndex());
                                       return (1.0 - xgW) *
                                              model.dofTotalVolume(ectx.globalDofIdx) *
-                                             getValue(ectx.intQuants.porosity()) * 
+                                             getValue(ectx.intQuants.porosity()) *
                                              getValue(ectx.fs.density(gasPhaseIdx)) *
                                              getValue(ectx.fs.saturation(gasPhaseIdx));
                                   }
@@ -2355,7 +2355,7 @@ private:
                               {
                                   const auto& scaledDrainageInfo = problem.materialLawManager()
                                                                    ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
-                                  const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));                                
+                                  const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));
                                   Scalar sgcr = scaledDrainageInfo.Sgcr;
                                   if (problem.materialLawManager()->enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
@@ -2370,7 +2370,7 @@ private:
                                       : FluidSystem::convertRvToXgO(getValue(ectx.fs.Rv()), ectx.intQuants.pvtRegionIndex());
                                       return (1.0 - xgW) *
                                              model.dofTotalVolume(ectx.globalDofIdx) *
-                                             getValue(ectx.intQuants.porosity()) * 
+                                             getValue(ectx.intQuants.porosity()) *
                                              getValue(ectx.fs.density(gasPhaseIdx)) *
                                              getValue(ectx.fs.saturation(gasPhaseIdx));
                                   }
@@ -2393,7 +2393,7 @@ private:
                                   : FluidSystem::convertRvToXgO(getValue(ectx.fs.Rv()), ectx.intQuants.pvtRegionIndex());
                                   return (1.0 - xgW) *
                                          model.dofTotalVolume(ectx.globalDofIdx) *
-                                         getValue(ectx.intQuants.porosity()) * 
+                                         getValue(ectx.intQuants.porosity()) *
                                          getValue(ectx.fs.density(gasPhaseIdx)) *
                                          std::min(sgcr, getValue(ectx.fs.saturation(gasPhaseIdx))) /
                                          FluidSystem::molarMass(gasCompIdx, ectx.intQuants.pvtRegionIndex());
@@ -2416,7 +2416,7 @@ private:
                                   : FluidSystem::convertRvToXgO(getValue(ectx.fs.Rv()), ectx.intQuants.pvtRegionIndex());
                                   return (1.0 - xgW) *
                                          model.dofTotalVolume(ectx.globalDofIdx) *
-                                         getValue(ectx.intQuants.porosity()) * 
+                                         getValue(ectx.intQuants.porosity()) *
                                          getValue(ectx.fs.density(gasPhaseIdx)) *
                                          std::max(Scalar{0.0}, getValue(ectx.fs.saturation(gasPhaseIdx)) - sgcr) /
                                          FluidSystem::molarMass(gasCompIdx, ectx.intQuants.pvtRegionIndex());
@@ -2429,7 +2429,7 @@ private:
                               {
                                   const auto& scaledDrainageInfo = problem.materialLawManager()
                                                                    ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
-                                  const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));                                
+                                  const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));
                                   Scalar sgcr = scaledDrainageInfo.Sgcr;
                                   if (problem.materialLawManager()->enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
@@ -2444,7 +2444,7 @@ private:
                                       : FluidSystem::convertRvToXgO(getValue(ectx.fs.Rv()), ectx.intQuants.pvtRegionIndex());
                                       return (1.0 - xgW) *
                                              model.dofTotalVolume(ectx.globalDofIdx) *
-                                             getValue(ectx.intQuants.porosity()) * 
+                                             getValue(ectx.intQuants.porosity()) *
                                              getValue(ectx.fs.density(gasPhaseIdx)) *
                                              getValue(ectx.fs.saturation(gasPhaseIdx)) /
                                              FluidSystem::molarMass(gasCompIdx, ectx.intQuants.pvtRegionIndex());
@@ -2458,7 +2458,7 @@ private:
                               {
                                   const auto& scaledDrainageInfo = problem.materialLawManager()
                                                                    ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
-                                  const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));                                
+                                  const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));
                                   Scalar sgcr = scaledDrainageInfo.Sgcr;
                                   if (problem.materialLawManager()->enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
@@ -2473,7 +2473,7 @@ private:
                                       : FluidSystem::convertRvToXgO(getValue(ectx.fs.Rv()), ectx.intQuants.pvtRegionIndex());
                                       return (1.0 - xgW) *
                                              model.dofTotalVolume(ectx.globalDofIdx) *
-                                             getValue(ectx.intQuants.porosity()) * 
+                                             getValue(ectx.intQuants.porosity()) *
                                              getValue(ectx.fs.density(gasPhaseIdx)) *
                                              getValue(ectx.fs.saturation(gasPhaseIdx)) /
                                              FluidSystem::molarMass(gasCompIdx, ectx.intQuants.pvtRegionIndex());

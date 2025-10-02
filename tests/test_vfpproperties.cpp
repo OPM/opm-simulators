@@ -753,5 +753,3 @@ const double reference[] = {
 };
 
 BOOST_AUTO_TEST_SUITE_END() // Integration tests//
-
-

@@ -105,7 +105,7 @@ template <class M, class X, class Y, int l>
 void
 GpuJac<M, X, Y, l>::invertDiagonalAndFlatten()
 {
-    dispatchInvertDiagonalAndFlatten<6>();   
+    dispatchInvertDiagonalAndFlatten<6>();
 }
 
 } // namespace Opm::gpuistl
@@ -113,6 +113,6 @@ GpuJac<M, X, Y, l>::invertDiagonalAndFlatten()
     template class ::Opm::gpuistl::GpuJac<::Opm::gpuistl::GpuSparseMatrixWrapper<realtype>,             \
                                         ::Opm::gpuistl::GpuVector<realtype>,                     \
                                         ::Opm::gpuistl::GpuVector<realtype>>
-   
+
 INSTANTIATE_CUJAC_DUNE(double);
 INSTANTIATE_CUJAC_DUNE(float);

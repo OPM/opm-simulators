@@ -296,7 +296,7 @@ public:
         } else {
             priVars.setPrimaryVarsMeaningSolvent(PrimaryVariables::SolventMeaning::Rsolw);
             priVars[solventSaturationIdx] = solventRsw;
-        } 
+        }
     }
 
     /*!
@@ -518,13 +518,13 @@ public:
         }
     }
 
-    static bool isSolubleInWater() 
+    static bool isSolubleInWater()
     { return params_.rsSolw_active_; }
 
-    static bool isCO2Sol() 
+    static bool isCO2Sol()
     { return params_.co2sol_; }
 
-    static bool isH2Sol() 
+    static bool isH2Sol()
     { return params_.h2sol_; }
 
 private:
@@ -819,13 +819,13 @@ public:
                 const auto& muWat = fs.viscosity(waterPhaseIdx);
                 const auto& muWatEff = brineCo2Pvt.viscosity(pvtRegionIdx, T, p, rsSolw());
                 mobw *= muWat / muWatEff;
-            } else { 
+            } else {
                 const auto& h2gasPvt = SolventModule::h2GasPvt();
                 solventInvFormationVolumeFactor_ =
                     h2gasPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p, rv, rvw);
                 solventRefDensity_ = h2gasPvt.gasReferenceDensity(pvtRegionIdx);
-                solventViscosity_ = h2gasPvt.viscosity(pvtRegionIdx, T, p, rv, rvw); 
-            
+                solventViscosity_ = h2gasPvt.viscosity(pvtRegionIdx, T, p, rv, rvw);
+
                 const auto& brineH2Pvt = SolventModule::brineH2Pvt();
                 auto& fs = asImp_().fluidState_;
                 const auto& bw = brineH2Pvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p, rsSolw());
@@ -844,7 +844,7 @@ public:
             solventInvFormationVolumeFactor_ = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
             solventRefDensity_ = solventPvt.referenceDensity(pvtRegionIdx);
             solventViscosity_ = solventPvt.viscosity(pvtRegionIdx, T, p);
-        }   
+        }
 
         solventDensity_ = solventInvFormationVolumeFactor_*solventRefDensity_;
         effectiveProperties(elemCtx, scvIdx, timeIdx);

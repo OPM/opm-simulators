@@ -42,7 +42,7 @@ class EclipseState;
 
 //! \brief Class handling mixing rate controls for a FlowProblemBlackoil.
 template<class FluidSystem>
-class MixingRateControls 
+class MixingRateControls
 {
 public:
     using Scalar = typename FluidSystem::Scalar;
@@ -60,7 +60,7 @@ public:
     bool drsdtActive(int episodeIdx) const;
     bool drvdtActive(int episodeIdx) const;
     bool drsdtConvective(int episodeIdx) const;
-    
+
     bool drsdtActive(int episodeIdx, std::size_t pvtRegionIdx) const;
     bool drvdtActive(int episodeIdx, std::size_t pvtRegionIdx) const;
     bool drsdtConvective(int episodeIdx, std::size_t pvtRegionIdx) const;
@@ -138,7 +138,7 @@ public:
             const auto& rs = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
                 getValue(fs.Rsw()) :
                 getValue(fs.Rs());
-            
+
             const auto& salt = getValue(fs.saltSaturation());
 
             this->updateConvectiveDRsDt_(compressedDofIdx,

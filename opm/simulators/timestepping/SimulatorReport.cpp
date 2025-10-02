@@ -102,8 +102,8 @@ namespace Opm
         unconverged_domains += sr.unconverged_domains;
         accepted_unconverged_domains += sr.accepted_unconverged_domains;
         skipped_domains += sr.skipped_domains;
-        // It makes no sense adding time points. Therefore, do not 
-        // overwrite the value of global_time which gets set in 
+        // It makes no sense adding time points. Therefore, do not
+        // overwrite the value of global_time which gets set in
         // NonlinearSolver.hpp by the line:
         //     report.global_time = timer.simulationTimeElapsed();
     }

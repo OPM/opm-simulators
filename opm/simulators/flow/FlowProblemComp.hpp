@@ -104,7 +104,7 @@ public:
         // tighter tolerance is needed for compositional modeling here
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
     }
-    
+
     Opm::CompositionalConfig::EOSType getEosType() const
     {
         auto& simulator = this->simulator();
@@ -361,7 +361,7 @@ public:
             Dune::FieldVector<Scalar, numComponents> z(0.0);
             Scalar sumMoles = 0.0;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (Indices::waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)){ 
+                if (Indices::waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)){
                     continue;
                 }
                 const auto saturation = fs.saturation(phaseIdx);
@@ -450,7 +450,7 @@ protected:
     {
         readExplicitInitialConditionCompositional_();
     }
-    
+
     void readExplicitInitialConditionCompositional_()
     {
         const auto& simulator = this->simulator();

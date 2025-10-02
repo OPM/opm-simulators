@@ -3,7 +3,7 @@
 /*
   Copyright 2023 INRIA
   Copyright 2024 SINTEF Digital
-  
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify

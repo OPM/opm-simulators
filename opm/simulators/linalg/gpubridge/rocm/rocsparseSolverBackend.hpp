@@ -79,7 +79,7 @@ private:
     char rev[64];
 
     std::unique_ptr<rocsparsePreconditioner<Scalar, block_size> > prec; // can perform blocked ILU0 and AMG on pressure component
-    
+
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result

@@ -23,7 +23,7 @@
 // can switch to it by defining the macro #define DISABLE_SFC_ORDERING 1.
 // This will change the default cell order to Cartesian.
 // Note that this option is not available for pre-built or installed versions of dune-ALUGrid.
-// To enable changig to Cartesian ordering, you will need to rebuild dune-ALUGrid from source, ensuring 
+// To enable changig to Cartesian ordering, you will need to rebuild dune-ALUGrid from source, ensuring
 // the build configuration allows disabling SFC ordering from OPM.
 // For more details, refer to the files gridfactory.hh and aluinline.hh located in the dune-alugrid/3d/
 

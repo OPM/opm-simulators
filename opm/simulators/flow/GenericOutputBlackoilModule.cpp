@@ -280,7 +280,7 @@ calc_inplace(std::map<std::string, double>& miscSummaryData,
              const Parallel::Communication& comm)
 {
     auto inplace = this->accumulateRegionSums(comm);
-    
+
     if (comm.rank() != 0)
         return inplace;
 
@@ -288,7 +288,7 @@ calc_inplace(std::map<std::string, double>& miscSummaryData,
                               miscSummaryData,
                               regionData);
 
-    
+
     return inplace;
 }
 
@@ -939,7 +939,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     if (enableBioeffects_) {
-        // Biofilms for gas-water systems; MICP only for water systems  
+        // Biofilms for gas-water systems; MICP only for water systems
         this->bioeffectsC_.allocate(bufferSize, !FluidSystem::phaseIsActive(gasPhaseIdx));
     }
 

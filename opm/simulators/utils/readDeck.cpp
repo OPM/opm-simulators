@@ -509,7 +509,7 @@ void Opm::ensureOutputDirExists(const std::string& cmdline_output_dir)
 }
 
 void Opm::prepareResultOutputDirectory(const std::string&           baseName,
-                                       const std::filesystem::path& outputDir)  
+                                       const std::filesystem::path& outputDir)
 {
     namespace fs = std::filesystem;
 
@@ -617,7 +617,7 @@ Opm::setupLogging(Parallel::Communication& comm,
     }
 
     // Cleans up the result output directory, we only do this on process 0
-    if (comm.rank() == 0) { 
+    if (comm.rank() == 0) {
         prepareResultOutputDirectory(baseName, output_dir);
     }
     //... and the other processes need to wait for this to be finished.

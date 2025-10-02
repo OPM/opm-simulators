@@ -169,12 +169,12 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
 
         };
 
-        WellGroupControls(well_).getGroupProductionControl(group, 
+        WellGroupControls(well_).getGroupProductionControl(group,
                                                            well_state,
                                                            group_state,
                                                            schedule,
                                                            summaryState,
-                                                           bhp, 
+                                                           bhp,
                                                            active_rates,
                                                            rCoeff,
                                                            efficiencyFactor,

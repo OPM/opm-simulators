@@ -548,7 +548,7 @@ add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.c
 set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # We only wait for the hipification process if we are compiling HIP.
-# That is, we need to wait for the HIP header files to be generated 
+# That is, we need to wait for the HIP header files to be generated
 # before the rest of the code can compile. HIP header file includes
 # anything in gpuistl, say.
 if (CONVERT_CUDA_TO_HIP)
@@ -595,13 +595,13 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   endif()
 
   # We only wait for the hipification process if we are compiling HIP.
-  # That is, we need to wait for the HIP header files to be generated 
+  # That is, we need to wait for the HIP header files to be generated
   # before the rest of the code can compile. HIP header file includes
   # anything in gpuistl, say.
   if(CONVERT_CUDA_TO_HIP)
     add_dependencies(flow_lib${OBJ} hipified_headers)
   endif()
-  
+
   opm_add_test(flow_${OBJ}
                ONLY_COMPILE
                SOURCES
@@ -832,4 +832,3 @@ endif()
 
 install(DIRECTORY doc/man1 DESTINATION ${CMAKE_INSTALL_MANDIR}
   FILES_MATCHING PATTERN "*.1")
-

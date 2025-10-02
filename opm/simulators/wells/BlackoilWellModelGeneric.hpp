@@ -509,7 +509,7 @@ protected:
                            const Scalar gasDensity) const;
 
     Schedule& schedule_;
-    
+
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;

@@ -122,7 +122,7 @@ void writeNonlinearIterationsPerCell(
     for (auto domain_idx = 0*ds; domain_idx < ds; ++domain_idx) {
         const auto& domain = domains[domain_idx];
         const auto& report = domain_reports[domain_idx];
-        const int iterations = report.success.total_newton_iterations + 
+        const int iterations = report.success.total_newton_iterations +
                               report.failure.total_newton_iterations;
 
         for (const int cell_idx : domain.cells) {

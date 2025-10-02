@@ -21,7 +21,7 @@ def get_config_path() -> Path:
             config_path = repo_root / "python/docker/python_versions.json"
             if config_path.exists():
                 return config_path
-        
+
         raise FileNotFoundError(
             "Could not locate python_versions.json. Either run from within "
             "opm-simulators repository or set OPM_SIMULATORS_ROOT environment variable."

@@ -126,4 +126,3 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(s1.severityOfWorstFailure() == CR::Severity::TooLarge);
     }
 }
-

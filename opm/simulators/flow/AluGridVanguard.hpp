@@ -72,10 +72,10 @@ struct Vanguard<TypeTag, TTag::AluGridVanguard> {
 template<class TypeTag>
 struct Grid<TypeTag, TTag::AluGridVanguard> {
 #if HAVE_MPI
-    using type = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>; 
-#else    
+    using type = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
+#else
     using type = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
-#endif //HAVE_MPI     
+#endif //HAVE_MPI
 };
 template<class TypeTag>
 struct EquilGrid<TypeTag, TTag::AluGridVanguard> {
@@ -106,7 +106,7 @@ class AluGridVanguard : public FlowBaseVanguard<TypeTag>
 public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;        
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     using LevelCartesianIndexMapper = Opm::LevelCartesianIndexMapper<Grid>;
     using EquilCartesianIndexMapper = Dune::CartesianIndexMapper<EquilGrid>;
@@ -279,11 +279,11 @@ public:
     }
 
     std::vector<int> cellPartition() const
-    {      
+    {
         // not required for this type of grid yet
         return {};
     }
-    
+
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const {
         return equilGridToGrid_[elemIndex];
     }

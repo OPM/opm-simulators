@@ -396,4 +396,3 @@ getMasterActivationDate_() const
 
 
 } // namespace Opm
-
