@@ -46,7 +46,7 @@ namespace Opm {
 
 template<class FluidSystem, class Indices>
 StandardWellEval<FluidSystem,Indices>::
-StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif)
+StandardWellEval(const WellInterfaceIndices<FluidSystem, Indices::numEq>& baseif)
     : baseif_(baseif)
     , primary_variables_(baseif_)
     , F0_(numWellConservationEq)

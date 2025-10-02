@@ -24,17 +24,13 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
-#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
-#include <opm/models/blackoil/blackoilonephaseindices.hh>
-#include <opm/models/blackoil/blackoiltwophaseindices.hh>
-
 #include <cassert>
 
 namespace Opm
 {
 
-template<class FluidSystem, class Indices>
-WellInterfaceIndices<FluidSystem,Indices>::
+template<class FluidSystem, int numEq>
+WellInterfaceIndices<FluidSystem, numEq>::
 WellInterfaceIndices(const Well& well,
                      const ParallelWellInfo<Scalar>& parallel_well_info,
                      const int time_step,
@@ -58,9 +54,9 @@ WellInterfaceIndices(const Well& well,
 {
 }
 
-template<class FluidSystem, class Indices>
-typename WellInterfaceIndices<FluidSystem,Indices>::Scalar
-WellInterfaceIndices<FluidSystem,Indices>::
+template<class FluidSystem, int numEq>
+typename WellInterfaceIndices<FluidSystem, numEq>::Scalar
+WellInterfaceIndices<FluidSystem, numEq>::
 scalingFactor(const int phaseIdx) const
 {
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
@@ -72,7 +68,8 @@ scalingFactor(const int phaseIdx) const
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
             FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx) == phaseIdx)
         return 0.01;
-    if (Indices::enableSolvent && phaseIdx == Indices::contiSolventEqIdx )
+    const auto& pu = FluidSystem::phaseUsage();
+    if (pu.hasSolvent() && phaseIdx == pu.contiSolventEqIdx() )
         return 0.01;
 
     // we should not come this far
@@ -80,12 +77,26 @@ scalingFactor(const int phaseIdx) const
     return 1.0;
 }
 
-#include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
+template<class Scalar>
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
-INSTANTIATE_TYPE_INDICES(WellInterfaceIndices, double)
+#define INSTANTIATE_TYPE(T, NUMEQ) \
+    template class WellInterfaceIndices<FS<T>, NUMEQ>;
+
+INSTANTIATE_TYPE(double, 1)
+INSTANTIATE_TYPE(double, 2)
+INSTANTIATE_TYPE(double, 3)
+INSTANTIATE_TYPE(double, 4)
+INSTANTIATE_TYPE(double, 5)
+INSTANTIATE_TYPE(double, 6)
 
 #if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_TYPE_INDICES(WellInterfaceIndices, float)
+INSTANTIATE_TYPE(float, 1)
+INSTANTIATE_TYPE(float, 2)
+INSTANTIATE_TYPE(float, 3)
+INSTANTIATE_TYPE(float, 4)
+INSTANTIATE_TYPE(float, 5)
+INSTANTIATE_TYPE(float, 6)
 #endif
 
 } // namespace Opm
