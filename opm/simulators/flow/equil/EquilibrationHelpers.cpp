@@ -27,13 +27,10 @@
 namespace Opm {
 namespace EQUIL {
 
-template<class Scalar>
-using MatLaw = EclMaterialLaw::Manager<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
 template<class Scalar> using FS = BlackOilFluidSystem<Scalar>;
 
-#define INSTANTIATE_TYPE(T) \
+#define INSTANTIATE_TYPE1(T, MatLaw) \
     template struct PcEq<FS<T>,MatLaw<T>>; \
-    template class EquilReg<T>; \
     template T satFromPc<FS<T>,MatLaw<T>>(const MatLaw<T>&, \
                                           const int,const int, \
                                           const T,const bool); \
@@ -43,7 +40,10 @@ template<class Scalar> using FS = BlackOilFluidSystem<Scalar>;
     template T satFromDepth<FS<T>,MatLaw<T>>(const MatLaw<T>&, \
                                              const T,const T, \
                                              const int,const int,const bool); \
-    template bool isConstPc<FS<T>,MatLaw<T>>(const MatLaw<T>&,const int,const int); \
+    template bool isConstPc<FS<T>,MatLaw<T>>(const MatLaw<T>&,const int,const int);
+
+#define INSTANTIATE_TYPE2(T) \
+    template class EquilReg<T>; \
     template class Miscibility::PBVD<FS<T>>; \
     template class Miscibility::PDVD<FS<T>>; \
     template class Miscibility::RsVD<FS<T>>; \
@@ -53,10 +53,20 @@ template<class Scalar> using FS = BlackOilFluidSystem<Scalar>;
     template class Miscibility::RvVD<FS<T>>; \
     template class Miscibility::RvwVD<FS<T>>;
 
-INSTANTIATE_TYPE(double)
+#define INSTANTIATE_TYPE(T, ML1, ML2) \
+INSTANTIATE_TYPE1(T, ML1) \
+INSTANTIATE_TYPE1(T, ML2) \
+INSTANTIATE_TYPE2(T)
+
+template<class Scalar>
+using MatLaw1 = EclMaterialLaw::Manager<ThreePhaseMaterialTraits<Scalar,0,1,2,true,true>>;
+template<class Scalar>
+using MatLaw2 = EclMaterialLaw::Manager<ThreePhaseMaterialTraits<Scalar,0,1,2,false,true>>;
+
+INSTANTIATE_TYPE(double, MatLaw1, MatLaw2)
 
 #if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_TYPE(float)
+INSTANTIATE_TYPE(float, MatLaw1, MatLaw2)
 #endif
 
 } // namespace Equil

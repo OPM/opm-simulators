@@ -86,7 +86,9 @@ private:
         Scalar,
         /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
         /*nonWettingPhaseIdx=*/FluidSystem::naplPhaseIdx,
-        /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
+        /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx,
+        /* hysteresis */ false,
+        /* endpointscaling */ false>;
 
 public:
     using type = Opm::ThreePhaseParkerVanGenuchten<Traits>;

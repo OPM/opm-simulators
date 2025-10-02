@@ -131,7 +131,9 @@ private:
     using Traits = Opm::ThreePhaseMaterialTraits<Scalar,
                                                /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
                                                /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                               /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
+                                               /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx,
+                                               /* hysteresis */ false,
+                                               /* endpointscaling */ false>;
 
     // define the material law which is parameterized by effective saturation
     using EffMaterialLaw = Opm::NullMaterial<Traits>;

@@ -35,17 +35,21 @@
 namespace Opm {
 
 template<class Scalar>
-using MatLaw = EclMaterialLaw::Manager<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
+using MatLaw1 = EclMaterialLaw::Manager<ThreePhaseMaterialTraits<Scalar,0,1,2,true,true>>;
+template<class Scalar>
+using MatLaw2 = EclMaterialLaw::Manager<ThreePhaseMaterialTraits<Scalar,0,1,2,false,true>>;
 
 namespace EQUIL {
 namespace DeckDependent {
 
-#define INSTANTIATE_COMP(T, GridView, Mapper)                                      \
+#define INSTANTIATE_COMP1(T, GridView, Mapper)                                     \
     template class InitialStateComputer<BlackOilFluidSystem<T>,                    \
                                         Dune::CpGrid,                              \
                                         GridView,                                  \
                                         Mapper,                                    \
-                                        Dune::CartesianIndexMapper<Dune::CpGrid>>; \
+                                        Dune::CartesianIndexMapper<Dune::CpGrid>>;
+
+#define INSTANTIATE_COMP2(T, MatLaw, GridView, Mapper)                             \
     template InitialStateComputer<BlackOilFluidSystem<T>,                          \
                                   Dune::CpGrid,                                    \
                                   GridView,                                        \
@@ -60,12 +64,17 @@ namespace DeckDependent {
                                   const int,                                       \
                                   const bool);
 
+#define INSTANTIATE_COMP(T, ML1, ML2, GridView, Mapper)                            \
+INSTANTIATE_COMP1(T, GridView, Mapper)                                             \
+INSTANTIATE_COMP2(T, ML1, GridView, Mapper)                                        \
+INSTANTIATE_COMP2(T, ML2, GridView, Mapper)
+
 using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
 using Mapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
 
-INSTANTIATE_COMP(double, GridView, Mapper)
+INSTANTIATE_COMP(double, MatLaw1, MatLaw2, GridView, Mapper)
 #if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_COMP(float, GridView, Mapper)
+INSTANTIATE_COMP(float, MatLaw1, MatLaw2, GridView, Mapper)
 #endif
 
 #if HAVE_DUNE_FEM
@@ -74,10 +83,10 @@ using GridViewFem = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
                                                     false>;
 using MapperFem = Dune::MultipleCodimMultipleGeomTypeMapper<GridViewFem>;
 
-INSTANTIATE_COMP(double, GridViewFem, MapperFem)
+INSTANTIATE_COMP(double, MatLaw1, MatLaw2, GridViewFem, MapperFem)
 
 #if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_COMP(float, GridViewFem, MapperFem)
+INSTANTIATE_COMP(float, MatLaw1, MatLaw2, GridViewFem, MapperFem)
 #endif
 
 #endif // HAVE_DUNE_FEM
@@ -85,20 +94,22 @@ INSTANTIATE_COMP(float, GridViewFem, MapperFem)
 } // namespace DeckDependent
 
 namespace Details {
-#define INSTANTIATE_TYPE(T)                                                 \
+#define INSTANTIATE_TYPE(T, MatLaw1, MatLaw2)                               \
     template class PressureTable<BlackOilFluidSystem<T>,EquilReg<T>>;       \
     template void verticalExtent(const std::vector<int>&,                   \
                                  const std::vector<std::pair<T,T>>&,        \
                                  const Parallel::Communication&,            \
                                  std::array<T,2>&);                         \
-    template class PhaseSaturations<MatLaw<T>,BlackOilFluidSystem<T>,       \
+    template class PhaseSaturations<MatLaw1<T>,BlackOilFluidSystem<T>,      \
+                                    EquilReg<T>,std::size_t>;               \
+    template class PhaseSaturations<MatLaw2<T>,BlackOilFluidSystem<T>,      \
                                     EquilReg<T>,std::size_t>;               \
     template std::pair<T,T> cellZMinMax<T>(const Dune::cpgrid::Entity<0>&);
 
-INSTANTIATE_TYPE(double)
+INSTANTIATE_TYPE(double, MatLaw1, MatLaw2)
 
 #if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_TYPE(float)
+INSTANTIATE_TYPE(float, MatLaw1, MatLaw2)
 #endif
 }
 
