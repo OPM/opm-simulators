@@ -22,6 +22,7 @@ struct bsr_matrix
 bsr_matrix* bsr_new();
 void bsr_init(bsr_matrix *A, int nrows, int nnz, int b);
 void bsr_vmspmv3(bsr_matrix *A, const double *x, double *y);
+void bsr_vdspmv3(bsr_matrix *A, const double *x, double *y);
 void bsr_downcast(bsr_matrix *M);
 
 void bsr_info(bsr_matrix *A);

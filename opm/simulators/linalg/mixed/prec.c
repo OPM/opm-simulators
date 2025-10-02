@@ -576,6 +576,94 @@ void bildu_mapply3c(bildu_prec *restrict P, double *x)
     }
 }
 
+void bildu_dapply3c(bildu_prec *restrict P, double *x)
+{
+    bsr_matrix *L  = P->L;
+    bsr_matrix *D  = P->D;
+    bsr_matrix *U  = P->U;
+
+    int b=L->b;
+    int bb=b*b;
+
+    __m256d mm256_zero_pd =_mm256_setzero_pd();
+
+    // Lower triangular solve assuming ones on diagonal
+    for(int i=0;i<L->ncols;i++)
+    {
+        __m256d vA[3], vx[3];
+
+        double *xi = x+b*i;
+        __m256d vxi = _mm256_loadu_pd(xi);
+
+        vx[0] = _mm256_permute4x64_pd(vxi,0b00000000); //0b01010101
+        vx[1] = _mm256_permute4x64_pd(vxi,0b01010101); //0b01010101
+        vx[2] = _mm256_permute4x64_pd(vxi,0b10101010); //0b01010101
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            const double *A = L->dbl+k*bb;
+            int j=U->colidx[k];
+            vA[0] = _mm256_loadu_pd(A+0)*vx[0];
+            vA[1] = _mm256_loadu_pd(A+3)*vx[1];
+            vA[2] = _mm256_loadu_pd(A+6)*vx[2];
+
+            double *xj = x+b*j;
+            __m256d vxj = _mm256_loadu_pd(xj);
+            __m256d vz = (vxj - vA[0]) - (vA[1] + vA[2]);
+
+            //vz =_mm256_blend_pd(vxj,vz,0x7);  // 4th element unchanged
+            //_mm256_storeu_pd(xj,vz);
+            double z[4];
+            _mm256_store_pd(z,vz);
+            for(int kk=0;kk<3;kk++) xj[kk]=z[kk];
+        }
+
+        // Muliply by (inverse) diagonal block
+        const double *A = D->dbl+i*bb;
+        vA[0] = _mm256_loadu_pd(A+0)*vx[0]; //0b01010101
+        vA[1] = _mm256_loadu_pd(A+3)*vx[1]; //0b01010101
+        vA[2] = _mm256_loadu_pd(A+6)*vx[2]; //0b01010101
+        __m256d vz = vA[0] + vA[1] + vA[2];
+
+        //vz =_mm256_blend_pd(vxi,vz,0x7);  // 4th element unchanged
+        //_mm256_storeu_pd(xi,vz);
+        double z[4];
+        _mm256_store_pd(z,vz);
+        for(int k=0;k<3;k++) xi[k]=z[k];
+    }
+
+    // Upper triangular solve assuming nonzeros stored in original order
+    for(int i=U->ncols;i>0;i--)
+    {
+        __m256d vA[3];
+        for(int k=0;k<3;k++) vA[k]=mm256_zero_pd;
+        for(int k=U->rowptr[i]-1;k>U->rowptr[i-1]-1;k--)
+        {
+            const double *A = U->dbl+k*bb;
+            int j=U->colidx[k];
+            __m256d vxj = _mm256_loadu_pd(x+b*j);
+            vA[0] += _mm256_loadu_pd(A+0)*_mm256_permute4x64_pd(vxj,0b00000000); //0b01010101
+            vA[1] += _mm256_loadu_pd(A+3)*_mm256_permute4x64_pd(vxj,0b01010101); //0b01010101
+            vA[2] += _mm256_loadu_pd(A+6)*_mm256_permute4x64_pd(vxj,0b10101010); //0b01010101
+        }
+        double *xi = x+b*(i-1);
+        __m256d vxi = _mm256_loadu_pd(xi);
+        __m256d vz = (vxi - vA[0]) - (vA[1] + vA[2]);
+        vz =_mm256_blend_pd(vxi,vz,0x7);  // 4th element unchanged
+        _mm256_storeu_pd(xi,vz);
+
+        //double z[4];
+        //_mm256_store_pd(z,vz);
+        //for(int k=0;k<3;k++) xi[k]=z[k];
+    }
+}
+
+
+
+
+
+
+
+
 void bildu_downcast(bildu_prec *P)
 {
     bsr_downcast(P->L);
