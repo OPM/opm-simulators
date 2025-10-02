@@ -169,6 +169,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/mixed/HaugenLabs.c
   opm/simulators/linalg/mixed/bsr.c
   opm/simulators/linalg/mixed/prec.c
+  opm/simulators/linalg/mixed/bslv.c
   opm/simulators/linalg/ISTLSolver.cpp
   opm/simulators/linalg/MILU.cpp
   opm/simulators/linalg/ParallelIstlInformation.cpp

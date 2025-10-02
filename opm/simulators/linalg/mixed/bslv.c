@@ -1,21 +1,22 @@
-#include "HaugenLabs.h"
-
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include "bslv.h"
+#include "vec.h"
 
 #include <math.h>
-#include <immintrin.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#pragma GCC push_options
-#pragma GCC target("avx2")
-
-/*
 bslv_memory *bslv_new()
 {
     bslv_memory *mem = malloc(sizeof(bslv_memory));
     return mem;
 }
+
+void bslv_info(bslv_memory *mem, int count)
+{
+    double * restrict e = mem->e;
+    printf("bslv_info: iterations=%d reduction=%.2e\n",count,e[count]);
+}
+
 
 void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, bool use_dilu)
 {
@@ -31,8 +32,6 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
 
     int narrays=7;
     mem->dtmp = (double**) malloc(narrays*sizeof(double*));
-    //for(int i=0;i<narrays;i++) mem->tmp[i] = (double*) malloc(n*sizeof(double));
-    //for(int i=0;i<narrays;i++) posix_memalign((void**)&(mem->tmp[i]),64,n*sizeof(double));
 
     int np = 8*((n+7)/8); // padded to nearest multiple of 8
     for(int i=0;i<narrays;i++)
@@ -40,17 +39,6 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
         posix_memalign((void**)&(mem->dtmp[i]),64,np*sizeof(double));
         for(int k=8*(n/8);k<np;k++) mem->dtmp[i][k] = 0.0; //zeroing out padded section
     }
-
-    narrays=2;
-    mem->stmp = (float**) malloc(narrays*sizeof(float*));
-
-    np=16*((n+15)/16); // padded to nearest multiple of 16
-    for(int i=0;i<narrays;i++)
-    {
-        posix_memalign((void**)&(mem->stmp[i]),64,np*sizeof(float));
-        for(int k=16*(n/16);k<np;k++) mem->stmp[i][k] = 0.0; //zeroing out padded section
-    }
-
 
     mem->P = bildu_new();
     bildu_init(mem->P, A); // initialize structure of L,D,U components of P
@@ -74,6 +62,26 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
 
 }
 
+double __attribute__((noinline)) vec_inner2(const double *a, const double *b, int n)
+{
+    const double *x = __builtin_assume_aligned(a,64);
+    const double *y = __builtin_assume_aligned(b,64);
+
+    int const N=8;
+    double agg[N];
+    for(int i=0;i<N;i++) agg[i]=0.0;
+    for(int i=0;i<n;i+=N)
+    {
+        for(int j=0;j<N;j++) agg[j]+=x[i+j]*y[i+j];
+    }
+    //for(int j=0;j<8;j++) agg[j]+=agg[j+8];
+    for(int j=0;j<4;j++) agg[j]+=agg[j+4];
+    for(int j=0;j<2;j++) agg[j]+=agg[j+2];
+    for(int j=0;j<1;j++) agg[j]+=agg[j+1];
+
+    return agg[0];
+
+}
 
 int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
 {
@@ -146,76 +154,7 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     return j == max_iter ? j : ++j;
 }
 
-void bslv_info(bslv_memory *mem, int count)
-{
-    double * restrict e = mem->e;
-    printf("bslv_info: iterations=%d reduction=%.2e\n",count,e[count]);
-}
 
 
 
 
-
-
-
-
-double __attribute__((noinline)) vec_inner2(const double *a, const double *b, int n)
-{
-    const double *x = __builtin_assume_aligned(a,64);
-    const double *y = __builtin_assume_aligned(b,64);
-
-    int const N=8;
-    double agg[N];
-    for(int i=0;i<N;i++) agg[i]=0.0;
-    for(int i=0;i<n;i+=N)
-    {
-        for(int j=0;j<N;j++) agg[j]+=x[i+j]*y[i+j];
-    }
-    //for(int j=0;j<8;j++) agg[j]+=agg[j+8];
-    for(int j=0;j<4;j++) agg[j]+=agg[j+4];
-    for(int j=0;j<2;j++) agg[j]+=agg[j+2];
-    for(int j=0;j<1;j++) agg[j]+=agg[j+1];
-
-    return agg[0];
-
-}
-*/
-/*
-double vec_norm(double const *v, int n)
-{
-    double norm=0;
-    for (int k=0;k<n;k++) norm+=v[k]*v[k];
-    return sqrt(norm);
-}
-
-
-void vec_show(const double *x, int n, const char *name)
-{
-    printf("%s =\n[\n",name);
-    for(int i=0;i<n;i++)
-    {
-        for(int j=0;j<3;j++) printf(" %+.4e",x[3*i+j]);
-        printf("\n");
-    }
-    printf("]\n\n");
-}
-
-void headtail(double *x, int n, char const *name)
-{
-
-    int const  depth=9;
-    printf("%s =\n[\n",name);
-    for(int i=0;i<depth;i++)
-    {
-        printf(" %+.4e\n",x[i]);
-    }
-    printf("...\n");
-    for(int i=n-depth;i<n;i++)
-    {
-        printf(" %+.4e\n",x[i]);
-    }
-    printf("]\n");
-
-}
-*/
-#pragma GCC pop_options
