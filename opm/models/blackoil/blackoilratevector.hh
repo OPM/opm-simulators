@@ -73,7 +73,6 @@ class BlackOilRateVector
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { contiEnergyEqIdx = Indices::contiEnergyEqIdx };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };

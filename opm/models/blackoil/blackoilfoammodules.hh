@@ -60,7 +60,6 @@ class BlackOilFoamModule
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Model = GetPropType<TypeTag, Properties::Model>;
@@ -81,7 +80,6 @@ class BlackOilFoamModule
     static constexpr unsigned enableFoam = enableFoamV;
 
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
-    static constexpr unsigned numPhases = FluidSystem::numPhases;
 
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
@@ -390,7 +388,6 @@ class BlackOilFoamIntensiveQuantities<TypeTag, /*enableFoam=*/true>
 
     using FoamModule = BlackOilFoamModule<TypeTag>;
 
-    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
     static constexpr int foamConcentrationIdx = Indices::foamConcentrationIdx;

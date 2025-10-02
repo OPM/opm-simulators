@@ -64,7 +64,6 @@ class BlackOilExtboModule
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Model = GetPropType<TypeTag, Properties::Model>;
@@ -75,17 +74,12 @@ class BlackOilExtboModule
 
     using Toolbox = MathToolbox<Evaluation>;
 
-    using TabulatedFunction = typename BlackOilExtboParams<Scalar>::TabulatedFunction;
-    using Tabulated2DFunction = typename BlackOilExtboParams<Scalar>::Tabulated2DFunction;
-
     static constexpr unsigned zFractionIdx = Indices::zFractionIdx;
     static constexpr unsigned contiZfracEqIdx = Indices::contiZfracEqIdx;
     static constexpr unsigned enableExtbo = enableExtboV;
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
-    static constexpr unsigned numPhases = FluidSystem::numPhases;
     static constexpr unsigned gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr unsigned oilPhaseIdx = FluidSystem::oilPhaseIdx;
-    static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
 public:
@@ -399,18 +393,14 @@ class BlackOilExtboIntensiveQuantities<TypeTag, /*enableExtboV=*/true>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     using ExtboModule = BlackOilExtboModule<TypeTag>;
 
-    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr int zFractionIdx = Indices::zFractionIdx;
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
-    static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
-    static constexpr double cutOff = 1e-12;
 
 public:
     /*!
@@ -643,22 +633,6 @@ class BlackOilExtboExtensiveQuantities
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
-
-    using Toolbox = MathToolbox<Evaluation>;
-
-    static constexpr unsigned gasPhaseIdx = FluidSystem::gasPhaseIdx;
-    static constexpr int dimWorld = GridView::dimensionworld;
-
-    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
-    using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
-
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 };
@@ -666,8 +640,6 @@ class BlackOilExtboExtensiveQuantities
 template <class TypeTag>
 class BlackOilExtboExtensiveQuantities<TypeTag, false>
 {
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 };
 
 } // namespace Opm

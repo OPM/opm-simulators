@@ -61,7 +61,6 @@ class BlackOilExtensiveQuantities
 
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     using DiffusionExtensiveQuantities = BlackOilDiffusionExtensiveQuantities<TypeTag, enableDiffusion>;

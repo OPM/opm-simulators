@@ -95,12 +95,10 @@ class BlackOilBioeffectsModule
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Model = GetPropType<TypeTag, Properties::Model>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
@@ -109,7 +107,6 @@ class BlackOilBioeffectsModule
 
     using TabulatedFunction = typename BlackOilBioeffectsParams<Scalar>::TabulatedFunction;
 
-    enum { waterCompIdx = FluidSystem::waterCompIdx };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
 
     static constexpr unsigned microbialConcentrationIdx = Indices::microbialConcentrationIdx;
@@ -524,7 +521,6 @@ class BlackOilBioeffectsIntensiveQuantities
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
@@ -535,8 +531,6 @@ class BlackOilBioeffectsIntensiveQuantities
     static constexpr int ureaConcentrationIdx = Indices::ureaConcentrationIdx;
     static constexpr int biofilmVolumeFractionIdx = Indices::biofilmVolumeFractionIdx;
     static constexpr int calciteVolumeFractionIdx = Indices::calciteVolumeFractionIdx;
-    static constexpr int temperatureIdx = Indices::temperatureIdx;
-    static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr bool enableMICP = Indices::enableMICP;
 
 public:
@@ -657,7 +651,6 @@ public:
 template <class TypeTag, bool enableBioeffectsV = getPropValue<TypeTag, Properties::EnableBioeffects>()>
 class BlackOilBioeffectsExtensiveQuantities
 {
-    using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 };
 
 template <class TypeTag>
