@@ -110,7 +110,7 @@ protected:
                                          const Scalar relaxed_inner_tolerance_flow_ms_well,
                                          const Scalar tolerance_pressure_ms_wells,
                                          const Scalar relaxed_inner_tolerance_pressure_ms_well,
-                                         const bool relax_tolerance, 
+                                         const bool relax_tolerance,
                                          const bool well_is_stopped) const;
 
     std::pair<bool, std::vector<Scalar> >

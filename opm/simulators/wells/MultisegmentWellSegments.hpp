@@ -75,7 +75,7 @@ public:
                               const int pvt_region_index,
                               const int seg_idx) const;
 
-    EvalWell getFrictionPressureLoss(const int seg, 
+    EvalWell getFrictionPressureLoss(const int seg,
                                      const bool extra_reverse_flow_derivatives = false) const;
 
     // pressure drop for Spiral ICD segment (WSEGSICD)
@@ -88,7 +88,7 @@ public:
                                  const bool extra_reverse_flow_derivatives = false) const;
 
     // pressure drop for sub-critical valve (WSEGVALV)
-    EvalWell pressureDropValve(const int seg, 
+    EvalWell pressureDropValve(const int seg,
                                const SummaryState& st,
                                const bool extra_reverse_flow_derivatives = false) const;
 

@@ -1,7 +1,7 @@
 /*
   Copyright 2022 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2023 INRIA
-  
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -36,12 +36,12 @@ namespace Opm::DamarisOutput {
 
 // Initialize an XML file
 std::string initDamarisXmlFile();
- 
+
 /**
 *   Initialize Damaris by either:
 *  1/ Filling in a templated XML file and storing it in the chosen directory (output directory)
-*  2/ Reading a file specified by the environment variable FLOW_DAMARIS_XML_FILE 
-*  
+*  2/ Reading a file specified by the environment variable FLOW_DAMARIS_XML_FILE
+*
 */
 void initializeDamaris(const Parallel::Communication comm, const int mpiRank,
                        const std::map<std::string, std::string>& find_replace_map);

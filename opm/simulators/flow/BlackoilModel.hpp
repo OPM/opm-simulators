@@ -312,7 +312,7 @@ public:
     { return compNames_; }
 
     //! \brief Returns true if an NLDD solver exists
-    bool hasNlddSolver() const 
+    bool hasNlddSolver() const
     { return nlddSolver_ != nullptr; }
 
 protected:

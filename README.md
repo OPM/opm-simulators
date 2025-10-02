@@ -7,7 +7,7 @@
 [![Zenodo](https://img.shields.io/badge/Zenodo_Src-10.5281%2Fzenodo.12637570-ff2222)](https://doi.org/10.5281/zenodo.12637570)
 
 > The `opm-simulators` repository contains the OPM Flow reservoir simulator which uses automatic differentiation and standard input-formats to simulate reservoirs of industrial complexity on real assets by commercial actors. It is cooperatively developed by multiple industry-partners and academic institutions under the GPL 3 license.
-> 
+>
 > Flow is a fully implicit black-oil simulators which also supports CO2 storage, H2 storage, thermal simulations, solvents, as well as polymers. It works with the Eclipse formats, making it easy to integrate into existing workflows. The automatic differentiation is implemented in [opm-common](https://github.com/OPM/opm-common). The manual can be found here on the OPM [home page](https://opm-project.org/?page_id=955).
 
 ## Supported Platforms
@@ -54,7 +54,7 @@ The resulting file can be uploaded to for instance gist.github.com.
 To cite OPM Flow we primarily use the paper `The Open Porous Media Flow reservoir simulator` published in the `Computers & Mathematics with Applications` (CAMWA) Journal. The correctly attribute credit to later contributors, we also want the Zenodo repository containing the source code to be cited. The BibTex for both can be found below.
 <details>
 <summary>BibTeX for CAMWA article</summary>
-  
+
 ```bibtex
 @article{OPMFLOW,
  title = {The {Open} {Porous} {Media} {Flow} reservoir simulator},

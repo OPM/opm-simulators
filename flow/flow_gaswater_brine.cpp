@@ -51,7 +51,7 @@ struct EnableVapwat<TypeTag, TTag::FlowGasWaterBrineProblem> {
 };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterBrineProblem> { 
+struct Linearizer<TypeTag, TTag::FlowGasWaterBrineProblem> {
     using type = TpfaLinearizer<TypeTag>;
 };
 

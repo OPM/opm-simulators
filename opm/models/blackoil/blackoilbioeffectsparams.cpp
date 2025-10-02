@@ -46,7 +46,7 @@ template<bool enableBioeffects , bool enableMICP>
 void BlackOilBioeffectsParams<Scalar>::
 initFromState(const EclipseState& eclState)
 {
-    // some sanity checks: 
+    // some sanity checks:
     // if biofilm is enabled, the BIOFILM keyword must be present,
     // if biofilm is disabled the keyword must not be present,
     // if MICP is enabled, the MICP keyword must be present, and
@@ -138,7 +138,7 @@ initFromState(const EclipseState& eclState)
             bioDiffCoefficient_[pvtRegionIdx][BlackOilBioeffectsParams::ureaDiffIdx] = diffMICPTable.getUreaDiffusion().front();
         }
     }
-    
+
     if constexpr (!enableMICP) {
         const TableContainer& pcfactTables = tableManager.getPcfactTables();
         if (!pcfactTables.empty()) {

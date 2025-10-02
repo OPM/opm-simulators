@@ -520,7 +520,7 @@ public:
 
     const Evaluation& permFactor() const
     {
-        throw std::logic_error("permFactor() is not yet implemented for compositional modeling"); 
+        throw std::logic_error("permFactor() is not yet implemented for compositional modeling");
     }
 
 private:

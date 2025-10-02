@@ -70,7 +70,7 @@ struct BlackOilOnePhaseIndices
     //! Is MICP involved? (microbes, oxygen, urea, biofilm, and calcite)
     static constexpr bool enableMICP = numBioCompV == 5;
 
-    //! Biofilm effects on co2/h2store only for two phase indices  
+    //! Biofilm effects on co2/h2store only for two phase indices
     static constexpr bool enableBiofilm = false;
 
     //! Number of solvent components to be considered

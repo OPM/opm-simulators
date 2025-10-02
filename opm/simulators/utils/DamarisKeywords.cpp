@@ -1,7 +1,7 @@
 /*
   Copyright 2021 Equinor.
   Copyright 2023 Inria.
-  
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -42,7 +42,7 @@
 
     The entries in the map below will be filled by the corresponding
     Damaris Keywords.
-    
+
     The command line arguments are defined in opm/simulators/flow/DamarisWriter.hpp
     and defaults are set in opm/simulators/flow/FlowProblemProperties.hpp
 */
@@ -53,11 +53,11 @@ bool FileExists(const std::string& filename_in,
                 const Parallel::Communication& comm)
 {
     // From c++17  : std::filesystem::exists(filename_in);
-    
+
     int retint = 1;
     std::ifstream filestr;
     bool file_exists = false;
-    
+
     if ((filename_in.length() == 0) || (filename_in == "#") ) {
         return file_exists;
     }
@@ -92,7 +92,7 @@ void DamarisSettings::SetRandString(void)
     std::default_random_engine e1(r());
     std::uniform_int_distribution<int> uniform_dist(0, std::numeric_limits<int>::max());
     int rand_int = uniform_dist(e1);
-    
+
     rand_value_str_ = std::to_string(rand_int) ;
 }
 
@@ -129,7 +129,7 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
         }
     }
 
-     // Test if input Paraview Python file exists 
+     // Test if input Paraview Python file exists
     if (paraviewPythonFilename_ != ""){
         if (FileExists(paraviewPythonFilename_, comm)) {
             disableParaviewXMLstart.clear();
@@ -141,7 +141,7 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
         }
     }
 
-    // Flag error if both scripts are enabled 
+    // Flag error if both scripts are enabled
     if ((pythonFilename_.size() > 0) && (paraviewPythonFilename_.size() > 0) )
     {
         // A work around of this issue is to remove the Paraview mpi4py library (use print(inspect.getfile(mpi4py)))
@@ -165,8 +165,8 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
     } else {
         damarisOutputCollective_str = "FilePerCore";
     }
-    OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : <option key=\"FileMode\"> {} </option> ", 
-                              damarisOutputCollective_str)); 
+    OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : <option key=\"FileMode\"> {} </option> ",
+                              damarisOutputCollective_str));
 
     std::string  simName_str;
     // Check if simulation name was given on command line
@@ -176,10 +176,10 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
     } else {
         simName_str = damarisSimName_;
     }
-    OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : <simulation name={} ", 
+    OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : <simulation name={} ",
                               simName_str));
-    
-    // A different shared memory buffer name is important if multiple simulations 
+
+    // A different shared memory buffer name is important if multiple simulations
     // are running on the same node, as one simulation will remove the buffer when it exits,
     // which will remove the buffer for other simulations.
     std::string  shmemName_str;
@@ -188,7 +188,7 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
     } else {
         shmemName_str = shmemName_ ;
     }
-    
+
     std::string shmemSizeBytes_str;
     if (shmemSizeBytes_ != 0) {
         shmemSizeBytes_str = std::to_string(shmemSizeBytes_);
@@ -196,9 +196,9 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
         shmemSizeBytes_str = "536870912";  // 512 MB
     }
 
-    OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : <buffer name={} size={} ", 
+    OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : <buffer name={} size={} ",
                               shmemName_str, shmemSizeBytes_str));
-    
+
     if ((nDamarisCores_ > 0) && (nDamarisNodes_ > 0))
     {
         nDamarisNodes_ = 0; // Default is to use Damaris Cores
@@ -216,20 +216,20 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
     } else {
         nDamarisNodes_str = "0";
     }
-    
-    OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : <dedicated cores={} nodes={} ", 
+
+    OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : <dedicated cores={} nodes={} ",
                               nDamarisCores_str, nDamarisNodes_str));
 
-   
-                              
+
+
     std::string logLevel_str(damarisLogLevel_);
     std::string logFlush_str("false");
     if ((logLevel_str == "debug") || (logLevel_str == "trace") ) {
         logFlush_str = "true";
     }
-    OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : <log FileName={}/damaris_log/{} Flush={}  LogLevel={} ", 
+    OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : <log FileName={}/damaris_log/{} Flush={}  LogLevel={} ",
                               OutputDir, simName_str, logFlush_str, logLevel_str));
-    
+
     std::map<std::string, std::string> damaris_keywords = {
         {"_SHMEM_BUFFER_BYTES_REGEX_", shmemSizeBytes_str},
         {"_DC_REGEX_", nDamarisCores_str},
@@ -253,7 +253,7 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
         {"_DISABLEPARAVIEWFIN_",disableParaviewXMLfin},
         {"_DASK_SCHEDULER_FILE_",damarisDaskFile_},
     };
-                            
+
     return damaris_keywords;
 }
 

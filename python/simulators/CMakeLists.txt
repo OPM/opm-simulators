@@ -162,5 +162,3 @@ configure_file(${PROJECT_SOURCE_DIR}/python/setup.py.in
                 ${PROJECT_BINARY_DIR}/python/setup.py.tmp @ONLY)
 file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/python/setup.py
                INPUT ${PROJECT_BINARY_DIR}/python/setup.py.tmp)
-
-

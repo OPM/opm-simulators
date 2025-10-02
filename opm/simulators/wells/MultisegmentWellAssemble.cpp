@@ -215,8 +215,8 @@ assembleAccelerationTerm(const int seg_target,
     // seg_upwind:  upwind segment to seg
     // acceleration term shold be
     //  * velocity head for seg_target if seg = seg_target
-    //  * negative velocity head for seg if seg != seg_target   
-    
+    //  * negative velocity head for seg if seg != seg_target
+
     /*
         This method is called in MultisegmentWellEval::assembleAccelerationPressureLoss.
         It does *not* need communication.
@@ -232,7 +232,7 @@ assembleAccelerationTerm(const int seg_target,
     if constexpr (has_gfrac_variable) {
         eqns.D()[seg_target][seg_upwind][SPres][GFrac] -= accelerationTerm.derivative(GFrac + Indices::numEq);
     }
-}                     
+}
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellAssemble<FluidSystem,Indices>::

@@ -1301,8 +1301,8 @@ updateGroupControlledWells(const Schedule& schedule,
                 auto deferred_logger = Opm::DeferredLogger();
                 const auto& control_group_target = tcalc.groupTarget(ctrl, deferred_logger);
 
-                // Calculates the guide rate of the parent group with control. 
-                // It is allowed that the guide rate of this group is defaulted. The guide rate will be derived from the children groups 
+                // Calculates the guide rate of the parent group with control.
+                // It is allowed that the guide rate of this group is defaulted. The guide rate will be derived from the children groups
                 const auto& control_group_guide_rate = getGuideRate(control_group_name,
                                                     schedule,
                                                     well_state,
@@ -1649,10 +1649,10 @@ getWellGroupTargetProducer(const std::string& name,
                            const std::vector<Scalar>& resv_coeff,
                            DeferredLogger& deferred_logger)
 {
-    // This function computes a wells group target. 
+    // This function computes a wells group target.
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
     // 'parent' will stay fixed while 'group' will be higher up
-    // in the group tree. 
+    // in the group tree.
     // Eficiencyfactor is the well efficiency factor for the first group the well is
     // part of. Later it is the accumulated factor including the group efficiency factor
     // of the child of group.
@@ -1749,7 +1749,7 @@ getWellGroupTargetProducer(const std::string& name,
         if (guideRate->has(chain[ii]) && num_gr_ctrl > 0) {
             local_reduction_level = ii;
         }
-    }   
+    }
     // Compute portion of target corresponding to current_rate_available
     Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
@@ -1927,7 +1927,7 @@ checkGroupConstraintsInj(const std::string& name,
             scale = group_target_rate_available / current_well_rate_available;
         }
         return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
-    }    
+    }
 
     std::optional<Group::InjectionControls> ctrl;
     if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
@@ -1987,13 +1987,13 @@ getWellGroupTargetInjector(const std::string& name,
                            const std::vector<Scalar>& resv_coeff,
                            DeferredLogger& deferred_logger)
 {
-    // This function computes a wells group target. 
+    // This function computes a wells group target.
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
     // 'parent' will stay fixed while 'group' will be higher up
-    // in the group tree. 
+    // in the group tree.
     // Eficiencyfactor is the well efficiency factor for the first group the well is
     // part of. Later it is the accumulated factor including the group efficiency factor
-    // of the child of group.    
+    // of the child of group.
     auto currentGroupControl = group_state.injection_control(group.name(), injectionPhase);
     if (currentGroupControl == Group::InjectionCMode::FLD || currentGroupControl == Group::InjectionCMode::NONE) {
         // Return if we are not available for parent group.
@@ -2089,7 +2089,7 @@ getWellGroupTargetInjector(const std::string& name,
         if (guideRate->has(chain[ii], injectionPhase) && num_gr_ctrl > 0) {
             local_reduction_level = ii;
         }
-    }    
+    }
 
     // Compute portion of target corresponding to current_rate_available
     Scalar target = orig_target;

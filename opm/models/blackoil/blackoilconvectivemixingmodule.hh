@@ -177,7 +177,7 @@ public:
                                  const IntensiveQuantities& intQuantsEx,
                                  const unsigned phaseIdx,
                                  const ConvectiveMixingModuleParam& info) {
-        
+
         if (info.active_.empty()) {
             return;
         }

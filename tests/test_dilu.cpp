@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrectNoZeros, T, NumericTypes)
     // x_k+1 = x_k + z
     Vector new_x = x;
     new_x += z;
-    
+
     Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
     seqdilu.apply(x, b);
 
@@ -362,7 +362,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrect1, T, NumericTypes)
     // x_k+1 = x_k + z
     Vector new_x = x;
     new_x += z;
-    
+
     Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
     seqdilu.apply(x, b);
 
@@ -461,7 +461,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrect2, T, NumericTypes)
     // x_k+1 = x_k + z
     Vector new_x = x;
     new_x += z;
-    
+
     Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
     seqdilu.apply(x, b);
 
@@ -765,7 +765,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrect3, T, NumericTypes)
     // x_k+1 = x_k + z
     Vector new_x = x;
     new_x += z;
-    
+
     Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
     seqdilu.apply(x, b);
 

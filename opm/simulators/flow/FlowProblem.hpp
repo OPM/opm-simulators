@@ -2,7 +2,7 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   Copyright 2023 INRIA
-  
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -1117,12 +1117,12 @@ public:
     LhsEval wellTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
         OPM_TIMEBLOCK_LOCAL(wellTransMultiplier, Subsystem::Wells);
-        
+
         const bool implicit = !this->explicitRockCompaction_;
         double trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<double>(intQuants, elementIdx)
                                      : this->simulator().problem().getRockCompTransMultVal(elementIdx);
         trans_mult *= this->simulator().problem().template permFactTransMultiplier<double>(intQuants, elementIdx);
-    
+
         return trans_mult;
     }
 
@@ -1657,7 +1657,7 @@ protected:
 
         if (!this->overburdenPressure_.empty())
             effectivePressure -= this->overburdenPressure_[elementIdx];
-        
+
         if (rock_config.store()) {
             effectivePressure -= asImp_().initialFluidState(elementIdx).pressure(refPressurePhaseIdx_());
         }

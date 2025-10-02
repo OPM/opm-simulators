@@ -935,7 +935,7 @@ onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
                 ws.injection_cmode = Well::InjectorCMode::BHP;
                 ws.bhp = inj_controls.bhp_limit;
             }
-        } 
+        }
     } else { // producer
         prod_controls.clearControls();
         prod_controls.addControl(Well::ProducerCMode::BHP);
@@ -950,8 +950,8 @@ onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
                 ws.production_cmode = Well::ProducerCMode::BHP;
                 ws.bhp = prod_controls.bhp_limit;
             }
-        } 
-    }    
+        }
+    }
 }
 
 

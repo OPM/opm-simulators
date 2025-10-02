@@ -16,4 +16,3 @@ class TestBasic(unittest.TestCase):
             #   has not been initialized
             with self.assertRaises(RuntimeError):
                 sim.get_dt()
-

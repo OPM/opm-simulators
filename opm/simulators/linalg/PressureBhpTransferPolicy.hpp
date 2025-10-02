@@ -272,4 +272,3 @@ private:
 };
 
 } // namespace Opm
-

@@ -143,7 +143,7 @@ public:
                               std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                               WellContributions<Scalar>& wellContribs,
                               GpuResult& res) override;
-    
+
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x          resulting x vector, caller must guarantee that x points to a valid array
     void get_result(Scalar* x) override;

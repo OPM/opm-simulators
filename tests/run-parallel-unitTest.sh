@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 # This executes a unit test in parallel.
 
 if test $# -eq 0

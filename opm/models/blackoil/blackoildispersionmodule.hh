@@ -52,7 +52,7 @@ namespace Opm {
  * \ingroup Dispersion
  * \class Opm::BlackOilDispersionModule
  * \brief Provides the auxiliary methods required for consideration of the
- * dispersion equation. 
+ * dispersion equation.
  */
 template <class TypeTag, bool enableDispersion>
 class BlackOilDispersionModule;
@@ -379,7 +379,7 @@ class BlackOilDispersionIntensiveQuantities<TypeTag, /*enableDispersion=*/true>
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
 
-public:    
+public:
     /*!
      * \brief Returns the max. norm of the filter velocity of the cell.
      */
@@ -418,7 +418,7 @@ protected:
         for (const auto& velocityInfo : velocityInfos) {
             for (unsigned i = 0; i < phaseIdxs.size(); ++i) {
                 if (FluidSystem::phaseIsActive(phaseIdxs[i])) {
-                    normVelocityCell_[phaseIdxs[i]] = std::max(normVelocityCell_[phaseIdxs[i]], 
+                    normVelocityCell_[phaseIdxs[i]] = std::max(normVelocityCell_[phaseIdxs[i]],
                         std::abs(velocityInfo.velocity[conti0EqIdx +
                                  FluidSystem::canonicalToActiveCompIdx(compIdxs[i])]));
                 }

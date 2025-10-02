@@ -100,11 +100,9 @@ public:
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x          resulting x vector, caller must guarantee that x points to a valid array
     void get_result(Scalar* x) override;
-    
+
 }; // end class rocalutionSolverBackend
 
 } // namespace Opm::Accelerator
 
 #endif
-
-

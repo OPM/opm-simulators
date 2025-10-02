@@ -297,7 +297,7 @@ int main(int argc, char** argv)
 
     auto fullPreconditioner = Opm::PreconditionerFactory<Operator, Communication>::create(op, prm, weights, comm);
     Dune::BiCGSTABSolver<Vector> amgBiCGSTAB(op, sp, *fullPreconditioner, 10e-8, 300, (ccomm.rank()==0) ? 2 : 0);
-    
+
     using PreconditionerOperatorType = Opm::GhostLastMatrixAdapter<BCRSMat, Vector, Vector, Communication>;
     auto ghostOperator = std::make_unique<PreconditionerOperatorType>(mat, comm);
     auto ghostPreconditioner = Opm::PreconditionerFactory<PreconditionerOperatorType, Communication>::create(*ghostOperator, prm, weights, comm);

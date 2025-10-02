@@ -256,8 +256,8 @@ public:
                                                   const Well::InjectionControls& inj_controls,
                                                   const Well::ProductionControls& prod_controls,
                                                   const Scalar WQTotal,
-                                                  DeferredLogger& deferred_logger, 
-                                                  const bool fixed_control = false, 
+                                                  DeferredLogger& deferred_logger,
+                                                  const bool fixed_control = false,
                                                   const bool fixed_status = false);
 
     virtual void updatePrimaryVariables(const Simulator& simulator,
@@ -361,7 +361,7 @@ public:
                                             const WellProductionControls& prod_controls,
                                             WellStateType& well_state,
                                             const GroupState<Scalar>& group_state,
-                                            DeferredLogger& deferred_logger, 
+                                            DeferredLogger& deferred_logger,
                                             const bool fixed_control = false,
                                             const bool fixed_status = false) = 0;
 protected:
@@ -417,7 +417,7 @@ protected:
 
     virtual void updateIPRImplicit(const Simulator& simulator,
                                    WellStateType& well_state,
-                                   DeferredLogger& deferred_logger) = 0;                                            
+                                   DeferredLogger& deferred_logger) = 0;
 
     bool iterateWellEquations(const Simulator& simulator,
                               const double dt,
@@ -444,18 +444,18 @@ protected:
                           const double dt,
                           const Scalar bhp,
                           WellStateType& well_state,
-                          DeferredLogger& deferred_logger);         
+                          DeferredLogger& deferred_logger);
 
     bool solveWellWithZeroRate(const Simulator& simulator,
                                const double dt,
                                WellStateType& well_state,
-                               DeferredLogger& deferred_logger);                                                                                                       
+                               DeferredLogger& deferred_logger);
 
     bool solveWellForTesting(const Simulator& simulator,
                              WellStateType& well_state,
                              const GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger);
-    
+
 
     template<class GasLiftSingleWell>
     std::unique_ptr<GasLiftSingleWell> initializeGliftWellTest_(const Simulator& simulator,

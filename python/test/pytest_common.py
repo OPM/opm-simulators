@@ -76,4 +76,3 @@ def create_onephase_simulator(*args, **kwargs):
         kwargs['args'].append(flag_to_add)
 
     return OnePhaseSimulator(*args, **kwargs)
-

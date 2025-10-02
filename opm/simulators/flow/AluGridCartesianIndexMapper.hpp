@@ -50,11 +50,11 @@ namespace Dune {
 public:
 
 #if HAVE_MPI
-    using Grid = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>; 
-#else    
+    using Grid = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
+#else
     using Grid = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
 #endif //HAVE_MPI
-    
+
     // data handle for communicating global ids during load balance and communication
     template <class GridView>
     class GlobalIndexDataHandle : public Dune::CommDataHandleIF<GlobalIndexDataHandle<GridView>, int>

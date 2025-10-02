@@ -39,10 +39,10 @@ public:
                 int *cols,
                 int *rows,
                 hipStream_t stream);
-    
+
     void upload(Matrix<Scalar> *matrix,
                 hipStream_t stream);
-    
+
     void upload(BlockedMatrix<Scalar> *matrix,
                 hipStream_t stream);
 
@@ -63,7 +63,7 @@ public:
 
     void upload(Scalar *vals,
                 hipStream_t stream);
-    
+
     void upload(Matrix<Scalar> *matrix,
                 hipStream_t stream);
 

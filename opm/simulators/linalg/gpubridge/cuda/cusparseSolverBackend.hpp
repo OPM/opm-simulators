@@ -67,7 +67,7 @@ private:
     bool useJacMatrix = false;
     int nnzbs_prec;             // number of nonzero blocks in the matrix for preconditioner
                                 // could be jacMatrix or matrix
-                                
+
     double c_copy = 0.0; // cummulative timer measuring the total time it takes to transfer the data to the GPU
 
     /// Solve linear system using ilu0-bicgstab
@@ -139,7 +139,7 @@ public:
                               std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                               WellContributions<Scalar>& wellContribs,
                               GpuResult& res) override;
-    
+
     /// Get resulting vector x after linear solve, also includes post processing if necessary
     /// \param[inout] x        resulting x vector, caller must guarantee that x points to a valid array
     void get_result(Scalar* x) override;
@@ -149,4 +149,3 @@ public:
 } // namespace Opm::Accelerator
 
 #endif
-

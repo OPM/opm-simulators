@@ -1005,4 +1005,3 @@ INSTANTIATE_GPU_FUNCTIONS(6);
 } // namespace Opm
 
 #endif // CHOW_PATEL
-

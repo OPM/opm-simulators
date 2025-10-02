@@ -39,12 +39,12 @@
 */
 
 namespace Opm::DamarisOutput {
-    
-/** 
- * Returns true if the file exists. 
- * Tests to see if filename string is empty 
+
+/**
+ * Returns true if the file exists.
+ * Tests to see if filename string is empty
  * or the "#" character and if so returns false.
- * Tests for file existance on rank 0 and 
+ * Tests for file existance on rank 0 and
  * passes result via MPI to all other ranks.
  */
 bool FileExists(const std::string& filename_in,
@@ -54,9 +54,9 @@ struct DamarisSettings
 {
     bool enableDamarisOutputCollective_ = true;
     bool saveToDamarisHDF5_ = true;
-    // if saveMeshToDamarisHDF5 is true, requires enableDamarisOutputCollective to be false 
+    // if saveMeshToDamarisHDF5 is true, requires enableDamarisOutputCollective to be false
     // (until offsets are are added to mesh data for collective writing)
-    bool saveMeshToHDF5_ = false;  
+    bool saveMeshToHDF5_ = false;
     std::string pythonFilename_;
     std::string paraviewPythonFilename_;
 
@@ -68,13 +68,13 @@ struct DamarisSettings
     int nDamarisCores_ = 1;  // this is the number of (Damaris server) cores per node
     int nDamarisNodes_ = 0;
     long shmemSizeBytes_ = 536870912;  // 512 MB
-    
-    std::string rand_value_str_ ;  // to be added to sheared memory name to make unique 
+
+    std::string rand_value_str_ ;  // to be added to sheared memory name to make unique
 
     std::map<std::string, std::string>
     getKeywords(const Parallel::Communication& comm,
                 const std::string& OutputDir);
-                
+
     void SetRandString(void);  // sets the value of rand_value_str_
 };
 

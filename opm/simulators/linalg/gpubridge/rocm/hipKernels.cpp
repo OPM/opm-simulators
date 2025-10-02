@@ -146,12 +146,12 @@ __global__ void residual_blocked_k(const Scalar *vals,
     const unsigned int lane = idx_t % warpsize;
     const unsigned int c = (lane / bs) % bs;
     const unsigned int r = lane % bs;
-    
+
     // for 3x3 blocks:
     // num_active_threads: 27 (CUDA) vs 63 (ROCM)
     // num_blocks_per_warp: 3 (CUDA) vs  7 (ROCM)
-    int offsetTarget = warpsize == 64 ? 48 : 32; 
-    
+    int offsetTarget = warpsize == 64 ? 48 : 32;
+
     while(target_block_row < Nb){
         unsigned int first_block = rows[target_block_row];
         unsigned int last_block = rows[target_block_row+1];
@@ -167,8 +167,8 @@ __global__ void residual_blocked_k(const Scalar *vals,
         }
 
         // do reduction in shared mem
-        tmp[lane] = local_out; 
-        
+        tmp[lane] = local_out;
+
         for(unsigned int offset = 3; offset <= offsetTarget; offset <<= 1)
         {
             if (lane + offset < warpsize)
@@ -177,7 +177,7 @@ __global__ void residual_blocked_k(const Scalar *vals,
             }
             __syncthreads();
         }
-        
+
         if(lane < bs){
             unsigned int row = target_block_row*bs + lane;
             out[row] = rhs[row] - tmp[lane];
@@ -186,7 +186,7 @@ __global__ void residual_blocked_k(const Scalar *vals,
     }
 }
 
-// KERNEL residual_k    
+// KERNEL residual_k
 // res = rhs - mat * x
 // algorithm based on:
 // Optimization of Block Sparse Matrix-Vector Multiplication on Shared-MemoryParallel Architectures,
@@ -251,7 +251,7 @@ __global__ void spmv_k(const Scalar *vals,
     extern __shared__ Scalar tmp[];
     const unsigned int bsize = blockDim.x;
     const unsigned int gid = blockDim.x * blockIdx.x + threadIdx.x;
-    const unsigned int idx_b = gid / bsize; 
+    const unsigned int idx_b = gid / bsize;
     const unsigned int idx_t = threadIdx.x;
     const unsigned int num_workgroups = gridDim.x;
 
@@ -351,7 +351,7 @@ full_to_pressure_restriction([[maybe_unused]] const Scalar* fine_y,
 #else
     OPM_THROW(std::logic_error, "Error full_to_pressure_restriction for rocsparse only supported when compiling with hipcc");
 #endif
-    
+
     if (verbosity >= 4) {
         std::ostringstream oss;
         oss << std::scientific << "HipKernels full_to_pressure_restriction() time: " << t.stop() << " s";
@@ -396,12 +396,12 @@ prolongate_vector([[maybe_unused]] const Scalar* in,
                   [[maybe_unused]] hipStream_t stream)
 {
     Timer t;
-    
+
 #ifdef __HIP__
     unsigned blockDim = 64;
     unsigned blocks = Accelerator::ceilDivision(N, blockDim);
     unsigned gridDim = blocks * blockDim;
-    unsigned shared_mem_size = blockDim * sizeof(Scalar); 
+    unsigned shared_mem_size = blockDim * sizeof(Scalar);
 
     // dim3(N) will create a vector {N, 1, 1}
     prolongate_vector_k<<<dim3(gridDim), dim3(blockDim), shared_mem_size, stream>>>(in, out, cols, N);
@@ -435,7 +435,7 @@ residual([[maybe_unused]] Scalar* vals,
     unsigned blockDim = 64;
     const unsigned int num_work_groups = Accelerator::ceilDivision(Nb, blockDim);
     unsigned gridDim = num_work_groups * blockDim;
-    unsigned shared_mem_size = blockDim * sizeof(Scalar); 
+    unsigned shared_mem_size = blockDim * sizeof(Scalar);
 
     if (block_size > 1) {
         // dim3(N) will create a vector {N, 1, 1}
@@ -447,7 +447,7 @@ residual([[maybe_unused]] Scalar* vals,
 #else
     OPM_THROW(std::logic_error, "Error residual for rocsparse only supported when compiling with hipcc");
 #endif
-    
+
     if (verbosity >= 4) {
         HIP_CHECK(hipStreamSynchronize(stream));
         std::ostringstream oss;
@@ -472,15 +472,15 @@ spmv([[maybe_unused]] Scalar* vals,
     unsigned blockDim = 64;
     const unsigned int num_work_groups = Accelerator::ceilDivision(Nb, blockDim);
     unsigned gridDim = num_work_groups * blockDim;
-    unsigned shared_mem_size = blockDim * sizeof(Scalar); 
+    unsigned shared_mem_size = blockDim * sizeof(Scalar);
 
    spmv_k<<<dim3(gridDim), dim3(blockDim), shared_mem_size, stream>>>(vals, cols, rows, Nb, x, y);
-    
+
     HIP_CHECK(hipStreamSynchronize(stream));
 #else
     OPM_THROW(std::logic_error, "Error spmv for rocsparse only supported when compiling with hipcc");
 #endif
-    
+
     if (verbosity >= 4) {
         std::ostringstream oss;
         oss << std::scientific << "HipKernels spmv_blocked() time: " << t_spmv.stop() << " s";

@@ -605,7 +605,7 @@ private:
                         loc_flinfo[dofIdx - 1] = FlowInfo{faceId, flow, nncId};
                         loc_vlinfo[dofIdx - 1] = VelocityInfo{flow};
                     }
-                } 
+                }
 
                 for (unsigned bdfIdx = 0; bdfIdx < stencil.numBoundaryFaces(); ++bdfIdx) {
                     const auto& scvf = stencil.boundaryFace(bdfIdx);

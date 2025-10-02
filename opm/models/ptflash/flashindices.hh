@@ -74,7 +74,7 @@ public:
 
     //! Index of water saturation
     static constexpr int water0Idx = enableWater ? z0Idx + numComponents - 1 : -1000;
-    
+
     // equation indices
 
     //! Index of the mass conservation equation for the first

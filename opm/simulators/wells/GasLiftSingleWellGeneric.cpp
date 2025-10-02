@@ -770,7 +770,7 @@ getRateWithLimit_(Rate rate_type, const BasicRates& rates) const
             displayDebugMessage_(msg);
             rate2 *= target/new_rate;
             new_rate = target;
-            target_type = rate_type; 
+            target_type = rate_type;
         }
     }
     if (((rate_type == Rate::oil) || (rate_type == Rate::water))) {
@@ -1003,7 +1003,7 @@ getLimitedRatesFromRates_(const BasicRates& rates) const
     bool oil_is_limited = oil_limiting_target.has_value();
     auto [gas_rate, gas_is_limited] = getGasRateWithLimit_(rates);
     auto [water_rate, water_limiting_target] = getWaterRateWithLimit2_(rates);
-   
+
     bool water_is_limited = water_limiting_target.has_value();
     return LimitedRates {oil_rate,
                          gas_rate,

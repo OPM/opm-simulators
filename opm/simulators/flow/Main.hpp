@@ -4,7 +4,7 @@
   Copyright 2015 IRIS AS
   Copyright 2014 STATOIL ASA.
   Copyright 2023 Inria
-  
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -228,7 +228,7 @@ protected:
 
 #if HAVE_DAMARIS
         enableDamarisOutput_ = Parameters::Get<Parameters::EnableDamarisOutput>();
-        
+
         // Reset to false as we cannot use Damaris if there is only one rank.
         if ((enableDamarisOutput_ == true) && (FlowGenericVanguard::comm().size() == 1)) {
             std::string msg ;
@@ -253,13 +253,13 @@ protected:
         }
 #endif // HAVE_DAMARIS
 
-        // Guard for when the Damaris core(s) return from damaris_start() 
+        // Guard for when the Damaris core(s) return from damaris_start()
         // which happens when damaris_stop() is called in main simulation
         if (!isSimulationRank_) {
             exitCode = EXIT_SUCCESS;
             return true;
         }
-        
+
         int mpiRank = FlowGenericVanguard::comm().rank();
         outputCout_ = false;
         if (mpiRank == 0)

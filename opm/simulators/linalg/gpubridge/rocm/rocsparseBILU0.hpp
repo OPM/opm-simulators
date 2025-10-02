@@ -47,14 +47,14 @@ class rocsparseBILU0 : public rocsparsePreconditioner<Scalar, block_size>
     using Base::verbosity;
 
 private:
-   
+
     rocsparse_mat_descr descr_M, descr_L, descr_U;
     rocsparse_mat_info ilu_info;
 #if HIP_VERSION >= 50400000
     rocsparse_mat_info spmv_info;
 #endif
 
-    rocsparse_int *d_Mrows, *d_Mcols; 
+    rocsparse_int *d_Mrows, *d_Mcols;
     Scalar *d_Mvals, *d_t;
     void *d_buffer; // buffer space, used by rocsparse ilu0 analysis
 
@@ -81,7 +81,7 @@ public:
     /// Analysis, extract parallelism if specified
     /// \param[in] mat     matrix A
     bool analyze_matrix(BlockedMatrix<Scalar> *mat) override;
-    
+
     /// Analysis, extract parallelism if specified
     /// \param[in] mat     matrix A
     /// \param[in] jacMat  matrix for preconditioner, analyze this as well
@@ -91,7 +91,7 @@ public:
     /// ILU decomposition
     /// \param[in] mat     matrix A to decompose
     bool create_preconditioner(BlockedMatrix<Scalar> *mat) override;
-    
+
     /// ILU decomposition
     /// \param[in] mat     matrix A
     /// \param[in] jacMat  matrix for preconditioner, decompose this one if used
@@ -118,7 +118,7 @@ public:
     /// \param[in]  mCols Array of matrix column indices
     /// \param[in]  reuse True to reuse old matrix
     void copy_values_to_gpu(Scalar *mVals, int *mRows, int *mCols, bool reuse);
-    
+
     /// Update GPU values after a new assembly is done
     /// \param[in] b     New b vector
     void update_system_on_gpu(Scalar*, Scalar* b) override;
@@ -127,4 +127,3 @@ public:
 } // namespace Opm
 
 #endif
-

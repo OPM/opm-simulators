@@ -107,7 +107,7 @@ outputRestart(data::Solution& sol, const bool isMICP)
             data::TargetType::RESTART_OPM_EXTENDED);
         }
     };
-    
+
     auto solutionMicrobes = DataEntry{"MICROBES",  UnitSystem::measure::density, cMicrobes_};
     insert(solutionMicrobes);
     auto solutionBiofilm = DataEntry{"BIOFILM",  UnitSystem::measure::identity, cBiofilm_};

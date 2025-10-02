@@ -87,7 +87,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                    const Scalar relaxed_inner_tolerance_flow_ms_well,
                    const Scalar tolerance_pressure_ms_wells,
                    const Scalar relaxed_inner_tolerance_pressure_ms_well,
-                   const bool relax_tolerance, 
+                   const bool relax_tolerance,
                    const bool well_is_stopped) const
 {
     assert(int(B_avg.size()) == baseif_.numConservationQuantities());
@@ -163,7 +163,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                                    tolerance_wells,
                                    max_residual_allowed},
                                   std::abs(linSys_.residual()[0][SPres]),
-                                  well_is_stopped,  
+                                  well_is_stopped,
                                   report,
                                   deferred_logger);
 
@@ -211,7 +211,7 @@ assembleAccelerationPressureLoss(const int seg,
     const Scalar seg_area = segment_set[seg].crossArea();
     const EvalWell signed_velocity_head = segments_.accelerationPressureLossContribution(seg, seg_area);
     segments.pressure_drop_accel[seg] = signed_velocity_head.value();
-    
+
     const int seg_upwind = segments_.upwinding_segment(seg);
     // acceleration term is *subtracted* from pressure equation
     MultisegmentWellAssemble(baseif_).
@@ -231,7 +231,7 @@ assembleAccelerationPressureLoss(const int seg,
         const EvalWell signed_velocity_head_inlet = segments_.accelerationPressureLossContribution(inlet, inlet_area);
         segments.pressure_drop_accel[seg] -= signed_velocity_head_inlet.value();
 
-        const int inlet_upwind = segments_.upwinding_segment(inlet); 
+        const int inlet_upwind = segments_.upwinding_segment(inlet);
         MultisegmentWellAssemble(baseif_).
             assembleAccelerationTerm(seg, inlet, inlet_upwind, -signed_velocity_head_inlet, linSys_);
         if (inlet != inlet_upwind) {// special treatment for reverse flow

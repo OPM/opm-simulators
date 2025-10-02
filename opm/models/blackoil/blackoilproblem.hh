@@ -102,7 +102,7 @@ public:
                                unsigned,
                                unsigned) const
     { return 0; }
-    
+
     Scalar satnumRegionIndex(unsigned) const
     { return 0; }
 

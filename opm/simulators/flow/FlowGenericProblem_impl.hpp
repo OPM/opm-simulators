@@ -215,7 +215,7 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
     }
     else if (!overburdTables.empty() && rock_config.store()) {
         OpmLog::warning("ROCKOPTS item 2 set to STORE, OVERBURD ignored!");
-    } 
+    }
 }
 
 template<class GridView, class FluidSystem>

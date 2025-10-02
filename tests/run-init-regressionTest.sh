@@ -33,7 +33,7 @@ do
     t) REL_TOL=${OPTARG} ;;
     c) COMPARE_ECL_COMMAND=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
-    d) ;; # Ignored 
+    d) ;; # Ignored
     h) ;; # Ignored#
   esac
 done

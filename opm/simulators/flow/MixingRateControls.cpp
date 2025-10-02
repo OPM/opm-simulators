@@ -348,7 +348,7 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
         factor /= Xhi;
         deltaDensity = (saturatedDensity - co2Density);
     }
-    
+
     convectiveDrs_[compressedDofIdx] =
         factor * permz * rssat * max(Scalar{0.0}, deltaDensity) *
         gravity / ( std::max(sg_max - sg, Scalar{0.0}) *

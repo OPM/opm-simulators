@@ -49,7 +49,7 @@ class rocsparseCPR : public rocsparsePreconditioner<Scalar, block_size>, public 
 
 private:
     std::vector<RocmMatrix<Scalar>> d_Amatrices, d_Rmatrices; // scalar matrices that represent the AMG hierarchy
-    
+
     std::vector<RocmVector<int>> d_PcolIndices; // prolongation does not need a full matrix, only store colIndices
     std::vector<RocmVector<Scalar>> d_invDiags; // inverse of diagonal of Amatrices
     std::vector<RocmVector<Scalar>> d_t, d_f; // intermediate vectors used during amg cycle
@@ -93,7 +93,7 @@ private:
                        Scalar &y,
                        Scalar &x,
                        WellContributions<Scalar>& wellContribs);
-    
+
 public:
 
     rocsparseCPR(int verbosity);
@@ -107,12 +107,12 @@ public:
                     std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                     rocsparse_int *d_Arows,
                     rocsparse_int *d_Acols) override;
-    
+
 
     /// Analysis, extract parallelism if specified
     /// \param[in] mat     matrix A
     bool analyze_matrix(BlockedMatrix<Scalar> *mat) override;
-    
+
     /// Analysis, extract parallelism if specified
     /// \param[in] mat     matrix A
     /// \param[in] jacMat  matrix for preconditioner, analyze this as well
@@ -122,13 +122,13 @@ public:
     /// Create AMG preconditioner and perform ILU decomposition
     /// \param[in] mat     matrix A
     bool create_preconditioner(BlockedMatrix<Scalar> *mat) override;
-    
+
     /// Create AMG preconditioner and perform ILU decomposition
     /// \param[in] mat     matrix A
     /// \param[in] jacMat  matrix for preconditioner, decompose this one if used
     bool create_preconditioner(BlockedMatrix<Scalar> *mat,
                                BlockedMatrix<Scalar> *jacMat) override;
-    
+
     /// Apply preconditioner, x = prec(y)
     /// applies blocked ilu0
     /// also applies amg for pressure component
@@ -138,7 +138,7 @@ public:
     void apply(const Scalar& y,
                Scalar& x,
                WellContributions<Scalar>& wellContribs) override;
-    
+
     /// Copy matrix A values to GPU
     /// \param[in]  b Input values
     void copy_system_to_gpu(Scalar *b) override;
@@ -147,10 +147,9 @@ public:
     /// \param[in] vals           Matrix values
     /// \param[in] b              input vector, contains N values
     void update_system_on_gpu(Scalar* vals, Scalar* b) override;
-    
+
 };
 
 } // namespace Opm
 
 #endif
-

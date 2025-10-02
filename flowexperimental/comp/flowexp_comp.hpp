@@ -187,8 +187,8 @@ struct EnableMech<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
 };
 
 template<class TypeTag, int NumComp, bool EnableWater>
-struct EnableDisgasInWater<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> { 
-    static constexpr bool value = false; 
+struct EnableDisgasInWater<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
+    static constexpr bool value = false;
 };
 
 template<class TypeTag, int NumComp, bool EnableWater>

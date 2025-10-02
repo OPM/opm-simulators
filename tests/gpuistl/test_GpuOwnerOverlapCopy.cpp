@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(TestProject)
     auto xGPU = Opm::gpuistl::GpuVector<double>(xCPU);
 
     auto gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
-    
+
     auto GpuOwnerOverlapCopy
         = Opm::gpuistl::GpuOwnerOverlapCopy<double, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
 

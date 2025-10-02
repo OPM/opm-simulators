@@ -211,4 +211,3 @@ BOOST_AUTO_TEST_CASE(G1)
     BOOST_CHECK_CLOSE(state->alq(), 0.0, 1e-8);
     BOOST_CHECK(!state->increase().has_value());
 }
-
