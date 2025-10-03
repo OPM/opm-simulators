@@ -193,3 +193,4 @@ void bsr_nonzeros(bsr_matrix *A, const char *name)
 }
 
 #pragma GCC pop_options
+
