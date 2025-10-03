@@ -349,7 +349,7 @@ public:
     /*!
      * \brief Called by the simulator before each time integration.
      */
-    void beginTimeStep()
+    virtual void beginTimeStep()
     {
         OPM_TIMEBLOCK(beginTimeStep);
         const int episodeIdx = this->episodeIndex();
@@ -376,7 +376,6 @@ public:
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
-
     }
 
     /*!
