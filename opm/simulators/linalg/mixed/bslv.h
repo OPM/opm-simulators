@@ -22,7 +22,7 @@ struct bslv_memory
     int n;
     double **dtmp;
 
-    bildu_prec *P;
+    prec_t *P;
 }
 bslv_memory;
 

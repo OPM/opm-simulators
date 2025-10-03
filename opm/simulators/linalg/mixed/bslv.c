@@ -40,8 +40,8 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
         for(int k=8*(n/8);k<np;k++) mem->dtmp[i][k] = 0.0; //zeroing out padded section
     }
 
-    mem->P = bildu_new();
-    bildu_init(mem->P, A); // initialize structure of L,D,U components of P
+    mem->P = prec_new();
+    prec_init(mem->P, A); // initialize structure of L,D,U components of P
 
     // random initialization of one-dimensinal shadow space
     //   - note we fix the random seed for reproducibility
@@ -101,9 +101,9 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
           double * restrict v_j = mem->dtmp[6];
           double * restrict x_j = x;
 
-    bildu_prec * restrict P = mem->P;
-    mem->use_dilu ? bildu_factorize(P,A) : bildu_factorize2(P,A); // choose dilu or ilu0
-    bildu_downcast(P);
+    prec_t * restrict P = mem->P;
+    mem->use_dilu ? prec_factorize(P,A) : prec_factorize2(P,A); // choose dilu or ilu0
+    prec_downcast(P);
 
     vec_fill(x_j,0.0,n);
     vec_copy(r_j,b,n);
@@ -119,7 +119,7 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     for(j=0;j<max_iter;j++)
     {
         //vec_copy(q_j,p_j,n);                                        //q_j=p_j
-        bildu_mapply3c(P,q_j);                                          //q_j=P.q_j;
+        prec_mapply3c(P,q_j);                                          //q_j=P.q_j;
         bsr_vmspmv3(A,q_j,v_j);                                        //v_j= A.q_j
 
         //double alpha_j = rho_j/vec_inner(r0,v_j,n);
@@ -128,7 +128,7 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
         //vec_axpy(-alpha_j,v_j,r_j,s_j,n);
 
         //vec_copy(q_j,s_j,n);                                        //q_j=s_j
-        bildu_mapply3c(P,q_j);                                          //q_j=P.q_j;
+        prec_mapply3c(P,q_j);                                          //q_j=P.q_j;
         bsr_vmspmv3(A,q_j,t_j);                                        //t_j= A.q_j
 
         //double w_j = vec_inner(s_j,t_j,n)/vec_inner(t_j,t_j,n);
@@ -149,7 +149,7 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
         double beta_j = (alpha_j/w_j)*(rho_j/rho_0);
         for (int k=0;k<n;k++) q_j[k] = p_j[k] = r_j[k] + beta_j*(p_j[k] - w_j*v_j[k]);
     }
-    bildu_mapply3c(P,x_j);                                       //x_j=P.x_j;
+    prec_mapply3c(P,x_j);                                       //x_j=P.x_j;
 
     return j == max_iter ? j : ++j;
 }
@@ -173,9 +173,9 @@ int bslv_pbicgstab3d(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
           double * restrict v_j = mem->dtmp[6];
           double * restrict x_j = x;
 
-    bildu_prec * restrict P = mem->P;
-    mem->use_dilu ? bildu_factorize(P,A) : bildu_factorize2(P,A); // choose dilu or ilu0
-    bildu_downcast(P);
+    prec_t * restrict P = mem->P;
+    mem->use_dilu ? prec_factorize(P,A) : prec_factorize2(P,A); // choose dilu or ilu0
+    prec_downcast(P);
 
     vec_fill(x_j,0.0,n);
     vec_copy(r_j,b,n);
@@ -191,7 +191,7 @@ int bslv_pbicgstab3d(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     for(j=0;j<max_iter;j++)
     {
         //vec_copy(q_j,p_j,n);                                        //q_j=p_j
-        bildu_dapply3c(P,q_j);                                          //q_j=P.q_j;
+        prec_dapply3c(P,q_j);                                          //q_j=P.q_j;
         bsr_vdspmv3(A,q_j,v_j);                                        //v_j= A.q_j
 
         //double alpha_j = rho_j/vec_inner(r0,v_j,n);
@@ -200,7 +200,7 @@ int bslv_pbicgstab3d(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
         //vec_axpy(-alpha_j,v_j,r_j,s_j,n);
 
         //vec_copy(q_j,s_j,n);                                        //q_j=s_j
-        bildu_dapply3c(P,q_j);                                          //q_j=P.q_j;
+        prec_dapply3c(P,q_j);                                          //q_j=P.q_j;
         bsr_vdspmv3(A,q_j,t_j);                                        //t_j= A.q_j
 
         //double w_j = vec_inner(s_j,t_j,n)/vec_inner(t_j,t_j,n);
@@ -221,7 +221,7 @@ int bslv_pbicgstab3d(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
         double beta_j = (alpha_j/w_j)*(rho_j/rho_0);
         for (int k=0;k<n;k++) q_j[k] = p_j[k] = r_j[k] + beta_j*(p_j[k] - w_j*v_j[k]);
     }
-    bildu_dapply3c(P,x_j);                                       //x_j=P.x_j;
+    prec_dapply3c(P,x_j);                                       //x_j=P.x_j;
 
     return j == max_iter ? j : ++j;
 }

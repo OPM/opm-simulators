@@ -4,13 +4,10 @@
 extern "C" {
 #endif
 
-
 #include "bsr.h"
 
-#include <stdbool.h>
-
 typedef
-struct bildu_prec
+struct prec_t
 {
     bsr_matrix *L;
     bsr_matrix *D;
@@ -18,19 +15,19 @@ struct bildu_prec
     int noffsets;
     int(*offsets)[3];
 }
-bildu_prec;
+prec_t;
 
-bildu_prec *bildu_new();
-void bildu_init(bildu_prec *P, bsr_matrix const *A);
-int  bildu_analyze(bsr_matrix *M, int (*offsets)[3]);
-void bildu_factorize(bildu_prec *P, bsr_matrix *A);
-void bildu_factorize2(bildu_prec *P, bsr_matrix *A);
-void bildu_apply3(bildu_prec *P, double *x);
-void bildu_apply3c(bildu_prec *P, double *x);
-void bildu_mapply3c(bildu_prec *P, double *x);
-void bildu_dapply3c(bildu_prec *P, double *x);
-void bildu_downcast(bildu_prec *P);
-void bildu_info(bildu_prec *P);
+prec_t *prec_new();
+void prec_init(prec_t *P, bsr_matrix const *A);
+int  prec_analyze(bsr_matrix *M, int (*offsets)[3]);
+void prec_factorize(prec_t *P, bsr_matrix *A);
+void prec_factorize2(prec_t *P, bsr_matrix *A);
+void prec_apply3(prec_t *P, double *x);
+void prec_apply3c(prec_t *P, double *x);
+void prec_mapply3c(prec_t *P, double *x);
+void prec_dapply3c(prec_t *P, double *x);
+void prec_downcast(prec_t *P);
+void prec_info(prec_t *P);
 
 #ifdef __cplusplus
 }
