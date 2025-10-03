@@ -117,7 +117,6 @@ class TransExtensiveQuantities
     enum { numPhases = FluidSystem::numPhases };
 
     typedef MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
     typedef Dune::FieldVector<Evaluation, dimWorld> EvalDimVector;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
@@ -504,9 +503,6 @@ private:
 
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
-
-    const Implementation& asImp_() const
-    { return *static_cast<const Implementation*>(this); }
 
     // the volumetric flux of all phases [m^3/s]
     std::array<Evaluation, numPhases> volumeFlux_;
