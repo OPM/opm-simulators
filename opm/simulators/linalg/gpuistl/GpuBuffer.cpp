@@ -48,12 +48,11 @@ GpuBuffer<bool>::GpuBuffer(const std::vector<bool>& data)
 {
     assert(data.size() > 0);
 
-    bool* tmp = new bool[m_numberOfElements];
+    auto tmp = std::make_unique<bool[]>(m_numberOfElements);
     for (size_t i = 0; i < m_numberOfElements; ++i) {
         tmp[i] = static_cast<bool>(data[i]);
     }
-    OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice, tmp, m_numberOfElements * sizeof(bool), cudaMemcpyHostToDevice));
-    delete[] tmp;
+    OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice, tmp.get(), m_numberOfElements * sizeof(bool), cudaMemcpyHostToDevice));
 }
 
 template <class T>
@@ -223,12 +222,11 @@ GpuBuffer<bool>::copyFromHost(const std::vector<bool>& data)
         return;
     }
 
-    bool* tmp = new bool[data.size()];
+    auto tmp = std::make_unique<bool[]>(data.size());
     for (size_t i = 0; i < data.size(); ++i) {
         tmp[i] = static_cast<bool>(data[i]);
     }
-    copyFromHost(tmp, data.size());
-    delete[] tmp;
+    copyFromHost(tmp.get(), data.size());
 }
 
 template <class T>
@@ -247,12 +245,11 @@ GpuBuffer<bool>::copyToHost(std::vector<bool>& data) const
         return;
     }
 
-    bool* tmp = new bool[data.size()];
-    copyToHost(tmp, data.size());
+    auto tmp = std::make_unique<bool[]>(data.size());
+    copyToHost(tmp.get(), data.size());
     for (size_t i = 0; i < data.size(); ++i) {
         data[i] = static_cast<bool>(tmp[i]);
     }
-    delete[] tmp;
 }
 
 // TODO: do we have to instantiate everything like this?
