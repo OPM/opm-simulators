@@ -1,5 +1,4 @@
 #include "prec.h"
-//#include "vec.h"
 
 #include <stdio.h>
 #include <immintrin.h>
@@ -8,9 +7,9 @@
 #pragma GCC target("avx2")
 
 
-bildu_prec *bildu_new()
+prec_t *prec_new()
 {
-    bildu_prec *P = malloc(sizeof(bildu_prec));
+    prec_t *P = malloc(sizeof(prec_t));
     P->L=bsr_new();
     P->D=bsr_new();
     P->U=bsr_new();
@@ -21,7 +20,7 @@ bildu_prec *bildu_new()
     return P;
 }
 
-int bildu_analyze(bsr_matrix *M, int (*offsets)[3])
+int prec_analyze(bsr_matrix *M, int (*offsets)[3])
 {
     int count=0;
     for(int i=0;i<M->nrows;i++)
@@ -55,7 +54,7 @@ int bildu_analyze(bsr_matrix *M, int (*offsets)[3])
 }
 
 
-void bildu_init(bildu_prec *P, bsr_matrix const *A)
+void prec_init(prec_t *P, bsr_matrix const *A)
 {
     int b     = A->b;
     int nrows = A->nrows;
@@ -103,15 +102,15 @@ void bildu_init(bildu_prec *P, bsr_matrix const *A)
 
     // offsets for off-diagonal updates
     int count;
-    count = bildu_analyze(U,NULL);
+    count = prec_analyze(U,NULL);
     P->offsets = malloc(3*(count+1)*sizeof(int));
-    count = bildu_analyze(U,P->offsets);
+    count = prec_analyze(U,P->offsets);
     P->offsets[count][0]=U->nnz;
     P->noffsets=count;
 }
 
 
-
+/*
 void mat3_view(double const *M, char const *name)
 {
     printf("%s = \n[\n",name);
@@ -125,12 +124,13 @@ void mat3_view(double const *M, char const *name)
     }
     printf("\n]\n");
 }
-
+*/
+/*
 void mat3_T(double *B, double const *A)
 {
     for(int i=0;i<3;i++) for(int j=0;j<3;j++) B[3*i+j] = A[i+3*j];
 }
-
+*/
 void mat3_matmul(double *C, const double *A, const double *B)
 {
     // assume 3x3 column-major matrices
@@ -277,7 +277,7 @@ void mat3_vfms(double *C, double const *A, double const *B)
 }
 
 
-void bildu_factorize(bildu_prec *P, bsr_matrix *A)
+void prec_factorize(prec_t *P, bsr_matrix *A)
 {
     int nrows = A->nrows;
     int b     = A->b;
@@ -347,7 +347,7 @@ void bildu_factorize(bildu_prec *P, bsr_matrix *A)
     }
 }
 
-void bildu_factorize2(bildu_prec *P, bsr_matrix *A)
+void prec_factorize2(prec_t *P, bsr_matrix *A)
 {
     int nrows = A->nrows;
     int b     = A->b;
@@ -459,7 +459,7 @@ inline void mat3_vecfms(double *y, const double *A, const double *x)
     for(int k=0;k<3;k++) y[k]-=z[k];
 }
 
-void bildu_apply3(bildu_prec *restrict P, double *x)
+void prec_apply3(prec_t *restrict P, double *x)
 {
     //bsr_matrix *LT = &(P->LT);
     bsr_matrix const *L  = P->L;
@@ -495,7 +495,7 @@ void bildu_apply3(bildu_prec *restrict P, double *x)
 
 
 
-void bildu_mapply3c(bildu_prec *restrict P, double *x)
+void prec_mapply3c(prec_t *restrict P, double *x)
 {
     bsr_matrix *L  = P->L;
     bsr_matrix *D  = P->D;
@@ -576,7 +576,7 @@ void bildu_mapply3c(bildu_prec *restrict P, double *x)
     }
 }
 
-void bildu_dapply3c(bildu_prec *restrict P, double *x)
+void prec_dapply3c(prec_t *restrict P, double *x)
 {
     bsr_matrix *L  = P->L;
     bsr_matrix *D  = P->D;
@@ -664,7 +664,7 @@ void bildu_dapply3c(bildu_prec *restrict P, double *x)
 
 
 
-void bildu_downcast(bildu_prec *P)
+void prec_downcast(prec_t *P)
 {
     bsr_downcast(P->L);
     bsr_downcast(P->D);
@@ -673,7 +673,7 @@ void bildu_downcast(bildu_prec *P)
 
 
 
-void bildu_info(bildu_prec *P)
+void prec_info(prec_t *P)
 {
     bsr_info(P->L);
     bsr_info(P->D);
