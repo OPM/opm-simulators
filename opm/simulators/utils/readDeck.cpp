@@ -275,6 +275,9 @@ namespace {
                                 const int stepIdx,
                                 const bool isInj)
     {
+        // Avoid throw when checking step 0 on restart
+        if (!schedule.hasGroup(parentname, stepIdx)) return false;
+
         const auto& parent = schedule.getGroup(parentname, stepIdx);
         if (isInj) {
             if (parent.isInjectionGroup()) {
