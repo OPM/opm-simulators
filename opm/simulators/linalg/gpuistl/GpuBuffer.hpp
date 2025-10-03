@@ -23,6 +23,7 @@
 #include <exception>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <vector>
@@ -61,6 +62,11 @@ public:
     using value_type = T;
 
     /**
+     * @brief Default constructor not allocating any memory
+     */
+    GpuBuffer() = default;
+
+    /**
      * @brief GpuBuffer allocates new GPU memory of the same size as other and copies the content of the other buffer to
      * this newly allocated memory.
      *
@@ -68,7 +74,18 @@ public:
      *
      * @param other the buffer to copy from
      */
-    GpuBuffer(const GpuBuffer<T>& other);
+    GpuBuffer(const GpuBuffer<T>& other)
+        : GpuBuffer(other.m_numberOfElements)
+    {
+        assertSameSize(other);
+        if (m_numberOfElements == 0) {
+            return;
+        }
+        OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
+                                    other.m_dataOnDevice,
+                                    m_numberOfElements * sizeof(T),
+                                    cudaMemcpyDeviceToDevice));
+    }
 
     /**
      * @brief GpuBuffer allocates new GPU memory of the same size as data and copies the content of the data vector to
@@ -79,19 +96,33 @@ public:
      *
      * @param data the vector to copy from
      */
-    explicit GpuBuffer(const std::vector<T>& data);
-
-    /**
-     * @brief Default constructor not allocating any memory
-     */
-    GpuBuffer() = default;
+    explicit GpuBuffer(const std::vector<T>& data)
+        : GpuBuffer(data.size())
+    {
+        if constexpr (std::is_same_v<T, bool>) {
+            // Special handling for std::vector<bool>
+            assert(data.size() > 0);
+            auto tmp = std::make_unique<bool[]>(m_numberOfElements);
+            for (size_t i = 0; i < m_numberOfElements; ++i) {
+                tmp[i] = static_cast<bool>(data[i]);
+            }
+            OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice, tmp.get(), m_numberOfElements * sizeof(bool), cudaMemcpyHostToDevice));
+        } else {
+            // Regular types can use data.data()
+            OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice, data.data(), m_numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+        }
+    }
 
     /**
      * @brief GpuBuffer allocates new GPU memory of size numberOfElements * sizeof(T)
      *
      * @param numberOfElements number of T elements to allocate
      */
-    explicit GpuBuffer(const size_t numberOfElements);
+    explicit GpuBuffer(const size_t numberOfElements)
+        : m_numberOfElements(numberOfElements)
+    {
+        OPM_GPU_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * m_numberOfElements));
+    }
 
 
     /**
@@ -103,22 +134,37 @@ public:
      * @param numberOfElements number of T elements to allocate
      * @param dataOnHost data on host/CPU
      */
-    GpuBuffer(const T* dataOnHost, const size_t numberOfElements);
+    GpuBuffer(const T* dataOnHost, const size_t numberOfElements)
+        : GpuBuffer(numberOfElements)
+    {
+        OPM_GPU_SAFE_CALL(cudaMemcpy(
+            m_dataOnDevice, dataOnHost, m_numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+    }
+
 
     /**
      * @brief ~GpuBuffer calls cudaFree
      */
-    virtual ~GpuBuffer();
+    virtual ~GpuBuffer()
+    {
+        OPM_GPU_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
+    }
 
     /**
      * @return the raw pointer to the GPU data
      */
-    T* data();
+    T* data()
+    {
+        return m_dataOnDevice;
+    }
 
     /**
      * @return the raw pointer to the GPU data
      */
-    const T* data() const;
+    const T* data() const
+    {
+        return m_dataOnDevice;
+    }
 
     /**
      * @brief copyFromHost copies data from a Dune::BlockVector
@@ -173,7 +219,16 @@ public:
      * @note This does synchronous transfer.
      * @note assumes that this buffer has numberOfElements elements
      */
-    void copyFromHost(const T* dataPointer, size_t numberOfElements);
+    void copyFromHost(const T* dataPointer, size_t numberOfElements)
+    {
+        if (numberOfElements > size()) {
+            OPM_THROW(std::runtime_error,
+                    fmt::format("Requesting to copy too many elements. buffer has {} elements, while {} was requested.",
+                                size(),
+                                numberOfElements));
+        }
+        OPM_GPU_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+    }
 
     /**
      * @brief copyFromHost copies numberOfElements to the CPU memory dataPointer
@@ -182,7 +237,11 @@ public:
      * @note This does synchronous transfer.
      * @note assumes that this buffer has numberOfElements elements
      */
-    void copyToHost(T* dataPointer, size_t numberOfElements) const;
+    void copyToHost(T* dataPointer, size_t numberOfElements) const
+    {
+        assertSameSize(numberOfElements);
+        OPM_GPU_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
+    }
 
     /**
      * @brief copyToHost copies data from an std::vector
@@ -191,7 +250,26 @@ public:
      * @note This does synchronous transfer.
      * @note This assumes that the size of this buffer is equal to the size of the input vector.
      */
-    void copyFromHost(const std::vector<T>& data);
+    void copyFromHost(const std::vector<T>& data)
+    {
+        assertSameSize(data.size());
+
+        if (data.empty()) {
+            return;
+        }
+
+        if constexpr (std::is_same_v<T, bool>)
+        {
+            auto tmp = std::make_unique<bool[]>(data.size());
+            for (size_t i = 0; i < data.size(); ++i) {
+                tmp[i] = static_cast<bool>(data[i]);
+            }
+            copyFromHost(tmp.get(), data.size());
+        }
+        else {
+            copyFromHost(data.data(), data.size());
+        }
+    }
 
     /**
      * @brief copyToHost copies data to an std::vector
@@ -200,34 +278,108 @@ public:
      * @note This does synchronous transfer.
      * @note This assumes that the size of this buffer is equal to the size of the input vector.
      */
-    void copyToHost(std::vector<T>& data) const;
+    void copyToHost(std::vector<T>& data) const
+    {
+        assertSameSize(data.size());
+
+        if (data.empty()) {
+            return;
+        }
+
+        if constexpr (std::is_same_v<T, bool>)
+        {
+            auto tmp = std::make_unique<bool[]>(data.size());
+            copyToHost(tmp.get(), data.size());
+            for (size_t i = 0; i < data.size(); ++i) {
+                data[i] = static_cast<bool>(tmp[i]);
+            }
+            return;
+        }
+        else {
+            copyToHost(data.data(), data.size());
+        }
+    }
 
     /**
      * @brief size returns the size (number of T elements) in the buffer
      * @return number of elements
      */
-    size_type size() const;
+    size_type size() const
+    {
+        return m_numberOfElements;
+    }
 
     /**
      * @brief resize the number of elements that fit in the buffer, shrinking it causes truncation
      * @param number of elements in the new buffer
      */
-    void resize(size_t);
+    void resize(size_t newSize)
+    {
+        if (newSize < 1) {
+            OPM_THROW(std::invalid_argument, "Setting a GpuBuffer size to a non-positive number is not allowed");
+        }
+
+        if (m_numberOfElements == 0) {
+            // We have no data, so we can just allocate new memory
+            OPM_GPU_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * newSize));
+        }
+        else {
+            // Allocate memory for temporary buffer
+            T* tmpBuffer = nullptr;
+            OPM_GPU_SAFE_CALL(cudaMalloc(&tmpBuffer, sizeof(T) * m_numberOfElements));
+
+            // Move the data from the old to the new buffer with truncation
+            size_t sizeOfMove = std::min({m_numberOfElements, newSize});
+            OPM_GPU_SAFE_CALL(cudaMemcpy(tmpBuffer,
+                                        m_dataOnDevice,
+                                        sizeOfMove * sizeof(T),
+                                        cudaMemcpyDeviceToDevice));
+
+            // free the old buffer
+            OPM_GPU_SAFE_CALL(cudaFree(m_dataOnDevice));
+
+            // swap the buffers
+            m_dataOnDevice = tmpBuffer;
+        }
+
+        // update size
+        m_numberOfElements = newSize;
+    }
 
     /**
      * @brief creates an std::vector of the same size and copies the GPU data to this std::vector
      * @return an std::vector containing the elements copied from the GPU.
      */
-    std::vector<T> asStdVector() const;
+    std::vector<T> asStdVector() const
+    {
+        std::vector<T> temporary(m_numberOfElements);
+        copyToHost(temporary);
+        return temporary;
+    }
 
 private:
     T* m_dataOnDevice = nullptr;
     size_t m_numberOfElements = 0;
 
-    void assertSameSize(const GpuBuffer<T>& other) const;
-    void assertSameSize(size_t size) const;
+    void assertSameSize(const GpuBuffer<T>& other) const
+    {
+        assertSameSize(other.m_numberOfElements);
+    }
 
-    void assertHasElements() const;
+    void assertSameSize(size_t size) const
+    {
+        if (size != m_numberOfElements) {
+            OPM_THROW(std::invalid_argument,
+                    fmt::format("Given buffer has {}, while we have {}.", size, m_numberOfElements));
+        }
+    }
+
+    void assertHasElements() const
+    {
+        if (m_numberOfElements <= 0) {
+            OPM_THROW(std::invalid_argument, "We have 0 elements");
+        }
+    }
 };
 
 template <class T>
