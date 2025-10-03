@@ -383,10 +383,14 @@ private:
 };
 
 template <class T>
-GpuView<T> make_view(GpuBuffer<T>&);
+GpuView<T> make_view(GpuBuffer<T>& buf) {
+    return GpuView<T>(buf.data(), buf.size());
+}
 
 template <class T>
-GpuView<const T> make_view(const GpuBuffer<T>&);
+GpuView<const T> make_view(const GpuBuffer<T>& buf) {
+    return GpuView<const T>(buf.data(), buf.size());
+}
 
 } // namespace Opm::gpuistl
 #endif
