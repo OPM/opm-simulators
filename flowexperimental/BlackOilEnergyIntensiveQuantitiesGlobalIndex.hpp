@@ -132,6 +132,32 @@ public:
     { }
 };
 
+template <class TypeTag>
+class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::NoTemperature>
+    : public BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::NoTemperature>
+{
+    using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::NoTemperature>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
+public:
+    void updateTemperature_([[maybe_unused]] const Problem& problem,
+                            [[maybe_unused]] const PrimaryVariables& priVars,
+                            [[maybe_unused]] unsigned globalSpaceIdx,
+                            [[maybe_unused]] unsigned timeIdx)
+    { }
+
+    void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
+                                 [[maybe_unused]] const PrimaryVariables& priVars,
+                                 [[maybe_unused]] unsigned globalSpaceIdx,
+                                 [[maybe_unused]] unsigned timeIdx,
+                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
+    { }
+};
+
 } // namespace Opm
 
 #endif
