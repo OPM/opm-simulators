@@ -139,7 +139,6 @@ class BoundaryPressureCallback
     using IQRawFluidState = decltype(std::declval<IntensiveQuantities>().fluidState());
     using IQFluidState = std::remove_const_t<std::remove_reference_t<IQRawFluidState>>;
     using IQScalar = typename IQFluidState::Scalar;
-    using Toolbox = MathToolbox<IQScalar>;
 
 public:
     using ResultType = IQScalar;
@@ -342,11 +341,8 @@ class VelocityCallback
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     using ResultRawType = decltype(IntensiveQuantities().velocityCenter());
-
-    enum { dim = GridView::dimensionworld };
 
 public:
     using ResultType = std::remove_const_t<std::remove_reference_t<ResultRawType>>;
