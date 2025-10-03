@@ -468,7 +468,7 @@ public:
      * \return Dissolved gas-oil ratio (RS) at depth @c
      * depth and pressure @c press.
      */
-    Scalar operator()(const Scalar /* depth */,
+    Scalar operator()(const Scalar depth,
                       const Scalar press,
                       const Scalar temp,
                       const Scalar satGas = 0.0) const override;
@@ -529,7 +529,7 @@ public:
      * \return Dissolved oil-gas ratio (RV) at depth @c
      * depth and pressure @c press.
      */
-    Scalar operator()(const Scalar /*depth*/,
+    Scalar operator()(const Scalar depth,
                       const Scalar press,
                       const Scalar temp,
                       const Scalar satOil = 0.0) const override;
@@ -589,7 +589,7 @@ public:
      * \return Dissolved water-gas ratio (RVW) at depth @c
      * depth and pressure @c press.
      */
-    Scalar operator()(const Scalar /*depth*/,
+    Scalar operator()(const Scalar depth,
                       const Scalar press,
                       const Scalar temp,
                       const Scalar satWat = 0.0) const override;
