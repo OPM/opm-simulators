@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#pragma GCC push_options
+#pragma GCC target("avx2")
+
 bslv_memory *bslv_new()
 {
     bslv_memory *mem = malloc(sizeof(bslv_memory));
@@ -102,7 +105,7 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
           double * restrict x_j = x;
 
     prec_t * restrict P = mem->P;
-    mem->use_dilu ? prec_factorize(P,A) : prec_factorize2(P,A); // choose dilu or ilu0
+    mem->use_dilu ? prec_dilu_factorize(P,A) : prec_ilu0_factorize(P,A); // choose dilu or ilu0
     prec_downcast(P);
 
     vec_fill(x_j,0.0,n);
@@ -174,7 +177,7 @@ int bslv_pbicgstab3d(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
           double * restrict x_j = x;
 
     prec_t * restrict P = mem->P;
-    mem->use_dilu ? prec_factorize(P,A) : prec_factorize2(P,A); // choose dilu or ilu0
+    mem->use_dilu ? prec_dilu_factorize(P,A) : prec_ilu0_factorize(P,A); // choose dilu or ilu0
     prec_downcast(P);
 
     vec_fill(x_j,0.0,n);
@@ -227,6 +230,7 @@ int bslv_pbicgstab3d(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
 }
 
 
+#pragma GCC pop_options
 
 
 

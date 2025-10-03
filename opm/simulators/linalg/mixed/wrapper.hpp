@@ -58,8 +58,8 @@ class MixedSolver : public InverseOperator<X,X>
         bsr_downcast(jacobian_);
 
         // solve linear system
-        //int count = bslv_pbicgstab3m(mem_, jacobian_, &b[0][0], &x[0][0]);
-        int count = bslv_pbicgstab3d(mem_, jacobian_, &b[0][0], &x[0][0]);
+        int count = bslv_pbicgstab3m(mem_, jacobian_, &b[0][0], &x[0][0]);
+        //int count = bslv_pbicgstab3d(mem_, jacobian_, &b[0][0], &x[0][0]);
 
         // return convergence information
         res.converged  = (mem_->e[count] < mem_->tol);

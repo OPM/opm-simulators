@@ -277,7 +277,7 @@ void mat3_vfms(double *C, double const *A, double const *B)
 }
 
 
-void prec_factorize(prec_t *P, bsr_matrix *A)
+void prec_dilu_factorize(prec_t *P, bsr_matrix *A)
 {
     int nrows = A->nrows;
     int b     = A->b;
@@ -347,7 +347,7 @@ void prec_factorize(prec_t *P, bsr_matrix *A)
     }
 }
 
-void prec_factorize2(prec_t *P, bsr_matrix *A)
+void prec_ilu0_factorize(prec_t *P, bsr_matrix *A)
 {
     int nrows = A->nrows;
     int b     = A->b;
