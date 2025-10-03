@@ -132,7 +132,6 @@ class DarcyExtensiveQuantities
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
     using Toolbox = MathToolbox<Evaluation>;
-    using ParameterCache = typename FluidSystem::template ParameterCache<Evaluation>;
     using EvalDimVector = Dune::FieldVector<Evaluation, dimWorld>;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
@@ -551,9 +550,6 @@ protected:
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
-
-    const Implementation& asImp_() const
-    { return *static_cast<const Implementation*>(this); }
 
 protected:
     // intrinsic permeability tensor and its square root

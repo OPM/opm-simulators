@@ -79,6 +79,7 @@ class MultiPhaseBaseProblem
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 //! \endcond
@@ -393,10 +394,6 @@ protected:
 
 private:
     //! Returns the implementation of the problem (i.e. static polymorphism)
-    Implementation& asImp_()
-    { return *static_cast<Implementation *>(this); }
-
-    //! \copydoc asImp_()
     const Implementation& asImp_() const
     { return *static_cast<const Implementation *>(this); }
 

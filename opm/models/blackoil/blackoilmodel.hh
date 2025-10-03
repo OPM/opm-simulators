@@ -690,9 +690,6 @@ private:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
-    const Implementation& asImp_() const
-    { return *static_cast<const Implementation*>(this); }
-
     template <class Context>
     void updatePvtRegionIndex_(PrimaryVariables& priVars,
                                const Context& context,
