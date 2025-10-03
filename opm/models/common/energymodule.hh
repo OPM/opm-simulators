@@ -61,7 +61,6 @@ class EnergyModule<TypeTag, /*enableEnergy=*/false>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
@@ -69,8 +68,6 @@ class EnergyModule<TypeTag, /*enableEnergy=*/false>
     using Model = GetPropType<TypeTag, Properties::Model>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
-
-    using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
 
 public:
     /*!
@@ -229,7 +226,6 @@ class EnergyModule<TypeTag, /*enableEnergy=*/true>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
@@ -242,7 +238,6 @@ class EnergyModule<TypeTag, /*enableEnergy=*/true>
     enum { energyEqIdx = Indices::energyEqIdx };
     enum { temperatureIdx = Indices::temperatureIdx };
 
-    using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
     using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
@@ -613,7 +608,6 @@ class EnergyIntensiveQuantities<TypeTag, /*enableEnergy=*/true>
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numPhases = FluidSystem::numPhases };
-    enum { energyEqIdx = Indices::energyEqIdx };
     enum { temperatureIdx = Indices::temperatureIdx };
 
     using Toolbox = Opm::MathToolbox<Evaluation>;

@@ -117,7 +117,6 @@ class TransExtensiveQuantities
     enum { numPhases = FluidSystem::numPhases };
 
     typedef MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
     typedef Dune::FieldVector<Evaluation, dimWorld> EvalDimVector;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 

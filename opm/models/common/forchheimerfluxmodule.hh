@@ -132,7 +132,6 @@ public:
 template <class TypeTag>
 class ForchheimerIntensiveQuantities
 {
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
@@ -219,8 +218,6 @@ class ForchheimerExtensiveQuantities
     : public DarcyExtensiveQuantities<TypeTag>
 {
     using DarcyExtQuants = DarcyExtensiveQuantities<TypeTag>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
