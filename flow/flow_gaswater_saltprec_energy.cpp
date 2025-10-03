@@ -60,7 +60,7 @@ struct EnableEnergy<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
 };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
+struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> { 
     using type = TpfaLinearizer<TypeTag>;
 };
 
@@ -68,6 +68,9 @@ template<class TypeTag>
 struct LocalResidual<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
     using type = BlackOilLocalResidualTPFA<TypeTag>;
 };
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem>
+{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
 
 //! The indices required by the model
 template<class TypeTag>
@@ -84,7 +87,7 @@ public:
     using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
                                          getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
                                          getPropValue<TypeTag, Properties::EnableFoam>(),
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,

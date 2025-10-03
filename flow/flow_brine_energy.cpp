@@ -39,7 +39,7 @@ struct EnableEnergy<TypeTag, TTag::FlowBrineEnergyProblem> {
 };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowBrineEnergyProblem> {
+struct Linearizer<TypeTag, TTag::FlowBrineEnergyProblem> { 
     using type = TpfaLinearizer<TypeTag>;
 };
 
@@ -47,6 +47,9 @@ template<class TypeTag>
 struct LocalResidual<TypeTag, TTag::FlowBrineEnergyProblem> {
     using type = BlackOilLocalResidualTPFA<TypeTag>;
 };
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowBrineEnergyProblem>
+{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
 }
 
 int flowBrineEnergyMain(int argc, char** argv)

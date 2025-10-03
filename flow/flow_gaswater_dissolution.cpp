@@ -54,6 +54,10 @@ struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterDissolutionProblem> {
 };
 
 template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterDissolutionProblem>
+{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+
+template<class TypeTag>
 struct EnableVapwat<TypeTag, TTag::FlowGasWaterDissolutionProblem> {
     static constexpr bool value = true;
 };
@@ -73,7 +77,7 @@ public:
     using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
                                          getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
                                          getPropValue<TypeTag, Properties::EnableFoam>(),
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,

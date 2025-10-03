@@ -52,9 +52,8 @@ template<class TypeTag>
 struct EnableDispersion<TypeTag, TTag::FlowGasWaterEnergyProblem> { static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowGasWaterEnergyProblem> {
-    static constexpr bool value = true;
-};
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterEnergyProblem>
+{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
 
 template<class TypeTag>
 struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterEnergyProblem> {
@@ -81,7 +80,7 @@ public:
     using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
                                          getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
                                          getPropValue<TypeTag, Properties::EnableFoam>(),
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,

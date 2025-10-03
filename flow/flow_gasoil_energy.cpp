@@ -50,7 +50,7 @@ public:
   using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                        getPropValue<TypeTag, Properties::EnableExtbo>(),
                                        getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                       getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                       getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
                                        getPropValue<TypeTag, Properties::EnableFoam>(),
                                        getPropValue<TypeTag, Properties::EnableBrine>(),
                                        /*PVOffset=*/0,
@@ -58,9 +58,8 @@ public:
                                        getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowGasOilEnergyProblem> {
-    static constexpr bool value = true;
-};
+struct EnergyModuleType<TypeTag, TTag::FlowGasOilEnergyProblem>
+{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
 template<class TypeTag>
 struct Linearizer<TypeTag, TTag::FlowGasOilEnergyProblem> { using type = TpfaLinearizer<TypeTag>; };
 
