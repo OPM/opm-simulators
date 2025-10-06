@@ -849,11 +849,15 @@ private:
         const auto changedWells = this->schedule_
             .changed_wells(timer.reportStepNum(), this->initialStep());
 
-        if (changedWells.empty()) {
+        const auto changedWellLists = this->schedule_
+            .changedWellLists(timer.reportStepNum(), this->initialStep());
+
+        if (changedWells.empty() && !changedWellLists) {
             return;
         }
 
         this->outputModule_->outputWellspecReport(changedWells,
+                                                  changedWellLists,
                                                   timer.reportStepNum(),
                                                   timer.simulationTimeElapsed(),
                                                   timer.currentDateTime());

@@ -686,6 +686,7 @@ production(const std::size_t reportStepNum,
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 wellSpecification(const std::vector<std::string>& changedWells,
+                  const bool                      changedWellLists,
                   const std::size_t               reportStepNum) const
 {
     std::ostringstream ss;
@@ -696,8 +697,11 @@ wellSpecification(const std::vector<std::string>& changedWells,
         { return grid.getCellDepth(globalCellIndex); }
     };
 
-    PrtFile::Reports::wellSpecification(changedWells, reportStepNum,
-                                        this->schedule_, blockDepth, ss);
+    PrtFile::Reports::wellSpecification(changedWells,
+                                        changedWellLists,
+                                        reportStepNum,
+                                        this->schedule_,
+                                        blockDepth, ss);
 
     OpmLog::note(ss.str());
 }

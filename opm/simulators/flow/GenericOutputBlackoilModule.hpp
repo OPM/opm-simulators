@@ -121,7 +121,28 @@ public:
                          std::map<std::string, std::vector<double>>& regionData,
                          const Parallel::Communication& comm);
 
+    /// Emit well specification report
+    ///
+    /// Includes well level, connection level, and segment level information
+    /// for structurally changed wells.  Also includes contents of well
+    /// lists for structurally changed well lists.
+    ///
+    /// \param[in] changedWells Wells whose structures differ from those of
+    /// the previous well specification report.
+    ///
+    /// \param[in] changedWellLists Whether or not any of the run's current
+    /// well lists changed structurally since the previous well
+    /// specification report.
+    ///
+    /// \param[in] reportStepNum One-based report step index.
+    ///
+    /// \param[in] elapsed Simulated time, in seconds, since start of
+    /// simulation run.
+    ///
+    /// \param[in] currentDate Time point at which this well specification
+    /// report is emitted.
     void outputWellspecReport(const std::vector<std::string>& changedWells,
+                              const bool changedWellLists,
                               const std::size_t reportStepNum,
                               const double elapsed,
                               boost::posix_time::ptime currentDate) const;
