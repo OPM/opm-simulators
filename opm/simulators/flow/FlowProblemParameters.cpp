@@ -68,6 +68,12 @@ void registerFlowProblemParameters()
 
     Parameters::Register<Parameters::NumSatfuncConsistencySamplePoints>
         ("Maximum number of reported failures for each individual saturation function consistency check");
+    
+    Parameters::Register<Parameters::HyNeConfigFile>
+        ("Use config files for Hybrid Newton");
+
+    Parameters::Register<Parameters::UseHyNe>
+        ("Wheter or not to use Hybrid Newton");
 
     // By default, stop it after the universe will probably have stopped
     // to exist. (the ECL problem will finish the simulation explicitly
