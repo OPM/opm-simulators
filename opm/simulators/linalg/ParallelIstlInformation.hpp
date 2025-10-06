@@ -254,17 +254,7 @@ private:
         template<class T>
         T getInitialValue()
         {
-            //g++-4.4 does not support std::numeric_limits<T>::lowest();
-            // we rely on IEE 754 for floating point values and use min()
-            // for integral types.
-            if( std::is_integral<T>::value )
-            {
-                return std::numeric_limits<T>::min();
-            }
-            else
-            {
-                return -std::numeric_limits<T>::max();
-            }
+            return std::numeric_limits<T>::lowest();
         }
         /// \brief Get the underlying binary operator.
         ///
