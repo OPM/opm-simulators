@@ -130,8 +130,9 @@ computeLocalReduction(const std::tuple<Containers...>& containers,
         // in this regard in the future.
         //auto newVal = container.begin();
         auto mask   = ownerMask.begin();
-        auto& value = std::get<I>(values);
-        value = reduceOperator.getInitialValue();
+        using ValueType = std::tuple_element_t<I, std::tuple<ReturnValues...> >;
+        ValueType& value = std::get<I>(values);
+        value = reduceOperator.template getInitialValue<ValueType>();
 
         for (auto endVal = ownerMask.end(); mask != endVal; /*++newVal,*/ ++mask )
         {

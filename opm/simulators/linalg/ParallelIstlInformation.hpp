@@ -156,11 +156,6 @@ private:
     template<typename BinaryOperator>
     struct MaskIDOperator
     {
-        // This is a real nice one: numeric limits needs a type without const
-        // or reference qualifier. Otherwise we get complete nonesense.
-        typedef typename std::remove_cv<
-            typename std::remove_reference<typename BinaryOperator::result_type>::type
-            >::type Result;
         /// \brief Apply the underlying binary operator according to the mask.
         ///
         /// The BinaryOperator will be called with t1, and mask*t2.
@@ -181,9 +176,10 @@ private:
         {
             return b_;
         }
-        Result getInitialValue()
+        template<class T>
+        T getInitialValue()
         {
-            return Result();
+            return T{};
         }
     private:
         BinaryOperator b_;
@@ -214,9 +210,10 @@ private:
         {
             return std::plus<T>();
         }
-        T getInitialValue()
+        template<class V, std::enable_if_t<std::is_convertible_v<T, V>, int> = 0>
+        V getInitialValue()
         {
-            return T();
+            return T{};
         }
     };
 
@@ -228,12 +225,6 @@ private:
     template<typename BinaryOperator>
     struct MaskToMinOperator
     {
-        // This is a real nice one: numeric limits has to a type without const
-        // or reference. Otherwise we get complete nonesense.
-        typedef typename std::remove_reference<
-            typename std::remove_const<typename BinaryOperator::result_type>::type
-            >::type Result;
-
         explicit MaskToMinOperator(BinaryOperator b)
         : b_(b)
         {}
@@ -257,21 +248,22 @@ private:
             }
             else
             {
-                return getInitialValue();
+                return getInitialValue<T>();
             }
         }
-        Result getInitialValue()
+        template<class T>
+        T getInitialValue()
         {
             //g++-4.4 does not support std::numeric_limits<T>::lowest();
             // we rely on IEE 754 for floating point values and use min()
             // for integral types.
-            if( std::is_integral<Result>::value )
+            if( std::is_integral<T>::value )
             {
-                return std::numeric_limits<Result>::min();
+                return std::numeric_limits<T>::min();
             }
             else
             {
-                return -std::numeric_limits<Result>::max();
+                return -std::numeric_limits<T>::max();
             }
         }
         /// \brief Get the underlying binary operator.
@@ -292,12 +284,6 @@ private:
     template<typename BinaryOperator>
     struct MaskToMaxOperator
     {
-        // This is a real nice one: numeric limits has to a type without const
-        // or reference. Otherwise we get complete nonesense.
-        typedef typename std::remove_cv<
-            typename std::remove_reference<typename BinaryOperator::result_type>::type
-            >::type Result;
-
         explicit MaskToMaxOperator(BinaryOperator b)
         : b_(b)
         {}
@@ -328,9 +314,10 @@ private:
         {
             return b_;
         }
-        Result getInitialValue()
+        template<class T>
+        T getInitialValue()
         {
-            return std::numeric_limits<Result>::max();
+            return std::numeric_limits<T>::max();
         }
     private:
         BinaryOperator b_;
