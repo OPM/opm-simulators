@@ -363,7 +363,8 @@ protected:
     * output tensor. Scaling and transformations defined in the configuration
     * are applied automatically.
     *
-    * \param input The input tensor of shape [n_cells x n_input_features].
+    * \param input The input tensor of shape 
+    *              [(# of scalar features) + (# of per-cell features × n_cells)].
     * \param config The HybridNewtonConfig specifying model path and output
     *        feature definitions.
     * \return A tensor of shape [n_cells x n_output_features], where rows
