@@ -92,10 +92,6 @@ protected:
               const std::vector<Scalar>& depth_arg,
               const bool has_polymermw);
 
-    void updateWellStateFromPrimaryVariables(WellState<Scalar, IndexTraits>& well_state,
-                                             const SummaryState& summary_state,
-                                             DeferredLogger& deferred_logger) const;
-
     PrimaryVariables primary_variables_; //!< Primary variables for well
 
     // the saturations in the well bore under surface conditions at the beginning of the time step
