@@ -282,28 +282,12 @@ nonlinearIterationNewton(const int iteration,
             wellModel().linearize(simulator().model().linearizer().jacobian(),
                                   simulator().model().linearizer().residual());
 
-/*
-            // Looks like a good place to export the linear system
-            char tag[64];
-            int idx = simulator_.episodeIndex(); printf("idx = %d\n",idx);
-            bool cond = (idx>30);
-
-            if(cond) simulator_.model().linearizer().exportSystem(idx,tag);
-*/
-
-
             // ---- Solve linear system ----
             solveJacobianSystem(x);
-
 
             report.linear_solve_setup_time += linear_solve_setup_time_;
             report.linear_solve_time += perfTimer.stop();
             report.total_linear_iterations += linearIterationsLastSolve();
-/*
-            // Solution vector must be exported after solver converges
-            if(cond) simulator_.model().linearizer().exportVector(x,tag);
-            //getchar();
-*/
         }
         catch (...) {
             report.linear_solve_setup_time += linear_solve_setup_time_;
@@ -519,21 +503,14 @@ solveJacobianSystem(BVector& x)
 
         Dune::Timer perfTimer;
         perfTimer.start();
-        linSolver.prepare(jacobian, residual); // what happens here?
+        linSolver.prepare(jacobian, residual);
         linear_solve_setup_time_ = perfTimer.stop();
         linSolver.setResidual(residual);
         // actually, the error needs to be calculated after setResidual in order to
         // account for parallelization properly. since the residual of ECFV
         // discretizations does not need to be synchronized across processes to be
         // consistent, this is not relevant for OPM-flow...
-        double r0 = residual.two_norm();
-
         linSolver.solve(x);
-
-        int count = linSolver.iterations();
-        double rr = residual.two_norm();
-        printf("--> %04d: %.4e %.4e\n",count, r0, rr/r0);
-
     }
 }
 
