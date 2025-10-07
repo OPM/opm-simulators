@@ -2049,7 +2049,7 @@ calcPressSatRsRv(const RMap& reg,
             ptable.equilibrate(eqreg, vspan);
             // For titled blocks, we use both vertical and horizontal subdivision
             // The accuracy value determines the number of subdivisions in each direction
-            this->equilibrateTiltedFaultBlockComplex(cells, eqreg, gridView, acc, ptable, psat);
+            this->equilibrateTiltedFaultBlockSimple(cells, eqreg, gridView, acc, ptable, psat);
         }
         else if (acc == 0) {
             if (cells.empty()) {
