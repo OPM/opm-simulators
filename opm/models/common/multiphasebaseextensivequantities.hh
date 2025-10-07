@@ -54,7 +54,6 @@ class MultiPhaseBaseExtensiveQuantities
     using ParentType = GetPropType<TypeTag, Properties::DiscExtensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
@@ -110,7 +109,6 @@ public:
      *              the extensive quantities should be calculated.
      * \param timeIdx The index used by the time discretization.
      * \param fluidState The FluidState on the domain boundary.
-     * \param paramCache The FluidSystem's parameter cache.
      */
     template <class Context, class FluidState>
     void updateBoundary(const Context& context,
