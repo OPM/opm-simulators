@@ -1,6 +1,0 @@
-OMP_NUM_THREADS=1 mpirun -np 1 --map-by numa --bind-to core build/bin/flow \
-    --linear-solver=mixed-ilu0 \
-    --linear-solver-reduction=1e-3 \
-    --linear-solver-max-iter=1024 \
-    --matrix-add-well-contributions=true \
-    $@
