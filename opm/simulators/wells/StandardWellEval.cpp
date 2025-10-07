@@ -60,9 +60,9 @@ typename StandardWellEval<FluidSystem,Indices>::EvalWell
 StandardWellEval<FluidSystem,Indices>::
 extendEval(const Eval& in) const
 {
-    EvalWell out(primary_variables_.numWellEq() + Indices::numEq, in.value());
+    EvalWell out(in.value());
     for(int eqIdx = 0; eqIdx < Indices::numEq;++eqIdx) {
-        out.setDerivative(eqIdx, in.derivative(eqIdx));
+        out.setDerivative(eqIdx, in.derivative(eqIdx), primary_variables_.numWellEq() + Indices::numEq);
     }
     return out;
 }
