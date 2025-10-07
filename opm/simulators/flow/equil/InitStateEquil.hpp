@@ -677,6 +677,7 @@ void verticalExtent(const CellRange&      cells,
 
 template <class Scalar, class Element>
 std::pair<Scalar,Scalar> cellZMinMax(const Element& element);
+
 } // namespace Details
 
 namespace DeckDependent {
@@ -806,7 +807,6 @@ private:
     int num_pressure_points_;
     static const int dimensionworld = Grid::dimensionworld;
     std::vector<std::array<double, 3>> centroids_;
-
 };
 
 } // namespace DeckDependent

@@ -55,7 +55,6 @@
 #include <limits>
 #include <stdexcept>
 
-
 namespace Opm {
 namespace EQUIL {
 
@@ -1864,8 +1863,6 @@ getCellCentroids_(const EclipseState& eclState,
     }
 }
 
-
-
 template<class FluidSystem,
          class Grid,
          class GridView,
@@ -2032,8 +2029,11 @@ calcPressSatRsRv(const RMap& reg,
         Details::verticalExtent(cells, cellZMinMax_, comm, vspan);
         const auto acc = rec[r].initializationTargetAccuracy();
         if (acc > 0) {
-            // For titled fault blocks, we'll use a combination of vertical and horizontal subdivision
-            // with the given accuracy value determining the number of subdivisions (not sure if it is valuable)
+            // The grid blocks are treated as being tilted
+            //  The top and bottom faces are orientated towards their neighbors within the equilibration region. 
+            // The simulator takes an average of the conditions at N levels within each half (upper and lower) of the block, weighted according to the block’s
+            // horizontal cross-section at each level.
+
             // First check if the region has cells
             if (cells.empty()) {
                 regionIsEmpty[r] = 1;
