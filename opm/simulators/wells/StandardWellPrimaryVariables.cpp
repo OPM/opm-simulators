@@ -99,9 +99,11 @@ template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
 setEvaluationsFromValues()
 {
+    // total number of equations/derivatives (well + reservoir)
+    const int totalNumEq = numWellEq_ + Indices::numEq;
     for (int eqIdx = 0; eqIdx < numWellEq_; ++eqIdx) {
         evaluation_[eqIdx] =
-            EvalWell::createVariable(numWellEq_ + Indices::numEq,
+            EvalWell::createVariable(totalNumEq,
                                      value_[eqIdx],
                                      Indices::numEq + eqIdx);
 
@@ -113,7 +115,7 @@ void StandardWellPrimaryVariables<FluidSystem,Indices>::
 resize(const int numWellEq)
 {
     value_.resize(numWellEq, 0.0);
-    evaluation_.resize(numWellEq, EvalWell{numWellEq + Indices::numEq, 0.0});
+    evaluation_.resize(numWellEq, {0.0});
     numWellEq_ = numWellEq;
 }
 
@@ -468,7 +470,7 @@ StandardWellPrimaryVariables<FluidSystem,Indices>::
 volumeFraction(const int compIdx) const
 {
     if (FluidSystem::numActivePhases() == 1) {
-        return EvalWell(numWellEq_ + Indices::numEq, 1.0);
+        return 1.0;
     }
 
     if (has_gfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx)) {
@@ -486,7 +488,7 @@ volumeFraction(const int compIdx) const
     }
     // Compute the Oil fraction if oil is present
     // or the WATER fraction for a gas-water case
-    EvalWell well_fraction(numWellEq_ + Indices::numEq, 1.0);
+    EvalWell well_fraction{1.0};
     if (has_wfrac_variable && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
         well_fraction -= evaluation_[WFrac];
     }
@@ -518,7 +520,7 @@ typename StandardWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 StandardWellPrimaryVariables<FluidSystem,Indices>::
 surfaceVolumeFraction(const int compIdx) const
 {
-    EvalWell sum_volume_fraction_scaled(numWellEq_ + Indices::numEq, 0.);
+    EvalWell sum_volume_fraction_scaled{0.};
     for (int idx = 0; idx < well_.numConservationQuantities(); ++idx) {
         sum_volume_fraction_scaled += this->volumeFractionScaled(idx);
     }
