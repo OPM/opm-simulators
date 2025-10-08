@@ -4,9 +4,9 @@ from pathlib import Path
 import numpy as np
 import subprocess
 
-from .utils import Dense, Sequential
-from .utils import collect_input_features, compute_output_vars, write_config, extract_newtit_from_file, extract_unrst_variables
-from .utils import (ABSOLUTE_CASES, RELATIVE_CASES, FEATURE_ENGINEERING_CASES, SCALING_CASES, MULTI_MODEL_CASES, ZERO_NEWTON_CASES, ALL_CASES)
+from utils import Dense, Sequential
+from utils import collect_input_features, compute_output_vars, write_config, extract_newtit_from_file, extract_unrst_variables
+from utils import ABSOLUTE_CASES, RELATIVE_CASES, FEATURE_ENGINEERING_CASES, SCALING_CASES, MULTI_MODEL_CASES, ZERO_NEWTON_CASES, ALL_CASES
 
 from opm.ml.ml_tools.kerasify import export_model
 

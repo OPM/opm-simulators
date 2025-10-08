@@ -3,7 +3,9 @@ file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/tests/integration/HybridNewton)
 add_test(NAME
           HybridNewton
          COMMAND
-          pytest ${PROJECT_SOURCE_DIR}/python/integration_tests/ml/hybrid_newton
+          ${Python3_EXECUTABLE}
+          -m unittest discover
+          ${PROJECT_SOURCE_DIR}/python/integration_tests/ml/hybrid_newton
         WORKING_DIRECTORY
           ${PROJECT_BINARY_DIR}/tests/integration/HybridNewton
   )
