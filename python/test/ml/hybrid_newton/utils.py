@@ -5,6 +5,27 @@ from pathlib import Path
 
 from opm.io.ecl import ERst, ESmry
 
+# Avoid tensorflow dependency but maintain compability with kerasify export_model method
+class Dense:
+    def __init__(self, input_dim, output_dim, activation='linear'):
+        self.weights = np.zeros((input_dim, output_dim), dtype=np.float32)
+        self.biases = np.zeros((output_dim,), dtype=np.float32)
+        self.activation = activation
+
+    def set_weights(self, w_b):
+        self.weights = w_b[0].astype(np.float32)
+        self.biases = w_b[1].astype(np.float32)
+
+    def get_weights(self):
+        return [self.weights, self.biases]
+
+    def get_config(self):
+        return {'activation': self.activation}
+
+class Sequential:
+    def __init__(self, layers):
+        self.layers = layers
+
 
 def extract_unrst_variables(data_dir, deck_file):
     """

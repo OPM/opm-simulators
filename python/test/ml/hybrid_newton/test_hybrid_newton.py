@@ -4,10 +4,10 @@ from pathlib import Path
 import numpy as np
 import subprocess
 
+from .utils import Dense, Sequential
 from .utils import collect_input_features, compute_output_vars, write_config, extract_newtit_from_file, extract_unrst_variables
 from .utils import (ABSOLUTE_CASES, RELATIVE_CASES, FEATURE_ENGINEERING_CASES, SCALING_CASES, MULTI_MODEL_CASES, ZERO_NEWTON_CASES, ALL_CASES)
 
-import tensorflow as tf
 from kerasify import export_model
 
 
@@ -89,9 +89,8 @@ class TestHybridNewton(unittest.TestCase):
             input_flat = input_flat.reshape(-1)
             output_flat = output_flat.reshape(-1)
 
-            model = tf.keras.Sequential([
-                tf.keras.Input(shape=(input_flat.shape[0],)),
-                tf.keras.layers.Dense(output_flat.shape[0], use_bias=True)
+            model = Sequential([
+                Dense(input_dim=input_flat.shape[0], output_dim=output_flat.shape[0])
             ])
             model.layers[0].set_weights([np.zeros((input_flat.shape[0], output_flat.shape[0])), output_flat])
             apply_time = self.times[start_idx]
@@ -197,3 +196,5 @@ class TestHybridNewton(unittest.TestCase):
                 f"got {h}, expected <= {b}"
             )
 
+if __name__ == "__main__":
+    unittest.main()
