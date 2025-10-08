@@ -375,14 +375,16 @@ private:
                     const_cast<real_type*>(&m_cpuWeights[0][0]), m_cpuWeights.dim());
                 m_weights.emplace(m_cpuWeights);
 
+                const bool enableThreadParallel = m_parameters.cpr_weights_thread_parallel_;
                 // CPU implementation wrapped for GPU
-                weightsCalculator = [this]() -> GPUVector& {
+                weightsCalculator = [this, enableThreadParallel]() -> GPUVector& {
                     // Use the CPU implementation to calculate the weights
                     ElementContext elemCtx(m_simulator);
                     Amg::getTrueImpesWeights(pressureIndex,
                                              m_cpuWeights,
                                              elemCtx, m_simulator.model(),
-                                             m_element_chunks);
+                                             m_element_chunks,
+                                             enableThreadParallel);
 
                     // Copy CPU vector to GPU vector using main stream and asynchronous transfer
                     m_weights->copyFromHostAsync(m_cpuWeights);
@@ -394,14 +396,16 @@ private:
                 m_pinnedWeightsMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
                     const_cast<real_type*>(&m_cpuWeights[0][0]), m_cpuWeights.dim());
                 m_weights.emplace(m_cpuWeights);
+                const bool enableThreadParallel = m_parameters.cpr_weights_thread_parallel_;
                 // CPU implementation wrapped for GPU
-                weightsCalculator = [this]() -> GPUVector& {
+                weightsCalculator = [this, enableThreadParallel]() -> GPUVector& {
                     // Use the CPU implementation to calculate the weights
                     ElementContext elemCtx(m_simulator);
                     Amg::getTrueImpesWeightsAnalytic(pressureIndex,
                                                      m_cpuWeights,
                                                      elemCtx, m_simulator.model(),
-                                                     m_element_chunks);
+                                                     m_element_chunks,
+                                                     enableThreadParallel);
 
                     // Copy CPU vector to GPU vector using main stream and asynchronous transfer
                     m_weights->copyFromHostAsync(m_cpuWeights);
