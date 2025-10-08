@@ -580,8 +580,8 @@ public:
         fclose(out);
 
         // clean-up
-        delete rows;
-        delete cols;
+        delete [] rows;
+        delete [] cols;
     }
 
     void setLinearizationType(LinearizationType linearizationType)
