@@ -7,12 +7,12 @@
 #pragma GCC target("avx2")
 
 
-prec_t *prec_new()
+prec_t *prec_alloc()
 {
     prec_t *P = malloc(sizeof(prec_t));
-    P->L=bsr_new();
-    P->D=bsr_new();
-    P->U=bsr_new();
+    P->L=bsr_alloc();
+    P->D=bsr_alloc();
+    P->U=bsr_alloc();
 
     P->noffsets=-1;
     P->offsets=NULL;

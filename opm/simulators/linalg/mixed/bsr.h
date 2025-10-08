@@ -19,7 +19,7 @@ struct bsr_matrix
 
 } bsr_matrix;
 
-bsr_matrix* bsr_new();
+bsr_matrix* bsr_alloc();
 void bsr_free(bsr_matrix *A);
 
 void bsr_init(bsr_matrix *A, int nrows, int nnz, int b);

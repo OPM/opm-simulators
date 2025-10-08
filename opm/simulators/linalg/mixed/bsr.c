@@ -9,7 +9,7 @@
 #pragma GCC push_options
 #pragma GCC target("avx2")
 
-bsr_matrix* bsr_new()
+bsr_matrix* bsr_alloc()
 {
     bsr_matrix *A=malloc(sizeof(bsr_matrix));
     A->nrows = 0;

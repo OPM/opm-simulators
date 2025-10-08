@@ -8,7 +8,7 @@
 #pragma GCC push_options
 #pragma GCC target("avx2")
 
-bslv_memory *bslv_new()
+bslv_memory *bslv_alloc()
 {
     bslv_memory *mem = malloc(sizeof(bslv_memory));
     mem->e    = NULL;
@@ -65,7 +65,7 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
         for(int k=8*(n/8);k<np;k++) mem->dtmp[i][k] = 0.0; //zeroing out padded section
     }
 
-    mem->P = prec_new();
+    mem->P = prec_alloc();
     prec_init(mem->P, A); // initialize structure of L,D,U components of P
 
     // random initialization of one-dimensinal shadow space

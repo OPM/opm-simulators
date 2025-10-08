@@ -16,7 +16,7 @@ class MixedSolver : public InverseOperator<X,X>
         int b     = A[0][0].N();
 
         // create jacobian matrix object and allocate various arrays
-        jacobian_ = bsr_new();
+        jacobian_ = bsr_alloc();
         bsr_init(jacobian_,nrows,nnz,b);
 
         // initialize sparsity pattern
@@ -37,7 +37,7 @@ class MixedSolver : public InverseOperator<X,X>
         }
 
         // allocate and intialize solver memory
-        mem_ =bslv_new();
+        mem_ = bslv_alloc();
         bslv_init(mem_, tol, maxiter, jacobian_, use_dilu);
 
         //pointer to nonzero blocks
