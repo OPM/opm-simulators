@@ -71,7 +71,8 @@ public:
     EvalWell getSurfaceVolume(const EvalWell& temperature,
                               const EvalWell& saltConcentration,
                               const PrimaryVariables& primary_variables,
-                              const int seg_idx) const;
+                              const int seg_idx,
+                              DeferredLogger& deferred_logger) const;
 
     EvalWell getFrictionPressureLoss(const int seg,
                                      const bool extra_reverse_flow_derivatives = false) const;
@@ -157,6 +158,8 @@ private:
 
     std::vector<Scalar> depth_diffs_;
 
+    std::vector<Scalar> surface_densities_;
+
     // the densities of segment fluids
     // we should not have this member variable
     std::vector<EvalWell> densities_;
@@ -183,6 +186,26 @@ private:
     Scalar mixtureDensity(const int seg) const;
     Scalar mixtureDensityWithExponents(const int seg) const;
     Scalar mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const;
+
+    std::vector<Scalar> getSurfaceDensities(int pvt_region_index) const;
+
+    // this class is used to store the result of phase property calculation
+    struct PhaseCalcResult {
+        std::vector<EvalWell> b;
+        EvalWell vol_ratio{0.};
+        std::vector<EvalWell> mix;
+        std::vector<EvalWell> mix_s;
+        std::vector<EvalWell> phase_viscosities;
+        std::vector<EvalWell> phase_densities;
+    };
+
+    PhaseCalcResult calculatePhaseProperties(const EvalWell& temperature,
+                                             const EvalWell& saltConcentration,
+                                             const PrimaryVariables& primary_variables,
+                                             int seg,
+                                             int pvt_region_index,
+                                             bool update_visc_and_den,
+                                             DeferredLogger& deferred_logger) const;
 };
 
 } // namespace Opm
