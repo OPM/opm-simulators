@@ -186,7 +186,7 @@ namespace Opm {
                              const Scalar relaxation_factor = 1.0);
 
         // computing the accumulation term for later use in well mass equations
-        void computeInitialSegmentFluids(const Simulator& simulator);
+        void computeInitialSegmentFluids(const Simulator& simulator, DeferredLogger& deferred_logger);
 
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& simulator);
@@ -287,7 +287,9 @@ namespace Opm {
 
         void updateWaterThroughput(const double dt, WellStateType& well_state) const override;
 
-        EvalWell getSegmentSurfaceVolume(const Simulator& simulator, const int seg_idx) const;
+        EvalWell getSegmentSurfaceVolume(const Simulator& simulator,
+                                         const int seg_idx,
+                                         DeferredLogger& deferred_logger) const;
 
         // turn on crossflow to avoid singular well equations
         // when the well is banned from cross-flow and the BHP is not properly initialized,
