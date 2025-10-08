@@ -3,3 +3,4 @@ future
 decorator
 opm
 numpy
+tensorflow-cpu
