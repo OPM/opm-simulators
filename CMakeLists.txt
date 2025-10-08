@@ -525,6 +525,10 @@ if(MPI_FOUND)
   include (${CMAKE_CURRENT_SOURCE_DIR}/parallelUnitTests.cmake)
 endif()
 
+if(OPM_ENABLE_PYTHON)
+  include (${CMAKE_CURRENT_SOURCE_DIR}/pythonIntegrationTests.cmake)
+endif()
+
 include(OpmBashCompletion)
 
 if (NOT BUILD_FLOW)
