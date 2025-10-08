@@ -17,7 +17,7 @@ struct prec_t
 }
 prec_t;
 
-prec_t *prec_new();
+prec_t *prec_alloc();
 void prec_free(prec_t *P);
 
 void prec_init(prec_t *P, bsr_matrix const *A);

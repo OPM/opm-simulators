@@ -26,7 +26,7 @@ struct bslv_memory
 }
 bslv_memory;
 
-bslv_memory *bslv_new();
+bslv_memory *bslv_alloc();
 void bslv_free(bslv_memory *mem);
 
 void bslv_info(bslv_memory *mem, int count);
