@@ -20,6 +20,8 @@ struct bsr_matrix
 } bsr_matrix;
 
 bsr_matrix* bsr_new();
+void bsr_free(bsr_matrix *A);
+
 void bsr_init(bsr_matrix *A, int nrows, int nnz, int b);
 void bsr_vmspmv3(bsr_matrix *A, const double *x, double *y);
 void bsr_vdspmv3(bsr_matrix *A, const double *x, double *y);

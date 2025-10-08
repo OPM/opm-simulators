@@ -44,6 +44,13 @@ class MixedSolver : public InverseOperator<X,X>
         data_ = &A[0][0][0][0];
     }
 
+    ~MixedSolver()
+    {
+        bsr_free(jacobian_);
+        bslv_free(mem_);
+
+    }
+
     virtual void apply (X& x, X& b, InverseOperatorResult& res) override
     {
         // transpose each dense block to make them column-major
