@@ -23,7 +23,7 @@ class TestHybridNewton(unittest.TestCase):
         cls.times = []
 
         baseline_cmd = [
-            "flow",
+            os.environ.get("FLOW_BINARY", default="flow"),
             str(cls.data_dir / cls.deck_file),
             "--output-extra-convergence-info=steps,iterations",
             "--newton-min-iterations=0",
@@ -124,7 +124,7 @@ class TestHybridNewton(unittest.TestCase):
     def _run_hybrid_newton_test(self, json_path):
         """Run hybrid Newton via subprocess and extract Newton iterations."""
         cmd = [
-            "flow",
+            os.environ.get("FLOW_BINARY", default="flow"),
             str(self.data_dir / self.deck_file),
             f"--hy-ne-config-file={json_path}",
             "--use-hy-ne=true",
