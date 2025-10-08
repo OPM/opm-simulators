@@ -18,6 +18,8 @@ struct prec_t
 prec_t;
 
 prec_t *prec_new();
+void prec_free(prec_t *P);
+
 void prec_init(prec_t *P, bsr_matrix const *A);
 int  prec_analyze(bsr_matrix *M, int (*offsets)[3]);
 void prec_dilu_factorize(prec_t *P, bsr_matrix *A);

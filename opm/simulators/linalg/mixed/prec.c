@@ -20,6 +20,19 @@ prec_t *prec_new()
     return P;
 }
 
+void prec_free(prec_t *P)
+{
+    if(P==NULL) return;
+
+    if(P->offsets!=NULL) free(P->offsets);
+    bsr_free(P->U);
+    bsr_free(P->D);
+    bsr_free(P->L);
+
+    free(P);
+    P=NULL;
+}
+
 int prec_analyze(bsr_matrix *M, int (*offsets)[3])
 {
     int count=0;

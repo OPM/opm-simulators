@@ -9,12 +9,6 @@
 #pragma GCC push_options
 #pragma GCC target("avx2")
 
-void bsr_hello()
-{
-    printf("HaugenLabs\n");
-    getchar();
-}
-
 bsr_matrix* bsr_new()
 {
     bsr_matrix *A=malloc(sizeof(bsr_matrix));
@@ -29,6 +23,19 @@ bsr_matrix* bsr_new()
     A->flt    = NULL;
 
     return A;
+}
+
+void bsr_free(bsr_matrix *A)
+{
+    if(A==NULL) return;
+
+    if(A->flt    != NULL) free(A->flt);
+    if(A->dbl    != NULL) free(A->dbl);
+    if(A->colidx != NULL) free(A->colidx);
+    if(A->rowptr != NULL) free(A->rowptr);
+
+    free(A);
+    A=NULL;
 }
 
 void bsr_init(bsr_matrix *A, int nrows, int nnz, int b)

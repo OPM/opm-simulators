@@ -11,7 +11,29 @@
 bslv_memory *bslv_new()
 {
     bslv_memory *mem = malloc(sizeof(bslv_memory));
+    mem->e    = NULL;
+    mem->dtmp = NULL;
     return mem;
+}
+
+bslv_free(bslv_memory *mem)
+{
+    if(mem == NULL) return;
+
+    if(mem->e !=NULL) free(mem->e);
+    if(mem->dtmp !=NULL)
+    {
+        int narrays=7;
+        for(int i=0;i<narrays;i++)
+        {
+            if(mem->dtmp[i] != NULL) free(mem->dtmp[i]);
+        }
+        free(mem->dtmp);
+    }
+    if(mem->P !=NULL) prec_free(mem->P);
+
+    free(mem);
+    mem=NULL;
 }
 
 void bslv_info(bslv_memory *mem, int count)
