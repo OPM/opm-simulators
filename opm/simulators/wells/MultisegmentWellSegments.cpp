@@ -213,6 +213,7 @@ computeFluidProperties(const EvalWell& temperature,
                     FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
                 visc[gasCompIdx] =
                     FluidSystem::gasPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
+                phase_densities[gasCompIdx] = b[gasCompIdx] * surf_dens[gasCompIdx];
             }
         }
 
@@ -250,6 +251,7 @@ computeFluidProperties(const EvalWell& temperature,
                     FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
                 visc[oilCompIdx] =
                     FluidSystem::oilPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
+                phase_densities[oilCompIdx] = b[oilCompIdx] * surf_dens[oilCompIdx];
             }
         }
 
