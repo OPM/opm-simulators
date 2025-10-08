@@ -151,7 +151,7 @@ struct BlackOilVariableAndEquationIndices
 
     //! Index of the primary variable for the brine
     static constexpr int saltConcentrationIdx =
-        enableBrine ? PVOffset + numPhases + numSolvents + numExtbos + numExtbos + numPolymers + numFoam : -1000;
+        enableBrine ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam : -1000;
 
     //! Index of the primary variable for temperature
     static constexpr int temperatureIdx  =
