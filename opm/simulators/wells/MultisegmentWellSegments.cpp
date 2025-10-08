@@ -183,32 +183,25 @@ computeFluidProperties(const EvalWell& temperature,
         // gas phase
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            const bool oil_exist = (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && mix_s[FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx)] > 0.0);
+            if (oil_exist) {
                 const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
                 const EvalWell rvmax = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index, temperature, seg_pressure);
-                if (mix_s[oilCompIdx] > 0.0) {
-                    if (mix_s[gasCompIdx] > 0.0) {
-                        rv = mix_s[oilCompIdx] / mix_s[gasCompIdx];
-                    }
-
-                    if (rv > rvmax) {
-                        rv = rvmax;
-                    }
-                    b[gasCompIdx] =
-                        FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rv, rvw);
-                    visc[gasCompIdx] =
-                        FluidSystem::gasPvt().viscosity(pvt_region_index, temperature, seg_pressure, rv, rvw);
-                    phase_densities[gasCompIdx] = b[gasCompIdx] * surf_dens[gasCompIdx]
-                                                + rv * b[gasCompIdx] * surf_dens[oilCompIdx];
-                } else { // no oil exists
-                    b[gasCompIdx] =
-                        FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
-                    visc[gasCompIdx] =
-                        FluidSystem::gasPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
-                    phase_densities[gasCompIdx] = b[gasCompIdx] * surf_dens[gasCompIdx];
+                if (mix_s[gasCompIdx] > 0.0) {
+                    rv = mix_s[oilCompIdx] / mix_s[gasCompIdx];
                 }
-            } else { // no Liquid phase
-                // it is the same with zero mix_s[Oil]
+
+                if (rv > rvmax) {
+                    rv = rvmax;
+                }
+                b[gasCompIdx] =
+                        FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure,
+                                                                           rv, rvw);
+                visc[gasCompIdx] =
+                        FluidSystem::gasPvt().viscosity(pvt_region_index, temperature, seg_pressure, rv, rvw);
+                phase_densities[gasCompIdx] = b[gasCompIdx] * surf_dens[gasCompIdx]
+                                              + rv * b[gasCompIdx] * surf_dens[oilCompIdx];
+            } else { // no oil here
                 b[gasCompIdx] =
                     FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
                 visc[gasCompIdx] =
@@ -221,32 +214,25 @@ computeFluidProperties(const EvalWell& temperature,
         // oil phase
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const bool gas_exist = (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && mix_s[FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx)] > 0.0);
+            if (gas_exist) {
                 const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
                 const EvalWell rsmax = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index, temperature, seg_pressure);
-                if (mix_s[gasCompIdx] > 0.0) {
-                    if (mix_s[oilCompIdx] > 0.0) {
-                        rs = mix_s[gasCompIdx] / mix_s[oilCompIdx];
-                    }
-
-                    if (rs > rsmax) {
-                        rs = rsmax;
-                    }
-                    b[oilCompIdx] =
-                        FluidSystem::oilPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rs);
-                    visc[oilCompIdx] =
-                        FluidSystem::oilPvt().viscosity(pvt_region_index, temperature, seg_pressure, rs);
-                    phase_densities[oilCompIdx] = b[oilCompIdx] * surf_dens[oilCompIdx]
-                                                + rs * b[oilCompIdx] * surf_dens[gasCompIdx];
-                } else { // no oil exists
-                    b[oilCompIdx] =
-                        FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
-                    visc[oilCompIdx] =
-                        FluidSystem::oilPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
-                    phase_densities[oilCompIdx] = b[oilCompIdx] * surf_dens[oilCompIdx];
+                if (mix_s[oilCompIdx] > 0.0) {
+                    rs = mix_s[gasCompIdx] / mix_s[oilCompIdx];
                 }
-            } else { // no Liquid phase
-                // it is the same with zero mix_s[Oil]
+
+                if (rs > rsmax) {
+                    rs = rsmax;
+                }
+                b[oilCompIdx] =
+                        FluidSystem::oilPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure,
+                                                                           rs);
+                visc[oilCompIdx] =
+                        FluidSystem::oilPvt().viscosity(pvt_region_index, temperature, seg_pressure, rs);
+                phase_densities[oilCompIdx] = b[oilCompIdx] * surf_dens[oilCompIdx]
+                                              + rs * b[oilCompIdx] * surf_dens[gasCompIdx];
+            } else { // no gas phase
                 b[oilCompIdx] =
                     FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
                 visc[oilCompIdx] =
