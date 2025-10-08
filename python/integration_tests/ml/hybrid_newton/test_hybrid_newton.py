@@ -8,8 +8,7 @@ from .utils import Dense, Sequential
 from .utils import collect_input_features, compute_output_vars, write_config, extract_newtit_from_file, extract_unrst_variables
 from .utils import (ABSOLUTE_CASES, RELATIVE_CASES, FEATURE_ENGINEERING_CASES, SCALING_CASES, MULTI_MODEL_CASES, ZERO_NEWTON_CASES, ALL_CASES)
 
-from kerasify import export_model
-
+from opm.ml.ml_tools.kerasify import export_model
 
 class TestHybridNewton(unittest.TestCase):
     @classmethod
@@ -24,27 +23,28 @@ class TestHybridNewton(unittest.TestCase):
         cls.times = []
 
         baseline_cmd = [
-            "flow",
+            os.environ.get("FLOW_BINARY", default="flow"),
             str(cls.data_dir / cls.deck_file),
             "--output-extra-convergence-info=steps,iterations",
             "--newton-min-iterations=0",
+            "--output-dir=.",
             "--full-time-step-initially=true",
         ]
 
-        print("Running baseline simulation...")
-        subprocess.run(baseline_cmd, cwd=cls.data_dir, stdout=subprocess.DEVNULL, check=True)
+        print("Running baseline simulation... ")
+        subprocess.run(baseline_cmd, stdout=subprocess.DEVNULL, check=True)
 
         # Extract Newton iterations
-        cls.baseline_iters = extract_newtit_from_file(cls.data_dir / Path(cls.deck_file).stem)
+        cls.baseline_iters = extract_newtit_from_file(Path('.') / Path(cls.deck_file).stem)
         print(f"Baseline Newton iterations: {cls.baseline_iters}")
 
         # Extract fluid state from UNRST for all timesteps
-        cls.unrst, cls.times = extract_unrst_variables(cls.data_dir, cls.deck_file)
+        cls.unrst, cls.times = extract_unrst_variables(".", cls.deck_file)
         cls.rd_init["PERMX"] = [10**2] * len(cls.unrst["PRESSURE"][0])
         cls.n_cells = len(cls.unrst["PRESSURE"][0])
   
     def _run_cases(self, cases):
-        models_dir = self.data_dir / "models"
+        models_dir = Path('.') / "models"
         os.makedirs(models_dir, exist_ok=True)
 
         for case in cases:
@@ -125,21 +125,22 @@ class TestHybridNewton(unittest.TestCase):
     def _run_hybrid_newton_test(self, json_path):
         """Run hybrid Newton via subprocess and extract Newton iterations."""
         cmd = [
-            "flow",
+            os.environ.get("FLOW_BINARY", default="flow"),
             str(self.data_dir / self.deck_file),
             f"--hy-ne-config-file={json_path}",
             "--use-hy-ne=true",
             "--output-extra-convergence-info=steps,iterations",
             "--newton-min-iterations=0",
+            "--output-dir=.",
             "--full-time-step-initially=true"
         ]
 
         print(f"Running hybrid Newton simulation with config {json_path}...")
-        subprocess.run(cmd, cwd=self.data_dir, 
+        subprocess.run(cmd,
                        stdout=subprocess.DEVNULL, 
                        check=True)
 
-        hybrid_iters = extract_newtit_from_file(self.data_dir / Path(self.deck_file).stem) 
+        hybrid_iters = extract_newtit_from_file(Path('.') / Path(self.deck_file).stem)
         return hybrid_iters
 
     def test_absolute_cases(self):
