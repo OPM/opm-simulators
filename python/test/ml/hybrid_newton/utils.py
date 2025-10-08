@@ -220,7 +220,7 @@ def compute_output_vars(output_features, start_idx, end_idx, unrst, rd_init, fea
     return np.stack(output_data), scaling_params
 
 
-def extract_newtit_from_file(filename: str | Path) -> list[int]:
+def extract_newtit_from_file(filename):
     """
     Parse an INFOSTEP file and return the values of the 'NewtIt' column.
 
