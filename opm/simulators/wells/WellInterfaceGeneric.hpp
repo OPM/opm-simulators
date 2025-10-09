@@ -67,6 +67,8 @@ public:
                          const PhaseUsageInfo<IndexTraits>& phase_usage,
                          const std::vector<PerforationData<Scalar>>& perf_data);
 
+    virtual ~WellInterfaceGeneric() = default;
+
     /// \brief Get the perforations of the well
     const std::vector<PerforationData<Scalar>>& perforationData() const;
 
@@ -253,9 +255,9 @@ protected:
         {
             if (!operable_under_only_bhp_limit || !solvable || has_negative_potentials) {
                 return false;
-            } else {
-                return ( (isOperableUnderBHPLimit() || isOperableUnderTHPLimit()) );
             }
+
+            return isOperableUnderBHPLimit() || isOperableUnderTHPLimit();
         }
 
         bool isOperableUnderBHPLimit() const
