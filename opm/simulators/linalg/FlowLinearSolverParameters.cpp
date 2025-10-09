@@ -68,11 +68,18 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
     }
 
     accelerator_mode_ = Parameters::Get<Parameters::AcceleratorMode>();
+    cpr_weights_thread_parallel_ = Parameters::Get<Parameters::CprWeightsThreadParallel>();
     gpu_device_id_ = Parameters::Get<Parameters::GpuDeviceId>();
     opencl_platform_id_ = Parameters::Get<Parameters::OpenclPlatformId>();
     opencl_ilu_parallel_ = Parameters::Get<Parameters::OpenclIluParallel>();
-    linear_solver_accelerator_ = Parameters::linearSolverAcceleratorTypeFromCLI();
-    cpr_weights_thread_parallel_ = Parameters::Get<Parameters::CprWeightsThreadParallel>();
+
+    // NLDD local solvers must use CPU accelerator because extractMatrix and other
+    // operations in the NLDD implementation are not GPU-compatible yet.
+    if (is_nldd_local_solver_) {
+        linear_solver_accelerator_ = Parameters::LinearSolverAcceleratorType::CPU;
+    } else {
+        linear_solver_accelerator_ = Parameters::linearSolverAcceleratorTypeFromCLI();
+    }
 
     if (linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU) {
         if (!Parameters::IsSet<Parameters::LinearSolver>()) {
