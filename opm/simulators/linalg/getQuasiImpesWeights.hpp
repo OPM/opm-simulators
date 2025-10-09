@@ -58,7 +58,7 @@ namespace Details
 namespace Amg
 {
     template <class Matrix, class Vector>
-    void getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, const bool transpose, Vector& weights)
+    void getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, const bool transpose, Vector& weights, bool enable_thread_parallel)
     {
         using VectorBlockType = typename Vector::block_type;
         using MatrixBlockType = typename Matrix::block_type;
@@ -72,10 +72,10 @@ namespace Amg
         VectorBlockType bweights;
         MatrixBlockType diag_block_transpose;
 
-        // Use OpenMP to parallelize over matrix rows
-        #ifdef _OPENMP
-        #pragma omp parallel for private(diag_block, bweights, diag_block_transpose)
-        #endif
+        // Use OpenMP to parallelize over matrix rows (runtime controlled via if clause)
+#ifdef _OPENMP
+#pragma omp parallel for private(diag_block, bweights, diag_block_transpose) if(enable_thread_parallel)
+#endif
         for (int row_idx = 0; row_idx < static_cast<int>(A.N()); ++row_idx) {
             diag_block = MatrixBlockType(0.0);
             // Find diagonal block for this row
@@ -102,10 +102,10 @@ namespace Amg
     }
 
     template <class Matrix, class Vector>
-    Vector getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, const bool transpose)
+    Vector getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, const bool transpose, bool enable_thread_parallel)
     {
         Vector weights(matrix.N());
-        getQuasiImpesWeights(matrix, pressureVarIndex, transpose, weights);
+        getQuasiImpesWeights(matrix, pressureVarIndex, transpose, weights, enable_thread_parallel);
         return weights;
     }
 
@@ -152,7 +152,8 @@ namespace Amg
     void getTrueImpesWeights(int pressureVarIndex, Vector& weights,
                              const ElementContext& elemCtx,
                              const Model& model,
-                             const ElementChunksType& element_chunks)
+                             const ElementChunksType& element_chunks,
+                             bool enable_thread_parallel)
     {
         using VectorBlockType = typename Vector::block_type;
         using Matrix = typename std::decay_t<decltype(model.linearizer().jacobian())>;
@@ -171,9 +172,9 @@ namespace Amg
         Dune::FieldVector<Evaluation, numEq> storage;
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        #ifdef _OPENMP
-        #pragma omp parallel for private(block, bweights, block_transpose, storage)
-        #endif
+#ifdef _OPENMP
+#pragma omp parallel for private(block, bweights, block_transpose, storage) if(enable_thread_parallel)
+#endif
         for (const auto& chunk : element_chunks) {
             const std::size_t thread_id = ThreadManager::threadId();
             ElementContext localElemCtx(elemCtx.simulator());
@@ -217,7 +218,8 @@ namespace Amg
                                      Vector& weights,
                                      const ElementContext& elemCtx,
                                      const Model& model,
-                                     const ElementChunksType& element_chunks)
+                                     const ElementChunksType& element_chunks,
+                                     bool enable_thread_parallel)
     {
         // The sequential residual is a linear combination of the
         // mass balance residuals, with coefficients equal to (for
@@ -239,11 +241,11 @@ namespace Amg
         const auto& solution = model.solution(/*timeIdx*/ 0);
         VectorBlockType bweights;
 
-        // Use OpenMP to parallelize over element chunks
+        // Use OpenMP to parallelize over element chunks (runtime controlled via if clause)
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        #ifdef _OPENMP
-        #pragma omp parallel for private(bweights)
-        #endif
+#ifdef _OPENMP
+#pragma omp parallel for private(bweights) if(enable_thread_parallel)
+#endif
         for (const auto& chunk : element_chunks) {
 
             // Each thread gets a unique copy of elemCtx

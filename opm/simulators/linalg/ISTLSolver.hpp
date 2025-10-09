@@ -580,19 +580,21 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (preconditionerType == "cpr" || preconditionerType == "cprt"
                 || preconditionerType == "cprw" || preconditionerType == "cprwt") {
                 const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
+                const bool enableThreadParallel = this->parameters_[0].cpr_weights_thread_parallel_;
                 const auto weightsType = prm.get("preconditioner.weight_type"s, "quasiimpes"s);
                 if (weightsType == "quasiimpes") {
                     // weights will be created as default in the solver
                     // assignment p = pressureIndex prevent compiler warning about
                     // capturing variable with non-automatic storage duration
-                    weightsCalculator = [matrix, transpose, pressIndex]() {
+                    weightsCalculator = [matrix, transpose, pressIndex, enableThreadParallel]() {
                         return Amg::getQuasiImpesWeights<Matrix, Vector>(matrix,
                                                                          pressIndex,
-                                                                         transpose);
+                                                                         transpose,
+                                                                         enableThreadParallel);
                     };
                 } else if ( weightsType == "trueimpes" ) {
                     weightsCalculator =
-                        [this, pressIndex]
+                        [this, pressIndex, enableThreadParallel]
                         {
                             Vector weights(rhs_->size());
                             ElementContext elemCtx(simulator_);
@@ -600,13 +602,14 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                      weights,
                                                      elemCtx,
                                                      simulator_.model(),
-                                                     *element_chunks_
+                                                     *element_chunks_,
+                                                     enableThreadParallel
                             );
                             return weights;
                         };
                 } else if  (weightsType == "trueimpesanalytic" ) {
                     weightsCalculator =
-                        [this, pressIndex]
+                        [this, pressIndex, enableThreadParallel]
                         {
                             Vector weights(rhs_->size());
                             ElementContext elemCtx(simulator_);
@@ -614,7 +617,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                              weights,
                                                              elemCtx,
                                                              simulator_.model(),
-                                                             *element_chunks_
+                                                             *element_chunks_,
+                                                             enableThreadParallel
                             );
                             return weights;
                         };
