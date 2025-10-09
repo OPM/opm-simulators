@@ -56,7 +56,6 @@ public:
     void computeFluidProperties(const EvalWell& temperature,
                                 const EvalWell& saltConcentration,
                                 const PrimaryVariables& primary_variables,
-                                int pvt_region_index,
                                 DeferredLogger& deferred_logger);
 
     //! \brief Update upwinding segments.
@@ -72,7 +71,6 @@ public:
     EvalWell getSurfaceVolume(const EvalWell& temperature,
                               const EvalWell& saltConcentration,
                               const PrimaryVariables& primary_variables,
-                              const int pvt_region_index,
                               const int seg_idx) const;
 
     EvalWell getFrictionPressureLoss(const int seg,

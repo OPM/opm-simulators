@@ -140,9 +140,9 @@ void MultisegmentWellSegments<FluidSystem,Indices>::
 computeFluidProperties(const EvalWell& temperature,
                        const EvalWell& saltConcentration,
                        const PrimaryVariables& primary_variables,
-                       int pvt_region_index,
                        DeferredLogger& deferred_logger)
 {
+    const int pvt_region_index = well_.pvtRegionIdx();
     std::vector<Scalar> surf_dens(well_.numConservationQuantities());
     // Surface density.
     for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
@@ -349,7 +349,6 @@ MultisegmentWellSegments<FluidSystem,Indices>::
 getSurfaceVolume(const EvalWell& temperature,
                  const EvalWell& saltConcentration,
                  const PrimaryVariables& primary_variables,
-                 const int pvt_region_index,
                  const int seg_idx) const
 {
     const EvalWell seg_pressure = primary_variables.getSegmentPressure(seg_idx);
@@ -359,6 +358,7 @@ getSurfaceVolume(const EvalWell& temperature,
         mix_s[comp_idx] = primary_variables.surfaceVolumeFraction(seg_idx, comp_idx);
     }
 
+    const int pvt_region_index = well_.pvtRegionIdx();
     std::vector<EvalWell> b(well_.numConservationQuantities(), 0.);
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
         const unsigned waterCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);

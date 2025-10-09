@@ -1140,7 +1140,6 @@ namespace Opm
         this->segments_.computeFluidProperties(temperature,
                                                saltConcentration,
                                                this->primary_variables_,
-                                               std::get<2>(info), //pvt_region_index
                                                deferred_logger);
     }
 
@@ -2047,7 +2046,6 @@ namespace Opm
         return this->segments_.getSurfaceVolume(temperature,
                                                 saltConcentration,
                                                 this->primary_variables_,
-                                                std::get<2>(info), //pvt_region_index
                                                 seg_idx);
     }
 
@@ -2287,13 +2285,13 @@ namespace Opm
     }
 
     template <typename TypeTag>
-    typename MultisegmentWell<TypeTag>::FSInfo MultisegmentWell<TypeTag>::
+    typename MultisegmentWell<TypeTag>::FSInfo
+    MultisegmentWell<TypeTag>::
     getFirstPerforationFluidStateInfo(const Simulator& simulator) const
     {
         Scalar fsTemperature = 0.0;
         using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
         SaltConcType fsSaltConcentration{};
-        int pvt_region_index = 0;
 
         // If this process does not contain active perforations, this->well_cells_ is empty.
         if (this->well_cells_.size() > 0) {
@@ -2305,10 +2303,9 @@ namespace Opm
 
             fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
             fsSaltConcentration = fs.saltConcentration();
-            pvt_region_index = fs.pvtRegionIndex();
         }
 
-        auto info = std::make_tuple(fsTemperature, fsSaltConcentration, pvt_region_index);
+        auto info = std::make_tuple(fsTemperature, fsSaltConcentration);
 
         // The following broadcast call is neccessary to ensure that processes that do *not* contain
         // the first perforation get the correct temperature, saltConcentration and pvt_region_index
