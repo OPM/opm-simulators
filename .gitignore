@@ -32,6 +32,11 @@ build/
 
 # Mac OS X debug info
 *.dSYM
+*.DS_Store
+
+# VSCode
+.vs
+.vscode
 
 # emacs directory setting:
 .dir-locals.el
