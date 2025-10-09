@@ -815,10 +815,10 @@ template<class Scalar> using dIter = typename std::vector<Scalar>::iterator;
 template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterator;
 
 #define INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, DIM)                 \
-    template std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>,int>                \
+    template std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>>                \
         Opm::ParallelWellInfo<T>::broadcastFirstPerforationValue                    \
-        <std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>,int>>                   \
-        (std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>,int> const&)            \
+        <std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>>>                   \
+        (std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>> const&)            \
         const;
 
 #define INSTANTIATE_TYPE(T)                                                         \
