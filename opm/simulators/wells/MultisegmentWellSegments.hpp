@@ -187,8 +187,6 @@ private:
     Scalar mixtureDensityWithExponents(const int seg) const;
     Scalar mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const;
 
-    std::vector<Scalar> getSurfaceDensities(int pvt_region_index) const;
-
     // this class is used to store the result of phase property calculation
     struct PhaseCalcResult {
         std::vector<EvalWell> b;
