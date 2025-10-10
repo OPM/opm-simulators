@@ -53,6 +53,28 @@
 #include <utility>
 #include <vector>
 
+namespace {
+
+template <typename FluidSystem>
+std::vector<typename FluidSystem::Scalar> surfaceDensities(const int pvt_region, const std::size_t num_quantities)
+{
+    using Scalar = typename FluidSystem::Scalar;
+    auto surf_dens = std::vector<Scalar>(num_quantities);
+
+    for (auto phIdx = 0*FluidSystem::numPhases; phIdx < FluidSystem::numPhases; ++phIdx) {
+        if (!FluidSystem::phaseIsActive(phIdx)) {
+            continue;
+        }
+
+        const auto compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phIdx));
+        surf_dens[compIdx] = FluidSystem::referenceDensity(phIdx, pvt_region);
+    }
+
+    return surf_dens;
+}
+
+} // anonymous namespace
+
 namespace Opm
 {
 
@@ -69,6 +91,7 @@ MultisegmentWellSegments(const int numSegments,
     // local information. This is an exception and intentionally, since here, we only need the local entries.
     , inlets_(well.wellEcl().getSegments().size())
     , depth_diffs_(numSegments, 0.0)
+    , surface_densities_(surfaceDensities<FluidSystem>(well.pvtRegionIdx(), well.numConservationQuantities()))
     , densities_(numSegments, 0.0)
     , mass_rates_(numSegments, 0.0)
     , viscosities_(numSegments, 0.0)
@@ -134,8 +157,6 @@ MultisegmentWellSegments(const int numSegments,
         const Scalar outlet_depth = outlet_segment.depth();
         depth_diffs_[seg] = segment_depth - outlet_depth;
     }
-
-    surface_densities_ = getSurfaceDensities(well_.pvtRegionIdx());
 }
 
 template<class FluidSystem, class Indices>
@@ -748,24 +769,6 @@ mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const
     }
 
     return mixDens;
-}
-
-template<class FluidSystem, class Indices>
-std::vector<typename MultisegmentWellSegments<FluidSystem, Indices>::Scalar>
-MultisegmentWellSegments<FluidSystem, Indices>::
-getSurfaceDensities(int pvt_region_index) const
-{
-    std::vector<Scalar> surf_dens(well_.numConservationQuantities());
-    // Surface density.
-    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-        if (!FluidSystem::phaseIsActive(phaseIdx)) {
-            continue;
-        }
-
-        const unsigned compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-        surf_dens[compIdx] = FluidSystem::referenceDensity(phaseIdx, pvt_region_index);
-    }
-    return surf_dens;
 }
 
 template<class FluidSystem, class Indices>
