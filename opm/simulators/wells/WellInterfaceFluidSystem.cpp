@@ -37,7 +37,7 @@
 #include <opm/simulators/wells/WellConstraints.hpp>
 #include <opm/simulators/wells/WellGroupConstraints.hpp>
 #include <opm/simulators/wells/WellGroupControls.hpp>
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/WellGroupHelper.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 namespace Opm
@@ -179,13 +179,15 @@ checkIndividualConstraints(SingleWellState<Scalar, IndexTraits>& ws,
 template<typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
-                      const GroupState<Scalar>& group_state,
+checkGroupConstraints(const WellGroupHelperType& wgHelper,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const bool check_guide_rate,
                       DeferredLogger& deferred_logger) const
 {
+    const auto& group_state = wgHelper.groupState();
+
+
     if (!this->wellEcl().isAvailableForGroupControl())
         return false;
 
@@ -201,7 +203,7 @@ checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
             this->rateConverter().calcInjCoeff(id, region, coeff);
     };
 
-    return WellGroupConstraints(*this).checkGroupConstraints(well_state, group_state,
+    return WellGroupConstraints(*this).checkGroupConstraints(wgHelper,
                                                              schedule, summaryState,
                                                              rCoeff, check_guide_rate, deferred_logger);
 }
@@ -209,18 +211,18 @@ checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
 template<typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkConstraints(WellState<Scalar, IndexTraits>& well_state,
-                 const GroupState<Scalar>& group_state,
+checkConstraints(const WellGroupHelperType& wgHelper,
                  const Schedule& schedule,
                  const SummaryState& summaryState,
                  DeferredLogger& deferred_logger) const
 {
+    auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
     const bool ind_broken = checkIndividualConstraints(well_state.well(this->index_of_well_),
                                                        summaryState, deferred_logger);
     if (ind_broken) {
         return true;
     } else {
-        return checkGroupConstraints(well_state, group_state, schedule,
+        return checkGroupConstraints(wgHelper, schedule,
                                      summaryState, true, deferred_logger);
     }
 }

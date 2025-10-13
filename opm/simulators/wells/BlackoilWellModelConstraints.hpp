@@ -34,7 +34,7 @@ class DeferredLogger;
 template<class Scalar> class GroupState;
 class SummaryState;
 template<typename Scalar, typename IndexTraits> class WellState;
-template<typename Scalar, typename IndexTraits> class WellGroupHelpers;
+template<typename Scalar, typename IndexTraits> class WellGroupHelper;
 
 /// Class for handling constraints for the blackoil well model.
 template<typename Scalar, typename IndexTraits>
@@ -46,10 +46,10 @@ public:
     constexpr static int oilPhaseIdx = IndexTraits::oilPhaseIdx;
     constexpr static int gasPhaseIdx = IndexTraits::gasPhaseIdx;
 
-    using WellGroupHelpersType = WellGroupHelpers<Scalar, IndexTraits>;
+    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
 
     //! \brief Constructor initializes reference to the well model.
-    explicit BlackoilWellModelConstraints(const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel)
+    explicit BlackoilWellModelConstraints(BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel)
         : wellModel_(wellModel)
     {}
 
@@ -67,10 +67,8 @@ public:
 
     //! \brief Execute action on broken constraint for a production well group. Return true if a group control is changed
     bool actionOnBrokenConstraints(const Group& group,
-                                   const int reportStepIdx,
                                    const Group::GroupLimitAction group_limit_action,
                                    const Group::ProductionCMode& newControl,
-                                   const WellState<Scalar, IndexTraits>& well_state,
                                    std::optional<std::string>& worst_offending_well,
                                    GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger) const;
@@ -84,8 +82,7 @@ public:
                                       std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
                                       std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                                       GroupState<Scalar>& group_state,
-                                      WellState<Scalar, IndexTraits>& well_state,
-                                      DeferredLogger& deferred_logger) const;
+                                      DeferredLogger& deferred_logger);
 
 private:
     //! \brief Check and return value and type of constraints for an injection well group.
@@ -97,10 +94,11 @@ private:
     //! \brief Check and return value and type of constraints for a production well group.
     std::pair<Group::ProductionCMode, Scalar>
     checkGroupProductionConstraints(const Group& group,
-                                    const int reportStepIdx,
                                     DeferredLogger& deferred_logger) const;
 
-    const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_; //!< Reference to well model
+    WellGroupHelperType& wgHelper() { return wellModel_.wgHelper(); }
+    const WellGroupHelperType& wgHelper() const { return wellModel_.wgHelper(); }
+    BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_; //!< Reference to well model
 };
 
 } // namespace Opm

@@ -34,7 +34,7 @@
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/WellGroupHelper.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -358,8 +358,7 @@ template<typename Scalar, typename IndexTraits>
 std::pair<Scalar, Group::ProductionCMode> WellGroupControls<Scalar, IndexTraits>::
 getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       const Group& group,
-                                      const WellState<Scalar, IndexTraits>& well_state,
-                                      const GroupState<Scalar>& group_state,
+                                      const WellGroupHelperType& wgHelper,
                                       const Schedule& schedule,
                                       const SummaryState& summaryState,
                                       const std::vector<Scalar>& resv_coeff,
@@ -368,6 +367,8 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       const GuideRate* guideRate,
                                       DeferredLogger& deferred_logger)
 {
+    const auto& group_state = wgHelper.groupState();
+    const auto& well_state = wgHelper.wellState();
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
     if (currentGroupControl == Group::ProductionCMode::FLD ||
         currentGroupControl == Group::ProductionCMode::NONE) {
@@ -377,7 +378,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
             // Produce share of parents control
             const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
             efficiencyFactor *= group.getGroupEfficiencyFactor();
-            return getAutoChokeGroupProductionTargetRate(name, parent, well_state, group_state,
+            return getAutoChokeGroupProductionTargetRate(name, parent, wgHelper,
                                                 schedule, summaryState,
                                                 resv_coeff, efficiencyFactor, reportStepIdx,
                                                 guideRate, deferred_logger);
@@ -398,7 +399,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     // gconsale may adjust the grat target.
     // the adjusted rates is send to the targetCalculator
     Scalar gratTargetFromSales = 0.0;
-    if (group_state.has_grat_sales_target(group.name()))
+    if (wgHelper.groupState().has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
     WGHelpers::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
@@ -410,8 +411,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       group.has_gpmaint_control(currentGroupControl));
 
     WGHelpers::FractionCalculator<Scalar, IndexTraits> fcalc(schedule,
-                                        well_state,
-                                        group_state,
+                                        wgHelper,
                                         summaryState,
                                         reportStepIdx,
                                         guideRate,
@@ -433,8 +433,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
         ctrl = group.productionControls(summaryState);
 
     const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<Scalar, IndexTraits>::groupChainTopBot(name, group.name(),
-                                                                  schedule, reportStepIdx);
+    const auto chain = wgHelper.groupChainTopBot(name, group.name());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
     Scalar target = orig_target;
