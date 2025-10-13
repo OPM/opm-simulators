@@ -150,6 +150,17 @@ public:
         return *this;
     }
 
+	/**
+	 * @brief Add two matrices (element-wise).
+	 * @param other Matrix to add.
+	 * @return Resulting matrix.
+	 */
+    OPM_HOST_DEVICE MiniMatrix operator+(const MiniMatrix& other) const {
+        MiniMatrix result = *this;
+        result += other;
+        return result;
+    }
+
     /**
      * @brief Subtract another matrix from this one (element-wise).
      * @param other Matrix to subtract.
@@ -160,6 +171,17 @@ public:
             data_[i] -= other.data_[i];
         return *this;
     }
+
+	/**
+	 * @brief Subtract two matrices (element-wise).
+	 * @param other Matrix to subtract.
+	 * @return Resulting matrix.
+	 */
+	OPM_HOST_DEVICE MiniMatrix operator-(const MiniMatrix& other) const {
+		MiniMatrix result = *this;
+		result -= other;
+		return result;
+	}
 
     /**
      * @brief Matrix-vector multiplication: y = A * x
