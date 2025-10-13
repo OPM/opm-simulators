@@ -35,21 +35,6 @@ namespace Opm::gpuistl
  */
 template<class T, int dimension>
 class MiniMatrix {
-	/**
-	 * @brief Matrix-vector multiplication: y = A * x, with MiniVector.
-	 * @param x Input MiniVector (length = dimension)
-	 * @return Resulting MiniVector (length = dimension)
-	 */
-	OPM_HOST_DEVICE Opm::gpuistl::MiniVector<T, dimension> operator*(const Opm::gpuistl::MiniVector<T, dimension>& x) const {
-		Opm::gpuistl::MiniVector<T, dimension> result{};
-		for (size_type row = 0; row < dimension; ++row) {
-			T sum = T{};
-			for (size_type col = 0; col < dimension; ++col)
-				sum += (*this)(row, col) * x[col];
-			result[row] = sum;
-		}
-		return result;
-	}
 public:
 	using value_type = T;
 	using size_type = std::size_t;
@@ -209,6 +194,22 @@ public:
         }
         return C;
     }
+
+	/**
+	 * @brief Matrix-vector multiplication: y = A * x, with MiniVector.
+	 * @param x Input MiniVector (length = dimension)
+	 * @return Resulting MiniVector (length = dimension)
+	 */
+	OPM_HOST_DEVICE Opm::gpuistl::MiniVector<T, dimension> operator*(const Opm::gpuistl::MiniVector<T, dimension>& x) const {
+		Opm::gpuistl::MiniVector<T, dimension> result{};
+		for (size_type row = 0; row < dimension; ++row) {
+			T sum = T{};
+			for (size_type col = 0; col < dimension; ++col)
+				sum += (*this)(row, col) * x[col];
+			result[row] = sum;
+		}
+		return result;
+	}
 
 private:
 	array_type data_;
