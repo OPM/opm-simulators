@@ -27,7 +27,6 @@
 
 using MatType = Opm::gpuistl::MiniMatrix<double, 3>;
 
-template<typename MatType>
 __global__ void doNothingKernel(MatType m)
 {
     auto idx = threadIdx.x;
@@ -43,7 +42,6 @@ BOOST_AUTO_TEST_CASE(TestPassingMatrixToKernel)
     BOOST_CHECK(err == cudaSuccess);
 }
 
-template<typename MatType>
 __global__ void MiniMatrixOperationsInKernel(MatType m1, MatType m2)
 {
     {
@@ -75,4 +73,28 @@ BOOST_AUTO_TEST_CASE(TestMiniMatrixOperationsInKernel)
     std::ignore = cudaDeviceSynchronize();
     cudaError_t err = cudaGetLastError();
     BOOST_CHECK(err == cudaSuccess);
+}
+
+__global__ void WriteToMatrixInKernel(MatType* m)
+{
+    (*m) = MatType(1.0);
+    (*m)[1][1] = 3.14;
+    return;
+}
+
+BOOST_AUTO_TEST_CASE(TestWritingToMatrixInKernel)
+{
+    MatType* d_m = nullptr;
+    std::ignore = cudaMalloc(&d_m, sizeof(MatType));
+
+    WriteToMatrixInKernel<<<1, 1>>>(d_m);
+    std::ignore = cudaDeviceSynchronize();
+    cudaError_t err = cudaGetLastError();
+    BOOST_CHECK(err == cudaSuccess);
+
+    MatType h_m;
+    std::ignore = cudaMemcpy(&h_m, d_m, sizeof(MatType), cudaMemcpyDeviceToHost);
+    std::ignore = cudaFree(d_m);
+
+    BOOST_CHECK(h_m[1][1] == 3.14);
 }
