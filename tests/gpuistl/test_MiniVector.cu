@@ -23,8 +23,10 @@
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
+#include <utility> // for std::ignore
 
-template<typename VecType>
+using VecType = Opm::gpuistl::MiniVector<double, 3>;
+
 __global__ void doNothingKernel(VecType v)
 {
     auto idx = threadIdx.x;
@@ -34,9 +36,9 @@ __global__ void doNothingKernel(VecType v)
 // Check that we can create a minivector and pass it to a GPU kernel without errors
 BOOST_AUTO_TEST_CASE(TestPassingToKernel)
 {
-    Opm::gpuistl::MiniVector<double, 3> v = {1.0, 2.0, 3.0};
+    VecType v = {1.0, 2.0, 3.0};
     doNothingKernel<<<1, 1>>>(v);
-    cudaDeviceSynchronize();
+    std::ignore = cudaDeviceSynchronize();
     cudaError_t err = cudaGetLastError();
     BOOST_CHECK(err == cudaSuccess);
 }
@@ -52,10 +54,35 @@ __global__ void kernelWithVectorOperations(VecType v1, VecType v2)
 
 BOOST_AUTO_TEST_CASE(TestVectorOperationsOnDevice)
 {
-    Opm::gpuistl::MiniVector<double, 3> v1 = {1.0, 2.0, 3.0};
-    Opm::gpuistl::MiniVector<double, 3> v2(1.0);
+    VecType v1 = {1.0, 2.0, 3.0};
+    VecType v2(1.0);
     kernelWithVectorOperations<<<1, 1>>>(v1, v2);
-    cudaDeviceSynchronize();
+    std::ignore = cudaDeviceSynchronize();
     cudaError_t err = cudaGetLastError();
     BOOST_CHECK(err == cudaSuccess);
+}
+
+__global__ void writeToVectorKernel(VecType* v)
+{
+    (*v) = VecType();
+    (*v)[0] = 1.0;
+    (*v)[1] = 2.0;
+    (*v)[2] = 3.0;
+    return;
+}
+
+BOOST_AUTO_TEST_CASE(WriteToVectorInKernel)
+{
+    VecType* d_v;
+    cudaMalloc(&d_v, sizeof(VecType));
+
+    writeToVectorKernel<<<1, 1>>>(d_v);
+    std::ignore = cudaDeviceSynchronize();
+    cudaError_t err = cudaGetLastError();
+    BOOST_CHECK(err == cudaSuccess);
+
+    VecType h_v;
+    cudaMemcpy(&h_v, d_v, sizeof(VecType), cudaMemcpyDeviceToHost);
+    cudaFree(d_v);
+    BOOST_CHECK(h_v == VecType({1.0, 2.0, 3.0}));
 }
