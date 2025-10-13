@@ -23,8 +23,56 @@
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
 #include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
+#include <utility> // for std::ignore
 
-BOOST_AUTO_TEST_CASE(Trivial)
+using MatType = Opm::gpuistl::MiniMatrix<double, 3>;
+
+template<typename MatType>
+__global__ void doNothingKernel(MatType m)
 {
-    BOOST_CHECK(true);
+    auto idx = threadIdx.x;
+    return;
+}
+
+BOOST_AUTO_TEST_CASE(TestPassingMatrixToKernel)
+{
+    MatType m;
+    doNothingKernel<<<1, 1>>>(m);
+    std::ignore = cudaDeviceSynchronize();
+    cudaError_t err = cudaGetLastError();
+    BOOST_CHECK(err == cudaSuccess);
+}
+
+template<typename MatType>
+__global__ void MiniMatrixOperationsInKernel(MatType m1, MatType m2)
+{
+    {
+      auto tmp = m1 * m2;
+    }
+    {
+      auto tmp = m1 + m2;
+    }
+    {
+      auto tmp = m1 - m2;
+    }
+    m1 += m2;
+    m1 -= m2;
+
+    // Check equality and iterator usage
+    for (auto it1 = m1.begin(), it2 = m2.begin(); it1 != m1.end() && it2 != m2.end(); ++it1, ++it2)
+    {
+        assert(*it1 == *it2);
+    }
+
+    return;
+}
+
+BOOST_AUTO_TEST_CASE(TestMiniMatrixOperationsInKernel)
+{
+    MatType m1 = 1.0;
+    MatType m2 = 1.0;
+    MiniMatrixOperationsInKernel<<<1, 1>>>(m1, m2);
+    std::ignore = cudaDeviceSynchronize();
+    cudaError_t err = cudaGetLastError();
+    BOOST_CHECK(err == cudaSuccess);
 }
