@@ -334,7 +334,8 @@ updateWellPotentials(const Simulator& simulator,
             auto cur_exc_type = ExceptionType::NONE;
             try {
                 std::vector<Scalar> potentials;
-                well->computeWellPotentials(simulator, well_state_copy, potentials, deferred_logger);
+                const auto& wgHelper = simulator.problem().wellModel().wgHelper();
+                well->computeWellPotentials(simulator, well_state_copy, wgHelper, potentials, deferred_logger);
                 auto& ws = wellState.well(well->indexOfWell());
                 for (int p = 0; p < np; ++p) {
                     // make sure the potentials are positive
