@@ -23,7 +23,7 @@ DIMENS
 
 WELLDIMS
    30   10    2   30 /
-   
+
 ENDSCALE
 --DIR      REV      NTENDP    NSENDP
 'NODIR'  'REVERS'    1          20   /
@@ -37,8 +37,8 @@ NSTACK
 
 EQLDIMS
 -- NTEQUL
-     1 / 
-     
+     1 /
+
 
 FMTOUT
 FMTIN
@@ -112,11 +112,11 @@ SCALECRS
 --  YES /
  NO/
 
-ENPTVD 
--- Depth   swl   swcr   swu   sgl   sgcr   sgu  sowcr  sogcr 
--- Sandstone 
+ENPTVD
+-- Depth   swl   swcr   swu   sgl   sgcr   sgu  sowcr  sogcr
+-- Sandstone
    2.5     .1    0.2    0.9   .0     0.1   0.9   0.2    0.2
-   7.5     .1    0.2    0.7   .0     0.1   0.9   0.2    0.2 
+   7.5     .1    0.2    0.7   .0     0.1   0.9   0.2    0.2
   12.5     .1    0.4    0.9   .0     0.1   0.9   0.2    0.2
   17.5     .1    0.4    0.7   .0     0.1   0.9   0.2    0.2
   22.5     .2    0.2    0.9   .0     0.1   0.9   0.2    0.2
@@ -126,7 +126,7 @@ ENPTVD
   42.5     .1    0.2    0.9   .0     0.1   0.9   0.2    0.2
   47.5     .1    0.2    0.9   .0     0.1   0.9   0.2    0.2
   50.0     .1    0.2    0.9   .0     0.1   0.9   0.2    0.2 /
-/ 
+/
 
 SWOF
 0.1 0.0 1.0 0.9
@@ -149,7 +149,7 @@ SGOF
 PVTW
 --RefPres  Bw      Comp   Vw    Cv
    1.      1.0   4.0E-5  0.96  0.0 /
-   
+
 
 ROCK
 --RefPres  Comp
@@ -174,7 +174,7 @@ EQUIL
 RSVD
  0  0.0
  100 100. /
- 
+
 RVVD
    0.  0.
  100.  0.0001 /

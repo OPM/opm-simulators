@@ -209,7 +209,7 @@ public:
             );
         }
     }
-    
+
 private:
     /*!
     * \brief Load cell indices from a plain text file.

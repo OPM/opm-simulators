@@ -42,7 +42,7 @@ class TestHybridNewton(unittest.TestCase):
         cls.unrst, cls.times = extract_unrst_variables(".", cls.deck_file)
         cls.rd_init["PERMX"] = [10**2] * len(cls.unrst["PRESSURE"][0])
         cls.n_cells = len(cls.unrst["PRESSURE"][0])
-  
+
     def _run_cases(self, cases):
         models_dir = Path('.') / "models"
         os.makedirs(models_dir, exist_ok=True)
@@ -56,7 +56,7 @@ class TestHybridNewton(unittest.TestCase):
                 # Run hybrid Newton test
                 hybrid_iters = self._run_hybrid_newton_test(json_path)
         return hybrid_iters
-    
+
     def _build_case_models(self, case, models_dir):
         models_to_write = []
 
@@ -94,14 +94,14 @@ class TestHybridNewton(unittest.TestCase):
             ])
             model.layers[0].set_weights([np.zeros((input_flat.shape[0], output_flat.shape[0])), output_flat])
             apply_time = self.times[start_idx]
-            
+
             active_cells = list(range(self.n_cells))
 
             models_dir.mkdir(exist_ok=True)
             model_name = "_".join(input_features) + "__TO__" + "_".join(output_features) + f"_{start_idx}_{end_idx}.model"
             model_path = models_dir / model_name
             export_model(model, model_path)
-    
+
             models_to_write.append({
                 "input_features": input_features,
                 "output_features": output_features,
@@ -137,7 +137,7 @@ class TestHybridNewton(unittest.TestCase):
 
         print(f"Running hybrid Newton simulation with config {json_path}...")
         subprocess.run(cmd,
-                       stdout=subprocess.DEVNULL, 
+                       stdout=subprocess.DEVNULL,
                        check=True)
 
         hybrid_iters = extract_newtit_from_file(Path('.') / Path(self.deck_file).stem)
@@ -157,7 +157,7 @@ class TestHybridNewton(unittest.TestCase):
 
     def test_multi_model_cases(self):
         self._run_cases(MULTI_MODEL_CASES)
-    
+
     def test_zero_newton_cases(self):
         hybrid_iters = self._run_cases(ZERO_NEWTON_CASES)
         print(f"Hybrid Newton iterations all_features: {hybrid_iters}")

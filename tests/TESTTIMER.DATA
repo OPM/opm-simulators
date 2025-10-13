@@ -12,7 +12,7 @@ START
 SCHEDULE
 
 TSTEP
-1.0 2*5.0  
+1.0 2*5.0
   /
 
 TSTEP
@@ -20,7 +20,7 @@ TSTEP
  /
 
 TSTEP
-  19.0 
+  19.0
   /
 
 TSTEP
@@ -40,7 +40,7 @@ TSTEP
   /
 
 TSTEP
-  11.0 
+  11.0
   /
 
 TSTEP

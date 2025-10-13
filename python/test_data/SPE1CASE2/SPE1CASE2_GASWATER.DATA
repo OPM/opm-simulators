@@ -13,7 +13,7 @@ RUNSPEC
 -- -------------------------------------------------------------------------
 
 TITLE
-   SPE1 - CASE 2 - 2Phase GAS-WATER case 
+   SPE1 - CASE 2 - 2Phase GAS-WATER case
 
 DIMENS
    10 10 3 /
@@ -28,7 +28,7 @@ EQLDIMS
 TABDIMS
 /
 
--- oil is removed to facilitate a gas water test case 
+-- oil is removed to facilitate a gas water test case
 WATER
 GAS
 
@@ -63,11 +63,11 @@ INIT
 -- -------------------------------------------------------------------------
 NOECHO
 
-DX 
--- There are in total 300 cells with length 1000ft in x-direction	
+DX
+-- There are in total 300 cells with length 1000ft in x-direction
    	300*1000 /
 DY
--- There are in total 300 cells with length 1000ft in y-direction	
+-- There are in total 300 cells with length 1000ft in y-direction
 	300*1000 /
 DZ
 -- The layers are 20, 30 and 50 ft thick, in each layer there are 100 cells
@@ -121,7 +121,7 @@ PVTW
   .0  1.0  3.03E-06  .5  0.0 /
 
 DENSITY
--- Density (lb per ft³) at surface cond. of 
+-- Density (lb per ft³) at surface cond. of
 -- oil, water and gas, respectively (in that order)
 
 -- Using values from Norne:
@@ -133,9 +133,9 @@ DENSITY
 PVDG
 -- Column 1: gas phase pressure (psia)
 -- Column 2: gas formation volume factor (rb per Mscf)
--- 	     - in Odeh's paper the units are said to be given in rb per bbl, 
--- 	       but this is assumed to be a mistake: FVF-values in Odeh's paper 
---	       are given in rb per scf, not rb per bbl. This will be in 
+-- 	     - in Odeh's paper the units are said to be given in rb per bbl,
+-- 	       but this is assumed to be a mistake: FVF-values in Odeh's paper
+--	       are given in rb per scf, not rb per bbl. This will be in
 --	       agreement with conventions
 -- Column 3: gas viscosity (cP)
 
@@ -159,9 +159,9 @@ PRESSURE
 
 SWAT
 100*0.7  100*0.5 100*0.3 /
-	
+
 SUMMARY
--- -------------------------------------------------------------------------	 
+-- -------------------------------------------------------------------------
 
 -- 2b) Gas saturation at grid points given in Odeh's paper
 BGSAT
@@ -220,7 +220,7 @@ WCONINJE
 
 TSTEP
 --Advance the simulater once a month for ONE year:
-31 28 31 30 31 30 31 31 30 31 30 31/ 
+31 28 31 30 31 30 31 31 30 31 30 31/
 
 
 END

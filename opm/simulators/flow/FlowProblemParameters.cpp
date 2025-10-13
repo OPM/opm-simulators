@@ -68,7 +68,7 @@ void registerFlowProblemParameters()
 
     Parameters::Register<Parameters::NumSatfuncConsistencySamplePoints>
         ("Maximum number of reported failures for each individual saturation function consistency check");
-    
+
     Parameters::Register<Parameters::HyNeConfigFile>
         ("Use config files for Hybrid Newton");
 

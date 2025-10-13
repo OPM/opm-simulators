@@ -7,22 +7,22 @@
 
 
 VFPPROD
--- Table  Datum Depth  Rate Type  WFR Type   GFR Type   THP Type   ALQ Type    UNITS     TAB Type 
-    4      114.60      LIQ        WCT         GOR         THP        GRAT      METRIC   BHP      / 
--- FLO: LIQ rates 
+-- Table  Datum Depth  Rate Type  WFR Type   GFR Type   THP Type   ALQ Type    UNITS     TAB Type
+    4      114.60      LIQ        WCT         GOR         THP        GRAT      METRIC   BHP      /
+-- FLO: LIQ rates
        20.0       30.0       70.0      134.0      180.0      242.0      325.0
       437.0      586.0      787.0     1057.0     1419.0     1906.0     2559.0
-     3436.0     4614.0     6195.0     8319.0    11171.0 / 
--- thp values 
-       2.00      10.00      15.00      20.00      23.00      35.00 / 
--- WFR: WCT values 
+     3436.0     4614.0     6195.0     8319.0    11171.0 /
+-- thp values
+       2.00      10.00      15.00      20.00      23.00      35.00 /
+-- WFR: WCT values
       0.000      0.110      0.220      0.330      0.440      0.550      0.660
-      0.770      0.880      0.990 / 
--- GFR: GOR values 
+      0.770      0.880      0.990 /
+-- GFR: GOR values
        20.0       30.0       33.9       40.0       50.0       75.0      100.0
-      500.0     1000.0 / 
--- ALQ: GRAT values 
-        0.0    50000.0   100000.0   150000.0   200000.0   300000.0 / 
+      500.0     1000.0 /
+-- ALQ: GRAT values
+        0.0    50000.0   100000.0   150000.0   200000.0   300000.0 /
 
   1  1  1  1   13.977   13.688   12.372   11.188   10.053    8.939    7.827    7.159    6.834
                 6.644    6.151    5.567    5.256    5.391    6.029    7.246    9.175   12.047

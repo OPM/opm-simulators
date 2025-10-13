@@ -52,8 +52,8 @@
 #include <opm/simulators/flow/MixingRateControls.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
-#include <opm/simulators/flow/HybridNewton.hpp> 
-#include <opm/simulators/flow/HybridNewtonConfig.hpp> 
+#include <opm/simulators/flow/HybridNewton.hpp>
+#include <opm/simulators/flow/HybridNewtonConfig.hpp>
 
 #include <opm/simulators/utils/satfunc/SatfuncConsistencyCheckManager.hpp>
 

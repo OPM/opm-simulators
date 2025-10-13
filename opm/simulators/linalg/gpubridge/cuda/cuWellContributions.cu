@@ -267,4 +267,3 @@ template class WellContributionsCuda<float>;
 #endif
 
 } //namespace Opm
-

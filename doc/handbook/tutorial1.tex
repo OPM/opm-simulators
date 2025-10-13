@@ -50,7 +50,7 @@ The solved equations are the mass balances of water and oil:
   -
   \nabla \cdot \left( \varrho_{o} \, \frac{k_{ro}}{\mu_{o}} \, \mathbf{K}\;\nabla p_o \right)
   -
-  q_o 
+  q_o
   & =
   0
 \end{align}
@@ -238,7 +238,7 @@ and the analogous \texttt{bboxMin()} method are provided by the
 problem's base class.
 
 In addition to these methods, there might be some additional
-model-specific methods. 
+model-specific methods.
 
 \subsection{Defining fluid properties}
 \label{tutorial1:description-fluid-class}
@@ -298,12 +298,12 @@ even not at all.
   program if you use command line parameters. In both cases, don't
   forget run the simulation before re-inspecting the results using
   \texttt{paraview}.
-  
+
 \item \textbf{Boundary Conditions} \\
   Change the boundary conditions in the problem file
   \texttt{tutorial1problem.hh} so that water enters from the
   bottom and oil is extracted from the top boundary. The right and the
-  left boundary should be closed for both, water and oil. 
+  left boundary should be closed for both, water and oil.
 
   Note that in \eWoms, flux boundary conditions are specified as
   fluxes of the conserved quantities into the direction of the outer
@@ -389,7 +389,7 @@ chapter~\ref{sec:fluidframework}.
   instruct the model to use this fluid system by setting
   the \texttt{FluidSystem} property via:\\
 \begin{lstlisting}[style=eWomsCode]
-  SET_TYPE_PROP(Tutorial1Problem, 
+  SET_TYPE_PROP(Tutorial1Problem,
                 FluidSystem,
                 Ewoms::FluidSystems::H2OAir<typename GET_PROP_TYPE(TypeTag, Scalar)>)
 \end{lstlisting}
@@ -434,7 +434,7 @@ complex fluid system.
   directory as the header for the regularized Brooks-Corey law,
   \texttt{regularizedbrookscorey.hh}.
 \end{itemize}
- 
+
 \item \textbf{Heterogeneities}  \\
   Set up a model domain with the soil properties given in Figure
   \ref{tutorial1:exercise1_d}. Adjust the boundary conditions
@@ -499,7 +499,7 @@ step size of $100\;\text{s}$.
 \psfrag{Lin2}{$\lambda = 1.8$, $p_e = 1000\;\text{Pa}$}
 \psfrag{K2}{K $= 10^{-9}\;\text{m}^2$}
 \psfrag{phi2}{$\phi = 0.15$}
-\psfrag{BC1}{\textsc{Brooks}-\textsc{Corey} Law} 
+\psfrag{BC1}{\textsc{Brooks}-\textsc{Corey} Law}
 \psfrag{BC2}{$\lambda = 2$, $p_e = 1500\;\text{Pa}$}
 \psfrag{H1y}{$50\;\text{m}$}
 \psfrag{H2y}{$15\;\text{m}$}
@@ -542,7 +542,7 @@ and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$.
 
 \clearpage \newpage
 
-%%% Local Variables: 
+%%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "ewoms-handbook"
-%%% End: 
+%%% End:

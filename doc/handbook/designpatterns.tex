@@ -138,11 +138,11 @@ executed is dynamically determined at run time.
 // The base class
 class Car
 {public:
-  virtual double gasUsage() 
+  virtual double gasUsage()
   { return 4.5; };/*@\label{designpatterns:virtual-usage}@*/
   virtual double fuelTankSize() = 0;/*@\label{designpatterns:totally-virtual}@*/
-  
-  double range(double fuelTankFillLevel) 
+
+  double range(double fuelTankFillLevel)
   { return 100*fuelTankFillLevel*fuelTankSize()/gasUsage(); }
 };
 \end{lstlisting}
@@ -192,7 +192,7 @@ S-Class.
 \end{example}
 
 \begin{exc}
-What happens if \dots 
+What happens if \dots
 \begin{itemize}
 \item \dots the \texttt{gasUsage} method is removed from the \texttt{Lupo} class?
 \item \dots the \texttt{virtual} qualifier is removed in front of the
@@ -234,16 +234,16 @@ the called method cannot be dynamically changed at runtime.
   can be implemented like this:
 \begin{lstlisting}[name=staticcars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 // The base class. The 'Imp' template parameter is the
-// type of implementation, i.e. the derived class 
+// type of implementation, i.e. the derived class
 template <class Imp>
 class Car
 {public:
-  double gasUsage() 
+  double gasUsage()
   { return 4.5; };
-  double fuelTankSize() 
+  double fuelTankSize()
   { throw "The derived class needs to implement the fuelTankSize() method"; };
-  
-  double range(double fuelTankFillLevel) 
+
+  double range(double fuelTankFillLevel)
   { return 100*fuelTankFillLevel*asImp_().fuelTankSize()/asImp_().gasUsage(); }
 
 protected:
@@ -361,7 +361,7 @@ int main()
         Dune::PDELab::GridFunctionSpaceBlockwiseMapper
     >
         GridFunctionSpace;
-    typedef typename GridFunctionSpace::ConstraintsContainer<double>::Type 
+    typedef typename GridFunctionSpace::ConstraintsContainer<double>::Type
         ConstraintsTrafo;
     typedef Ewoms::PDELab::BoxLocalOperator<TypeTag> LocalOperator;
     typedef Dune::PDELab::GridOperatorSpace<
@@ -383,7 +383,7 @@ not pose a severe problem as long as the type (in this case the grid
 operator space) needs to be specified exactly once in the whole
 program. If, on the other hand, it needs to be consistend over
 multiple locations in the source code, measures have to be taken in
-order to keep the code maintainable. 
+order to keep the code maintainable.
 
 \section{Traits Classes}
 
@@ -394,7 +394,7 @@ class. Instead of writing
 template <class A, class B, class C, class D>
 class MyClass {};
 \end{lstlisting}
-one can use 
+one can use
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 template <class Traits>
 class MyClass {};
@@ -402,7 +402,7 @@ class MyClass {};
 where the \texttt{Traits} class contains public type definitions for
 \texttt{A}, \texttt{B}, \texttt{C} and \texttt{D}, e.g.
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
-struct MyTraits 
+struct MyTraits
 {
   typedef float A;
   typedef double B;

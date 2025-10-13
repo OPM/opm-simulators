@@ -74,7 +74,7 @@ DATES  -- Step2
 /
 
 
-WCONPROD 
+WCONPROD
   'PROD1'  'SHUT' /
 /
 
@@ -97,4 +97,3 @@ WCONHIST
 /
 
 END
-

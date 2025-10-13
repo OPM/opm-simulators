@@ -10,10 +10,10 @@ TITLE
 UNIT TEST
 
 
-START             
+START
 1 NOV 1979  /
 
-OIL 
+OIL
 GAS
 WATER
 
@@ -24,13 +24,13 @@ DIMENS
     10  10   10   /
 
 GRID
-DXV 
+DXV
 10*10 /
 
-DYV 
+DYV
 10*10 /
 
-DZV 
+DZV
 10*10 /
 
 DEPTHZ
@@ -75,7 +75,7 @@ COMPDAT
       'OP_3'   7   7    3    3 'OPEN' 1*        18.032     0.311  1608.615 1*        1*         'Y'    18.526 /
       'OP_3'   7   7    4    4 'OPEN' 1*        56.817     0.311  5047.177 1*        1*         'Y'    18.155 /
       'OP_3'   7   7    5    5 'OPEN' 1*         4.728     0.311   420.067 1*        1*         'Y'    18.162 /
-/      
+/
 
 DATES
  1 JUN 1980/
@@ -122,4 +122,3 @@ DATES
 /
 
 END
-

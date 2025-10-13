@@ -153,7 +153,7 @@ NEW_PROP_TAG(TestProp);
 
 SET_TYPE_PROP(BaseTypeTag, TestProp, int);
 UNSET_PROP(DerivedTypeTag, TestProp);
-// trying to access the 'TestProp' property for 'DerivedTypeTag' 
+// trying to access the 'TestProp' property for 'DerivedTypeTag'
 // will trigger a compiler error!
 }}
 \end{lstlisting}
@@ -197,12 +197,12 @@ Example:\nolinebreak
 template <TypeTag>
 class MyClass {
   // retrieve the ::value attribute of the 'NumEq' property
-  enum { numEq = GET_PROP(TypeTag, NumEq)::value }; 
+  enum { numEq = GET_PROP(TypeTag, NumEq)::value };
   // retrieve the ::value attribute of the 'NumPhases' property using the convenience macro
-  enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) }; 
+  enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
 
   // retrieve the ::type attribute of the 'Scalar' property
-  typedef typename GET_PROP(TypeTag, Scalar)::type Scalar; 
+  typedef typename GET_PROP(TypeTag, Scalar)::type Scalar;
   // retrieve the ::type attribute of the 'Vector' property using the convenience macro
   typedef typename GET_PROP_TYPE(TypeTag, Vector) Vector;
 };
@@ -238,7 +238,7 @@ diagram for the car types above might look like outlined in Figure
 \ref{fig:car-hierarchy}.
 
 \begin{figure}[t]
-  \centering 
+  \centering
   \subfloat[]{
     \includegraphics[width=.6\textwidth]{EPS/car-hierarchy.eps}
     \label{fig:car-hierarchy}
@@ -296,7 +296,7 @@ the following:
   of seats is $2$, it uses $\unitfrac[18]{l}{100km}$ and has a cargo payload of
   $\unit[35]{t}$.
 \item A tank exhibits a top speed of $\unitfrac[60]{km}{h}$, uses $\unitfrac[65]{l}{100km}$
-  and features a $\unit[120]{mm}$ diameter canon 
+  and features a $\unit[120]{mm}$ diameter canon
 \item A sedan has a gas usage of $\unitfrac[7]{l}{100km}$, as well as an automatic
   transmission, in every other aspect it is like a compact car.
 \item A pick-up truck has a top speed of $\unitfrac[120]{km}{h}$ and a payload of
@@ -370,7 +370,7 @@ Properties for Sedan:
 \end{lstlisting}
 
 
-%%% Local Variables: 
+%%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "ewoms-handbook"
 %%% End:
