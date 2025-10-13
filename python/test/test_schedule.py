@@ -31,7 +31,7 @@ class TestBasic(unittest.TestCase):
             self.assertEqual(dt.datetime(2016, 1, 1), self.schedule.end)
             self.sim = create_black_oil_simulator(
                 self.deck, state, self.schedule, summary_config)
-            tsteps = self.schedule.timesteps
+            tsteps = self.schedule.reportsteps
             self.assertEqual(dt.datetime(2015, 1, 1), tsteps[0])
             last_step = len(tsteps) - 1
             self.assertEqual(dt.datetime(2016, 1, 1), tsteps[last_step])
