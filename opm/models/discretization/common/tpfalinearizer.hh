@@ -838,8 +838,8 @@ private:
             const bool on_full_domain = (numCells == model_().numTotalDof());
 
             // Ensure we can have the domain  on the GPU.
-            auto domain_buffer = copy_to_gpu(domain);
-            auto domain_view = make_view(domain_buffer);
+            auto domain_buffer = gpuistl::copy_to_gpu(domain);
+            auto domain_view = gpuistl::make_view(domain_buffer);
             auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlock, MatrixBlockGPU, ResidualNBInfo, NeighborInfoStruct>(neighborInfo_);
             auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
 
