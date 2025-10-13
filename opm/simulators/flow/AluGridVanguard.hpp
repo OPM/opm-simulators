@@ -187,7 +187,7 @@ public:
                                                                  this->grid(),
                                                                  this->cellCentroids(),
                                                                  getPropValue<TypeTag, Properties::EnergyModuleType>()
-                                                                 == EnergyModules::FullyImplicitThermal,
+                                                                   == EnergyModules::FullyImplicitThermal,
                                                                  getPropValue<TypeTag,
                                                                  Properties::EnableDiffusion>(),
                                                                  getPropValue<TypeTag,

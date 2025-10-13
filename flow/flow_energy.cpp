@@ -23,7 +23,7 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
-#include <opm/models/blackoil/blackoilenergymodules.hh>
+//#include <opm/material/thermal/EnergyModuleType.hpp>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
 namespace Opm {

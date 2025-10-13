@@ -34,12 +34,7 @@ struct EnableBrine<TypeTag, TTag::FlowBrineEnergyProblem> {
 };
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowBrineEnergyProblem> {
-    static constexpr bool value = true;
-};
-
-template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowBrineEnergyProblem> { 
+struct Linearizer<TypeTag, TTag::FlowBrineEnergyProblem> {
     using type = TpfaLinearizer<TypeTag>;
 };
 

@@ -32,7 +32,7 @@
 
 namespace Opm {
 
-template <class TypeTag, EnergyModules value>
+template <class TypeTag, EnergyModules activeModule>
 class BlackOilEnergyIntensiveQuantitiesGlobalIndex;
 
 /*!
@@ -53,7 +53,7 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::Fully
     using SolidEnergyLaw = GetPropType<TypeTag, Properties::SolidEnergyLaw>;
     using ThermalConductionLaw  = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
     using ParamCache = typename FluidSystem::template ParameterCache<Evaluation>;
-    
+
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned numPhases = FluidSystem::numPhases;

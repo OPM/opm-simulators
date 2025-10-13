@@ -32,8 +32,8 @@
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
 
-#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
@@ -50,19 +50,19 @@
 
 namespace Opm {
 
-    enum class EnergyModules : std::uint8_t {
-            FullyImplicitThermal = 0,
-            SequantialImplicitThermal = 1,
-            ConstantTemperature = 2,
-            NoTemperature = 3
-    };
+    //enum class EnergyModules : std::uint8_t {
+    //        FullyImplicitThermal = 0,
+    //        SequantialImplicitThermal = 1,
+    //        ConstantTemperature = 2,
+    //        NoTemperature = 3
+    //};
 
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
  *        model by energy.
  */
-template <class TypeTag, EnergyModules value = getPropValue<TypeTag, Properties::EnergyModuleType>()>
+template <class TypeTag, EnergyModules activeModule = getPropValue<TypeTag, Properties::EnergyModuleType>()>
 class BlackOilEnergyModule
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -80,7 +80,7 @@ class BlackOilEnergyModule
     static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
-    static constexpr unsigned enableEnergy = (value == EnergyModules::FullyImplicitThermal);
+    static constexpr unsigned enableEnergy = (activeModule == EnergyModules::FullyImplicitThermal);
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr unsigned numPhases = FluidSystem::numPhases;
 
@@ -337,7 +337,7 @@ public:
     }
 };
 
-template <class TypeTag, EnergyModules value>
+template <class TypeTag, EnergyModules activeModule>
 class BlackOilEnergyIntensiveQuantities;
 
 /*!
@@ -562,7 +562,7 @@ protected:
     { return *static_cast<Implementation*>(this); }
 };
 
-template <class TypeTag, EnergyModules value>
+template <class TypeTag, EnergyModules activeModule>
 class BlackOilEnergyExtensiveQuantities;
 
 /*!

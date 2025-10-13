@@ -63,7 +63,7 @@ struct TracerModel<TypeTag, TTag::FlowBaseProblemComp> {
 
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowBaseProblemComp>
-{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+{ static constexpr EnergyModules value = EnergyModules::NoTemperature; };
 
 // Set the material law for fluid fluxes
 template<class TypeTag>

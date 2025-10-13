@@ -55,11 +55,6 @@ struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
 };
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
-    static constexpr bool value = true;
-};
-
-template<class TypeTag>
 struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> { 
     using type = TpfaLinearizer<TypeTag>;
 };
@@ -82,12 +77,13 @@ private:
     // messages unfortunately are *really* confusing and not really helpful.
     using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
-
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
 public:
     using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
                                          getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
+                                         numEnergyVars,
                                          getPropValue<TypeTag, Properties::EnableFoam>(),
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
