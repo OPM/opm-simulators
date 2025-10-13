@@ -74,7 +74,7 @@ __global__ void writeToVectorKernel(VecType* v)
 BOOST_AUTO_TEST_CASE(WriteToVectorInKernel)
 {
     VecType* d_v;
-    cudaMalloc(&d_v, sizeof(VecType));
+    std::ignore = cudaMalloc(&d_v, sizeof(VecType));
 
     writeToVectorKernel<<<1, 1>>>(d_v);
     std::ignore = cudaDeviceSynchronize();
@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(WriteToVectorInKernel)
     BOOST_CHECK(err == cudaSuccess);
 
     VecType h_v;
-    cudaMemcpy(&h_v, d_v, sizeof(VecType), cudaMemcpyDeviceToHost);
-    cudaFree(d_v);
+    std::ignore = cudaMemcpy(&h_v, d_v, sizeof(VecType), cudaMemcpyDeviceToHost);
+    std::ignore = cudaFree(d_v);
     BOOST_CHECK(h_v == VecType({1.0, 2.0, 3.0}));
 }
