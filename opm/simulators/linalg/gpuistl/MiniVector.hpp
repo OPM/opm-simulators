@@ -179,13 +179,18 @@ public:
     }
 
     /** @return `true` if all components compare equal. */
-    OPM_HOST_DEVICE constexpr bool operator==(const MiniVector& other) const noexcept
+    OPM_HOST_DEVICE bool operator==(const MiniVector& other) const noexcept
     {
-        return std::equal(data_.begin(), data_.end(), other.data_.begin());
+        for (size_type i = 0; i < Dimension; ++i) {
+            if (data_[i] != other.data_[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** @return `true` if any component differs. */
-    OPM_HOST_DEVICE constexpr bool operator!=(const MiniVector& other) const noexcept
+    OPM_HOST_DEVICE bool operator!=(const MiniVector& other) const noexcept
     {
         return !(*this == other);
     }
