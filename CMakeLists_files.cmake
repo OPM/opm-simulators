@@ -242,6 +242,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WellFilterCake.cpp
   opm/simulators/wells/WellGroupConstraints.cpp
   opm/simulators/wells/WellGroupControls.cpp
+  opm/simulators/wells/WellGroupHelper.cpp
   opm/simulators/wells/WellGroupHelpers.cpp
   opm/simulators/wells/WellHelpers.cpp
   opm/simulators/wells/WellInterfaceFluidSystem.cpp
@@ -1156,6 +1157,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellFilterCake.hpp
   opm/simulators/wells/WellGroupConstraints.hpp
   opm/simulators/wells/WellGroupControls.hpp
+  opm/simulators/wells/WellGroupHelper.hpp
   opm/simulators/wells/WellGroupHelpers.hpp
   opm/simulators/wells/WellHelpers.hpp
   opm/simulators/wells/WellInterfaceFluidSystem.hpp

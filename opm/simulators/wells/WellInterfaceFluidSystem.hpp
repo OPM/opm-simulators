@@ -43,6 +43,7 @@ class Schedule;
 struct RatioLimitCheckReport;
 template<typename Scalar, typename IndexTraits> class SingleWellState;
 template<typename Scalar, typename IndexTraits> class WellState;
+template<typename Scalar, typename IndexTraits> class WellGroupHelper;
 
 template<class FluidSystem>
 class WellInterfaceFluidSystem : public WellInterfaceGeneric<typename FluidSystem::Scalar, typename FluidSystem::IndexTraitsType>
@@ -57,6 +58,7 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using ModelParameters = typename WellInterfaceGeneric<Scalar, IndexTraits>::ModelParameters;
+    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
 
     static constexpr int Water = IndexTraits::waterPhaseIdx;
     static constexpr int Oil = IndexTraits::oilPhaseIdx;
@@ -88,15 +90,13 @@ protected:
                                     const std::optional<Well::InjectionControls>& inj_controls = std::nullopt,
                                     const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
-    bool checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
-                               const GroupState<Scalar>& group_state,
+    bool checkGroupConstraints(const WellGroupHelperType& wgHelper,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const bool check_guide_rate,
                                DeferredLogger& deferred_logger) const;
 
-    bool checkConstraints(WellState<Scalar, IndexTraits>& well_state,
-                          const GroupState<Scalar>& group_state,
+    bool checkConstraints(const WellGroupHelperType& wgHelper,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
                           DeferredLogger& deferred_logger) const;

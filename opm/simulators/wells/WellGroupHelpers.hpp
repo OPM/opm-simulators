@@ -255,39 +255,6 @@ public:
                                     const bool is_production_group,
                                     const Phase injection_phase);
 
-    static std::pair<bool, Scalar>
-    checkGroupConstraintsInj(const std::string& name,
-                             const std::string& parent,
-                             const Group& group,
-                             const WellStateType& wellState,
-                             const GroupState<Scalar>& group_state,
-                             const int reportStepIdx,
-                             const GuideRate* guideRate,
-                             const Scalar* rates,
-                             Phase injectionPhase,
-                             const Scalar efficiencyFactor,
-                             const Schedule& schedule,
-                             const SummaryState& summaryState,
-                             const std::vector<Scalar>& resv_coeff,
-                             const bool check_guide_rate,
-                             DeferredLogger& deferred_logger);
-
-    static Scalar
-    getWellGroupTargetInjector(const std::string& name,
-                               const std::string& parent,
-                               const Group& group,
-                               const WellStateType& wellState,
-                               const GroupState<Scalar>& group_state,
-                               const int reportStepIdx,
-                               const GuideRate* guideRate,
-                               const Scalar* rates,
-                               Phase injectionPhase,
-                               const Scalar efficiencyFactor,
-                               const Schedule& schedule,
-                               const SummaryState& summaryState,
-                               const std::vector<Scalar>& resv_coeff,
-                               DeferredLogger& deferred_logger);
-
     static std::vector<std::string>
     groupChainTopBot(const std::string& bottom,
                      const std::string& top,
@@ -307,36 +274,6 @@ public:
                   const GroupState<Scalar>& group_state,
                   const int reportStepIdx,
                   const Schedule& schedule);
-
-    static std::pair<bool, Scalar>
-    checkGroupConstraintsProd(const std::string& name,
-                              const std::string& parent,
-                              const Group& group,
-                              const WellStateType& wellState,
-                              const GroupState<Scalar>& group_state,
-                              const int reportStepIdx,
-                              const GuideRate* guideRate,
-                              const Scalar* rates,
-                              const Scalar efficiencyFactor,
-                              const Schedule& schedule,
-                              const SummaryState& summaryState,
-                              const std::vector<Scalar>& resv_coeff,
-                              const bool check_guide_rate,
-                              DeferredLogger& deferred_logger);
-    static Scalar
-    getWellGroupTargetProducer(const std::string& name,
-                               const std::string& parent,
-                               const Group& group,
-                               const WellStateType& wellState,
-                               const GroupState<Scalar>& group_state,
-                               const int reportStepIdx,
-                               const GuideRate* guideRate,
-                               const Scalar* rates,
-                               const Scalar efficiencyFactor,
-                               const Schedule& schedule,
-                               const SummaryState& summaryState,
-                               const std::vector<Scalar>& resv_coeff,
-                               DeferredLogger& deferred_logger);
 
     template <class AverageRegionalPressureType>
     static void setRegionAveragePressureCalculator(const Group& group,

@@ -39,6 +39,7 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
+#include <opm/simulators/wells/WellGroupHelper.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellTracerRate.hpp>
 #include <opm/simulators/wells/WGState.hpp>
@@ -69,7 +70,6 @@ namespace Opm {
     struct SimulatorUpdate;
     class SummaryConfig;
     template<typename Scalar, typename IndexTraits> class VFPProperties;
-    template<typename Scalar, typename IndexTraits> class WellGroupHelpers;
     template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
     template<typename Scalar, typename IndexTraits> class WellState;
 } // namespace Opm
@@ -93,7 +93,7 @@ namespace Opm {
 template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelGeneric
 {
-    using WellGroupHelpersType =  WellGroupHelpers<Scalar, IndexTraits>;
+    using WellGroupHelperType =  WellGroupHelper<Scalar, IndexTraits>;
 public:
     BlackoilWellModelGeneric(Schedule& schedule,
                              BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gaslift,
@@ -167,6 +167,10 @@ public:
       the internal nupcol wellstate with updateNupcolWGState() first.
     */
     const WellState<Scalar, IndexTraits>& nupcolWellState() const
+    {
+        return this->nupcol_wgstate_.well_state;
+    }
+    WellState<Scalar, IndexTraits>& nupcolWellState()
     {
         return this->nupcol_wgstate_.well_state;
     }
@@ -294,6 +298,9 @@ public:
 
     const ConnectionIndexMap& connectionIndexMap(const std::size_t idx)
     { return conn_idx_map_[idx]; }
+
+    WellGroupHelperType& wgHelper() { return wg_helper_; }
+    const WellGroupHelperType& wgHelper() const { return wg_helper_; }
 
 protected:
     /*
@@ -575,6 +582,7 @@ protected:
     WGState<Scalar, IndexTraits> active_wgstate_;
     WGState<Scalar, IndexTraits> last_valid_wgstate_;
     WGState<Scalar, IndexTraits> nupcol_wgstate_;
+    WellGroupHelperType wg_helper_{};
     WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 
     bool wellStructureChangedDynamically_{false};
