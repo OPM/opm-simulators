@@ -9,4 +9,3 @@ This model implements Navier-\/\-Stokes flow of a single fluid. By default, it s
 If the property {\ttfamily Enable\-Navier\-Stokes} is set to {\ttfamily true}, an additional convective momentum flux term (Navier term) gets included into the momentum conservation equations which allows to capture turbolent flow regimes. This additional term is given by \[ \varrho \left(\mathbf{v} \cdot \boldsymbol{\nabla} \right) \mathbf{v} \;. \]
 
 These equations are discretized by a fully-\/coupled vertex-\/centered finite volume (box) scheme in space and using the implicit Euler method in time. Be aware, that this discretization scheme is quite unstable for the Navier-\/\-Stokes equations and quickly leads to unphysical oscillations in the calculated solution. We intend to use a more appropriate discretization scheme in the future, though.
-

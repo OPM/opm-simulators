@@ -83,4 +83,3 @@ void amgclSolverBackend<Scalar,block_size>::solve_cuda(Scalar* b)
 INSTANTIATE_TYPE(double)
 
 } // namespace Opm::Accelerator
-

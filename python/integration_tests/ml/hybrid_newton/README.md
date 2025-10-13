@@ -7,7 +7,7 @@ It ensures that adding ML-based approximations does not degrade solver performan
 
 ## Dependencies
 
-In a similar way as for opm-common ML module, these tests require **TensorFlow** to be installed. 
+In a similar way as for opm-common ML module, these tests require **TensorFlow** to be installed.
 The CPU version is enough for this test and allows faster installation.
 ```bash
 pip install tensorflow-cpu

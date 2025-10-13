@@ -190,7 +190,7 @@ dispatchQuasiImpesWeights(const GpuSparseMatrixWrapper<T>& matrix,
             dispatchQuasiImpesWeights<T, transpose, blocksize - 1>(
                 matrix, pressureVarIndex, weights, diagonalIndices, numberOfRows);
         } else {
-            throw std::runtime_error("Unsupported block size for getQuasiImpesWeights: " + 
+            throw std::runtime_error("Unsupported block size for getQuasiImpesWeights: " +
                                    std::to_string(matrix.blockSize()) + ". Only block sizes 1-3 are supported.");
         }
     } else {

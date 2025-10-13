@@ -361,7 +361,7 @@ SCALING_CASES = [
      "input_features": ["PRESSURE"], "scaling_input": ["standard"],
      "output_features": ["PRESSURE"], "scaling_output": ["standard"]},
     {"label": "scaling_SGAS_SWAT_standard", "mode": "single", "start_idx": 1, "end_idx": 2,
-     "input_features": ["SGAS", "SWAT"], "scaling_input": ["standard", "none"], 
+     "input_features": ["SGAS", "SWAT"], "scaling_input": ["standard", "none"],
      "output_features": ["SGAS", "SWAT"], "scaling_output": ["none", "standard"]},
     {"label": "scaling_PRESSURE_SWAT_minmax", "mode": "single", "start_idx": 1, "end_idx": 2,
      "input_features": ["PRESSURE", "SWAT"], "scaling_input": ["minmax", "none"],
