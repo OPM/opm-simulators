@@ -77,23 +77,21 @@ public:
     }
 
 	/**
-	 * @brief Access element at (row, col).
+	 * @brief Access row for further column indexing.
 	 * @param row Row index.
-	 * @param col Column index.
-	 * @return Reference to element.
+	 * @return Pointer to the beginning of the row.
 	 */
-	OPM_HOST_DEVICE T& operator()(size_type row, size_type col) {
-		return data_[row * dimension + col];
+	OPM_HOST_DEVICE T* operator[](size_type row) {
+		return &data_[row * dimension];
 	}
 
 	/**
-	 * @brief Access element at (row, col) (const version).
+	 * @brief Access row for further column indexing (const version).
 	 * @param row Row index.
-	 * @param col Column index.
-	 * @return Const reference to element.
+	 * @return Const pointer to the beginning of the row.
 	 */
-	OPM_HOST_DEVICE const T& operator()(size_type row, size_type col) const {
-		return data_[row * dimension + col];
+	OPM_HOST_DEVICE const T* operator[](size_type row) const {
+		return &data_[row * dimension];
 	}
 
 	/**
@@ -193,7 +191,7 @@ public:
         for (size_type row = 0; row < dimension; ++row) {
             T sum = T{};
             for (size_type col = 0; col < dimension; ++col)
-                sum += (*this)(row, col) * x[col];
+                sum += (*this)[row][col] * x[col];
             result[row] = sum;
         }
         return result;
@@ -210,8 +208,8 @@ public:
             for (size_type col = 0; col < dimension; ++col) {
                 T sum = T{};
                 for (size_type k = 0; k < dimension; ++k)
-                    sum += (*this)(row, k) * B(k, col);
-                C(row, col) = sum;
+                    sum += (*this)[row][k] * B[k][col];
+                C[row][col] = sum;
             }
         }
         return C;
@@ -227,7 +225,7 @@ public:
 		for (size_type row = 0; row < dimension; ++row) {
 			T sum = T{};
 			for (size_type col = 0; col < dimension; ++col)
-				sum += (*this)(row, col) * x[col];
+				sum += (*this)[row][col] * x[col];
 			result[row] = sum;
 		}
 		return result;
