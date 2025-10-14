@@ -23,66 +23,100 @@
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <utility> // for std::ignore
 
-using VecType = Opm::gpuistl::MiniVector<double, 3>;
-
-__global__ void doNothingKernel(VecType v)
+BOOST_AUTO_TEST_CASE(DefaultConstructor)
 {
-    auto idx = threadIdx.x;
-    return;
+    ::Opm::gpuistl::MiniVector<int, 3> v; // Default constructor initializes all elements to zero
+    BOOST_TEST(v.size() == 3u);
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        BOOST_TEST(v[i] == 0);
+    }
 }
 
-// Check that we can create a minivector and pass it to a GPU kernel without errors
-BOOST_AUTO_TEST_CASE(TestPassingToKernel)
+BOOST_AUTO_TEST_CASE(UniformValueConstructor)
 {
-    VecType v = {1.0, 2.0, 3.0};
-    doNothingKernel<<<1, 1>>>(v);
-    std::ignore = cudaDeviceSynchronize();
-    cudaError_t err = cudaGetLastError();
-    BOOST_CHECK(err == cudaSuccess);
+    constexpr float kVal = 2.5f;
+    ::Opm::gpuistl::MiniVector<float, 4> v(kVal);
+    for (auto e : v) {
+        BOOST_TEST(e == kVal, boost::test_tools::tolerance(1e-6f));
+    }
 }
 
-template <typename VecType>
-__global__ void kernelWithVectorOperations(VecType v1, VecType v2)
+BOOST_AUTO_TEST_CASE(InitializerListConstructor)
 {
-    assert(v1.size() == v2.size());
-    assert(v1 != v2);
-    assert(v1.at(0) == v2.at(0));
-    assert(v1[0] == v2[0]);
+    ::Opm::gpuistl::MiniVector<double, 2> v {1.1, 2.2};
+    BOOST_TEST(v[0] == 1.1, boost::test_tools::tolerance(1e-12));
+    BOOST_TEST(v[1] == 2.2, boost::test_tools::tolerance(1e-12));
 }
 
-BOOST_AUTO_TEST_CASE(TestVectorOperationsOnDevice)
+BOOST_AUTO_TEST_CASE(AtBoundsChecking)
 {
-    VecType v1 = {1.0, 2.0, 3.0};
-    VecType v2(1.0);
-    kernelWithVectorOperations<<<1, 1>>>(v1, v2);
-    std::ignore = cudaDeviceSynchronize();
-    cudaError_t err = cudaGetLastError();
-    BOOST_CHECK(err == cudaSuccess);
+    ::Opm::gpuistl::MiniVector<int, 2> v {5, 6};
+    BOOST_CHECK_THROW(v.at(2), std::out_of_range);
 }
 
-__global__ void writeToVectorKernel(VecType* v)
+BOOST_AUTO_TEST_CASE(IteratorTraversal)
 {
-    (*v) = VecType();
-    (*v)[0] = 1.0;
-    (*v)[1] = 2.0;
-    (*v)[2] = 3.0;
-    return;
+    ::Opm::gpuistl::MiniVector<int, 3> v {1, 2, 3};
+    int sum = 0;
+    for (int e : v)
+        sum += e;
+    BOOST_TEST(sum == 6);
 }
 
-BOOST_AUTO_TEST_CASE(WriteToVectorInKernel)
+template <class VecT>
+__global__ void
+fillKernel(VecT* v, typename VecT::value_type val)
 {
-    VecType* d_v;
-    std::ignore = cudaMalloc(&d_v, sizeof(VecType));
+    (*v)[threadIdx.x] = val;
+}
 
-    writeToVectorKernel<<<1, 1>>>(d_v);
-    std::ignore = cudaDeviceSynchronize();
-    cudaError_t err = cudaGetLastError();
-    BOOST_CHECK(err == cudaSuccess);
+template <class VecT, class IntT>
+__global__ void
+sumKernel(const VecT* v, IntT* out)
+{
+    if (threadIdx.x == 0) {
+        IntT s = 0;
+        for (std::size_t i = 0; i < VecT::size(); ++i) {
+            s += (*v)[i];
+        }
+        *out = s;
+    }
+}
 
-    VecType h_v;
-    std::ignore = cudaMemcpy(&h_v, d_v, sizeof(VecType), cudaMemcpyDeviceToHost);
-    std::ignore = cudaFree(d_v);
-    BOOST_CHECK(h_v == VecType({1.0, 2.0, 3.0}));
+BOOST_AUTO_TEST_CASE(GPUFill)
+{
+    // make_gpu_shared_ptr<T>() should:
+    //   1. allocate device memory for a single T
+    //   2. return a std::shared_ptr<T> whose custom deleter frees GPU memory
+    //   3. optionally take a host value to copy to device (overload)
+
+    auto dvec = ::Opm::gpuistl::make_gpu_shared_ptr<::Opm::gpuistl::MiniVector<int, 3>>();
+
+    // Fill the vector from the device
+    fillKernel<<<1, 3>>>(dvec.get(), 7);
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+
+    // Copy back and verify
+    ::Opm::gpuistl::MiniVector<int, 3> hvec = ::Opm::gpuistl::copyFromGPU(dvec);
+    for (int i = 0; i < 3; ++i) {
+        BOOST_TEST(hvec[i] == 7);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(GPUSum)
+{
+    ::Opm::gpuistl::MiniVector<int, 4> hsrc(1); // [1, 1, 1, 1]
+
+    auto dsrc = ::Opm::gpuistl::make_gpu_shared_ptr<::Opm::gpuistl::MiniVector<int, 4>>(hsrc);
+    auto dout = ::Opm::gpuistl::make_gpu_shared_ptr<int>();
+
+    sumKernel<<<1, 1>>>(dsrc.get(), dout.get());
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+
+    int sum = ::Opm::gpuistl::copyFromGPU(dout);
+    BOOST_TEST(sum == 4);
 }
