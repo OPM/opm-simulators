@@ -1056,6 +1056,11 @@ void
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
 {
+    // All the NNCs created if PINCH OPTION(4) is ALL
+    // They already store the correct transmissibilty
+    // calculated via a harmonic average of those between
+    // the cells (with multipliers applied). See
+    // processEclipseFormat.cpp in opm-grid.
     const auto& pinchNnc = eclState_.getPinchNNC();
 
     for (const auto& nncEntry : pinchNnc) {
