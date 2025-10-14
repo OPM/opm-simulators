@@ -208,9 +208,9 @@ enableSolTracers() const
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
 Scalar GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
-currentConcentration_(const Well& eclWell, const std::string& name) const
+currentConcentration_(const Well& eclWell, const std::string& name, const SummaryState& summaryState) const
 {
-    return eclWell.getTracerProperties().getConcentration(name);
+    return eclWell.getTracerProperties().getConcentration(eclWell.name(), name, summaryState);
 }
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
