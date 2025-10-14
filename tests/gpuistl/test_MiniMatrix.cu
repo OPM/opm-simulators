@@ -23,6 +23,9 @@
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
 #include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+
 #include <utility> // for std::ignore
 
 using MatType = Opm::gpuistl::MiniMatrix<double, 3>;
@@ -42,8 +45,9 @@ BOOST_AUTO_TEST_CASE(TestPassingMatrixToKernel)
     BOOST_CHECK(err == cudaSuccess);
 }
 
-__global__ void MiniMatrixOperationsInKernel(MatType m1, MatType m2)
+__global__ void MiniMatrixOperationsInKernel(MatType m1, MatType m2, bool* result)
 {
+    *result = true;
     {
       auto tmp = m1 * m2;
     }
@@ -59,7 +63,7 @@ __global__ void MiniMatrixOperationsInKernel(MatType m1, MatType m2)
     // Check equality and iterator usage
     for (auto it1 = m1.begin(), it2 = m2.begin(); it1 != m1.end() && it2 != m2.end(); ++it1, ++it2)
     {
-        assert(*it1 == *it2);
+        *result &= (*it1 == *it2);
     }
 
     return;
@@ -69,10 +73,15 @@ BOOST_AUTO_TEST_CASE(TestMiniMatrixOperationsInKernel)
 {
     MatType m1 = 1.0;
     MatType m2 = 1.0;
-    MiniMatrixOperationsInKernel<<<1, 1>>>(m1, m2);
+    auto d_result = Opm::gpuistl::make_gpu_unique_ptr<bool>(true);
+
+    MiniMatrixOperationsInKernel<<<1, 1>>>(m1, m2, d_result.get());
     std::ignore = cudaDeviceSynchronize();
     cudaError_t err = cudaGetLastError();
     BOOST_CHECK(err == cudaSuccess);
+
+    bool h_result = Opm::gpuistl::copyFromGPU(d_result.get());
+    BOOST_CHECK(h_result);
 }
 
 __global__ void WriteToMatrixInKernel(MatType* m)
@@ -84,17 +93,14 @@ __global__ void WriteToMatrixInKernel(MatType* m)
 
 BOOST_AUTO_TEST_CASE(TestWritingToMatrixInKernel)
 {
-    MatType* d_m = nullptr;
-    std::ignore = cudaMalloc(&d_m, sizeof(MatType));
+    auto d_m = Opm::gpuistl::make_gpu_unique_ptr<MatType>();
 
-    WriteToMatrixInKernel<<<1, 1>>>(d_m);
+    WriteToMatrixInKernel<<<1, 1>>>(d_m.get());
     std::ignore = cudaDeviceSynchronize();
     cudaError_t err = cudaGetLastError();
     BOOST_CHECK(err == cudaSuccess);
 
-    MatType h_m;
-    std::ignore = cudaMemcpy(&h_m, d_m, sizeof(MatType), cudaMemcpyDeviceToHost);
-    std::ignore = cudaFree(d_m);
+    MatType h_m = Opm::gpuistl::copyFromGPU(d_m.get());
 
     BOOST_CHECK(h_m[1][1] == 3.14);
 }
