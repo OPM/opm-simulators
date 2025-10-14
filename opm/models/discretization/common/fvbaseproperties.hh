@@ -131,6 +131,10 @@ struct PrimaryVariables { using type = UndefinedProperty; };
 //! The secondary variables within a sub-control volume
 template<class TypeTag, class MyTypeTag>
 struct IntensiveQuantities { using type = UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct GPUIntensiveQuantities { using type = UndefinedProperty; };
+
 //! The discretization specific part of the intensive quantities
 template<class TypeTag, class MyTypeTag>
 struct DiscIntensiveQuantities { using type = UndefinedProperty; };

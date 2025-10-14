@@ -32,6 +32,44 @@
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
 namespace Opm {
+
+// Simple dummy fluid state
+class DummyFluidState {
+public:
+    double saturation(unsigned /*phaseIdx*/) const { return 0.5; }
+    double invB(unsigned /*phaseIdx*/) const { return 1.0; }
+    double pressure(unsigned /*phaseIdx*/) const { return 1.0e5; }
+    double Rs() const { return 0.0; }
+    double Rsw() const { return 0.0; }
+    double Rv() const { return 0.0; }
+    double Rvw() const { return 0.0; }
+    double temperature() const { return 300.0; }
+};
+
+// Dummy intensive quantities class
+template <class TypeTag>
+class DummyIntensiveQuantities {
+public:
+    using FluidState = DummyFluidState;
+
+    // Fluid state access
+    const FluidState& fluidState() const { return fluidState_; }
+
+    // Basic properties
+    double porosity() const { return 0.2; }
+    unsigned pvtRegionIndex() const { return 0; }
+
+    // Mobility and transmissibility
+    double mobility(unsigned /*phaseIdx*/, FaceDir::DirEnum /*faceDir*/) const { return 1.0; }
+    double rockCompTransMultiplier() const { return 1.0; }
+
+    // Bio effects (if enabled)
+    double permFactor() const { return 1.0; }
+
+private:
+    FluidState fluidState_;
+};
+
 namespace Properties {
 namespace TTag {
 struct FlowGasWaterEnergyProblem {
@@ -65,6 +103,9 @@ template<class TypeTag>
 struct EnableVapwat<TypeTag, TTag::FlowGasWaterEnergyProblem> {
     static constexpr bool value = true;
 };
+
+template<class TypeTag>
+struct GPUIntensiveQuantities<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = DummyIntensiveQuantities<TypeTag>; };
 
 //! The indices required by the model
 template<class TypeTag>

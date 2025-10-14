@@ -845,6 +845,9 @@ private:
 
             linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view, neighborInfo_view);
             hipDeviceSynchronize();
+
+            using GPUIQ = GetPropType<TypeTag, Properties::GPUIntensiveQuantities>;
+            GPUIQ iq{};
             
             for (unsigned ii = 0; ii < numCells; ++ii) {
                 OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
