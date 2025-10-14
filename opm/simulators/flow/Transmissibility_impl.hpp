@@ -563,7 +563,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
         // be seen in a parallel. Unfortunately, when we do not use transmissibilities
         // we will only see warnings for the partition of process 0 and also false positives.
         this->applyEditNncToGridTrans_(globalToLocal);
-        this->applyPinchNncToGridTrans_(globalToLocal, applyNncMultregT);
+        this->applyPinchNncToGridTrans_(globalToLocal);
         this->applyNncToGridTrans_(globalToLocal);
         this->applyEditNncrToGridTrans_(globalToLocal);
         if (applyNncMultregT) {
@@ -1054,11 +1054,9 @@ computeFaceProperties(const Intersection& intersection,
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed,
-                          const bool applyNncMultregT)
+applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
 {
     const auto& pinchNnc = eclState_.getPinchNNC();
-    const auto& transMult = this->eclState_.getTransMult();
 
     for (const auto& nncEntry : pinchNnc) {
         auto c1 = nncEntry.cell1;
@@ -1089,12 +1087,7 @@ applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianTo
             if (candidate != trans_.end()) {
                 // the correctly calculated transmissibility is stored in
                 // the NNC. Overwrite previous value with it.
-                // taking the region multiplier into account.
                 candidate->second = nncEntry.trans;
-                if (applyNncMultregT) {
-                    const auto mult = transMult.getRegionMultiplierNNC(c1, c2);
-                    candidate->second *= mult;
-                }
             }
         }
     }
