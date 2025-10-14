@@ -269,7 +269,7 @@ Configuration of Metis partitioner. You can request a configuration to
 be read from a JSON file by giving the filename here, ending with
 extension '.json.' See
 http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/manual.pdf for
-available METIS options. Default: "default" 
+available METIS options. Default: "default"
 .TP
 \fB\-\-milu\-variant\fR=\fI\,STRING\/\fR
 Specify which variant of the modified\-ILU preconditioner ought to be used. Possible variants are: ilu (default, plain ILU), milu_1 (lump diagonal with dropped row entries), milu_2 (lump diagonal with the sum of the absolute values of the dropped row entries), milu_3 (if diagonal is positive add sum of dropped row entries, otherwise subtract them), milu_4 (if diagonal is positive add sum of dropped row entries, otherwise do nothing. Default: "ilu"
@@ -555,4 +555,3 @@ Try to detect and correct oscillations or stagnation during the Newton method. D
 .TP
 \fB\-\-water\-only\-threshold\fR=\fI\,SCALAR\/\fR
 Cells with water saturation above or equal is considered one\-phase water only. Default: 1
-

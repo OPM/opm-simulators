@@ -34,9 +34,9 @@ repos:
     hooks:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
-        types_or: [c, c++, python, shell, yaml, cmake, markdown]
+        types_or: [c, c++, python, shell, yaml, cmake, markdown, text]
         exclude: '^(build/|\.git/)'
 
       - id: end-of-file-fixer
-        types_or: [c, c++, python, shell, yaml, cmake, markdown]
+        types_or: [c, c++, python, shell, yaml, cmake, markdown, text]
         exclude: '^(build/|\.git/)'

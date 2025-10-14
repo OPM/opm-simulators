@@ -462,7 +462,7 @@ copy_system_to_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
 
     if (verbosity >= 3) {
         cudaStreamSynchronize(stream);
-        
+
         c_copy += t.stop();
         std::ostringstream out;
         out << "---cusparseSolver::copy_system_to_gpu(): " << t.elapsed() << " s";
@@ -481,7 +481,7 @@ update_system_on_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
 
     cudaMemcpyAsync(d_b, b, N * sizeof(Scalar), cudaMemcpyHostToDevice, stream);
     cudaMemsetAsync(d_x, 0, sizeof(Scalar) * N, stream);
-    
+
 #if COPY_ROW_BY_ROW
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
@@ -506,7 +506,7 @@ update_system_on_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
         if (use_multithreading)
             copyThread->join();
 
-        cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, 
+        cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues,
                         nnzbs_prec * block_size * block_size * sizeof(Scalar),
                         cudaMemcpyHostToDevice, stream);
     } else {

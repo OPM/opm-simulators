@@ -33,8 +33,8 @@ NSTACK
 
 EQLDIMS
 -- NTEQUL
-     1 / 
-     
+     1 /
+
 
 FMTOUT
 FMTIN
@@ -125,7 +125,7 @@ SGOF
 PVTW
 --RefPres  Bw      Comp   Vw    Cv
    1.      1.0   4.0E-5  0.96  0.0 /
-   
+
 
 ROCK
 --RefPres  Comp
@@ -144,7 +144,7 @@ EQUIL
 RSVD
  0  0.0
  100 100. /
- 
+
 RVVD
    0.  0.
  100.  0.0001 /

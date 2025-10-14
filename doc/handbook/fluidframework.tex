@@ -64,7 +64,7 @@ The \eWoms fluid framework currently features the following concepts
 \section{Fluid States}
 
 Fluid state objects express the complete thermodynamic state of a
-system at a given spatial and temporal position. 
+system at a given spatial and temporal position.
 
 \subsection{Exported Constants}
 
@@ -144,7 +144,7 @@ Also, \textbf{all} fluid states \textbf{must} provide the following methods:
   arbitrary, but in the context of the \eWoms fluid framework, we
   assume that it is the same for all fluid phases, i.e.
   $f_\alpha^{\kappa,0} = f_\beta^{\kappa,0}$.
-  
+
   Assuming thermal equilibrium, there is a one-to-one mapping between
   a component's chemical potential $\zeta^\kappa_\alpha$ and its
   fugacity $f^\kappa_\alpha$. With the above assumptions, chemical
@@ -165,7 +165,7 @@ Also, \textbf{all} fluid states \textbf{must} provide the following methods:
 \item[viscosity():] Returns the dynamic viscosity
   $\mu_\alpha$ of fluid phase $\alpha$.
 \end{description}
-  
+
 \subsection{Available Fluid States}
 Currently, the following fluid states are provided by \eWoms:
 \begin{description}
@@ -309,15 +309,15 @@ only needs to provide the following thermodynamic relations:
   parameter cache, a phase and a component index, return the calculate
   the molecular diffusion coefficient for the component in the fluid
   phase.
-  
+
   Molecular diffusion of a component $\kappa$ in phase $\alpha$ is
   caused by a gradient of the chemical potential. Using some
   simplifying assumptions~\cite{reid1987}, they can be also expressed
   in terms of mole fraction gradients, i.e. the equation used for mass
   fluxes due to molecular diffusion is
-  \[ 
+  \[
   J^\kappa_\alpha = - \rho_{mol,\alpha} D^\kappa_\alpha\ \mathbf{grad} x^\kappa_\alpha\;,
-  \] 
+  \]
   where $\rho_{mol,\alpha}$ is the molar density of phase $\alpha$,
   $x^\kappa_\alpha$ is the mole fraction of component $\kappa$ in
   phase $\alpha$, $D^\kappa_\alpha$ is the diffusion coefficient and
@@ -404,7 +404,7 @@ provides the following constraint solvers:
     \sum_{\alpha=1}^M \saturation_\alpha = 1
     \]
   \item $M - 1$ constraints are given by the capillary pressures:
-    \[ 
+    \[
     p_\beta = p_\alpha + p_{c\beta\alpha} \;,
     \]
     for all phases $\alpha$, $\beta$
@@ -430,7 +430,7 @@ system of equations is closed.
   non-ideal mixtures.
 \end{description}
 
-%%% Local Variables: 
+%%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "ewoms-handbook"
-%%% End: 
+%%% End:
