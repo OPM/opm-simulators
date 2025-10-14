@@ -233,7 +233,7 @@ namespace Opm
         if (iog == IndividualOrGroup::Individual) {
             changed = this->checkIndividualConstraints(ws, summaryState, deferred_logger);
         } else if (iog == IndividualOrGroup::Group) {
-            changed = this->checkGroupConstraints(wgHelper, schedule, summaryState, true, deferred_logger);
+            changed = this->checkGroupConstraints(wgHelper, schedule, summaryState, true);
         } else {
             assert(iog == IndividualOrGroup::Both);
             changed = this->checkConstraints(wgHelper, schedule, summaryState, deferred_logger);
@@ -317,7 +317,7 @@ namespace Opm
                         changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
                     }
                     if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
-                        changed = changed || this->checkGroupConstraints(wgHelper, schedule, summary_state, false, deferred_logger);
+                        changed = changed || this->checkGroupConstraints(wgHelper, schedule, summary_state, false);
                     }
 
                     if (changed) {
