@@ -93,8 +93,7 @@ protected:
     bool checkGroupConstraints(const WellGroupHelperType& wgHelper,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
-                               const bool check_guide_rate,
-                               DeferredLogger& deferred_logger) const;
+                               const bool check_guide_rate) const;
 
     bool checkConstraints(const WellGroupHelperType& wgHelper,
                           const Schedule& schedule,

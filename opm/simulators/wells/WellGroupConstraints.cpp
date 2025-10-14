@@ -40,11 +40,9 @@ WellGroupConstraints<Scalar, IndexTraits>::
 checkGroupConstraintsInj(const Group& group,
                          const WellGroupHelperType& wgHelper,
                          const Scalar efficiencyFactor,
-                         const Schedule& schedule,
                          const SummaryState& summaryState,
                          const RateConvFunc& rateConverter,
-                         const bool check_guide_rate,
-                         DeferredLogger& deferred_logger) const
+                         const bool check_guide_rate) const
 {
     auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
 
@@ -122,8 +120,7 @@ checkGroupConstraints(const WellGroupHelperType& wgHelper,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const RateConvFunc& rateConverter,
-                      const bool check_guide_rate,
-                      DeferredLogger& deferred_logger) const
+                      const bool check_guide_rate) const
 {
     auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
     const auto& well = well_.wellEcl();
@@ -145,10 +142,9 @@ checkGroupConstraints(const WellGroupHelperType& wgHelper,
                                             well_state[well.name()].efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
                 this->checkGroupConstraintsInj(group, wgHelper, efficiencyFactor,
-                                               schedule, summaryState,
+                                               summaryState,
                                                rateConverter,
-                                               check_guide_rate,
-                                               deferred_logger);
+                                               check_guide_rate);
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
             if (group_constraint.first) {
