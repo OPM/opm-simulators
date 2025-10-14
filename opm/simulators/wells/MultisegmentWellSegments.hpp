@@ -201,7 +201,6 @@ private:
                                              const EvalWell& saltConcentration,
                                              const PrimaryVariables& primary_variables,
                                              int seg,
-                                             int pvt_region_index,
                                              bool update_visc_and_den,
                                              DeferredLogger& deferred_logger) const;
 };

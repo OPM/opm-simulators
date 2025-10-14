@@ -171,7 +171,6 @@ computeFluidProperties(const EvalWell& temperature,
                                                                saltConcentration,
                                                                primary_variables,
                                                                seg,
-                                                               pvt_region_index,
                                                                true,
                                                                deferred_logger);
 
@@ -266,7 +265,6 @@ getSurfaceVolume(const EvalWell& temperature,
                                                         saltConcentration,
                                                         primary_variables,
                                                         seg_idx,
-                                                        pvt_region_index,
                                                         false,
                                                         deferred_logger);
     const EvalWell& vol_ratio = result.vol_ratio;
@@ -778,7 +776,6 @@ calculatePhaseProperties(const EvalWell& temperature,
                          const EvalWell& saltConcentration,
                          const PrimaryVariables& primary_variables,
                          const int seg,
-                         int pvt_region_index,
                          const bool update_visc_and_den,
                          DeferredLogger& deferred_logger) const
 {
@@ -817,6 +814,8 @@ calculatePhaseProperties(const EvalWell& temperature,
     const int waterActiveCompIdx = waterActive ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx) : -1;
     const int gasActiveCompIdx = gasActive ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx) : -1;
     const int oilActiveCompIdx = oilActive ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx) : -1;
+
+    const int pvt_region_index = well_.pvtRegionIdx();
 
     // water phase
     if (waterActive) {
