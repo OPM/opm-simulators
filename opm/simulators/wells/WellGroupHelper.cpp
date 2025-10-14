@@ -1986,7 +1986,7 @@ updateGroupTargetReductionRecursive_(
 
 
 template class WellGroupHelper<double, BlackOilDefaultFluidSystemIndices>;
-#ifdef HAVE_FLOAT
+#ifdef FLOW_INSTANTIATE_FLOAT
 template class WellGroupHelper<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 } // namespace Opm
