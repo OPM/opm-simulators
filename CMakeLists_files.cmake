@@ -127,6 +127,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/GenericOutputBlackoilModule.cpp
   opm/simulators/flow/GenericThresholdPressure.cpp
   opm/simulators/flow/GenericTracerModel.cpp
+  opm/simulators/flow/HybridNewtonConfig.cpp
   opm/simulators/flow/InterRegFlows.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/LogOutputHelper.cpp
@@ -935,6 +936,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/GenericTracerModel.hpp
   opm/simulators/flow/GenericTracerModel_impl.hpp
   opm/simulators/flow/HybridNewton.hpp
+  opm/simulators/flow/HybridNewtonConfig.hpp
   opm/simulators/flow/InterRegFlows.hpp
   opm/simulators/flow/KeywordValidation.hpp
   opm/simulators/flow/LogOutputHelper.hpp
