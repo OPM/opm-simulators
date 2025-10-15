@@ -76,32 +76,7 @@ namespace
             diagIndices[rawIdx] = diagIdx;
         }
     }
-
-    // For a non-reordered matrix, extract the diagonal pointers
-    // TODO: Because we store this contiunously we do not actually need to load all the values
-    // TODO: Having a single address and doing pointer arithmetic should suffice
-    template <class T>
-    __global__ void cuComputeDiagPtrs(const int* rowIndices,
-                                      const int* colIndices,
-                                      int rows,
-                                      T** diagPtrs,
-                                      T* values)
-    {
-        const auto rawIdx = blockDim.x * blockIdx.x + threadIdx.x;
-        if (rawIdx < rows) {
-            const size_t nnzIdx = rowIndices[rawIdx];
-
-            size_t diagIdx = nnzIdx;
-            while (colIndices[diagIdx] != rawIdx) {
-                ++diagIdx;
-            }
-
-            diagPtrs[rawIdx] = &values[diagIdx];
-        }
-    }
-
 } // namespace
-
 
 template <class T>
 void
@@ -141,25 +116,6 @@ computeDiagIndices(const int* rowIndices,
         <<<nThreadBlocks, threadBlockSize>>>(rowIndices, colIndices, reorderedToNatural, rows, diagIndices);
 }
 
-template <class T>
-GpuBuffer<T*>
-getDiagPtrs(GpuSparseMatrixWrapper<T>& matrix)
-{
-    GpuBuffer<T*> diagPtrs(matrix.N());
-
-    // Have cuda/hip automatically pick a reasonable block size for this kernel based on static analysis
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuComputeDiagPtrs<T>);
-    // Calculate the number of blocks needed
-    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(matrix.N(), threadBlockSize);
-
-    cuComputeDiagPtrs<T>
-        <<<nThreadBlocks, threadBlockSize>>>(
-            matrix->getRowIndices().data(), matrix->getColumnIndices().data(), matrix.N(), diagPtrs.data(), matrix->getNonZeroValues().data());
-    return diagPtrs;
-}
-
-
-
 } // namespace Opm::gpuistl::detail
 
 #define DEFINE_KERNEL_WRAPPERS_FOR_TYPES(T)                                                                            \
@@ -167,8 +123,6 @@ getDiagPtrs(GpuSparseMatrixWrapper<T>& matrix)
         const int*, const int*, const size_t*, int, size_t*);                                                \
     template void Opm::gpuistl::detail::computeDiagIndices<T>(                                                         \
         const int*, const int*, const int*, int, size_t*);                                               \
-    template Opm::gpuistl::GpuBuffer<T*> Opm::gpuistl::detail::getDiagPtrs<T>(                           \
-        Opm::gpuistl::GpuSparseMatrixWrapper<T>&);
 
 DEFINE_KERNEL_WRAPPERS_FOR_TYPES(float)
 DEFINE_KERNEL_WRAPPERS_FOR_TYPES(double)
