@@ -147,7 +147,6 @@ private:
     }
 
 protected:
-
     void validateFluidSystem()
     {
         const auto& eclState = simulator_.vanguard().eclState();
@@ -230,9 +229,8 @@ protected:
     * \param config  HybridNewtonConfig containing feature definitions and cell indices.
     * \return        A 1D tensor of Evaluation values with the computed layout.
     */
-    ML::Tensor<Evaluation> constructInputTensor(
-        const HybridNewtonConfig& config
-    )
+    ML::Tensor<Evaluation>
+    constructInputTensor(const HybridNewtonConfig& config)
     {
         const auto& features = config.input_features;
 
@@ -374,7 +372,8 @@ protected:
     *         output tensor does not match the expected feature layout.
     */
     ML::Tensor<Evaluation>
-    constructOutputTensor(const ML::Tensor<Evaluation>& input, const HybridNewtonConfig& config)
+    constructOutputTensor(const ML::Tensor<Evaluation>& input,
+                          const HybridNewtonConfig& config)
     {
         const auto& features = config.output_features;
         const int n_features = features.size();
@@ -415,10 +414,8 @@ protected:
     * \throws std::runtime_error if an unknown output feature is encountered
     *         or if state consistency cannot be enforced.
     */
-    void updateInitialGuess(
-        ML::Tensor<Evaluation>& output,
-        const HybridNewtonConfig& config
-    )
+    void updateInitialGuess(ML::Tensor<Evaluation>& output,
+                            const HybridNewtonConfig& config)
     {
         const auto& features = config.output_features;
 
@@ -492,7 +489,9 @@ protected:
                 ++feature_idx;
             }
 
-            int sat_count = static_cast<int>(flags.has_SWAT) + static_cast<int>(flags.has_SOIL) + static_cast<int>(flags.has_SGAS);
+            int sat_count = static_cast<int>(flags.has_SWAT) +
+                            static_cast<int>(flags.has_SOIL) +
+                            static_cast<int>(flags.has_SGAS);
 
             if (sat_count >= 2) {
                 Scalar sw = sw_val;
@@ -543,11 +542,12 @@ protected:
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx*/0);
     }
 
-    struct FeatureFlags {
-    bool has_SWAT = false;
-    bool has_SOIL = false;
-    bool has_SGAS = false;
-    bool has_PRESSURE = false;
+    struct FeatureFlags
+    {
+        bool has_SWAT = false;
+        bool has_SOIL = false;
+        bool has_SGAS = false;
+        bool has_PRESSURE = false;
     };
 
     FeatureFlags flagFeatures(const std::vector<std::pair<std::string, FeatureSpec>>& features)
@@ -570,11 +570,11 @@ protected:
         return flags;
     }
 
-    protected:
-        Simulator& simulator_;
-        std::vector<HybridNewtonConfig> configs_;
-        bool configsLoaded_;
-    };
+protected:
+    Simulator& simulator_;
+    std::vector<HybridNewtonConfig> configs_;
+    bool configsLoaded_;
+};
 
 } // namespace Opm
 
