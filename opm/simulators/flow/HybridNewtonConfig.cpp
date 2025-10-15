@@ -102,7 +102,7 @@ HybridNewtonConfig::loadCellIndicesFromFile(const std::string& filename) const
 {
     std::vector<int> indices;
     std::ifstream cellFile(filename);
-    if (!cellFile.is_open()) {
+    if (! cellFile) {
         throw std::runtime_error("Cannot open cell indices file: " + filename);
     }
 
