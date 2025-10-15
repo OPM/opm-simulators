@@ -684,11 +684,12 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeInitialSegmentFluids(const Simulator& simulator)
+    computeInitialSegmentFluids(const Simulator& simulator,
+                                DeferredLogger& deferred_logger)
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             // TODO: trying to reduce the times for the surfaceVolumeFraction calculation
-            const Scalar surface_volume = getSegmentSurfaceVolume(simulator, seg).value();
+            const Scalar surface_volume = getSegmentSurfaceVolume(simulator, seg, deferred_logger).value();
             for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
                 segment_fluid_initial_[seg][comp_idx] = surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx).value();
             }
@@ -747,7 +748,7 @@ namespace Opm
     {
         updatePrimaryVariables(simulator, well_state, deferred_logger);
         computePerfCellPressDiffs(simulator);
-        computeInitialSegmentFluids(simulator);
+        computeInitialSegmentFluids(simulator, deferred_logger);
     }
 
 
@@ -1883,7 +1884,7 @@ namespace Opm
             // calculating the accumulation term
             // TODO: without considering the efficiency factor for now
             {
-                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(simulator, seg);
+                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(simulator, seg, deferred_logger);
 
                 // Add a regularization_factor to increase the accumulation term
                 // This will make the system less stiff and help convergence for
@@ -2034,7 +2035,9 @@ namespace Opm
     template<typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
-    getSegmentSurfaceVolume(const Simulator& simulator, const int seg_idx) const
+    getSegmentSurfaceVolume(const Simulator& simulator,
+                            const int seg_idx,
+                            DeferredLogger& deferred_logger) const
     {
         EvalWell temperature;
         EvalWell saltConcentration;
@@ -2046,7 +2049,8 @@ namespace Opm
         return this->segments_.getSurfaceVolume(temperature,
                                                 saltConcentration,
                                                 this->primary_variables_,
-                                                seg_idx);
+                                                seg_idx,
+                                                deferred_logger);
     }
 
 
