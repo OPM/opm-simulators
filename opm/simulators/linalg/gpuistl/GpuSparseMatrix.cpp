@@ -330,8 +330,6 @@ GpuSparseMatrix<T>::assertSameSize(const VectorType& x) const
     detail::validateVectorMatrixSizes(x.dim(), blockSize(), N());
 }
 
-
-
 template class GpuSparseMatrix<float>;
 template class GpuSparseMatrix<double>;
 

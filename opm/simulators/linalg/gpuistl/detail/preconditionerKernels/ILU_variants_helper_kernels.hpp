@@ -22,6 +22,8 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpuThreadUtils.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
@@ -65,6 +67,10 @@ void computeDiagIndices(const int* rowIndices,
                         const int* reorderedToNatural,
                         int rows,
                         size_t* diagIndices);
+
+// TODO: this functions should not reside here
+template <class T>
+GpuBuffer<T*> getDiagPtrs(GpuSparseMatrixWrapper<T>& matrix);
 
 } // namespace Opm::gpuistl::detail
 
