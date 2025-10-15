@@ -189,20 +189,31 @@ private:
 
     // this class is used to store the result of phase property calculation
     struct PhaseCalcResult {
+        explicit PhaseCalcResult(const std::size_t num_quantities)
+            : b(num_quantities, 0.0)
+            , mix(num_quantities, 0.0)
+            , mix_s(num_quantities, 0.0)
+            , phase_viscosities(num_quantities, 0.0)
+            , phase_densities(num_quantities, 0.0)
+        {}
+
+        void clear();
+
         std::vector<EvalWell> b;
-        EvalWell vol_ratio{0.};
         std::vector<EvalWell> mix;
         std::vector<EvalWell> mix_s;
         std::vector<EvalWell> phase_viscosities;
         std::vector<EvalWell> phase_densities;
+        EvalWell vol_ratio{0.};
     };
 
-    PhaseCalcResult calculatePhaseProperties(const EvalWell& temperature,
-                                             const EvalWell& saltConcentration,
-                                             const PrimaryVariables& primary_variables,
-                                             int seg,
-                                             bool update_visc_and_den,
-                                             DeferredLogger& deferred_logger) const;
+    void calculatePhaseProperties(PhaseCalcResult& result,
+                                  const EvalWell& temperature,
+                                  const EvalWell& saltConcentration,
+                                  const PrimaryVariables& primary_variables,
+                                  int seg,
+                                  bool update_visc_and_den,
+                                  DeferredLogger& deferred_logger) const;
 };
 
 } // namespace Opm

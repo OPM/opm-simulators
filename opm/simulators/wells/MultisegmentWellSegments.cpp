@@ -166,13 +166,12 @@ computeFluidProperties(const EvalWell& temperature,
                        const PrimaryVariables& primary_variables,
                        DeferredLogger& deferred_logger)
 {
+    const int num_quantities = well_.numConservationQuantities();
+    PhaseCalcResult result(static_cast<size_t>(num_quantities));
+
     for (std::size_t seg = 0; seg < perforations_.size(); ++seg) {
-        const PhaseCalcResult result = calculatePhaseProperties(temperature,
-                                                               saltConcentration,
-                                                               primary_variables,
-                                                               seg,
-                                                               true,
-                                                               deferred_logger);
+        calculatePhaseProperties(result, temperature, saltConcentration,
+                                 primary_variables, seg, true, deferred_logger);
 
         phase_densities_[seg] = result.phase_densities;
         phase_viscosities_[seg] = result.phase_viscosities;
@@ -184,7 +183,7 @@ computeFluidProperties(const EvalWell& temperature,
 
         viscosities_[seg] = 0.;
         // calculate the average viscosity
-        for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
+        for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
             const EvalWell fraction =  mix[comp_idx] / b[comp_idx] / volrat;
             // TODO: a little more work needs to be done to handle the negative fractions here
             phase_fractions_[seg][comp_idx] = fraction; // >= 0.0 ? fraction : 0.0;
@@ -192,7 +191,7 @@ computeFluidProperties(const EvalWell& temperature,
         }
 
         EvalWell density(0.0);
-        for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
+        for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
             density += surface_densities_[comp_idx] * mix_s[comp_idx];
         }
         densities_[seg] = density / volrat;
@@ -261,12 +260,10 @@ getSurfaceVolume(const EvalWell& temperature,
                  const int seg_idx,
                  DeferredLogger& deferred_logger) const
 {
-    const PhaseCalcResult result = calculatePhaseProperties(temperature,
-                                                        saltConcentration,
-                                                        primary_variables,
-                                                        seg_idx,
-                                                        false,
-                                                        deferred_logger);
+    PhaseCalcResult result(static_cast<size_t>(well_.numConservationQuantities()));
+    calculatePhaseProperties(result, temperature, saltConcentration,
+                             primary_variables, seg_idx, false, deferred_logger);
+
     const EvalWell& vol_ratio = result.vol_ratio;
 
     // We increase the segment volume with a factor 10 to stabilize the system.
@@ -770,39 +767,29 @@ mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const
 }
 
 template<class FluidSystem, class Indices>
-typename MultisegmentWellSegments<FluidSystem, Indices>::PhaseCalcResult
+void
 MultisegmentWellSegments<FluidSystem, Indices>::
-calculatePhaseProperties(const EvalWell& temperature,
+calculatePhaseProperties(PhaseCalcResult& result,
+                         const EvalWell& temperature,
                          const EvalWell& saltConcentration,
                          const PrimaryVariables& primary_variables,
                          const int seg,
                          const bool update_visc_and_den,
                          DeferredLogger& deferred_logger) const
 {
-    PhaseCalcResult result;
-
-    const int num_quantities = well_.numConservationQuantities();
-
-    result.b.assign(num_quantities, 0.0);
-    result.mix_s.assign(num_quantities, 0.0);
-    result.mix.assign(num_quantities, 0.0);
+    result.clear();
 
     auto& b = result.b;
     auto& mix_s = result.mix_s;
     auto& mix = result.mix;
-    auto& vol_ratio = result.vol_ratio; // default 0.
-
-    if (update_visc_and_den) {
-        result.phase_viscosities.assign(num_quantities, 0.0);
-        result.phase_densities.assign(num_quantities, 0.0);
-    }
-
+    auto& vol_ratio = result.vol_ratio;
     auto& phase_viscosities = result.phase_viscosities;
     auto& phase_densities = result.phase_densities;
 
     // we might use reference here
     const EvalWell seg_pressure = primary_variables.getSegmentPressure(seg);
 
+    const int num_quantities = well_.numConservationQuantities();
     for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
         mix_s[comp_idx] = primary_variables.surfaceVolumeFraction(seg, comp_idx);
     }
@@ -916,8 +903,19 @@ calculatePhaseProperties(const EvalWell& temperature,
     for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
         vol_ratio += mix[comp_idx] / b[comp_idx];
     }
+}
 
-    return result;
+template<typename FluidSystem, typename Indices>
+void
+MultisegmentWellSegments<FluidSystem, Indices>::
+PhaseCalcResult::clear()
+{
+    std::fill(b.begin(), b.end(), 0.0);
+    std::fill(mix.begin(), mix.end(), 0.0);
+    std::fill(mix_s.begin(), mix_s.end(), 0.0);
+    std::fill(phase_viscosities.begin(), phase_viscosities.end(), 0.0);
+    std::fill(phase_densities.begin(), phase_densities.end(), 0.0);
+    vol_ratio = 0.0;
 }
 
 #include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
