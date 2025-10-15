@@ -97,6 +97,28 @@ namespace
             }
         }
     }
+
+    template <class T>
+    __global__ void cuComputeDiagPtrs(const int* rowIndices,
+                                      const int* colIndices,
+                                      int rows,
+                                      T** diagPtrs,
+                                      T* values,
+                                      size_t blocksize)
+    {
+        const auto rawIdx = blockDim.x * blockIdx.x + threadIdx.x;
+        if (rawIdx < rows) {
+            const size_t nnzIdx = rowIndices[rawIdx];
+
+            size_t diagIdx = nnzIdx;
+            while (colIndices[diagIdx] != rawIdx) {
+                ++diagIdx;
+            }
+
+            // Pointer arithmetic based on first element is sufficient here
+            diagPtrs[rawIdx] = values + diagIdx*blocksize*blocksize;
+        }
+    }
 } // namespace
 
 template <class T, int blocksize>
@@ -145,20 +167,45 @@ copyMatDataToReorderedSplit(const T* srcMatrix,
                                                                                  numberOfRows);
 }
 
-#define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
+template <class T>
+GpuBuffer<T*>
+getDiagPtrs(GpuSparseMatrixWrapper<T>& matrix)
+{
+    GpuBuffer<T*> diagPtrs(matrix.N());
+
+    // Have cuda/hip automatically pick a reasonable block size for this kernel based on static analysis
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuComputeDiagPtrs<T>);
+    // Calculate the number of blocks needed
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(matrix.N(), threadBlockSize);
+
+    cuComputeDiagPtrs<T>
+        <<<nThreadBlocks, threadBlockSize>>>(
+            matrix->getRowIndices().data(), matrix->getColumnIndices().data(), matrix.N(), diagPtrs.data(), matrix->getNonZeroValues().data(), matrix.blockSize());
+    return diagPtrs;
+}
+
+#define INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(T, blocksize)                                                                      \
     template void copyMatDataToReordered<T, blocksize>(const T*, const int*, T*, int*, int*, size_t, int);                         \
     template void copyMatDataToReorderedSplit<T, blocksize>(const T*, const int*, const int*, T*, int*, T*, int*, T*, int*, size_t, int);
 
-INSTANTIATE_KERNEL_WRAPPERS(float, 1);
-INSTANTIATE_KERNEL_WRAPPERS(float, 2);
-INSTANTIATE_KERNEL_WRAPPERS(float, 3);
-INSTANTIATE_KERNEL_WRAPPERS(float, 4);
-INSTANTIATE_KERNEL_WRAPPERS(float, 5);
-INSTANTIATE_KERNEL_WRAPPERS(float, 6);
-INSTANTIATE_KERNEL_WRAPPERS(double, 1);
-INSTANTIATE_KERNEL_WRAPPERS(double, 2);
-INSTANTIATE_KERNEL_WRAPPERS(double, 3);
-INSTANTIATE_KERNEL_WRAPPERS(double, 4);
-INSTANTIATE_KERNEL_WRAPPERS(double, 5);
-INSTANTIATE_KERNEL_WRAPPERS(double, 6);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(float, 1);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(float, 2);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(float, 3);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(float, 4);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(float, 5);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(float, 6);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(double, 1);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(double, 2);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(double, 3);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(double, 4);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(double, 5);
+INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(double, 6);
+
+#define INSTANTIATE_KERNEL_WRAPPER_WITH_SCALAR(T) \
+    template Opm::gpuistl::GpuBuffer<T*> Opm::gpuistl::detail::getDiagPtrs<T>(                           \
+        Opm::gpuistl::GpuSparseMatrixWrapper<T>&);
+
+INSTANTIATE_KERNEL_WRAPPER_WITH_SCALAR(float)
+INSTANTIATE_KERNEL_WRAPPER_WITH_SCALAR(double)
+
 } // namespace Opm::gpuistl::detail
