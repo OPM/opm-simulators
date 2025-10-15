@@ -63,11 +63,13 @@
 #include <opm/common/utility/gpuDecorators.hpp>
 #if HAVE_CUDA
 #if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniVector.hpp>
 #else
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
@@ -811,7 +813,14 @@ private:
 #if HAVE_CUDA
         // Make sure we have can have the domain on the GPU.
         if constexpr (std::is_same_v<SubDomainType, FullDomain<>>) {
-            // printf("Entering linearize_");
+            /*
+                One of the things I must be careful with on the GPU is all of the pointers in this class
+                Block* diagMatAddress_ for instance will be pointing to CPU memory, and many helper objects
+                of this nature must be converted in some way to be usable on the GPU.
+
+                Practically I think is will work to just do pointer arithmetic and assume the same layout is used
+                I think this might not be completely guaranteed though, so maybe I should be more cautious.
+            */
 
             #if OPM_IS_COMPILING_WITH_GPU_COMPILER
                 printf("GPU COMPILER");
@@ -986,6 +995,8 @@ private:
                 ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
                 *diagMatAddress_[globI] += bMat;
             }
+
+            gpuistl::GpuSparseMatrixWrapper<double> gpuJacobian = gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(jacobian_->istlMatrix());
         }
         else {
             assert(false && "Only FullDomain is supported on GPU");
