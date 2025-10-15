@@ -151,6 +151,27 @@ struct NeighborInfoStruct
     }
 };
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+namespace  gpuistl {
+    template<class MiniMatrixType, class MatrixBlockType, class ResidualNBInfoType>
+    auto copy_to_gpu(const SparseTable<NeighborInfoStruct<ResidualNBInfoType, MatrixBlockType>>& cpu_matrix)
+    {
+        // Convert the DUNE FieldVectors to MiniMatrix types
+        using StructWithMinimatrix = NeighborInfoStruct<ResidualNBInfoType, MiniMatrixType>;
+        std::vector<StructWithMinimatrix> minimatrices(cpu_matrix.dataSize());
+        size_t idx = 0;
+        for (auto e : cpu_matrix.dataStorage()) {
+            minimatrices[idx++] = StructWithMinimatrix(e);
+        }
+
+        return SparseTable<StructWithMinimatrix, gpuistl::GpuBuffer>(
+            gpuistl::GpuBuffer<StructWithMinimatrix>(minimatrices),
+            gpuistl::GpuBuffer<int>(cpu_matrix.rowStarts())
+        );
+    }
+}
+#endif
+
 /*!
  * \ingroup FiniteVolumeDiscretizations
  *
