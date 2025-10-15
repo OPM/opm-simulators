@@ -139,7 +139,7 @@ protected:
                                std::vector<TracerVector>& b);
 
     Scalar currentConcentration_(const Well& eclWell,
-                                 const std::string& name,
+                                 const std::string& trName,
                                  const SummaryState& summaryState) const;
 
     //! \brief Tracer type index
