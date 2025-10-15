@@ -1658,7 +1658,7 @@ inferLocalShutWells()
 template<typename Scalar, typename IndexTraits>
 Scalar
 BlackoilWellModelGeneric<Scalar, IndexTraits>::
-updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor, const Scalar upper_update_bound)
+updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor, const Scalar upper_update_bound, std::vector<std::string>& updated_wells)
 {
     OPM_TIMEFUNCTION();
     // Get the network and return if inactive (no wells in network at this time)
@@ -1709,6 +1709,7 @@ updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor, con
             }
         }
     }
+    const auto& balance = this->schedule()[reportStepIdx].network_balance();
 
     for (auto& well : well_container_generic_) {
 
@@ -1723,8 +1724,15 @@ updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor, con
                 const Scalar new_limit = it->second;
                 well->setDynamicThpLimit(new_limit);
                 SingleWellState<Scalar, IndexTraits>& ws = this->wellState()[well->indexOfWell()];
+                const Scalar pressure_tolerance = balance.pressure_tolerance();
+                // We only re-compute the solution if the thp has changed more than
+                // 1% of the pressure_tolerance
+                Scalar update_well_threshold = 1e-2;
+                bool needs_update = std::abs(new_limit - ws.thp) > pressure_tolerance*update_well_threshold;
+                if (needs_update) {
+                    updated_wells.push_back(well->name());
+                }
                 const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
-                // TODO: not sure why the thp is NOT updated properly elsewhere
                 if (thp_is_limit) {
                     ws.thp = well->getTHPConstraint(summaryState_);
                 }
