@@ -38,14 +38,16 @@ namespace Opm {
  *
  * Supports standard (mean/std) and min-max scaling.
  */
-struct Scaler {
+struct Scaler
+{
     enum class Type { None, Standard, MinMax } type = Type::None;
     double mean = 0.0;
     double std  = 1.0;
     double min  = 0.0;
     double max  = 1.0;
 
-    double scale(double raw_value) const {
+    double scale(double raw_value) const
+    {
         switch (type) {
             case Type::Standard:
                 return (std == 0.0) ? mean : (raw_value - mean) / std;
@@ -59,7 +61,8 @@ struct Scaler {
         }
     }
 
-    double unscale(double scaled_value) const {
+    double unscale(double scaled_value) const
+    {
         switch (type) {
             case Type::Standard: return scaled_value * std + mean;
             case Type::MinMax:   return scaled_value * (max - min) + min;
@@ -75,18 +78,21 @@ struct Scaler {
  * Supports log, log10, log1p, and no transform. Provides forward
  * and inverse methods.
  */
-struct Transform {
+struct Transform
+{
     enum class Type { None, Log, Log10, Log1p } type = Type::None;
 
     Transform() = default;
-    explicit Transform(const std::string& name) {
+    explicit Transform(const std::string& name)
+    {
         if      (name == "log10") type = Type::Log10;
         else if (name == "log")   type = Type::Log;
         else if (name == "log1p") type = Type::Log1p;
         else                       type = Type::None;
     }
 
-    double apply(double raw_value) const {
+    double apply(double raw_value) const
+    {
         switch (type) {
             case Type::Log10: return std::log10(raw_value);
             case Type::Log:   return std::log(raw_value);
@@ -96,7 +102,8 @@ struct Transform {
         }
     }
 
-    double applyInverse(double transformed_value) const {
+    double applyInverse(double transformed_value) const
+    {
         switch (type) {
             case Type::Log10: return std::pow(10.0, transformed_value);
             case Type::Log:   return std::exp(transformed_value);
@@ -112,7 +119,8 @@ struct Transform {
  *
  * Includes transformation, scaling, delta flag, and actual feature name.
  */
-struct FeatureSpec {
+struct FeatureSpec
+{
     Transform transform;
     Scaler scaler;
     bool is_delta = false;
@@ -127,7 +135,8 @@ struct FeatureSpec {
  * Encapsulates model path, cell indices, apply times, input/output
  * features, and validation. Can be constructed from a PropertyTree.
  */
-class HybridNewtonConfig {
+class HybridNewtonConfig
+{
 public:
     std::string model_path;
     std::string cell_indices_file;
