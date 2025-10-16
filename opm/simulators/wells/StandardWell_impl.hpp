@@ -378,6 +378,9 @@ namespace Opm
 
         auto& ws = well_state.well(this->index_of_well_);
         ws.phase_mixing_rates.fill(0.0);
+        if constexpr (has_energy) {
+            ws.energy_rate = 0.0;
+        }
 
 
         const int np = this->number_of_phases_;
@@ -542,6 +545,7 @@ namespace Opm
         if constexpr (has_energy) {
             connectionRates[perf][Indices::contiEnergyEqIdx] =
                 connectionRateEnergy(cq_s, intQuants, deferred_logger);
+            ws.energy_rate += getValue(connectionRates[perf][Indices::contiEnergyEqIdx]);
         }
 
         if constexpr (has_polymer) {

@@ -65,6 +65,7 @@ public:
         serializer(bhp);
         serializer(thp);
         serializer(temperature);
+        serializer(energy_rate);
         serializer(efficiency_scaling_factor);
         serializer(phase_mixing_rates);
         serializer(well_potentials);
@@ -96,7 +97,11 @@ public:
     PhaseUsageInfo<IndexTraits> pu;
     Scalar bhp{0};
     Scalar thp{0};
+
+    // thermal related
     Scalar temperature{0};
+    Scalar energy_rate{0.};
+
     Scalar efficiency_scaling_factor{1.0};
 
     // filtration injection concentration
