@@ -232,7 +232,7 @@ private:
 
     const Schedule& schedule_;
     const SummaryState& summary_state_;
-    WellState<Scalar, IndexTraits>* well_state_;
+    WellState<Scalar, IndexTraits>* well_state_{nullptr};
     GroupState<Scalar>* group_state_{nullptr};
     const GuideRate& guide_rate_;
     int report_step_{0};
