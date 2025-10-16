@@ -255,9 +255,6 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
             current_rate += wgHelper().sumWellSurfaceRates(group,
                                                            pu.canonicalToActivePhaseIdx(waterPhaseIdx),
                                                            /*is_injector=*/false);
-            current_rate += wgHelper().sumWellSurfaceRates(group,
-                                                           pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                           /*is_injector=*/false);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
