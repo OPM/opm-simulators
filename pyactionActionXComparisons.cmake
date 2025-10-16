@@ -196,6 +196,8 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_WTMULT_insert_kw
                                  IGNORE_EXTRA_KW BOTH)
 
 if(MPI_FOUND)
+  # We pass allow-distributed-wells=true, because wells appear inactive with
+  # with PYACTION but active with ACTIONX
   add_test_compareSeparateECLFiles(CASENAME pyaction_gconprod_insert_kw_4_procs
                                    DIR1 pyaction
                                    FILENAME1 PYACTION_GCONPROD_INSERT_KW
@@ -205,7 +207,8 @@ if(MPI_FOUND)
                                    ABS_TOL ${abs_tol}
                                    REL_TOL ${rel_tol}
                                    IGNORE_EXTRA_KW BOTH
-                                   MPI_PROCS 4)
+                                   MPI_PROCS 4
+                                   TEST_ARGS --allow-distributed-wells=true)
 
   add_test_compareSeparateECLFiles(CASENAME pyaction_gconsump_insert_kw_4_procs
                                    DIR1 pyaction
@@ -218,6 +221,8 @@ if(MPI_FOUND)
                                    IGNORE_EXTRA_KW BOTH
                                    MPI_PROCS 4)
 
+  # We pass allow-distributed-wells=true, because wells appear inactive with
+  # with PYACTION but active with ACTIONX
   add_test_compareSeparateECLFiles(CASENAME pyaction_gruptree_insert_kw_4_procs
                                    DIR1 pyaction
                                    FILENAME1 PYACTION_GRUPTREE_INSERT_KW
@@ -227,7 +232,8 @@ if(MPI_FOUND)
                                    ABS_TOL ${abs_tol}
                                    REL_TOL ${rel_tol}
                                    IGNORE_EXTRA_KW BOTH
-                                   MPI_PROCS 4)
+                                   MPI_PROCS 4
+                                   TEST_ARGS --allow-distributed-wells=true)
 
   add_test_compareSeparateECLFiles(CASENAME actionx_gefac_4_procs
                                    DIR1 model4
@@ -295,6 +301,8 @@ if(MPI_FOUND)
                                    IGNORE_EXTRA_KW BOTH
                                    MPI_PROCS 4)
 
+  # We pass allow-distributed-wells=true, because wells appear inactive with
+  # with PYACTION but active with ACTIONX
   add_test_compareSeparateECLFiles(CASENAME pyaction_wconprod_insert_kw_4_procs
                                    DIR1 pyaction
                                    FILENAME1 PYACTION_WCONPROD_INSERT_KW
@@ -304,7 +312,8 @@ if(MPI_FOUND)
                                    ABS_TOL ${abs_tol}
                                    REL_TOL ${rel_tol}
                                    IGNORE_EXTRA_KW BOTH
-                                   MPI_PROCS 4)
+                                   MPI_PROCS 4
+                                   TEST_ARGS --allow-distributed-wells=true)
 
   add_test_compareSeparateECLFiles(CASENAME pyaction_wefac_insert_kw_4_procs
                                    DIR1 pyaction
