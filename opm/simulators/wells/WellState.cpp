@@ -591,6 +591,10 @@ report(const int* globalCellIdxMap,
             well.rates.set(rt::brine, ws.sum_brine_rates());
         }
 
+        if (pu.hasEnergy()) {
+            well.rates.set(rt::energy,  ws.energy_rate);
+        }
+
         if (pu.hasBiofilm() || pu.hasMICP()) {
             well.rates.set(rt::microbial, ws.sum_microbial_rates());
             if (pu.hasMICP()) {
