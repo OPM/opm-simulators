@@ -23,6 +23,11 @@
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
+#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
+
+#include <opm/common/utility/pointerArithmetic.hpp>
 
 #include <dune/istl/bcrsmatrix.hh>
 
@@ -227,4 +232,80 @@ typedef boost::mpl::range_c<int, 1, 7> block_sizes;
 BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSparsityMatrixGeneric, T, block_sizes)
 {
     runRandomSparsityMatrixTest<Opm::gpuistl::GpuSparseMatrixGeneric<double>, T::value>();
+}
+
+__global__ void checkPointers(double* data, std::array<void*, 6>* ptrs, std::array<bool, 6>* correctPtrs)
+{
+    const int row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row == 0)
+    {
+        (*correctPtrs)[0] = (*static_cast<double*>((*ptrs)[0]) == 1.0);
+        (*correctPtrs)[1] = (*static_cast<double*>((*ptrs)[1]) == 2.0);
+        (*correctPtrs)[2] = (*static_cast<double*>((*ptrs)[2]) == 3.0);
+        (*correctPtrs)[3] = (*static_cast<double*>((*ptrs)[3]) == 4.0);
+        (*correctPtrs)[4] = (*static_cast<double*>((*ptrs)[4]) == 5.0);
+        (*correctPtrs)[5] = (*static_cast<double*>((*ptrs)[5]) == 6.0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(TestFindingPointersToElements)
+{
+    /*
+        In this test I want to check that constructing a Dune Matrix with the istl wrapper will
+        produce a matrix stored with in the same way as the GpuSparseMatrix
+
+        That should be the case with the way we produce the jacobian matrix in the tpfalinearizer (using reserve and then filling in values)
+    */
+    using CPUBlockType = Dune::FieldMatrix<double, 1, 1>;
+
+    Opm::Linear::IstlSparseMatrixAdapter<CPUBlockType> cpuMatrix(3,3);
+
+    std::vector<std::set<int>> sparsityPattern =
+        {
+            {0,1,2},
+            {1},
+            {0,2}
+        };
+    cpuMatrix.reserve(sparsityPattern);
+
+    // This way of filling in the matrix is chosen to mirror what happens in the tpfalinaerizer
+    *(cpuMatrix.blockAddress(0, 0)) = CPUBlockType(1.0);
+    *(cpuMatrix.blockAddress(0, 1)) = CPUBlockType(2.0);
+    *(cpuMatrix.blockAddress(0, 2)) = CPUBlockType(3.0);
+    *(cpuMatrix.blockAddress(1, 1)) = CPUBlockType(4.0);
+    *(cpuMatrix.blockAddress(2, 0)) = CPUBlockType(5.0);
+    *(cpuMatrix.blockAddress(2, 2)) = CPUBlockType(6.0);
+
+    auto gpuMatrix = Opm::gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(cpuMatrix.istlMatrix());
+
+    std::array<void*, 6> ptrsCPU = {
+        cpuMatrix.blockAddress(0,0),
+        cpuMatrix.blockAddress(0,1),
+        cpuMatrix.blockAddress(0,2),
+        cpuMatrix.blockAddress(1,1),
+        cpuMatrix.blockAddress(2,0),
+        cpuMatrix.blockAddress(2,2)
+    };
+
+    std::array<void*, 6> ptrsGpuComputed;
+    void* gpuDataBuffer = gpuMatrix.getNonZeroValues().data();
+    void* cpuDataBuffer = cpuMatrix.blockAddress(0, 0);
+
+    for (size_t i = 0; i < 6; ++i) {
+        ptrsGpuComputed[i] = Opm::ComputePtrBasedOnOffsetInOtherBuffer(gpuDataBuffer, cpuDataBuffer, ptrsCPU[i]);
+    }
+
+    auto ptrsGpu = Opm::gpuistl::make_gpu_unique_ptr<std::array<void*, 6>>(ptrsGpuComputed);
+    auto correctValues = Opm::gpuistl::make_gpu_unique_ptr<std::array<bool, 6>>({false});
+
+    checkPointers<<<1,1>>>(static_cast<double*>(gpuDataBuffer), ptrsGpu.get(), correctValues.get());
+
+    auto correctValuesCPU = Opm::gpuistl::copyFromGPU(correctValues);
+
+    BOOST_CHECK(correctValuesCPU[0]);
+    BOOST_CHECK(correctValuesCPU[1]);
+    BOOST_CHECK(correctValuesCPU[2]);
+    BOOST_CHECK(correctValuesCPU[3]);
+    BOOST_CHECK(correctValuesCPU[4]);
+    BOOST_CHECK(correctValuesCPU[5]);
 }
