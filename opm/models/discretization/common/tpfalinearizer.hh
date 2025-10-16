@@ -157,20 +157,24 @@ struct NeighborInfoStruct
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 namespace  gpuistl {
-    template<class MiniMatrixType, class MatrixBlockType, class ResidualNBInfoType>
-    auto copy_to_gpu(const SparseTable<NeighborInfoStruct<ResidualNBInfoType, MatrixBlockType>>& cpu_matrix)
+    // Also take in the gpu_matrix because we need to compute the pointers of different non-zero entries
+    // TODO: this can _probably_ be optimized away by assuming that the DUNE matrix is always stored contiguously
+    // TODO: if that is the case, then we can know where the pointers should be be using the same offset from the
+    // TODO: first entry on the GPU as the CPU.
+    template<class MiniMatrixType, class GpuMatrix, class MatrixBlockType, class ResidualNBInfoType>
+    auto copy_to_gpu(const SparseTable<NeighborInfoStruct<ResidualNBInfoType, MatrixBlockType>>& cpu_neighbor_table, GpuMatrix& gpu_matrix)
     {
         // Convert the DUNE FieldVectors to MiniMatrix types
         using StructWithMinimatrix = NeighborInfoStruct<ResidualNBInfoType, MiniMatrixType>;
-        std::vector<StructWithMinimatrix> minimatrices(cpu_matrix.dataSize());
+        std::vector<StructWithMinimatrix> minimatrices(cpu_neighbor_table.dataSize());
         size_t idx = 0;
-        for (auto e : cpu_matrix.dataStorage()) {
+        for (auto e : cpu_neighbor_table.dataStorage()) {
             minimatrices[idx++] = StructWithMinimatrix(e);
         }
 
         return SparseTable<StructWithMinimatrix, gpuistl::GpuBuffer>(
             gpuistl::GpuBuffer<StructWithMinimatrix>(minimatrices),
-            gpuistl::GpuBuffer<int>(cpu_matrix.rowStarts())
+            gpuistl::GpuBuffer<int>(cpu_neighbor_table.rowStarts())
         );
     }
 }
@@ -549,7 +553,7 @@ private:
         std::vector<NeighborSet> sparsityPattern(model.numTotalDof());
         const Scalar gravity = problem_().gravity()[dimWorld - 1];
         unsigned numCells = model.numTotalDof();
-        neighborInfo_.reserve(numCells, 6 * numCells);
+        neighborInfo_.reserve(numCells, 6 * numCells); // Expect ~6 neighbors per cell
         std::vector<NeighborInfoCPU> loc_nbinfo;
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
@@ -869,10 +873,12 @@ private:
             const unsigned int numCells = domain.cells.size();
             const bool on_full_domain = (numCells == model_().numTotalDof());
 
+            gpuistl::GpuSparseMatrixWrapper<double> gpuJacobian = gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(jacobian_->istlMatrix());
+
             // Ensure we can have the domain  on the GPU.
             auto domain_buffer = copy_to_gpu(domain);
             auto domain_view = make_view(domain_buffer);
-            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_);
+            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_, gpuJacobian);
             auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
 
             linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view, neighborInfo_view);
@@ -1018,8 +1024,6 @@ private:
                 ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
                 *diagMatAddress_[globI] += bMat;
             }
-
-            gpuistl::GpuSparseMatrixWrapper<double> gpuJacobian = gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(jacobian_->istlMatrix());
         }
         else {
             assert(false && "Only FullDomain is supported on GPU");
