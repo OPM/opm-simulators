@@ -1660,6 +1660,9 @@ namespace Opm
         this->operability_status_.resetOperability();
         this->operability_status_.solvable = true;
 
+        // update flag for preventing group control
+        this->updatePreventGroupControl(summary_state, well_state, Base::B_avg_, deferred_logger, prod_controls);
+
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             ++its_since_last_switch;
             if (allow_switching && its_since_last_switch >= min_its_after_switch && status_switch_count < max_status_switch){

@@ -141,6 +141,9 @@ checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
     const auto& well = well_.wellEcl();
     const int well_index = well_.indexOfWell();
     auto& ws = well_state.well(well_index);
+    if (ws.prevent_group_control) {
+        return false;
+    }
 
     if (well.isInjector()) {
         const auto currentControl = ws.injection_cmode;
