@@ -158,6 +158,9 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver5.cpp
   opm/simulators/linalg/FlexibleSolver6.cpp
   opm/simulators/linalg/FlowLinearSolverParameters.cpp
+  opm/simulators/linalg/mixed/bsr.c
+  opm/simulators/linalg/mixed/prec.c
+  opm/simulators/linalg/mixed/bslv.c
   opm/simulators/linalg/ISTLSolver.cpp
   opm/simulators/linalg/MILU.cpp
   opm/simulators/linalg/ParallelIstlInformation.cpp
