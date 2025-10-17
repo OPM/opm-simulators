@@ -29,6 +29,7 @@
 #define EWOMS_FV_BASE_PRIMARY_VARIABLES_HH
 
 #include <dune/common/fvector.hh>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
@@ -46,10 +47,10 @@ namespace Opm {
  *
  * \brief Represents the primary variables used by the a model.
  */
-template <class TypeTag>
+template <class TypeTag, template<class, int> class VectorType = Dune::FieldVector>
 class FvBasePrimaryVariables
-    : public Dune::FieldVector<GetPropType<TypeTag, Properties::Scalar>,
-                               getPropValue<TypeTag, Properties::NumEq>()>
+    : public VectorType<GetPropType<TypeTag, Properties::Scalar>,
+                        getPropValue<TypeTag, Properties::NumEq>()>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
@@ -57,10 +58,10 @@ class FvBasePrimaryVariables
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
     using Toolbox = MathToolbox<Evaluation>;
-    using ParentType = Dune::FieldVector<Scalar, numEq>;
+    using ParentType = VectorType<Scalar, numEq>;
 
 public:
-    FvBasePrimaryVariables()
+    OPM_HOST_DEVICE FvBasePrimaryVariables()
         : ParentType()
     { Valgrind::SetUndefined(*this); }
 
@@ -76,7 +77,7 @@ public:
 
     using ParentType::operator=; //!< Import base class assignment operators.
 
-    static void init()
+    OPM_HOST_DEVICE static void init()
     {
         // Nothing required by default.
     }
@@ -93,7 +94,7 @@ public:
      * it represents the a constant f = x_i. (the difference is that in the first case,
      * the derivative w.r.t. x_i is 1, while it is 0 in the second case.
      */
-    Evaluation makeEvaluation(unsigned varIdx, unsigned timeIdx,
+    OPM_HOST_DEVICE Evaluation makeEvaluation(unsigned varIdx, unsigned timeIdx,
                               LinearizationType linearizationType = LinearizationType()) const
     {
         if constexpr (std::is_same_v<Evaluation, Scalar>) {
@@ -121,7 +122,7 @@ public:
      * from the primary variables.)
      */
     template <class FluidState>
-    void assignNaive(const FluidState&)
+    OPM_HOST_DEVICE void assignNaive(const FluidState&)
     {
         throw std::runtime_error("The PrimaryVariables class does not define "
                                  "an assignNaive() method");
@@ -130,7 +131,7 @@ public:
     /*!
      * \brief Instruct valgrind to check the definedness of all attributes of this class.
      */
-    void checkDefined() const
+    OPM_HOST_DEVICE void checkDefined() const
     {
         Valgrind::CheckDefined(*static_cast<const ParentType*>(this));
     }
