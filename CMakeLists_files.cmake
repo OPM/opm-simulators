@@ -556,6 +556,7 @@ if (HAVE_CUDA)
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
       tests/gpuistl/test_gpuBlackOilFluidSystem
+      tests/gpuistl/test_GpuSparseMatrix
       tests/gpuistl/test_blackoilfluidstategpu.cu
     )
 
