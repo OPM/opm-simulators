@@ -573,11 +573,6 @@ updateWellRatesFromGroupTargetScale(const Scalar scale,
         if (!well_index.has_value())
             continue;
 
-        if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
-        {
-            continue;
-        }
-
         auto& ws = wellState.well(well_index.value());
         if (ws.status == Well::Status::SHUT)
             continue;
