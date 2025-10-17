@@ -94,6 +94,8 @@ public:
     Scalar gpmaint_target(const std::string& gname) const;
     bool has_gpmaint_target(const std::string& gname) const;
 
+    bool has_field_or_none_control(const std::string& gname) const;
+    bool has_field_or_none_control(const std::string& gname, Phase injection_phase) const;
     bool has_production_control(const std::string& gname) const;
     void production_control(const std::string& gname, Group::ProductionCMode cmode);
     Group::ProductionCMode production_control(const std::string& gname) const;
@@ -120,7 +122,7 @@ public:
         GroupPotential(Scalar oil = 0.0, Scalar gas = 0.0, Scalar water = 0.0)
             : oil_rate(oil), gas_rate(gas), water_rate(water) {}
     };
-
+    bool has_production_group_potential(const std::string& gname) const;
     void update_group_production_potential(
         const std::string& gname, Scalar oil_rate, Scalar gas_rate, Scalar water_rate
     );
