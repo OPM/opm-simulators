@@ -61,6 +61,7 @@
 #include <vector>
 
 #include <opm/common/utility/gpuDecorators.hpp>
+#include <opm/common/utility/pointerArithmetic.hpp>
 #if HAVE_CUDA
 #if USE_HIP
 #include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
@@ -159,15 +160,45 @@ struct NeighborInfoStruct
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 namespace  gpuistl {
-    template<class MiniMatrixType, class MatrixBlockType, class ResidualNBInfoType>
-    auto copy_to_gpu(const SparseTable<NeighborInfoStruct<ResidualNBInfoType, MatrixBlockType>>& cpu_neighbor_table)
+    template< class MiniMatrixType, class GpuMatrixType, class CpuMatrixType, class MatrixBlockType, class ResidualNBInfoType>
+    auto copy_to_gpu(const SparseTable<NeighborInfoStruct<ResidualNBInfoType, MatrixBlockType>>& cpu_neighbor_table, GpuMatrixType& gpuJacobian, CpuMatrixType& cpuJacobian)
     {
         // Convert the DUNE FieldVectors to MiniMatrix types
         using StructWithMinimatrix = NeighborInfoStruct<ResidualNBInfoType, MiniMatrixType>;
         std::vector<StructWithMinimatrix> minimatrices(cpu_neighbor_table.dataSize());
         size_t idx = 0;
         for (auto e : cpu_neighbor_table.dataStorage()) {
-            minimatrices[idx++] = StructWithMinimatrix(e);
+            minimatrices[idx] = StructWithMinimatrix(e);
+
+            double* gpuBufStart = gpuJacobian.getNonZeroValues().data();
+            double* cpuBufStart = &(cpuJacobian[0][0][0][0]);
+            double* cpuPtr = &((*e.matBlockAddress)[0][0]);
+
+            const size_t gpuNonZeroes = gpuJacobian.nonzeroes();
+            const size_t cpuNonZeroes = cpuJacobian.nonzeroes();
+
+            // To compute the length of the buffer of the cpuJacobian we here assume we have a blocked
+            // BCRS matrix with square blocks and that the blocks are stored as Dune::FieldMatrix
+            using CpuBlockType = typename CpuMatrixType::block_type::BaseType;
+
+            const size_t gpuBlockSize = gpuJacobian.blockSize() * gpuJacobian.blockSize();
+            const size_t cpuBlockSize = CpuBlockType::rows * CpuBlockType::cols;
+
+            size_t gpuBufferSize = gpuNonZeroes * sizeof(typename GpuMatrixType::field_type) * gpuBlockSize;
+            size_t cpuBufferSize = cpuNonZeroes * sizeof(typename CpuMatrixType::field_type) * cpuBlockSize;
+
+            assert (gpuBufferSize == cpuBufferSize);
+
+            // convert the pointer from CPU to GPU pointer based on offset in CPU jacobian
+            double* gpuPtr = ComputePtrBasedOnOffsetInOtherBuffer(
+                gpuBufStart, gpuBufferSize,
+                cpuBufStart, cpuBufferSize,
+                cpuPtr
+            );
+
+            minimatrices[idx].matBlockAddress = reinterpret_cast<MiniMatrixType*>(gpuPtr);
+
+            ++idx;
         }
 
         return SparseTable<StructWithMinimatrix, gpuistl::GpuBuffer>(
@@ -761,6 +792,26 @@ public:
         }
     }
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    template<class VectorBlockType, class MatrixBlockType, class ADVectorBlockType>
+    void setResAndJacobiGPUCPU(VectorBlockType& res, MatrixBlockType& bMat, const ADVectorBlockType& resid) const
+    {
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+            res[eqIdx] = resid[eqIdx].value();
+        }
+
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+            for (unsigned pvIdx = 0; pvIdx < numEq; ++pvIdx) {
+                // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of
+                // the residual function 'eqIdx' for the degree of freedom 'dofIdx'
+                // with regard to the focus variable 'pvIdx' of the degree of freedom
+                // 'focusDofIdx'
+                bMat[eqIdx][pvIdx] = resid[eqIdx].derivative(pvIdx);
+            }
+        }
+    }
+#endif
+
     void updateFlowsInfo()
     {
         OPM_TIMEBLOCK(updateFlows);
@@ -876,7 +927,7 @@ private:
             // Ensure we can have the domain  on the GPU.
             auto domain_buffer = copy_to_gpu(domain);
             auto domain_view = make_view(domain_buffer);
-            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_);
+            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_, gpuJacobian, jacobian_->istlMatrix());
             auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
 
             linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view, neighborInfo_view);
