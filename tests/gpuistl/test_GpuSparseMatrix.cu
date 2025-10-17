@@ -234,7 +234,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSparsityMatrixGeneric, T, block_sizes)
     runRandomSparsityMatrixTest<Opm::gpuistl::GpuSparseMatrixGeneric<double>, T::value>();
 }
 
-__global__ void checkPointers(double* data, std::array<void*, 6>* ptrs, std::array<bool, 6>* correctPtrs)
+__global__ void checkPointers(double* data, std::array<double*, 6>* ptrs, std::array<bool, 6>* correctPtrs)
 {
     const int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row == 0)
@@ -278,24 +278,26 @@ BOOST_AUTO_TEST_CASE(TestFindingPointersToElements)
 
     auto gpuMatrix = Opm::gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(cpuMatrix.istlMatrix());
 
-    std::array<void*, 6> ptrsCPU = {
-        cpuMatrix.blockAddress(0,0),
-        cpuMatrix.blockAddress(0,1),
-        cpuMatrix.blockAddress(0,2),
-        cpuMatrix.blockAddress(1,1),
-        cpuMatrix.blockAddress(2,0),
-        cpuMatrix.blockAddress(2,2)
+    // Is getting access to the pure underlying data supposed to be this hard?
+    // block
+    std::array<double*, 6> ptrsCPU = {
+        &(cpuMatrix.istlMatrix()[0][0][0][0]),
+        &(cpuMatrix.istlMatrix()[0][1][0][0]),
+        &(cpuMatrix.istlMatrix()[0][2][0][0]),
+        &(cpuMatrix.istlMatrix()[1][1][0][0]),
+        &(cpuMatrix.istlMatrix()[2][0][0][0]),
+        &(cpuMatrix.istlMatrix()[2][2][0][0])
     };
 
-    std::array<void*, 6> ptrsGpuComputed;
-    void* gpuDataBuffer = gpuMatrix.getNonZeroValues().data();
-    void* cpuDataBuffer = cpuMatrix.blockAddress(0, 0);
+    std::array<double*, 6> ptrsGpuComputed;
+    double* gpuDataBuffer = gpuMatrix.getNonZeroValues().data();
+    double* cpuDataBuffer = &((*cpuMatrix.blockAddress(0, 0))[0][0]);
 
     for (size_t i = 0; i < 6; ++i) {
-        ptrsGpuComputed[i] = Opm::ComputePtrBasedOnOffsetInOtherBuffer(gpuDataBuffer, cpuDataBuffer, ptrsCPU[i]);
+        ptrsGpuComputed[i] = Opm::ComputePtrBasedOnOffsetInOtherBuffer(gpuDataBuffer, gpuMatrix.nonzeroes(), cpuDataBuffer, cpuMatrix.istlMatrix().nonzeroes(), ptrsCPU[i]);
     }
 
-    auto ptrsGpu = Opm::gpuistl::make_gpu_unique_ptr<std::array<void*, 6>>(ptrsGpuComputed);
+    auto ptrsGpu = Opm::gpuistl::make_gpu_unique_ptr<std::array<double*, 6>>(ptrsGpuComputed);
     auto correctValues = Opm::gpuistl::make_gpu_unique_ptr<std::array<bool, 6>>({false});
 
     checkPointers<<<1,1>>>(static_cast<double*>(gpuDataBuffer), ptrsGpu.get(), correctValues.get());
