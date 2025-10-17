@@ -51,23 +51,146 @@ template <class TypeTag>
 class DummyIntensiveQuantities {
 public:
     using FluidState = DummyFluidState;
-
-    // Fluid state access
     const FluidState& fluidState() const { return fluidState_; }
-
-    // Basic properties
     double porosity() const { return 0.2; }
     unsigned pvtRegionIndex() const { return 0; }
-
-    // Mobility and transmissibility
     double mobility(unsigned /*phaseIdx*/, FaceDir::DirEnum /*faceDir*/) const { return 1.0; }
     double rockCompTransMultiplier() const { return 1.0; }
-
-    // Bio effects (if enabled)
     double permFactor() const { return 1.0; }
-
 private:
     FluidState fluidState_;
+};
+
+template <typename TypeTag>
+class DummyFIBlackOilModel
+{
+public:
+    explicit DummyFIBlackOilModel(int /* simulator */) {}
+    void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const {}
+    void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const {}
+    template <class GridSubDomain>
+    void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */, const GridSubDomain& /* gridSubDomain */) const {}
+    void updateFailed() {}
+    int intensiveQuantities(unsigned /* globalIdx */, unsigned /* timeIdx */) const { return 42; }
+protected:
+    void updateCachedIntQuants(const unsigned /* timeIdx */) const {}
+    template <class EMDArg>
+    void updateCachedIntQuants1(const unsigned /* timeIdx */) const {}
+    template <class ...Args>
+    void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const {}
+    template <class ...Args>
+    void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */, const unsigned /* timeIdx */) const {}
+};
+
+
+template <class TypeTag>
+class DummyBlackOilLocalResidualTPFA
+{
+public:
+    using RateVector = std::array<double, 3>;
+    using IntensiveQuantities = int;
+    using ElementContext = int;
+    using Problem = int;
+    struct ResidualNBInfo
+    {
+        double trans = 0.0;
+        double faceArea = 0.0;
+        double thpres = 0.0;
+        double dZg = 0.0;
+        int faceDir = 0;
+        double Vin = 0.0;
+        double Vex = 0.0;
+        double inAlpha = 0.0;
+        double outAlpha = 0.0;
+        double diffusivity = 0.0;
+        double dispersivity = 0.0;
+    };
+
+    struct ModuleParams { int dummy = 0; };
+
+    // Dummy storage computation
+    template <class LhsEval>
+    void computeStorage(std::array<LhsEval, 3>& storage,
+                        const ElementContext& /* elemCtx */,
+                        unsigned /* dofIdx */,
+                        unsigned /* timeIdx */) const
+    { storage = {0.0, 0.0, 0.0}; }
+
+    template <class LhsEval>
+    static void computeStorage(std::array<LhsEval, 3>& storage,
+                               const IntensiveQuantities& /* intQuants */)
+    { storage = {0.0, 0.0, 0.0}; }
+
+    // Dummy flux computation
+    static void computeFlux(RateVector& flux,
+                            RateVector& darcy,
+                            const unsigned /* globalIndexIn */,
+                            const unsigned /* globalIndexEx */,
+                            const IntensiveQuantities& /* intQuantsIn */,
+                            const IntensiveQuantities& /* intQuantsEx */,
+                            const ResidualNBInfo& /* nbInfo */,
+                            const ModuleParams& /* moduleParams */)
+    {
+        flux = {0.0, 0.0, 0.0};
+        darcy = {0.0, 0.0, 0.0};
+    }
+
+    static void computeFlux(RateVector& flux,
+                            const ElementContext& /* elemCtx */,
+                            unsigned /* scvfIdx */,
+                            unsigned /* timeIdx */)
+    { flux = {0.0, 0.0, 0.0}; }
+
+    // Dummy boundary flux computation
+    template <class BoundaryConditionData>
+    static void computeBoundaryFlux(RateVector& bdyFlux,
+                                    const Problem& /* problem */,
+                                    const BoundaryConditionData& /* bdyInfo */,
+                                    const IntensiveQuantities& /* insideIntQuants */,
+                                    unsigned /* globalSpaceIdx */)
+    { bdyFlux = {0.0, 0.0, 0.0}; }
+
+    template <class BoundaryConditionData>
+    static void computeBoundaryFluxRate(RateVector& bdyFlux,
+                                        const BoundaryConditionData& /* bdyInfo */)
+    { bdyFlux = {0.0, 0.0, 0.0}; }
+
+    template <class BoundaryConditionData>
+    static void computeBoundaryFluxFree(const Problem& /* problem */,
+                                        RateVector& bdyFlux,
+                                        const BoundaryConditionData& /* bdyInfo */,
+                                        const IntensiveQuantities& /* insideIntQuants */,
+                                        unsigned /* globalSpaceIdx */)
+    { bdyFlux = {0.0, 0.0, 0.0}; }
+
+    template <class BoundaryConditionData>
+    static void computeBoundaryThermal(const Problem& /* problem */,
+                                       RateVector& bdyFlux,
+                                       const BoundaryConditionData& /* bdyInfo */,
+                                       const IntensiveQuantities& /* insideIntQuants */,
+                                       unsigned /* globalSpaceIdx */)
+    { bdyFlux = {0.0, 0.0, 0.0}; }
+
+    // Dummy source computation
+    static void computeSource(RateVector& source,
+                              const Problem& /* problem */,
+                              const IntensiveQuantities& /* insideIntQuants */,
+                              unsigned /* globalSpaceIdex */,
+                              unsigned /* timeIdx */)
+    { source = {0.0, 0.0, 0.0};}
+
+    static void computeSourceDense(RateVector& source,
+                                   const Problem& /* problem */,
+                                   const IntensiveQuantities& /* insideIntQuants */,
+                                   unsigned /* globalSpaceIdex */,
+                                   unsigned /* timeIdx */)
+    { source = {0.0, 0.0, 0.0}; }
+
+    void computeSource(RateVector& source,
+                       const ElementContext& /* elemCtx */,
+                       unsigned /* dofIdx */,
+                       unsigned /* timeIdx */) const
+    { assert(false && "DO NOT USE ELEMENT CONTEXT ON GPU"); } // Should be caught in the CPU version of the assembly
 };
 
 namespace Properties {
@@ -106,6 +229,12 @@ struct EnableVapwat<TypeTag, TTag::FlowGasWaterEnergyProblem> {
 
 template<class TypeTag>
 struct GPUIntensiveQuantities<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = DummyIntensiveQuantities<TypeTag>; };
+
+template<class TypeTag>
+struct GPUFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = DummyFIBlackOilModel<TypeTag>; };
+
+template<class TypeTag>
+struct GPUBlackOilLocalResidualTPFA<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = DummyBlackOilLocalResidualTPFA<TypeTag>; };
 
 //! The indices required by the model
 template<class TypeTag>

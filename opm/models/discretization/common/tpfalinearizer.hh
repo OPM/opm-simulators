@@ -884,6 +884,9 @@ private:
 
             using GPUIQ = GetPropType<TypeTag, Properties::GPUIntensiveQuantities>;
             GPUIQ iq{};
+
+            using GPUFIBMod = GetPropType<TypeTag, Properties::GPUFIBlackOilModel>;
+            using GPULocalResidual = GetPropType<TypeTag, Properties::GPUBlackOilLocalResidualTPFA>;
             
             for (unsigned ii = 0; ii < numCells; ++ii) {
                 OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);

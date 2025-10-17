@@ -135,6 +135,13 @@ struct IntensiveQuantities { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct GPUIntensiveQuantities { using type = UndefinedProperty; };
 
+template<class TypeTag, class MyTypeTag>
+struct GPUBlackOilLocalResidualTPFA { using type = UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct GPUFIBlackOilModel { using type = UndefinedProperty; };
+
+
 //! The discretization specific part of the intensive quantities
 template<class TypeTag, class MyTypeTag>
 struct DiscIntensiveQuantities { using type = UndefinedProperty; };
