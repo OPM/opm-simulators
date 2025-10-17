@@ -954,6 +954,71 @@ onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
     }
 }
 
+template<typename Scalar, typename IndexTraits>
+void WellInterfaceGeneric<Scalar, IndexTraits>::updatePreventGroupControl(const SummaryState& summary_state,
+                                                                          WellState<Scalar, IndexTraits>& well_state,
+                                                                          const std::vector<Scalar>& rate_scaling,
+                                                                          DeferredLogger& deferred_logger,
+                                                                          const std::optional<Well::ProductionControls>& prod_controls) const
+{
+    // Avoid problematic group control cases like e.g., WRAT for well with approx zero
+    // water potential. Set flag prevent_group_control in such cases
+    auto& ws = well_state.well(this->index_of_well_);
+    ws.prevent_group_control = false;
+    const auto controls = prod_controls.has_value() ? prod_controls.value() : this->well_ecl_.productionControls(summary_state);
+    if (this->isInjector() || !controls.hasControl(Well::ProducerCMode::GRUP)) {
+        return;
+    }
+    if (!ws.production_cmode_group_translated.has_value()) {
+        return;
+    }
+    const auto& pu = this->phaseUsage();
+    auto weighted_rates = ws.surface_rates;
+    auto rate_sum = std::accumulate(weighted_rates.begin(), weighted_rates.end(), 0.0);
+    if (rate_sum == 0.0) {
+        weighted_rates = ws.prev_surface_rates;
+        rate_sum = std::accumulate(weighted_rates.begin(), weighted_rates.end(), 0.0);
+        if (rate_sum == 0.0) {
+            // should not happen, but just in case
+            return;
+        }
+    }
+    for (size_t i = 0; i < weighted_rates.size(); ++i) {
+        weighted_rates[i] *= rate_scaling[i];
+    }
+    const auto& gcmode = ws.production_cmode_group_translated;
+    // We only need to check ORAT, WRAT, GRAT, LRAT
+    const bool do_check = (gcmode == Well::ProducerCMode::ORAT ||
+                           gcmode == Well::ProducerCMode::WRAT ||
+                           gcmode == Well::ProducerCMode::GRAT ||
+                           gcmode == Well::ProducerCMode::LRAT);
+    if (!do_check) {
+        return;
+    }
+    // Compute rate corresponding to the (translated) group control mode
+    Scalar cmode_rate = 0.0;
+    if (gcmode == Well::ProducerCMode::ORAT || gcmode == Well::ProducerCMode::LRAT) {
+        const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+        cmode_rate += weighted_rates[oil_pos];
+    }
+    if (gcmode == Well::ProducerCMode::WRAT || gcmode == Well::ProducerCMode::LRAT) {
+        const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+        cmode_rate += weighted_rates[water_pos];
+    }
+    if (gcmode == Well::ProducerCMode::GRAT) {
+        const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+        cmode_rate += weighted_rates[gas_pos];
+    }
+    const Scalar fraction_tol = this->param_.tolerance_wells_;
+    const Scalar fraction_cur = cmode_rate / rate_sum;
+    if (fraction_cur < fraction_tol) {
+        std::string mode_string = WellProducerCMode2String(gcmode.value());
+        deferred_logger.debug(fmt::format("Well {} is flagged to prevent group control ({}) due to low rate fraction ({:.3e})",
+                                         this->name(), mode_string, fraction_cur));
+        ws.prevent_group_control = true;
+    } 
+}
+
 
 template class WellInterfaceGeneric<double, BlackOilDefaultFluidSystemIndices>;
 
