@@ -2411,6 +2411,21 @@ namespace Opm
             // updateWellControl(simulator, well_state, deferred_logger);
         } while (it < max_iter);
 
+        if (converged) {
+            std::ostringstream sstr;
+            sstr << "     Well " << this->name() << " converged in " << it << " inner iterations.";
+            if (relax_convergence)
+                sstr << "      (A relaxed tolerance was used after "<< this->param_.strict_inner_iter_wells_ << " iterations)";
+
+            // Output "converged in 0 inner iterations" messages only at
+            // elevated verbosity levels.
+            deferred_logger.debug(sstr.str(), OpmLog::defaultDebugVerbosityLevel + (it == 0));
+        } else {
+            std::ostringstream sstr;
+            sstr << "     Well " << this->name() << " did not converge in " << it << " inner iterations.";
+            deferred_logger.debug(sstr.str());
+        }
+
         return converged;
     }
 
@@ -2526,6 +2541,14 @@ namespace Opm
                     this->operability_status_.operable_under_only_bhp_limit = !is_stopped;
                 }
             }
+            std::string message = fmt::format("   Well {} converged in {} inner iterations ("
+                "{} control/status switches).", this->name(), it, switch_count);
+            if (relax_convergence) {
+                message.append(fmt::format("   (A relaxed tolerance was used after {} iterations)",
+                this->param_.strict_inner_iter_wells_));
+            }
+            deferred_logger.debug(message, OpmLog::defaultDebugVerbosityLevel + ((it == 0) && (switch_count == 0)));
+
         } else {
             this->wellStatus_ = well_status_orig;
             this->operability_status_ = operability_orig;
