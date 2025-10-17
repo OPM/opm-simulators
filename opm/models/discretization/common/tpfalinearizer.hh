@@ -882,11 +882,11 @@ private:
             linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view, neighborInfo_view);
             hipDeviceSynchronize();
 
-            using GPUIQ = GetPropType<TypeTag, Properties::GPUIntensiveQuantities>;
-            GPUIQ iq{};
+            using TrivialIQ = GetPropType<TypeTag, Properties::TrivialIntensiveQuantities>;
+            TrivialIQ iq{};
 
-            using GPUFIBMod = GetPropType<TypeTag, Properties::GPUFIBlackOilModel>;
-            using GPULocalResidual = GetPropType<TypeTag, Properties::GPUBlackOilLocalResidualTPFA>;
+            using TrivialFIBMod = GetPropType<TypeTag, Properties::TrivialFIBlackOilModel>;
+            using TrivialLocalResidual = GetPropType<TypeTag, Properties::TrivialBlackOilLocalResidualTPFA>;
             
             for (unsigned ii = 0; ii < numCells; ++ii) {
                 OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);

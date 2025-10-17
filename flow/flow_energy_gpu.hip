@@ -34,7 +34,7 @@
 namespace Opm {
 
 // Simple dummy fluid state
-class DummyFluidState {
+class FakeFluidState {
 public:
     __host__ __device__ double saturation(unsigned /*phaseIdx*/) const { return 0.5; }
     __host__ __device__ double invB(unsigned /*phaseIdx*/) const { return 1.0; }
@@ -46,11 +46,11 @@ public:
     __host__ __device__ double temperature() const { return 300.0; }
 };
 
-// Dummy intensive quantities class
+// Fake intensive quantities class
 template <class TypeTag>
-class DummyIntensiveQuantities {
+class FakeIntensiveQuantities {
 public:
-    using FluidState = DummyFluidState;
+    using FluidState = FakeFluidState;
     __host__ __device__ const FluidState& fluidState() const { return fluidState_; }
     __host__ __device__ double porosity() const { return 0.2; }
     __host__ __device__ unsigned pvtRegionIndex() const { return 0; }
@@ -62,10 +62,10 @@ private:
 };
 
 template <typename TypeTag>
-class DummyFIBlackOilModel
+class FakeFIBlackOilModel
 {
 public:
-    __host__ __device__ explicit DummyFIBlackOilModel(int /* simulator */) {}
+    __host__ __device__ explicit FakeFIBlackOilModel(int /* simulator */) {}
     __host__ __device__ void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const {}
     __host__ __device__ void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const {}
     template <class GridSubDomain>
@@ -84,7 +84,7 @@ protected:
 
 
 template <class TypeTag>
-class DummyBlackOilLocalResidualTPFA
+class FakeBlackOilLocalResidualTPFA
 {
 public:
     using RateVector = std::array<double, 3>;
@@ -108,7 +108,7 @@ public:
 
     struct ModuleParams { int dummy = 0; };
 
-    // Dummy storage computation
+    // Fake storage computation
     template <class LhsEval>
     __host__ __device__ void computeStorage(std::array<LhsEval, 3>& storage,
                         const ElementContext& /* elemCtx */,
@@ -121,7 +121,7 @@ public:
                                const IntensiveQuantities& /* intQuants */)
     { storage = {0.0, 0.0, 0.0}; }
 
-    // Dummy flux computation
+    // Fake flux computation
     __host__ __device__ static void computeFlux(RateVector& flux,
                             RateVector& darcy,
                             const unsigned /* globalIndexIn */,
@@ -141,7 +141,7 @@ public:
                             unsigned /* timeIdx */)
     { flux = {0.0, 0.0, 0.0}; }
 
-    // Dummy boundary flux computation
+    // Fake boundary flux computation
     template <class BoundaryConditionData>
     __host__ __device__ static void computeBoundaryFlux(RateVector& bdyFlux,
                                     const Problem& /* problem */,
@@ -171,7 +171,7 @@ public:
                                        unsigned /* globalSpaceIdx */)
     { bdyFlux = {0.0, 0.0, 0.0}; }
 
-    // Dummy source computation
+    // Fake source computation
     __host__ __device__ static void computeSource(RateVector& source,
                               const Problem& /* problem */,
                               const IntensiveQuantities& /* insideIntQuants */,
@@ -228,13 +228,13 @@ struct EnableVapwat<TypeTag, TTag::FlowGasWaterEnergyProblem> {
 };
 
 template<class TypeTag>
-struct GPUIntensiveQuantities<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = DummyIntensiveQuantities<TypeTag>; };
+struct TrivialIntensiveQuantities<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = FakeIntensiveQuantities<TypeTag>; };
 
 template<class TypeTag>
-struct GPUFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = DummyFIBlackOilModel<TypeTag>; };
+struct TrivialFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = FakeFIBlackOilModel<TypeTag>; };
 
 template<class TypeTag>
-struct GPUBlackOilLocalResidualTPFA<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = DummyBlackOilLocalResidualTPFA<TypeTag>; };
+struct TrivialBlackOilLocalResidualTPFA<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = FakeBlackOilLocalResidualTPFA<TypeTag>; };
 
 //! The indices required by the model
 template<class TypeTag>
