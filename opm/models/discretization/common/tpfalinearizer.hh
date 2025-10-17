@@ -878,7 +878,6 @@ private:
             auto domain_view = make_view(domain_buffer);
             auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_);
             auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
-            gpuistl::detail::SetNeighborPointers<double>(gpuJacobian, neighborInfo_view);
 
             linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view, neighborInfo_view);
             hipDeviceSynchronize();
