@@ -197,6 +197,22 @@ public:
         return !(*this == other);
     }
 
+    /** @return Reference to this vector after every element is assigned to 'value' */
+    OPM_HOST_DEVICE MiniVector& operator=(const value_type& value)
+    {
+        fill(value);
+        return *this;
+    }
+
+    /** @return Reference to this vector after element‑wise multiplication with 'other' */
+    OPM_HOST_DEVICE MiniVector& operator*=(const value_type& value)
+    {
+        for (auto& x : data_) {
+            x *= value;
+        }
+        return *this;
+    }
+
 private:
     //! Element storage.
     std::array<value_type, Dimension> data_ {};

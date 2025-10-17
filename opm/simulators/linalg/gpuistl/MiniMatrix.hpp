@@ -231,6 +231,18 @@ public:
 		return result;
 	}
 
+	OPM_HOST_DEVICE MiniMatrix& operator*=(const T& scalar) {
+		for (auto& x : data_)
+			x *= scalar;
+		return *this;
+	}
+
+	OPM_HOST_DEVICE MiniMatrix operator+=(const T& scalar) {
+		for (auto& x : data_)
+			x += scalar;
+		return *this;
+	}
+
 private:
 	array_type data_;
 };
