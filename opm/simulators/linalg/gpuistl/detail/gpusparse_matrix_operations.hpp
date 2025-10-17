@@ -20,6 +20,8 @@
 #define OPM_GPUISTL_GPUSPARSE_MATRIX_OPERATIONS_HPP
 
 #include <cstddef>
+#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 
 namespace Opm::gpuistl::detail
 {
@@ -73,6 +75,12 @@ void copyMatDataToReorderedSplit(const T* srcMatrix,
                                  size_t numberOfRows,
                                  int threadBlockSize);
 
+/**
+ * @brief Return the pointers to diagonal elements in a GpuBuffer
+ * @param matrix The matrix to extract diagonal pointers from
+ */
+template <class T>
+GpuBuffer<T*> getDiagPtrs(GpuSparseMatrixWrapper<T>& matrix);
 } // namespace Opm::gpuistl::detail
 
 #endif

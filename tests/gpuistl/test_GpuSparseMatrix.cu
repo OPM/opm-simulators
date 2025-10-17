@@ -23,6 +23,8 @@
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
 #include <dune/istl/bcrsmatrix.hh>
 
@@ -107,6 +109,75 @@ BOOST_AUTO_TEST_CASE(TestConstruction1D)
     BOOST_CHECK_EQUAL(columnIndicesFromCUDA[0], 0);
     BOOST_CHECK_EQUAL(columnIndicesFromCUDA[1], 1);
     // TODO: Check rest
+}
+
+__global__ void checkDiagonalsKernel(double** diagPtrs, std::array<double, 3>* values)
+{
+    const int row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row == 0)
+    {
+        (*values)[0] = *diagPtrs[0];
+        (*values)[1] = *diagPtrs[1];
+        (*values)[2] = *diagPtrs[2];
+    }
+}
+
+BOOST_AUTO_TEST_CASE(TestGetDiagPtrs)
+{
+    const int N = 3;
+    const int nonZeroes = 6;
+    using M = Dune::FieldMatrix<double, 1, 1>;
+    using SpMatrix = Dune::BCRSMatrix<M>;
+
+    SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
+    for (auto row = B.createbegin(); row != B.createend(); ++row)
+    {
+        if (row.index() == 0)
+        {
+            row.insert(0);
+            row.insert(1);
+            row.insert(2);
+        }
+        else if (row.index() == 1)
+        {
+            row.insert(1);
+        }
+        else
+        {
+            row.insert(0);
+            row.insert(2);
+        }
+    }
+
+    // This might not be the most elegant way of filling in a Dune sparse matrix, but it works.
+    B[0][0] = 1.0;
+    B[0][1] = 2.0;
+    B[0][2] = 3.0;
+    B[1][1] = 4.0;
+    B[2][0] = 5.0;
+    B[2][2] = 6.0;
+
+    auto gpuSparseMatrix = Opm::gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(B);
+
+    auto cpuValues = gpuSparseMatrix.getNonZeroValues().asStdVector();
+    BOOST_CHECK_EQUAL(cpuValues[0], 1.0);
+    BOOST_CHECK_EQUAL(cpuValues[1], 2.0);
+    BOOST_CHECK_EQUAL(cpuValues[2], 3.0);
+    BOOST_CHECK_EQUAL(cpuValues[3], 4.0);
+    BOOST_CHECK_EQUAL(cpuValues[4], 5.0);
+    BOOST_CHECK_EQUAL(cpuValues[5], 6.0);
+
+    auto diagPtrs = Opm::gpuistl::detail::getDiagPtrs(gpuSparseMatrix);
+    auto diagPtrsView = Opm::gpuistl::GpuView<double*>(diagPtrs.data(), diagPtrs.size());
+
+    auto d_result = Opm::gpuistl::make_gpu_unique_ptr<std::array<double, 3>>({-1});
+
+    checkDiagonalsKernel<<<1, 1>>>(diagPtrsView.data(), d_result.get());
+
+    std::array<double, 3> h_result = Opm::gpuistl::copyFromGPU(d_result);
+    BOOST_CHECK_EQUAL(h_result[0], 1.0);
+    BOOST_CHECK_EQUAL(h_result[1], 4.0);
+    BOOST_CHECK_EQUAL(h_result[2], 6.0);
 }
 
 // Template function to run the random sparsity matrix test with a given block size
