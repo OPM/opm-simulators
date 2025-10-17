@@ -28,6 +28,7 @@
 namespace Opm {
 template<class Scalar> class GroupState;
 class Schedule;
+template<typename Scalar, typename IndexTraits> class WellGroupHelper;
 template<typename Scalar, typename IndexTraits> class WellState;
 }
 
@@ -37,9 +38,10 @@ template<typename Scalar, typename IndexTraits>
 class FractionCalculator
 {
 public:
+    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+
     FractionCalculator(const Schedule& schedule,
-                       const WellState<Scalar, IndexTraits>& well_state,
-                       const GroupState<Scalar>& group_state,
+                       const WellGroupHelperType& wgHelper,
                        const SummaryState& summary_state,
                        const int report_step,
                        const GuideRate* guide_rate,
@@ -66,9 +68,10 @@ private:
     int groupControlledWells(const std::string& group_name,
                              const std::string& always_included_child);
     GuideRate::RateVector getGroupRateVector(const std::string& group_name);
+    const WellGroupHelperType& wgHelper() const { return wgHelper_; }
+
     const Schedule& schedule_;
-    const WellState<Scalar, IndexTraits>& well_state_;
-    const GroupState<Scalar>& group_state_;
+    const WellGroupHelperType& wgHelper_;
     const SummaryState& summary_state_;
     int report_step_;
     const GuideRate* guide_rate_;
