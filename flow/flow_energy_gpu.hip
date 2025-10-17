@@ -36,14 +36,14 @@ namespace Opm {
 // Simple dummy fluid state
 class DummyFluidState {
 public:
-    double saturation(unsigned /*phaseIdx*/) const { return 0.5; }
-    double invB(unsigned /*phaseIdx*/) const { return 1.0; }
-    double pressure(unsigned /*phaseIdx*/) const { return 1.0e5; }
-    double Rs() const { return 0.0; }
-    double Rsw() const { return 0.0; }
-    double Rv() const { return 0.0; }
-    double Rvw() const { return 0.0; }
-    double temperature() const { return 300.0; }
+    __host__ __device__ double saturation(unsigned /*phaseIdx*/) const { return 0.5; }
+    __host__ __device__ double invB(unsigned /*phaseIdx*/) const { return 1.0; }
+    __host__ __device__ double pressure(unsigned /*phaseIdx*/) const { return 1.0e5; }
+    __host__ __device__ double Rs() const { return 0.0; }
+    __host__ __device__ double Rsw() const { return 0.0; }
+    __host__ __device__ double Rv() const { return 0.0; }
+    __host__ __device__ double Rvw() const { return 0.0; }
+    __host__ __device__ double temperature() const { return 300.0; }
 };
 
 // Dummy intensive quantities class
@@ -51,12 +51,12 @@ template <class TypeTag>
 class DummyIntensiveQuantities {
 public:
     using FluidState = DummyFluidState;
-    const FluidState& fluidState() const { return fluidState_; }
-    double porosity() const { return 0.2; }
-    unsigned pvtRegionIndex() const { return 0; }
-    double mobility(unsigned /*phaseIdx*/, FaceDir::DirEnum /*faceDir*/) const { return 1.0; }
-    double rockCompTransMultiplier() const { return 1.0; }
-    double permFactor() const { return 1.0; }
+    __host__ __device__ const FluidState& fluidState() const { return fluidState_; }
+    __host__ __device__ double porosity() const { return 0.2; }
+    __host__ __device__ unsigned pvtRegionIndex() const { return 0; }
+    __host__ __device__ double mobility(unsigned /*phaseIdx*/, FaceDir::DirEnum /*faceDir*/) const { return 1.0; }
+    __host__ __device__ double rockCompTransMultiplier() const { return 1.0; }
+    __host__ __device__ double permFactor() const { return 1.0; }
 private:
     FluidState fluidState_;
 };
@@ -65,21 +65,21 @@ template <typename TypeTag>
 class DummyFIBlackOilModel
 {
 public:
-    explicit DummyFIBlackOilModel(int /* simulator */) {}
-    void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const {}
-    void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const {}
+    __host__ __device__ explicit DummyFIBlackOilModel(int /* simulator */) {}
+    __host__ __device__ void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const {}
+    __host__ __device__ void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const {}
     template <class GridSubDomain>
-    void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */, const GridSubDomain& /* gridSubDomain */) const {}
-    void updateFailed() {}
-    int intensiveQuantities(unsigned /* globalIdx */, unsigned /* timeIdx */) const { return 42; }
+    __host__ __device__ void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */, const GridSubDomain& /* gridSubDomain */) const {}
+    __host__ __device__ void updateFailed() {}
+    __host__ __device__ int intensiveQuantities(unsigned /* globalIdx */, unsigned /* timeIdx */) const { return 42; }
 protected:
-    void updateCachedIntQuants(const unsigned /* timeIdx */) const {}
+    __host__ __device__ void updateCachedIntQuants(const unsigned /* timeIdx */) const {}
     template <class EMDArg>
-    void updateCachedIntQuants1(const unsigned /* timeIdx */) const {}
+    __host__ __device__ void updateCachedIntQuants1(const unsigned /* timeIdx */) const {}
     template <class ...Args>
-    void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const {}
+    __host__ __device__ void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const {}
     template <class ...Args>
-    void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */, const unsigned /* timeIdx */) const {}
+    __host__ __device__ void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */, const unsigned /* timeIdx */) const {}
 };
 
 
@@ -110,19 +110,19 @@ public:
 
     // Dummy storage computation
     template <class LhsEval>
-    void computeStorage(std::array<LhsEval, 3>& storage,
+    __host__ __device__ void computeStorage(std::array<LhsEval, 3>& storage,
                         const ElementContext& /* elemCtx */,
                         unsigned /* dofIdx */,
                         unsigned /* timeIdx */) const
     { storage = {0.0, 0.0, 0.0}; }
 
     template <class LhsEval>
-    static void computeStorage(std::array<LhsEval, 3>& storage,
+    __host__ __device__ static void computeStorage(std::array<LhsEval, 3>& storage,
                                const IntensiveQuantities& /* intQuants */)
     { storage = {0.0, 0.0, 0.0}; }
 
     // Dummy flux computation
-    static void computeFlux(RateVector& flux,
+    __host__ __device__ static void computeFlux(RateVector& flux,
                             RateVector& darcy,
                             const unsigned /* globalIndexIn */,
                             const unsigned /* globalIndexEx */,
@@ -135,7 +135,7 @@ public:
         darcy = {0.0, 0.0, 0.0};
     }
 
-    static void computeFlux(RateVector& flux,
+    __host__ __device__ static void computeFlux(RateVector& flux,
                             const ElementContext& /* elemCtx */,
                             unsigned /* scvfIdx */,
                             unsigned /* timeIdx */)
@@ -143,7 +143,7 @@ public:
 
     // Dummy boundary flux computation
     template <class BoundaryConditionData>
-    static void computeBoundaryFlux(RateVector& bdyFlux,
+    __host__ __device__ static void computeBoundaryFlux(RateVector& bdyFlux,
                                     const Problem& /* problem */,
                                     const BoundaryConditionData& /* bdyInfo */,
                                     const IntensiveQuantities& /* insideIntQuants */,
@@ -151,12 +151,12 @@ public:
     { bdyFlux = {0.0, 0.0, 0.0}; }
 
     template <class BoundaryConditionData>
-    static void computeBoundaryFluxRate(RateVector& bdyFlux,
+    __host__ __device__ static void computeBoundaryFluxRate(RateVector& bdyFlux,
                                         const BoundaryConditionData& /* bdyInfo */)
     { bdyFlux = {0.0, 0.0, 0.0}; }
 
     template <class BoundaryConditionData>
-    static void computeBoundaryFluxFree(const Problem& /* problem */,
+    __host__ __device__ static void computeBoundaryFluxFree(const Problem& /* problem */,
                                         RateVector& bdyFlux,
                                         const BoundaryConditionData& /* bdyInfo */,
                                         const IntensiveQuantities& /* insideIntQuants */,
@@ -164,7 +164,7 @@ public:
     { bdyFlux = {0.0, 0.0, 0.0}; }
 
     template <class BoundaryConditionData>
-    static void computeBoundaryThermal(const Problem& /* problem */,
+    __host__ __device__ static void computeBoundaryThermal(const Problem& /* problem */,
                                        RateVector& bdyFlux,
                                        const BoundaryConditionData& /* bdyInfo */,
                                        const IntensiveQuantities& /* insideIntQuants */,
@@ -172,21 +172,21 @@ public:
     { bdyFlux = {0.0, 0.0, 0.0}; }
 
     // Dummy source computation
-    static void computeSource(RateVector& source,
+    __host__ __device__ static void computeSource(RateVector& source,
                               const Problem& /* problem */,
                               const IntensiveQuantities& /* insideIntQuants */,
                               unsigned /* globalSpaceIdex */,
                               unsigned /* timeIdx */)
     { source = {0.0, 0.0, 0.0};}
 
-    static void computeSourceDense(RateVector& source,
+    __host__ __device__ static void computeSourceDense(RateVector& source,
                                    const Problem& /* problem */,
                                    const IntensiveQuantities& /* insideIntQuants */,
                                    unsigned /* globalSpaceIdex */,
                                    unsigned /* timeIdx */)
     { source = {0.0, 0.0, 0.0}; }
 
-    void computeSource(RateVector& source,
+    __host__ __device__ void computeSource(RateVector& source,
                        const ElementContext& /* elemCtx */,
                        unsigned /* dofIdx */,
                        unsigned /* timeIdx */) const
