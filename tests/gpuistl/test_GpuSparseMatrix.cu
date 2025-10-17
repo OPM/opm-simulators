@@ -237,14 +237,15 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSparsityMatrixGeneric, T, block_sizes)
 __global__ void checkPointers(double* data, std::array<double*, 6>* ptrs, std::array<bool, 6>* correctPtrs)
 {
     const int row = blockIdx.x * blockDim.x + threadIdx.x;
+
     if (row == 0)
     {
-        (*correctPtrs)[0] = (*static_cast<double*>((*ptrs)[0]) == 1.0);
-        (*correctPtrs)[1] = (*static_cast<double*>((*ptrs)[1]) == 2.0);
-        (*correctPtrs)[2] = (*static_cast<double*>((*ptrs)[2]) == 3.0);
-        (*correctPtrs)[3] = (*static_cast<double*>((*ptrs)[3]) == 4.0);
-        (*correctPtrs)[4] = (*static_cast<double*>((*ptrs)[4]) == 5.0);
-        (*correctPtrs)[5] = (*static_cast<double*>((*ptrs)[5]) == 6.0);
+        const std::array<double, 6> expectedValues = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+
+        for (int i = 0; i < 6; ++i) {
+            double actualValue = *((*ptrs)[i]); // Dereference pointer to array, index the array, dereference the double* in the array
+            (*correctPtrs)[i] = (actualValue == expectedValues[i]);
+        }
     }
 }
 
