@@ -82,11 +82,6 @@ struct EnableDisgasInWater { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableBioeffects { using type = UndefinedProperty; };
 
-//! Allow the spatial and temporal domains to exhibit non-constant temperature
-//! in the black-oil model
-template<class TypeTag, class MyTypeTag>
-struct EnableTemperature { using type = UndefinedProperty; };
-
 template<class TypeTag, class MyTypeTag>
 struct EnableMech { using type = UndefinedProperty; };
 
@@ -103,6 +98,11 @@ struct BlackOilEnergyScalingFactor { using type = UndefinedProperty; };
 //! Similarly to the energy equation, a scaling is applied to the urea equation in MICP
 template<class TypeTag, class MyTypeTag>
 struct BlackOilUreaScalingFactor { using type = UndefinedProperty; };
+
+//! Specifies who temperature is modeled by the simulator
+template<class TypeTag, class MyTypeTag>
+struct EnergyModuleType { using type = UndefinedProperty; };
+
 
 } // namespace Opm::Properties
 

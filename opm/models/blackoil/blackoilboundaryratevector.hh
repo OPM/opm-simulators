@@ -59,7 +59,7 @@ class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableEnergy = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal) };
     enum { contiEnergyEqIdx = Indices::contiEnergyEqIdx };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableMICP = Indices::enableMICP };
@@ -67,7 +67,8 @@ class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
     static constexpr bool blackoilConserveSurfaceVolume =
         getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
-    using EnergyModule = BlackOilEnergyModule<TypeTag, enableEnergy>;
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    using EnergyModule = BlackOilEnergyModule<TypeTag, energyModuleType>;
 
 public:
     /*!

@@ -60,6 +60,10 @@ struct LocalResidual<TypeTag, TTag::FlowGasWaterBrineProblem> {
     using type = BlackOilLocalResidualTPFA<TypeTag>;
 };
 
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterBrineProblem>
+{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowGasWaterBrineProblem>
@@ -70,12 +74,13 @@ private:
     // messages unfortunately are *really* confusing and not really helpful.
     using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
-
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
 public:
     using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
                                          getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         numEnergyVars,
                                          getPropValue<TypeTag, Properties::EnableFoam>(),
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
