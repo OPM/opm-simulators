@@ -921,13 +921,25 @@ private:
 
             gpuistl::GpuSparseMatrixWrapper<double> gpuJacobian = gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(jacobian_->istlMatrix());
 
-
             // Ensure we can have the domain  on the GPU.
             auto domain_buffer = copy_to_gpu(domain);
             auto domain_view = make_view(domain_buffer);
             auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_, gpuJacobian, jacobian_->istlMatrix());
             printf("size of neghborInfo sparse table: %d\n", neighborInfo_buffer.size());
             auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
+
+            using NeighborInfoGPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockGPU>;
+
+            // Verify that neighborInfo_view is indeed a SparseTable with GpuView
+            static_assert(std::is_same_v<decltype(neighborInfo_view),
+                                        SparseTable<NeighborInfoGPU, gpuistl::GpuView>>);
+
+            static_assert(std::is_same_v<decltype(neighborInfo_view.rowStarts()),
+                                        const gpuistl::GpuView<int>&>);
+
+            static_assert(std::is_same_v<decltype(neighborInfo_view.dataStorage()),
+                                        const gpuistl::GpuView<NeighborInfoGPU>&>);
+
             auto gpuBufferDiagMatAddress = gpuistl::detail::getDiagPtrs(gpuJacobian);
             auto diagMatAddressView = gpuistl::make_view(gpuBufferDiagMatAddress);
 
@@ -1267,58 +1279,59 @@ private:
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
         printf("in kernel");
         printf("GPU_LOCAL_domain.cells size: %d\n", GPU_LOCAL_domain.cells.size());
-        printf("GPU_LOCAL_neighborInfo size: %d\n", GPU_LOCAL_neighborInfo.dataSize());
-        if (ii < numCells) {
-            printf("processing cell %d\n", ii);
-            const unsigned globI = GPU_LOCAL_domain.cells[ii];
-            printf("globI = %d\n", globI);
-            const auto& nbInfos = GPU_LOCAL_neighborInfo[globI];
-            // VectorBlockType res(0.0);
-            // MatrixBlockType bMat(0.0);
-            // ADVectorBlockType adres(0.0);
-            // ADVectorBlockType darcyFlux(0.0);
-            //const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+        printf("GPU_LOCAL_neighborInfo row 0 size: %d\n", GPU_LOCAL_neighborInfo.rowSize(0));
+        // printf("GPU_LOCAL_neighborInfo size: %d\n", GPU_LOCAL_neighborInfo.dataSize());
+        // if (ii < numCells) {
+        //     printf("processing cell %d\n", ii);
+        //     const unsigned globI = GPU_LOCAL_domain.cells[ii];
+        //     printf("globI = %d\n", globI);
+        //     const auto& nbInfos = GPU_LOCAL_neighborInfo[globI];
+        //     // VectorBlockType res(0.0);
+        //     // MatrixBlockType bMat(0.0);
+        //     // ADVectorBlockType adres(0.0);
+        //     // ADVectorBlockType darcyFlux(0.0);
+        //     //const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
 
-            // Flux term.
-            // {
-            //     short loc = 0;
-            //     for (const auto& nbInfo : nbInfos) {
-            //         const unsigned globJ = nbInfo.neighbor;
-            //         assert(globJ != globI);
-            //         res = 0.0;
-            //         bMat = 0.0;
-            //         adres = 0.0;
-            //         darcyFlux = 0.0;
-            //         // const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-            //         // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-            //         //                         nbInfo.res_nbinfo,  problem_().moduleParams());
-            //         adres *= nbInfo.res_nbinfo.faceArea;
-            //         // if (dispersionActive || enableBioeffects) {
-            //         //     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
-            //         //         velocityInfo_[globI][loc].velocity[phaseIdx] =
-            //         //             darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
-            //         //     }
-            //         // }
-            //         //setResAndJacobiGPUCPU(res, bMat, adres);
-            //         //residual_[globI] += res;
-            //         //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
-            //         *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
-            //         bMat *= -1.0;
-            //         //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
-            //         *nbInfo.matBlockAddress += bMat;
-            //         ++loc;
-            //     }
-            // }
+        //     // Flux term.
+        //     // {
+        //     //     short loc = 0;
+        //     //     for (const auto& nbInfo : nbInfos) {
+        //     //         const unsigned globJ = nbInfo.neighbor;
+        //     //         assert(globJ != globI);
+        //     //         res = 0.0;
+        //     //         bMat = 0.0;
+        //     //         adres = 0.0;
+        //     //         darcyFlux = 0.0;
+        //     //         // const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+        //     //         // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+        //     //         //                         nbInfo.res_nbinfo,  problem_().moduleParams());
+        //     //         adres *= nbInfo.res_nbinfo.faceArea;
+        //     //         // if (dispersionActive || enableBioeffects) {
+        //     //         //     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
+        //     //         //         velocityInfo_[globI][loc].velocity[phaseIdx] =
+        //     //         //             darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+        //     //         //     }
+        //     //         // }
+        //     //         //setResAndJacobiGPUCPU(res, bMat, adres);
+        //     //         //residual_[globI] += res;
+        //     //         //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
+        //     //         *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+        //     //         bMat *= -1.0;
+        //     //         //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+        //     //         *nbInfo.matBlockAddress += bMat;
+        //     //         ++loc;
+        //     //     }
+        //     // }
 
-            // Accumulation term.
-            // const double volume = model_().dofTotalVolume(globI);
-            // const Scalar storefac = volume / dt;
-            // adres = 0.0;
-            // {
-            //     // LocalResidual::computeStorage(adres, intQuantsIn);
-            // }
-            // setResAndJacobiGPUCPU(res, bMat, adres);
-        }
+        //     // Accumulation term.
+        //     // const double volume = model_().dofTotalVolume(globI);
+        //     // const Scalar storefac = volume / dt;
+        //     // adres = 0.0;
+        //     // {
+        //     //     // LocalResidual::computeStorage(adres, intQuantsIn);
+        //     // }
+        //     // setResAndJacobiGPUCPU(res, bMat, adres);
+        // }
     }
 #endif
 
