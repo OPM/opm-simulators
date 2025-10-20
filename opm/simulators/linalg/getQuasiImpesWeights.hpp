@@ -58,7 +58,11 @@ namespace Details
 namespace Amg
 {
     template <class Matrix, class Vector>
-    void getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, const bool transpose, Vector& weights, bool enable_thread_parallel)
+    void getQuasiImpesWeights(const Matrix& matrix,
+                              const int pressureVarIndex,
+                              const bool transpose,
+                              Vector& weights,
+                              [[maybe_unused]] bool enable_thread_parallel)
     {
         using VectorBlockType = typename Vector::block_type;
         using MatrixBlockType = typename Matrix::block_type;
@@ -102,7 +106,10 @@ namespace Amg
     }
 
     template <class Matrix, class Vector>
-    Vector getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, const bool transpose, bool enable_thread_parallel)
+    Vector getQuasiImpesWeights(const Matrix& matrix,
+                                const int pressureVarIndex,
+                                const bool transpose,
+                                bool enable_thread_parallel)
     {
         Vector weights(matrix.N());
         getQuasiImpesWeights(matrix, pressureVarIndex, transpose, weights, enable_thread_parallel);
@@ -153,7 +160,7 @@ namespace Amg
                              const ElementContext& elemCtx,
                              const Model& model,
                              const ElementChunksType& element_chunks,
-                             bool enable_thread_parallel)
+                             [[maybe_unused]] bool enable_thread_parallel)
     {
         using VectorBlockType = typename Vector::block_type;
         using Matrix = typename std::decay_t<decltype(model.linearizer().jacobian())>;
@@ -219,7 +226,7 @@ namespace Amg
                                      const ElementContext& elemCtx,
                                      const Model& model,
                                      const ElementChunksType& element_chunks,
-                                     bool enable_thread_parallel)
+                                     [[maybe_unused]] bool enable_thread_parallel)
     {
         // The sequential residual is a linear combination of the
         // mass balance residuals, with coefficients equal to (for
