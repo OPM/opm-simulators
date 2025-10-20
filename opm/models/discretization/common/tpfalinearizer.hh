@@ -795,7 +795,7 @@ public:
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
     template<class VectorBlockType, class MatrixBlockType, class ADVectorBlockType>
-    void setResAndJacobiGPUCPU(VectorBlockType& res, MatrixBlockType& bMat, const ADVectorBlockType& resid) const
+    OPM_HOST_DEVICE static void setResAndJacobiGPUCPU(VectorBlockType& res, MatrixBlockType& bMat, const ADVectorBlockType& resid)
     {
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             res[eqIdx] = resid[eqIdx].value();
@@ -1272,66 +1272,59 @@ private:
         const unsigned int numCells,
         const bool on_full_domain,
         const DomainType GPU_LOCAL_domain,
-        const NeighborSparseTable& GPU_LOCAL_neighborInfo,
+        const NeighborSparseTable GPU_LOCAL_neighborInfo,
         DiagPtrType GPU_LOCAL_diagMatAddress)
     {
         // Get the index of the cell
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
-        printf("in kernel");
-        printf("GPU_LOCAL_domain.cells size: %d\n", GPU_LOCAL_domain.cells.size());
-        printf("GPU_LOCAL_neighborInfo row 0 size: %d\n", GPU_LOCAL_neighborInfo.rowSize(0));
-        // printf("GPU_LOCAL_neighborInfo size: %d\n", GPU_LOCAL_neighborInfo.dataSize());
-        // if (ii < numCells) {
-        //     printf("processing cell %d\n", ii);
-        //     const unsigned globI = GPU_LOCAL_domain.cells[ii];
-        //     printf("globI = %d\n", globI);
-        //     const auto& nbInfos = GPU_LOCAL_neighborInfo[globI];
-        //     // VectorBlockType res(0.0);
-        //     // MatrixBlockType bMat(0.0);
-        //     // ADVectorBlockType adres(0.0);
-        //     // ADVectorBlockType darcyFlux(0.0);
-        //     //const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+        if (ii < numCells) {
+            const unsigned globI = GPU_LOCAL_domain.cells[ii];
+            const auto& nbInfos = GPU_LOCAL_neighborInfo[globI];
+            VectorBlockType res(0.0);
+            MatrixBlockType bMat(0.0);
+            ADVectorBlockType adres(0.0);
+            ADVectorBlockType darcyFlux(0.0);
+            // const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
 
-        //     // Flux term.
-        //     // {
-        //     //     short loc = 0;
-        //     //     for (const auto& nbInfo : nbInfos) {
-        //     //         const unsigned globJ = nbInfo.neighbor;
-        //     //         assert(globJ != globI);
-        //     //         res = 0.0;
-        //     //         bMat = 0.0;
-        //     //         adres = 0.0;
-        //     //         darcyFlux = 0.0;
-        //     //         // const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-        //     //         // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-        //     //         //                         nbInfo.res_nbinfo,  problem_().moduleParams());
-        //     //         adres *= nbInfo.res_nbinfo.faceArea;
-        //     //         // if (dispersionActive || enableBioeffects) {
-        //     //         //     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
-        //     //         //         velocityInfo_[globI][loc].velocity[phaseIdx] =
-        //     //         //             darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
-        //     //         //     }
-        //     //         // }
-        //     //         //setResAndJacobiGPUCPU(res, bMat, adres);
-        //     //         //residual_[globI] += res;
-        //     //         //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
-        //     //         *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
-        //     //         bMat *= -1.0;
-        //     //         //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
-        //     //         *nbInfo.matBlockAddress += bMat;
-        //     //         ++loc;
-        //     //     }
-        //     // }
+            // Flux term.
+            {
+                short loc = 0;
+                for (const auto& nbInfo : nbInfos) {
+                    const unsigned globJ = nbInfo.neighbor;
+                    res = 0.0;
+                    bMat = 0.0;
+                    adres = 0.0;
+                    darcyFlux = 0.0;
+                    // const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+                    // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+                    //                         nbInfo.res_nbinfo,  problem_().moduleParams());
+                    adres *= nbInfo.res_nbinfo.faceArea;
+                    // if (dispersionActive || enableBioeffects) {
+                    //     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
+                    //         velocityInfo_[globI][loc].velocity[phaseIdx] =
+                    //             darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+                    //     }
+                    // }
+                    //setResAndJacobiGPUCPU(res, bMat, adres);
+                    //residual_[globI] += res;
+                    //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
+                    *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+                    bMat *= -1.0;
+                    //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+                    *nbInfo.matBlockAddress += bMat;
+                    ++loc;
+                }
+            }
 
-        //     // Accumulation term.
-        //     // const double volume = model_().dofTotalVolume(globI);
-        //     // const Scalar storefac = volume / dt;
-        //     // adres = 0.0;
-        //     // {
-        //     //     // LocalResidual::computeStorage(adres, intQuantsIn);
-        //     // }
-        //     // setResAndJacobiGPUCPU(res, bMat, adres);
-        // }
+            // Accumulation term.
+            // const double volume = model_().dofTotalVolume(globI);
+            // const Scalar storefac = volume / dt;
+            adres = 0.0;
+            {
+                // LocalResidual::computeStorage(adres, intQuantsIn);
+            }
+            setResAndJacobiGPUCPU(res, bMat, adres);
+        }
     }
 #endif
 
