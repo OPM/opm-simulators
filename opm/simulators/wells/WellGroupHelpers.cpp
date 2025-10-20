@@ -1524,7 +1524,7 @@ checkGroupConstraintsProd(const std::string& name,
                                         true,
                                         Phase::OIL);
 
-    auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };
+    auto localFraction = [&](const std::string& child) { return fcalc.localFraction(name, child); };
 
     auto localReduction = [&](const std::string& group_name)
     {
