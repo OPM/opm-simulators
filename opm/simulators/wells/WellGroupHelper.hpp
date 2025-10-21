@@ -98,6 +98,8 @@ public:
         };
 
     WellGroupHelper(
+        WellState<Scalar, IndexTraits>& well_state,
+        GroupState<Scalar>& group_state,
         const Schedule& schedule,
         const SummaryState& summary_state,
         const GuideRate& guide_rate,
@@ -174,6 +176,7 @@ public:
         const FieldPropsManager& fp,
         std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regional_average_pressure_calculator
     ) const;
+    void setReportStep(int report_step) { report_step_ = report_step; }
     Scalar sumSolventRates(const Group& group, const bool is_injector) const;
     Scalar sumWellResRates(const Group& group, const int phase_pos, const bool injector) const;
     Scalar sumWellSurfaceRates(const Group& group, const int phase_pos, const bool injector) const;
@@ -195,7 +198,7 @@ public:
     void updateReservoirRatesInjectionGroups(const Group& group);
     void updateVREPForGroups(const Group& group);
     void updateState(
-        WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& group_state, int report_step
+        WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& group_state
     );
     void updateSurfaceRatesInjectionGroups(const Group& group);
     void updateWellRates(const Group& group, const WellState<Scalar, IndexTraits>& well_state_nupcol);
@@ -230,10 +233,10 @@ private:
     void updateGroupTargetReductionRecursive_(
         const Group& group, const bool is_injector, std::vector<Scalar>& group_target_reduction);
 
-    const Schedule& schedule_;
-    const SummaryState& summary_state_;
     WellState<Scalar, IndexTraits>* well_state_{nullptr};
     GroupState<Scalar>* group_state_{nullptr};
+    const Schedule& schedule_;
+    const SummaryState& summary_state_;
     const GuideRate& guide_rate_;
     int report_step_{0};
     DeferredLogger* deferred_logger_{nullptr};

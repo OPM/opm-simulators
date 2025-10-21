@@ -359,6 +359,8 @@ protected:
     {
         this->active_wgstate_ = this->last_valid_wgstate_;
         this->node_pressures_ = this->last_valid_node_pressures_;
+        // Update helper pointers to reference the restored active state
+        this->wg_helper_.updateState(this->wellState(), this->groupState());
     }
 
     /*

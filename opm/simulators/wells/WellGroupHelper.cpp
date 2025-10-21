@@ -34,12 +34,16 @@ namespace Opm {
 
 template<typename Scalar, typename IndexTraits>
 WellGroupHelper<Scalar, IndexTraits>::WellGroupHelper(
+    WellState<Scalar, IndexTraits>& well_state,
+    GroupState<Scalar>& group_state,
     const Schedule& schedule,
     const SummaryState& summary_state,
     const GuideRate& guide_rate,
     const PhaseUsageInfo<IndexTraits>& phase_usage_info
 
-) : schedule_{schedule}
+) : well_state_{&well_state}
+  , group_state_{&group_state}
+  , schedule_{schedule}
   , summary_state_{summary_state}
   , guide_rate_{guide_rate}
   , phase_usage_info_{phase_usage_info}
@@ -1306,11 +1310,10 @@ updateReservoirRatesInjectionGroups(const Group& group)
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-updateState(WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& group_state, int report_step)
+updateState(WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& group_state)
 {
     this->well_state_ = &well_state;
     this->group_state_ = &group_state;
-    this->report_step_ = report_step;
 }
 
 template<typename Scalar, typename IndexTraits>

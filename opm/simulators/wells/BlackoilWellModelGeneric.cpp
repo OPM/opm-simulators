@@ -110,7 +110,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , active_wgstate_(pu)
     , last_valid_wgstate_(pu)
     , nupcol_wgstate_(pu)
-    , wg_helper_(schedule, summaryState, guideRate_, pu)
+    , wg_helper_(this->wellState(), this->groupState(), this->schedule(), summaryState, guideRate_, pu)
 {
 
     const auto numProcs = comm_.size();
