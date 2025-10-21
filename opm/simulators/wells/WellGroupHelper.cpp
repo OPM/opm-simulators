@@ -53,7 +53,7 @@ WellGroupHelper<Scalar, IndexTraits>::WellGroupHelper(
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor)
+accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor) const
 {
     factor *= group.getGroupEfficiencyFactor();
     if (group.parent() != "FIELD" && !group.parent().empty())
@@ -658,7 +658,7 @@ getWellGroupTargetInjector(const std::string& name,
                            const Scalar* rates,
                            Phase injection_phase,
                            const Scalar efficiency_factor,
-                           const std::vector<Scalar>& resv_coeff)
+                           const std::vector<Scalar>& resv_coeff) const
 {
     // This function computes a wells group target.
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
@@ -794,7 +794,7 @@ getWellGroupTargetProducer(const std::string& name,
                            const Group& group,
                            const Scalar* rates,
                            const Scalar efficiency_factor,
-                           const std::vector<Scalar>& resv_coeff)
+                           const std::vector<Scalar>& resv_coeff) const
 {
     // This function computes a wells group target.
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
@@ -1039,7 +1039,7 @@ setCmodeGroup(const Group& group)
 template<typename Scalar, typename IndexTraits>
 Scalar
 WellGroupHelper<Scalar, IndexTraits>::
-sumSolventRates(const Group& group, const bool is_injector)
+sumSolventRates(const Group& group, const bool is_injector) const
 {
     Scalar rate = 0.0;
     for (const std::string& group_name : group.groups()) {
@@ -1569,7 +1569,7 @@ worstOffendingWell(const Group& group,
 template<typename Scalar, typename IndexTraits>
 std::string
 WellGroupHelper<Scalar, IndexTraits>::
-controlGroup_(const Group& group)
+controlGroup_(const Group& group) const
 {
     const Group::ProductionCMode& currentGroupControl = this->groupState().production_control(group.name());
 
@@ -1634,7 +1634,7 @@ isInGroupChainTopBot_(const std::string& bottom, const std::string& top) const
 
 template<typename Scalar, typename IndexTraits>
 int WellGroupHelper<Scalar, IndexTraits>::
-phaseToActivePhaseIdx_(const Phase phase)
+phaseToActivePhaseIdx_(const Phase phase) const
 {
     const auto& pu = this->phase_usage_info_;
     int phase_pos = -1;

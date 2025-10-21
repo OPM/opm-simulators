@@ -104,7 +104,7 @@ public:
         const PhaseUsageInfo<IndexTraits>& phase_usage_info
     );
 
-    void accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor);
+    void accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor) const;
     std::pair<bool, Scalar> checkGroupConstraintsInj(
         const std::string& name,
         const std::string& parent,
@@ -140,7 +140,7 @@ public:
         const Phase injection_phase,
         const Scalar efficiency_factor,
         const std::vector<Scalar>& resv_coeff
-    );
+    ) const;
     Scalar getWellGroupTargetProducer(
         const std::string& name,
         const std::string& parent,
@@ -148,7 +148,7 @@ public:
         const Scalar* rates,
         const Scalar efficiency_factor,
         const std::vector<Scalar>& resv_coeff
-    );
+    ) const;
     GuideRate::RateVector getWellRateVector(const std::string& name) const;
     std::vector<std::string> groupChainTopBot(const std::string& bottom, const std::string& top) const;
     int groupControlledWells(
@@ -173,8 +173,8 @@ public:
         const Group& group,
         const FieldPropsManager& fp,
         std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regional_average_pressure_calculator
-    );
-    Scalar sumSolventRates(const Group& group, const bool is_injector);
+    ) const;
+    Scalar sumSolventRates(const Group& group, const bool is_injector) const;
     Scalar sumWellResRates(const Group& group, const int phase_pos, const bool injector) const;
     Scalar sumWellSurfaceRates(const Group& group, const int phase_pos, const bool injector) const;
     Scalar sumWellPhaseRates(
@@ -208,10 +208,10 @@ public:
         const Parallel::Communication& comm
     ) const;
 private:
-    std::string controlGroup_(const Group& group);
+    std::string controlGroup_(const Group& group) const;
     GuideRate::RateVector getGuideRateVector_(const std::vector<Scalar>& rates) const;
     bool isInGroupChainTopBot_(const std::string& bottom, const std::string& top) const;
-    int phaseToActivePhaseIdx_(const Phase phase);
+    int phaseToActivePhaseIdx_(const Phase phase) const;
     Scalar satelliteInjectionRate_(
         const ScheduleState& sched,
         const Group& group,
@@ -257,7 +257,8 @@ void WellGroupHelper<Scalar, IndexTraits>::
 setRegionAveragePressureCalculator(
     const Group& group,
     const FieldPropsManager& fp,
-    std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regional_average_pressure_calculator)
+    std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regional_average_pressure_calculator
+) const
 {
     for (const std::string& groupName : group.groups()) {
         this->setRegionAveragePressureCalculator(this->schedule_.getGroup(groupName, this->report_step_), fp, regional_average_pressure_calculator);
