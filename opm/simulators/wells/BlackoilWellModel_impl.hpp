@@ -195,7 +195,7 @@ namespace Opm {
     {
         DeferredLogger local_deferredLogger{};
 
-        this->wgHelper().updateState(this->wellState(), this->groupState(), timeStepIdx);
+        this->wgHelper().setReportStep(timeStepIdx);
         this->wgHelper().setLogger(&local_deferredLogger);
         this->report_step_starts_ = true;
         this->report_step_start_events_ = this->schedule()[timeStepIdx].wellgroup_events();
@@ -333,6 +333,7 @@ namespace Opm {
         this->updateAverageFormationFactor();
 
         DeferredLogger local_deferredLogger;
+        this->wgHelper().setLogger(&local_deferredLogger);
 
         this->switched_prod_groups_.clear();
         this->switched_inj_groups_.clear();
@@ -363,8 +364,6 @@ namespace Opm {
 
         this->resetWGState();
         const int reportStepIdx = simulator_.episodeIndex();
-        this->wgHelper().updateState(this->wellState(), this->groupState(), reportStepIdx);
-        this->wgHelper().setLogger(&local_deferredLogger);
 
         this->wellState().updateWellsDefaultALQ(this->schedule(), reportStepIdx, this->summaryState());
         this->wellState().gliftTimeStepInit();
