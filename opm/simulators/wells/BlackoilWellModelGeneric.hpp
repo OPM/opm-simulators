@@ -165,6 +165,10 @@ public:
     /*
       Will return the currently active nupcolWellState; must update
       the internal nupcol wellstate with updateNupcolWGState() first.
+
+      Both const and non-const accessors are provided. The non-const
+      accessor is required for the WellStateGuard pattern and pushWellState()
+      in WellGroupHelper, which temporarily switches WellGroupHelper to use this state.
     */
     const WellState<Scalar, IndexTraits>& nupcolWellState() const
     {
