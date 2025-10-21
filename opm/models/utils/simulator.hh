@@ -826,19 +826,19 @@ public:
     }
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-    ReservoirCouplingMaster* reservoirCouplingMaster() const
+    ReservoirCouplingMaster<Scalar>* reservoirCouplingMaster() const
     {
         return reservoirCouplingMaster_;
     }
-    ReservoirCouplingSlave* reservoirCouplingSlave() const
+    ReservoirCouplingSlave<Scalar>* reservoirCouplingSlave() const
     {
         return reservoirCouplingSlave_;
     }
-    void setReservoirCouplingMaster(ReservoirCouplingMaster *reservoirCouplingMaster)
+    void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar> *reservoirCouplingMaster)
     {
         this->reservoirCouplingMaster_ = reservoirCouplingMaster;
     }
-    void setReservoirCouplingSlave(ReservoirCouplingSlave *reservoirCouplingSlave)
+    void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar> *reservoirCouplingSlave)
     {
         this->reservoirCouplingSlave_ = reservoirCouplingSlave;
     }
@@ -960,8 +960,8 @@ private:
     bool verbose_;
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-    ReservoirCouplingMaster *reservoirCouplingMaster_ = nullptr;
-    ReservoirCouplingSlave *reservoirCouplingSlave_ = nullptr;
+    ReservoirCouplingMaster<Scalar> *reservoirCouplingMaster_ = nullptr;
+    ReservoirCouplingSlave<Scalar> *reservoirCouplingSlave_ = nullptr;
 #endif
 
 };

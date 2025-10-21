@@ -378,10 +378,10 @@ template<class Scalar> class WellContributions;
             { nldd_ = mod; }
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-            ReservoirCouplingMaster& reservoirCouplingMaster() {
+            ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {
                 return *(this->simulator_.reservoirCouplingMaster());
             }
-            ReservoirCouplingSlave& reservoirCouplingSlave() {
+            ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() {
                 return *(this->simulator_.reservoirCouplingSlave());
             }
             bool isReservoirCouplingMaster() const {
@@ -390,14 +390,16 @@ template<class Scalar> class WellContributions;
             bool isReservoirCouplingSlave() const {
                 return this->simulator_.reservoirCouplingSlave() != nullptr;
             }
-            void setReservoirCouplingMaster(ReservoirCouplingMaster *master)
+            void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar> *master)
             {
                 this->guide_rate_handler_.setReservoirCouplingMaster(master);
             }
-            void setReservoirCouplingSlave(ReservoirCouplingSlave *slave)
+            void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar> *slave)
             {
                 this->guide_rate_handler_.setReservoirCouplingSlave(slave);
             }
+            void receiveGroupTargetsFromMaster(const int reportStepIdx);
+            void sendMasterGroupTargetsToSlaves(const int reportStepIdx);
         #endif
         protected:
             Simulator& simulator_;
@@ -538,11 +540,11 @@ template<class Scalar> class WellContributions;
             void calcResvCoeff(const int fipnum,
                                const int pvtreg,
                                const std::vector<Scalar>& production_rates,
-                               std::vector<Scalar>& resv_coeff) override;
+                               std::vector<Scalar>& resv_coeff) const override;
 
             void calcInjResvCoeff(const int fipnum,
                                   const int pvtreg,
-                                  std::vector<Scalar>& resv_coeff) override;
+                                  std::vector<Scalar>& resv_coeff) const override;
 
             void computeWellTemperature();
 

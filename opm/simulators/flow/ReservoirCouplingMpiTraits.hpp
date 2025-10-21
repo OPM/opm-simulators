@@ -28,10 +28,11 @@
 #include <mutex>  // For std::call_once
 #include <tuple>   // for std::tuple_size
 
+#include <array>
+#include <mutex>  // For std::call_once
 #include <mpi.h>
 
 namespace Dune {
-
 namespace detail {
 
 // -----------------------------------------------------------------------
@@ -78,6 +79,13 @@ struct StructMPITraitsImpl
 
             MPI_Datatype tmp;
             // Create the MPI datatype
+            // The below assertion ensures that the displacements are in declaration order.
+            // It is strictly not necessary, since MPI_Type_create_struct does not require
+            // the displacements to be in declaration order, but it is a good practice
+            // to ensure that the displacements are in declaration order for better readability
+            // and maintainability of the code.
+            for (std::size_t k = 1; k < N; ++k)
+                assert(disp[k-1] < disp[k] && "StructMPITraits member list not in declaration order");
             MPI_Type_create_struct(N, blk.data(), disp.data(), types.data(), &tmp);
             // Resize the datatype to account for possible padding issues
             MPI_Type_create_resized(tmp, 0, sizeof(Struct), &type_);
@@ -152,12 +160,39 @@ using StructMPITraits = StructMPITraitsImpl<Struct, Members...>;
 
 } // namespace Dune::detail
 
+// -----------------------------------------------------------------------
+// MPI traits for ReservoirCoupling structs
+// The fields of the structs should be listed in the order they are declared
+// in the struct definition.
+// -----------------------------------------------------------------------
+// Trait for InjectionGroupTarget
+template<class Scalar>
+struct MPITraits<
+        ::Opm::ReservoirCoupling::InjectionGroupTarget<Scalar>>
+  : detail::StructMPITraits<
+        ::Opm::ReservoirCoupling::InjectionGroupTarget<Scalar>,
+        &::Opm::ReservoirCoupling::InjectionGroupTarget<Scalar>::group_name_idx,
+        &::Opm::ReservoirCoupling::InjectionGroupTarget<Scalar>::target,
+        &::Opm::ReservoirCoupling::InjectionGroupTarget<Scalar>::cmode,
+        &::Opm::ReservoirCoupling::InjectionGroupTarget<Scalar>::phase>  { };
+
+// Trait for ProductionGroupTarget
+template<class Scalar>
+struct MPITraits<
+        ::Opm::ReservoirCoupling::ProductionGroupTarget<Scalar>>
+  : detail::StructMPITraits<
+        ::Opm::ReservoirCoupling::ProductionGroupTarget<Scalar>,
+        &::Opm::ReservoirCoupling::ProductionGroupTarget<Scalar>::group_name_idx,
+        &::Opm::ReservoirCoupling::ProductionGroupTarget<Scalar>::target,
+        &::Opm::ReservoirCoupling::ProductionGroupTarget<Scalar>::cmode> { };
+
+
 // Trait for Potentials
-template<>
-struct MPITraits<::Opm::ReservoirCoupling::Potentials>
+template<class Scalar>
+struct MPITraits<::Opm::ReservoirCoupling::Potentials<Scalar>>
     : detail::StructMPITraits<
-          ::Opm::ReservoirCoupling::Potentials,
-          &::Opm::ReservoirCoupling::Potentials::rate>  { };
+          ::Opm::ReservoirCoupling::Potentials<Scalar>,
+          &::Opm::ReservoirCoupling::Potentials<Scalar>::rate>  { };
 
 } // namespace Dune
 

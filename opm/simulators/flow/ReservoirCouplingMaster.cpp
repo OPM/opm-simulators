@@ -43,7 +43,8 @@ namespace Opm {
 //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
 //   or MPI_Send() calls below.
 
-ReservoirCouplingMaster::
+template <class Scalar>
+ReservoirCouplingMaster<Scalar>::
 ReservoirCouplingMaster(
     const Parallel::Communication &comm,
     const Schedule &schedule,
@@ -61,24 +62,46 @@ ReservoirCouplingMaster(
 // Public methods
 // ------------------
 
+template <class Scalar>
 bool
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 isMasterGroup(const std::string &group_name) const
 {
     return this->master_group_slave_names_.find(group_name) !=
            this->master_group_slave_names_.end();
 }
 
+template <class Scalar>
+const std::vector<std::string>&
+ReservoirCouplingMaster<Scalar>::
+getMasterGroupNamesForSlave(std::size_t slave_idx) const
+{
+    if (slave_idx >= this->slave_idx_to_master_groups_.size()) {
+        OPM_THROW(
+            std::runtime_error,
+            fmt::format(
+                "Slave index {} out of bounds. Valid range is [0, {})",
+                slave_idx, this->slave_idx_to_master_groups_.size()
+            )
+        );
+    }
+
+    // Direct O(1) vector access for performance-critical usage
+    return this->slave_idx_to_master_groups_[slave_idx];
+}
+
+template <class Scalar>
 std::size_t
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 getMasterGroupPotIdx(
     const std::string &slave_name, const std::string &master_group_name) const
 {
     return this->master_group_name_order_.at(slave_name).at(master_group_name);
 }
 
-const ReservoirCoupling::Potentials&
-ReservoirCouplingMaster::
+template <class Scalar>
+const ReservoirCoupling::Potentials<Scalar>&
+ReservoirCouplingMaster<Scalar>::
 getSlaveGroupPotentials(const std::string &master_group_name)
 {
     auto it = this->master_group_slave_names_.find(master_group_name);
@@ -97,9 +120,21 @@ getSlaveGroupPotentials(const std::string &master_group_name)
         );
     }
 }
+template <class Scalar>
+int
+ReservoirCouplingMaster<Scalar>::
+getSlaveIdx(const std::string &slave_name) const
+{
+    auto it = std::find(this->slave_names_.begin(), this->slave_names_.end(), slave_name);
+    if (it != this->slave_names_.end()) {
+        return std::distance(this->slave_names_.begin(), it);
+    }
+    OPM_THROW(std::runtime_error, "Slave name not found: " + slave_name);
+}
 
+template <class Scalar>
 void
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 maybeActivate(int report_step) {
     if (!this->activated()) {
         double start_date = this->schedule_.getStartTime();
@@ -110,8 +145,9 @@ maybeActivate(int report_step) {
     }
 }
 
+template <class Scalar>
 void
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 maybeSpawnSlaveProcesses(int report_step)
 {
     if (this->numSlavesStarted() > 0) {  // We have already spawned the slave processes
@@ -121,13 +157,14 @@ maybeSpawnSlaveProcesses(int report_step)
     auto slave_count = rescoup.slaveCount();
     auto master_group_count = rescoup.masterGroupCount();
     if (slave_count > 0 && master_group_count > 0) {
-        ReservoirCouplingSpawnSlaves spawn_slaves{*this, rescoup};
+        ReservoirCouplingSpawnSlaves<Scalar> spawn_slaves{*this, rescoup};
         spawn_slaves.spawn();
     }
 }
 
+template <class Scalar>
 double
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
 {
     // Check if the suggested timestep needs to be adjusted based on the slave processes'
@@ -173,8 +210,9 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
     return suggested_timestep;
 }
 
+template <class Scalar>
 void
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 maybeReceiveActivationHandshakeFromSlaves(double current_time)
 {
     // Initialize on first call
@@ -225,22 +263,25 @@ maybeReceiveActivationHandshakeFromSlaves(double current_time)
     );
 }
 
+template <class Scalar>
 std::size_t
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 numSlaveGroups(unsigned int index)
 {
     return this->master_group_name_order_[this->slave_names_[index]].size();
 }
 
+template <class Scalar>
 std::size_t
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 numSlavesStarted() const
 {
     return this->slave_names_.size();
 }
 
+template <class Scalar>
 void
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 sendNextTimeStepToSlaves(double timestep)
 {
     if (this->comm_.rank() == 0) {
@@ -269,8 +310,29 @@ sendNextTimeStepToSlaves(double timestep)
    }
 }
 
+template <class Scalar>
 void
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
+rebuildSlaveIdxToMasterGroupsVector()
+{
+    // Rebuild the index-based vector from the name-based map
+    // This ensures consistent ordering with slave_names_ vector
+    this->slave_idx_to_master_groups_.clear();
+    this->slave_idx_to_master_groups_.resize(this->slave_names_.size());
+
+    for (std::size_t slave_idx = 0; slave_idx < this->slave_names_.size(); ++slave_idx) {
+        const auto& slave_name = this->slave_names_[slave_idx];
+        auto it = this->slave_name_to_master_groups_map_.find(slave_name);
+        if (it != this->slave_name_to_master_groups_map_.end()) {
+            this->slave_idx_to_master_groups_[slave_idx] = it->second;
+        }
+        // If slave_name not found in map, leave the vector empty for that index
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
 receiveNextReportDateFromSlaves()
 {
     auto num_slaves = this->numSlavesStarted();
@@ -310,8 +372,9 @@ receiveNextReportDateFromSlaves()
     OpmLog::info("Broadcasted slave next report dates to all ranks");
 }
 
+template <class Scalar>
 void
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 receivePotentialsFromSlaves()
 {
     auto num_slaves = this->numSlavesStarted();
@@ -358,8 +421,93 @@ receivePotentialsFromSlaves()
     }
 }
 
+template <class Scalar>
 void
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
+sendInjectionTargetsToSlave(std::size_t slave_idx,
+                            const std::vector<InjectionGroupTarget>& injection_targets) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
+    if (this->comm_.rank() == 0) {
+        auto num_injection_targets = injection_targets.size();
+        auto MPI_INJECTION_TARGETS_TYPE = Dune::MPITraits<InjectionGroupTarget>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            injection_targets.data(),
+            /*count=*/num_injection_targets,
+            /*datatype=*/MPI_INJECTION_TARGETS_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::InjectionGroupTargets),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger_.info(fmt::format(
+            "Sent {} injection targets to slave process with name: {}",
+            num_injection_targets, this->getSlaveName(slave_idx)
+        ));
+    }
+}
+
+// The slave process will use this information to determine how many targets to expect
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendNumGroupTargetsToSlave(std::size_t slave_idx,
+                           std::size_t num_injection_targets,
+                           std::size_t num_production_targets) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
+    if (this->comm_.rank() == 0) {
+        std::vector<std::size_t> num_targets(2);
+        num_targets[0] = num_injection_targets;
+        num_targets[1] = num_production_targets;
+        auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            num_targets.data(),
+            /*count=*/2,
+            /*datatype=*/MPI_SIZE_T_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::NumSlaveGroupTargets),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger_.info(fmt::format(
+            "Sent number of injection targets {} and production targets {} to slave process with name: {}",
+            num_injection_targets, num_production_targets, this->getSlaveName(slave_idx)
+        ));
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendProductionTargetsToSlave(std::size_t slave_idx,
+                             const std::vector<ProductionGroupTarget>& production_targets) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
+    if (this->comm_.rank() == 0) {
+        auto num_production_targets = production_targets.size();
+        auto MPI_PRODUCTION_TARGETS_TYPE = Dune::MPITraits<ProductionGroupTarget>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            production_targets.data(),
+            /*count=*/num_production_targets,
+            /*datatype=*/MPI_PRODUCTION_TARGETS_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::ProductionGroupTargets),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger_.info(fmt::format(
+            "Sent {} production targets to slave process with name: {}", num_production_targets, this->getSlaveName(slave_idx)
+        ));
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
 updateMasterGroupNameOrderMap(
     const std::string& slave_name, const std::map<std::string, std::size_t>& master_group_name_map
 )
@@ -371,8 +519,9 @@ updateMasterGroupNameOrderMap(
 // Private methods
 // ------------------
 
+template <class Scalar>
 double
-ReservoirCouplingMaster::
+ReservoirCouplingMaster<Scalar>::
 getMasterActivationDate_() const
 {
     // Assume master mode is activated when the first SLAVES keyword is encountered in the schedule
@@ -394,5 +543,10 @@ getMasterActivationDate_() const
               "No SLAVES keyword found in schedule");
 }
 
+template class ReservoirCouplingMaster<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class ReservoirCouplingMaster<float>;
+#endif
 
 } // namespace Opm
