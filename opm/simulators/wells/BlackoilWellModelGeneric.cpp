@@ -1302,6 +1302,8 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                         const int np = this->wellState().numPhases();
                         Scalar gr_rate_nupcol = 0.0;
                         {
+                            // Temporarily use the nupcol well state for all helper functions
+                            // At the end of this scope, the well state will be restored to its original value
                             auto guard = wg_helper.pushWellState(this->nupcolWellState());
                             for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
                                 gr_rate_nupcol += wg_helper.sumWellPhaseRates(
@@ -1350,6 +1352,8 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     wg_helper.updateGroupTargetReduction(fieldGroup, /*is_injector=*/false);
     wg_helper.updateGroupTargetReduction(fieldGroup, /*is_injector=*/true);
     {
+        // Temporarily use the nupcol well state for all helper functions
+        // At the end of this scope, the well state will be restored to its original value
         auto guard = wg_helper.pushWellState(this->nupcolWellState());
         wg_helper.updateREINForGroups(fieldGroup, /*sum_rank=*/comm_.rank() == 0);
         wg_helper.updateVREPForGroups(fieldGroup);
