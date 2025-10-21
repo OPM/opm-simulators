@@ -751,20 +751,19 @@ namespace Opm {
                     continue;
                 }
 
-                const auto index_of_well = well->indexOfWell();
-                const auto nperf = well->numLocalPerfs();
-
-                auto& ws = well_state.well(index_of_well);
-                auto& filtrate_data = ws.perf_data.filtrate_data;
-
-                const auto& wellstate_nupcol = this->simulator_.problem().wellModel()
-                    .nupcolWellState().well(index_of_well);
+                const auto& wellstate_nupcol = simulator_.problem().wellModel()
+                    .nupcolWellState().well(well->indexOfWell());
 
                 const auto& well_indices_fracture = well->wellIndexFracture();
 
-                assert (well_indices_fracture.size() == nperf);
+                auto& filtrate_data = well_state.well(well->indexOfWell())
+                    .perf_data.filtrate_data;
 
-                for (int perf = 0; perf < nperf; ++perf) {
+                const auto nperf = well->numLocalPerfs();
+
+                assert(well_indices_fracture.size() == nperf);
+
+                for (auto perf = 0*nperf; perf < nperf; ++perf) {
                     const auto cell_idx = well->perforationData()[perf].cell_index;
                     const auto& intQuants = this->simulator_.model()
                         .intensiveQuantities(cell_idx, /*timeIdx=*/0);
@@ -781,15 +780,16 @@ namespace Opm {
                     const auto effective_well_index = wi[FluidSystem::waterPhaseIdx];
 
                     // NB we should maybe store effective_well_index;
-                    const Scalar well_index_fracture = well_indices_fracture[perf];
+                    // not sure why nupcol is used here..
+                    const Scalar perf_pressure = wellstate_nupcol.perf_data.pressure[perf];
+                    const Scalar well_index_fracture = well_indices_fracture[perf]
+                        .wellIndex(perf_pressure);
 
-                    assert (effective_well_index >= well_index_fracture);
-
-                    const auto well_fracture_factor =
-                        (effective_well_index - well_index_fracture) / effective_well_index;
+                    assert(effective_well_index >= well_index_fracture);
 
                     // NB! this change the well state for this value
-                    filtrate_data.flow_factor[perf] = well_fracture_factor;
+                    filtrate_data.flow_factor[perf] = (effective_well_index - well_index_fracture)
+                         / effective_well_index;
                 }
             }
 
