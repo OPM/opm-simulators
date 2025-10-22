@@ -28,7 +28,6 @@
 
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellGroupHelper.hpp>
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <cassert>
