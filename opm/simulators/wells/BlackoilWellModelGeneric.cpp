@@ -1363,6 +1363,10 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                                                phaseIdx,
                                                                                /*isInjector*/ false);
                         }
+                        // sum contributions from owned wells to everybody
+                        gr_rate_nupcol = comm_.sum(gr_rate_nupcol);
+                        gr_rate = comm_.sum(gr_rate);
+
                         Scalar small_rate = 1e-12; // m3/s
                         Scalar denominator = (0.5*gr_rate_nupcol + 0.5*gr_rate);
                         Scalar rel_change = denominator > small_rate ? std::abs( (gr_rate_nupcol - gr_rate) / denominator) : 0.0;
