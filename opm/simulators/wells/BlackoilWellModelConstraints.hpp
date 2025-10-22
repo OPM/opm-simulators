@@ -92,8 +92,9 @@ private:
                                    const int reportStepIdx,
                                    const Phase& phase) const;
 
-    //! \brief Check and return value and type of constraints for a production well group.
-    std::pair<Group::ProductionCMode, Scalar>
+    //! \brief Check and return value and type of constraints for a production well group,
+    // scaling factor, and whether the group is under producing its current target.
+    std::tuple<Group::ProductionCMode, Scalar, bool>
     checkGroupProductionConstraints(const Group& group,
                                     DeferredLogger& deferred_logger) const;
 
