@@ -26,6 +26,10 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
 
+#if HAVE_DUNE_COMMON
+#include <dune/common/fvector.hh>
+#endif
+
 /**
  * @brief A small, fixed‑dimension MiniVector class backed by std::array that can be
  *        used in both host and CUDA device code.
@@ -74,6 +78,17 @@ public:
     OPM_HOST_DEVICE constexpr explicit MiniVector(const value_type& value)
     {
         fill(value);
+    }
+
+    /**
+     * @brief Conversion constructor from Dune::FieldVector.
+     * @param fv Source FieldVector (must have dimension `Dimension`).
+     */
+    explicit MiniVector(const Dune::FieldVector<T, Dimension>& fv)
+    {
+        for (size_type i = 0; i < Dimension; ++i) {
+            data_[i] = fv[i];
+        }
     }
 
     /**
@@ -201,6 +216,40 @@ public:
     OPM_HOST_DEVICE MiniVector& operator=(const value_type& value)
     {
         fill(value);
+        return *this;
+    }
+
+    OPM_HOST_DEVICE MiniVector operator+(const value_type& value) const
+    {
+        MiniVector result = *this;
+        for (auto& x : result.data_) {
+            x += value;
+        }
+        return result;
+    }
+
+    OPM_HOST_DEVICE MiniVector& operator+=(const MiniVector& other)
+    {
+        for (size_type i = 0; i < Dimension; ++i) {
+            data_[i] += other.data_[i];
+        }
+        return *this;
+    }
+
+    OPM_HOST_DEVICE MiniVector operator-(const MiniVector& other) const
+    {
+        MiniVector result = *this;
+        for (size_type i = 0; i < Dimension; ++i) {
+            result.data_[i] -= other.data_[i];
+        }
+        return result;
+    }
+
+    OPM_HOST_DEVICE MiniVector& operator-=(const MiniVector& other)
+    {
+        for (size_type i = 0; i < Dimension; ++i) {
+            data_[i] -= other.data_[i];
+        }
         return *this;
     }
 

@@ -206,6 +206,19 @@ namespace  gpuistl {
             gpuistl::GpuBuffer<int>(cpu_neighbor_table.rowStarts())
         );
     }
+
+    // Implemented for residual_, which is a vector of FiedVectors
+    // We then make a GpuBuffer of MiniVectors
+    template<class CpuVecOfVecType, class GpuInnerVecType>
+    auto copy_to_gpu(CpuVecOfVecType& cpuVecOfVec)
+    {
+        std::vector<GpuInnerVecType> stdVecOfInnerVecs;
+        for (const auto& vec : cpuVecOfVec) {
+            stdVecOfInnerVecs.push_back((GpuInnerVecType)vec);
+        }
+
+        return gpuistl::GpuBuffer<GpuInnerVecType>(stdVecOfInnerVecs);
+    }
 }
 #endif
 
@@ -943,21 +956,28 @@ private:
             auto gpuBufferDiagMatAddress = gpuistl::detail::getDiagPtrs(gpuJacobian);
             auto diagMatAddressView = gpuistl::make_view(gpuBufferDiagMatAddress);
 
-            linearize_kernel<VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<1,1>>>(
-                dispersionActive,
-                numCells,
-                on_full_domain,
-                domain_view,
-                neighborInfo_view,
-                diagMatAddressView);
-            hipDeviceSynchronize();
+            // Take the residual_ and move it to the GPU
+            // This requires going from doubles, to a blocked vector
+            // This is done using a GpuBuffer which contains MiniVectors
+            auto gpuResidualBuffer = gpuistl::copy_to_gpu<GlobalEqVector, VectorBlockGPU>(residual_);
+            auto gpuResidualView = gpuistl::make_view(gpuResidualBuffer);
 
             using TrivialIQ = GetPropType<TypeTag, Properties::TrivialIntensiveQuantities>;
             TrivialIQ iq{};
 
             using TrivialFIBMod = GetPropType<TypeTag, Properties::TrivialFIBlackOilModel>;
             using TrivialLocalResidual = GetPropType<TypeTag, Properties::TrivialBlackOilLocalResidualTPFA>;
-            
+
+            linearize_kernel<TrivialIQ, TrivialFIBMod, TrivialLocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<1,1>>>(
+                dispersionActive,
+                numCells,
+                on_full_domain,
+                domain_view,
+                neighborInfo_view,
+                diagMatAddressView,
+                gpuResidualView);
+            hipDeviceSynchronize();
+
             for (unsigned ii = 0; ii < numCells; ++ii) {
                 OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
                 const unsigned globI = domain.cells[ii];
@@ -1266,14 +1286,15 @@ private:
     }
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
-    template<class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable>
+    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
     __global__ static void linearize_kernel(
         const bool dispersionActive,
         const unsigned int numCells,
         const bool on_full_domain,
         const DomainType GPU_LOCAL_domain,
         const NeighborSparseTable GPU_LOCAL_neighborInfo,
-        DiagPtrType GPU_LOCAL_diagMatAddress)
+        DiagPtrType GPU_LOCAL_diagMatAddress,
+        GpuResidualView GPU_LOCAL_residualView)
     {
         // Get the index of the cell
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
@@ -1284,7 +1305,8 @@ private:
             MatrixBlockType bMat(0.0);
             ADVectorBlockType adres(0.0);
             ADVectorBlockType darcyFlux(0.0);
-            // const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            // const LocalIntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            const LocalIntensiveQuantities& intQuantsIn = LocalModelClass{}.intensiveQuantities(globI, /*timeIdx*/ 0);
 
             // Flux term.
             {
@@ -1296,17 +1318,16 @@ private:
                     adres = 0.0;
                     darcyFlux = 0.0;
                     // const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+                    const LocalIntensiveQuantities& intQuantsEx = LocalModelClass{}.intensiveQuantities(globJ, /*timeIdx*/ 0);
                     // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
                     //                         nbInfo.res_nbinfo,  problem_().moduleParams());
+
+                    // LocalResidualKernel::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+                    //                         nbInfo.res_nbinfo,  0);
                     adres *= nbInfo.res_nbinfo.faceArea;
-                    // if (dispersionActive || enableBioeffects) {
-                    //     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
-                    //         velocityInfo_[globI][loc].velocity[phaseIdx] =
-                    //             darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
-                    //     }
-                    // }
-                    //setResAndJacobiGPUCPU(res, bMat, adres);
-                    //residual_[globI] += res;
+                    setResAndJacobiGPUCPU(res, bMat, adres);
+                    GPU_LOCAL_residualView[globI] += res;
+
                     //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
                     *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
                     bMat *= -1.0;

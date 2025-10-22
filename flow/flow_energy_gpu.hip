@@ -21,6 +21,8 @@
 
 #include <flow/flow_gaswater_energy.hpp>
 
+#include <opm/common/utility/gpuDecorators.hpp>
+
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
@@ -36,14 +38,15 @@ namespace Opm {
 // Simple dummy fluid state
 class FakeFluidState {
 public:
-    __host__ __device__ double saturation(unsigned /*phaseIdx*/) const { return 0.5; }
-    __host__ __device__ double invB(unsigned /*phaseIdx*/) const { return 1.0; }
-    __host__ __device__ double pressure(unsigned /*phaseIdx*/) const { return 1.0e5; }
-    __host__ __device__ double Rs() const { return 0.0; }
-    __host__ __device__ double Rsw() const { return 0.0; }
-    __host__ __device__ double Rv() const { return 0.0; }
-    __host__ __device__ double Rvw() const { return 0.0; }
-    __host__ __device__ double temperature() const { return 300.0; }
+    OPM_HOST_DEVICE FakeFluidState() {}
+    OPM_HOST_DEVICE double saturation(unsigned /*phaseIdx*/) const { return 0.5; }
+    OPM_HOST_DEVICE double invB(unsigned /*phaseIdx*/) const { return 1.0; }
+    OPM_HOST_DEVICE double pressure(unsigned /*phaseIdx*/) const { return 1.0e5; }
+    OPM_HOST_DEVICE double Rs() const { return 0.0; }
+    OPM_HOST_DEVICE double Rsw() const { return 0.0; }
+    OPM_HOST_DEVICE double Rv() const { return 0.0; }
+    OPM_HOST_DEVICE double Rvw() const { return 0.0; }
+    OPM_HOST_DEVICE double temperature() const { return 300.0; }
 };
 
 // Fake intensive quantities class
@@ -51,12 +54,13 @@ template <class TypeTag>
 class FakeIntensiveQuantities {
 public:
     using FluidState = FakeFluidState;
-    __host__ __device__ const FluidState& fluidState() const { return fluidState_; }
-    __host__ __device__ double porosity() const { return 0.2; }
-    __host__ __device__ unsigned pvtRegionIndex() const { return 0; }
-    __host__ __device__ double mobility(unsigned /*phaseIdx*/, FaceDir::DirEnum /*faceDir*/) const { return 1.0; }
-    __host__ __device__ double rockCompTransMultiplier() const { return 1.0; }
-    __host__ __device__ double permFactor() const { return 1.0; }
+    OPM_HOST_DEVICE FakeIntensiveQuantities() : fluidState_() {}
+    OPM_HOST_DEVICE const FluidState& fluidState() const { return fluidState_; }
+    OPM_HOST_DEVICE double porosity() const { return 0.2; }
+    OPM_HOST_DEVICE unsigned pvtRegionIndex() const { return 0; }
+    OPM_HOST_DEVICE double mobility(unsigned /*phaseIdx*/, FaceDir::DirEnum /*faceDir*/) const { return 1.0; }
+    OPM_HOST_DEVICE double rockCompTransMultiplier() const { return 1.0; }
+    OPM_HOST_DEVICE double permFactor() const { return 1.0; }
 private:
     FluidState fluidState_;
 };
@@ -65,21 +69,22 @@ template <typename TypeTag>
 class FakeFIBlackOilModel
 {
 public:
-    __host__ __device__ explicit FakeFIBlackOilModel(int /* simulator */) {}
-    __host__ __device__ void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const {}
-    __host__ __device__ void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const {}
+    OPM_HOST_DEVICE FakeFIBlackOilModel() {}
+    OPM_HOST_DEVICE explicit FakeFIBlackOilModel(int /* simulator */) {}
+    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const {}
+    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const {}
     template <class GridSubDomain>
-    __host__ __device__ void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */, const GridSubDomain& /* gridSubDomain */) const {}
-    __host__ __device__ void updateFailed() {}
-    __host__ __device__ int intensiveQuantities(unsigned /* globalIdx */, unsigned /* timeIdx */) const { return 42; }
+    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */, const GridSubDomain& /* gridSubDomain */) const {}
+    OPM_HOST_DEVICE void updateFailed() {}
+    OPM_HOST_DEVICE FakeIntensiveQuantities<TypeTag> intensiveQuantities(unsigned /* globalIdx */, unsigned /* timeIdx */) const { return FakeIntensiveQuantities<TypeTag>{}; }
 protected:
-    __host__ __device__ void updateCachedIntQuants(const unsigned /* timeIdx */) const {}
+    OPM_HOST_DEVICE void updateCachedIntQuants(const unsigned /* timeIdx */) const {}
     template <class EMDArg>
-    __host__ __device__ void updateCachedIntQuants1(const unsigned /* timeIdx */) const {}
+    OPM_HOST_DEVICE void updateCachedIntQuants1(const unsigned /* timeIdx */) const {}
     template <class ...Args>
-    __host__ __device__ void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const {}
+    OPM_HOST_DEVICE void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const {}
     template <class ...Args>
-    __host__ __device__ void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */, const unsigned /* timeIdx */) const {}
+    OPM_HOST_DEVICE void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */, const unsigned /* timeIdx */) const {}
 };
 
 
@@ -110,19 +115,19 @@ public:
 
     // Fake storage computation
     template <class LhsEval>
-    __host__ __device__ void computeStorage(std::array<LhsEval, 3>& storage,
+    OPM_HOST_DEVICE void computeStorage(std::array<LhsEval, 3>& storage,
                         const ElementContext& /* elemCtx */,
                         unsigned /* dofIdx */,
                         unsigned /* timeIdx */) const
     { storage = {0.0, 0.0, 0.0}; }
 
     template <class LhsEval>
-    __host__ __device__ static void computeStorage(std::array<LhsEval, 3>& storage,
+    OPM_HOST_DEVICE static void computeStorage(std::array<LhsEval, 3>& storage,
                                const IntensiveQuantities& /* intQuants */)
     { storage = {0.0, 0.0, 0.0}; }
 
     // Fake flux computation
-    __host__ __device__ static void computeFlux(RateVector& flux,
+    OPM_HOST_DEVICE static void computeFlux(RateVector& flux,
                             RateVector& darcy,
                             const unsigned /* globalIndexIn */,
                             const unsigned /* globalIndexEx */,
@@ -135,7 +140,7 @@ public:
         darcy = {0.0, 0.0, 0.0};
     }
 
-    __host__ __device__ static void computeFlux(RateVector& flux,
+    OPM_HOST_DEVICE static void computeFlux(RateVector& flux,
                             const ElementContext& /* elemCtx */,
                             unsigned /* scvfIdx */,
                             unsigned /* timeIdx */)
@@ -143,7 +148,7 @@ public:
 
     // Fake boundary flux computation
     template <class BoundaryConditionData>
-    __host__ __device__ static void computeBoundaryFlux(RateVector& bdyFlux,
+    OPM_HOST_DEVICE static void computeBoundaryFlux(RateVector& bdyFlux,
                                     const Problem& /* problem */,
                                     const BoundaryConditionData& /* bdyInfo */,
                                     const IntensiveQuantities& /* insideIntQuants */,
@@ -151,12 +156,12 @@ public:
     { bdyFlux = {0.0, 0.0, 0.0}; }
 
     template <class BoundaryConditionData>
-    __host__ __device__ static void computeBoundaryFluxRate(RateVector& bdyFlux,
+    OPM_HOST_DEVICE static void computeBoundaryFluxRate(RateVector& bdyFlux,
                                         const BoundaryConditionData& /* bdyInfo */)
     { bdyFlux = {0.0, 0.0, 0.0}; }
 
     template <class BoundaryConditionData>
-    __host__ __device__ static void computeBoundaryFluxFree(const Problem& /* problem */,
+    OPM_HOST_DEVICE static void computeBoundaryFluxFree(const Problem& /* problem */,
                                         RateVector& bdyFlux,
                                         const BoundaryConditionData& /* bdyInfo */,
                                         const IntensiveQuantities& /* insideIntQuants */,
@@ -164,7 +169,7 @@ public:
     { bdyFlux = {0.0, 0.0, 0.0}; }
 
     template <class BoundaryConditionData>
-    __host__ __device__ static void computeBoundaryThermal(const Problem& /* problem */,
+    OPM_HOST_DEVICE static void computeBoundaryThermal(const Problem& /* problem */,
                                        RateVector& bdyFlux,
                                        const BoundaryConditionData& /* bdyInfo */,
                                        const IntensiveQuantities& /* insideIntQuants */,
@@ -172,21 +177,21 @@ public:
     { bdyFlux = {0.0, 0.0, 0.0}; }
 
     // Fake source computation
-    __host__ __device__ static void computeSource(RateVector& source,
+    OPM_HOST_DEVICE static void computeSource(RateVector& source,
                               const Problem& /* problem */,
                               const IntensiveQuantities& /* insideIntQuants */,
                               unsigned /* globalSpaceIdex */,
                               unsigned /* timeIdx */)
     { source = {0.0, 0.0, 0.0};}
 
-    __host__ __device__ static void computeSourceDense(RateVector& source,
+    OPM_HOST_DEVICE static void computeSourceDense(RateVector& source,
                                    const Problem& /* problem */,
                                    const IntensiveQuantities& /* insideIntQuants */,
                                    unsigned /* globalSpaceIdex */,
                                    unsigned /* timeIdx */)
     { source = {0.0, 0.0, 0.0}; }
 
-    __host__ __device__ void computeSource(RateVector& source,
+    OPM_HOST_DEVICE void computeSource(RateVector& source,
                        const ElementContext& /* elemCtx */,
                        unsigned /* dofIdx */,
                        unsigned /* timeIdx */) const
