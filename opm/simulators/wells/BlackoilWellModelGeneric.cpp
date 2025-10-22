@@ -65,7 +65,6 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
 #include <opm/simulators/wells/WellGroupHelper.hpp>
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
