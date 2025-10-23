@@ -255,6 +255,11 @@ checkGroupProductionConstraints(const Group& group,
     if (group.has_control(Group::ProductionCMode::ORAT))
     {
         const Scalar current_rate = reducedSumSurface(oilPhaseIdx);
+        deferred_logger.debug("group control ORAT check ",
+                              fmt::format("group control ORAT check, GROUP {} current oil rate: {}, target oil rate: {}",
+                                          group.name(),
+                                          current_rate,
+                                          controls.oil_target));
 
         if (currentControl != Group::ProductionCMode::ORAT) {
             if (controls.oil_target < current_rate  ) {
@@ -289,6 +294,11 @@ checkGroupProductionConstraints(const Group& group,
 
         if (currentControl != Group::ProductionCMode::GRAT)
         {
+            deferred_logger.debug("group control GRAT check ",
+                                  fmt::format("group control GRAT check, GROUP {} current gas rate: {}, target gas rate: {}",
+                                              group.name(),
+                                              current_rate,
+                                              controls.gas_target));
             if (controls.gas_target < current_rate  ) {
                 Scalar scale = 1.0;
                 if (current_rate > 1e-12)
@@ -297,6 +307,13 @@ checkGroupProductionConstraints(const Group& group,
             }
         } else {
             under_producing = (controls.gas_target > (1. + tolerance) * current_rate);
+            if (under_producing) {
+                deferred_logger.debug("GRAT_UNDERPRODUCING",
+                                      "GROUP " + group.name() +
+                                      " is under producing its gas target: target = " +
+                                      std::to_string(controls.gas_target) +
+                                      ", current = " + std::to_string(current_rate));
+            }
         }
     }
     if (group.has_control(Group::ProductionCMode::LRAT))
@@ -694,6 +711,9 @@ updateGroupIndividualControl(const Group& group,
                         group.name(),
                         Group::ProductionCMode2String(currentControl));
                 deferred_logger.info(msg);
+            }
+            if (currentControl != Group::ProductionCMode::NONE) {
+                changed = true;
             }
         }
     }
