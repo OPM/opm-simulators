@@ -982,11 +982,11 @@ groupControlledWells(const std::string& group_name,
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-setCmodeGroup(GroupState<Scalar>& group_state, const Group& group) const
+setCmodeGroup(const Group& group, GroupState<Scalar>& group_state) const
 {
 
     for (const std::string& group_name : group.groups()) {
-        this->setCmodeGroup(group_state, this->schedule_.getGroup(group_name, this->report_step_));
+        this->setCmodeGroup(this->schedule_.getGroup(group_name, this->report_step_), group_state);
     }
 
     // use NONE as default control
@@ -1198,21 +1198,25 @@ sumWellSurfaceRates(const Group& group,
 
 template<typename Scalar, typename IndexTraits>
 int WellGroupHelper<Scalar, IndexTraits>::
-updateGroupControlledWells(const bool is_production_group, const Phase injection_phase)
+updateGroupControlledWells(
+    const bool is_production_group, const Phase injection_phase, GroupState<Scalar>& group_state
+) const
 {
     OPM_TIMEFUNCTION();
     const auto& group_name = "FIELD";
-    return this->updateGroupControlledWellsRecursive_(group_name, is_production_group, injection_phase);
+    return this->updateGroupControlledWellsRecursive_(
+        group_name, is_production_group, injection_phase, group_state
+    );
 }
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-updateGroupProductionRates(const Group& group)
+updateGroupProductionRates(const Group& group, GroupState<Scalar>& group_state) const
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-        this->updateGroupProductionRates(group_tmp);
+        this->updateGroupProductionRates(group_tmp, group_state);
     }
     const int np = this->wellState().numPhases();
     std::vector<Scalar> rates(np, 0.0);
@@ -1221,21 +1225,25 @@ updateGroupProductionRates(const Group& group)
             /*res_rates=*/false, group, phase, /*injector=*/false, /*network=*/false
         );
     }
-    this->groupState().update_production_rates(group.name(), rates);
+    group_state.update_production_rates(group.name(), rates);
 }
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-updateGroupTargetReduction(const Group& group, const bool is_injector)
+updateGroupTargetReduction(
+    const Group& group, const bool is_injector, GroupState<Scalar>& group_state
+) const
 {
     OPM_TIMEFUNCTION();
     std::vector<Scalar> group_target_reduction(this->wellState().numPhases(), 0.0);
-    this->updateGroupTargetReductionRecursive_(group, is_injector, group_target_reduction);
+    this->updateGroupTargetReductionRecursive_(
+        group, is_injector, group_target_reduction, group_state
+    );
 }
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-updateNetworkLeafNodeProductionRates()
+updateNetworkLeafNodeProductionRates(GroupState<Scalar>& group_state) const
 {
     const auto& network = this->schedule_[this->report_step_].network();
     if (network.active()) {
@@ -1252,20 +1260,20 @@ updateNetworkLeafNodeProductionRates()
                     }
                 }
             }
-            this->groupState().update_network_leaf_node_production_rates(group_name, network_rates);
+            group_state.update_network_leaf_node_production_rates(group_name, network_rates);
         }
     }
 }
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-updateREINForGroups(const Group& group, bool sum_rank)
+updateREINForGroups(const Group& group, bool sum_rank, GroupState<Scalar>& group_state) const
 {
     OPM_TIMEFUNCTION();
     const int np = this->wellState().numPhases();
     for (const std::string& groupName : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(groupName, this->report_step_);
-        this->updateREINForGroups(group_tmp, sum_rank);
+        this->updateREINForGroups(group_tmp, sum_rank, group_state);
     }
 
     std::vector<Scalar> rein(np, 0.0);
@@ -1279,24 +1287,24 @@ updateREINForGroups(const Group& group, bool sum_rank)
     if (sum_rank) {
         const auto& pu = this->wellState().phaseUsageInfo();
         if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-            const auto& [consumption_rate, import_rate] = this->groupState().gconsump_rates(group.name());
+            const auto& [consumption_rate, import_rate] = group_state.gconsump_rates(group.name());
             const auto ig = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
             rein[ig] += import_rate;
             rein[ig] -= consumption_rate;
         }
     }
 
-    this->groupState().update_injection_rein_rates(group.name(), rein);
+    group_state.update_injection_rein_rates(group.name(), rein);
 }
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-updateReservoirRatesInjectionGroups(const Group& group)
+updateReservoirRatesInjectionGroups(const Group& group, GroupState<Scalar>& group_state) const
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-        this->updateReservoirRatesInjectionGroups(group_tmp);
+        this->updateReservoirRatesInjectionGroups(group_tmp, group_state);
     }
     const int np = this->wellState().numPhases();
     std::vector<Scalar> resv(np, 0.0);
@@ -1305,7 +1313,7 @@ updateReservoirRatesInjectionGroups(const Group& group)
             /*res_rates=*/true, group, phase, /*injector=*/true, /*network=*/false
         );
     }
-    this->groupState().update_injection_reservoir_rates(group.name(), resv);
+    group_state.update_injection_reservoir_rates(group.name(), resv);
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -1318,12 +1326,12 @@ updateState(WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& grou
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-updateSurfaceRatesInjectionGroups(const Group& group)
+updateSurfaceRatesInjectionGroups(const Group& group, GroupState<Scalar>& group_state) const
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-        this->updateSurfaceRatesInjectionGroups(group_tmp);
+        this->updateSurfaceRatesInjectionGroups(group_tmp, group_state);
     }
     const int np = this->wellState().numPhases();
     std::vector<Scalar> rates(np, 0.0);
@@ -1336,18 +1344,17 @@ updateSurfaceRatesInjectionGroups(const Group& group)
             /*network=*/false
         );
     }
-    this->groupState().update_injection_surface_rates(group.name(), rates);
+    group_state.update_injection_surface_rates(group.name(), rates);
 }
-
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-updateVREPForGroups(const Group& group)
+updateVREPForGroups(const Group& group, GroupState<Scalar>& group_state) const
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-        this->updateVREPForGroups(group_tmp);
+        this->updateVREPForGroups(group_tmp, group_state);
     }
     const int np = this->wellState().numPhases();
     Scalar resv = 0.0;
@@ -1356,7 +1363,7 @@ updateVREPForGroups(const Group& group)
             /*res_rates=*/true, group, phase, /*injector=*/false, /*network=*/false
         );
     }
-    this->groupState().update_injection_vrep_rate(group.name(), resv);
+    group_state.update_injection_vrep_rate(group.name(), resv);
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -1750,8 +1757,9 @@ int WellGroupHelper<Scalar, IndexTraits>::
 updateGroupControlledWellsRecursive_(
     const std::string& group_name,
     const bool is_production_group,
-    const Phase injection_phase
-)
+    const Phase injection_phase,
+    GroupState<Scalar>& group_state
+) const
 {
     const Group& group = this->schedule_.getGroup(group_name, this->report_step_);
     int num_wells = 0;
@@ -1759,19 +1767,22 @@ updateGroupControlledWellsRecursive_(
 
         bool included = false;
         if (is_production_group) {
-            const auto ctrl = this->groupState().production_control(child_group);
+            const auto ctrl = group_state.production_control(child_group);
             included = included || (ctrl == Group::ProductionCMode::FLD) || (ctrl == Group::ProductionCMode::NONE);
         } else {
-            const auto ctrl = this->groupState().injection_control(child_group, injection_phase);
+            const auto ctrl = group_state.injection_control(child_group, injection_phase);
             included = included || (ctrl == Group::InjectionCMode::FLD)
                                 || (ctrl == Group::InjectionCMode::NONE);
         }
 
         if (included) {
             num_wells += this->updateGroupControlledWellsRecursive_(
-                                                       child_group, is_production_group, injection_phase);
+                child_group, is_production_group, injection_phase, group_state
+            );
         } else {
-            this->updateGroupControlledWellsRecursive_(child_group, is_production_group, injection_phase);
+            this->updateGroupControlledWellsRecursive_(
+                child_group, is_production_group, injection_phase, group_state
+            );
         }
     }
     for (const std::string& child_well : group.wells()) {
@@ -1789,7 +1800,7 @@ updateGroupControlledWellsRecursive_(
                     included = included || this->wellState().isInjectionGrup(child_well);
                 }
         }
-        const auto ctrl1 = this->groupState().production_control(group.name());
+        const auto ctrl1 = group_state.production_control(group.name());
         if (group.as_choke() && ((ctrl1 == Group::ProductionCMode::FLD) ||
                                  (ctrl1 == Group::ProductionCMode::NONE))) {
             // The auto choke group has not own group control but inherits control from an ancestor group.
@@ -1814,8 +1825,8 @@ updateGroupControlledWellsRecursive_(
             if (group_guide_rate > 0) {
                 // Guide rate is not default for the auto choke group
                 Scalar grat_target_from_sales = 0.0;
-                if (this->groupState().has_grat_sales_target(control_group_name))
-                    grat_target_from_sales = this->groupState().grat_sales_target(control_group_name);
+                if (group_state.has_grat_sales_target(control_group_name))
+                    grat_target_from_sales = group_state.grat_sales_target(control_group_name);
 
                 std::vector<Scalar> resv_coeff(num_phases, 1.0);
                 WGHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{
@@ -1824,7 +1835,7 @@ updateGroupControlledWellsRecursive_(
                     resv_coeff,
                     grat_target_from_sales,
                     group.name(),
-                    this->groupState(),
+                    group_state,
                     group.has_gpmaint_control(control_group_cmode)
                 };
                 const auto& control_group_target = tcalc.groupTarget(ctrl, this->deferredLogger());
@@ -1851,9 +1862,9 @@ updateGroupControlledWellsRecursive_(
         }
     }
     if (is_production_group) {
-        this->groupState().update_number_of_wells_under_group_control(group_name, num_wells);
+        group_state.update_number_of_wells_under_group_control(group_name, num_wells);
     } else {
-        this->groupState().update_number_of_wells_under_inj_group_control(
+        group_state.update_number_of_wells_under_inj_group_control(
             group_name, injection_phase, num_wells
         );
     }
@@ -1864,13 +1875,19 @@ updateGroupControlledWellsRecursive_(
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
 updateGroupTargetReductionRecursive_(
-    const Group& group, const bool is_injector, std::vector<Scalar>& group_target_reduction)
+    const Group& group,
+    const bool is_injector,
+    std::vector<Scalar>& group_target_reduction,
+    GroupState<Scalar>& group_state
+) const
 {
     const int np = this->wellState().numPhases();
     for (const std::string& sub_group_name : group.groups()) {
         std::vector<Scalar> sub_group_target_reduction(np, 0.0);
         const Group& sub_group = this->schedule_.getGroup(sub_group_name, this->report_step_);
-        this->updateGroupTargetReductionRecursive_(sub_group, is_injector, sub_group_target_reduction);
+        this->updateGroupTargetReductionRecursive_(
+            sub_group, is_injector, sub_group_target_reduction, group_state
+        );
 
         const Scalar sub_group_efficiency = sub_group.getGroupEfficiencyFactor();
 
@@ -1883,11 +1900,15 @@ updateGroupTargetReductionRecursive_(
                 if (phase_pos == -1)
                     continue;
                 const Group::InjectionCMode& current_group_control
-                        = this->groupState().injection_control(sub_group.name(), phase);
+                        = group_state.injection_control(sub_group.name(), phase);
                 const bool individual_control = (current_group_control != Group::InjectionCMode::FLD
                         && current_group_control != Group::InjectionCMode::NONE);
-                const int num_group_controlled_wells
-                        = this->groupControlledWells(sub_group.name(), "", !is_injector, phase);
+                const int num_group_controlled_wells = this->groupControlledWells(
+                    sub_group.name(),
+                    /*always_included_child=*/"",
+                    !is_injector,
+                    phase
+                );
                 if (individual_control || num_group_controlled_wells == 0) {
                     group_target_reduction[phase_pos] += sub_group_efficiency *
                                         this->sumWellSurfaceRates(sub_group, phase_pos, is_injector);
@@ -1903,11 +1924,10 @@ updateGroupTargetReductionRecursive_(
         }
         else {
             const Group::ProductionCMode& current_group_control =
-                                        this->groupState().production_control(sub_group.name());
+                                        group_state.production_control(sub_group.name());
             const bool individual_control = (current_group_control != Group::ProductionCMode::FLD
                                              && current_group_control != Group::ProductionCMode::NONE);
-            const int num_group_controlled_wells
-                = this->groupControlledWells(
+            const int num_group_controlled_wells = this->groupControlledWells(
                     sub_group.name(),
                     /*always_included_child=*/"",
                     !is_injector,
@@ -1975,10 +1995,10 @@ updateGroupTargetReductionRecursive_(
         }
     }
     if (is_injector) {
-        this->groupState().update_injection_reduction_rates(group.name(), group_target_reduction);
+        group_state.update_injection_reduction_rates(group.name(), group_target_reduction);
     }
     else {
-        this->groupState().update_production_reduction_rates(group.name(), group_target_reduction);
+        group_state.update_production_reduction_rates(group.name(), group_target_reduction);
     }
 }
 
