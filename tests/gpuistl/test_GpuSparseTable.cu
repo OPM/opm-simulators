@@ -27,8 +27,6 @@
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 
-#include <opm/common/utility/pointerArithmetic.hpp>
-
 #include <dune/istl/bcrsmatrix.hh>
 
 #include <boost/mpl/range_c.hpp>
