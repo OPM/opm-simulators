@@ -168,7 +168,7 @@ public:
     WellStateGuard pushWellState(WellState<Scalar, IndexTraits>& well_state) {
         return WellStateGuard(*this, well_state);
     }
-    void setCmodeGroup(const Group& group);
+    void setCmodeGroup(GroupState<Scalar>& group_state, const Group& group) const;
     void setLogger(DeferredLogger* deferred_logger) { deferred_logger_ = deferred_logger; }
     template <class AverageRegionalPressureType>
     void setRegionAveragePressureCalculator(
