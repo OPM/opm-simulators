@@ -494,6 +494,7 @@ updateGroupIndividualControl(const Group& group,
                              std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
                              std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                              GroupState<Scalar>& group_state,
+                             WellState<Scalar, IndexTraits>& well_state,
                              DeferredLogger& deferred_logger)
 {
     bool changed = false;
@@ -545,7 +546,8 @@ updateGroupIndividualControl(const Group& group,
                                                 group_state, deferred_logger);
                 wgHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
                                                                group,
-                                                               /*is_injector=*/false);
+                                                               /*is_injector=*/false,
+                                                               well_state);
                 changed = true;
             }
         }
@@ -592,7 +594,8 @@ updateGroupIndividualControl(const Group& group,
 
                 wgHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
                                                                group,
-                                                               /*is_injector=*/false);
+                                                               /*is_injector=*/false,
+                                                               well_state);
             } else if (worst_offending_well) {
                 closed_offending_wells.insert_or_assign(group.name(),
                             std::make_pair(Group::ProductionCMode2String(changed_this.first), *worst_offending_well));

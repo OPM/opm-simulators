@@ -73,7 +73,7 @@ public:
                                    GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger) const;
 
-    //! \brief Update the individual controls for wells in a group. Return true if a group control is changed
+    //! \brief Update the ndividual controls for wells in a group. Return true if a group control is changed
     bool updateGroupIndividualControl(const Group& group,
                                       const int reportStepIdx,
                                       const int max_number_of_group_switch,
@@ -82,6 +82,7 @@ public:
                                       std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
                                       std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                                       GroupState<Scalar>& group_state,
+                                      WellState<Scalar, IndexTraits>& well_state,
                                       DeferredLogger& deferred_logger);
 
 private:

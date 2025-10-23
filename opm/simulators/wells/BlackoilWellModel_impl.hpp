@@ -1971,6 +1971,7 @@ namespace Opm {
                                              this->switched_prod_groups_,
                                              this->closed_offending_wells_,
                                              this->groupState(),
+                                             this->wellState(),
                                              deferred_logger);
 
         if (changed_individual) {

@@ -1368,17 +1368,21 @@ updateVREPForGroups(const Group& group, GroupState<Scalar>& group_state) const
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-updateWellRates(const Group& group, const WellState<Scalar, IndexTraits>& well_state_nupcol)
+updateWellRates(
+    const Group& group,
+    const WellState<Scalar, IndexTraits>& well_state_nupcol,
+    WellState<Scalar, IndexTraits>& well_state
+) const
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-        this->updateWellRates(group_tmp, well_state_nupcol);
+        this->updateWellRates(group_tmp, well_state_nupcol, well_state);
     }
-    const int np = this->wellState().numPhases();
+    const int np = well_state.numPhases();
     for (const std::string& well_name : group.wells()) {
         std::vector<Scalar> rates(np, 0.0);
-        const auto well_index = this->wellState().index(well_name);
+        const auto well_index = well_state.index(well_name);
         if (well_index.has_value()) { // the well is found on this node
             const auto& well_tmp = this->schedule_.getWell(well_name, this->report_step_);
             int sign = 1;
@@ -1391,13 +1395,15 @@ updateWellRates(const Group& group, const WellState<Scalar, IndexTraits>& well_s
                 rates[phase] = sign * ws.surface_rates[phase];
             }
         }
-        this->wellState().setCurrentWellRates(well_name, rates);
+        well_state.setCurrentWellRates(well_name, rates);
     }
 }
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-updateWellRatesFromGroupTargetScale(const Scalar scale, const Group& group, bool is_injector)
+updateWellRatesFromGroupTargetScale(
+    const Scalar scale, const Group& group, bool is_injector, WellState<Scalar, IndexTraits>& well_state
+) const
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
@@ -1419,11 +1425,11 @@ updateWellRatesFromGroupTargetScale(const Scalar scale, const Group& group, bool
         }
         if (!individual_control) {
             const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-            this->updateWellRatesFromGroupTargetScale(scale, group_tmp, is_injector);
+            this->updateWellRatesFromGroupTargetScale(scale, group_tmp, is_injector, well_state);
         }
     }
 
-    const int np = this->wellState().numPhases();
+    const int np = well_state.numPhases();
     for (const std::string& well_name : group.wells()) {
         const auto& well_tmp = this->schedule_.getWell(well_name, this->report_step_);
 
@@ -1433,11 +1439,11 @@ updateWellRatesFromGroupTargetScale(const Scalar scale, const Group& group, bool
         if (well_tmp.isInjector() && !is_injector)
             continue;
 
-        const auto well_index = this->wellState().index(well_name);
+        const auto well_index = well_state.index(well_name);
         if (!well_index.has_value())
             continue;
 
-        auto& ws = this->wellState().well(well_index.value());
+        auto& ws = well_state.well(well_index.value());
         if (ws.status == Well::Status::SHUT)
             continue;
 

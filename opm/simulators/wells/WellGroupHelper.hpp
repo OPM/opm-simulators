@@ -208,10 +208,16 @@ public:
         WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& group_state
     );
     void updateSurfaceRatesInjectionGroups(const Group& group, GroupState<Scalar>& group_state) const;
-    void updateWellRates(const Group& group, const WellState<Scalar, IndexTraits>& well_state_nupcol);
+    void updateWellRates(
+        const Group& group,
+        const WellState<Scalar, IndexTraits>& well_state_nupcol,
+        WellState<Scalar, IndexTraits>& well_state
+    ) const;
     const WellState<Scalar, IndexTraits>& wellState() const { return *this->well_state_; }
     WellState<Scalar, IndexTraits>& wellState() { return *this->well_state_; }
-    void updateWellRatesFromGroupTargetScale(const Scalar scale, const Group& group, bool is_injector);
+    void updateWellRatesFromGroupTargetScale(
+        const Scalar scale, const Group& group, bool is_injector, WellState<Scalar, IndexTraits>& well_state
+    ) const;
     std::pair<std::optional<std::string>, Scalar> worstOffendingWell(
         const Group& group,
         const Group::ProductionCMode& offended_control,
