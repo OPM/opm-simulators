@@ -707,7 +707,7 @@ checkGroupHigherConstraints(const Group& group,
                                                   phase, this->groupState(),
                                                   deferred_logger);
                     this->wgHelper().updateWellRatesFromGroupTargetScale(
-                        scaling_factor, group, /*is_injector=*/true
+                        scaling_factor, group, /*is_injector=*/true, this->wellState()
                     );
                     changed = true;
                 }
@@ -777,7 +777,7 @@ checkGroupHigherConstraints(const Group& group,
                         switched_prod_groups_[group.name()].push_back(currentControl);
                     }
                     this->wgHelper().updateWellRatesFromGroupTargetScale(
-                        scaling_factor, group, /*is_injector=*/false
+                        scaling_factor, group, /*is_injector=*/false, this->wellState()
                     );
                 }
             }
@@ -1361,7 +1361,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
         wg_helper.updateNetworkLeafNodeProductionRates(this->groupState());
         wg_helper.updateGroupProductionRates(fieldGroup, this->groupState());
     }
-    wg_helper.updateWellRates(fieldGroup, this->nupcolWellState());
+    wg_helper.updateWellRates(fieldGroup, this->nupcolWellState(), this->wellState());
     this->wellState().communicateGroupRates(comm_);
     this->groupState().communicate_rates(comm_);
 
