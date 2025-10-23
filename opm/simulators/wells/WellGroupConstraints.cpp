@@ -44,7 +44,7 @@ checkGroupConstraintsInj(const Group& group,
                          const RateConvFunc& rateConverter,
                          const bool check_guide_rate) const
 {
-    auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
+    const auto& well_state = wgHelper.wellState();
 
     // Translate injector type from control to Phase.
     const auto& well_controls = well_.wellEcl().injectionControls(summaryState);
@@ -97,7 +97,7 @@ checkGroupConstraintsProd(const Group& group,
                           const RateConvFunc& rateConverter,
                           const bool check_guide_rate) const
 {
-    auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
+    const auto& well_state = wgHelper.wellState();
 
     // Make conversion factors for RESV <-> surface rates.
     std::vector<Scalar> resv_coeff(well_.phaseUsage().numActivePhases(), 1.0);

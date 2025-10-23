@@ -265,7 +265,6 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
                     wgHelper().sumWellSurfaceRates(group,
                                                    pu.canonicalToActivePhaseIdx(waterPhaseIdx),
                                                    /*is_injector=*/false);
-            current_water_rate = wellModel_.comm().sum(current_water_rate);
                 current_water_rate = wellModel_.comm().sum(current_water_rate);
                 if (std::abs(current_water_rate) < 1e-12) {
                     skip = true;
