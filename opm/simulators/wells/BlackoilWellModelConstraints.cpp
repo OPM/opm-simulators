@@ -600,7 +600,7 @@ updateGroupIndividualControl(const Group& group,
         }
         const auto under_producing = std::get<2>(changed_this);
         if (mode == Group::ProductionCMode::NONE && under_producing) {
-            // also need to check whether the current target is met or not
+            group_state.production_control(group.name(), mode);
             if (wellModel_.comm().rank() == 0) {
                 const std::string msg =
                     fmt::format(
@@ -609,7 +609,6 @@ updateGroupIndividualControl(const Group& group,
                         group.name(),
                         Group::ProductionCMode2String(currentControl));
                 deferred_logger.info(msg);
-                group_state.production_control(group.name(), mode);
             }
         }
     }
