@@ -228,6 +228,29 @@ namespace  gpuistl {
         );
     }
 
+    // Handle the BoundaryInfo structs
+    template<class GpuVecBlock, class GpuFluidState, class BoundaryInfoTypeGPU, class BoundaryInfoTypeCPU>
+    auto copy_to_gpu(const std::vector<BoundaryInfoTypeCPU>& cpu_boundary_info)
+    {
+        std::vector<BoundaryInfoTypeGPU> gpu_boundary_info;
+        for (const auto& info : cpu_boundary_info) {
+            gpu_boundary_info.push_back(BoundaryInfoTypeGPU{info.cell,
+                                        info.dir,
+                                        info.bfIndex,
+                                        BoundaryConditionData<GpuVecBlock,
+                                                              GpuFluidState>{
+                                            info.bcdata.type,
+                                            GpuVecBlock(info.bcdata.massRate),
+                                            info.bcdata.pvtRegionIdx,
+                                            info.bcdata.boundaryFaceIndex,
+                                            info.bcdata.faceArea,
+                                            info.bcdata.faceZCoord,
+                                            GpuFluidState{}}}); // for now we just create a dummy fluid state to avoid this weird conversion
+        }
+
+        return gpuistl::GpuBuffer<BoundaryInfoTypeGPU>(gpu_boundary_info);
+    }
+
     // Implemented for residual_, which is a vector of FiedVectors
     // We then make a GpuBuffer of MiniVectors
     template<class CpuVecOfVecType, class GpuInnerVecType>
@@ -959,7 +982,6 @@ private:
             auto domain_buffer = copy_to_gpu(domain);
             auto domain_view = make_view(domain_buffer);
             auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_, gpuJacobian, jacobian_->istlMatrix());
-            printf("size of neghborInfo sparse table: %d\n", neighborInfo_buffer.size());
             auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
 
             using NeighborInfoGPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockGPU>;
@@ -989,6 +1011,13 @@ private:
             using TrivialFIBMod = GetPropType<TypeTag, Properties::TrivialFIBlackOilModel>;
             using TrivialLocalResidual = GetPropType<TypeTag, Properties::TrivialBlackOilLocalResidualTPFA>;
 
+            using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, typename TrivialIQ::FluidState>;
+            using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
+
+            // Copy boundary info to GPU
+            gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
+            auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
+
             linearize_kernel<TrivialIQ, TrivialFIBMod, TrivialLocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<1,1>>>(
                 dispersionActive,
                 numCells,
@@ -996,7 +1025,8 @@ private:
                 domain_view,
                 neighborInfo_view,
                 diagMatAddressView,
-                gpuResidualView);
+                gpuResidualView,
+                boundaryInfo_view);
             hipDeviceSynchronize();
 
             for (unsigned ii = 0; ii < numCells; ++ii) {
@@ -1307,7 +1337,7 @@ private:
     }
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
-    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
+    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView, class GpuBoundaryInfoView>
     __global__ static void linearize_kernel(
         const bool dispersionActive,
         const unsigned int numCells,
@@ -1315,7 +1345,8 @@ private:
         const DomainType GPU_LOCAL_domain,
         const NeighborSparseTable GPU_LOCAL_neighborInfo,
         DiagPtrType GPU_LOCAL_diagMatAddress,
-        GpuResidualView GPU_LOCAL_residualView)
+        GpuResidualView GPU_LOCAL_residualView,
+        const GpuBoundaryInfoView GPU_LOCAL_boundaryInfo)
     {
         // Get the index of the cell
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
@@ -1369,23 +1400,23 @@ private:
         }
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
-        // for (const auto& bdyInfo : boundaryInfo_) {
-        //     if (bdyInfo.bcdata.type == BCType::NONE) {
-        //         continue;
-        //     }
-
-        //     VectorBlock res(0.0);
-        //     MatrixBlock bMat(0.0);
-        //     ADVectorBlock adres(0.0);
-        //     const unsigned globI = bdyInfo.cell;
-        //     const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-        //     LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
-        //     adres *= bdyInfo.bcdata.faceArea;
-        //     setResAndJacobi(res, bMat, adres);
-        //     residual_[globI] += res;
-        //     ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-        //     *diagMatAddress_[globI] += bMat;
-        // }
+        if (ii < GPU_LOCAL_boundaryInfo.size())
+        {
+            if (GPU_LOCAL_boundaryInfo[ii].bcdata.type != BCType::NONE)
+            {
+                VectorBlockType res(0.0);
+                MatrixBlockType bMat(0.0);
+                ADVectorBlockType adres(0.0);
+                const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
+                // const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+                adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
+                setResAndJacobiGPUCPU(res, bMat, adres);
+                GPU_LOCAL_residualView[globI] += res;
+                ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+                *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+            }
+        }
     }
 #endif
 
