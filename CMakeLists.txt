@@ -70,6 +70,10 @@ if (CONVERT_CUDA_TO_HIP AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.21")
   find_package(hipsparse REQUIRED)
   find_package(hipblas REQUIRED)
   link_libraries(roc::hipblas roc::hipsparse)
+
+  # Does not seem to work with alugrid enabled
+  # TODO: Investigate this when jenkins gets updated.
+  set(CMAKE_DISABLE_FIND_PACKAGE_dune-alugrid ON)
 elseif(CONVERT_CUDA_TO_HIP)
   message("To generate HIP code for AMD GPUs run CMake with version >= 3.21")
 endif()
