@@ -982,22 +982,22 @@ groupControlledWells(const std::string& group_name,
 
 template<typename Scalar, typename IndexTraits>
 void WellGroupHelper<Scalar, IndexTraits>::
-setCmodeGroup(const Group& group)
+setCmodeGroup(GroupState<Scalar>& group_state, const Group& group) const
 {
 
     for (const std::string& group_name : group.groups()) {
-        this->setCmodeGroup(this->schedule_.getGroup(group_name, this->report_step_));
+        this->setCmodeGroup(group_state, this->schedule_.getGroup(group_name, this->report_step_));
     }
 
     // use NONE as default control
     const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
     for (Phase phase : all) {
-        if (!this->groupState().has_injection_control(group.name(), phase)) {
-            this->groupState().injection_control(group.name(), phase, Group::InjectionCMode::NONE);
+        if (!group_state.has_injection_control(group.name(), phase)) {
+            group_state.injection_control(group.name(), phase, Group::InjectionCMode::NONE);
         }
     }
-    if (!this->groupState().has_production_control(group.name())) {
-        this->groupState().production_control(group.name(), Group::ProductionCMode::NONE);
+    if (!group_state.has_production_control(group.name())) {
+        group_state.production_control(group.name(), Group::ProductionCMode::NONE);
     }
 
     const auto& events = this->schedule_[this->report_step_].wellgroup_events();
@@ -1009,29 +1009,29 @@ setCmodeGroup(const Group& group)
                 continue;
 
             const auto& controls = group.injectionControls(phase, this->summary_state_);
-            this->groupState().injection_control(group.name(), phase, controls.cmode);
+            group_state.injection_control(group.name(), phase, controls.cmode);
         }
     }
 
     if (group.isProductionGroup()
         && events.hasEvent(group.name(), ScheduleEvents::GROUP_PRODUCTION_UPDATE)) {
         const auto controls = group.productionControls(this->summary_state_);
-        this->groupState().production_control(group.name(), controls.cmode);
+        group_state.production_control(group.name(), controls.cmode);
     }
 
     if (group.has_gpmaint_control(Group::ProductionCMode::RESV)) {
-        this->groupState().production_control(group.name(), Group::ProductionCMode::RESV);
+        group_state.production_control(group.name(), Group::ProductionCMode::RESV);
     }
     for (Phase phase : all) {
         if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE)) {
-            this->groupState().injection_control(group.name(), phase, Group::InjectionCMode::RATE);
+            group_state.injection_control(group.name(), phase, Group::InjectionCMode::RATE);
         } else if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV)) {
-            this->groupState().injection_control(group.name(), phase, Group::InjectionCMode::RESV);
+            group_state.injection_control(group.name(), phase, Group::InjectionCMode::RESV);
         }
     }
 
     if (this->schedule_[this->report_step_].gconsale().has(group.name())) {
-        this->groupState().injection_control(group.name(), Phase::GAS, Group::InjectionCMode::SALE);
+        group_state.injection_control(group.name(), Phase::GAS, Group::InjectionCMode::SALE);
     }
 }
 

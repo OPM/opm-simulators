@@ -301,7 +301,7 @@ namespace Opm {
             const auto& fieldGroup =
                 this->schedule().getGroup("FIELD", reportStepIdx);
 
-            this->wgHelper().setCmodeGroup(fieldGroup);
+            this->wgHelper().setCmodeGroup(this->groupState(), fieldGroup);
 
             // Define per region average pressure calculators for use by
             // pressure maintenance groups (GPMAINT keyword).
