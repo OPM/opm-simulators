@@ -588,7 +588,7 @@ protected:
     WGState<Scalar, IndexTraits> active_wgstate_;
     WGState<Scalar, IndexTraits> last_valid_wgstate_;
     WGState<Scalar, IndexTraits> nupcol_wgstate_;
-    WellGroupHelperType wg_helper_{};
+    WellGroupHelperType wg_helper_;
     WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 
     bool wellStructureChangedDynamically_{false};

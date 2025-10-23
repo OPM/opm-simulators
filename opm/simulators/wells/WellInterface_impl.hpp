@@ -879,7 +879,7 @@ namespace Opm
     {
         OPM_TIMEFUNCTION();
         auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
-        auto& group_state = const_cast<WellGroupHelperType&>(wgHelper).groupState();
+        const auto& group_state = wgHelper.groupState();
         prepareWellBeforeAssembling(simulator, dt, wgHelper, deferred_logger);
         assembleWellEqWithoutIteration(simulator, dt, well_state, group_state, deferred_logger);
     }
