@@ -158,6 +158,27 @@ struct NeighborInfoStruct
     }
 };
 
+template<class VectorBlock, class ScalarFluidState>
+struct BoundaryConditionData
+{
+    BCType type;
+    VectorBlock massRate;
+    unsigned pvtRegionIdx;
+    unsigned boundaryFaceIndex;
+    double faceArea;
+    double faceZCoord;
+    ScalarFluidState exFluidState;
+};
+
+template<class BoundaryConditionData>
+struct BoundaryInfo
+{
+    unsigned int cell;
+    int dir;
+    unsigned int bfIndex;
+    BoundaryConditionData bcdata;
+};
+
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 namespace  gpuistl {
     template< class MiniMatrixType, class GpuMatrixType, class CpuMatrixType, class MatrixBlockType, class ResidualNBInfoType>
@@ -652,7 +673,7 @@ private:
                             massrate[ii] = massrateAD[ii].value();
                         }
                         const auto& exFluidState = problem_().boundaryFluidState(myIdx, dir_id);
-                        BoundaryConditionData bcdata{type,
+                        BoundaryConditionDataCPU bcdata{type,
                                                      massrate,
                                                      exFluidState.pvtRegionIndex(),
                                                      bfIndex,
@@ -1346,6 +1367,25 @@ private:
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
         }
+
+        // Boundary terms. Only looping over cells with nontrivial bcs.
+        // for (const auto& bdyInfo : boundaryInfo_) {
+        //     if (bdyInfo.bcdata.type == BCType::NONE) {
+        //         continue;
+        //     }
+
+        //     VectorBlock res(0.0);
+        //     MatrixBlock bMat(0.0);
+        //     ADVectorBlock adres(0.0);
+        //     const unsigned globI = bdyInfo.cell;
+        //     const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+        //     LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+        //     adres *= bdyInfo.bcdata.faceArea;
+        //     setResAndJacobi(res, bMat, adres);
+        //     residual_[globI] += res;
+        //     ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+        //     *diagMatAddress_[globI] += bMat;
+        // }
     }
 #endif
 
@@ -1403,25 +1443,12 @@ private:
     SparseTable<VelocityInfo> velocityInfo_;
 
     using ScalarFluidState = typename IntensiveQuantities::ScalarFluidState;
-    struct BoundaryConditionData
-    {
-        BCType type;
-        VectorBlock massRate;
-        unsigned pvtRegionIdx;
-        unsigned boundaryFaceIndex;
-        double faceArea;
-        double faceZCoord;
-        ScalarFluidState exFluidState;
-    };
 
-    struct BoundaryInfo
-    {
-        unsigned int cell;
-        int dir;
-        unsigned int bfIndex;
-        BoundaryConditionData bcdata;
-    };
-    std::vector<BoundaryInfo> boundaryInfo_;
+    using BoundaryConditionDataCPU = BoundaryConditionData<VectorBlock, ScalarFluidState>;
+
+    using BoundaryInfoCPU = BoundaryInfo<BoundaryConditionDataCPU>;
+
+    std::vector<BoundaryInfoCPU> boundaryInfo_;
 
     bool separateSparseSourceTerms_ = false;
 
