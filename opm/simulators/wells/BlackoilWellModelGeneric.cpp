@@ -1343,23 +1343,23 @@ updateAndCommunicateGroupData(const int reportStepIdx,
         constexpr std::array<bool, num_configs> is_production_group = {true, false, false, false};
         constexpr std::array<Phase, num_configs> phases = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
         for (int i = 0; i < num_configs; i++) {
-            wg_helper.updateGroupControlledWells(is_production_group[i], phases[i]);
+            wg_helper.updateGroupControlledWells(is_production_group[i], phases[i], this->groupState());
         }
     }
     // the group target reduction rates needs to be update since wells may have switched to/from GRUP control
     // The group target reduction does not honor NUPCOL.
-    wg_helper.updateGroupTargetReduction(fieldGroup, /*is_injector=*/false);
-    wg_helper.updateGroupTargetReduction(fieldGroup, /*is_injector=*/true);
+    wg_helper.updateGroupTargetReduction(fieldGroup, /*is_injector=*/false, this->groupState());
+    wg_helper.updateGroupTargetReduction(fieldGroup, /*is_injector=*/true, this->groupState());
     {
         // Temporarily use the nupcol well state for all helper functions
         // At the end of this scope, the well state will be restored to its original value
         auto guard = wg_helper.pushWellState(this->nupcolWellState());
-        wg_helper.updateREINForGroups(fieldGroup, /*sum_rank=*/comm_.rank() == 0);
-        wg_helper.updateVREPForGroups(fieldGroup);
-        wg_helper.updateReservoirRatesInjectionGroups(fieldGroup);
-        wg_helper.updateSurfaceRatesInjectionGroups(fieldGroup);
-        wg_helper.updateNetworkLeafNodeProductionRates();
-        wg_helper.updateGroupProductionRates(fieldGroup);
+        wg_helper.updateREINForGroups(fieldGroup, /*sum_rank=*/comm_.rank() == 0, this->groupState());
+        wg_helper.updateVREPForGroups(fieldGroup, this->groupState());
+        wg_helper.updateReservoirRatesInjectionGroups(fieldGroup, this->groupState());
+        wg_helper.updateSurfaceRatesInjectionGroups(fieldGroup, this->groupState());
+        wg_helper.updateNetworkLeafNodeProductionRates(this->groupState());
+        wg_helper.updateGroupProductionRates(fieldGroup, this->groupState());
     }
     wg_helper.updateWellRates(fieldGroup, this->nupcolWellState());
     this->wellState().communicateGroupRates(comm_);
