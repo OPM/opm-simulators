@@ -56,7 +56,7 @@ __global__ void fetchSparseTableValuesInKernel(Opm::SparseTable<int, Opm::gpuist
     }
 }
 
-BOOST_AUTO_TEST_CASE(TestOIJFOAIWJF)
+BOOST_AUTO_TEST_CASE(TestUsingSparseTableInKernel)
 {
     /*
         Sparse table storting the data
