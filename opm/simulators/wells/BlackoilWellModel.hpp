@@ -72,7 +72,7 @@
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/WellGroupHelper.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -115,8 +115,8 @@ template<class Scalar> class WellContributions;
             using ModelParameters = BlackoilModelParameters<Scalar>;
 
             using WellConnectionModule = WellConnectionAuxiliaryModule<TypeTag, BlackoilWellModel<TypeTag>>;
-
             using IndexTraits = typename FluidSystem::IndexTraitsType;
+            using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
 
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
@@ -142,8 +142,6 @@ template<class Scalar> class WellContributions;
             // For computing average pressured used by gpmaint
             using AverageRegionalPressureType = RegionAverageCalculator::
                 AverageRegionalPressure<FluidSystem, std::vector<int> >;
-
-            using WellGroupHelpersType = WellGroupHelpers<Scalar, IndexTraits>;
 
             explicit BlackoilWellModel(Simulator& simulator);
 
