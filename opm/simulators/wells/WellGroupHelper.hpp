@@ -119,7 +119,8 @@ public:
                                                      const Phase injection_phase,
                                                      const Scalar efficiency_factor,
                                                      const std::vector<Scalar>& resv_coeff,
-                                                     const bool check_guide_rate) const;
+                                                     const bool check_guide_rate,
+                                                     DeferredLogger& deferred_logger) const;
 
     std::pair<bool, Scalar> checkGroupConstraintsProd(const std::string& name,
                                                       const std::string& parent,
@@ -127,16 +128,12 @@ public:
                                                       const Scalar* rates,
                                                       const Scalar efficiency_factor,
                                                       const std::vector<Scalar>& resv_coeff,
-                                                      const bool check_guide_rate) const;
+                                                      const bool check_guide_rate,
+                                                      DeferredLogger& deferred_logger) const;
 
     std::map<std::string, Scalar> computeNetworkPressures(const Network::ExtNetwork& network,
                                                           const VFPProdProperties<Scalar>& vfp_prod_props,
                                                           const Parallel::Communication& comm) const;
-
-    DeferredLogger& deferredLogger() const
-    {
-        return *this->deferred_logger_;
-    }
 
     Scalar getGuideRate(const std::string& name, const GuideRateModel::Target target) const;
 
@@ -148,14 +145,16 @@ public:
                                       const Scalar* rates,
                                       const Phase injection_phase,
                                       const Scalar efficiency_factor,
-                                      const std::vector<Scalar>& resv_coeff) const;
+                                      const std::vector<Scalar>& resv_coeff,
+                                      DeferredLogger& deferred_logger) const;
 
     Scalar getWellGroupTargetProducer(const std::string& name,
                                       const std::string& parent,
                                       const Group& group,
                                       const Scalar* rates,
                                       const Scalar efficiency_factor,
-                                      const std::vector<Scalar>& resv_coeff) const;
+                                      const std::vector<Scalar>& resv_coeff,
+                                      DeferredLogger& deferred_logger) const;
 
     GuideRate::RateVector getWellRateVector(const std::string& name) const;
 
@@ -189,11 +188,6 @@ public:
     }
 
     void setCmodeGroup(const Group& group, GroupState<Scalar>& group_state) const;
-
-    void setLogger(DeferredLogger* deferred_logger)
-    {
-        deferred_logger_ = deferred_logger;
-    }
 
     template <class AverageRegionalPressureType>
     void
@@ -229,7 +223,8 @@ public:
     /// group_name its main usage is to detect cases where there is no wells under group control
     int updateGroupControlledWells(const bool is_production_group,
                                    const Phase injection_phase,
-                                   GroupState<Scalar>& group_state) const;
+                                   GroupState<Scalar>& group_state,
+                                   DeferredLogger& deferred_logger) const;
 
     void updateGroupProductionRates(const Group& group, GroupState<Scalar>& group_state) const;
 
@@ -267,7 +262,8 @@ public:
     std::pair<std::optional<std::string>, Scalar>
     worstOffendingWell(const Group& group,
                        const Group::ProductionCMode& offended_control,
-                       const Parallel::Communication& comm) const;
+                       const Parallel::Communication& comm,
+                       DeferredLogger& deferred_logger) const;
 
 private:
     std::string controlGroup_(const Group& group) const;
@@ -294,7 +290,8 @@ private:
     int updateGroupControlledWellsRecursive_(const std::string& group_name,
                                              const bool is_production_group,
                                              const Phase injection_phase,
-                                             GroupState<Scalar>& group_state) const;
+                                             GroupState<Scalar>& group_state,
+                                             DeferredLogger& deferred_logger) const;
 
     void updateGroupTargetReductionRecursive_(const Group& group,
                                               const bool is_injector,
@@ -307,7 +304,6 @@ private:
     const SummaryState& summary_state_;
     const GuideRate& guide_rate_;
     int report_step_ {0};
-    DeferredLogger* deferred_logger_ {nullptr};
     // NOTE: The phase usage info seems to be read-only throughout the simulation, so it should be safe
     // to store a reference to it here.
     const PhaseUsageInfo<IndexTraits>& phase_usage_info_;

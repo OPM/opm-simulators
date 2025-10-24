@@ -452,7 +452,7 @@ actionOnBrokenConstraints(const Group& group,
     }
     case Group::ExceedAction::WELL: {
         std::tie(worst_offending_well, std::ignore) =
-            wgHelper().worstOffendingWell(group, newControl, wellModel_.comm());
+            wgHelper().worstOffendingWell(group, newControl, wellModel_.comm(), deferred_logger);
         break;
     }
     case Group::ExceedAction::PLUG: {

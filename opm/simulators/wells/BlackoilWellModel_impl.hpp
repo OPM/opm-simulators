@@ -196,7 +196,6 @@ namespace Opm {
         DeferredLogger local_deferredLogger{};
 
         this->wgHelper().setReportStep(timeStepIdx);
-        this->wgHelper().setLogger(&local_deferredLogger);
         this->report_step_starts_ = true;
         this->report_step_start_events_ = this->schedule()[timeStepIdx].wellgroup_events();
 
@@ -333,7 +332,6 @@ namespace Opm {
         this->updateAverageFormationFactor();
 
         DeferredLogger local_deferredLogger;
-        this->wgHelper().setLogger(&local_deferredLogger);
 
         this->switched_prod_groups_.clear();
         this->switched_inj_groups_.clear();
@@ -1135,7 +1133,6 @@ namespace Opm {
         OPM_TIMEFUNCTION();
         DeferredLogger local_deferredLogger;
 
-        this->wgHelper().setLogger(&local_deferredLogger);
         this->guide_rate_handler_.setLogger(&local_deferredLogger);
         if constexpr (BlackoilWellModelGasLift<TypeTag>::glift_debug) {
             if (gaslift_.terminalOutput()) {
