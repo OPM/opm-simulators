@@ -67,7 +67,7 @@ public:
 
     private:
         WellGroupHelper& wgHelper_;
-        WellState<Scalar, IndexTraits>* previous_state_ptr_;
+        const WellState<Scalar, IndexTraits>* previous_state_ptr_;
     };
 
     // RAII guard for temporarily setting groupstate pointer
@@ -94,7 +94,7 @@ public:
 
         private:
             WellGroupHelper& wgHelper_;
-            GroupState<Scalar>* previous_state_ptr_;
+            const GroupState<Scalar>* previous_state_ptr_;
         };
 
     WellGroupHelper(
@@ -160,7 +160,6 @@ public:
         const Phase injection_phase
     ) const;
     const GroupState<Scalar>& groupState() const { return *this->group_state_; }
-    GroupState<Scalar>& groupState() { return *this->group_state_; }
     const PhaseUsageInfo<IndexTraits>& phaseUsageInfo() const { return this->phase_usage_info_; }
     GroupStateGuard pushGroupState(GroupState<Scalar>& group_state) {
         return GroupStateGuard(*this, group_state);
@@ -214,7 +213,6 @@ public:
         WellState<Scalar, IndexTraits>& well_state
     ) const;
     const WellState<Scalar, IndexTraits>& wellState() const { return *this->well_state_; }
-    WellState<Scalar, IndexTraits>& wellState() { return *this->well_state_; }
     void updateWellRatesFromGroupTargetScale(
         const Scalar scale, const Group& group, bool is_injector, WellState<Scalar, IndexTraits>& well_state
     ) const;
@@ -253,8 +251,8 @@ private:
         std::vector<Scalar>& group_target_reduction,
         GroupState<Scalar>& group_state
     ) const;
-    WellState<Scalar, IndexTraits>* well_state_{nullptr};
-    GroupState<Scalar>* group_state_{nullptr};
+    const WellState<Scalar, IndexTraits>* well_state_{nullptr};
+    const GroupState<Scalar>* group_state_{nullptr};
     const Schedule& schedule_;
     const SummaryState& summary_state_;
     const GuideRate& guide_rate_;
