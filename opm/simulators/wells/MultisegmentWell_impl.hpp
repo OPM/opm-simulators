@@ -1702,6 +1702,10 @@ namespace Opm
                 OPM_THROW(std::runtime_error, fmt::format("Misalignment of the parallel simulation run in iterateWellEqWithSwitching - the well calculation for well {} succeeded some ranks but failed on other ranks.", this->name()));
             }
             if (converged) {
+                this->primary_variables_.copyToWellState(*this, getRefDensity(),
+                                                        well_state,
+                                                        summary_state,
+                                                        deferred_logger);
                 // if equations are sufficiently linear they might converge in less than min_its_after_switch
                 // in this case, make sure all constraints are satisfied before returning
                 if (switch_count > 0 && its_since_last_switch < min_its_after_switch) {
