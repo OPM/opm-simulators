@@ -73,7 +73,7 @@ public:
                                    GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger) const;
 
-    //! \brief Update the ndividual controls for wells in a group. Return true if a group control is changed
+    //! \brief Update the individual controls for wells in a group. Return true if a group control is changed
     bool updateGroupIndividualControl(const Group& group,
                                       const int reportStepIdx,
                                       const int max_number_of_group_switch,
