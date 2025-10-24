@@ -51,13 +51,7 @@ public:
                      const bool use_gpmaint);
 
     template <typename RateType>
-    RateType calcModeRateFromRates(const std::vector<RateType>& rates) const
-    {
-      return calcModeRateFromRates(rates.data());
-    }
-
-    template <typename RateType>
-    RateType calcModeRateFromRates(const RateType* rates) const;
+    RateType calcModeRateFromRates(const std::vector<RateType>& rates) const;
 
     Scalar groupTarget(const std::optional<Group::ProductionControls>& ctrl,
                        DeferredLogger& deferred_logger) const;
