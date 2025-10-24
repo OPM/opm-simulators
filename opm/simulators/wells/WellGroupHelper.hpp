@@ -107,6 +107,7 @@ public:
     );
 
     void accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor) const;
+
     std::pair<bool, Scalar> checkGroupConstraintsInj(
         const std::string& name,
         const std::string& parent,
@@ -117,6 +118,7 @@ public:
         const std::vector<Scalar>& resv_coeff,
         const bool check_guide_rate
     ) const;
+
     std::pair<bool, Scalar> checkGroupConstraintsProd(
         const std::string& name,
         const std::string& parent,
@@ -126,14 +128,19 @@ public:
         const std::vector<Scalar>& resv_coeff,
         const bool check_guide_rate
     ) const;
+
     std::map<std::string, Scalar> computeNetworkPressures(
         const Network::ExtNetwork& network,
         const VFPProdProperties<Scalar>& vfp_prod_props,
         const Parallel::Communication& comm
     ) const;
+
     DeferredLogger& deferredLogger() const { return *this->deferred_logger_; }
+
     Scalar getGuideRate(const std::string& name, const GuideRateModel::Target target) const;
+
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
+
     Scalar getWellGroupTargetInjector(
         const std::string& name,
         const std::string& parent,
@@ -143,6 +150,7 @@ public:
         const Scalar efficiency_factor,
         const std::vector<Scalar>& resv_coeff
     ) const;
+
     Scalar getWellGroupTargetProducer(
         const std::string& name,
         const std::string& parent,
@@ -151,34 +159,49 @@ public:
         const Scalar efficiency_factor,
         const std::vector<Scalar>& resv_coeff
     ) const;
+
     GuideRate::RateVector getWellRateVector(const std::string& name) const;
+
     std::vector<std::string> groupChainTopBot(const std::string& bottom, const std::string& top) const;
+
     int groupControlledWells(
         const std::string& group_name,
         const std::string& always_included_child,
         const bool is_production_group,
         const Phase injection_phase
     ) const;
+
     const GroupState<Scalar>& groupState() const { return *this->group_state_; }
+
     const PhaseUsageInfo<IndexTraits>& phaseUsageInfo() const { return this->phase_usage_info_; }
+
     GroupStateGuard pushGroupState(GroupState<Scalar>& group_state) {
         return GroupStateGuard(*this, group_state);
     }
+
     WellStateGuard pushWellState(WellState<Scalar, IndexTraits>& well_state) {
         return WellStateGuard(*this, well_state);
     }
+
     void setCmodeGroup(const Group& group, GroupState<Scalar>& group_state) const;
+
     void setLogger(DeferredLogger* deferred_logger) { deferred_logger_ = deferred_logger; }
+
     template <class AverageRegionalPressureType>
     void setRegionAveragePressureCalculator(
         const Group& group,
         const FieldPropsManager& fp,
         std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regional_average_pressure_calculator
     ) const;
+
     void setReportStep(int report_step) { report_step_ = report_step; }
+
     Scalar sumSolventRates(const Group& group, const bool is_injector) const;
+
     Scalar sumWellResRates(const Group& group, const int phase_pos, const bool injector) const;
+
     Scalar sumWellSurfaceRates(const Group& group, const int phase_pos, const bool injector) const;
+
     Scalar sumWellPhaseRates(
         bool res_rates,
         const Group& group,
@@ -186,36 +209,50 @@ public:
         const bool injector,
         const bool network = false
     ) const;
+
     template <class RegionalValues> void updateGpMaintTargetForGroups(
         const Group& group,
         const RegionalValues& regional_values,
         const double dt,
         GroupState<Scalar>& group_state
     ) const;
+
     int updateGroupControlledWells(
         const bool is_production_group, const Phase injection_phase, GroupState<Scalar>& group_state
     ) const;
+
     void updateGroupProductionRates(const Group& group, GroupState<Scalar>& group_state) const;
+
     void updateGroupTargetReduction(
         const Group& group, const bool is_injector, GroupState<Scalar>& group_state
     ) const;
+
     void updateNetworkLeafNodeProductionRates(GroupState<Scalar>& group_state) const;
+
     void updateREINForGroups(const Group& group, bool sum_rank, GroupState<Scalar>& group_state) const;
+
     void updateReservoirRatesInjectionGroups(const Group& group, GroupState<Scalar>& group_state) const;
+
     void updateVREPForGroups(const Group& group, GroupState<Scalar>& group_state) const;
+
     void updateState(
         WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& group_state
     );
+
     void updateSurfaceRatesInjectionGroups(const Group& group, GroupState<Scalar>& group_state) const;
+
     void updateWellRates(
         const Group& group,
         const WellState<Scalar, IndexTraits>& well_state_nupcol,
         WellState<Scalar, IndexTraits>& well_state
     ) const;
+
     const WellState<Scalar, IndexTraits>& wellState() const { return *this->well_state_; }
+
     void updateWellRatesFromGroupTargetScale(
         const Scalar scale, const Group& group, bool is_injector, WellState<Scalar, IndexTraits>& well_state
     ) const;
+
     std::pair<std::optional<std::string>, Scalar> worstOffendingWell(
         const Group& group,
         const Group::ProductionCMode& offended_control,
@@ -223,34 +260,43 @@ public:
     ) const;
 private:
     std::string controlGroup_(const Group& group) const;
+
     GuideRate::RateVector getGuideRateVector_(const std::vector<Scalar>& rates) const;
+
     bool isInGroupChainTopBot_(const std::string& bottom, const std::string& top) const;
+
     int phaseToActivePhaseIdx_(const Phase phase) const;
+
     Scalar satelliteInjectionRate_(
         const ScheduleState& sched,
         const Group& group,
         const int phase_pos,
         bool res_rates
     ) const;
+
     Scalar satelliteProductionRate_(
         const ScheduleState& sched,
         const Group& group,
         const GSatProd::GSatProdGroupProp::Rate rate_comp,
         bool res_rates
     ) const;
+
     std::optional<GSatProd::GSatProdGroupProp::Rate> selectRateComponent_(const int phase_pos) const;
+
     int updateGroupControlledWellsRecursive_(
         const std::string& group_name,
         const bool is_production_group,
         const Phase injection_phase,
         GroupState<Scalar>& group_state
     ) const;
+
     void updateGroupTargetReductionRecursive_(
         const Group& group,
         const bool is_injector,
         std::vector<Scalar>& group_target_reduction,
         GroupState<Scalar>& group_state
     ) const;
+
     const WellState<Scalar, IndexTraits>* well_state_{nullptr};
     const GroupState<Scalar>* group_state_{nullptr};
     const Schedule& schedule_;
