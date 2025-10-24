@@ -29,6 +29,7 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
 
 namespace Opm {
 /*!
@@ -72,6 +73,10 @@ struct Linearizer<TypeTag, TTag::FlowBiofilmProblem> { using type = TpfaLineariz
 template<class TypeTag>
 struct LocalResidual<TypeTag, TTag::FlowBiofilmProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowBiofilmProblem>
+{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowBiofilmProblem>
@@ -83,11 +88,14 @@ private:
     using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
+    // get the energy module type to determine the equation number
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
 public:
     using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
                                          getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         numEnergyVars,
                                          getPropValue<TypeTag, Properties::EnableFoam>(),
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,

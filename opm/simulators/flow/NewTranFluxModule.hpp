@@ -121,7 +121,7 @@ class NewTranExtensiveQuantities
     enum { numPhases = FluidSystem::numPhases };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
 
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
 

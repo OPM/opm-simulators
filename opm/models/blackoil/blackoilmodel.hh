@@ -38,6 +38,7 @@
 #include <opm/models/blackoil/blackoildarcyfluxmodule.hh>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
 #include <opm/models/blackoil/blackoildispersionmodule.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilextbomodules.hh>
 #include <opm/models/blackoil/blackoilextensivequantities.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
@@ -143,7 +144,7 @@ struct Indices<TypeTag, TTag::BlackOilModel>
     using type = BlackOilVariableAndEquationIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                                     getPropValue<TypeTag, Properties::EnableExtbo>(),
                                                     getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
                                                     getPropValue<TypeTag, Properties::EnableFoam>(),
                                                     getPropValue<TypeTag, Properties::EnableBrine>(),
                                                     /*PVOffset=*/0,
@@ -201,14 +202,9 @@ template<class TypeTag>
 struct EnableBioeffects<TypeTag, TTag::BlackOilModel>
 { static constexpr bool value = false; };
 
-//! By default, the blackoil model is isothermal and does not conserve energy
 template<class TypeTag>
-struct EnableTemperature<TypeTag, TTag::BlackOilModel>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::BlackOilModel>
-{ static constexpr bool value = false; };
+struct EnergyModuleType<TypeTag, TTag::BlackOilModel>
+{ static constexpr EnergyModules value = EnergyModules::NoTemperature; };
 
 //! disable diffusion by default
 template<class TypeTag>
