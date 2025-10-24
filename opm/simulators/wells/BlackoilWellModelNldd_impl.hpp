@@ -64,6 +64,7 @@ assembleWellEq(const double dt,
             well->assembleWellEq(wellModel_.simulator(),
                                  dt,
                                  wellModel_.wgHelper(),
+                                 wellModel_.wellState(),
                                  deferred_logger);
         }
     }
@@ -192,6 +193,7 @@ updateWellControls(DeferredLogger& deferred_logger,
             well->updateWellControl(wellModel_.simulator(),
                                     mode,
                                     wellModel_.wgHelper(),
+                                    wellModel_.wellState(),
                                     deferred_logger);
         }
     }

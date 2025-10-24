@@ -182,7 +182,8 @@ WellInterfaceFluidSystem<FluidSystem>::
 checkGroupConstraints(const WellGroupHelperType& wgHelper,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
-                      const bool check_guide_rate) const
+                      const bool check_guide_rate,
+                      WellStateType& well_state) const
 {
     const auto& group_state = wgHelper.groupState();
 
@@ -204,7 +205,7 @@ checkGroupConstraints(const WellGroupHelperType& wgHelper,
 
     return WellGroupConstraints(*this).checkGroupConstraints(wgHelper,
                                                              schedule, summaryState,
-                                                             rCoeff, check_guide_rate);
+                                                             rCoeff, check_guide_rate, well_state);
 }
 
 template<typename FluidSystem>
@@ -213,16 +214,16 @@ WellInterfaceFluidSystem<FluidSystem>::
 checkConstraints(const WellGroupHelperType& wgHelper,
                  const Schedule& schedule,
                  const SummaryState& summaryState,
+                 WellStateType& well_state,
                  DeferredLogger& deferred_logger) const
 {
-    auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
     const bool ind_broken = checkIndividualConstraints(well_state.well(this->index_of_well_),
                                                        summaryState, deferred_logger);
     if (ind_broken) {
         return true;
     } else {
         return checkGroupConstraints(wgHelper, schedule,
-                                     summaryState, true);
+                                     summaryState, true, well_state);
     }
 }
 
