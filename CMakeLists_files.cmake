@@ -527,7 +527,7 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuSeqILU0.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cusparse_handle.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cuSparse_matrix_operations.cpp)
-  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuSparseMatrix.cpp)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuSparseMatrix.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuVector.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cuVector_operations.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_safe_conversion.cpp)
@@ -556,7 +556,8 @@ if (HAVE_CUDA)
       tests/gpuistl/test_gpu_ad.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
-      tests/gpuistl/test_gpuBlackOilFluidSystem
+      tests/gpuistl/test_gpuBlackOilFluidSystem.cu
+      tests/gpuistl/test_GpuSparseMatrix.cu
       tests/gpuistl/test_blackoilfluidstategpu.cu
     )
 
