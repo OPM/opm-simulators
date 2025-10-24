@@ -21,8 +21,8 @@
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
-#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
+#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleState.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
@@ -38,23 +38,27 @@
 #include <string>
 #include <vector>
 
-namespace Opm {
+namespace Opm
+{
 
-template<typename Scalar, typename IndexTraits>
-class WellGroupHelper {
+template <typename Scalar, typename IndexTraits>
+class WellGroupHelper
+{
 public:
     // RAII guard for temporarily setting wellstate pointer
-    class WellStateGuard {
+    class WellStateGuard
+    {
     public:
         WellStateGuard(WellGroupHelper& wgHelper, WellState<Scalar, IndexTraits>& well_state)
-            : wgHelper_{wgHelper}
-            , previous_state_ptr_{wgHelper_.well_state_}
+            : wgHelper_ {wgHelper}
+            , previous_state_ptr_ {wgHelper_.well_state_}
         {
             // Set the new state directly
             wgHelper_.well_state_ = &well_state;
         }
 
-        ~WellStateGuard() {
+        ~WellStateGuard()
+        {
             // Restore the previous state
             wgHelper_.well_state_ = previous_state_ptr_;
         }
@@ -71,94 +75,87 @@ public:
     };
 
     // RAII guard for temporarily setting groupstate pointer
-    class GroupStateGuard {
-        public:
-            GroupStateGuard(WellGroupHelper& wgHelper, GroupState<Scalar>& group_state)
-                : wgHelper_{wgHelper}
-                , previous_state_ptr_{wgHelper_.group_state_}
-            {
-                // Set the new state directly
-                wgHelper_.group_state_ = &group_state;
-            }
+    class GroupStateGuard
+    {
+    public:
+        GroupStateGuard(WellGroupHelper& wgHelper, GroupState<Scalar>& group_state)
+            : wgHelper_ {wgHelper}
+            , previous_state_ptr_ {wgHelper_.group_state_}
+        {
+            // Set the new state directly
+            wgHelper_.group_state_ = &group_state;
+        }
 
-            ~GroupStateGuard() {
-                // Restore the previous state
-                wgHelper_.group_state_ = previous_state_ptr_;
-            }
+        ~GroupStateGuard()
+        {
+            // Restore the previous state
+            wgHelper_.group_state_ = previous_state_ptr_;
+        }
 
-            // Delete copy and move operations
-            GroupStateGuard(const GroupStateGuard&) = delete;
-            GroupStateGuard& operator=(const GroupStateGuard&) = delete;
-            GroupStateGuard(GroupStateGuard&&) = delete;
-            GroupStateGuard& operator=(GroupStateGuard&&) = delete;
+        // Delete copy and move operations
+        GroupStateGuard(const GroupStateGuard&) = delete;
+        GroupStateGuard& operator=(const GroupStateGuard&) = delete;
+        GroupStateGuard(GroupStateGuard&&) = delete;
+        GroupStateGuard& operator=(GroupStateGuard&&) = delete;
 
-        private:
-            WellGroupHelper& wgHelper_;
-            const GroupState<Scalar>* previous_state_ptr_;
-        };
+    private:
+        WellGroupHelper& wgHelper_;
+        const GroupState<Scalar>* previous_state_ptr_;
+    };
 
-    WellGroupHelper(
-        WellState<Scalar, IndexTraits>& well_state,
-        GroupState<Scalar>& group_state,
-        const Schedule& schedule,
-        const SummaryState& summary_state,
-        const GuideRate& guide_rate,
-        const PhaseUsageInfo<IndexTraits>& phase_usage_info
-    );
+    WellGroupHelper(WellState<Scalar, IndexTraits>& well_state,
+                    GroupState<Scalar>& group_state,
+                    const Schedule& schedule,
+                    const SummaryState& summary_state,
+                    const GuideRate& guide_rate,
+                    const PhaseUsageInfo<IndexTraits>& phase_usage_info);
 
     void accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor) const;
 
-    std::pair<bool, Scalar> checkGroupConstraintsInj(
-        const std::string& name,
-        const std::string& parent,
-        const Group& group,
-        const Scalar* rates,
-        const Phase injection_phase,
-        const Scalar efficiency_factor,
-        const std::vector<Scalar>& resv_coeff,
-        const bool check_guide_rate
-    ) const;
+    std::pair<bool, Scalar> checkGroupConstraintsInj(const std::string& name,
+                                                     const std::string& parent,
+                                                     const Group& group,
+                                                     const Scalar* rates,
+                                                     const Phase injection_phase,
+                                                     const Scalar efficiency_factor,
+                                                     const std::vector<Scalar>& resv_coeff,
+                                                     const bool check_guide_rate) const;
 
-    std::pair<bool, Scalar> checkGroupConstraintsProd(
-        const std::string& name,
-        const std::string& parent,
-        const Group& group,
-        const Scalar* rates,
-        const Scalar efficiency_factor,
-        const std::vector<Scalar>& resv_coeff,
-        const bool check_guide_rate
-    ) const;
+    std::pair<bool, Scalar> checkGroupConstraintsProd(const std::string& name,
+                                                      const std::string& parent,
+                                                      const Group& group,
+                                                      const Scalar* rates,
+                                                      const Scalar efficiency_factor,
+                                                      const std::vector<Scalar>& resv_coeff,
+                                                      const bool check_guide_rate) const;
 
-    std::map<std::string, Scalar> computeNetworkPressures(
-        const Network::ExtNetwork& network,
-        const VFPProdProperties<Scalar>& vfp_prod_props,
-        const Parallel::Communication& comm
-    ) const;
+    std::map<std::string, Scalar> computeNetworkPressures(const Network::ExtNetwork& network,
+                                                          const VFPProdProperties<Scalar>& vfp_prod_props,
+                                                          const Parallel::Communication& comm) const;
 
-    DeferredLogger& deferredLogger() const { return *this->deferred_logger_; }
+    DeferredLogger& deferredLogger() const
+    {
+        return *this->deferred_logger_;
+    }
 
     Scalar getGuideRate(const std::string& name, const GuideRateModel::Target target) const;
 
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
 
-    Scalar getWellGroupTargetInjector(
-        const std::string& name,
-        const std::string& parent,
-        const Group& group,
-        const Scalar* rates,
-        const Phase injection_phase,
-        const Scalar efficiency_factor,
-        const std::vector<Scalar>& resv_coeff
-    ) const;
+    Scalar getWellGroupTargetInjector(const std::string& name,
+                                      const std::string& parent,
+                                      const Group& group,
+                                      const Scalar* rates,
+                                      const Phase injection_phase,
+                                      const Scalar efficiency_factor,
+                                      const std::vector<Scalar>& resv_coeff) const;
 
-    Scalar getWellGroupTargetProducer(
-        const std::string& name,
-        const std::string& parent,
-        const Group& group,
-        const Scalar* rates,
-        const Scalar efficiency_factor,
-        const std::vector<Scalar>& resv_coeff
-    ) const;
+    Scalar getWellGroupTargetProducer(const std::string& name,
+                                      const std::string& parent,
+                                      const Group& group,
+                                      const Scalar* rates,
+                                      const Scalar efficiency_factor,
+                                      const std::vector<Scalar>& resv_coeff) const;
 
     GuideRate::RateVector getWellRateVector(const std::string& name) const;
 
@@ -166,37 +163,49 @@ public:
 
     /// returns the number of wells that are actively under group control for a given group with name given
     /// by group_name
-    int groupControlledWells(
-        const std::string& group_name,
-        const std::string& always_included_child,
-        const bool is_production_group,
-        const Phase injection_phase
-    ) const;
+    int groupControlledWells(const std::string& group_name,
+                             const std::string& always_included_child,
+                             const bool is_production_group,
+                             const Phase injection_phase) const;
 
-    const GroupState<Scalar>& groupState() const { return *this->group_state_; }
+    const GroupState<Scalar>& groupState() const
+    {
+        return *this->group_state_;
+    }
 
-    const PhaseUsageInfo<IndexTraits>& phaseUsageInfo() const { return this->phase_usage_info_; }
+    const PhaseUsageInfo<IndexTraits>& phaseUsageInfo() const
+    {
+        return this->phase_usage_info_;
+    }
 
-    GroupStateGuard pushGroupState(GroupState<Scalar>& group_state) {
+    GroupStateGuard pushGroupState(GroupState<Scalar>& group_state)
+    {
         return GroupStateGuard(*this, group_state);
     }
 
-    WellStateGuard pushWellState(WellState<Scalar, IndexTraits>& well_state) {
+    WellStateGuard pushWellState(WellState<Scalar, IndexTraits>& well_state)
+    {
         return WellStateGuard(*this, well_state);
     }
 
     void setCmodeGroup(const Group& group, GroupState<Scalar>& group_state) const;
 
-    void setLogger(DeferredLogger* deferred_logger) { deferred_logger_ = deferred_logger; }
+    void setLogger(DeferredLogger* deferred_logger)
+    {
+        deferred_logger_ = deferred_logger;
+    }
 
     template <class AverageRegionalPressureType>
-    void setRegionAveragePressureCalculator(
-        const Group& group,
-        const FieldPropsManager& fp,
-        std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regional_average_pressure_calculator
-    ) const;
+    void
+    setRegionAveragePressureCalculator(const Group& group,
+                                       const FieldPropsManager& fp,
+                                       std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>&
+                                           regional_average_pressure_calculator) const;
 
-    void setReportStep(int report_step) { report_step_ = report_step; }
+    void setReportStep(int report_step)
+    {
+        report_step_ = report_step;
+    }
 
     Scalar sumSolventRates(const Group& group, const bool is_injector) const;
 
@@ -204,32 +213,29 @@ public:
 
     Scalar sumWellSurfaceRates(const Group& group, const int phase_pos, const bool injector) const;
 
-    Scalar sumWellPhaseRates(
-        bool res_rates,
-        const Group& group,
-        const int phase_pos,
-        const bool injector,
-        const bool network = false
-    ) const;
+    Scalar sumWellPhaseRates(bool res_rates,
+                             const Group& group,
+                             const int phase_pos,
+                             const bool injector,
+                             const bool network = false) const;
 
-    template <class RegionalValues> void updateGpMaintTargetForGroups(
-        const Group& group,
-        const RegionalValues& regional_values,
-        const double dt,
-        GroupState<Scalar>& group_state
-    ) const;
+    template <class RegionalValues>
+    void updateGpMaintTargetForGroups(const Group& group,
+                                      const RegionalValues& regional_values,
+                                      const double dt,
+                                      GroupState<Scalar>& group_state) const;
 
-    /// update the number of wells that are actively under group control for a given group with name given by group_name
-    /// its main usage is to detect cases where there is no wells under group control
-    int updateGroupControlledWells(
-        const bool is_production_group, const Phase injection_phase, GroupState<Scalar>& group_state
-    ) const;
+    /// update the number of wells that are actively under group control for a given group with name given by
+    /// group_name its main usage is to detect cases where there is no wells under group control
+    int updateGroupControlledWells(const bool is_production_group,
+                                   const Phase injection_phase,
+                                   GroupState<Scalar>& group_state) const;
 
     void updateGroupProductionRates(const Group& group, GroupState<Scalar>& group_state) const;
 
-    void updateGroupTargetReduction(
-        const Group& group, const bool is_injector, GroupState<Scalar>& group_state
-    ) const;
+    void updateGroupTargetReduction(const Group& group,
+                                    const bool is_injector,
+                                    GroupState<Scalar>& group_state) const;
 
     void updateNetworkLeafNodeProductionRates(GroupState<Scalar>& group_state) const;
 
@@ -239,30 +245,30 @@ public:
 
     void updateVREPForGroups(const Group& group, GroupState<Scalar>& group_state) const;
 
-    void updateState(
-        WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& group_state
-    );
+    void updateState(WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& group_state);
 
     void updateSurfaceRatesInjectionGroups(const Group& group, GroupState<Scalar>& group_state) const;
 
-    void updateWellRates(
-        const Group& group,
-        const WellState<Scalar, IndexTraits>& well_state_nupcol,
-        WellState<Scalar, IndexTraits>& well_state
-    ) const;
+    void updateWellRates(const Group& group,
+                         const WellState<Scalar, IndexTraits>& well_state_nupcol,
+                         WellState<Scalar, IndexTraits>& well_state) const;
 
-    const WellState<Scalar, IndexTraits>& wellState() const { return *this->well_state_; }
+    const WellState<Scalar, IndexTraits>& wellState() const
+    {
+        return *this->well_state_;
+    }
 
-    void updateWellRatesFromGroupTargetScale(
-        const Scalar scale, const Group& group, bool is_injector, WellState<Scalar, IndexTraits>& well_state
-    ) const;
+    void updateWellRatesFromGroupTargetScale(const Scalar scale,
+                                             const Group& group,
+                                             bool is_injector,
+                                             WellState<Scalar, IndexTraits>& well_state) const;
 
     /// Returns the name of the worst offending well and its fraction (i.e. violated_phase / preferred_phase)
-    std::pair<std::optional<std::string>, Scalar> worstOffendingWell(
-        const Group& group,
-        const Group::ProductionCMode& offended_control,
-        const Parallel::Communication& comm
-    ) const;
+    std::pair<std::optional<std::string>, Scalar>
+    worstOffendingWell(const Group& group,
+                       const Group::ProductionCMode& offended_control,
+                       const Parallel::Communication& comm) const;
+
 private:
     std::string controlGroup_(const Group& group) const;
 
@@ -273,43 +279,35 @@ private:
 
     int phaseToActivePhaseIdx_(const Phase phase) const;
 
-    Scalar satelliteInjectionRate_(
-        const ScheduleState& sched,
-        const Group& group,
-        const int phase_pos,
-        bool res_rates
-    ) const;
+    Scalar satelliteInjectionRate_(const ScheduleState& sched,
+                                   const Group& group,
+                                   const int phase_pos,
+                                   bool res_rates) const;
 
-    Scalar satelliteProductionRate_(
-        const ScheduleState& sched,
-        const Group& group,
-        const GSatProd::GSatProdGroupProp::Rate rate_comp,
-        bool res_rates
-    ) const;
+    Scalar satelliteProductionRate_(const ScheduleState& sched,
+                                    const Group& group,
+                                    const GSatProd::GSatProdGroupProp::Rate rate_comp,
+                                    bool res_rates) const;
 
     std::optional<GSatProd::GSatProdGroupProp::Rate> selectRateComponent_(const int phase_pos) const;
 
-    int updateGroupControlledWellsRecursive_(
-        const std::string& group_name,
-        const bool is_production_group,
-        const Phase injection_phase,
-        GroupState<Scalar>& group_state
-    ) const;
+    int updateGroupControlledWellsRecursive_(const std::string& group_name,
+                                             const bool is_production_group,
+                                             const Phase injection_phase,
+                                             GroupState<Scalar>& group_state) const;
 
-    void updateGroupTargetReductionRecursive_(
-        const Group& group,
-        const bool is_injector,
-        std::vector<Scalar>& group_target_reduction,
-        GroupState<Scalar>& group_state
-    ) const;
+    void updateGroupTargetReductionRecursive_(const Group& group,
+                                              const bool is_injector,
+                                              std::vector<Scalar>& group_target_reduction,
+                                              GroupState<Scalar>& group_state) const;
 
-    const WellState<Scalar, IndexTraits>* well_state_{nullptr};
-    const GroupState<Scalar>* group_state_{nullptr};
+    const WellState<Scalar, IndexTraits>* well_state_ {nullptr};
+    const GroupState<Scalar>* group_state_ {nullptr};
     const Schedule& schedule_;
     const SummaryState& summary_state_;
     const GuideRate& guide_rate_;
-    int report_step_{0};
-    DeferredLogger* deferred_logger_{nullptr};
+    int report_step_ {0};
+    DeferredLogger* deferred_logger_ {nullptr};
     // NOTE: The phase usage info seems to be read-only throughout the simulation, so it should be safe
     // to store a reference to it here.
     const PhaseUsageInfo<IndexTraits>& phase_usage_info_;
@@ -324,17 +322,19 @@ private:
 //       not available when WellGroupHelper.cpp is compiled. Template functions
 //       must be visible at their instantiation point.
 //       See WellGroupHelper.cpp for detailed rationale.
-template<typename Scalar, typename IndexTraits>
+template <typename Scalar, typename IndexTraits>
 template <class AverageRegionalPressureType>
-void WellGroupHelper<Scalar, IndexTraits>::
-setRegionAveragePressureCalculator(
+void
+WellGroupHelper<Scalar, IndexTraits>::setRegionAveragePressureCalculator(
     const Group& group,
     const FieldPropsManager& fp,
-    std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regional_average_pressure_calculator
-) const
+    std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regional_average_pressure_calculator)
+    const
 {
     for (const std::string& groupName : group.groups()) {
-        this->setRegionAveragePressureCalculator(this->schedule_.getGroup(groupName, this->report_step_), fp, regional_average_pressure_calculator);
+        this->setRegionAveragePressureCalculator(this->schedule_.getGroup(groupName, this->report_step_),
+                                                 fp,
+                                                 regional_average_pressure_calculator);
     }
     const auto& gpm = group.gpmaint();
     if (!gpm)
@@ -347,8 +347,8 @@ setRegionAveragePressureCalculator(
     if (regional_average_pressure_calculator.count(reg->first) == 0) {
         const std::string name = (reg->first.rfind("FIP", 0) == 0) ? reg->first : "FIP" + reg->first;
         const auto& fipnum = fp.get_int(name);
-        regional_average_pressure_calculator[reg->first] =
-            std::make_unique<AverageRegionalPressureType>(fipnum);
+        regional_average_pressure_calculator[reg->first]
+            = std::make_unique<AverageRegionalPressureType>(fipnum);
     }
 }
 
@@ -357,14 +357,13 @@ setRegionAveragePressureCalculator(
 //       not available when WellGroupHelper.cpp is compiled. Template functions
 //       must be visible at their instantiation point.
 //       See WellGroupHelper.cpp for detailed rationale.
-template<typename Scalar, typename IndexTraits>
+template <typename Scalar, typename IndexTraits>
 template <class RegionalValues>
-void WellGroupHelper<Scalar, IndexTraits>::
-updateGpMaintTargetForGroups(const Group& group,
-                             const RegionalValues& regional_values,
-                             const double dt,
-                             GroupState<Scalar>& group_state
-                             ) const
+void
+WellGroupHelper<Scalar, IndexTraits>::updateGpMaintTargetForGroups(const Group& group,
+                                                                   const RegionalValues& regional_values,
+                                                                   const double dt,
+                                                                   GroupState<Scalar>& group_state) const
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
@@ -386,63 +385,56 @@ updateGpMaintTargetForGroups(const Group& group,
     bool injection = true;
     Scalar sign = 1.0;
     switch (gpm->flow_target()) {
-        case GPMaint::FlowTarget::RESV_PROD:
-        {
-            current_rate = -this->groupState().injection_vrep_rate(group.name());
-            injection = false;
-            sign = -1.0;
-            break;
+    case GPMaint::FlowTarget::RESV_PROD: {
+        current_rate = -this->groupState().injection_vrep_rate(group.name());
+        injection = false;
+        sign = -1.0;
+        break;
+    }
+    case GPMaint::FlowTarget::RESV_OINJ: {
+        if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+            const auto io = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+            current_rate = group_state.injection_reservoir_rates(group.name())[io];
         }
-        case GPMaint::FlowTarget::RESV_OINJ:
-        {
-            if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
-                const auto io = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-                current_rate = group_state.injection_reservoir_rates(group.name())[io];
-            }
-            break;
+        break;
+    }
+    case GPMaint::FlowTarget::RESV_WINJ: {
+        if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+            const auto iw = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+            current_rate = group_state.injection_reservoir_rates(group.name())[iw];
         }
-        case GPMaint::FlowTarget::RESV_WINJ:
-        {
-            if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
-                const auto iw = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-                current_rate = group_state.injection_reservoir_rates(group.name())[iw];
-            }
-            break;
+        break;
+    }
+    case GPMaint::FlowTarget::RESV_GINJ: {
+        if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+            const auto ig = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+            current_rate = group_state.injection_reservoir_rates(group.name())[ig];
         }
-        case GPMaint::FlowTarget::RESV_GINJ:
-        {
-            if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-                const auto ig = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-                current_rate = group_state.injection_reservoir_rates(group.name())[ig];
-            }
-            break;
+        break;
+    }
+    case GPMaint::FlowTarget::SURF_OINJ: {
+        if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+            const auto io = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+            current_rate = group_state.injection_surface_rates(group.name())[io];
         }
-        case GPMaint::FlowTarget::SURF_OINJ:
-        {
-            if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
-                const auto io = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-                current_rate = group_state.injection_surface_rates(group.name())[io];
-            }
-            break;
+        break;
+    }
+    case GPMaint::FlowTarget::SURF_WINJ: {
+        if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+            const auto iw = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+            current_rate = group_state.injection_surface_rates(group.name())[iw];
         }
-        case GPMaint::FlowTarget::SURF_WINJ:
-        {
-            if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
-                const auto iw = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-                current_rate = group_state.injection_surface_rates(group.name())[iw];
-            }
-            break;
+        break;
+    }
+    case GPMaint::FlowTarget::SURF_GINJ: {
+        if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+            const auto ig = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+            current_rate = group_state.injection_surface_rates(group.name())[ig];
         }
-        case GPMaint::FlowTarget::SURF_GINJ:
-        {
-            if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-                const auto ig = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-                current_rate = group_state.injection_surface_rates(group.name())[ig];
-            }
-            break;
-        }
-        default:
-            throw std::invalid_argument("Invalid Flow target type in GPMAINT");
+        break;
+    }
+    default:
+        throw std::invalid_argument("Invalid Flow target type in GPMAINT");
     }
     auto& gpmaint_state = group_state.gpmaint(group.name());
     // we only activate gpmaint if pressure is lower than the target regional pressure for injectors
@@ -454,7 +446,7 @@ updateGpMaintTargetForGroups(const Group& group,
     } else {
         gpm->resetState(gpmaint_state);
     }
-    group_state.update_gpmaint_target(group.name(), std::max(Scalar{0.0}, sign * rate));
+    group_state.update_gpmaint_target(group.name(), std::max(Scalar {0.0}, sign * rate));
 }
 
 } // namespace Opm
