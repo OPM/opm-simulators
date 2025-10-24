@@ -398,6 +398,9 @@ namespace Opm
         deferred_logger.info(" well " + this->name() + " is being tested");
 
         WellStateType well_state_copy = well_state;
+        // Ensure that wgHelper uses well_state_copy as WellState for the well testing
+        // and the guard ensures that the original well state is restored at scope exit, i.e. at
+        // the end of this function.
         auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
         auto& ws = well_state_copy.well(this->indexOfWell());
 
@@ -735,6 +738,9 @@ namespace Opm
         OPM_TIMEFUNCTION();
         // Solve a well using single bhp-constraint (but close if not operable under this)
         auto group_state = GroupState<Scalar>(); // empty group
+        // Ensure that wgHelper uses the empty group state as GroupState for iterateWellEqWithSwitching()
+        // and the guard ensures that the original group state is restored at scope exit, i.e. at
+        // the end of this function.
         auto group_guard = const_cast<WellGroupHelperType&>(wgHelper).pushGroupState(group_state);
 
         auto inj_controls = Well::InjectionControls(0);
@@ -780,6 +786,9 @@ namespace Opm
         this->stopWell();
 
         auto group_state = GroupState<Scalar>(); // empty group
+        // Ensure that wgHelper uses the empty group state as GroupState for iterateWellEqWithSwitching()
+        // and the guard ensures that the original group state is restored at scope exit, i.e. at
+        // the end of this function.
         auto group_guard = const_cast<WellGroupHelperType&>(wgHelper).pushGroupState(group_state);
 
         auto inj_controls = Well::InjectionControls(0);
@@ -1224,8 +1233,11 @@ namespace Opm
         this->operability_status_.resetOperability();
         WellStateType well_state_copy = wgHelper.wellState();
         const double dt = simulator.timeStepSize();
-        // equations should be converged at this stage, so only one it is needed
+        // Ensure that wgHelper uses well_state_copy as WellState for iterateWellEquations()
+        // and the guard ensures that the original well state is restored at scope exit, i.e. at
+        // the end of this function.
         auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
+        // equations should be converged at this stage, so only one it is needed
         bool converged = iterateWellEquations(simulator, dt, wgHelper, well_state_copy, deferred_logger);
         return converged;
     }
