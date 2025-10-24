@@ -189,10 +189,10 @@ namespace Opm
     updateWellControl(const Simulator& simulator,
                       const IndividualOrGroup iog,
                       const WellGroupHelperType& wgHelper,
+                      WellStateType& well_state,
                       DeferredLogger& deferred_logger) /* const */
     {
         OPM_TIMEFUNCTION();
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         if (stoppedOrZeroRateTarget(simulator, well_state, deferred_logger)) {
             return false;
         }
@@ -233,10 +233,12 @@ namespace Opm
         if (iog == IndividualOrGroup::Individual) {
             changed = this->checkIndividualConstraints(ws, summaryState, deferred_logger);
         } else if (iog == IndividualOrGroup::Group) {
-            changed = this->checkGroupConstraints(wgHelper, schedule, summaryState, true);
+            changed = this->checkGroupConstraints(
+                wgHelper, schedule, summaryState, true, well_state
+            );
         } else {
             assert(iog == IndividualOrGroup::Both);
-            changed = this->checkConstraints(wgHelper, schedule, summaryState, deferred_logger);
+            changed = this->checkConstraints(wgHelper, schedule, summaryState, well_state, deferred_logger);
         }
         Parallel::Communication cc = simulator.vanguard().grid().comm();
         // checking whether control changed
@@ -262,7 +264,7 @@ namespace Opm
             if (iterationIdx >= nupcol || this->well_control_log_.empty()) {
                 this->well_control_log_.push_back(from);
             }
-            updateWellStateWithTarget(simulator, wgHelper, deferred_logger);
+            updateWellStateWithTarget(simulator, wgHelper, well_state, deferred_logger);
             updatePrimaryVariables(simulator, well_state, deferred_logger);
         }
 
@@ -277,12 +279,12 @@ namespace Opm
                                              const Well::InjectionControls& inj_controls,
                                              const Well::ProductionControls& prod_controls,
                                              const Scalar wqTotal,
+                                             WellStateType& well_state,
                                              DeferredLogger& deferred_logger,
                                              const bool fixed_control,
                                              const bool fixed_status)
     {
         OPM_TIMEFUNCTION();
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto& schedule = simulator.vanguard().schedule();
         auto& ws = well_state.well(this->index_of_well_);
@@ -317,7 +319,9 @@ namespace Opm
                         changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
                     }
                     if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
-                        changed = changed || this->checkGroupConstraints(wgHelper, schedule, summary_state, false);
+                        changed = changed || this->checkGroupConstraints(
+                            wgHelper, schedule, summary_state, false, well_state
+                        );
                     }
 
                     if (changed) {
@@ -327,7 +331,7 @@ namespace Opm
                              ws.thp = this->getTHPConstraint(summary_state);
                         } else {
                             // don't call for thp since this might trigger additional local solve
-                            updateWellStateWithTarget(simulator, wgHelper, deferred_logger);
+                            updateWellStateWithTarget(simulator, wgHelper, well_state, deferred_logger);
                         }
                         updatePrimaryVariables(simulator, well_state, deferred_logger);
                     }
@@ -383,17 +387,18 @@ namespace Opm
     wellTesting(const Simulator& simulator,
                 const double simulation_time,
                 const WellGroupHelperType& wgHelper,
+                WellStateType& well_state,
                 WellTestState& well_test_state,
                 GLiftEclWells& ecl_well_map,
                 std::map<std::string, double>& open_times,
                 DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         const auto& group_state = wgHelper.groupState();
         deferred_logger.info(" well " + this->name() + " is being tested");
 
         WellStateType well_state_copy = well_state;
+        auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
         auto& ws = well_state_copy.well(this->indexOfWell());
 
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -431,9 +436,7 @@ namespace Opm
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
             const std::size_t original_number_closed_completions = welltest_state_temp.num_closed_completions();
-            // Use RAII guard to temporarily redirect wgHelper to use well_state_copy
-            auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
-            bool converged = solveWellForTesting(simulator, wgHelper, deferred_logger);
+            bool converged = solveWellForTesting(simulator, wgHelper, well_state_copy, deferred_logger);
             if (!converged) {
                 const auto msg = fmt::format("WTEST: Well {} is not solvable (physical)", this->name());
                 deferred_logger.debug(msg);
@@ -506,10 +509,10 @@ namespace Opm
     iterateWellEquations(const Simulator& simulator,
                          const double dt,
                          const WellGroupHelperType& wgHelper,
+                         WellStateType& well_state,
                          DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
         const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
@@ -520,12 +523,16 @@ namespace Opm
         try {
             // TODO: the following two functions will be refactored to be one to reduce the code duplication
             if (!this->param_.local_well_solver_control_switching_){
-                converged = this->iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger);
+                converged = this->iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger);
             } else {
                 if (this->param_.use_implicit_ipr_ && this->well_ecl_.isProducer() && (well_state.well(this->index_of_well_).status == WellStatus::OPEN)) {
-                    converged = solveWellWithOperabilityCheck(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger);
+                    converged = solveWellWithOperabilityCheck(
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                    );
                 } else {
-                    converged = this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger);
+                    converged = this->iterateWellEqWithSwitching(
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                    );
                 }
             }
 
@@ -571,24 +578,26 @@ namespace Opm
                                   const Well::InjectionControls& inj_controls,
                                   const Well::ProductionControls& prod_controls,
                                   const WellGroupHelperType& wgHelper,
+                                  WellStateType& well_state,
                                   DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         const auto& summary_state = simulator.vanguard().summaryState();
         bool converged = true;
         auto& ws = well_state.well(this->index_of_well_);
         // if well is stopped, check if we can reopen
         if (this->wellIsStopped()) {
             this->openWell();
-            auto bhp_target = estimateOperableBhp(simulator, dt, wgHelper, summary_state, deferred_logger);
+            auto bhp_target = estimateOperableBhp(
+                simulator, dt, wgHelper, summary_state, well_state, deferred_logger
+            );
             if (!bhp_target.has_value()) {
                 // no intersection with ipr
                 const auto msg = fmt::format("estimateOperableBhp: Did not find operable BHP for well {}", this->name());
                 deferred_logger.debug(msg);
                 // well can't operate using explicit fractions stop the well
                 // solve with zero rates
-                converged = solveWellWithZeroRate(simulator, dt, wgHelper, deferred_logger);
+                converged = solveWellWithZeroRate(simulator, dt, wgHelper, well_state, deferred_logger);
                 this->stopWell();
                 this->operability_status_.can_obtain_bhp_with_thp_limit = false;
                 this->operability_status_.obey_thp_limit_under_bhp_limit = false;
@@ -598,11 +607,13 @@ namespace Opm
                 ws.thp = this->getTHPConstraint(summary_state);
                 const Scalar bhp = std::max(bhp_target.value(),
                                             static_cast<Scalar>(prod_controls.bhp_limit));
-                solveWellWithBhp(simulator, dt, bhp, wgHelper, deferred_logger);
+                solveWellWithBhp(simulator, dt, bhp, wgHelper, well_state, deferred_logger);
             }
         }
         // solve well-equation
-        converged = this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger);
+        converged = this->iterateWellEqWithSwitching(
+            simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+        );
 
 
         const bool isThp = ws.production_cmode == Well::ProducerCMode::THP;
@@ -622,10 +633,14 @@ namespace Opm
                 if (bhp_stable.has_value() && cur_bhp - bhp_stable.value() > cur_bhp*reltol){
                     const auto msg = fmt::format("Well {} converged to an unstable solution, re-solving", this->name());
                     deferred_logger.debug(msg);
-                    solveWellWithBhp(simulator, dt, bhp_stable.value(), wgHelper, deferred_logger);
+                    solveWellWithBhp(
+                        simulator, dt, bhp_stable.value(), wgHelper, well_state, deferred_logger
+                    );
                     // re-solve with hopefully good initial guess
                     ws.thp = this->getTHPConstraint(summary_state);
-                    converged = this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger);
+                    converged = this->iterateWellEqWithSwitching(
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                    );
                 }
             }
         }
@@ -634,11 +649,13 @@ namespace Opm
             // Well did not converge, switch to explicit fractions
             this->operability_status_.use_vfpexplicit = true;
             this->openWell();
-            auto bhp_target = estimateOperableBhp(simulator, dt, wgHelper, summary_state, deferred_logger);
+            auto bhp_target = estimateOperableBhp(
+                simulator, dt, wgHelper, summary_state, well_state, deferred_logger
+            );
             if (!bhp_target.has_value()) {
                 // solve with zero rate
                 // well can't operate using explicit fractions stop the well
-                converged = solveWellWithZeroRate(simulator, dt, wgHelper, deferred_logger);
+                converged = solveWellWithZeroRate(simulator, dt, wgHelper, well_state, deferred_logger);
                 this->stopWell();
                 this->operability_status_.can_obtain_bhp_with_thp_limit = false;
                 this->operability_status_.obey_thp_limit_under_bhp_limit = false;
@@ -647,7 +664,9 @@ namespace Opm
                 // solve well with the estimated target bhp (or limit)
                 const Scalar bhp = std::max(bhp_target.value(),
                                             static_cast<Scalar>(prod_controls.bhp_limit));
-                solveWellWithBhp(simulator, dt, bhp, wgHelper, deferred_logger);
+                solveWellWithBhp(
+                    simulator, dt, bhp, wgHelper, well_state, deferred_logger
+                );
                 ws.thp = this->getTHPConstraint(summary_state);
                 const auto msg = fmt::format("Well {} did not converge, re-solving with explicit fractions for VFP caculations.", this->name());
                 deferred_logger.debug(msg);
@@ -655,6 +674,7 @@ namespace Opm
                                                              inj_controls,
                                                              prod_controls,
                                                              wgHelper,
+                                                             well_state,
                                                              deferred_logger);
             }
         }
@@ -671,12 +691,14 @@ namespace Opm
                         const double dt,
                         const WellGroupHelperType& wgHelper,
                         const SummaryState& summary_state,
+                        WellStateType& well_state,
                         DeferredLogger& deferred_logger)
     {
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         if (!this->wellHasTHPConstraints(summary_state)) {
             const Scalar bhp_limit = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summary_state);
-            const bool converged = solveWellWithBhp(simulator, dt, bhp_limit, wgHelper, deferred_logger);
+            const bool converged = solveWellWithBhp(
+                simulator, dt, bhp_limit, wgHelper, well_state, deferred_logger
+            );
             if (!converged || this->wellIsStopped()) {
                 return std::nullopt;
             }
@@ -688,7 +710,9 @@ namespace Opm
         // Get minimal bhp from vfp-curve
         Scalar bhp_min =  WellBhpThpCalculator(*this).calculateMinimumBhpFromThp(well_state, this->well_ecl_, summary_state, this->getRefDensity());
         // Solve
-        const bool converged = solveWellWithBhp(simulator, dt, bhp_min, wgHelper, deferred_logger);
+        const bool converged = solveWellWithBhp(
+            simulator, dt, bhp_min, wgHelper, well_state, deferred_logger
+        );
         if (!converged || this->wellIsStopped()) {
             return std::nullopt;
         }
@@ -705,10 +729,10 @@ namespace Opm
                      const double dt,
                      const Scalar bhp,
                      const WellGroupHelperType& wgHelper,
+                     WellStateType& well_state,
                      DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         // Solve a well using single bhp-constraint (but close if not operable under this)
         auto group_state = GroupState<Scalar>(); // empty group
         auto group_guard = const_cast<WellGroupHelperType&>(wgHelper).pushGroupState(group_state);
@@ -732,7 +756,10 @@ namespace Opm
         // update well-state
         ws.bhp = bhp;
         // solve
-        const bool converged =  this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger, /*fixed_control*/true);
+        const bool converged =  this->iterateWellEqWithSwitching(
+            simulator, dt, inj_controls, prod_controls, wgHelper,
+            well_state, deferred_logger, /*fixed_control*/true
+        );
         ws.injection_cmode = cmode_inj;
         ws.production_cmode = cmode_prod;
         return converged;
@@ -744,6 +771,7 @@ namespace Opm
     solveWellWithZeroRate(const Simulator& simulator,
                           const double dt,
                           const WellGroupHelperType& wgHelper,
+                          WellStateType& well_state,
                           DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
@@ -756,7 +784,10 @@ namespace Opm
 
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);
-        const bool converged =  this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger, /*fixed_control*/true, /*fixed_status*/ true);
+        const bool converged =  this->iterateWellEqWithSwitching(
+            simulator, dt, inj_controls, prod_controls, wgHelper, well_state,
+            deferred_logger, /*fixed_control*/true, /*fixed_status*/ true
+        );
         this->wellStatus_ = well_status_orig;
         return converged;
     }
@@ -766,10 +797,10 @@ namespace Opm
     WellInterface<TypeTag>::
     solveWellForTesting(const Simulator& simulator,
                         const WellGroupHelperType& wgHelper,
+                        WellStateType& well_state,
                         DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         const double dt = simulator.timeStepSize();
 
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -781,12 +812,18 @@ namespace Opm
         try {
             // TODO: the following two functions will be refactored to be one to reduce the code duplication
             if (!this->param_.local_well_solver_control_switching_){
-                converged = this->iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger);
+                converged = this->iterateWellEqWithControl(
+                    simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                );
             } else {
                 if (this->param_.use_implicit_ipr_ && this->well_ecl_.isProducer() && (well_state.well(this->index_of_well_).status == WellStatus::OPEN)) {
-                    converged = this->solveWellWithOperabilityCheck(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger);
+                    converged = this->solveWellWithOperabilityCheck(
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                    );
                 } else {
-                    converged = this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger);
+                    converged = this->iterateWellEqWithSwitching(
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                    );
                 }
             }
 
@@ -812,17 +849,17 @@ namespace Opm
     WellInterface<TypeTag>::
     solveWellEquation(const Simulator& simulator,
                       const WellGroupHelperType& wgHelper,
+                      WellStateType& well_state,
                       DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
         if (!this->isOperableAndSolvable() && !this->wellIsStopped())
             return;
 
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         // keep a copy of the original well state
         const WellStateType well_state0 = well_state;
         const double dt = simulator.timeStepSize();
-        bool converged = iterateWellEquations(simulator, dt, wgHelper, deferred_logger);
+        bool converged = iterateWellEquations(simulator, dt, wgHelper, well_state, deferred_logger);
 
         // Newly opened wells with THP control sometimes struggles to
         // converge due to bad initial guess. Or due to the simple fact
@@ -855,7 +892,7 @@ namespace Opm
                 const std::string msg = std::string("The newly opened well ") + this->name()
                     + std::string(" with THP control did not converge during inner iterations, we try again with bhp control");
                 deferred_logger.debug(msg);
-                converged = this->iterateWellEquations(simulator, dt, wgHelper, deferred_logger);
+                converged = this->iterateWellEquations(simulator, dt, wgHelper, well_state, deferred_logger);
             }
         }
 
@@ -875,12 +912,12 @@ namespace Opm
     assembleWellEq(const Simulator& simulator,
                    const double dt,
                    const WellGroupHelperType& wgHelper,
+                   WellStateType& well_state,
                    DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         const auto& group_state = wgHelper.groupState();
-        prepareWellBeforeAssembling(simulator, dt, wgHelper, deferred_logger);
+        prepareWellBeforeAssembling(simulator, dt, wgHelper, well_state, deferred_logger);
         assembleWellEqWithoutIteration(simulator, dt, well_state, group_state, deferred_logger);
     }
 
@@ -912,10 +949,10 @@ namespace Opm
     prepareWellBeforeAssembling(const Simulator& simulator,
                                 const double dt,
                                 const WellGroupHelperType& wgHelper,
+                                WellStateType& well_state,
                                 DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         const bool old_well_operable = this->operability_status_.isOperableAndSolvable();
 
         if (this->param_.check_well_operability_iter_)
@@ -942,7 +979,9 @@ namespace Opm
                 }
                 this->stopWell();
                 changed_to_stopped_this_step_ = true;
-                bool converged_zero_rate = this->solveWellWithZeroRate(simulator, dt, wgHelper, deferred_logger);
+                bool converged_zero_rate = this->solveWellWithZeroRate(
+                    simulator, dt, wgHelper, well_state, deferred_logger
+                );
                 if (this->param_.shut_unsolvable_wells_ && !converged_zero_rate ) {
                     this->operability_status_.solvable = false;
                 }
@@ -950,7 +989,9 @@ namespace Opm
                 number_of_well_reopenings_++;
                 return;
             }
-            bool converged = this->iterateWellEquations(simulator, dt, wgHelper, deferred_logger);
+            bool converged = this->iterateWellEquations(
+                simulator, dt, wgHelper, well_state, deferred_logger
+            );
 
             if (converged) {
                 const bool zero_target = this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger);
@@ -1142,7 +1183,7 @@ namespace Opm
     {
         OPM_TIMEFUNCTION();
         if (this->param_.local_well_solver_control_switching_) {
-            const bool success = updateWellOperabilityFromWellEq(simulator, well_state, wgHelper, deferred_logger);
+            const bool success = updateWellOperabilityFromWellEq(simulator, wgHelper, deferred_logger);
             if (!success) {
                 this->operability_status_.solvable = false;
                 deferred_logger.debug("Operability check using well equations did not converge for well "
@@ -1174,7 +1215,6 @@ namespace Opm
     bool
     WellInterface<TypeTag>::
     updateWellOperabilityFromWellEq(const Simulator& simulator,
-                                    const WellStateType& well_state,
                                     const WellGroupHelperType& wgHelper,
                                     DeferredLogger& deferred_logger)
     {
@@ -1182,11 +1222,11 @@ namespace Opm
         // only makes sense if we're using this parameter is true
         assert(this->param_.local_well_solver_control_switching_);
         this->operability_status_.resetOperability();
-        WellStateType well_state_copy = well_state;
+        WellStateType well_state_copy = wgHelper.wellState();
         const double dt = simulator.timeStepSize();
         // equations should be converged at this stage, so only one it is needed
         auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
-        bool converged = iterateWellEquations(simulator, dt, wgHelper, deferred_logger);
+        bool converged = iterateWellEquations(simulator, dt, wgHelper, well_state_copy, deferred_logger);
         return converged;
     }
 
@@ -1203,10 +1243,10 @@ namespace Opm
     WellInterface<TypeTag>::
     updateWellStateWithTarget(const Simulator& simulator,
                               const WellGroupHelperType& wgHelper,
+                              WellStateType& well_state,
                               DeferredLogger& deferred_logger) const
     {
         OPM_TIMEFUNCTION();
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         const auto& group_state = wgHelper.groupState();
         // only bhp and wellRates are used to initilize the primaryvariables for standard wells
         const auto& well = this->well_ecl_;

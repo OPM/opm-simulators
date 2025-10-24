@@ -49,7 +49,7 @@ public:
     using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
 
     //! \brief Constructor initializes reference to the well model.
-    explicit BlackoilWellModelConstraints(BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel)
+    explicit BlackoilWellModelConstraints(const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel)
         : wellModel_(wellModel)
     {}
 
@@ -97,9 +97,8 @@ private:
     checkGroupProductionConstraints(const Group& group,
                                     DeferredLogger& deferred_logger) const;
 
-    WellGroupHelperType& wgHelper() { return wellModel_.wgHelper(); }
     const WellGroupHelperType& wgHelper() const { return wellModel_.wgHelper(); }
-    BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_; //!< Reference to well model
+    const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_; //!< Reference to well model
 };
 
 } // namespace Opm

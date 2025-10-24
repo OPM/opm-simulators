@@ -56,12 +56,14 @@ public:
                                             const std::optional<std::string>&,
                                             std::vector<Scalar>&)>;
     using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using WellStateType = WellState<Scalar, IndexTraits>;
 
     bool checkGroupConstraints(const WellGroupHelperType& wgHelper,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const RateConvFunc& rateConverter,
-                               const bool check_guide_rate) const;
+                               const bool check_guide_rate,
+                               WellStateType& well_state) const;
 
 private:
     std::pair<bool, Scalar>

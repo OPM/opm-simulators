@@ -169,6 +169,7 @@ public:
     void assembleWellEq(const Simulator& simulator,
                         const double dt,
                         const WellGroupHelperType& wgHelper,
+                        WellStateType& well_state,
                         DeferredLogger& deferred_logger);
 
     void assembleWellEqWithoutIteration(const Simulator& simulator,
@@ -181,6 +182,7 @@ public:
     void prepareWellBeforeAssembling(const Simulator& simulator,
                                      const double dt,
                                      const WellGroupHelperType& wgHelper,
+                                     WellStateType& well_state,
                                      DeferredLogger& deferred_logger);
 
     virtual void computeWellRatesWithBhp(const Simulator& ebosSimulator,
@@ -218,6 +220,7 @@ public:
 
     virtual void updateWellStateWithTarget(const Simulator& simulator,
                                            const WellGroupHelperType& wgHelper,
+                                           WellStateType& well_state,
                                            DeferredLogger& deferred_logger) const;
 
     virtual void scaleSegmentRatesAndPressure(WellStateType& well_state) const;
@@ -250,6 +253,7 @@ public:
     bool updateWellControl(const Simulator& simulator,
                            const IndividualOrGroup iog,
                            const WellGroupHelperType& wgHelper,
+                           WellStateType& well_state,
                            DeferredLogger& deferred_logger) /* const */;
 
     bool updateWellControlAndStatusLocalIteration(const Simulator& simulator,
@@ -257,6 +261,7 @@ public:
                                                   const Well::InjectionControls& inj_controls,
                                                   const Well::ProductionControls& prod_controls,
                                                   const Scalar WQTotal,
+                                                  WellStateType& well_state,
                                                   DeferredLogger& deferred_logger,
                                                   const bool fixed_control = false,
                                                   const bool fixed_status = false);
@@ -292,6 +297,7 @@ public:
     void wellTesting(const Simulator& simulator,
                      const double simulation_time,
                      const WellGroupHelperType& wgHelper,
+                     WellStateType& well_state,
                      WellTestState& welltest_state,
                      GLiftEclWells& ecl_well_map,
                      std::map<std::string, double>& open_times,
@@ -316,7 +322,6 @@ public:
                                DeferredLogger& deferred_logger);
 
     bool updateWellOperabilityFromWellEq(const Simulator& simulator,
-                                         const WellStateType& well_state,
                                          const WellGroupHelperType& wgHelper,
                                          DeferredLogger& deferred_logger);
 
@@ -339,6 +344,7 @@ public:
 
     void solveWellEquation(const Simulator& simulator,
                            const WellGroupHelperType& wgHelper,
+                           WellStateType& well_state,
                            DeferredLogger& deferred_logger);
 
     const std::vector<RateVector>& connectionRates() const
@@ -362,6 +368,7 @@ public:
                                             const WellInjectionControls& inj_controls,
                                             const WellProductionControls& prod_controls,
                                             const WellGroupHelperType& wgHelper,
+                                            WellStateType& well_state,
                                             DeferredLogger& deferred_logger,
                                             const bool fixed_control = false,
                                             const bool fixed_status = false) = 0;
@@ -414,6 +421,7 @@ protected:
                                           const WellInjectionControls& inj_controls,
                                           const WellProductionControls& prod_controls,
                                           const WellGroupHelperType& wgHelper,
+                                          WellStateType& well_state,
                                           DeferredLogger& deferred_logger) = 0;
 
     virtual void updateIPRImplicit(const Simulator& simulator,
@@ -423,6 +431,7 @@ protected:
     bool iterateWellEquations(const Simulator& simulator,
                               const double dt,
                               const WellGroupHelperType& wgHelper,
+                              WellStateType& well_state,
                               DeferredLogger& deferred_logger);
 
     bool solveWellWithOperabilityCheck(const Simulator& simulator,
@@ -430,6 +439,7 @@ protected:
                                        const Well::InjectionControls& inj_controls,
                                        const Well::ProductionControls& prod_controls,
                                        const WellGroupHelperType& wgHelper,
+                                       WellStateType& well_state,
                                        DeferredLogger& deferred_logger);
 
     std::optional<Scalar>
@@ -437,21 +447,25 @@ protected:
                         const double dt,
                         const WellGroupHelperType& wgHelper,
                         const SummaryState& summary_state,
+                        WellStateType& well_state,
                         DeferredLogger& deferred_logger);
 
     bool solveWellWithBhp(const Simulator& simulator,
                           const double dt,
                           const Scalar bhp,
                           const WellGroupHelperType& wgHelper,
+                          WellStateType& well_state,
                           DeferredLogger& deferred_logger);
 
     bool solveWellWithZeroRate(const Simulator& simulator,
                                const double dt,
                                const WellGroupHelperType& wgHelper,
+                               WellStateType& well_state,
                                DeferredLogger& deferred_logger);
 
     bool solveWellForTesting(const Simulator& simulator,
                              const WellGroupHelperType& wgHelper,
+                             WellStateType& well_state,
                              DeferredLogger& deferred_logger);
 
 

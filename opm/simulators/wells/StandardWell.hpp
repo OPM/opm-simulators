@@ -200,6 +200,7 @@ namespace Opm
                                       const Well::InjectionControls& inj_controls,
                                       const Well::ProductionControls& prod_controls,
                                       const WellGroupHelperType& wgHelper,
+                                      WellStateType& well_state,
                                       DeferredLogger& deferred_logger) override;
 
         // iterate well equations including control switching
@@ -208,6 +209,7 @@ namespace Opm
                                         const Well::InjectionControls& inj_controls,
                                         const Well::ProductionControls& prod_controls,
                                         const WellGroupHelperType& wgHelper,
+                                        WellStateType& well_state,
                                         DeferredLogger& deferred_logger,
                                         const bool fixed_control = false,
                                         const bool fixed_status = false) override;
@@ -323,7 +325,6 @@ namespace Opm
                                     const WellStateType& well_state) const;
 
         bool computeWellPotentialsImplicit(const Simulator& ebos_simulator,
-                                           const WellStateType& well_state,
                                            const WellGroupHelperType& wgHelper,
                                            std::vector<Scalar>& well_potentials,
                                            DeferredLogger& deferred_logger) const;

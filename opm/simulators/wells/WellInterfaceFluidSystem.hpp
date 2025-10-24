@@ -59,6 +59,7 @@ public:
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using ModelParameters = typename WellInterfaceGeneric<Scalar, IndexTraits>::ModelParameters;
     using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using WellStateType = WellState<Scalar, IndexTraits>;
 
     static constexpr int Water = IndexTraits::waterPhaseIdx;
     static constexpr int Oil = IndexTraits::oilPhaseIdx;
@@ -93,11 +94,13 @@ protected:
     bool checkGroupConstraints(const WellGroupHelperType& wgHelper,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
-                               const bool check_guide_rate) const;
+                               const bool check_guide_rate,
+                               WellStateType& well_state) const;
 
     bool checkConstraints(const WellGroupHelperType& wgHelper,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
+                          WellStateType& well_state,
                           DeferredLogger& deferred_logger) const;
 
     std::optional<Scalar>

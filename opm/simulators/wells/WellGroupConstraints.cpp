@@ -120,9 +120,9 @@ checkGroupConstraints(const WellGroupHelperType& wgHelper,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const RateConvFunc& rateConverter,
-                      const bool check_guide_rate) const
+                      const bool check_guide_rate,
+                      WellStateType& well_state) const
 {
-    auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
     const auto& well = well_.wellEcl();
     const int well_index = well_.indexOfWell();
     auto& ws = well_state.well(well_index);

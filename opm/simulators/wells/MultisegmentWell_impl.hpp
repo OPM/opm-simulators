@@ -183,10 +183,10 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellStateWithTarget(const Simulator& simulator,
                               const WellGroupHelperType& wgHelper,
+                              WellStateType& well_state,
                               DeferredLogger&  deferred_logger) const
     {
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
-        Base::updateWellStateWithTarget(simulator, wgHelper, deferred_logger);
+        Base::updateWellStateWithTarget(simulator, wgHelper, well_state, deferred_logger);
         // scale segment rates based on the wellRates
         // and segment pressure based on bhp
         this->scaleSegmentRatesWithWellRates(this->segments_.inlets(),
@@ -310,7 +310,7 @@ namespace Opm
         debug_cost_counter_ = 0;
         bool converged_implicit = false;
         if (this->param_.local_well_solver_control_switching_) {
-            converged_implicit = computeWellPotentialsImplicit(simulator, well_state, wgHelper, well_potentials, deferred_logger);
+            converged_implicit = computeWellPotentialsImplicit(simulator, wgHelper, well_potentials, deferred_logger);
             if (!converged_implicit) {
                 deferred_logger.debug("Implicit potential calculations failed for well "
                                        + this->name() + ",  reverting to original aproach.");
@@ -463,7 +463,7 @@ namespace Opm
         const double dt = simulator.timeStepSize();
         // iterate to get a solution at the given bhp.
         well_copy.iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, wgHelper,
-                                           deferred_logger);
+                                           well_state_copy, deferred_logger);
 
         // compute the potential and store in the flux vector.
         well_flux.clear();
@@ -533,7 +533,6 @@ namespace Opm
     bool
     MultisegmentWell<TypeTag>::
     computeWellPotentialsImplicit(const Simulator& simulator,
-                                  const WellStateType& well_state,
                                   const WellGroupHelperType& wgHelper,
                                   std::vector<Scalar>& well_potentials,
                                   DeferredLogger& deferred_logger) const
@@ -545,7 +544,7 @@ namespace Opm
         well_copy.debug_cost_counter_ = 0;
 
         // store a copy of the well state, we don't want to update the real well state
-        WellStateType well_state_copy = well_state;
+        WellStateType well_state_copy = wgHelper.wellState();
         auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
         auto& ws = well_state_copy.well(this->index_of_well_);
 
@@ -584,9 +583,13 @@ namespace Opm
         // solve equations
         bool converged = false;
         if (this->well_ecl_.isProducer()) {
-            converged = well_copy.solveWellWithOperabilityCheck(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger);
+            converged = well_copy.solveWellWithOperabilityCheck(
+                simulator, dt, inj_controls, prod_controls, wgHelper, well_state_copy, deferred_logger
+            );
         } else {
-            converged = well_copy.iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, wgHelper, deferred_logger);
+            converged = well_copy.iterateWellEqWithSwitching(
+                simulator, dt, inj_controls, prod_controls, wgHelper, well_state_copy, deferred_logger
+            );
         }
 
         // fetch potentials (sign is updated on the outside).
@@ -1493,9 +1496,9 @@ namespace Opm
                              const Well::InjectionControls& inj_controls,
                              const Well::ProductionControls& prod_controls,
                              const WellGroupHelperType& wgHelper,
+                             WellStateType& well_state,
                              DeferredLogger& deferred_logger)
     {
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         const auto& group_state = wgHelper.groupState();
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
@@ -1618,11 +1621,11 @@ namespace Opm
                              const Well::InjectionControls& inj_controls,
                              const Well::ProductionControls& prod_controls,
                              const WellGroupHelperType& wgHelper,
+                             WellStateType& well_state,
                              DeferredLogger& deferred_logger,
                              const bool fixed_control /*false*/,
                              const bool fixed_status /*false*/)
     {
-        auto& well_state = const_cast<WellGroupHelperType&>(wgHelper).wellState();
         const auto& group_state = wgHelper.groupState();
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
 
@@ -1672,10 +1675,10 @@ namespace Opm
             ++its_since_last_switch;
             if (allow_switching && its_since_last_switch >= min_its_after_switch && status_switch_count < max_status_switch){
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
-                bool changed = this->updateWellControlAndStatusLocalIteration(simulator, wgHelper,
-                                                                              inj_controls, prod_controls, wqTotal,
-                                                                              deferred_logger, fixed_control,
-                                                                              fixed_status);
+                bool changed = this->updateWellControlAndStatusLocalIteration(
+                    simulator, wgHelper, inj_controls, prod_controls, wqTotal,
+                    well_state, deferred_logger, fixed_control, fixed_status
+                );
                 if (changed) {
                     its_since_last_switch = 0;
                     ++switch_count;

@@ -92,6 +92,7 @@ namespace Opm {
         /// updating the well state based the current control mode
         void updateWellStateWithTarget(const Simulator& simulator,
                                        const WellGroupHelperType& wgHelper,
+                                       WellStateType& well_state,
                                        DeferredLogger& deferred_logger) const override;
 
         /// updating the segment pressure and rates based the current bhp and well rates
@@ -258,7 +259,6 @@ namespace Opm {
                                     DeferredLogger& deferred_logger) const;
 
         bool computeWellPotentialsImplicit(const Simulator& simulator,
-                                           const WellStateType& well_state,
                                            const WellGroupHelperType& wgHelper,
                                            std::vector<Scalar>& well_potentials,
                                            DeferredLogger& deferred_logger) const;
@@ -270,6 +270,7 @@ namespace Opm {
                                       const Well::InjectionControls& inj_controls,
                                       const Well::ProductionControls& prod_controls,
                                       const WellGroupHelperType& wgHelper,
+                                      WellStateType& well_state,
                                       DeferredLogger& deferred_logger) override;
 
         bool iterateWellEqWithSwitching(const Simulator& simulator,
@@ -277,6 +278,7 @@ namespace Opm {
                                         const Well::InjectionControls& inj_controls,
                                         const Well::ProductionControls& prod_controls,
                                         const WellGroupHelperType& wgHelper,
+                                        WellStateType& well_state,
                                         DeferredLogger& deferred_logger,
                                         const bool fixed_control = false,
                                         const bool fixed_status = false) override;
