@@ -495,7 +495,7 @@ updateGroupIndividualControl(const Group& group,
                              std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                              GroupState<Scalar>& group_state,
                              WellState<Scalar, IndexTraits>& well_state,
-                             DeferredLogger& deferred_logger)
+                             DeferredLogger& deferred_logger) const
 {
     bool changed = false;
     if (group.isInjectionGroup())
