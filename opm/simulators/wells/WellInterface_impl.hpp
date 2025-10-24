@@ -234,7 +234,7 @@ namespace Opm
             changed = this->checkIndividualConstraints(ws, summaryState, deferred_logger);
         } else if (iog == IndividualOrGroup::Group) {
             changed = this->checkGroupConstraints(
-                wgHelper, schedule, summaryState, true, well_state
+                wgHelper, schedule, summaryState, true, well_state, deferred_logger
             );
         } else {
             assert(iog == IndividualOrGroup::Both);
@@ -320,7 +320,7 @@ namespace Opm
                     }
                     if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
                         changed = changed || this->checkGroupConstraints(
-                            wgHelper, schedule, summary_state, false, well_state
+                            wgHelper, schedule, summary_state, false, well_state, deferred_logger
                         );
                     }
 

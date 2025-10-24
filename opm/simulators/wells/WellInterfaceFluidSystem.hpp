@@ -95,7 +95,8 @@ protected:
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const bool check_guide_rate,
-                               WellStateType& well_state) const;
+                               WellStateType& well_state,
+                               DeferredLogger& deferred_logger) const;
 
     bool checkConstraints(const WellGroupHelperType& wgHelper,
                           const Schedule& schedule,
