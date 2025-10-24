@@ -220,21 +220,28 @@ activeProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
     }
 
     if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
-        const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-        const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-        Scalar current_rate = -ws.surface_rates[oil_pos];
-        current_rate -= ws.surface_rates[water_pos];
+        Scalar current_rate = 0.;
+        if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+            const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+            current_rate -= ws.surface_rates[oil_pos];
+        }
+        if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+            const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+            current_rate -= ws.surface_rates[water_pos];
+        }
 
         bool skip = false;
-        if (controls.liquid_rate == controls.oil_rate) {
+        if (controls.liquid_rate == controls.oil_rate && pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+            const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
             const Scalar current_water_rate = ws.surface_rates[water_pos];
             if (std::abs(current_water_rate) < 1e-12) {
                 skip = true;
                 deferred_logger.debug("LRAT_ORAT_WELL", "Well " + well_.name() + " The LRAT target is equal the ORAT target and the water rate is zero, skip checking LRAT");
             }
         }
-        if (!skip && controls.liquid_rate < current_rate)
+        if (!skip && controls.liquid_rate < current_rate) {
             return Well::ProducerCMode::LRAT;
+        }
     }
 
     if (controls.hasControl(Well::ProducerCMode::RESV) && currentControl != Well::ProducerCMode::RESV) {
