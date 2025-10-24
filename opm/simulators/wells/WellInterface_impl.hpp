@@ -575,9 +575,11 @@ namespace Opm
         const auto& summary_state = simulator.vanguard().summaryState();
         bool converged = true;
         auto& ws = well_state.well(this->index_of_well_);
-        // if well is stopped, check if we can reopen
+        // if well is stopped, check if we can reopen with explicit fraction
         if (this->wellIsStopped()) {
             this->openWell();
+            const bool use_vfpexplicit = this->operability_status_.use_vfpexplicit;
+            this->operability_status_.use_vfpexplicit = true;
             auto bhp_target = estimateOperableBhp(simulator, dt, well_state, summary_state, deferred_logger);
             if (!bhp_target.has_value()) {
                 // no intersection with ipr
@@ -596,6 +598,7 @@ namespace Opm
                 const Scalar bhp = std::max(bhp_target.value(),
                                             static_cast<Scalar>(prod_controls.bhp_limit));
                 solveWellWithBhp(simulator, dt, bhp, well_state, deferred_logger);
+                this->operability_status_.use_vfpexplicit = use_vfpexplicit;
             }
         }
         // solve well-equation
@@ -985,6 +988,20 @@ namespace Opm
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
         if (!well_operable) {
             this->stopWell();
+            try {
+                solveWellWithZeroRate(simulator, dt, well_state, deferred_logger);
+            } catch (const std::exception& e) {
+                const std::string msg = fmt::format("well {}: solveWellWithZeroRate() failed "
+                                                    "during attempt to solve with zero rate for well: ",
+                                                    this->name(), e.what());
+                deferred_logger.info(msg);
+                // we set the rate to zero to make sure the well dont contribute to the group rate
+                auto& ws = well_state.well(this->indexOfWell());
+                const int np = well_state.numPhases();
+                for (int p = 0; p < np; ++p) {
+                    ws.surface_rates[p] = Scalar{0.0};
+                }
+            }
             if (old_well_operable) {
                 deferred_logger.debug(" well " + this->name() + " gets STOPPED during iteration ");
                 changed_to_stopped_this_step_ = true;
