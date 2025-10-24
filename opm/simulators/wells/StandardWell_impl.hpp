@@ -1530,6 +1530,9 @@ namespace Opm
         // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
         // to replace the original one
         WellStateType well_state_copy = simulator.problem().wellModel().wellState();
+        // Ensure that wgHelper uses well_state_copy as WellState for the rest of this function,
+        // and the guard ensures that the original well state is restored at scope exit, i.e. at
+        // the end of this function.
         auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
 
         // Get the current controls.
@@ -1630,6 +1633,9 @@ namespace Opm
 
         // store a copy of the well state, we don't want to update the real well state
         WellStateType well_state_copy = wgHelper.wellState();
+        // Ensure that wgHelper uses well_state_copy as WellState for the rest of this function,
+        // and the guard ensures that the original well state is restored at scope exit, i.e. at
+        // the end of this function.
         auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
         auto& ws = well_state_copy.well(this->index_of_well_);
 
