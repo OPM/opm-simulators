@@ -164,6 +164,8 @@ public:
 
     std::vector<std::string> groupChainTopBot(const std::string& bottom, const std::string& top) const;
 
+    /// returns the number of wells that are actively under group control for a given group with name given
+    /// by group_name
     int groupControlledWells(
         const std::string& group_name,
         const std::string& always_included_child,
@@ -217,6 +219,8 @@ public:
         GroupState<Scalar>& group_state
     ) const;
 
+    /// update the number of wells that are actively under group control for a given group with name given by group_name
+    /// its main usage is to detect cases where there is no wells under group control
     int updateGroupControlledWells(
         const bool is_production_group, const Phase injection_phase, GroupState<Scalar>& group_state
     ) const;
@@ -253,6 +257,7 @@ public:
         const Scalar scale, const Group& group, bool is_injector, WellState<Scalar, IndexTraits>& well_state
     ) const;
 
+    /// Returns the name of the worst offending well and its fraction (i.e. violated_phase / preferred_phase)
     std::pair<std::optional<std::string>, Scalar> worstOffendingWell(
         const Group& group,
         const Group::ProductionCMode& offended_control,
@@ -263,6 +268,7 @@ private:
 
     GuideRate::RateVector getGuideRateVector_(const std::vector<Scalar>& rates) const;
 
+    /// check if well/group bottom is a sub well/group of the group top
     bool isInGroupChainTopBot_(const std::string& bottom, const std::string& top) const;
 
     int phaseToActivePhaseIdx_(const Phase phase) const;
