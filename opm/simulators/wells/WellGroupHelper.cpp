@@ -39,9 +39,7 @@ WellGroupHelper<Scalar, IndexTraits>::WellGroupHelper(WellState<Scalar, IndexTra
                                                       const Schedule& schedule,
                                                       const SummaryState& summary_state,
                                                       const GuideRate& guide_rate,
-                                                      const PhaseUsageInfo<IndexTraits>& phase_usage_info
-
-                                                      )
+                                                      const PhaseUsageInfo<IndexTraits>& phase_usage_info)
     : well_state_ {&well_state}
     , group_state_ {&group_state}
     , schedule_ {schedule}
