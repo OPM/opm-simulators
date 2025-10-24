@@ -1478,9 +1478,9 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
-            // Translate injector type from control to Phase.
-            Scalar group_target = std::numeric_limits<Scalar>::max();
             if (well->isProducer()) {
+                std::pair<WellProducerCMode, Scalar> group_target;
+                group_target.second = std::numeric_limits<Scalar>::max(); 
                 group_target =
                     WellGroupHelpersType::getWellGroupTargetProducer(well->name(),
                                             well->wellEcl().groupName(),
@@ -1495,6 +1495,9 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                             summaryState_,
                                             resv_coeff,
                                             deferred_logger);
+                auto& ws_update = this->wellState().well(well->indexOfWell());
+                ws_update.production_cmode_group_translated = group_target.first;
+                ws_update.group_target = group_target.second;
             } else {
                 const auto& well_controls = well->wellEcl().injectionControls(summaryState_);
                 auto injectorType = well_controls.injector_type;
@@ -1518,6 +1521,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                 default:
                     throw std::logic_error("MULTI-phase injection is not supported, but was requested for well " + well->name());
                 }
+                std::pair<WellInjectorCMode, Scalar> group_target;
                 group_target =
                     WellGroupHelpersType::getWellGroupTargetInjector(well->name(),
                                             well->wellEcl().groupName(),
@@ -1533,9 +1537,10 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                             summaryState_,
                                             resv_coeff,
                                             deferred_logger);
+                auto& ws_update = this->wellState().well(well->indexOfWell());
+                ws_update.injection_cmode_group_translated = group_target.first;
+                ws_update.group_target = group_target.second;
             }
-            auto& ws_update = this->wellState().well(well->indexOfWell());
-            ws_update.group_target = group_target;
         }
     }
 }

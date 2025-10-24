@@ -272,7 +272,7 @@ public:
                              const bool check_guide_rate,
                              DeferredLogger& deferred_logger);
 
-    static Scalar
+    static std::pair<WellInjectorCMode, Scalar>
     getWellGroupTargetInjector(const std::string& name,
                                const std::string& parent,
                                const Group& group,
@@ -323,7 +323,7 @@ public:
                               const std::vector<Scalar>& resv_coeff,
                               const bool check_guide_rate,
                               DeferredLogger& deferred_logger);
-    static Scalar
+    static std::pair<WellProducerCMode, Scalar>
     getWellGroupTargetProducer(const std::string& name,
                                const std::string& parent,
                                const Group& group,
