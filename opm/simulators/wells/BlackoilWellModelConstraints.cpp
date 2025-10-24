@@ -251,13 +251,15 @@ checkGroupProductionConstraints(const Group& group,
 
     // it is not producing the current control target
     bool under_producing = false;
-    constexpr Scalar tolerance = 0.02; // 2% tolerance to determine whether the group is under producing
+    constexpr Scalar tolerance = 0.1; // 10% tolerance to determine whether the group is under producing
     if (group.has_control(Group::ProductionCMode::ORAT))
     {
         const Scalar current_rate = reducedSumSurface(oilPhaseIdx);
-        deferred_logger.debug("group control ORAT check ",
-                              fmt::format("group control ORAT check, GROUP {} current oil rate: {}, target oil rate: {}",
+        deferred_logger.debug("group control ORAT check",
+                              fmt::format("group control ORAT check, GROUP {} "
+                                          "current control mode: {}, current oil rate: {}, target oil rate: {}",
                                           group.name(),
+                                          Group::ProductionCMode2String(currentControl),
                                           current_rate,
                                           controls.oil_target));
 
@@ -291,14 +293,16 @@ checkGroupProductionConstraints(const Group& group,
     if (group.has_control(Group::ProductionCMode::GRAT))
     {
         const Scalar current_rate = reducedSumSurface(gasPhaseIdx);
+        deferred_logger.debug("group control GRAT check",
+                              fmt::format("group control GRAT check, GROUP {} "
+                                          "current control mode: {}, current gas rate: {}, target gas rate: {}",
+                                          group.name(),
+                                          Group::ProductionCMode2String(currentControl),
+                                          current_rate,
+                                          controls.gas_target));
 
         if (currentControl != Group::ProductionCMode::GRAT)
         {
-            deferred_logger.debug("group control GRAT check ",
-                                  fmt::format("group control GRAT check, GROUP {} current gas rate: {}, target gas rate: {}",
-                                              group.name(),
-                                              current_rate,
-                                              controls.gas_target));
             if (controls.gas_target < current_rate  ) {
                 Scalar scale = 1.0;
                 if (current_rate > 1e-12)
