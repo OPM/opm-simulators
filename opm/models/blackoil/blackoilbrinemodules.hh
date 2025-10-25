@@ -448,13 +448,6 @@ public:
             const auto& permfactTable = BrineModule::permfactTable(elemCtx, dofIdx, timeIdx);
 
             permFactor_ = permfactTable.eval(porosityFactor);
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                asImp_().mobility_[phaseIdx] *= permFactor_;
-            }
         }
     }
 
