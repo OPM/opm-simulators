@@ -461,6 +461,11 @@ set(_pinch_cases
   PINCH_MULTZ_ALL_BARRIER
   PINCH_MULTZ-_ALL_BARRIER
   PINCH10_NOPINCH
+  # We only add the PINCH_MULTREGT tests where the multipliers are not 0 or 1.
+  # to save time.
+  PINCH_MULTREGT_02
+  PINCH_MULTREGT_05
+  PINCH_MULTREGT_08
   T1A_GAP T1A_NOGAP T1A_NOPINCH
   T1A1_NOGAP
   T2A1_GAP
