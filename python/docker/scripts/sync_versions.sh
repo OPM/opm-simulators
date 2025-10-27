@@ -98,8 +98,8 @@ fi
 README_FILE="$DOCKER_DIR/test_wheels/scripts/README.md"
 if [ -f "$README_FILE" ]; then
     log_info "📝 Updating $README_FILE..."
-    # Update the supported versions line
-    sed -i "s/- Supported: \`[^*]*\`/- Supported: \`$DEFAULT_VERSIONS\`/" "$README_FILE"
+    # Update the supported versions line (matches only Python version format: digits, dots, commas)
+    sed -i "s/- Supported: \`[0-9,.]*\`/- Supported: \`$DEFAULT_VERSIONS\`/" "$README_FILE"
     log_success "Updated test_wheels README.md supported versions"
 else
     log_warning "README.md not found at $README_FILE"
