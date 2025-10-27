@@ -61,7 +61,7 @@ ARG target_common="opmcommon_python"
 ARG target_simulators="simulators"
 # Default Python versions - can be overridden via build-arg or read from docker/python_versions.json
 # NOTE: The list is maintained in docker/python_versions.json and docker/scripts/sync_versions.sh
-ARG python_versions="3.8,3.9,3.10,3.11,3.12,3.13"
+ARG python_versions="3.8,3.9,3.10,3.11,3.12,3.13,3.14"
 # Finally copy all source files - only needed for wheel generation
 ADD . .
 RUN /bin/bash docker/scripts/generate-pypi-package.sh "$version_common" "$version_grid" "$version_simulators" "$build_jobs" "$version_tag" $libtype "$python_versions" "$target_common" "$target_simulators"

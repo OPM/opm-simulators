@@ -66,6 +66,7 @@ all_python_versions[3.10]="cp310-cp310:/opt/python/cp310-cp310/bin/python"
 all_python_versions[3.11]="cp311-cp311:/opt/python/cp311-cp311/bin/python"
 all_python_versions[3.12]="cp312-cp312:/opt/python/cp312-cp312/bin/python"
 all_python_versions[3.13]="cp313-cp313:/opt/python/cp313-cp313/bin/python"
+all_python_versions[3.14]="cp314-cp314:/opt/python/cp314-cp314/bin/python"
 
 # Build python_versions array from requested versions
 IFS=',' read -ra VERSIONS_ARRAY <<< "$PYTHON_VERSIONS"
@@ -76,7 +77,7 @@ for version in "${VERSIONS_ARRAY[@]}"; do
         python_versions[$tag]=$path
         echo "Added Python $version (tag: $tag, path: $path)"
     else
-        echo "Warning: Python version $version not supported. Supported: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13"
+        echo "Warning: Python version $version not supported. Supported: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14"
     fi
 done
 
