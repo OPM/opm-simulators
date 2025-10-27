@@ -2334,7 +2334,7 @@ namespace Opm
     std::optional<typename StandardWell<TypeTag>::Scalar>
     StandardWell<TypeTag>::
     computeBhpAtThpLimitInj(const Simulator& simulator,
-                            const WellGroupHelperType& wgHelper,
+                            [[maybe_unused]] const WellGroupHelperType& wgHelper,
                             const SummaryState& summary_state,
                             DeferredLogger& deferred_logger) const
     {
@@ -2342,7 +2342,6 @@ namespace Opm
         // with MultisegmentWell::computeBhpAtThpLimitInj which uses it in fratesIter lambda.
         // This maintains parallel API structure between well types and allows for future
         // enhancements without breaking the interface.
-        static_cast<void>(wgHelper);
 
         // Make the frates() function.
         auto frates = [this, &simulator, &deferred_logger](const Scalar bhp) {
