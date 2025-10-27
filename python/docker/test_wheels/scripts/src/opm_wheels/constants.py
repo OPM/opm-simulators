@@ -36,7 +36,7 @@ def _get_python_versions_for_enum():
         return list(config["supported_versions"].keys())
     except Exception:
         # Fallback to hardcoded values
-        return ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        return ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
 # Dynamically create PythonVersion enum using functional API
 _python_versions = _get_python_versions_for_enum()
