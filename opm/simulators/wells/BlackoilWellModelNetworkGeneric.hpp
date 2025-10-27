@@ -42,8 +42,7 @@ template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelNetworkGeneric
 {
 public:
-    BlackoilWellModelNetworkGeneric(BlackoilWellModelGeneric<Scalar,IndexTraits>& well_model,
-                                    const std::optional<std::map<std::string, double>>& restart_pressures);
+    BlackoilWellModelNetworkGeneric(BlackoilWellModelGeneric<Scalar,IndexTraits>& well_model);
 
     virtual ~BlackoilWellModelNetworkGeneric() = default;
 
@@ -57,6 +56,8 @@ public:
     // do not use, only needed for serialization testing
     void setNodePressures(const std::map<std::string, Scalar>& values)
     { node_pressures_ = values; }
+
+    void setFromRestart(const std::optional<std::map<std::string, double>>& restart_pressures);
 
     /// Checks if network is active (at least one network well on prediction).
     void updateActiveState(const int report_step);

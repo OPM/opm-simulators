@@ -32,7 +32,6 @@
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelWBP.hpp>
 #include <opm/simulators/wells/ConnectionIndexMap.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
@@ -61,6 +60,7 @@ namespace Opm {
     class DeferredLogger;
     class EclipseState;
     template<typename Scalar, typename IndexTraits> class BlackoilWellModelGasLiftGeneric;
+    template<typename Scalar, typename IndexTraits> class BlackoilWellModelNetworkGeneric;
     template<typename Scalar, typename IndexTraits> class GasLiftGroupInfo;
     template<typename Scalar, typename IndexTraits> class GasLiftSingleWellGeneric;
     template<class Scalar> class GasLiftWellState;
@@ -98,6 +98,7 @@ class BlackoilWellModelGeneric
 public:
     BlackoilWellModelGeneric(Schedule& schedule,
                              BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gaslift,
+                             BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>& network,
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsageInfo<IndexTraits>& phase_usage,
@@ -206,11 +207,7 @@ public:
       with storeWellState() can then subsequently be recovered with the
       resetWellState() method.
     */
-    void commitWGState()
-    {
-        this->last_valid_wgstate_ = this->active_wgstate_;
-        this->network_.commitState();
-    }
+    void commitWGState();
 
     data::GroupAndNetworkValues groupAndNetworkData(const int reportStepIdx) const;
 
@@ -257,7 +254,7 @@ public:
         serializer(local_shut_wells_);
         serializer(closed_this_step_);
         serializer(guideRate_);
-        serializer(network_);
+        serializer(genNetwork_);
         serializer(prev_inj_multipliers_);
         serializer(active_wgstate_);
         serializer(last_valid_wgstate_);
@@ -296,6 +293,17 @@ public:
     {
         return *vfp_properties_;
     }
+
+    void updateAndCommunicateGroupData(const int reportStepIdx,
+                                       const int iterationIdx,
+                                       const Scalar tol_nupcol,
+                                       // we only want to update the wellgroup target
+                                       // after the groups have found their controls
+                                       const bool update_wellgrouptarget,
+                                       DeferredLogger& deferred_logger);
+
+    const EclipseState& eclState() const
+    { return eclState_; }
 
 protected:
     /*
@@ -353,7 +361,7 @@ protected:
     void resetWGState()
     {
         this->active_wgstate_ = this->last_valid_wgstate_;
-        this->network_.resetState();
+        this->genNetwork_.resetState();
         // Update helper pointers to reference the restored active state
         this->group_state_helper_.updateState(this->wellState(), this->groupState());
     }
@@ -440,12 +448,6 @@ protected:
                                      const int reportStepIdx,
                                      const int max_number_of_group_switch,
                                      const bool update_group_switching_log);
-
-    void updateAndCommunicateGroupData(const int reportStepIdx,
-                                       const int iterationIdx,
-                                       const Scalar tol_nupcol,
-                                       const bool update_wellgrouptarget, // we only want to update the wellgrouptarget after the groups have found their controls
-                                       DeferredLogger& deferred_logger);
 
     void inferLocalShutWells();
 
@@ -577,7 +579,7 @@ protected:
     // Store map of group name and close offending well for output
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
 
-    BlackoilWellModelNetworkGeneric<Scalar,IndexTraits> network_;
+    BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& genNetwork_;
 
 private:
     WellInterfaceGeneric<Scalar, IndexTraits>* getGenWell(const std::string& well_name);

@@ -41,9 +41,15 @@ namespace Opm {
 
 template<typename Scalar, typename IndexTraits>
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
-BlackoilWellModelNetworkGeneric(BlackoilWellModelGeneric<Scalar,IndexTraits>& well_model,
-                                const std::optional<std::map<std::string, double>>& node_pressures)
+BlackoilWellModelNetworkGeneric(BlackoilWellModelGeneric<Scalar,IndexTraits>& well_model)
     : well_model_(well_model)
+{
+    this->setFromRestart(well_model_.eclState().getRestartNetworkPressures());
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+setFromRestart(const std::optional<std::map<std::string, double>>& node_pressures)
 {
     if (node_pressures.has_value()) {
         if constexpr (std::is_same_v<Scalar,double>) {

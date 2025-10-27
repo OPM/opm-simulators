@@ -30,7 +30,6 @@
 #endif
 
 #include <opm/grid/utility/cartesianToCompressed.hpp>
-#include <opm/common/utility/numeric/RootFinders.hpp>
 
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
@@ -47,10 +46,7 @@
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
-#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
-#include <opm/simulators/wells/WellGroupControls.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
-#include <opm/simulators/wells/TargetCalculator.hpp>
 
 #ifdef RESERVOIR_COUPLING_ENABLED
 #include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
@@ -78,11 +74,12 @@ namespace Opm {
     BlackoilWellModel(Simulator& simulator)
         : WellConnectionModule(*this, simulator.gridView().comm())
         , BlackoilWellModelGeneric<Scalar, IndexTraits>(simulator.vanguard().schedule(),
-                                           gaslift_,
-                                           simulator.vanguard().summaryState(),
-                                           simulator.vanguard().eclState(),
-                                           FluidSystem::phaseUsage(),
-                                           simulator.gridView().comm())
+                                                        gaslift_,
+                                                        network_,
+                                                        simulator.vanguard().summaryState(),
+                                                        simulator.vanguard().eclState(),
+                                                        FluidSystem::phaseUsage(),
+                                                        simulator.gridView().comm())
         , simulator_(simulator)
         , guide_rate_handler_{
             *this,
@@ -91,6 +88,7 @@ namespace Opm {
             simulator.vanguard().grid().comm()
         }
         , gaslift_(this->terminal_output_)
+        , network_(*this)
     {
         local_num_cells_ = simulator_.gridView().size(0);
 
@@ -1049,8 +1047,9 @@ namespace Opm {
         }
 
         this->well_container_generic_.clear();
-        for (auto& w : well_container_)
+        for (auto& w : well_container_) {
             this->well_container_generic_.push_back(w.get());
+        }
 
         const auto& network = this->schedule()[report_step].network();
         const auto& node_pressures = this->network_.nodePressures();
@@ -1151,36 +1150,6 @@ namespace Opm {
         const int pos = static_cast<int>(std::distance(this->wells_ecl_.begin(), it));
         return this->createWellPointer(pos, report_step);
     }
-
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    doPreStepNetworkRebalance(DeferredLogger& deferred_logger)
-    {
-        OPM_TIMEFUNCTION();
-        const double dt = this->simulator_.timeStepSize();
-        // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
-        auto& well_state = this->wellState();
-
-        const bool changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
-        assembleWellEqWithoutIteration(dt, deferred_logger);
-        const bool converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
-
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (auto& well : this->well_container_) {
-            well->solveEqAndUpdateWellState(simulator_, well_state, deferred_logger);
-        }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
-                                    this->simulator_.vanguard().grid().comm());
-
-        if (!converged) {
-            const std::string msg = fmt::format("Initial (pre-step) network balance did not converge.");
-            deferred_logger.warning(msg);
-        }
-    }
-
 
 
 
@@ -1330,10 +1299,9 @@ namespace Opm {
         // and in prepareWellsBeforeAssembling during well solves.
         bool well_group_control_changed = updateWellControls(local_deferredLogger);
         const auto [more_inner_network_update, network_imbalance] =
-                updateNetworks(mandatory_network_balance,
-                               local_deferredLogger,
-                               relax_network_tolerance);
-
+                this->network_.update(mandatory_network_balance,
+                                      local_deferredLogger,
+                                      relax_network_tolerance);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1373,200 +1341,6 @@ namespace Opm {
         const bool more_network_update = this->network_.shouldBalance(reportStepIdx, iterationIdx) &&
                     (more_inner_network_update || well_group_control_changed || alq_updated);
         return {well_group_control_changed, more_network_update, network_imbalance};
-    }
-
-    // This function is to be used for well groups in an extended network that act as a subsea manifold
-    // The wells of such group should have a common THP and total phase rate(s) obeying (if possible)
-    // the well group constraint set by GCONPROD
-    template <typename TypeTag>
-    bool
-    BlackoilWellModel<TypeTag>::
-    computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
-    {
-        OPM_TIMEFUNCTION();
-        const int reportStepIdx = this->simulator_.episodeIndex();
-        const auto& network = this->schedule()[reportStepIdx].network();
-        const auto& balance = this->schedule()[reportStepIdx].network_balance();
-        const Scalar thp_tolerance = balance.thp_tolerance();
-
-        if (!network.active()) {
-            return false;
-        }
-
-        auto& well_state = this->wellState();
-        auto& group_state = this->groupState();
-
-        bool well_group_thp_updated = false;
-        for (const std::string& nodeName : network.node_names()) {
-            const bool has_choke = network.node(nodeName).as_choke();
-            if (has_choke) {
-                const auto& summary_state = this->simulator_.vanguard().summaryState();
-                const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
-
-                //TODO: Auto choke combined with RESV control is not supported
-                std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
-                Scalar gratTargetFromSales = 0.0;
-                if (group_state.has_grat_sales_target(group.name()))
-                    gratTargetFromSales = group_state.grat_sales_target(group.name());
-
-                const auto ctrl = group.productionControls(summary_state);
-                auto cmode_tmp = ctrl.cmode;
-                Scalar target_tmp{0.0};
-                bool fld_none = false;
-                if (cmode_tmp == Group::ProductionCMode::FLD || cmode_tmp == Group::ProductionCMode::NONE) {
-                    fld_none = true;
-                    // Target is set for an ancestor group. Target for autochoke group to be
-                    // derived via group guide rates
-                    const Scalar efficiencyFactor = 1.0;
-                    const Group& parentGroup = this->schedule().getGroup(group.parent(), reportStepIdx);
-                    auto target = WellGroupControls<Scalar, IndexTraits>::getAutoChokeGroupProductionTargetRate(
-                                                            group.name(),
-                                                            parentGroup,
-                                                            this->groupStateHelper(),
-                                                            this->schedule(),
-                                                            summary_state,
-                                                            resv_coeff,
-                                                            efficiencyFactor,
-                                                            reportStepIdx,
-                                                            &this->guideRate_,
-                                                            local_deferredLogger);
-                    target_tmp = target.first;
-                    cmode_tmp = target.second;
-                }
-                const auto cmode = cmode_tmp;
-                using TargetCalculatorType =  GroupStateHelpers
-::TargetCalculator<Scalar, IndexTraits>;
-                TargetCalculatorType tcalc(cmode, FluidSystem::phaseUsage(), resv_coeff,
-                                           gratTargetFromSales, nodeName, group_state,
-                                           group.has_gpmaint_control(cmode));
-                if (!fld_none)
-                {
-                    // Target is set for the autochoke group itself
-                    target_tmp = tcalc.groupTarget(ctrl, local_deferredLogger);
-                }
-
-                const Scalar orig_target = target_tmp;
-
-                auto mismatch = [&] (auto group_thp) {
-                    Scalar group_rate(0.0);
-                    Scalar rate(0.0);
-                    for (auto& well : this->well_container_) {
-                        std::string well_name = well->name();
-                        auto& ws = well_state.well(well_name);
-                        if (group.hasWell(well_name)) {
-                            well->setDynamicThpLimit(group_thp);
-                            const Well& well_ecl = this->wells_ecl_[well->indexOfWell()];
-                            const auto inj_controls = Well::InjectionControls(0);
-                            const auto prod_controls = well_ecl.productionControls(summary_state);
-                            well->iterateWellEqWithSwitching(
-                                this->simulator_, dt, inj_controls, prod_controls, this->groupStateHelper(), this->wellState(), local_deferredLogger,
-                                /*fixed_control=*/false,
-                                /*fixed_status=*/false,
-                                /*solving_with_zero_rate=*/false
-                            );
-                            rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
-                            group_rate += rate;
-                        }
-                    }
-                    return (group_rate - orig_target)/orig_target;
-                };
-
-                const auto upbranch = network.uptree_branch(nodeName);
-                const auto& node_pressures = this->network_.nodePressures();
-                const auto it = node_pressures.find((*upbranch).uptree_node());
-                const Scalar nodal_pressure = it->second;
-                Scalar well_group_thp = nodal_pressure;
-
-                std::optional<Scalar> autochoke_thp;
-                if (auto iter = this->well_group_thp_calc_.find(nodeName); iter != this->well_group_thp_calc_.end()) {
-                    autochoke_thp = this->well_group_thp_calc_.at(nodeName);
-                }
-
-                using WellBhpThpCalculatorType = WellBhpThpCalculator<Scalar, IndexTraits>;
-                //Find an initial bracket
-                std::array<Scalar, 2> range_initial;
-                if (!autochoke_thp.has_value()){
-                    Scalar min_thp, max_thp;
-                    // Retrieve the terminal pressure of the associated root of the manifold group
-                    std::string node_name =  nodeName;
-                    while (!network.node(node_name).terminal_pressure().has_value()) {
-                        auto branch = network.uptree_branch(node_name).value();
-                        node_name = branch.uptree_node();
-                    }
-                    min_thp = network.node(node_name).terminal_pressure().value();
-                    WellBhpThpCalculatorType::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
-                    // Narrow down the bracket
-                    Scalar low1, high1;
-                    std::array<Scalar, 2> range = {Scalar{0.9}*min_thp, Scalar{1.1}*max_thp};
-                    std::optional<Scalar> appr_sol;
-                    WellBhpThpCalculatorType::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
-                    min_thp = low1;
-                    max_thp = high1;
-                    range_initial = {min_thp, max_thp};
-                }
-
-                if (!autochoke_thp.has_value() || autochoke_thp.value() > nodal_pressure) {
-                    // The bracket is based on the initial bracket or on a range based on a previous calculated group thp
-                    std::array<Scalar, 2> range = autochoke_thp.has_value() ?
-                        std::array<Scalar, 2>{Scalar{0.9} * autochoke_thp.value(),
-                                              Scalar{1.1} * autochoke_thp.value()} : range_initial;
-                    Scalar low, high;
-                    std::optional<Scalar> approximate_solution;
-                    const Scalar tolerance1 = thp_tolerance;
-                    local_deferredLogger.debug("Using brute force search to bracket the group THP");
-                    const bool finding_bracket = WellBhpThpCalculatorType::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
-
-                    if (approximate_solution.has_value()) {
-                        autochoke_thp = *approximate_solution;
-                        local_deferredLogger.debug("Approximate group THP value found: "  + std::to_string(autochoke_thp.value()));
-                    } else if (finding_bracket) {
-                        const Scalar tolerance2 = thp_tolerance;
-                        const int max_iteration_solve = 100;
-                        int iteration = 0;
-                        autochoke_thp = RegulaFalsiBisection<ThrowOnError>::
-                                         solve(mismatch, low, high, max_iteration_solve, tolerance2, iteration);
-                        local_deferredLogger.debug(" bracket = [" + std::to_string(low) + ", " + std::to_string(high) + "], " +
-                                                   "iteration = " + std::to_string(iteration));
-                        local_deferredLogger.debug("Group THP value = " + std::to_string(autochoke_thp.value()));
-                    } else {
-                        autochoke_thp.reset();
-                        local_deferredLogger.debug("Group THP solve failed due to bracketing failure");
-                    }
-                }
-                 if (autochoke_thp.has_value()) {
-                    well_group_thp_calc_[nodeName] = autochoke_thp.value();
-                    // Note: The node pressure of the auto-choke node is set to well_group_thp in computeNetworkPressures()
-                    // and must be larger or equal to the pressure of the uptree node of its branch.
-                    well_group_thp = std::max(autochoke_thp.value(), nodal_pressure);
-                }
-
-                for (auto& well : this->well_container_) {
-                    std::string well_name = well->name();
-
-                    if (well->isInjector() || !well->wellEcl().predictionMode())
-                        continue;
-
-                    if (group.hasWell(well_name)) {
-                        well->setDynamicThpLimit(well_group_thp);
-                    }
-                    const auto& ws = this->wellState().well(well->indexOfWell());
-                    const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
-                    if (thp_is_limit) {
-                        well->prepareWellBeforeAssembling(
-                            this->simulator_, dt, this->groupStateHelper(), this->wellState(), local_deferredLogger
-                        );
-                    }
-                }
-
-                // Use the group THP in computeNetworkPressures().
-                const auto& current_well_group_thp = group_state.is_autochoke_group(nodeName) ? group_state.well_group_thp(nodeName) : 1e30;
-                if (std::abs(current_well_group_thp - well_group_thp) > balance.pressure_tolerance()) {
-                    well_group_thp_updated = true;
-                    group_state.update_well_group_thp(nodeName, well_group_thp);
-                }
-            }
-        }
-        return well_group_thp_updated;
     }
 
     template<typename TypeTag>
@@ -1952,71 +1726,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    std::tuple<bool, typename BlackoilWellModel<TypeTag>::Scalar>
-    BlackoilWellModel<TypeTag>::
-    updateNetworks(const bool mandatory_network_balance,
-                   DeferredLogger& deferred_logger,
-                   const bool relax_network_tolerance)
-    {
-        OPM_TIMEFUNCTION();
-        const int episodeIdx = simulator_.episodeIndex();
-        const auto& network = this->schedule()[episodeIdx].network();
-        if (!this->wellsActive() && !network.active()) {
-            return {false, 0.0};
-        }
-
-        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
-        const auto& comm = simulator_.vanguard().grid().comm();
-
-        // network related
-        Scalar network_imbalance = 0.0;
-        bool more_network_update = false;
-        if (this->network_.shouldBalance(episodeIdx, iterationIdx) || mandatory_network_balance) {
-            OPM_TIMEBLOCK(BalanceNetwork);
-            const double dt = this->simulator_.timeStepSize();
-            // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
-            const bool well_group_thp_updated = computeWellGroupThp(dt, deferred_logger);
-            const int max_number_of_sub_iterations = param_.network_max_sub_iterations_;
-            const Scalar network_pressure_update_damping_factor = param_.network_pressure_update_damping_factor_;
-            const Scalar network_max_pressure_update = param_.network_max_pressure_update_in_bars_ * unit::barsa;
-            bool more_network_sub_update = false;
-            for (int i = 0; i < max_number_of_sub_iterations; i++) {
-                const auto local_network_imbalance =
-                    this->network_.updatePressures(episodeIdx,
-                                                   network_pressure_update_damping_factor,
-                                                   network_max_pressure_update);
-                network_imbalance = comm.max(local_network_imbalance);
-                const auto& balance = this->schedule()[episodeIdx].network_balance();
-                constexpr Scalar relaxation_factor = 10.0;
-                const Scalar tolerance = relax_network_tolerance ? relaxation_factor * balance.pressure_tolerance() : balance.pressure_tolerance();
-                more_network_sub_update = this->network_.active() && network_imbalance > tolerance;
-                if (!more_network_sub_update)
-                    break;
-
-                const auto& node_pressures = this->network_.nodePressures();
-                for (const auto& well : well_container_) {
-                    if (well->isInjector() || !well->wellEcl().predictionMode())
-                         continue;
-
-                    const auto it = node_pressures.find(well->wellEcl().groupName());
-                    if (it != node_pressures.end()) {
-                        well->prepareWellBeforeAssembling(this->simulator_,
-                                                          dt,
-                                                          this->groupStateHelper(),
-                                                          this->wellState(),
-                                                          deferred_logger);
-                    }
-                }
-                this->updateAndCommunicateGroupData(episodeIdx, iterationIdx, param_.nupcol_group_rate_tolerance_,
-                                                    /*update_wellgrouptarget*/ true, deferred_logger);
-            }
-            more_network_update = more_network_sub_update || well_group_thp_updated;
-        }
-        return { more_network_update, network_imbalance };
-    }
-
-
-    template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     updateAndCommunicate(const int reportStepIdx,
@@ -2320,7 +2029,9 @@ namespace Opm {
         updatePrimaryVariables(deferred_logger);
 
         // Actually do the pre-step network rebalance, using the updated well states and initial solutions
-        if (do_prestep_network_rebalance) doPreStepNetworkRebalance(deferred_logger);
+        if (do_prestep_network_rebalance) {
+            network_.doPreStepRebalance(deferred_logger);
+        }
     }
 
     template<typename TypeTag>
