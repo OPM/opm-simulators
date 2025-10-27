@@ -360,6 +360,28 @@ has_grat_sales_target(const std::string& gname) const
 
 //-------------------------------------------------------------------------
 
+// For injector groups. We can have a control for each phase.
+template<class Scalar>
+bool GroupState<Scalar>::
+has_field_or_none_control(const std::string& gname, Phase injection_phase) const
+{
+    if (!this->has_injection_control(gname, injection_phase))
+        return false;
+    const auto control = this->injection_control(gname, injection_phase);
+    return (control == Group::InjectionCMode::FLD) || (control == Group::InjectionCMode::NONE);
+}
+
+// For production groups.
+template<class Scalar>
+bool GroupState<Scalar>::
+has_field_or_none_control(const std::string& gname) const
+{
+    if (!this->has_production_control(gname))
+        return false;
+    const auto control = this->production_control(gname);
+    return (control == Group::ProductionCMode::FLD) || (control == Group::ProductionCMode::NONE);
+}
+
 template<class Scalar>
 bool GroupState<Scalar>::
 has_production_control(const std::string& gname) const
@@ -553,6 +575,13 @@ gconsump_rates(const std::string& gname) const {
         return it->second;
     }
     return zero_pair;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::has_production_group_potential(const std::string& gname) const
+{
+    auto group_iter = this->production_group_potentials.find(gname);
+    return (group_iter != this->production_group_potentials.end());
 }
 
 template<class Scalar>
