@@ -87,7 +87,7 @@ public:
     //! \param[in] changedWells List of wells whose structure changed at
     //! this time.
     //!
-    //! \param[in] changedWells Whether or not any of the run's well list
+    //! \param[in] changedWellLists Whether or not any of the run's well list
     //! changed structurally at this time.
     //!
     //! \param[in] reportStepNum Report step index (1-based).
