@@ -53,6 +53,7 @@ SingleWellState(const std::string& name_,
     , prev_surface_rates(pu.numActivePhases())
     , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu.numActivePhases())
     , trivial_group_target(false)
+    , prevent_group_control(false)
 {
     for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
         this->perf_data.cell_index[perf] = perf_input[perf].cell_index;
@@ -410,7 +411,10 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
            this->production_cmode == rhs.production_cmode &&
            this->alq_state == rhs.alq_state &&
            this->primaryvar == rhs.primaryvar &&
-           this->group_target == rhs.group_target;
+           this->group_target == rhs.group_target &&
+           this->injection_cmode_group_translated == rhs.injection_cmode_group_translated &&
+           this->production_cmode_group_translated == rhs.production_cmode_group_translated &&
+           this->prevent_group_control == rhs.prevent_group_control;
 }
 
 template class SingleWellState<double, BlackOilDefaultFluidSystemIndices>;

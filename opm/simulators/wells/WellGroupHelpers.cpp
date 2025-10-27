@@ -1628,7 +1628,7 @@ checkGroupConstraintsProd(const std::string& name,
 
 
 template<typename Scalar, typename IndexTraits>
-Scalar
+std::pair<WellProducerCMode, Scalar>
 WellGroupHelpers<Scalar, IndexTraits>::
 getWellGroupTargetProducer(const std::string& name,
                            const std::string& parent,
@@ -1657,7 +1657,7 @@ getWellGroupTargetProducer(const std::string& name,
     if (currentGroupControl == Group::ProductionCMode::FLD || currentGroupControl == Group::ProductionCMode::NONE) {
         // Return if we are not available for parent group.
         if (!group.productionGroupControlAvailable()) {
-            return std::numeric_limits<Scalar>::max();
+            return std::make_pair(WellProducerCMode::CMODE_UNDEFINED, std::numeric_limits<Scalar>::max());
         }
         // Otherwise: check production share of parent's control.
         const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
@@ -1679,7 +1679,7 @@ getWellGroupTargetProducer(const std::string& name,
     // This can be false for FLD-controlled groups, we must therefore
     // check for FLD first (done above).
     if (!group.isProductionGroup()) {
-        return std::numeric_limits<Scalar>::max();
+        return std::make_pair(WellProducerCMode::CMODE_UNDEFINED, std::numeric_limits<Scalar>::max());
     }
 
     // If we are here, we are at the topmost group to be visited in the recursion.
@@ -1767,7 +1767,30 @@ getWellGroupTargetProducer(const std::string& name,
         }
     }
     // Avoid negative target rates comming from too large local reductions.
-    return std::max(Scalar(0.0), target / efficiencyFactor);;
+    target = std::max(Scalar(0.0), target)/efficiencyFactor;
+    // Translate group control to well control
+    WellProducerCMode mode;
+    switch (currentGroupControl) {
+        case Group::ProductionCMode::ORAT:
+            mode = WellProducerCMode::ORAT;
+            break;
+        case Group::ProductionCMode::GRAT:
+            mode = WellProducerCMode::GRAT;
+            break;
+        case Group::ProductionCMode::WRAT:
+            mode = WellProducerCMode::WRAT;
+            break;
+        case Group::ProductionCMode::LRAT:
+            mode = WellProducerCMode::LRAT;
+            break;
+        case Group::ProductionCMode::RESV:
+            mode = WellProducerCMode::RESV;
+            break;
+        default:
+            mode = WellProducerCMode::CMODE_UNDEFINED;
+            break;
+    }
+    return std::make_pair(mode, target);
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -1965,7 +1988,7 @@ checkGroupConstraintsInj(const std::string& name,
 
 
 template<typename Scalar, typename IndexTraits>
-Scalar
+std::pair<WellInjectorCMode, Scalar>
 WellGroupHelpers<Scalar, IndexTraits>::
 getWellGroupTargetInjector(const std::string& name,
                            const std::string& parent,
@@ -1993,7 +2016,7 @@ getWellGroupTargetInjector(const std::string& name,
     if (currentGroupControl == Group::InjectionCMode::FLD || currentGroupControl == Group::InjectionCMode::NONE) {
         // Return if we are not available for parent group.
         if (!group.injectionGroupControlAvailable(injectionPhase)) {
-            return std::numeric_limits<Scalar>::max();
+            return std::make_pair(WellInjectorCMode::CMODE_UNDEFINED, std::numeric_limits<Scalar>::max());
         }
         // Otherwise: check production share of parent's control.
         const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
@@ -2016,7 +2039,7 @@ getWellGroupTargetInjector(const std::string& name,
     // This can be false for FLD-controlled groups, we must therefore
     // check for FLD first (done above).
     if (!group.isInjectionGroup()) {
-        return std::numeric_limits<Scalar>::max();
+        return std::make_pair(WellInjectorCMode::CMODE_UNDEFINED, std::numeric_limits<Scalar>::max());
     }
 
     // If we are here, we are at the topmost group to be visited in the recursion.
@@ -2109,7 +2132,10 @@ getWellGroupTargetInjector(const std::string& name,
         }
     }
     // Avoid negative target rates comming from too large local reductions.
-    return std::max(Scalar(0.0), target / efficiencyFactor);
+    target = std::max(Scalar(0.0), target)/efficiencyFactor;
+    // Translating injector group control to individual well control requires some care.
+    // We just set it to undefined for now, and update at a later stage if needed.
+    return std::make_pair(WellInjectorCMode::CMODE_UNDEFINED, target);
 }
 
 
