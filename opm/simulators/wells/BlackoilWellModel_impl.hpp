@@ -626,10 +626,11 @@ namespace Opm {
             }
 
             const auto& network = this->schedule()[timeStepIdx].network();
-            if (network.active() && !this->node_pressures_.empty()) {
+            const auto& node_pressures = this->network_.nodePressures();
+            if (network.active() && !node_pressures.empty()) {
                 if (well->isProducer()) {
-                    const auto it = this->node_pressures_.find(well->wellEcl().groupName());
-                    if (it != this->node_pressures_.end()) {
+                    const auto it = node_pressures.find(well->wellEcl().groupName());
+                    if (it != node_pressures.end()) {
                         // The well belongs to a group which has a network nodal pressure,
                         // set the dynamic THP constraint based on the network nodal pressure
                         const Scalar nodal_pressure = it->second;
@@ -1052,14 +1053,15 @@ namespace Opm {
             this->well_container_generic_.push_back(w.get());
 
         const auto& network = this->schedule()[report_step].network();
-        if (network.active() && !this->node_pressures_.empty()) {
+        const auto& node_pressures = this->network_.nodePressures();
+        if (network.active() && !node_pressures.empty()) {
             for (auto& well: this->well_container_generic_) {
                 // Producers only, since we so far only support the
                 // "extended" network model (properties defined by
                 // BRANPROP and NODEPROP) which only applies to producers.
                 if (well->isProducer()) {
-                    const auto it = this->node_pressures_.find(well->wellEcl().groupName());
-                    if (it != this->node_pressures_.end()) {
+                    const auto it = node_pressures.find(well->wellEcl().groupName());
+                    if (it != node_pressures.end()) {
                         // The well belongs to a group which has a network nodal pressure,
                         // set the dynamic THP constraint based on the network nodal pressure
                         const Scalar nodal_pressure = it->second;
@@ -1272,7 +1274,7 @@ namespace Opm {
                 // only output to terminal if we at the last newton iterations where we try to balance the network.
                 const int episodeIdx = simulator_.episodeIndex();
                 const int iterationIdx = simulator_.model().newtonMethod().numIterations();
-                if (this->shouldBalanceNetwork(episodeIdx, iterationIdx + 1)) {
+                if (this->network_.shouldBalance(episodeIdx, iterationIdx + 1)) {
                     if (this->terminal_output_) {
                         const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update, \n"
                             "and try again after the next Newton iteration (imbalance = {:.2e} bar, ctrl_change = {})",
@@ -1339,10 +1341,11 @@ namespace Opm {
             if (optimize_gas_lift) {
                 // we need to update the potentials if the thp limit as been modified by
                 // the network balancing
-                const bool updatePotentials = (this->shouldBalanceNetwork(reportStepIdx, iterationIdx) || mandatory_network_balance);
+                const bool updatePotentials = (this->network_.shouldBalance(reportStepIdx, iterationIdx) ||
+                                               mandatory_network_balance);
                 alq_updated = gaslift_.maybeDoGasLiftOptimize(simulator_,
                                                           well_container_,
-                                                          this->node_pressures_,
+                                                          this->network_.nodePressures(),
                                                           updatePotentials,
                                                           this->wellState(),
                                                           this->groupState(),
@@ -1367,7 +1370,7 @@ namespace Opm {
         }
         // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
         // the inner iterations are did not converge
-        const bool more_network_update = this->shouldBalanceNetwork(reportStepIdx, iterationIdx) &&
+        const bool more_network_update = this->network_.shouldBalance(reportStepIdx, iterationIdx) &&
                     (more_inner_network_update || well_group_control_changed || alq_updated);
         return {well_group_control_changed, more_network_update, network_imbalance};
     }
@@ -1469,7 +1472,8 @@ namespace Opm {
                 };
 
                 const auto upbranch = network.uptree_branch(nodeName);
-                const auto it = this->node_pressures_.find((*upbranch).uptree_node());
+                const auto& node_pressures = this->network_.nodePressures();
+                const auto it = node_pressures.find((*upbranch).uptree_node());
                 const Scalar nodal_pressure = it->second;
                 Scalar well_group_thp = nodal_pressure;
 
@@ -1951,8 +1955,8 @@ namespace Opm {
     std::tuple<bool, typename BlackoilWellModel<TypeTag>::Scalar>
     BlackoilWellModel<TypeTag>::
     updateNetworks(const bool mandatory_network_balance,
-                       DeferredLogger& deferred_logger,
-                       const bool relax_network_tolerance)
+                   DeferredLogger& deferred_logger,
+                   const bool relax_network_tolerance)
     {
         OPM_TIMEFUNCTION();
         const int episodeIdx = simulator_.episodeIndex();
@@ -1967,7 +1971,7 @@ namespace Opm {
         // network related
         Scalar network_imbalance = 0.0;
         bool more_network_update = false;
-        if (this->shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
+        if (this->network_.shouldBalance(episodeIdx, iterationIdx) || mandatory_network_balance) {
             OPM_TIMEBLOCK(BalanceNetwork);
             const double dt = this->simulator_.timeStepSize();
             // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
@@ -1977,22 +1981,30 @@ namespace Opm {
             const Scalar network_max_pressure_update = param_.network_max_pressure_update_in_bars_ * unit::barsa;
             bool more_network_sub_update = false;
             for (int i = 0; i < max_number_of_sub_iterations; i++) {
-                const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx, network_pressure_update_damping_factor, network_max_pressure_update);
+                const auto local_network_imbalance =
+                    this->network_.updatePressures(episodeIdx,
+                                                   network_pressure_update_damping_factor,
+                                                   network_max_pressure_update);
                 network_imbalance = comm.max(local_network_imbalance);
                 const auto& balance = this->schedule()[episodeIdx].network_balance();
                 constexpr Scalar relaxation_factor = 10.0;
                 const Scalar tolerance = relax_network_tolerance ? relaxation_factor * balance.pressure_tolerance() : balance.pressure_tolerance();
-                more_network_sub_update = this->networkActive() && network_imbalance > tolerance;
+                more_network_sub_update = this->network_.active() && network_imbalance > tolerance;
                 if (!more_network_sub_update)
                     break;
 
+                const auto& node_pressures = this->network_.nodePressures();
                 for (const auto& well : well_container_) {
                     if (well->isInjector() || !well->wellEcl().predictionMode())
                          continue;
 
-                    const auto it = this->node_pressures_.find(well->wellEcl().groupName());
-                    if (it != this->node_pressures_.end()) {
-                        well->prepareWellBeforeAssembling(this->simulator_, dt, this->groupStateHelper(), this->wellState(), deferred_logger);
+                    const auto it = node_pressures.find(well->wellEcl().groupName());
+                    if (it != node_pressures.end()) {
+                        well->prepareWellBeforeAssembling(this->simulator_,
+                                                          dt,
+                                                          this->groupStateHelper(),
+                                                          this->wellState(),
+                                                          deferred_logger);
                     }
                 }
                 this->updateAndCommunicateGroupData(episodeIdx, iterationIdx, param_.nupcol_group_rate_tolerance_,
@@ -2268,11 +2280,12 @@ namespace Opm {
     {
         // Check if there is a network with active prediction wells at this time step.
         const auto episodeIdx = simulator_.episodeIndex();
-        this->updateNetworkActiveState(episodeIdx);
+        this->network_.updateActiveState(episodeIdx);
 
         // Rebalance the network initially if any wells in the network have status changes
         // (Need to check this before clearing events)
-        const bool do_prestep_network_rebalance = param_.pre_solve_network_ && this->needPreStepNetworkRebalance(episodeIdx);
+        const bool do_prestep_network_rebalance =
+            param_.pre_solve_network_ && this->network_.needPreStepRebalance(episodeIdx);
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
