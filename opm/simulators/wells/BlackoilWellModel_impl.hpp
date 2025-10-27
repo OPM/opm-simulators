@@ -1051,24 +1051,7 @@ namespace Opm {
             this->well_container_generic_.push_back(w.get());
         }
 
-        const auto& network = this->schedule()[report_step].network();
-        const auto& node_pressures = this->network_.nodePressures();
-        if (network.active() && !node_pressures.empty()) {
-            for (auto& well: this->well_container_generic_) {
-                // Producers only, since we so far only support the
-                // "extended" network model (properties defined by
-                // BRANPROP and NODEPROP) which only applies to producers.
-                if (well->isProducer()) {
-                    const auto it = node_pressures.find(well->wellEcl().groupName());
-                    if (it != node_pressures.end()) {
-                        // The well belongs to a group which has a network nodal pressure,
-                        // set the dynamic THP constraint based on the network nodal pressure
-                        const Scalar nodal_pressure = it->second;
-                        well->setDynamicThpLimit(nodal_pressure);
-                    }
-                }
-            }
-        }
+        this->network_.initialize(report_step);
 
         this->wbp_.registerOpenWellsForWBPCalculation();
     }

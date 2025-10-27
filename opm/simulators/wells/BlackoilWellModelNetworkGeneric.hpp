@@ -59,6 +59,9 @@ public:
 
     void setFromRestart(const std::optional<std::map<std::string, double>>& restart_pressures);
 
+    //! \brief Initialize wells according to network configuration.
+    void initialize(const int report_step);
+
     /// Checks if network is active (at least one network well on prediction).
     void updateActiveState(const int report_step);
 
