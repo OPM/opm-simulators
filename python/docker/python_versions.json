@@ -27,7 +27,7 @@
     "3.10": "3.10.16",
     "3.11": "3.11.11",
     "3.12": "3.12.9",
-    "3.13": "3.13.1"
+    "3.13": "3.13.9"
   },
   "manylinux_platform": "manylinux_2_28_x86_64",
   "_manylinux_note": "auditwheel may optimize to an older version (e.g., manylinux_2_27) for broader compatibility"
