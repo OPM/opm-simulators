@@ -58,6 +58,7 @@
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
+#include <opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/GroupEconomicLimitsChecker.hpp>
@@ -92,6 +93,7 @@ template<typename Scalar, typename IndexTraits>
 BlackoilWellModelGeneric<Scalar, IndexTraits>::
 BlackoilWellModelGeneric(Schedule& schedule,
                          BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gaslift,
+                         BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>& network,
                          const SummaryState& summaryState,
                          const EclipseState& eclState,
                          const PhaseUsageInfo<IndexTraits>& pu,
@@ -110,7 +112,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , last_valid_wgstate_(pu)
     , nupcol_wgstate_(pu)
     , wg_helper_(this->wellState(), this->groupState(), this->schedule(), summaryState, guideRate_, pu)
-    , network_(*this, eclState.getRestartNetworkPressures())
+    , genNetwork_(network)
 {
 
     const auto numProcs = comm_.size();
@@ -1179,6 +1181,14 @@ assignGroupValues(const int                               reportStepIdx,
 }
 
 template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+commitWGState()
+{
+    this->last_valid_wgstate_ = this->active_wgstate_;
+    this->genNetwork_.commitState();
+}
+
+template<typename Scalar, typename IndexTraits>
 data::GroupAndNetworkValues
 BlackoilWellModelGeneric<Scalar, IndexTraits>::
 groupAndNetworkData(const int reportStepIdx) const
@@ -1186,7 +1196,7 @@ groupAndNetworkData(const int reportStepIdx) const
     auto grp_nwrk_values = data::GroupAndNetworkValues{};
 
     this->assignGroupValues(reportStepIdx, grp_nwrk_values.groupData);
-    this->network_.assignNodeValues(grp_nwrk_values.nodeData, reportStepIdx - 1); // Schedule state info at previous step
+    this->genNetwork_.assignNodeValues(grp_nwrk_values.nodeData, reportStepIdx - 1); // Schedule state info at previous step
 
     return grp_nwrk_values;
 }
@@ -1920,7 +1930,7 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->last_run_wellpi_ == rhs.last_run_wellpi_
         && this->local_shut_wells_ == rhs.local_shut_wells_
         && this->closed_this_step_ == rhs.closed_this_step_
-        && this->network_ == rhs.network_
+        && this->genNetwork_ == rhs.genNetwork_
         && this->prev_inj_multipliers_ == rhs.prev_inj_multipliers_
         && this->active_wgstate_ == rhs.active_wgstate_
         && this->last_valid_wgstate_ == rhs.last_valid_wgstate_
