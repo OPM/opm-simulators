@@ -263,18 +263,24 @@ initialize(const int report_step)
     const auto& network = well_model_.schedule()[report_step].network();
     if (network.active() && !node_pressures_.empty()) {
         for (auto& well : well_model_.genericWells()) {
-            // Producers only, since we so far only support the
-            // "extended" network model (properties defined by
-            // BRANPROP and NODEPROP) which only applies to producers.
-            if (well->isProducer()) {
-                const auto it = this->node_pressures_.find(well->wellEcl().groupName());
-                if (it != this->node_pressures_.end()) {
-                    // The well belongs to a group which has a network nodal pressure,
-                    // set the dynamic THP constraint based on the network nodal pressure
-                    const Scalar nodal_pressure = it->second;
-                    well->setDynamicThpLimit(nodal_pressure);
-                }
-            }
+            initializeWell(*well);
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
+{
+    // Producers only, since we so far only support the
+    // "extended" network model (properties defined by
+    // BRANPROP and NODEPROP) which only applies to producers.
+    if (well.isProducer() && !node_pressures_.empty()) {
+        const auto it = this->node_pressures_.find(well.wellEcl().groupName());
+        if (it != this->node_pressures_.end()) {
+            // The well belongs to a group which has a network nodal pressure,
+            // set the dynamic THP constraint based on the network nodal pressure
+            well.setDynamicThpLimit(it->second);
         }
     }
 }

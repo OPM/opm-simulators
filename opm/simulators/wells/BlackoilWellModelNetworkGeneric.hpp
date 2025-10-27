@@ -33,6 +33,7 @@
 namespace Opm {
     class Schedule;
     template<class Scalar, class IndexTraits> class BlackoilWellModelGeneric;
+    template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
 }
 
 namespace Opm {
@@ -61,6 +62,9 @@ public:
 
     //! \brief Initialize wells according to network configuration.
     void initialize(const int report_step);
+
+    //! \brief Initialize a single well according to network configuration.
+    void initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well);
 
     /// Checks if network is active (at least one network well on prediction).
     void updateActiveState(const int report_step);
