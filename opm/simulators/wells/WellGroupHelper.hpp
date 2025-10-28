@@ -20,6 +20,7 @@
 #define OPM_WELLGROUPHELPER_HEADER_INCLUDED
 
 #include <opm/common/TimingMacros.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
 #include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
@@ -34,7 +35,11 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <algorithm>
 #include <map>
+#include <memory>
+#include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
