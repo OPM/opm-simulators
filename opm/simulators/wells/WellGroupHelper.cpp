@@ -18,6 +18,7 @@
 */
 
 #include <config.h>
+#include <opm/simulators/wells/WellGroupHelper.hpp>
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
@@ -27,8 +28,12 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
 
+#include <array>
+#include <cstddef>
+#include <limits>
+#include <stack>
+#include <set>
 
 namespace Opm
 {
