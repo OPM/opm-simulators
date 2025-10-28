@@ -49,7 +49,7 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellGroupControls.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -200,7 +200,7 @@ namespace Opm {
     {
         DeferredLogger local_deferredLogger{};
 
-        this->wgHelper().setReportStep(timeStepIdx);
+        this->groupStateHelper().setReportStep(timeStepIdx);
         this->report_step_starts_ = true;
         this->report_step_start_events_ = this->schedule()[timeStepIdx].wellgroup_events();
 
@@ -305,12 +305,12 @@ namespace Opm {
             const auto& fieldGroup =
                 this->schedule().getGroup("FIELD", reportStepIdx);
 
-            this->wgHelper().setCmodeGroup(fieldGroup, this->groupState());
+            this->groupStateHelper().setCmodeGroup(fieldGroup);
 
             // Define per region average pressure calculators for use by
             // pressure maintenance groups (GPMAINT keyword).
             if (this->schedule()[reportStepIdx].has_gpmaint()) {
-                this->wgHelper().setRegionAveragePressureCalculator(
+                this->groupStateHelper().setRegionAveragePressureCalculator(
                     fieldGroup,
                     this->eclState_.fieldProps(),
                     this->regionalAveragePressureCalculator_
@@ -487,10 +487,9 @@ namespace Opm {
             }
             const double dt = simulator_.timeStepSize();
             const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
-            this->wgHelper().updateGpMaintTargetForGroups(fieldGroup,
+            this->groupStateHelper().updateGpMaintTargetForGroups(fieldGroup,
                                                           regionalAveragePressureCalculator_,
-                                                          dt,
-                                                          this->groupState());
+                                                          dt);
         }
 
         this->updateAndCommunicateGroupData(reportStepIdx,
@@ -515,10 +514,10 @@ namespace Opm {
                     try {
                         well->scaleSegmentRatesAndPressure(this->wellState());
                         well->calculateExplicitQuantities(simulator_, this->wellState(), local_deferredLogger);
-                        well->updateWellStateWithTarget(simulator_, this->wgHelper(), this->wellState(), local_deferredLogger);
+                        well->updateWellStateWithTarget(simulator_, this->groupStateHelper(), this->wellState(), local_deferredLogger);
                         well->updatePrimaryVariables(simulator_, this->wellState(), local_deferredLogger);
                         well->solveWellEquation(
-                            simulator_, this->wgHelper(), this->wellState(), local_deferredLogger
+                            simulator_, this->groupStateHelper(), this->wellState(), local_deferredLogger
                         );
                     } catch (const std::exception& e) {
                         const std::string msg = "Compute initial well solution for new well " + well->name() + " failed. Continue with zero initial rates";
@@ -576,7 +575,7 @@ namespace Opm {
     {
         assert(this->isReservoirCouplingMaster());
         RescoupReceiveSlaveGroupData<Scalar, IndexTraits> slave_group_data_receiver{
-            this->wgHelper(),
+            this->groupStateHelper(),
         };
         slave_group_data_receiver.receiveSlaveGroupData();
     }
@@ -587,7 +586,7 @@ namespace Opm {
     sendSlaveGroupDataToMaster()
     {
         assert(this->isReservoirCouplingSlave());
-        RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{this->wgHelper()};
+        RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{this->groupStateHelper()};
         slave_group_data_sender.sendSlaveGroupDataToMaster();
     }
 #endif // RESERVOIR_COUPLING_ENABLED
@@ -609,7 +608,7 @@ namespace Opm {
 
             Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor() *
                                             this->wellState().getGlobalEfficiencyScalingFactor(well_name);
-            this->wgHelper().accumulateGroupEfficiencyFactor(
+            this->groupStateHelper().accumulateGroupEfficiencyFactor(
                 this->schedule().getGroup(wellEcl.groupName(), timeStepIdx),
                 well_efficiency_factor
             );
@@ -644,7 +643,7 @@ namespace Opm {
                 gaslift_.initGliftEclWellMap(well_container_, ecl_well_map);
                 well->wellTesting(simulator_,
                                   simulationTime,
-                                  this->wgHelper(),
+                                  this->groupStateHelper(),
                                   this->wellState(),
                                   this->wellTestState(),
                                   ecl_well_map,
@@ -1420,7 +1419,7 @@ namespace Opm {
                     auto target = WellGroupControls<Scalar, IndexTraits>::getAutoChokeGroupProductionTargetRate(
                                                             group.name(),
                                                             parentGroup,
-                                                            this->wgHelper(),
+                                                            this->groupStateHelper(),
                                                             this->schedule(),
                                                             summary_state,
                                                             resv_coeff,
@@ -1432,7 +1431,8 @@ namespace Opm {
                     cmode_tmp = target.second;
                 }
                 const auto cmode = cmode_tmp;
-                using TargetCalculatorType =  WGHelpers::TargetCalculator<Scalar, IndexTraits>;
+                using TargetCalculatorType =  GroupStateHelpers
+::TargetCalculator<Scalar, IndexTraits>;
                 TargetCalculatorType tcalc(cmode, FluidSystem::phaseUsage(), resv_coeff,
                                            gratTargetFromSales, nodeName, group_state,
                                            group.has_gpmaint_control(cmode));
@@ -1456,7 +1456,7 @@ namespace Opm {
                             const auto inj_controls = Well::InjectionControls(0);
                             const auto prod_controls = well_ecl.productionControls(summary_state);
                             well->iterateWellEqWithSwitching(
-                                this->simulator_, dt, inj_controls, prod_controls, this->wgHelper(), this->wellState(), local_deferredLogger,
+                                this->simulator_, dt, inj_controls, prod_controls, this->groupStateHelper(), this->wellState(), local_deferredLogger,
                                 /*fixed_control=*/false,
                                 /*fixed_status=*/false,
                                 /*solving_with_zero_rate=*/false
@@ -1549,7 +1549,7 @@ namespace Opm {
                     const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
                     if (thp_is_limit) {
                         well->prepareWellBeforeAssembling(
-                            this->simulator_, dt, this->wgHelper(), this->wellState(), local_deferredLogger
+                            this->simulator_, dt, this->groupStateHelper(), this->wellState(), local_deferredLogger
                         );
                     }
                 }
@@ -1572,7 +1572,7 @@ namespace Opm {
     {
         OPM_TIMEFUNCTION();
         for (auto& well : well_container_) {
-            well->assembleWellEq(simulator_, dt, this->wgHelper(), deferred_logger);
+            well->assembleWellEq(simulator_, dt, this->groupStateHelper(), deferred_logger);
         }
     }
 
@@ -1585,7 +1585,7 @@ namespace Opm {
         OPM_TIMEFUNCTION();
         for (auto& well : well_container_) {
             well->prepareWellBeforeAssembling(
-                simulator_, dt, this->wgHelper(), this->wellState(), deferred_logger
+                simulator_, dt, this->groupStateHelper(), this->wellState(), deferred_logger
             );
         }
     }
@@ -1602,7 +1602,7 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         for (auto& well: well_container_) {
-            well->assembleWellEqWithoutIteration(simulator_, this->wgHelper(), dt, this->wellState(),
+            well->assembleWellEqWithoutIteration(simulator_, this->groupStateHelper(), dt, this->wellState(),
                                                  deferred_logger,
                                                  /*solving_with_zero_rate=*/false);
         }
@@ -1897,7 +1897,7 @@ namespace Opm {
                     for (const auto& well : well_container_) {
                         const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
                         const bool changed_well = well->updateWellControl(
-                            simulator_, mode, this->wgHelper(), this->wellState(), deferred_logger
+                            simulator_, mode, this->groupStateHelper(), this->wellState(), deferred_logger
                         );
                         if (changed_well) {
                             changed_well_to_group = changed_well || changed_well_to_group;
@@ -1922,7 +1922,7 @@ namespace Opm {
                     for (const auto& well : well_container_) {
                         const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
                         const bool changed_well = well->updateWellControl(
-                            simulator_, mode, this->wgHelper(), this->wellState(), deferred_logger
+                            simulator_, mode, this->groupStateHelper(), this->wellState(), deferred_logger
                         );
                         if (changed_well) {
                             changed_well_individual = changed_well || changed_well_individual;
@@ -1992,7 +1992,7 @@ namespace Opm {
 
                     const auto it = this->node_pressures_.find(well->wellEcl().groupName());
                     if (it != this->node_pressures_.end()) {
-                        well->prepareWellBeforeAssembling(this->simulator_, dt, this->wgHelper(), this->wellState(), deferred_logger);
+                        well->prepareWellBeforeAssembling(this->simulator_, dt, this->groupStateHelper(), this->wellState(), deferred_logger);
                     }
                 }
                 this->updateAndCommunicateGroupData(episodeIdx, iterationIdx, param_.nupcol_group_rate_tolerance_,
@@ -2028,7 +2028,7 @@ namespace Opm {
                 ws.injection_cmode == Well::InjectorCMode::GRUP)
             {
                 well->updateWellStateWithTarget(
-                    simulator_, this->wgHelper(), this->wellState(), deferred_logger
+                    simulator_, this->groupStateHelper(), this->wellState(), deferred_logger
                 );
             }
         }
@@ -2098,7 +2098,7 @@ namespace Opm {
             const auto wasClosed = wellTestState.well_is_closed(wname);
             well->checkWellOperability(simulator_,
                                        this->wellState(),
-                                       this->wgHelper(),
+                                       this->groupStateHelper(),
                                        local_deferredLogger);
             const bool under_zero_target =
                 well->wellUnderZeroGroupRateTarget(this->simulator_,
@@ -2183,7 +2183,7 @@ namespace Opm {
         std::string cur_exc_msg;
         auto cur_exc_type = ExceptionType::NONE;
         try {
-            well->computeWellPotentials(simulator_, well_state_copy, this->wgHelper(), potentials, deferred_logger);
+            well->computeWellPotentials(simulator_, well_state_copy, this->groupStateHelper(), potentials, deferred_logger);
         }
         // catch all possible exception and store type and message.
         OPM_PARALLEL_CATCH_CLAUSE(cur_exc_type, cur_exc_msg);
@@ -2278,7 +2278,7 @@ namespace Opm {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState<Scalar, IndexTraits>::event_mask)) {
                 well->updateWellStateWithTarget(
-                    simulator_, this->wgHelper(), this->wellState(), deferred_logger
+                    simulator_, this->groupStateHelper(), this->wellState(), deferred_logger
                 );
                 well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
                 // There is no new well control change input within a report step,
@@ -2293,7 +2293,7 @@ namespace Opm {
             if (param_.solve_welleq_initially_ && well->isOperableAndSolvable()) {
                 try {
                     well->solveWellEquation(
-                        simulator_, this->wgHelper(), this->wellState(), deferred_logger
+                        simulator_, this->groupStateHelper(), this->wellState(), deferred_logger
                     );
                 } catch (const std::exception& e) {
                     const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the previous rates";
@@ -2467,7 +2467,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeWellTemperature()
     {
-        if constexpr (energyModuleType_ == EnergyModules::FullyImplicitThermal || 
+        if constexpr (energyModuleType_ == EnergyModules::FullyImplicitThermal ||
                       energyModuleType_ == EnergyModules::SequentialImplicitThermal) {
             int np = this->numPhases();
             Scalar cellInternalEnergy;

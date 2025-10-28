@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_WELLGROUPHELPER_HEADER_INCLUDED
-#define OPM_WELLGROUPHELPER_HEADER_INCLUDED
+#ifndef OPM_GROUPSTATEHELPER_HEADER_INCLUDED
+#define OPM_GROUPSTATEHELPER_HEADER_INCLUDED
 #if HAVE_MPI
 #define RESERVOIR_COUPLING_ENABLED
 #endif
@@ -55,25 +55,25 @@ namespace Opm
 {
 
 template <typename Scalar, typename IndexTraits>
-class WellGroupHelper
+class GroupStateHelper
 {
 public:
     // RAII guard for temporarily setting wellstate pointer
     class WellStateGuard
     {
     public:
-        WellStateGuard(WellGroupHelper& wgHelper, WellState<Scalar, IndexTraits>& well_state)
-            : wgHelper_ {wgHelper}
-            , previous_state_ptr_ {wgHelper_.well_state_}
+        WellStateGuard(GroupStateHelper& groupStateHelper, WellState<Scalar, IndexTraits>& well_state)
+            : groupStateHelper_ {groupStateHelper}
+            , previous_state_ptr_ {groupStateHelper_.well_state_}
         {
             // Set the new state directly
-            wgHelper_.well_state_ = &well_state;
+            groupStateHelper_.well_state_ = &well_state;
         }
 
         ~WellStateGuard()
         {
             // Restore the previous state
-            wgHelper_.well_state_ = previous_state_ptr_;
+            groupStateHelper_.well_state_ = previous_state_ptr_;
         }
 
         // Delete copy and move operations
@@ -83,7 +83,7 @@ public:
         WellStateGuard& operator=(WellStateGuard&&) = delete;
 
     private:
-        WellGroupHelper& wgHelper_;
+        GroupStateHelper& groupStateHelper_;
         const WellState<Scalar, IndexTraits>* previous_state_ptr_;
     };
 
@@ -91,18 +91,18 @@ public:
     class GroupStateGuard
     {
     public:
-        GroupStateGuard(WellGroupHelper& wgHelper, GroupState<Scalar>& group_state)
-            : wgHelper_ {wgHelper}
-            , previous_state_ptr_ {wgHelper_.group_state_}
+        GroupStateGuard(GroupStateHelper& group_state_helper, GroupState<Scalar>& group_state)
+            : group_state_helper_ {group_state_helper}
+            , previous_state_ptr_ {group_state_helper.group_state_}
         {
             // Set the new state directly
-            wgHelper_.group_state_ = &group_state;
+            group_state_helper_.group_state_ = &group_state;
         }
 
         ~GroupStateGuard()
         {
             // Restore the previous state
-            wgHelper_.group_state_ = previous_state_ptr_;
+            group_state_helper_.group_state_ = previous_state_ptr_;
         }
 
         // Delete copy and move operations
@@ -112,11 +112,11 @@ public:
         GroupStateGuard& operator=(GroupStateGuard&&) = delete;
 
     private:
-        WellGroupHelper& wgHelper_;
-        const GroupState<Scalar>* previous_state_ptr_;
+        GroupStateHelper& group_state_helper_;
+        GroupState<Scalar>* previous_state_ptr_ {nullptr};
     };
 
-    WellGroupHelper(WellState<Scalar, IndexTraits>& well_state,
+    GroupStateHelper(WellState<Scalar, IndexTraits>& well_state,
                     GroupState<Scalar>& group_state,
                     const Schedule& schedule,
                     const SummaryState& summary_state,
@@ -180,7 +180,7 @@ public:
                              const bool is_production_group,
                              const Phase injection_phase) const;
 
-    const GroupState<Scalar>& groupState() const
+    GroupState<Scalar>& groupState() const
     {
         return *this->group_state_;
     }
@@ -231,7 +231,7 @@ public:
     }
 #endif
 
-    void setCmodeGroup(const Group& group, GroupState<Scalar>& group_state) const;
+    void setCmodeGroup(const Group& group);
 
     template <class AverageRegionalPressureType>
     void
@@ -277,33 +277,30 @@ public:
     template <class RegionalValues>
     void updateGpMaintTargetForGroups(const Group& group,
                                       const RegionalValues& regional_values,
-                                      const double dt,
-                                      GroupState<Scalar>& group_state) const;
+                                      const double dt);
 
     /// update the number of wells that are actively under group control for a given group with name given by
     /// group_name its main usage is to detect cases where there is no wells under group control
     int updateGroupControlledWells(const bool is_production_group,
                                    const Phase injection_phase,
-                                   GroupState<Scalar>& group_state,
-                                   DeferredLogger& deferred_logger) const;
+                                   DeferredLogger& deferred_logger);
 
-    void updateGroupProductionRates(const Group& group, GroupState<Scalar>& group_state) const;
+    void updateGroupProductionRates(const Group& group);
 
     void updateGroupTargetReduction(const Group& group,
-                                    const bool is_injector,
-                                    GroupState<Scalar>& group_state) const;
+                                    const bool is_injector);
 
-    void updateNetworkLeafNodeProductionRates(GroupState<Scalar>& group_state) const;
+    void updateNetworkLeafNodeProductionRates();
 
-    void updateREINForGroups(const Group& group, bool sum_rank, GroupState<Scalar>& group_state) const;
+    void updateREINForGroups(const Group& group, bool sum_rank);
 
-    void updateReservoirRatesInjectionGroups(const Group& group, GroupState<Scalar>& group_state) const;
-
-    void updateVREPForGroups(const Group& group, GroupState<Scalar>& group_state) const;
+    void updateReservoirRatesInjectionGroups(const Group& group);
 
     void updateState(WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& group_state);
 
-    void updateSurfaceRatesInjectionGroups(const Group& group, GroupState<Scalar>& group_state) const;
+    void updateSurfaceRatesInjectionGroups(const Group& group);
+
+    void updateVREPForGroups(const Group& group);
 
     void updateWellRates(const Group& group,
                          const WellState<Scalar, IndexTraits>& well_state_nupcol,
@@ -351,16 +348,14 @@ private:
     int updateGroupControlledWellsRecursive_(const std::string& group_name,
                                              const bool is_production_group,
                                              const Phase injection_phase,
-                                             GroupState<Scalar>& group_state,
-                                             DeferredLogger& deferred_logger) const;
+                                             DeferredLogger& deferred_logger);
 
     void updateGroupTargetReductionRecursive_(const Group& group,
                                               const bool is_injector,
-                                              std::vector<Scalar>& group_target_reduction,
-                                              GroupState<Scalar>& group_state) const;
+                                              std::vector<Scalar>& group_target_reduction);
 
     const WellState<Scalar, IndexTraits>* well_state_ {nullptr};
-    const GroupState<Scalar>* group_state_ {nullptr};
+    GroupState<Scalar>* group_state_ {nullptr};
     const Schedule& schedule_;
     const SummaryState& summary_state_;
     const GuideRate& guide_rate_;
@@ -380,13 +375,13 @@ private:
 
 // NOTE: This template member function is defined here in the header because the
 //       AverageRegionalPressureType type parameter depends on derived class types that are
-//       not available when WellGroupHelper.cpp is compiled. Template functions
+//       not available when GroupStateHelper.cpp is compiled. Template functions
 //       must be visible at their instantiation point.
-//       See WellGroupHelper.cpp for detailed rationale.
+//       See GroupStateHelper.cpp for detailed rationale.
 template <typename Scalar, typename IndexTraits>
 template <class AverageRegionalPressureType>
 void
-WellGroupHelper<Scalar, IndexTraits>::setRegionAveragePressureCalculator(
+GroupStateHelper<Scalar, IndexTraits>::setRegionAveragePressureCalculator(
     const Group& group,
     const FieldPropsManager& fp,
     std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regional_average_pressure_calculator)
@@ -415,21 +410,20 @@ WellGroupHelper<Scalar, IndexTraits>::setRegionAveragePressureCalculator(
 
 // NOTE: This template member function is defined in the header because the
 //       RegionalValues type parameter depends on derived class types that are
-//       not available when WellGroupHelper.cpp is compiled. Template functions
+//       not available when GroupStateHelper.cpp is compiled. Template functions
 //       must be visible at their instantiation point.
-//       See WellGroupHelper.cpp for detailed rationale.
+//       See GroupStateHelper.cpp for detailed rationale.
 template <typename Scalar, typename IndexTraits>
 template <class RegionalValues>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateGpMaintTargetForGroups(const Group& group,
+GroupStateHelper<Scalar, IndexTraits>::updateGpMaintTargetForGroups(const Group& group,
                                                                    const RegionalValues& regional_values,
-                                                                   const double dt,
-                                                                   GroupState<Scalar>& group_state) const
+                                                                   const double dt)
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-        this->updateGpMaintTargetForGroups(group_tmp, regional_values, dt, group_state);
+        this->updateGpMaintTargetForGroups(group_tmp, regional_values, dt);
     }
     const auto& gpm = group.gpmaint();
     if (!gpm)
@@ -455,49 +449,49 @@ WellGroupHelper<Scalar, IndexTraits>::updateGpMaintTargetForGroups(const Group& 
     case GPMaint::FlowTarget::RESV_OINJ: {
         if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
             const auto io = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-            current_rate = group_state.injection_reservoir_rates(group.name())[io];
+            current_rate = this->groupState().injection_reservoir_rates(group.name())[io];
         }
         break;
     }
     case GPMaint::FlowTarget::RESV_WINJ: {
         if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
             const auto iw = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-            current_rate = group_state.injection_reservoir_rates(group.name())[iw];
+            current_rate = this->groupState().injection_reservoir_rates(group.name())[iw];
         }
         break;
     }
     case GPMaint::FlowTarget::RESV_GINJ: {
         if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
             const auto ig = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-            current_rate = group_state.injection_reservoir_rates(group.name())[ig];
+            current_rate = this->groupState().injection_reservoir_rates(group.name())[ig];
         }
         break;
     }
     case GPMaint::FlowTarget::SURF_OINJ: {
         if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
             const auto io = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-            current_rate = group_state.injection_surface_rates(group.name())[io];
+            current_rate = this->groupState().injection_surface_rates(group.name())[io];
         }
         break;
     }
     case GPMaint::FlowTarget::SURF_WINJ: {
         if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
             const auto iw = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-            current_rate = group_state.injection_surface_rates(group.name())[iw];
+            current_rate = this->groupState().injection_surface_rates(group.name())[iw];
         }
         break;
     }
     case GPMaint::FlowTarget::SURF_GINJ: {
         if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
             const auto ig = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-            current_rate = group_state.injection_surface_rates(group.name())[ig];
+            current_rate = this->groupState().injection_surface_rates(group.name())[ig];
         }
         break;
     }
     default:
         throw std::invalid_argument("Invalid Flow target type in GPMAINT");
     }
-    auto& gpmaint_state = group_state.gpmaint(group.name());
+    auto& gpmaint_state = this->groupState().gpmaint(group.name());
     // we only activate gpmaint if pressure is lower than the target regional pressure for injectors
     // (i.e. error > 0) and higher for producers.
     bool activate = (injection && error > 0) || (!injection && error < 0);
@@ -507,9 +501,9 @@ WellGroupHelper<Scalar, IndexTraits>::updateGpMaintTargetForGroups(const Group& 
     } else {
         gpm->resetState(gpmaint_state);
     }
-    group_state.update_gpmaint_target(group.name(), std::max(Scalar {0.0}, sign * rate));
+    this->groupState().update_gpmaint_target(group.name(), std::max(Scalar {0.0}, sign * rate));
 }
 
 } // namespace Opm
 
-#endif
+#endif  // OPM_GROUPSTATE_HELPER_HEADER_INCLUDED

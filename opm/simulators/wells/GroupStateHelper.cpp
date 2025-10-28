@@ -18,7 +18,7 @@
 */
 
 #include <config.h>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
@@ -38,7 +38,7 @@ namespace Opm
 {
 
 template <typename Scalar, typename IndexTraits>
-WellGroupHelper<Scalar, IndexTraits>::WellGroupHelper(WellState<Scalar, IndexTraits>& well_state,
+GroupStateHelper<Scalar, IndexTraits>::GroupStateHelper(WellState<Scalar, IndexTraits>& well_state,
                                                       GroupState<Scalar>& group_state,
                                                       const Schedule& schedule,
                                                       const SummaryState& summary_state,
@@ -60,7 +60,7 @@ WellGroupHelper<Scalar, IndexTraits>::WellGroupHelper(WellState<Scalar, IndexTra
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::accumulateGroupEfficiencyFactor(const Group& group,
+GroupStateHelper<Scalar, IndexTraits>::accumulateGroupEfficiencyFactor(const Group& group,
                                                                       Scalar& factor) const
 {
     factor *= group.getGroupEfficiencyFactor();
@@ -71,7 +71,7 @@ WellGroupHelper<Scalar, IndexTraits>::accumulateGroupEfficiencyFactor(const Grou
 
 template <typename Scalar, typename IndexTraits>
 std::pair<bool, Scalar>
-WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::string& name,
+GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::string& name,
                                                                const std::string& parent,
                                                                const Group& group,
                                                                const Scalar* rates,
@@ -127,7 +127,8 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::string
             = this->schedule_[this->report_step_].gconsale().get(group.name(), this->summary_state_);
         sales_target = gconsale.sales_target;
     }
-    WGHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {
+    GroupStateHelpers
+::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {
         current_group_control,
         this->phase_usage_info_,
         resv_coeff,
@@ -138,7 +139,8 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::string
         group.has_gpmaint_control(injection_phase, current_group_control),
         deferred_logger};
 
-    WGHelpers::FractionCalculator fcalc {this->schedule_,
+    GroupStateHelpers
+::FractionCalculator fcalc {this->schedule_,
                                          *this,
                                          this->summary_state_,
                                          this->report_step_,
@@ -248,7 +250,7 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::string
 
 template <typename Scalar, typename IndexTraits>
 std::pair<bool, Scalar>
-WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::string& name,
+GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::string& name,
                                                                 const std::string& parent,
                                                                 const Group& group,
                                                                 const Scalar* rates,
@@ -303,7 +305,8 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::strin
     if (this->groupState().has_grat_sales_target(group.name()))
         grat_target_from_sales = this->groupState().grat_sales_target(group.name());
 
-    WGHelpers::TargetCalculator<Scalar, IndexTraits> tcalc {current_group_control,
+    GroupStateHelpers
+::TargetCalculator<Scalar, IndexTraits> tcalc {current_group_control,
                                                             this->phase_usage_info_,
                                                             resv_coeff,
                                                             grat_target_from_sales,
@@ -311,7 +314,8 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::strin
                                                             this->groupState(),
                                                             group.has_gpmaint_control(current_group_control)};
 
-    WGHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
+    GroupStateHelpers
+::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
                                                               *this,
                                                               this->summary_state_,
                                                               this->report_step_,
@@ -421,7 +425,7 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::strin
 
 template <typename Scalar, typename IndexTraits>
 std::map<std::string, Scalar>
-WellGroupHelper<Scalar, IndexTraits>::computeNetworkPressures(const Network::ExtNetwork& network,
+GroupStateHelper<Scalar, IndexTraits>::computeNetworkPressures(const Network::ExtNetwork& network,
                                                               const VFPProdProperties<Scalar>& vfp_prod_props,
                                                               const Parallel::Communication& comm) const
 {
@@ -578,7 +582,7 @@ WellGroupHelper<Scalar, IndexTraits>::computeNetworkPressures(const Network::Ext
 
 template <typename Scalar, typename IndexTraits>
 Scalar
-WellGroupHelper<Scalar, IndexTraits>::getGuideRate(const std::string& name,
+GroupStateHelper<Scalar, IndexTraits>::getGuideRate(const std::string& name,
                                                    const GuideRateModel::Target target) const
 {
     if (this->schedule_.hasWell(name, this->report_step_)) {
@@ -634,14 +638,14 @@ WellGroupHelper<Scalar, IndexTraits>::getGuideRate(const std::string& name,
 
 template <typename Scalar, typename IndexTraits>
 GuideRate::RateVector
-WellGroupHelper<Scalar, IndexTraits>::getProductionGroupRateVector(const std::string& group_name) const
+GroupStateHelper<Scalar, IndexTraits>::getProductionGroupRateVector(const std::string& group_name) const
 {
     return this->getGuideRateVector_(this->groupState().production_rates(group_name));
 }
 
 template <typename Scalar, typename IndexTraits>
 std::optional<Scalar>
-WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::string& name,
+GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
                                                                  const Scalar* rates,
@@ -690,7 +694,8 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
             = this->schedule_[this->report_step_].gconsale().get(group.name(), this->summary_state_);
         sales_target = gconsale.sales_target;
     }
-    WGHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {
+    GroupStateHelpers
+::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {
         current_group_control,
         this->phase_usage_info_,
         resv_coeff,
@@ -701,7 +706,8 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
         group.has_gpmaint_control(injection_phase, current_group_control),
         deferred_logger};
 
-    WGHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
+    GroupStateHelpers
+::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
                                                               *this,
                                                               this->summary_state_,
                                                               this->report_step_,
@@ -775,7 +781,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
 
 template <typename Scalar, typename IndexTraits>
 std::optional<Scalar>
-WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::string& name,
+GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
                                                                  const Scalar* rates,
@@ -825,7 +831,8 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
     if (this->groupState().has_grat_sales_target(group.name()))
         grat_target_from_sales = this->groupState().grat_sales_target(group.name());
 
-    WGHelpers::TargetCalculator<Scalar, IndexTraits> tcalc {current_group_control,
+    GroupStateHelpers
+::TargetCalculator<Scalar, IndexTraits> tcalc {current_group_control,
                                                             this->phase_usage_info_,
                                                             resv_coeff,
                                                             grat_target_from_sales,
@@ -833,7 +840,8 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
                                                             this->groupState(),
                                                             group.has_gpmaint_control(current_group_control)};
 
-    WGHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
+    GroupStateHelpers
+::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
                                                               *this,
                                                               this->summary_state_,
                                                               this->report_step_,
@@ -903,14 +911,14 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
 
 template <typename Scalar, typename IndexTraits>
 GuideRate::RateVector
-WellGroupHelper<Scalar, IndexTraits>::getWellRateVector(const std::string& name) const
+GroupStateHelper<Scalar, IndexTraits>::getWellRateVector(const std::string& name) const
 {
     return this->getGuideRateVector_(this->wellState().currentWellRates(name));
 }
 
 template <typename Scalar, typename IndexTraits>
 std::vector<std::string>
-WellGroupHelper<Scalar, IndexTraits>::groupChainTopBot(const std::string& bottom,
+GroupStateHelper<Scalar, IndexTraits>::groupChainTopBot(const std::string& bottom,
                                                        const std::string& top) const
 {
     // Get initial parent, 'bottom' can be a well or a group.
@@ -938,7 +946,7 @@ WellGroupHelper<Scalar, IndexTraits>::groupChainTopBot(const std::string& bottom
 
 template <typename Scalar, typename IndexTraits>
 int
-WellGroupHelper<Scalar, IndexTraits>::groupControlledWells(const std::string& group_name,
+GroupStateHelper<Scalar, IndexTraits>::groupControlledWells(const std::string& group_name,
                                                            const std::string& always_included_child,
                                                            const bool is_production_group,
                                                            const Phase injection_phase) const
@@ -960,22 +968,22 @@ WellGroupHelper<Scalar, IndexTraits>::groupControlledWells(const std::string& gr
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::setCmodeGroup(const Group& group, GroupState<Scalar>& group_state) const
+GroupStateHelper<Scalar, IndexTraits>::setCmodeGroup(const Group& group)
 {
 
     for (const std::string& group_name : group.groups()) {
-        this->setCmodeGroup(this->schedule_.getGroup(group_name, this->report_step_), group_state);
+        this->setCmodeGroup(this->schedule_.getGroup(group_name, this->report_step_));
     }
 
     // use NONE as default control
     const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
     for (Phase phase : all) {
-        if (!group_state.has_injection_control(group.name(), phase)) {
-            group_state.injection_control(group.name(), phase, Group::InjectionCMode::NONE);
+        if (!this->groupState().has_injection_control(group.name(), phase)) {
+            this->groupState().injection_control(group.name(), phase, Group::InjectionCMode::NONE);
         }
     }
-    if (!group_state.has_production_control(group.name())) {
-        group_state.production_control(group.name(), Group::ProductionCMode::NONE);
+    if (!this->groupState().has_production_control(group.name())) {
+        this->groupState().production_control(group.name(), Group::ProductionCMode::NONE);
     }
 
     const auto& events = this->schedule_[this->report_step_].wellgroup_events();
@@ -986,39 +994,39 @@ WellGroupHelper<Scalar, IndexTraits>::setCmodeGroup(const Group& group, GroupSta
                 continue;
 
             const auto& controls = group.injectionControls(phase, this->summary_state_);
-            group_state.injection_control(group.name(), phase, controls.cmode);
+            this->groupState().injection_control(group.name(), phase, controls.cmode);
         }
     }
 
     if (group.isProductionGroup() && events.hasEvent(group.name(), ScheduleEvents::GROUP_PRODUCTION_UPDATE)) {
         const auto controls = group.productionControls(this->summary_state_);
-        group_state.production_control(group.name(), controls.cmode);
+        this->groupState().production_control(group.name(), controls.cmode);
     }
 
     if (group.has_gpmaint_control(Group::ProductionCMode::RESV)) {
-        group_state.production_control(group.name(), Group::ProductionCMode::RESV);
+        this->groupState().production_control(group.name(), Group::ProductionCMode::RESV);
     }
     for (Phase phase : all) {
         if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE)) {
-            group_state.injection_control(group.name(), phase, Group::InjectionCMode::RATE);
+            this->groupState().injection_control(group.name(), phase, Group::InjectionCMode::RATE);
         } else if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV)) {
-            group_state.injection_control(group.name(), phase, Group::InjectionCMode::RESV);
+            this->groupState().injection_control(group.name(), phase, Group::InjectionCMode::RESV);
         }
     }
 
     if (this->schedule_[this->report_step_].gconsale().has(group.name())) {
-        group_state.injection_control(group.name(), Phase::GAS, Group::InjectionCMode::SALE);
+        this->groupState().injection_control(group.name(), Phase::GAS, Group::InjectionCMode::SALE);
     }
 }
 
 // NOTE: setRegionAveragePressureCalculator() is a template member function and must be
-//       defined in the header file (see WellGroupHelper.hpp).
+//       defined in the header file (see GroupStateHelper.hpp).
 //
 // See: updateGpMaintTargetForGroups() for detailed rationale.
 
 template <typename Scalar, typename IndexTraits>
 Scalar
-WellGroupHelper<Scalar, IndexTraits>::sumSolventRates(const Group& group, const bool is_injector) const
+GroupStateHelper<Scalar, IndexTraits>::sumSolventRates(const Group& group, const bool is_injector) const
 {
     Scalar rate = 0.0;
     for (const std::string& group_name : group.groups()) {
@@ -1059,7 +1067,7 @@ WellGroupHelper<Scalar, IndexTraits>::sumSolventRates(const Group& group, const 
 
 template <typename Scalar, typename IndexTraits>
 Scalar
-WellGroupHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
+GroupStateHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
                                                         const Opm::Group& group,
                                                         const int phase_pos,
                                                         const bool injector,
@@ -1128,7 +1136,7 @@ WellGroupHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
 
 template <typename Scalar, typename IndexTraits>
 Scalar
-WellGroupHelper<Scalar, IndexTraits>::sumWellResRates(const Group& group,
+GroupStateHelper<Scalar, IndexTraits>::sumWellResRates(const Group& group,
                                                       const int phasePos,
                                                       const bool injector) const
 {
@@ -1137,7 +1145,7 @@ WellGroupHelper<Scalar, IndexTraits>::sumWellResRates(const Group& group,
 
 template <typename Scalar, typename IndexTraits>
 Scalar
-WellGroupHelper<Scalar, IndexTraits>::sumWellSurfaceRates(const Group& group,
+GroupStateHelper<Scalar, IndexTraits>::sumWellSurfaceRates(const Group& group,
                                                           const int phase_pos,
                                                           const bool injector) const
 {
@@ -1145,7 +1153,7 @@ WellGroupHelper<Scalar, IndexTraits>::sumWellSurfaceRates(const Group& group,
 }
 
 // NOTE: updateGpMaintTargetForGroups() is a template member function and must be
-//       defined in the header file (see WellGroupHelper.hpp).
+//       defined in the header file (see GroupStateHelper.hpp).
 //
 // Rationale:
 //   - The RegionalValues template parameter depends on BlackoilWellModel's FluidSystem,
@@ -1159,35 +1167,33 @@ WellGroupHelper<Scalar, IndexTraits>::sumWellSurfaceRates(const Group& group,
 //   - The original implementation in WellGroupHelpers.cpp (static utility class) could keep
 //     the implementation in the .cpp file because it hard-coded BlackOilFluidSystem<Scalar>
 //     and used explicit template instantiation for that specific type.
-//   - As a member-based class, WellGroupHelper must support whatever FluidSystem the TypeTag
+//   - As a member-based class, GroupStateHelper must support whatever FluidSystem the TypeTag
 //     provides, so we cannot hard-code the type and must use header-based implementation.
 //
 // If moved here, the linker will report:
 //   undefined reference to
-//   `WellGroupHelper<...>::updateGpMaintTargetForGroups<std::map<...>>(const Group&, ...)`
+//   `GroupStateHelper<...>::updateGpMaintTargetForGroups<std::map<...>>(const Group&, ...)`
 
 template <typename Scalar, typename IndexTraits>
 int
-WellGroupHelper<Scalar, IndexTraits>::updateGroupControlledWells(const bool is_production_group,
+GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWells(const bool is_production_group,
                                                                  const Phase injection_phase,
-                                                                 GroupState<Scalar>& group_state,
-                                                                 DeferredLogger& deferred_logger) const
+                                                                 DeferredLogger& deferred_logger)
 {
     OPM_TIMEFUNCTION();
     const auto& group_name = "FIELD";
     return this->updateGroupControlledWellsRecursive_(
-        group_name, is_production_group, injection_phase, group_state, deferred_logger);
+        group_name, is_production_group, injection_phase, deferred_logger);
 }
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateGroupProductionRates(const Group& group,
-                                                                 GroupState<Scalar>& group_state) const
+GroupStateHelper<Scalar, IndexTraits>::updateGroupProductionRates(const Group& group)
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-        this->updateGroupProductionRates(group_tmp, group_state);
+        this->updateGroupProductionRates(group_tmp);
     }
     const int np = this->wellState().numPhases();
     std::vector<Scalar> rates(np, 0.0);
@@ -1195,24 +1201,22 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupProductionRates(const Group& gr
         rates[phase] = this->sumWellPhaseRates(
             /*res_rates=*/false, group, phase, /*injector=*/false, /*network=*/false);
     }
-    group_state.update_production_rates(group.name(), rates);
+    this->groupState().update_production_rates(group.name(), rates);
 }
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateGroupTargetReduction(const Group& group,
-                                                                 const bool is_injector,
-                                                                 GroupState<Scalar>& group_state) const
+GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReduction(const Group& group,
+                                                                 const bool is_injector)
 {
     OPM_TIMEFUNCTION();
     std::vector<Scalar> group_target_reduction(this->wellState().numPhases(), 0.0);
-    this->updateGroupTargetReductionRecursive_(group, is_injector, group_target_reduction, group_state);
+    this->updateGroupTargetReductionRecursive_(group, is_injector, group_target_reduction);
 }
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateNetworkLeafNodeProductionRates(
-    GroupState<Scalar>& group_state) const
+GroupStateHelper<Scalar, IndexTraits>::updateNetworkLeafNodeProductionRates()
 {
     const auto& network = this->schedule_[this->report_step_].network();
     if (network.active()) {
@@ -1229,22 +1233,21 @@ WellGroupHelper<Scalar, IndexTraits>::updateNetworkLeafNodeProductionRates(
                     }
                 }
             }
-            group_state.update_network_leaf_node_production_rates(group_name, network_rates);
+            this->groupState().update_network_leaf_node_production_rates(group_name, network_rates);
         }
     }
 }
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateREINForGroups(const Group& group,
-                                                          bool sum_rank,
-                                                          GroupState<Scalar>& group_state) const
+GroupStateHelper<Scalar, IndexTraits>::updateREINForGroups(const Group& group,
+                                                          bool sum_rank)
 {
     OPM_TIMEFUNCTION();
     const int np = this->wellState().numPhases();
     for (const std::string& groupName : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(groupName, this->report_step_);
-        this->updateREINForGroups(group_tmp, sum_rank, group_state);
+        this->updateREINForGroups(group_tmp, sum_rank);
     }
 
     std::vector<Scalar> rein(np, 0.0);
@@ -1257,25 +1260,24 @@ WellGroupHelper<Scalar, IndexTraits>::updateREINForGroups(const Group& group,
     if (sum_rank) {
         const auto& pu = this->wellState().phaseUsageInfo();
         if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-            const auto& [consumption_rate, import_rate] = group_state.gconsump_rates(group.name());
+            const auto& [consumption_rate, import_rate] = this->groupState().gconsump_rates(group.name());
             const auto ig = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
             rein[ig] += import_rate;
             rein[ig] -= consumption_rate;
         }
     }
 
-    group_state.update_injection_rein_rates(group.name(), rein);
+    this->groupState().update_injection_rein_rates(group.name(), rein);
 }
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateReservoirRatesInjectionGroups(
-    const Group& group, GroupState<Scalar>& group_state) const
+GroupStateHelper<Scalar, IndexTraits>::updateReservoirRatesInjectionGroups(const Group& group)
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-        this->updateReservoirRatesInjectionGroups(group_tmp, group_state);
+        this->updateReservoirRatesInjectionGroups(group_tmp);
     }
     const int np = this->wellState().numPhases();
     std::vector<Scalar> resv(np, 0.0);
@@ -1283,12 +1285,12 @@ WellGroupHelper<Scalar, IndexTraits>::updateReservoirRatesInjectionGroups(
         resv[phase] = this->sumWellPhaseRates(
             /*res_rates=*/true, group, phase, /*injector=*/true, /*network=*/false);
     }
-    group_state.update_injection_reservoir_rates(group.name(), resv);
+    this->groupState().update_injection_reservoir_rates(group.name(), resv);
 }
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateState(WellState<Scalar, IndexTraits>& well_state,
+GroupStateHelper<Scalar, IndexTraits>::updateState(WellState<Scalar, IndexTraits>& well_state,
                                                   GroupState<Scalar>& group_state)
 {
     this->well_state_ = &well_state;
@@ -1297,13 +1299,12 @@ WellGroupHelper<Scalar, IndexTraits>::updateState(WellState<Scalar, IndexTraits>
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateSurfaceRatesInjectionGroups(const Group& group,
-                                                                        GroupState<Scalar>& group_state) const
+GroupStateHelper<Scalar, IndexTraits>::updateSurfaceRatesInjectionGroups(const Group& group)
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-        this->updateSurfaceRatesInjectionGroups(group_tmp, group_state);
+        this->updateSurfaceRatesInjectionGroups(group_tmp);
     }
     const int np = this->wellState().numPhases();
     std::vector<Scalar> rates(np, 0.0);
@@ -1315,18 +1316,17 @@ WellGroupHelper<Scalar, IndexTraits>::updateSurfaceRatesInjectionGroups(const Gr
             /*injector=*/true,
             /*network=*/false);
     }
-    group_state.update_injection_surface_rates(group.name(), rates);
+    this->groupState().update_injection_surface_rates(group.name(), rates);
 }
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateVREPForGroups(const Group& group,
-                                                          GroupState<Scalar>& group_state) const
+GroupStateHelper<Scalar, IndexTraits>::updateVREPForGroups(const Group& group)
 {
     OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
-        this->updateVREPForGroups(group_tmp, group_state);
+        this->updateVREPForGroups(group_tmp);
     }
     const int np = this->wellState().numPhases();
     Scalar resv = 0.0;
@@ -1334,12 +1334,12 @@ WellGroupHelper<Scalar, IndexTraits>::updateVREPForGroups(const Group& group,
         resv += this->sumWellPhaseRates(
             /*res_rates=*/true, group, phase, /*injector=*/false, /*network=*/false);
     }
-    group_state.update_injection_vrep_rate(group.name(), resv);
+    this->groupState().update_injection_vrep_rate(group.name(), resv);
 }
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateWellRates(const Group& group,
+GroupStateHelper<Scalar, IndexTraits>::updateWellRates(const Group& group,
                                                       const WellState<Scalar, IndexTraits>& well_state_nupcol,
                                                       WellState<Scalar, IndexTraits>& well_state) const
 {
@@ -1370,7 +1370,7 @@ WellGroupHelper<Scalar, IndexTraits>::updateWellRates(const Group& group,
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateWellRatesFromGroupTargetScale(
+GroupStateHelper<Scalar, IndexTraits>::updateWellRatesFromGroupTargetScale(
     const Scalar scale,
     const Group& group,
     bool is_injector,
@@ -1436,7 +1436,7 @@ WellGroupHelper<Scalar, IndexTraits>::updateWellRatesFromGroupTargetScale(
 
 template <typename Scalar, typename IndexTraits>
 std::pair<std::optional<std::string>, Scalar>
-WellGroupHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
+GroupStateHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
                                                          const Group::ProductionCMode& offended_control,
                                                          const Parallel::Communication& comm,
                                                          DeferredLogger& deferred_logger) const
@@ -1548,7 +1548,7 @@ WellGroupHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
 
 template <typename Scalar, typename IndexTraits>
 std::string
-WellGroupHelper<Scalar, IndexTraits>::controlGroup_(const Group& group) const
+GroupStateHelper<Scalar, IndexTraits>::controlGroup_(const Group& group) const
 {
     const Group::ProductionCMode& currentGroupControl = this->groupState().production_control(group.name());
 
@@ -1566,7 +1566,7 @@ WellGroupHelper<Scalar, IndexTraits>::controlGroup_(const Group& group) const
 
 template <class Scalar, typename IndexTraits>
 Opm::GuideRate::RateVector
-WellGroupHelper<Scalar, IndexTraits>::getGuideRateVector_(const std::vector<Scalar>& rates) const
+GroupStateHelper<Scalar, IndexTraits>::getGuideRateVector_(const std::vector<Scalar>& rates) const
 {
     const auto& pu = this->phase_usage_info_;
     Scalar oilRate = 0.0;
@@ -1589,7 +1589,7 @@ WellGroupHelper<Scalar, IndexTraits>::getGuideRateVector_(const std::vector<Scal
 
 template <typename Scalar, typename IndexTraits>
 bool
-WellGroupHelper<Scalar, IndexTraits>::isInGroupChainTopBot_(const std::string& bottom,
+GroupStateHelper<Scalar, IndexTraits>::isInGroupChainTopBot_(const std::string& bottom,
                                                             const std::string& top) const
 {
     // Get initial parent, 'bottom' can be a well or a group.
@@ -1613,7 +1613,7 @@ WellGroupHelper<Scalar, IndexTraits>::isInGroupChainTopBot_(const std::string& b
 
 template <typename Scalar, typename IndexTraits>
 int
-WellGroupHelper<Scalar, IndexTraits>::phaseToActivePhaseIdx_(const Phase phase) const
+GroupStateHelper<Scalar, IndexTraits>::phaseToActivePhaseIdx_(const Phase phase) const
 {
     const auto& pu = this->phase_usage_info_;
     int phase_pos = -1;
@@ -1642,7 +1642,7 @@ WellGroupHelper<Scalar, IndexTraits>::phaseToActivePhaseIdx_(const Phase phase) 
 
 template <typename Scalar, typename IndexTraits>
 Scalar
-WellGroupHelper<Scalar, IndexTraits>::satelliteInjectionRate_(const ScheduleState& sched,
+GroupStateHelper<Scalar, IndexTraits>::satelliteInjectionRate_(const ScheduleState& sched,
                                                               const Group& group,
                                                               const int phase_pos,
                                                               bool res_rates) const
@@ -1677,7 +1677,7 @@ WellGroupHelper<Scalar, IndexTraits>::satelliteInjectionRate_(const ScheduleStat
 
 template <typename Scalar, typename IndexTraits>
 Scalar
-WellGroupHelper<Scalar, IndexTraits>::satelliteProductionRate_(
+GroupStateHelper<Scalar, IndexTraits>::satelliteProductionRate_(
     const ScheduleState& sched,
     const Group& group,
     const GSatProd::GSatProdGroupProp::Rate rate_comp,
@@ -1696,7 +1696,7 @@ WellGroupHelper<Scalar, IndexTraits>::satelliteProductionRate_(
 
 template <typename Scalar, typename IndexTraits>
 std::optional<GSatProd::GSatProdGroupProp::Rate>
-WellGroupHelper<Scalar, IndexTraits>::selectRateComponent_(const int phase_pos) const
+GroupStateHelper<Scalar, IndexTraits>::selectRateComponent_(const int phase_pos) const
 {
     // TODO: this function can be wrong, phase_pos is not used anymore, this function requries checking and
     // refactoring.
@@ -1719,12 +1719,11 @@ WellGroupHelper<Scalar, IndexTraits>::selectRateComponent_(const int phase_pos) 
 
 template <typename Scalar, typename IndexTraits>
 int
-WellGroupHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
+GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
     const std::string& group_name,
     const bool is_production_group,
     const Phase injection_phase,
-    GroupState<Scalar>& group_state,
-    DeferredLogger& deferred_logger) const
+    DeferredLogger& deferred_logger)
 {
     const Group& group = this->schedule_.getGroup(group_name, this->report_step_);
     int num_wells = 0;
@@ -1732,21 +1731,21 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
 
         bool included = false;
         if (is_production_group) {
-            const auto ctrl = group_state.production_control(child_group);
+            const auto ctrl = this->groupState().production_control(child_group);
             included
                 = included || (ctrl == Group::ProductionCMode::FLD) || (ctrl == Group::ProductionCMode::NONE);
         } else {
-            const auto ctrl = group_state.injection_control(child_group, injection_phase);
+            const auto ctrl = this->groupState().injection_control(child_group, injection_phase);
             included
                 = included || (ctrl == Group::InjectionCMode::FLD) || (ctrl == Group::InjectionCMode::NONE);
         }
 
         if (included) {
             num_wells += this->updateGroupControlledWellsRecursive_(
-                child_group, is_production_group, injection_phase, group_state, deferred_logger);
+                child_group, is_production_group, injection_phase, deferred_logger);
         } else {
             this->updateGroupControlledWellsRecursive_(
-                child_group, is_production_group, injection_phase, group_state, deferred_logger);
+                child_group, is_production_group, injection_phase, deferred_logger);
         }
     }
     for (const std::string& child_well : group.wells()) {
@@ -1763,7 +1762,7 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
                 included = included || this->wellState().isInjectionGrup(child_well);
             }
         }
-        const auto ctrl1 = group_state.production_control(group.name());
+        const auto ctrl1 = this->groupState().production_control(group.name());
         if (group.as_choke()
             && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))) {
             // The auto choke group has not own group control but inherits control from an ancestor group.
@@ -1788,17 +1787,18 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
             if (group_guide_rate > 0) {
                 // Guide rate is not default for the auto choke group
                 Scalar grat_target_from_sales = 0.0;
-                if (group_state.has_grat_sales_target(control_group_name))
-                    grat_target_from_sales = group_state.grat_sales_target(control_group_name);
+                if (this->groupState().has_grat_sales_target(control_group_name))
+                    grat_target_from_sales = this->groupState().grat_sales_target(control_group_name);
 
                 std::vector<Scalar> resv_coeff(num_phases, 1.0);
-                WGHelpers::TargetCalculator<Scalar, IndexTraits> tcalc {
+                GroupStateHelpers
+::TargetCalculator<Scalar, IndexTraits> tcalc {
                     control_group_cmode,
                     this->phase_usage_info_,
                     resv_coeff,
                     grat_target_from_sales,
                     group.name(),
-                    group_state,
+                    this->groupState(),
                     group.has_gpmaint_control(control_group_cmode)};
                 const auto& control_group_target = tcalc.groupTarget(ctrl, deferred_logger);
 
@@ -1825,9 +1825,9 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
         }
     }
     if (is_production_group) {
-        group_state.update_number_of_wells_under_group_control(group_name, num_wells);
+        this->groupState().update_number_of_wells_under_group_control(group_name, num_wells);
     } else {
-        group_state.update_number_of_wells_under_inj_group_control(group_name, injection_phase, num_wells);
+        this->groupState().update_number_of_wells_under_inj_group_control(group_name, injection_phase, num_wells);
     }
 
     return num_wells;
@@ -1835,18 +1835,17 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
 
 template <typename Scalar, typename IndexTraits>
 void
-WellGroupHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
+GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
     const Group& group,
     const bool is_injector,
-    std::vector<Scalar>& group_target_reduction,
-    GroupState<Scalar>& group_state) const
+    std::vector<Scalar>& group_target_reduction)
 {
     const int np = this->wellState().numPhases();
     for (const std::string& sub_group_name : group.groups()) {
         std::vector<Scalar> sub_group_target_reduction(np, 0.0);
         const Group& sub_group = this->schedule_.getGroup(sub_group_name, this->report_step_);
         this->updateGroupTargetReductionRecursive_(
-            sub_group, is_injector, sub_group_target_reduction, group_state);
+            sub_group, is_injector, sub_group_target_reduction);
 
         const Scalar sub_group_efficiency = sub_group.getGroupEfficiencyFactor();
 
@@ -1859,7 +1858,7 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
                 if (phase_pos == -1)
                     continue;
                 const Group::InjectionCMode& current_group_control
-                    = group_state.injection_control(sub_group.name(), phase);
+                    = this->groupState().injection_control(sub_group.name(), phase);
                 const bool individual_control = (current_group_control != Group::InjectionCMode::FLD
                                                  && current_group_control != Group::InjectionCMode::NONE);
                 const int num_group_controlled_wells
@@ -1880,7 +1879,7 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
             }
         } else {
             const Group::ProductionCMode& current_group_control
-                = group_state.production_control(sub_group.name());
+                = this->groupState().production_control(sub_group.name());
             const bool individual_control = (current_group_control != Group::ProductionCMode::FLD
                                              && current_group_control != Group::ProductionCMode::NONE);
             const int num_group_controlled_wells
@@ -1948,15 +1947,15 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
         }
     }
     if (is_injector) {
-        group_state.update_injection_reduction_rates(group.name(), group_target_reduction);
+        this->groupState().update_injection_reduction_rates(group.name(), group_target_reduction);
     } else {
-        group_state.update_production_reduction_rates(group.name(), group_target_reduction);
+        this->groupState().update_production_reduction_rates(group.name(), group_target_reduction);
     }
 }
 
 
-template class WellGroupHelper<double, BlackOilDefaultFluidSystemIndices>;
+template class GroupStateHelper<double, BlackOilDefaultFluidSystemIndices>;
 #ifdef FLOW_INSTANTIATE_FLOAT
-template class WellGroupHelper<float, BlackOilDefaultFluidSystemIndices>;
+template class GroupStateHelper<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 } // namespace Opm

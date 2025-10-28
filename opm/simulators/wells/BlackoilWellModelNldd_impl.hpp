@@ -66,7 +66,7 @@ assembleWellEq(const double dt,
         if (this->well_domain().at(well->name()) == domain.index) {
             well->assembleWellEq(wellModel_.simulator(),
                                  dt,
-                                 wellModel_.wgHelper(),
+                                 wellModel_.groupStateHelper(),
                                  wellModel_.wellState(),
                                  deferred_logger);
         }
@@ -195,7 +195,7 @@ updateWellControls(DeferredLogger& deferred_logger,
             constexpr auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
             well->updateWellControl(wellModel_.simulator(),
                                     mode,
-                                    wellModel_.wgHelper(),
+                                    wellModel_.groupStateHelper(),
                                     wellModel_.wellState(),
                                     deferred_logger);
         }

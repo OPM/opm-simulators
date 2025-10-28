@@ -77,7 +77,7 @@ namespace Opm
         using typename Base::SparseMatrixAdapter;
         using typename Base::FluidState;
         using typename Base::RateVector;
-        using typename Base::WellGroupHelperType;
+        using typename Base::GroupStateHelperType;
 
         using Base::has_solvent;
         using Base::has_zFraction;
@@ -162,7 +162,7 @@ namespace Opm
         /// computing the well potentials for group control
         void computeWellPotentials(const Simulator& simulator,
                                    const WellStateType& well_state,
-                                   const WellGroupHelperType& wgHelper,
+                                   const GroupStateHelperType& groupStateHelper,
                                    std::vector<Scalar>& well_potentials,
                                    DeferredLogger& deferred_logger) /* const */ override;
 
@@ -199,7 +199,7 @@ namespace Opm
                                       const double dt,
                                       const Well::InjectionControls& inj_controls,
                                       const Well::ProductionControls& prod_controls,
-                                      const WellGroupHelperType& wgHelper,
+                                      const GroupStateHelperType& groupStateHelper,
                                       WellStateType& well_state,
                                       DeferredLogger& deferred_logger) override;
 
@@ -208,7 +208,7 @@ namespace Opm
                                         const double dt,
                                         const Well::InjectionControls& inj_controls,
                                         const Well::ProductionControls& prod_controls,
-                                        const WellGroupHelperType& wgHelper,
+                                        const GroupStateHelperType& groupStateHelper,
                                         WellStateType& well_state,
                                         DeferredLogger& deferred_logger,
                                         const bool fixed_control,
@@ -217,14 +217,14 @@ namespace Opm
 
         /* returns BHP */
         Scalar computeWellRatesAndBhpWithThpAlqProd(const Simulator& ebos_simulator,
-                                                    const WellGroupHelperType& wgHelper,
+                                                    const GroupStateHelperType& groupStateHelper,
                                                     const SummaryState &summary_state,
                                                     DeferredLogger& deferred_logger,
                                                     std::vector<Scalar>& potentials,
                                                     Scalar alq) const;
 
         void computeWellRatesWithThpAlqProd(const Simulator& ebos_simulator,
-                                            const WellGroupHelperType& wgHelper,
+                                            const GroupStateHelperType& groupStateHelper,
                                             const SummaryState& summary_state,
                                             DeferredLogger& deferred_logger,
                                             std::vector<Scalar>& potentials,
@@ -232,14 +232,14 @@ namespace Opm
 
         std::optional<Scalar>
         computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
-                                        const WellGroupHelperType& wgHelper,
+                                        const GroupStateHelperType& groupStateHelper,
                                         const SummaryState& summary_state,
                                         const Scalar alq_value,
                                         DeferredLogger& deferred_logger,
                                         bool iterate_if_no_solution) const override;
 
         void updateIPRImplicit(const Simulator& simulator,
-                               const WellGroupHelperType& wgHelper,
+                               const GroupStateHelperType& groupStateHelper,
                                WellStateType& well_state,
                                DeferredLogger& deferred_logger) override;
 
@@ -316,18 +316,18 @@ namespace Opm
 
         void computeWellRatesWithBhpIterations(const Simulator& ebosSimulator,
                                                const Scalar& bhp,
-                                               const WellGroupHelperType& wgHelper,
+                                               const GroupStateHelperType& groupStateHelper,
                                                std::vector<Scalar>& well_flux,
                                                DeferredLogger& deferred_logger) const override;
 
         std::vector<Scalar>
         computeWellPotentialWithTHP(const Simulator& ebosSimulator,
-                                    const WellGroupHelperType& wgHelper,
+                                    const GroupStateHelperType& groupStateHelper,
                                     DeferredLogger& deferred_logger,
                                     const WellStateType& well_state) const;
 
         bool computeWellPotentialsImplicit(const Simulator& ebos_simulator,
-                                           const WellGroupHelperType& wgHelper,
+                                           const GroupStateHelperType& groupStateHelper,
                                            std::vector<Scalar>& well_potentials,
                                            DeferredLogger& deferred_logger) const;
 
@@ -362,7 +362,7 @@ namespace Opm
                                                  DeferredLogger& deferred_logger) const;
 
         void assembleWellEqWithoutIteration(const Simulator& simulator,
-                                            const WellGroupHelperType& wgHelper,
+                                            const GroupStateHelperType& groupStateHelper,
                                             const double dt,
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
@@ -371,7 +371,7 @@ namespace Opm
                                             const bool solving_with_zero_rate) override;
 
         void assembleWellEqWithoutIterationImpl(const Simulator& simulator,
-                                                const WellGroupHelperType& wgHelper,
+                                                const GroupStateHelperType& groupStateHelper,
                                                 const double dt,
                                                 const Well::InjectionControls& inj_controls,
                                                 const Well::ProductionControls& prod_controls,
@@ -396,7 +396,7 @@ namespace Opm
         // check whether the well is operable under THP limit with current reservoir condition
         void checkOperabilityUnderTHPLimit(const Simulator& simulator,
                                            const WellStateType& well_state,
-                                           const WellGroupHelperType& wgHelper,
+                                           const GroupStateHelperType& groupStateHelper,
                                            DeferredLogger& deferred_logger) override;
 
         // updating the inflow based on the current reservoir condition
@@ -463,13 +463,13 @@ namespace Opm
         std::optional<Scalar>
         computeBhpAtThpLimitProd(const WellStateType& well_state,
                                  const Simulator& simulator,
-                                 const WellGroupHelperType& wgHelper,
+                                 const GroupStateHelperType& groupStateHelper,
                                  const SummaryState& summary_state,
                                  DeferredLogger& deferred_logger) const;
 
         std::optional<Scalar>
         computeBhpAtThpLimitInj(const Simulator& simulator,
-                                const WellGroupHelperType& wgHelper,
+                                const GroupStateHelperType& groupStateHelper,
                                 const SummaryState& summary_state,
                                 DeferredLogger& deferred_logger) const;
 

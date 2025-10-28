@@ -36,13 +36,13 @@ namespace Opm {
 // -------------------------------------------------------
 template <class Scalar, class IndexTraits>
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
-RescoupSendSlaveGroupData(WellGroupHelperType& wg_helper)
-    : wg_helper_{wg_helper}
-    , reservoir_coupling_slave_{wg_helper.reservoirCouplingSlave()}
-    , schedule_{wg_helper.schedule()}
-    , group_state_{wg_helper.groupState()}
-    , phase_usage_{wg_helper.phaseUsage()}
-    , report_step_idx_{wg_helper.reportStepIdx()}
+RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper)
+    : groupStateHelper_{groupStateHelper}
+    , reservoir_coupling_slave_{groupStateHelper.reservoirCouplingSlave()}
+    , schedule_{groupStateHelper.schedule()}
+    , group_state_{groupStateHelper.groupState()}
+    , phase_usage_{groupStateHelper.phaseUsage()}
+    , report_step_idx_{groupStateHelper.reportStepIdx()}
 {
 }
 
@@ -177,7 +177,7 @@ collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const
 {
     auto& rescoup_slave = this->reservoir_coupling_slave_;
     const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
-    GuideRate::RateVector production_rates = this->wg_helper_.getProductionGroupRateVector(group_name);
+    GuideRate::RateVector production_rates = this->groupStateHelper_.getProductionGroupRateVector(group_name);
     // NOTE: GuideRate::RateVector is a vector of doubles, so we need to convert it to Scalar
     // TODO: Fix GuideRate::RateVector to be a vector of Scalars instead of doubles
     return ProductionRates{production_rates};

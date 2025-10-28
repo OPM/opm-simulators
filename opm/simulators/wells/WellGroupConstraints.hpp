@@ -40,7 +40,7 @@ enum class InjectorType;
 using RegionId = int;
 class Schedule;
 class SummaryState;
-template<typename Scalar, typename IndexTraits> class WellGroupHelper;
+template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
 template<typename Scalar, typename IndexTraits> class WellState;
 
@@ -55,10 +55,10 @@ public:
                                             const int,
                                             const std::optional<std::string>&,
                                             std::vector<Scalar>&)>;
-    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
     using WellStateType = WellState<Scalar, IndexTraits>;
 
-    bool checkGroupConstraints(const WellGroupHelperType& wgHelper,
+    bool checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const RateConvFunc& rateConverter,
@@ -69,7 +69,7 @@ public:
 private:
     std::pair<bool, Scalar>
     checkGroupConstraintsInj(const Group& group,
-                             const WellGroupHelperType& wgHelper,
+                             const GroupStateHelperType& groupStateHelper,
                              const Scalar efficiencyFactor,
                              const SummaryState& summaryState,
                              const RateConvFunc& rateConverter,
@@ -78,7 +78,7 @@ private:
 
     std::pair<bool, Scalar>
     checkGroupConstraintsProd(const Group& group,
-                              const WellGroupHelperType& wgHelper,
+                              const GroupStateHelperType& groupStateHelper,
                               const Scalar efficiencyFactor,
                               const RateConvFunc& rateConverter,
                               const bool check_guide_rate,

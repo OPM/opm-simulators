@@ -43,7 +43,7 @@ class Schedule;
 struct RatioLimitCheckReport;
 template<typename Scalar, typename IndexTraits> class SingleWellState;
 template<typename Scalar, typename IndexTraits> class WellState;
-template<typename Scalar, typename IndexTraits> class WellGroupHelper;
+template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 
 template<class FluidSystem>
 class WellInterfaceFluidSystem : public WellInterfaceGeneric<typename FluidSystem::Scalar, typename FluidSystem::IndexTraitsType>
@@ -58,7 +58,7 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using ModelParameters = typename WellInterfaceGeneric<Scalar, IndexTraits>::ModelParameters;
-    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
     using WellStateType = WellState<Scalar, IndexTraits>;
 
     static constexpr int Water = IndexTraits::waterPhaseIdx;
@@ -91,14 +91,14 @@ protected:
                                     const std::optional<Well::InjectionControls>& inj_controls = std::nullopt,
                                     const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
-    bool checkGroupConstraints(const WellGroupHelperType& wgHelper,
+    bool checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const bool check_guide_rate,
                                WellStateType& well_state,
                                DeferredLogger& deferred_logger) const;
 
-    bool checkConstraints(const WellGroupHelperType& wgHelper,
+    bool checkConstraints(const GroupStateHelperType& groupStateHelper,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
                           WellStateType& well_state,

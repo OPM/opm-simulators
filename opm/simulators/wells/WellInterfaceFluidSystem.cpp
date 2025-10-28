@@ -37,7 +37,7 @@
 #include <opm/simulators/wells/WellConstraints.hpp>
 #include <opm/simulators/wells/WellGroupConstraints.hpp>
 #include <opm/simulators/wells/WellGroupControls.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 namespace Opm
@@ -179,14 +179,14 @@ checkIndividualConstraints(SingleWellState<Scalar, IndexTraits>& ws,
 template<typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkGroupConstraints(const WellGroupHelperType& wgHelper,
+checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const bool check_guide_rate,
                       WellStateType& well_state,
                       DeferredLogger& deferred_logger) const
 {
-    const auto& group_state = wgHelper.groupState();
+    const auto& group_state = groupStateHelper.groupState();
 
 
     if (!this->wellEcl().isAvailableForGroupControl())
@@ -204,7 +204,7 @@ checkGroupConstraints(const WellGroupHelperType& wgHelper,
             this->rateConverter().calcInjCoeff(id, region, coeff);
     };
 
-    return WellGroupConstraints(*this).checkGroupConstraints(wgHelper,
+    return WellGroupConstraints(*this).checkGroupConstraints(groupStateHelper,
                                                              schedule, summaryState,
                                                              rCoeff, check_guide_rate, well_state, deferred_logger);
 }
@@ -212,7 +212,7 @@ checkGroupConstraints(const WellGroupHelperType& wgHelper,
 template<typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkConstraints(const WellGroupHelperType& wgHelper,
+checkConstraints(const GroupStateHelperType& groupStateHelper,
                  const Schedule& schedule,
                  const SummaryState& summaryState,
                  WellStateType& well_state,
@@ -223,7 +223,7 @@ checkConstraints(const WellGroupHelperType& wgHelper,
     if (ind_broken) {
         return true;
     } else {
-        return checkGroupConstraints(wgHelper, schedule,
+        return checkGroupConstraints(groupStateHelper, schedule,
                                      summaryState, true, well_state, deferred_logger);
     }
 }

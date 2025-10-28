@@ -72,7 +72,7 @@
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -117,7 +117,7 @@ template<class Scalar> class WellContributions;
 
             using WellConnectionModule = WellConnectionAuxiliaryModule<TypeTag, BlackoilWellModel<TypeTag>>;
             using IndexTraits = typename FluidSystem::IndexTraitsType;
-            using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+            using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
@@ -399,12 +399,12 @@ template<class Scalar> class WellContributions;
             void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar> *master)
             {
                 this->guide_rate_handler_.setReservoirCouplingMaster(master);
-                this->wgHelper().setReservoirCouplingMaster(master);
+                this->groupStateHelper().setReservoirCouplingMaster(master);
             }
             void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar> *slave)
             {
                 this->guide_rate_handler_.setReservoirCouplingSlave(slave);
-                this->wgHelper().setReservoirCouplingSlave(slave);
+                this->groupStateHelper().setReservoirCouplingSlave(slave);
             }
 
             /// \brief Send comprehensive slave group data to master

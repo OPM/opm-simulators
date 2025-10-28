@@ -27,7 +27,7 @@
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -38,14 +38,14 @@ template<typename Scalar, typename IndexTraits>
 std::pair<bool, Scalar>
 WellGroupConstraints<Scalar, IndexTraits>::
 checkGroupConstraintsInj(const Group& group,
-                         const WellGroupHelperType& wgHelper,
+                         const GroupStateHelperType& groupStateHelper,
                          const Scalar efficiencyFactor,
                          const SummaryState& summaryState,
                          const RateConvFunc& rateConverter,
                          const bool check_guide_rate,
                          DeferredLogger& deferred_logger) const
 {
-    const auto& well_state = wgHelper.wellState();
+    const auto& well_state = groupStateHelper.wellState();
 
     // Translate injector type from control to Phase.
     const auto& well_controls = well_.wellEcl().injectionControls(summaryState);
@@ -77,7 +77,7 @@ checkGroupConstraintsInj(const Group& group,
 
     const auto& ws = well_state.well(well_.indexOfWell());
     // Call check for the well's injection phase.
-    return wgHelper.checkGroupConstraintsInj(
+    return groupStateHelper.checkGroupConstraintsInj(
         well_.name(),
         well_.wellEcl().groupName(),
         group,
@@ -94,20 +94,20 @@ template<typename Scalar, typename IndexTraits>
 std::pair<bool, Scalar>
 WellGroupConstraints<Scalar, IndexTraits>::
 checkGroupConstraintsProd(const Group& group,
-                          const WellGroupHelperType& wgHelper,
+                          const GroupStateHelperType& groupStateHelper,
                           const Scalar efficiencyFactor,
                           const RateConvFunc& rateConverter,
                           const bool check_guide_rate,
                           DeferredLogger& deferred_logger) const
 {
-    const auto& well_state = wgHelper.wellState();
+    const auto& well_state = groupStateHelper.wellState();
 
     // Make conversion factors for RESV <-> surface rates.
     std::vector<Scalar> resv_coeff(well_.phaseUsage().numActivePhases(), 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
-    return wgHelper.checkGroupConstraintsProd(well_.name(),
+    return groupStateHelper.checkGroupConstraintsProd(well_.name(),
         well_.wellEcl().groupName(),
         group,
         ws.surface_rates.data(),
@@ -120,7 +120,7 @@ checkGroupConstraintsProd(const Group& group,
 
 template<typename Scalar, typename IndexTraits>
 bool WellGroupConstraints<Scalar, IndexTraits>::
-checkGroupConstraints(const WellGroupHelperType& wgHelper,
+checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const RateConvFunc& rateConverter,
@@ -146,7 +146,7 @@ checkGroupConstraints(const WellGroupHelperType& wgHelper,
             const Scalar efficiencyFactor = well.getEfficiencyFactor() *
                                             well_state[well.name()].efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
-                this->checkGroupConstraintsInj(group, wgHelper, efficiencyFactor,
+                this->checkGroupConstraintsInj(group, groupStateHelper, efficiencyFactor,
                                                summaryState,
                                                rateConverter,
                                                check_guide_rate,
@@ -178,7 +178,7 @@ checkGroupConstraints(const WellGroupHelperType& wgHelper,
             const Scalar efficiencyFactor = well.getEfficiencyFactor() *
                                             well_state[well.name()].efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
-                this->checkGroupConstraintsProd(group, wgHelper,
+                this->checkGroupConstraintsProd(group, groupStateHelper,
                                                 efficiencyFactor,
                                                 rateConverter,
                                                 check_guide_rate,
