@@ -144,10 +144,6 @@ public:
                                                       const bool check_guide_rate,
                                                       DeferredLogger& deferred_logger) const;
 
-    std::map<std::string, Scalar> computeNetworkPressures(const Network::ExtNetwork& network,
-                                                          const VFPProdProperties<Scalar>& vfp_prod_props,
-                                                          const Parallel::Communication& comm) const;
-
     Scalar getGuideRate(const std::string& name, const GuideRateModel::Target target) const;
 
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;

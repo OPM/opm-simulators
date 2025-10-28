@@ -29,7 +29,6 @@
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
-#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
@@ -144,10 +143,10 @@ updatePressures(const int reportStepIdx,
 
     const auto previous_node_pressures = node_pressures_;
 
-    node_pressures_ = well_model_.groupStateHelper().
-                          computeNetworkPressures(network,
-                                                  *well_model_.getVFPProperties().getProd(),
-                                                  well_model_.comm());
+    node_pressures_ = this->computePressures(network,
+                                             *well_model_.getVFPProperties().getProd(),
+                                             reportStepIdx,
+                                             well_model_.comm());
 
     // here, the network imbalance is the difference between the previous nodal pressure and the new nodal pressure
     Scalar network_imbalance = 0.;
@@ -233,11 +232,10 @@ assignNodeValues(std::map<std::string, data::NodeData>& nodevalues,
         return;
     }
 
-    auto converged_pressures =
-        well_model_.groupStateHelper().
-            computeNetworkPressures(network,
-                                    *well_model_.getVFPProperties().getProd(),
-                                    well_model_.comm());
+    auto converged_pressures = this->computePressures(network,
+                                                      *well_model_.getVFPProperties().getProd(),
+                                                      reportStepIdx,
+                                                      well_model_.comm());
     for (const auto& [node, converged_pressure] : converged_pressures) {
         auto it = nodevalues.find(node);
         assert(it != nodevalues.end() );
@@ -283,6 +281,169 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
             well.setDynamicThpLimit(it->second);
         }
     }
+}
+
+template <typename Scalar, typename IndexTraits>
+std::map<std::string, Scalar>
+BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+computePressures(const Network::ExtNetwork& network,
+                 const VFPProdProperties<Scalar>& vfp_prod_props,
+                 const int reportStepIdx,
+                 const Parallel::Communication& comm) const
+{
+    // TODO: Only dealing with production networks for now.
+    OPM_TIMEFUNCTION();
+    if (!network.active()) {
+        return {};
+    }
+
+    const auto& group_state = well_model_.groupStateHelper().groupState();
+    const auto& well_state = well_model_.groupStateHelper().wellState();
+
+    std::map<std::string, Scalar> node_pressures;
+    auto roots = network.roots();
+    for (const auto& root : roots) {
+        // Fixed pressure nodes of the network are the roots of trees.
+        // Leaf nodes must correspond to groups in the group structure.
+        // Let us first find all leaf nodes of the network. We also
+        // create a vector of all nodes, ordered so that a child is
+        // always after its parent.
+        std::stack<std::string> children;
+        std::set<std::string> leaf_nodes;
+        std::vector<std::string> root_to_child_nodes;
+        // children.push(network.root().name());
+        children.push(root.get().name());
+        while (!children.empty()) {
+            const auto node = children.top();
+            children.pop();
+            root_to_child_nodes.push_back(node);
+            auto branches = network.downtree_branches(node);
+            if (branches.empty()) {
+                leaf_nodes.insert(node);
+            }
+            for (const auto& branch : branches) {
+                children.push(branch.downtree_node());
+            }
+        }
+        assert(children.empty());
+
+        // Starting with the leaf nodes of the network, get the flow rates
+        // from the corresponding groups.
+        std::map<std::string, std::vector<Scalar>> node_inflows;
+        const std::vector<Scalar> zero_rates(3, 0.0);
+        for (const auto& node : leaf_nodes) {
+            // Guard against empty leaf nodes (may not be present in GRUPTREE)
+            if (!well_model_.groupStateHelper().groupState().has_production_rates(node)) {
+                node_inflows[node] = zero_rates;
+                continue;
+            }
+
+            node_inflows[node] = group_state.network_leaf_node_production_rates(node);
+            // Add the ALQ amounts to the gas rates if requested.
+            if (network.node(node).add_gas_lift_gas()) {
+                const auto& group = well_model_.schedule().getGroup(node, reportStepIdx);
+                Scalar alq = 0.0;
+                for (const std::string& wellname : group.wells()) {
+                    const Well& well = well_model_.schedule().getWell(wellname, reportStepIdx);
+                    if (well.isInjector() || !well_state.isOpen(wellname))
+                        continue;
+                    const Scalar efficiency = well.getEfficiencyFactor(/*network*/ true)
+                        * well_state.getGlobalEfficiencyScalingFactor(wellname);
+                    const auto& well_index = well_state.index(wellname);
+                    if (well_index.has_value() &&
+                        well_state.wellIsOwned(well_index.value(), wellname))
+                    {
+                        alq += well_state.well(wellname).alq_state.get() * efficiency;
+                    }
+                }
+                alq = comm.sum(alq);
+                node_inflows[node][IndexTraits::gasPhaseIdx] += alq;
+            }
+        }
+
+        // Accumulate in the network, towards the roots. Note that a
+        // root (i.e. fixed pressure node) can still be contributing
+        // flow towards other nodes in the network, i.e.  a node is
+        // the root of a subtree.
+        auto child_to_root_nodes = root_to_child_nodes;
+        std::reverse(child_to_root_nodes.begin(), child_to_root_nodes.end());
+        for (const auto& node : child_to_root_nodes) {
+            const auto upbranch = network.uptree_branch(node);
+            if (upbranch) {
+                // Add downbranch rates to upbranch.
+                std::vector<Scalar>& up = node_inflows[(*upbranch).uptree_node()];
+                const std::vector<Scalar>& down = node_inflows[node];
+                // We now also support NEFAC
+                const Scalar efficiency = network.node(node).efficiency();
+                if (up.empty()) {
+                    up = std::vector<Scalar>(down.size(), 0.0);
+                }
+                assert(up.size() == down.size());
+                for (std::size_t ii = 0; ii < up.size(); ++ii) {
+                    up[ii] += efficiency * down[ii];
+                }
+            }
+        }
+
+        // Going the other way (from roots to leafs), calculate the pressure
+        // at each node using VFP tables and rates.
+        // std::map<std::string, double> node_pressures;
+        for (const auto& node : root_to_child_nodes) {
+            auto press = network.node(node).terminal_pressure();
+            if (press) {
+                node_pressures[node] = *press;
+            } else {
+                const auto upbranch = network.uptree_branch(node);
+                assert(upbranch);
+                const Scalar up_press = node_pressures[(*upbranch).uptree_node()];
+                const auto vfp_table = (*upbranch).vfp_table();
+                if (vfp_table) {
+                    OPM_TIMEBLOCK(NetworkVfpCalculations);
+                    // The rates are here positive, but the VFP code expects the
+                    // convention that production rates are negative, so we must
+                    // take a copy and flip signs.
+                    auto rates = node_inflows[node];
+                    std::transform(
+                        rates.begin(), rates.end(), rates.begin(), [](const auto r) { return -r; });
+                    assert(rates.size() == 3);
+                    // NB! ALQ in extended network is never implicitly the gas lift rate (GRAT), i.e., the
+                    //     gas lift rates only enters the network pressure calculations through the rates
+                    //     (e.g., in GOR calculations) unless a branch ALQ is set in BRANPROP.
+                    //
+                    // @TODO: Standard network
+                    Scalar alq = (*upbranch).alq_value().value_or(0.0);
+                    node_pressures[node]
+                        = vfp_prod_props.bhp(*vfp_table,
+                                             rates[IndexTraits::waterPhaseIdx],
+                                             rates[IndexTraits::oilPhaseIdx],
+                                             rates[IndexTraits::gasPhaseIdx],
+                                             up_press,
+                                             alq,
+                                             0.0, // explicit_wfr
+                                             0.0, // explicit_gfr
+                                             false); // use_expvfp we dont support explicit lookup
+#define EXTRA_DEBUG_NETWORK 0
+#if EXTRA_DEBUG_NETWORK
+                    std::ostringstream oss;
+                    oss << "parent: " << (*upbranch).uptree_node() << "  child: " << node << "  rates = [ "
+                        << rates[0] * 86400 << ", " << rates[1] * 86400 << ", " << rates[2] * 86400 << " ]"
+                        << "  p(parent) = " << up_press / 1e5 << "  p(child) = " << node_pressures[node] / 1e5
+                        << std::endl;
+                    OpmLog::debug(oss.str());
+#endif
+                } else {
+                    // Table number specified as 9999 in the deck, no pressure loss.
+                    if (network.node(node).as_choke()) {
+                        // Node pressure is set to the group THP.
+                        node_pressures[node] = well_model_.groupStateHelper().groupState().well_group_thp(node);
+                    } else {
+                        node_pressures[node] = up_press;
+                    }
+                }
+            }
+        }
+    }
+    return node_pressures;
 }
 
 template<typename Scalar, typename IndexTraits>
