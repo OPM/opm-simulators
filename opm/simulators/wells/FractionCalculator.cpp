@@ -27,7 +27,7 @@
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
 #include <opm/simulators/wells/GroupState.hpp>
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/WellGroupHelper.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <cassert>
@@ -37,8 +37,7 @@ namespace Opm::WGHelpers {
 template<typename Scalar, typename IndexTraits>
 FractionCalculator<Scalar, IndexTraits>::
 FractionCalculator(const Schedule& schedule,
-                   const WellState<Scalar, IndexTraits>& well_state,
-                   const GroupState<Scalar>& group_state,
+                   const WellGroupHelperType& wgHelper,
                    const SummaryState& summary_state,
                    const int report_step,
                    const GuideRate* guide_rate,
@@ -46,8 +45,7 @@ FractionCalculator(const Schedule& schedule,
                    const bool is_producer,
                    const Phase injection_phase)
     : schedule_(schedule)
-    , well_state_(well_state)
-    , group_state_(group_state)
+    , wgHelper_(wgHelper)
     , summary_state_(summary_state)
     , report_step_(report_step)
     , guide_rate_(guide_rate)
@@ -129,11 +127,11 @@ guideRateSum(const Group& group,
     for (const std::string& child_group : group.groups()) {
         bool included = (child_group == always_included_child);
         if (is_producer_) {
-            const auto ctrl = this->group_state_.production_control(child_group);
+            const auto ctrl = this->wgHelper().groupState().production_control(child_group);
             included |= (ctrl == Group::ProductionCMode::FLD) ||
                         (ctrl == Group::ProductionCMode::NONE);
         } else {
-            const auto ctrl = this->group_state_.injection_control(child_group,
+            const auto ctrl = this->wgHelper().groupState().injection_control(child_group,
                                                                    this->injection_phase_);
             included |= (ctrl == Group::InjectionCMode::FLD) ||
                         (ctrl == Group::InjectionCMode::NONE);
@@ -149,9 +147,9 @@ guideRateSum(const Group& group,
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
         if (is_producer_) {
-            included |= well_state_.isProductionGrup(child_well);
+            included |= this->wgHelper().wellState().isProductionGrup(child_well);
         } else {
-            included |= well_state_.isInjectionGrup(child_well);
+            included |= this->wgHelper().wellState().isInjectionGrup(child_well);
         }
         if (included) {
             number_of_included_well_or_groups++;
@@ -169,8 +167,7 @@ guideRate(const std::string& name,
           const bool always_use_potentials)
 {
     if (schedule_.hasWell(name, report_step_)) {
-        return WellGroupHelpers<Scalar, IndexTraits>::getGuideRate(name, schedule_, well_state_, group_state_,
-                                                      report_step_, guide_rate_, target_);
+        return this->wgHelper().getGuideRate(name, target_);
     } else {
         if (groupControlledWells(name, always_included_child) > 0) {
             if (is_producer_ && guide_rate_->has(name) && !always_use_potentials) {
@@ -196,14 +193,9 @@ int FractionCalculator<Scalar, IndexTraits>::
 groupControlledWells(const std::string& group_name,
                      const std::string& always_included_child)
 {
-    return WellGroupHelpers<Scalar, IndexTraits>::groupControlledWells(schedule_,
-                                                          well_state_,
-                                                          this->group_state_,
-                                                          report_step_,
-                                                          group_name,
-                                                          always_included_child,
-                                                          is_producer_,
-                                                          injection_phase_);
+    return this->wgHelper().groupControlledWells(
+        group_name, always_included_child, is_producer_, injection_phase_
+    );
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -211,9 +203,7 @@ GuideRate::RateVector FractionCalculator<Scalar, IndexTraits>::
 getGroupRateVector(const std::string& group_name)
 {
     assert(is_producer_);
-    return WellGroupHelpers<Scalar, IndexTraits>::getProductionGroupRateVector(this->group_state_,
-                                                                               this->well_state_.phaseUsageInfo(),
-                                                                               group_name);
+    return this->wgHelper().getProductionGroupRateVector(group_name);
 }
 
 template class FractionCalculator<double, BlackOilDefaultFluidSystemIndices>;

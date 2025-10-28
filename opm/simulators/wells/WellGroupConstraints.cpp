@@ -27,7 +27,7 @@
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/WellGroupHelper.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -38,15 +38,15 @@ template<typename Scalar, typename IndexTraits>
 std::pair<bool, Scalar>
 WellGroupConstraints<Scalar, IndexTraits>::
 checkGroupConstraintsInj(const Group& group,
-                         const WellState<Scalar, IndexTraits>& well_state,
-                         const GroupState<Scalar>& group_state,
+                         const WellGroupHelperType& wgHelper,
                          const Scalar efficiencyFactor,
-                         const Schedule& schedule,
                          const SummaryState& summaryState,
                          const RateConvFunc& rateConverter,
                          const bool check_guide_rate,
                          DeferredLogger& deferred_logger) const
 {
+    const auto& well_state = wgHelper.wellState();
+
     // Translate injector type from control to Phase.
     const auto& well_controls = well_.wellEcl().injectionControls(summaryState);
     auto injectorType = well_controls.injector_type;
@@ -77,65 +77,55 @@ checkGroupConstraintsInj(const Group& group,
 
     const auto& ws = well_state.well(well_.indexOfWell());
     // Call check for the well's injection phase.
-    return WellGroupHelpers<Scalar, IndexTraits>::checkGroupConstraintsInj(well_.name(),
-                                                              well_.wellEcl().groupName(),
-                                                              group,
-                                                              well_state,
-                                                              group_state,
-                                                              well_.currentStep(),
-                                                              well_.guideRate(),
-                                                              ws.surface_rates.data(),
-                                                              injectionPhase,
-                                                              efficiencyFactor,
-                                                              schedule,
-                                                              summaryState,
-                                                              resv_coeff,
-                                                              check_guide_rate,
-                                                              deferred_logger);
+    return wgHelper.checkGroupConstraintsInj(
+        well_.name(),
+        well_.wellEcl().groupName(),
+        group,
+        ws.surface_rates.data(),
+        injectionPhase,
+        efficiencyFactor,
+        resv_coeff,
+        check_guide_rate,
+        deferred_logger
+    );
 }
 
 template<typename Scalar, typename IndexTraits>
 std::pair<bool, Scalar>
 WellGroupConstraints<Scalar, IndexTraits>::
 checkGroupConstraintsProd(const Group& group,
-                          const WellState<Scalar, IndexTraits>& well_state,
-                          const GroupState<Scalar>& group_state,
+                          const WellGroupHelperType& wgHelper,
                           const Scalar efficiencyFactor,
-                          const Schedule& schedule,
-                          const SummaryState& summaryState,
                           const RateConvFunc& rateConverter,
                           const bool check_guide_rate,
                           DeferredLogger& deferred_logger) const
 {
+    const auto& well_state = wgHelper.wellState();
+
     // Make conversion factors for RESV <-> surface rates.
     std::vector<Scalar> resv_coeff(well_.phaseUsage().numActivePhases(), 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
-    return WellGroupHelpers<Scalar, IndexTraits>::checkGroupConstraintsProd(well_.name(),
-                                                               well_.wellEcl().groupName(),
-                                                               group,
-                                                               well_state,
-                                                               group_state,
-                                                               well_.currentStep(),
-                                                               well_.guideRate(),
-                                                               ws.surface_rates.data(),
-                                                               efficiencyFactor,
-                                                               schedule,
-                                                               summaryState,
-                                                               resv_coeff,
-                                                               check_guide_rate,
-                                                               deferred_logger);
+    return wgHelper.checkGroupConstraintsProd(well_.name(),
+        well_.wellEcl().groupName(),
+        group,
+        ws.surface_rates.data(),
+        efficiencyFactor,
+        resv_coeff,
+        check_guide_rate,
+        deferred_logger
+    );
 }
 
 template<typename Scalar, typename IndexTraits>
 bool WellGroupConstraints<Scalar, IndexTraits>::
-checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
-                      const GroupState<Scalar>& group_state,
+checkGroupConstraints(const WellGroupHelperType& wgHelper,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const RateConvFunc& rateConverter,
                       const bool check_guide_rate,
+                      WellStateType& well_state,
                       DeferredLogger& deferred_logger) const
 {
     const auto& well = well_.wellEcl();
@@ -156,9 +146,8 @@ checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
             const Scalar efficiencyFactor = well.getEfficiencyFactor() *
                                             well_state[well.name()].efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
-                this->checkGroupConstraintsInj(group, well_state,
-                                               group_state, efficiencyFactor,
-                                               schedule, summaryState,
+                this->checkGroupConstraintsInj(group, wgHelper, efficiencyFactor,
+                                               summaryState,
                                                rateConverter,
                                                check_guide_rate,
                                                deferred_logger);
@@ -189,10 +178,11 @@ checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
             const Scalar efficiencyFactor = well.getEfficiencyFactor() *
                                             well_state[well.name()].efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
-                this->checkGroupConstraintsProd(group, well_state,
-                                                group_state, efficiencyFactor,
-                                                schedule, summaryState,
-                                                rateConverter, check_guide_rate, deferred_logger);
+                this->checkGroupConstraintsProd(group, wgHelper,
+                                                efficiencyFactor,
+                                                rateConverter,
+                                                check_guide_rate,
+                                                deferred_logger);
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
             if (group_constraint.first) {
