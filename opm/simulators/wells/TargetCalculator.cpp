@@ -56,7 +56,7 @@ TargetCalculator(const Group::ProductionCMode cmode,
 
 template<typename Scalar, typename IndexTraits>
 template <typename RateType>
-RateType TargetCalculator<Scalar, IndexTraits>::calcModeRateFromRates(const RateType* rates) const
+RateType TargetCalculator<Scalar, IndexTraits>::calcModeRateFromRates(const std::vector<RateType>& rates) const
 {
     switch (cmode_) {
     case Group::ProductionCMode::ORAT: {
@@ -278,7 +278,7 @@ InjectionTargetCalculator<Scalar, IndexTraits>::guideTargetMode() const
 
 #define INSTANTIATE_TARGET_CALCULATOR(T,...) \
     template __VA_ARGS__                     \
-    TargetCalculator<T, BlackOilDefaultFluidSystemIndices>::calcModeRateFromRates(const __VA_ARGS__* rates) const;
+    TargetCalculator<T, BlackOilDefaultFluidSystemIndices>::calcModeRateFromRates(const std::vector<__VA_ARGS__>& rates) const;
 
 #define INSTANTIATE_TYPE(T)                                       \
     template class TargetCalculator<T, BlackOilDefaultFluidSystemIndices>;                           \
