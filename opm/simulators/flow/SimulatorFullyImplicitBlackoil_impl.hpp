@@ -37,6 +37,7 @@
 #include <fmt/format.h>
 
 #include <filesystem>
+#include <limits>
 #include <sstream>
 
 namespace Opm {
@@ -349,7 +350,13 @@ runStep(SimulatorTimer& timer)
             auto& schedule = this->simulator_.vanguard().schedule();
             auto& events = this->schedule()[reportStep].events();
 
-            bool result = false;
+            auto max_next_tstep = this->simulator_.problem().maxNextTimeStepSize();
+            auto old_max = std::numeric_limits<double>::max();//assume no other max is already set
+            bool result = max_next_tstep < old_max;
+            if (result>0){
+                // maybe updated later
+                this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
+            }
             if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
                 // Unset the event to not trigger it again on the next sub step
                 schedule.clear_event(ScheduleEvents::TUNING_CHANGE, reportStep);
