@@ -23,7 +23,10 @@
 #ifndef OPM_BLACKOILWELLMODEL_NETWORK_GENERIC_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_NETWORK_GENERIC_HEADER_INCLUDED
 
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+
 #include <opm/output/data/Groups.hpp>
+
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <map>
@@ -34,6 +37,7 @@ namespace Opm {
     class Schedule;
     template<class Scalar, class IndexTraits> class BlackoilWellModelGeneric;
     template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
+    template<typename Scalar> class VFPProdProperties;
 }
 
 namespace Opm {
@@ -100,6 +104,13 @@ public:
     bool operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const;
 
 protected:
+    std::map<std::string, Scalar>
+    computePressures(const Network::ExtNetwork& network,
+                     const VFPProdProperties<Scalar>& vfp_prod_props,
+                     const int reportStepIdx,
+                     const Parallel::Communication& comm) const;
+
+
     bool active_{false};
     BlackoilWellModelGeneric<Scalar,IndexTraits>& well_model_;
 
