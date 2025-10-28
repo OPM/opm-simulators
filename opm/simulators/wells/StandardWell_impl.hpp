@@ -1529,11 +1529,12 @@ namespace Opm
         // iterate to get a more accurate well density
         // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
         // to replace the original one
-        WellStateType well_state_copy = simulator.problem().wellModel().wellState();
-        // Ensure that wgHelper uses well_state_copy as WellState for the rest of this function,
+        WellGroupHelperType wgHelper_copy = wgHelper;
+        WellStateType well_state_copy = wgHelper_copy.wellState();
+        // Ensure that wgHelper_copy uses well_state_copy as WellState for the rest of this function,
         // and the guard ensures that the original well state is restored at scope exit, i.e. at
         // the end of this function.
-        auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
+        auto guard = wgHelper_copy.pushWellState(well_state_copy);
 
         // Get the current controls.
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -1567,7 +1568,7 @@ namespace Opm
 
         const double dt = simulator.timeStepSize();
         const bool converged = well_copy.iterateWellEqWithControl(
-            simulator, dt, inj_controls, prod_controls, wgHelper, well_state_copy, deferred_logger
+            simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger
         );
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well potential calculations "
@@ -1633,10 +1634,11 @@ namespace Opm
 
         // store a copy of the well state, we don't want to update the real well state
         WellStateType well_state_copy = wgHelper.wellState();
-        // Ensure that wgHelper uses well_state_copy as WellState for the rest of this function,
+        WellGroupHelperType wgHelper_copy = wgHelper;
+        // Ensure that wgHelper_copy uses well_state_copy as WellState for the rest of this function,
         // and the guard ensures that the original well state is restored at scope exit, i.e. at
         // the end of this function.
-        auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
+        auto guard = wgHelper_copy.pushWellState(well_state_copy);
         auto& ws = well_state_copy.well(this->index_of_well_);
 
         // get current controls
@@ -1675,11 +1677,11 @@ namespace Opm
         bool converged = false;
         if (this->well_ecl_.isProducer()) {
             converged = well_copy.solveWellWithOperabilityCheck(
-                simulator, dt, inj_controls, prod_controls, wgHelper, well_state_copy, deferred_logger
+                simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger
             );
         } else {
             converged = well_copy.iterateWellEqWithSwitching(
-                simulator, dt, inj_controls, prod_controls, wgHelper, well_state_copy, deferred_logger
+                simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger
             );
         }
 
