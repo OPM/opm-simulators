@@ -590,6 +590,9 @@ public:
     void setNextTimeStepSize(Scalar dt)
     { nextTimeStepSize_ = dt; }
 
+    virtual Scalar maxNextTimeStepSize() const
+    { return std::numeric_limits<Scalar>::max(); }
+
     /*!
      * \brief Called by Opm::Simulator whenever a solution for a
      *        time step has been computed and the simulation time has
