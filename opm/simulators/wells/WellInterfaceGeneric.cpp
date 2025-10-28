@@ -959,28 +959,31 @@ onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
         }
     }
 }
-template<typename T>
-T WellIndexFracture::wellIndex(T p) const{
-        // linear interpolation between (pressure,ctf) and (ref_pressure, ref_ctf)
+
+template <typename T>
+T WellIndexFracture::wellIndex(T p) const
+{
+    return static_cast<T>(ctf); //NB NB early exit for testing
+
+    // Linear interpolation between (pressure,ctf) and (ref_pressure, ref_ctf)
+    if (std::abs(ref_pressure - pressure) < 1e-10) {
         return ctf;
-        double min =  std::min(ctf, ref_ctf);
-        double max =  std::min(ctf, ref_ctf);
-        if(std::abs(ref_pressure - pressure) < 1e-10){
-            return ctf;
-        }
-        T val = (ref_ctf-ctf)*(p - pressure)/(ref_pressure-pressure) + ctf;
-        val = std::max(val, min);
-        val = std::min(val, max);
-        return val;
-        //
+    }
+
+    const auto val = (ref_ctf - ctf)*(p - pressure)/(ref_pressure-pressure) + ctf;
+
+    const auto low  = static_cast<T>(std::min(ctf, ref_ctf));
+    const auto high = static_cast<T>(std::max(ctf, ref_ctf));
+
+    return std::clamp(static_cast<T>(val), low, high);
 }
 
-template double WellIndexFracture::wellIndex(double p) const;
-
 template class WellInterfaceGeneric<double, BlackOilDefaultFluidSystemIndices>;
+template double WellIndexFracture::wellIndex(double p) const;
 
 #if FLOW_INSTANTIATE_FLOAT
 template class WellInterfaceGeneric<float, BlackOilDefaultFluidSystemIndices>;
+template float WellIndexFracture::wellIndex(float p) const;
 #endif
 
 } // namespace Opm
