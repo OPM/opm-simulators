@@ -963,9 +963,9 @@ onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
 template<typename T>
 T WellIndexFracture::wellIndex(T p) const{
         // linear interpolation between (pressure,ctf) and (ref_pressure, ref_ctf)
-        return ctf;
+        return ctf; //NB NB early exit for testing
         double min =  std::min(ctf, ref_ctf);
-        double max =  std::min(ctf, ref_ctf);
+        double max =  std::max(ctf, ref_ctf);
         if(std::abs(ref_pressure - pressure) < 1e-10){
             return ctf;
         }
