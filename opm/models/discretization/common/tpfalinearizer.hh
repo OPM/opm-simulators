@@ -117,7 +117,7 @@ class TpfaLinearizer
 
     static constexpr bool linearizeNonLocalElements =
         getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
-    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
+    static constexpr bool enableEnergy = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static const bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();

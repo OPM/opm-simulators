@@ -79,7 +79,7 @@ class BlackOilIntensiveQuantities
     , public BlackOilPolymerIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnablePolymer>()>
     , public BlackOilFoamIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableFoam>()>
     , public BlackOilBrineIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableBrine>()>
-    , public BlackOilEnergyIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>
+    , public BlackOilEnergyIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnergyModuleType>()>
     , public BlackOilBioeffectsIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableBioeffects>()>
     , public BlackOilConvectiveMixingIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableConvectiveMixing>()>
 {
@@ -103,8 +103,9 @@ class BlackOilIntensiveQuantities
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
-    enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    enum { enableTemperature = (energyModuleType == EnergyModules::ConstantTemperature) };
+    enum { enableEnergy = (energyModuleType == EnergyModules::FullyImplicitThermal) };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
     enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
@@ -821,7 +822,7 @@ private:
     friend BlackOilSolventIntensiveQuantities<TypeTag, enableSolvent>;
     friend BlackOilExtboIntensiveQuantities<TypeTag, enableExtbo>;
     friend BlackOilPolymerIntensiveQuantities<TypeTag, enablePolymer>;
-    friend BlackOilEnergyIntensiveQuantities<TypeTag, enableEnergy>;
+    friend BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>;
     friend BlackOilFoamIntensiveQuantities<TypeTag, enableFoam>;
     friend BlackOilBrineIntensiveQuantities<TypeTag, enableBrine>;
     friend BlackOilBioeffectsIntensiveQuantities<TypeTag, enableBioeffects>;

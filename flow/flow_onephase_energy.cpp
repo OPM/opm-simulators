@@ -35,9 +35,9 @@ struct FlowWaterOnlyEnergyProblem {
 };
 }
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowWaterOnlyEnergyProblem> {
-    static constexpr bool value = true;
-};
+struct EnergyModuleType<TypeTag, TTag::FlowWaterOnlyEnergyProblem>
+{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowWaterOnlyEnergyProblem>
@@ -53,7 +53,7 @@ public:
     using type = Opm::BlackOilOnePhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                               getPropValue<TypeTag, Properties::EnableExtbo>(),
                                               getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                              getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                              getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
                                               getPropValue<TypeTag, Properties::EnableFoam>(),
                                               getPropValue<TypeTag, Properties::EnableBrine>(),
                                               /*PVOffset=*/0,

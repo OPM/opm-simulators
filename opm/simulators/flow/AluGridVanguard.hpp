@@ -186,8 +186,8 @@ public:
                                                                  this->cartesianIndexMapper(),
                                                                  this->grid(),
                                                                  this->cellCentroids(),
-                                                                 getPropValue<TypeTag,
-                                                                 Properties::EnableEnergy>(),
+                                                                 getPropValue<TypeTag, Properties::EnergyModuleType>()
+                                                                   == EnergyModules::FullyImplicitThermal,
                                                                  getPropValue<TypeTag,
                                                                  Properties::EnableDiffusion>(),
                                                                  getPropValue<TypeTag,

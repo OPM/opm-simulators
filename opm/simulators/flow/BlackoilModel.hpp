@@ -323,7 +323,7 @@ protected:
     static constexpr bool has_extbo_ = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool has_polymer_ = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr bool has_polymermw_ = getPropValue<TypeTag, Properties::EnablePolymerMW>();
-    static constexpr bool has_energy_ = getPropValue<TypeTag, Properties::EnableEnergy>();
+    static constexpr bool has_energy_ = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal;
     static constexpr bool has_foam_ = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool has_brine_ = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool has_bioeffects_ = getPropValue<TypeTag, Properties::EnableBioeffects>();

@@ -30,6 +30,7 @@
 
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
+#include <opm/material/thermal/EnergyModuleType.hpp>
 
 namespace Opm {
 namespace Properties {
@@ -54,6 +55,10 @@ struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterDissolutionProblem> {
 };
 
 template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterDissolutionProblem>
+{ static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+
+template<class TypeTag>
 struct EnableVapwat<TypeTag, TTag::FlowGasWaterDissolutionProblem> {
     static constexpr bool value = true;
 };
@@ -68,12 +73,13 @@ private:
     // messages unfortunately are *really* confusing and not really helpful.
     using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
-
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
 public:
     using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
                                          getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         numEnergyVars,
                                          getPropValue<TypeTag, Properties::EnableFoam>(),
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,

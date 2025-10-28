@@ -37,6 +37,7 @@
 #include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #if HAVE_ECL_INPUT
@@ -137,7 +138,7 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     enum { dimWorld = GridView::dimensionworld };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
-    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
+    static constexpr bool enableEnergy = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
 public:
