@@ -418,9 +418,10 @@ namespace Opm
 
         well_copy.debug_cost_counter_ = 0;
 
+        WellGroupHelperType wgHelper_copy = wgHelper;
         // store a copy of the well state, we don't want to update the real well state
-        WellStateType well_state_copy = simulator.problem().wellModel().wellState();
-        auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
+        WellStateType well_state_copy = wgHelper_copy.wellState();
+        auto guard = wgHelper_copy.pushWellState(well_state_copy);
         auto& ws = well_state_copy.well(this->index_of_well_);
 
         // Get the current controls.
@@ -462,7 +463,7 @@ namespace Opm
         well_copy.calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         const double dt = simulator.timeStepSize();
         // iterate to get a solution at the given bhp.
-        well_copy.iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, wgHelper,
+        well_copy.iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, wgHelper_copy,
                                            well_state_copy, deferred_logger);
 
         // compute the potential and store in the flux vector.
@@ -543,9 +544,10 @@ namespace Opm
         MultisegmentWell<TypeTag> well_copy(*this);
         well_copy.debug_cost_counter_ = 0;
 
+        WellGroupHelperType wgHelper_copy = wgHelper;
         // store a copy of the well state, we don't want to update the real well state
-        WellStateType well_state_copy = wgHelper.wellState();
-        auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
+        WellStateType well_state_copy = wgHelper_copy.wellState();
+        auto guard = wgHelper_copy.pushWellState(well_state_copy);
         auto& ws = well_state_copy.well(this->index_of_well_);
 
         // get current controls
@@ -584,11 +586,11 @@ namespace Opm
         bool converged = false;
         if (this->well_ecl_.isProducer()) {
             converged = well_copy.solveWellWithOperabilityCheck(
-                simulator, dt, inj_controls, prod_controls, wgHelper, well_state_copy, deferred_logger
+                simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger
             );
         } else {
             converged = well_copy.iterateWellEqWithSwitching(
-                simulator, dt, inj_controls, prod_controls, wgHelper, well_state_copy, deferred_logger
+                simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger
             );
         }
 

@@ -397,11 +397,12 @@ namespace Opm
         const auto& group_state = wgHelper.groupState();
         deferred_logger.info(" well " + this->name() + " is being tested");
 
+        WellGroupHelperType wgHelper_copy = wgHelper;
         WellStateType well_state_copy = well_state;
         // Ensure that wgHelper uses well_state_copy as WellState for the well testing
         // and the guard ensures that the original well state is restored at scope exit, i.e. at
         // the end of this function.
-        auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
+        auto guard = wgHelper_copy.pushWellState(well_state_copy);
         auto& ws = well_state_copy.well(this->indexOfWell());
 
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -439,7 +440,7 @@ namespace Opm
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
             const std::size_t original_number_closed_completions = welltest_state_temp.num_closed_completions();
-            bool converged = solveWellForTesting(simulator, wgHelper, well_state_copy, deferred_logger);
+            bool converged = solveWellForTesting(simulator, wgHelper_copy, well_state_copy, deferred_logger);
             if (!converged) {
                 const auto msg = fmt::format("WTEST: Well {} is not solvable (physical)", this->name());
                 deferred_logger.debug(msg);
@@ -447,7 +448,7 @@ namespace Opm
             }
 
 
-            updateWellOperability(simulator, well_state_copy, wgHelper, deferred_logger);
+            updateWellOperability(simulator, well_state_copy, wgHelper_copy, deferred_logger);
             if ( !this->isOperableAndSolvable() ) {
                 const auto msg = fmt::format("WTEST: Well {} is not operable (physical)", this->name());
                 deferred_logger.debug(msg);
@@ -455,7 +456,7 @@ namespace Opm
             }
             std::vector<Scalar> potentials;
             try {
-                computeWellPotentials(simulator, well_state_copy, wgHelper, potentials, deferred_logger);
+                computeWellPotentials(simulator, well_state_copy, wgHelper_copy, potentials, deferred_logger);
             } catch (const std::exception& e) {
                 const std::string msg = fmt::format("well {}: computeWellPotentials() "
                                                     "failed during testing for re-opening: ",
@@ -738,10 +739,11 @@ namespace Opm
         OPM_TIMEFUNCTION();
         // Solve a well using single bhp-constraint (but close if not operable under this)
         auto group_state = GroupState<Scalar>(); // empty group
-        // Ensure that wgHelper uses the empty group state as GroupState for iterateWellEqWithSwitching()
+        WellGroupHelperType wgHelper_copy = wgHelper;
+        // Ensure that wgHelper_copy uses the empty group state as GroupState for iterateWellEqWithSwitching()
         // and the guard ensures that the original group state is restored at scope exit, i.e. at
         // the end of this function.
-        auto group_guard = const_cast<WellGroupHelperType&>(wgHelper).pushGroupState(group_state);
+        auto group_guard = wgHelper_copy.pushGroupState(group_state);
 
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);
@@ -763,7 +765,7 @@ namespace Opm
         ws.bhp = bhp;
         // solve
         const bool converged =  this->iterateWellEqWithSwitching(
-            simulator, dt, inj_controls, prod_controls, wgHelper,
+            simulator, dt, inj_controls, prod_controls, wgHelper_copy,
             well_state, deferred_logger, /*fixed_control*/true
         );
         ws.injection_cmode = cmode_inj;
@@ -786,15 +788,16 @@ namespace Opm
         this->stopWell();
 
         auto group_state = GroupState<Scalar>(); // empty group
-        // Ensure that wgHelper uses the empty group state as GroupState for iterateWellEqWithSwitching()
+        WellGroupHelperType wgHelper_copy = wgHelper;
+        // Ensure that wgHelper_copy uses the empty group state as GroupState for iterateWellEqWithSwitching()
         // and the guard ensures that the original group state is restored at scope exit, i.e. at
         // the end of this function.
-        auto group_guard = const_cast<WellGroupHelperType&>(wgHelper).pushGroupState(group_state);
+        auto group_guard = wgHelper_copy.pushGroupState(group_state);
 
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);
         const bool converged =  this->iterateWellEqWithSwitching(
-            simulator, dt, inj_controls, prod_controls, wgHelper, well_state,
+            simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state,
             deferred_logger, /*fixed_control*/true, /*fixed_status*/ true
         );
         this->wellStatus_ = well_status_orig;
@@ -1231,14 +1234,15 @@ namespace Opm
         // only makes sense if we're using this parameter is true
         assert(this->param_.local_well_solver_control_switching_);
         this->operability_status_.resetOperability();
-        WellStateType well_state_copy = wgHelper.wellState();
+        WellGroupHelperType wgHelper_copy = wgHelper;
+        WellStateType well_state_copy = wgHelper_copy.wellState();
         const double dt = simulator.timeStepSize();
         // Ensure that wgHelper uses well_state_copy as WellState for iterateWellEquations()
         // and the guard ensures that the original well state is restored at scope exit, i.e. at
         // the end of this function.
-        auto guard = const_cast<WellGroupHelperType&>(wgHelper).pushWellState(well_state_copy);
+        auto guard = wgHelper_copy.pushWellState(well_state_copy);
         // equations should be converged at this stage, so only one it is needed
-        bool converged = iterateWellEquations(simulator, dt, wgHelper, well_state_copy, deferred_logger);
+        bool converged = iterateWellEquations(simulator, dt, wgHelper_copy, well_state_copy, deferred_logger);
         return converged;
     }
 
