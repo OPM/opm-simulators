@@ -187,7 +187,7 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
 
     auto reducedSumSurface = [&](int phase) -> Scalar {
         Scalar r = wgHelper().sumWellSurfaceRates(group,
-                                                  pu.canonicalToActivePhaseIdx(oilPhaseIdx),
+                                                  pu.canonicalToActivePhaseIdx(phase),
                                                   /*is_injector=*/false);
 
         return wellModel_.comm().sum(r);
@@ -598,9 +598,9 @@ updateGroupIndividualControl(const Group& group,
         if (mode != Group::ProductionCMode::NONE)
         {
             std::optional<std::string> worst_offending_well = std::nullopt;
-            changed = this->actionOnBrokenConstraints(group, reportStepIdx,
+            changed = this->actionOnBrokenConstraints(group,
                                             controls.group_limit_action,
-                                            mode, well_state,
+                                            mode,
                                             worst_offending_well,
                                             group_state, deferred_logger);
 
