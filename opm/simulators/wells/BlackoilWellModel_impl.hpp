@@ -1557,7 +1557,7 @@ namespace Opm {
 
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];
-            std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
+            auto derived = dynamic_cast<StandardWell<TypeTag>*>(well.get());
             if (derived) {
                 wellContribs.addNumBlocks(derived->linSys().getNumBlocks());
             }
@@ -1569,11 +1569,11 @@ namespace Opm {
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];
             // maybe WellInterface could implement addWellContribution()
-            auto derived_std = std::dynamic_pointer_cast<StandardWell<TypeTag>>(well);
+            auto derived_std = dynamic_cast<StandardWell<TypeTag>*>(well.get());
             if (derived_std) {
                 derived_std->linSys().extract(derived_std->numStaticWellEq, wellContribs);
             } else {
-                auto derived_ms = std::dynamic_pointer_cast<MultisegmentWell<TypeTag> >(well);
+                auto derived_ms = dynamic_cast<MultisegmentWell<TypeTag>*>(well.get());
                 if (derived_ms) {
                     derived_ms->linSys().extract(wellContribs);
                 } else {
@@ -2326,7 +2326,7 @@ namespace Opm {
     }
 
     template<typename TypeTag>
-    typename BlackoilWellModel<TypeTag>::WellInterfacePtr
+    const WellInterface<TypeTag>&
     BlackoilWellModel<TypeTag>::
     getWell(const std::string& well_name) const
     {
@@ -2339,7 +2339,7 @@ namespace Opm {
 
         assert(well != well_container_.end());
 
-        return *well;
+        return **well;
     }
 
     template <typename TypeTag>

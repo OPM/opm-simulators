@@ -187,7 +187,7 @@ template<class Scalar> class WellContributions;
                                          unsigned timeIdx) const;
 
 
-            using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag> >;
+            using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag>>;
 
             using BlackoilWellModelGeneric<Scalar, IndexTraits>::initFromRestartFile;
             void initFromRestartFile(const RestartValue& restartValues)
@@ -292,7 +292,7 @@ template<class Scalar> class WellContributions;
                                     const int reportStepIdx,
                                     const int iterationIdx);
 
-            WellInterfacePtr getWell(const std::string& well_name) const;
+            const WellInterface<TypeTag>& getWell(const std::string& well_name) const;
 
             using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 

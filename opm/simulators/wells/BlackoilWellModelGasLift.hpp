@@ -106,7 +106,7 @@ public:
     using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::GLiftSyncGroups;
     using GLiftWellStateMap =  typename Base::GLiftWellStateMap;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag>>;
+    using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag>>;
     using WellStateType = WellState<Scalar, IndexTraits>;
 
     explicit BlackoilWellModelGasLift(bool terminal_output)
