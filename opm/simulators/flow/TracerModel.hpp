@@ -437,23 +437,17 @@ protected:
 
         // Init. well output to zero
         auto& tracerRate = this->wellTracerRate_[eclWell.seqIndex()];
-        tracerRate.reserve(tr.numTracer());
         auto& solTracerRate = this->wellSolTracerRate_[eclWell.seqIndex()];
-        solTracerRate.reserve(tr.numTracer());
         auto& freeTracerRate = this->wellFreeTracerRate_[eclWell.seqIndex()];
-        freeTracerRate.reserve(tr.numTracer());
         auto* mswTracerRate = eclWell.isMultiSegment()
             ? &this->mSwTracerRate_[eclWell.seqIndex()]
             : nullptr;
-        if (mswTracerRate) {
-            mswTracerRate->reserve(tr.numTracer());
-        }
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-            tracerRate.emplace_back(this->name(tr.idx_[tIdx]), 0.0);
-            freeTracerRate.emplace_back(this->wellfname(tr.idx_[tIdx]), 0.0);
-            solTracerRate.emplace_back(this->wellsname(tr.idx_[tIdx]), 0.0);
+            tracerRate[tr.idx_[tIdx]] = {this->name(tr.idx_[tIdx]), 0.0};
+            freeTracerRate[tr.idx_[tIdx]] = {this->wellfname(tr.idx_[tIdx]), 0.0};
+            solTracerRate[tr.idx_[tIdx]] = {this->wellsname(tr.idx_[tIdx]), 0.0};
             if (eclWell.isMultiSegment()) {
-                auto& wtr = mswTracerRate->emplace_back(this->name(tr.idx_[tIdx]));
+                auto& wtr = mswTracerRate->at(tr.idx_[tIdx]) = {this->name(tr.idx_[tIdx])};;
                 wtr.rate.reserve(eclWell.getConnections().size());
                 for (std::size_t i = 0; i < eclWell.getConnections().size(); ++i) {
                     wtr.rate.emplace(eclWell.getConnections().get(i).segment(), 0.0);
@@ -492,10 +486,10 @@ protected:
 
                     // Store _injector_ tracer rate for reporting
                     // (can be done here since WTRACER is constant)
-                    tracerRate[tIdx].rate += delta;
-                    freeTracerRate[tIdx].rate += delta;
+                    tracerRate[tr.idx_[tIdx]].rate += delta;
+                    freeTracerRate[tr.idx_[tIdx]].rate += delta;
                     if (eclWell.isMultiSegment()) {
-                        (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
+                        (*mswTracerRate)[tr.idx_[tIdx]].rate[eclWell.getConnections().get(i).segment()] += delta;
                     }
                 }
                 dVol_[Free][tr.phaseIdx_][I] -= rate_f * dt;
@@ -505,8 +499,8 @@ protected:
                     const Scalar delta = rate_f * wtracer[tIdx];
                     // Store _injector_ tracer rate for cross-flowing well connections
                     // (can be done here since WTRACER is constant)
-                    tracerRate[tIdx].rate += delta;
-                    freeTracerRate[tIdx].rate += delta;
+                    tracerRate[tr.idx_[tIdx]].rate += delta;
+                    freeTracerRate[tr.idx_[tIdx]].rate += delta;
 
                     // Production of free tracer
                     tr.residual_[tIdx][I][Free] -= rate_f * tr.concentration_[tIdx][I][Free];
@@ -612,6 +606,17 @@ protected:
             this->wellSolTracerRate_.reserve(wellPtrs.size());
             this->mSwTracerRate_.reserve(num_msw);
             for (const auto& wellPtr : wellPtrs) {
+                // Resize vectors of well tracer rates to total number of tracers
+                const auto& eclWell = wellPtr->wellEcl();
+                this->wellTracerRate_[eclWell.seqIndex()].resize(this->numTracers());
+                this->wellFreeTracerRate_[eclWell.seqIndex()].resize(this->numTracers());
+                this->wellSolTracerRate_[eclWell.seqIndex()].resize(this->numTracers());
+                auto* mswTracerRate = eclWell.isMultiSegment()
+                    ? &this->mSwTracerRate_[eclWell.seqIndex()]
+                    : nullptr;
+                if (mswTracerRate) {
+                    mswTracerRate->resize(this->numTracers());
+                }
                 for (auto& tr : tbatch) {
                     this->assembleTracerEquationWell(tr, *wellPtr);
                 }
@@ -780,10 +785,10 @@ protected:
             for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                 // Store _producer_ free tracer rate for reporting
                 const Scalar delta = rate * tr.concentration_[tIdx][I][Index];
-                tracerRate[tIdx].rate += delta;
-                splitRate[tIdx].rate += delta;
+                tracerRate[tr.idx_[tIdx]].rate += delta;
+                splitRate[tr.idx_[tIdx]].rate += delta;
                 if (eclWell.isMultiSegment()) {
-                    (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
+                    (*mswTracerRate)[tr.idx_[tIdx]].rate[eclWell.getConnections().get(i).segment()] += delta;
                 }
             }
         }
