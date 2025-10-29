@@ -499,11 +499,14 @@ findTHP(const std::vector<Scalar>& bhp_array,
             const Scalar& y1 = bhp_array[array_ix+1];
             thp = findX(x0, x1, y0, y1, bhp);
         } else {
-            // no intersection, just return largest/smallest value in table
-            if (find_largest) {
-                thp = thp_array[nthp-1];
-            } else {
+            // No intersections from interpolation or extrapolation 
+            // bhp is either smaller than or larger than all values in
+            // bhp_array. If bhp < all values, return smallest thp-value
+            // in table, otherwise return largest.
+            if (bhp < bhp_array[0]) {
                 thp = thp_array[0];
+            } else {
+                thp = thp_array[nthp-1];
             }
         }
     }
