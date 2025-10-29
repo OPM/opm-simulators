@@ -131,6 +131,8 @@ public:
     {
         simulatorPtr_ = nullptr;
         separateSparseSourceTerms_ = Parameters::Get<Parameters::SeparateSparseSourceTerms>();
+        exportIndex_=-1;
+        exportCount_=-1;
     }
 
     /*!
@@ -307,8 +309,179 @@ public:
     GlobalEqVector& residual()
     { return residual_; }
 
-    void setLinearizationType(LinearizationType linearizationType)
-    { linearizationType_ = linearizationType; }
+    void printVector(GlobalEqVector &x, const char *name="x")
+    {
+        int count = 1;
+        printf("%s =\n[\n",name);
+        for (auto block = x.begin(); block != x.end(); block++)
+        {
+            for (auto i=block->begin(); i!=block->end(); i++)
+            {
+                printf(" %+.4e",*i);
+            }
+            printf("\n");
+            count++;
+            if(count>16) break;
+        }
+        printf("]\n");
+    }
+
+    void printResidual(const char *name="r")
+    {
+        printVector(residual_, name);
+    }
+
+    void printSparsity(const char *name="s")
+    {
+        auto& A = jacobian_->istlMatrix();
+
+        printf("nrows = %lu\n",A.N());
+        printf("ncols = %lu\n",A.M());
+        printf("nnz   = %lu\n",A.nonzeroes());
+
+        printf("%s =\n[\n",name);
+        int count=1;
+        int offset=0;
+        for(auto row=A.begin(); row!=A.end(); row++)
+        {
+            printf("%4d: ",offset);
+            for(unsigned int i=0;i<row->getsize();i++)
+            {
+                printf(" %4lu",row->getindexptr()[i]);
+            }
+            printf("\n");
+            offset+=row->getsize();
+            count++;
+            if(count>16) break;
+        }
+        printf("]\n");
+    }
+
+    void printNonzeros(const char *name="d")
+    {
+        auto& A = jacobian_->istlMatrix();
+        printf("%s =\n[\n",name);
+        int count=1;
+        for(auto row=A.begin();row!=A.end();row++)
+        {
+            for(unsigned int j=0;j<row->getsize();j++)
+            {
+                printf("|");
+                auto mat = row->getptr()[j];
+                for(auto vec=mat.begin();vec!=mat.end();vec++)
+                {
+                    for(auto k=vec->begin();k!=vec->end();k++)
+                    {
+                        printf(" %+.4e",*k);
+                    }
+                    printf(" |");
+                }
+                printf("\n");
+            }
+            count++;
+            if(count>6) break;
+            printf("\n");
+        }
+        printf("]\n");
+    }
+
+    void printJacobian()
+    {
+        printSparsity();
+        printNonzeros();
+    }
+
+    void exportSystem(int idx, char *tag, const char *path="export")
+    {
+        // export sparsity only once
+        if(exportIndex_==-1) exportSparsity(path);
+
+        // increment indices and generate tag
+        exportCount_ = exportIndex_==idx ? ++exportCount_ : 0;
+        exportIndex_ = idx;
+        sprintf(tag,"_%03d_%02d",exportIndex_, exportCount_);
+
+        printf("index = %d\n", exportIndex_);
+        printf("count = %d\n", exportCount_);
+
+        // export matrix
+        exportNonzeros(tag,path);
+
+        // export residual
+        char name[256];
+        sprintf(name,"%s/r",path);
+        exportVector(residual_,tag,name);
+    }
+
+    void exportVector(GlobalEqVector &x, const char *tag="", const char *name="export/x")
+    {
+        // assume double precision and contiguous data
+        const double *data = &x[0][0];
+
+        char filename[512];
+        sprintf(filename,"%s%s.f64",name,tag);
+        FILE *out =fopen(filename,"w");
+        fwrite(data, sizeof(double), x.dim(),out);
+        fclose(out);
+    }
+
+    void exportNonzeros(const char *tag="", const char *path=".")
+    {
+        auto& A = jacobian_->istlMatrix();
+
+        // assume double precision and contiguous data
+        const double *data = &A[0][0][0][0];
+        size_t dim = A[0][0].N()*A[0][0].M()*A.nonzeroes();
+
+        char filename[256];
+        sprintf(filename,"%s/data%s.f64",path,tag);
+        FILE *out =fopen(filename,"w");
+        fwrite(data, sizeof(double), dim,out);
+        fclose(out);
+    }
+
+    void exportSparsity(const char *path='.')
+    {
+        //assemble csr graph
+        auto& A = jacobian_->istlMatrix();
+        int *rows = new int[A.N()+1];
+        int *cols = new int[A.nonzeroes()];
+
+        int irow=0;
+        int icol=0;
+        rows[0]=0;
+        for(auto row=A.begin(); row!=A.end(); row++)
+        {
+            for(unsigned int i=0;i<row->getsize();i++)
+            {
+                cols[icol++]=row->getindexptr()[i];
+            }
+            rows[irow+1]= rows[irow]+row->getsize();
+            irow++;
+        }
+
+        //export arrays
+        FILE *out;
+        char filename[256];
+
+        sprintf(filename,"%s/rows.i32",path);
+        out=fopen(filename,"w");
+        fwrite(rows, sizeof(int), A.N()+1,out);
+        fclose(out);
+
+        sprintf(filename,"%s/cols.i32",path);
+        out=fopen(filename,"w");
+        fwrite(cols, sizeof(int), A.nonzeroes(),out);
+        fclose(out);
+
+        // clean-up
+        delete [] rows;
+        delete [] cols;
+    }
+
+    void setLinearizationType(LinearizationType linearizationType){
+        linearizationType_ = linearizationType;
+    };
 
     const LinearizationType& getLinearizationType() const
     { return linearizationType_; }
@@ -967,6 +1140,9 @@ private:
         std::vector<bool> interior;
     };
     FullDomain fullDomain_;
+
+    int exportIndex_;
+    int exportCount_;
 };
 
 } // namespace Opm
