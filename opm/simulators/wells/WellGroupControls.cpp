@@ -125,6 +125,7 @@ getGroupInjectionControl(const Group& group,
     }
 
     const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
+    assert(target_rate.has_value());
     if (target_rate) {
         control_eq = injection_rate - *target_rate;
     } else {
@@ -196,7 +197,7 @@ getGroupInjectionTargetRate(const Group& group,
     if (!group.isInjectionGroup()) {
         return std::nullopt;
     }
-
+    assert(well_state.well(well_.indexOfWell()).group_target.has_value());
     return well_state.well(well_.indexOfWell()).group_target;
 }
 
@@ -273,6 +274,7 @@ getGroupProductionControl(const Group& group,
                                       group.has_gpmaint_control(currentGroupControl));
 
     const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
+    assert(target_rate.has_value());
     if (target_rate) {
         const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
         control_eq = current_rate - *target_rate;
@@ -338,6 +340,7 @@ getGroupProductionTargetRate(const Group& group,
 
 
     const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
+    assert(target_rate.has_value());
     if (!target_rate) {
         return 1.0;
     }

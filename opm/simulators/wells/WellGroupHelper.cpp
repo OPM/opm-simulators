@@ -196,6 +196,7 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::string
         }
     }
 
+    assert(this->wellState().well(name).group_target.has_value());
     if (this->schedule_.hasWell(name)
         && this->wellState().well(name).group_target) { // for wells we already have computed the target
         Scalar scale = 1.0;
@@ -366,7 +367,7 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::strin
             }
         }
     }
-
+    assert(this->wellState().well(name).group_target.has_value());
     if (this->schedule_.hasWell(name) && this->wellState().well(name).group_target) {
         // for wells we already have computed the target
 
