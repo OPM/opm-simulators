@@ -63,7 +63,7 @@ checkGroupInjectionConstraints(const Group& group,
         if (currentControl != Group::InjectionCMode::RATE)
         {
             Scalar current_rate = 0.0;
-            current_rate += wgHelper().sumWellSurfaceRates(group, phasePos, /*isInjector*/true);
+            current_rate += groupStateHelper().sumWellSurfaceRates(group, phasePos, /*isInjector*/true);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -87,7 +87,7 @@ checkGroupInjectionConstraints(const Group& group,
         if (currentControl != Group::InjectionCMode::RESV)
         {
             Scalar current_rate = 0.0;
-            current_rate += wgHelper().sumWellResRates(group, phasePos, /*is_injector=*/true);
+            current_rate += groupStateHelper().sumWellResRates(group, phasePos, /*is_injector=*/true);
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
 
@@ -112,13 +112,13 @@ checkGroupInjectionConstraints(const Group& group,
             Scalar production_Rate = 0.0;
             const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
             const Group& groupRein = wellModel_.schedule().getGroup(controls.reinj_group, reportStepIdx);
-            production_Rate += wgHelper().sumWellSurfaceRates(groupRein, phasePos, /*is_injector=*/false);
+            production_Rate += groupStateHelper().sumWellSurfaceRates(groupRein, phasePos, /*is_injector=*/false);
 
             // sum over all nodes
             production_Rate = wellModel_.comm().sum(production_Rate);
 
             Scalar current_rate = 0.0;
-            current_rate += wgHelper().sumWellSurfaceRates(group, phasePos, /*is_injector=*/true);
+            current_rate += groupStateHelper().sumWellSurfaceRates(group, phasePos, /*is_injector=*/true);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -138,13 +138,13 @@ checkGroupInjectionConstraints(const Group& group,
             Scalar voidage_rate = 0.0;
             const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
             const Group& groupVoidage = wellModel_.schedule().getGroup(controls.voidage_group, reportStepIdx);
-            voidage_rate += wgHelper().sumWellResRates(groupVoidage,
+            voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
                                                        pu.canonicalToActivePhaseIdx(waterPhaseIdx),
                                                        /*is_injector=*/false);
-            voidage_rate += wgHelper().sumWellResRates(groupVoidage,
+            voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
                                                        pu.canonicalToActivePhaseIdx(oilPhaseIdx),
                                                        /*is_injector=*/false);
-            voidage_rate += wgHelper().sumWellResRates(groupVoidage,
+            voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
                                                        pu.canonicalToActivePhaseIdx(gasPhaseIdx),
                                                        /*is_injector=*/false);
 
@@ -152,13 +152,13 @@ checkGroupInjectionConstraints(const Group& group,
             voidage_rate = wellModel_.comm().sum(voidage_rate);
 
             Scalar total_rate = 0.0;
-            total_rate += wgHelper().sumWellResRates(group,
+            total_rate += groupStateHelper().sumWellResRates(group,
                                                      pu.canonicalToActivePhaseIdx(waterPhaseIdx),
                                                      /*is_injector=*/true);
-            total_rate += wgHelper().sumWellResRates(group,
+            total_rate += groupStateHelper().sumWellResRates(group,
                                                      pu.canonicalToActivePhaseIdx(oilPhaseIdx),
                                                      /*is_injector=*/true);
-            total_rate += wgHelper().sumWellResRates(group,
+            total_rate += groupStateHelper().sumWellResRates(group,
                                                      pu.canonicalToActivePhaseIdx(gasPhaseIdx),
                                                      /*is_injector=*/true);
 
@@ -189,7 +189,7 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
         if (currentControl != Group::ProductionCMode::ORAT)
         {
             Scalar current_rate = 0.0;
-            current_rate += wgHelper().sumWellSurfaceRates(group,
+            current_rate += groupStateHelper().sumWellSurfaceRates(group,
                                                            pu.canonicalToActivePhaseIdx(oilPhaseIdx),
                                                            /*is_injector=*/false);
 
@@ -210,7 +210,7 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
         if (currentControl != Group::ProductionCMode::WRAT)
         {
             Scalar current_rate = 0.0;
-            current_rate += wgHelper().sumWellSurfaceRates(group,
+            current_rate += groupStateHelper().sumWellSurfaceRates(group,
                                                            pu.canonicalToActivePhaseIdx(waterPhaseIdx),
                                                            /*is_injector=*/false);
 
@@ -230,7 +230,7 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
         if (currentControl != Group::ProductionCMode::GRAT)
         {
             Scalar current_rate = 0.0;
-            current_rate += wgHelper().sumWellSurfaceRates(group,
+            current_rate += groupStateHelper().sumWellSurfaceRates(group,
                                                            pu.canonicalToActivePhaseIdx(gasPhaseIdx),
                                                            /*is_injector=*/false);
 
@@ -249,10 +249,10 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
         if (currentControl != Group::ProductionCMode::LRAT)
         {
             Scalar current_rate = 0.0;
-            current_rate += wgHelper().sumWellSurfaceRates(group,
+            current_rate += groupStateHelper().sumWellSurfaceRates(group,
                                                            pu.canonicalToActivePhaseIdx(oilPhaseIdx),
                                                            /*is_injector=*/false);
-            current_rate += wgHelper().sumWellSurfaceRates(group,
+            current_rate += groupStateHelper().sumWellSurfaceRates(group,
                                                            pu.canonicalToActivePhaseIdx(waterPhaseIdx),
                                                            /*is_injector=*/false);
 
@@ -262,7 +262,7 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
             bool skip = false;
             if (controls.liquid_target == controls.oil_target) {
                 Scalar current_water_rate =
-                    wgHelper().sumWellSurfaceRates(group,
+                    groupStateHelper().sumWellSurfaceRates(group,
                                                    pu.canonicalToActivePhaseIdx(waterPhaseIdx),
                                                    /*is_injector=*/false);
                 current_water_rate = wellModel_.comm().sum(current_water_rate);
@@ -290,13 +290,13 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
         if (currentControl != Group::ProductionCMode::RESV)
         {
             Scalar current_rate = 0.0;
-            current_rate += wgHelper().sumWellResRates(group,
+            current_rate += groupStateHelper().sumWellResRates(group,
                                                        pu.canonicalToActivePhaseIdx(waterPhaseIdx),
                                                       /*is_injector=*/false);
-            current_rate += wgHelper().sumWellResRates(group,
+            current_rate += groupStateHelper().sumWellResRates(group,
                                                        pu.canonicalToActivePhaseIdx(oilPhaseIdx),
                                                        /*is_injector=*/false);
-            current_rate += wgHelper().sumWellResRates(group,
+            current_rate += groupStateHelper().sumWellResRates(group,
                                                        pu.canonicalToActivePhaseIdx(gasPhaseIdx),
                                                        /*is_injector=*/false);
 
@@ -452,7 +452,7 @@ actionOnBrokenConstraints(const Group& group,
     }
     case Group::ExceedAction::WELL: {
         std::tie(worst_offending_well, std::ignore) =
-            wgHelper().worstOffendingWell(group, newControl, wellModel_.comm(), deferred_logger);
+            groupStateHelper().worstOffendingWell(group, newControl, wellModel_.comm(), deferred_logger);
         break;
     }
     case Group::ExceedAction::PLUG: {
@@ -544,7 +544,7 @@ updateGroupIndividualControl(const Group& group,
                 }
                 this->actionOnBrokenConstraints(group, changed_this.first, phase,
                                                 group_state, deferred_logger);
-                wgHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
+                groupStateHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
                                                                group,
                                                                /*is_injector=*/false,
                                                                well_state);
@@ -592,7 +592,7 @@ updateGroupIndividualControl(const Group& group,
                     switched_prod[group.name()].push_back(currentControl);
                 }
 
-                wgHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
+                groupStateHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
                                                                group,
                                                                /*is_injector=*/false,
                                                                well_state);

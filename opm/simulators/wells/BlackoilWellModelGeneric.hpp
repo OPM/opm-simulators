@@ -39,7 +39,7 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellTracerRate.hpp>
 #include <opm/simulators/wells/WGState.hpp>
@@ -93,7 +93,7 @@ namespace Opm {
 template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelGeneric
 {
-    using WellGroupHelperType =  WellGroupHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType =  GroupStateHelper<Scalar, IndexTraits>;
 public:
     BlackoilWellModelGeneric(Schedule& schedule,
                              BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gaslift,
@@ -303,8 +303,8 @@ public:
     const ConnectionIndexMap& connectionIndexMap(const std::size_t idx)
     { return conn_idx_map_[idx]; }
 
-    WellGroupHelperType& wgHelper() { return wg_helper_; }
-    const WellGroupHelperType& wgHelper() const { return wg_helper_; }
+    GroupStateHelperType& groupStateHelper() { return group_state_helper_; }
+    const GroupStateHelperType& groupStateHelper() const { return group_state_helper_; }
 
 protected:
     /*
@@ -364,7 +364,7 @@ protected:
         this->active_wgstate_ = this->last_valid_wgstate_;
         this->node_pressures_ = this->last_valid_node_pressures_;
         // Update helper pointers to reference the restored active state
-        this->wg_helper_.updateState(this->wellState(), this->groupState());
+        this->group_state_helper_.updateState(this->wellState(), this->groupState());
     }
 
     /*
@@ -588,7 +588,7 @@ protected:
     WGState<Scalar, IndexTraits> active_wgstate_;
     WGState<Scalar, IndexTraits> last_valid_wgstate_;
     WGState<Scalar, IndexTraits> nupcol_wgstate_;
-    WellGroupHelperType wg_helper_;
+    GroupStateHelperType group_state_helper_;
     WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 
     bool wellStructureChangedDynamically_{false};

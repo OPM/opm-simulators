@@ -40,7 +40,7 @@ enum class InjectorType;
 using RegionId = int;
 class Schedule;
 class SummaryState;
-template<typename Scalar, typename IndexTraits> class WellGroupHelper;
+template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
 template<typename Scalar, typename IndexTraits> class WellState;
 
@@ -53,7 +53,7 @@ public:
 
     using RateConvFunc = std::function<void(const RegionId, const int,
                                             const std::optional<std::string>&, std::vector<Scalar>&)>;
-    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
     template<class EvalWell>
     void getGroupInjectionControl(const Group& group,
@@ -104,7 +104,7 @@ public:
 
     static std::pair<Scalar, Group::ProductionCMode> getAutoChokeGroupProductionTargetRate(const std::string& name,
                                                         const Group& group,
-                                                        const WellGroupHelperType& wgHelper,
+                                                        const GroupStateHelperType& groupStateHelper,
                                                         const Schedule& schedule,
                                                         const SummaryState& summaryState,
                                                         const std::vector<Scalar>& resv_coeff,

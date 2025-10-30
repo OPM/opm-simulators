@@ -32,7 +32,8 @@
 #include <cassert>
 #include <stdexcept>
 
-namespace Opm::WGHelpers {
+namespace Opm::GroupStateHelpers
+ {
 
 template<typename Scalar, typename IndexTraits>
 TargetCalculator<Scalar, IndexTraits>::
@@ -307,4 +308,4 @@ INSTANTIATE_TYPE(double)
 INSTANTIATE_TYPE(float)
 #endif
 
-} // namespace Opm::WGHelpers
+} // namespace Opm::GroupStateHelpers

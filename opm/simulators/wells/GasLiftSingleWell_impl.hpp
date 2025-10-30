@@ -146,10 +146,10 @@ GasLiftSingleWell<TypeTag>::
 computeBhpAtThpLimit_(Scalar alq, bool debug_output) const
 {
     OPM_TIMEFUNCTION();
-    const auto& wgHelper = this->simulator_.problem().wellModel().wgHelper();
+    const auto& groupStateHelper = this->simulator_.problem().wellModel().groupStateHelper();
     auto bhp_at_thp_limit = this->well_.computeBhpAtThpLimitProdWithAlq(
         this->simulator_,
-        wgHelper,
+        groupStateHelper,
         this->summary_state_,
         alq,
         this->deferred_logger_,

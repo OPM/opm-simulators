@@ -27,17 +27,18 @@
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
 #include <opm/simulators/wells/GroupState.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <cassert>
 
-namespace Opm::WGHelpers {
+namespace Opm::GroupStateHelpers
+ {
 
 template<typename Scalar, typename IndexTraits>
 FractionCalculator<Scalar, IndexTraits>::
 FractionCalculator(const Schedule& schedule,
-                   const WellGroupHelperType& wgHelper,
+                   const GroupStateHelperType& groupStateHelper,
                    const SummaryState& summary_state,
                    const int report_step,
                    const GuideRate* guide_rate,
@@ -45,7 +46,7 @@ FractionCalculator(const Schedule& schedule,
                    const bool is_producer,
                    const Phase injection_phase)
     : schedule_(schedule)
-    , wgHelper_(wgHelper)
+    , groupStateHelper_(groupStateHelper)
     , summary_state_(summary_state)
     , report_step_(report_step)
     , guide_rate_(guide_rate)
@@ -127,11 +128,11 @@ guideRateSum(const Group& group,
     for (const std::string& child_group : group.groups()) {
         bool included = (child_group == always_included_child);
         if (is_producer_) {
-            const auto ctrl = this->wgHelper().groupState().production_control(child_group);
+            const auto ctrl = this->groupStateHelper().groupState().production_control(child_group);
             included |= (ctrl == Group::ProductionCMode::FLD) ||
                         (ctrl == Group::ProductionCMode::NONE);
         } else {
-            const auto ctrl = this->wgHelper().groupState().injection_control(child_group,
+            const auto ctrl = this->groupStateHelper().groupState().injection_control(child_group,
                                                                    this->injection_phase_);
             included |= (ctrl == Group::InjectionCMode::FLD) ||
                         (ctrl == Group::InjectionCMode::NONE);
@@ -147,9 +148,9 @@ guideRateSum(const Group& group,
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
         if (is_producer_) {
-            included |= this->wgHelper().wellState().isProductionGrup(child_well);
+            included |= this->groupStateHelper().wellState().isProductionGrup(child_well);
         } else {
-            included |= this->wgHelper().wellState().isInjectionGrup(child_well);
+            included |= this->groupStateHelper().wellState().isInjectionGrup(child_well);
         }
         if (included) {
             number_of_included_well_or_groups++;
@@ -167,7 +168,7 @@ guideRate(const std::string& name,
           const bool always_use_potentials)
 {
     if (schedule_.hasWell(name, report_step_)) {
-        return this->wgHelper().getGuideRate(name, target_);
+        return this->groupStateHelper().getGuideRate(name, target_);
     } else {
         if (groupControlledWells(name, always_included_child) > 0) {
             if (is_producer_ && guide_rate_->has(name) && !always_use_potentials) {
@@ -193,7 +194,7 @@ int FractionCalculator<Scalar, IndexTraits>::
 groupControlledWells(const std::string& group_name,
                      const std::string& always_included_child)
 {
-    return this->wgHelper().groupControlledWells(
+    return this->groupStateHelper().groupControlledWells(
         group_name, always_included_child, is_producer_, injection_phase_
     );
 }
@@ -203,7 +204,7 @@ GuideRate::RateVector FractionCalculator<Scalar, IndexTraits>::
 getGroupRateVector(const std::string& group_name)
 {
     assert(is_producer_);
-    return this->wgHelper().getProductionGroupRateVector(group_name);
+    return this->groupStateHelper().getProductionGroupRateVector(group_name);
 }
 
 template class FractionCalculator<double, BlackOilDefaultFluidSystemIndices>;
@@ -211,4 +212,4 @@ template class FractionCalculator<double, BlackOilDefaultFluidSystemIndices>;
 #if FLOW_INSTANTIATE_FLOAT
 template class FractionCalculator<float, BlackOilDefaultFluidSystemIndices>;
 #endif
-} // namespace Opm::WGHelpers
+} // namespace Opm::GroupStateHelpers

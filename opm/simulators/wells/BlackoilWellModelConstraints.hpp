@@ -34,7 +34,7 @@ class DeferredLogger;
 template<class Scalar> class GroupState;
 class SummaryState;
 template<typename Scalar, typename IndexTraits> class WellState;
-template<typename Scalar, typename IndexTraits> class WellGroupHelper;
+template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 
 /// Class for handling constraints for the blackoil well model.
 template<typename Scalar, typename IndexTraits>
@@ -46,7 +46,7 @@ public:
     constexpr static int oilPhaseIdx = IndexTraits::oilPhaseIdx;
     constexpr static int gasPhaseIdx = IndexTraits::gasPhaseIdx;
 
-    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
     //! \brief Constructor initializes reference to the well model.
     explicit BlackoilWellModelConstraints(const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel)
@@ -97,7 +97,7 @@ private:
     checkGroupProductionConstraints(const Group& group,
                                     DeferredLogger& deferred_logger) const;
 
-    const WellGroupHelperType& wgHelper() const { return wellModel_.wgHelper(); }
+    const GroupStateHelperType& groupStateHelper() const { return wellModel_.groupStateHelper(); }
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_; //!< Reference to well model
 };
 

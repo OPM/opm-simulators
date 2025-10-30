@@ -30,7 +30,7 @@
 
 namespace Opm {
 
-template<typename Scalar, typename IndexTraits> class WellGroupHelper;
+template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 template<typename Scalar, typename IndexTraits> class BlackoilWellModelGeneric;
 namespace data {
 struct GroupData;
@@ -46,7 +46,7 @@ template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelGuideRates
 {
 public:
-    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
     //! \brief Constructor initializes reference to the well model.
     explicit BlackoilWellModelGuideRates(const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel)
@@ -73,7 +73,7 @@ public:
     //! \brief Check if a guide rate update is needed.
     bool guideRateUpdateIsNeeded(const int reportStepIdx) const;
 
-    const WellGroupHelperType& wgHelper() const { return wellModel_.wgHelper(); }
+    const GroupStateHelperType& groupStateHelper() const { return wellModel_.groupStateHelper(); }
 
 private:
     //! \brief Obtain guide rate values.
