@@ -595,6 +595,17 @@ updateGroupIndividualControl(const Group& group,
         const auto controls = group.productionControls(wellModel_.summaryState());
 
         const auto mode = std::get<0>(changed_this);
+
+        if (mode == Group::ProductionCMode::RESV) {
+            const std::string msg =
+                fmt::format("Production group {} control mode is RESV, "
+                            "current RESV target is {}",
+                            group.name(),
+                            controls.resv_target);
+            deferred_logger.debug(msg);
+            std::cout << msg << std::endl;
+        }
+
         if (mode != Group::ProductionCMode::NONE)
         {
             std::optional<std::string> worst_offending_well = std::nullopt;
@@ -629,7 +640,8 @@ updateGroupIndividualControl(const Group& group,
                         "and all the constraints are honored, and switching to NONE now.",
                         group.name(),
                         Group::ProductionCMode2String(currentControl));
-                deferred_logger.info(msg);
+                deferred_logger.debug(msg);
+                std::cout << msg << std::endl;
             }
             if (currentControl != Group::ProductionCMode::NONE) {
                 changed = true;

@@ -21,6 +21,8 @@
 #ifndef OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
+#include "opm/input/eclipse/Schedule/Well/Well.hpp"
+
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -335,6 +337,18 @@ public:
 
     bool is_permanently_inactive_well(const std::string& wname) const {
         return std::find(this->permanently_inactive_well_names_.begin(), this->permanently_inactive_well_names_.end(), wname) != this->permanently_inactive_well_names_.end();
+    }
+
+    std::string productionModeToString() const
+    {
+        std::string result;
+        for (const auto& w : wells_) {
+            if (w.producer) {
+                result += "Well: " + w.name + " Production Mode: " + WellProducerCMode2String(w.production_cmode) + "\n";
+            }
+        }
+        return result;
+
     }
 
 private:

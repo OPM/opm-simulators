@@ -226,6 +226,15 @@ public:
         serializer(m_number_of_wells_under_inj_group_control);
     }
 
+    std::string productionControlsToString() const
+    {
+        std::string result;
+        for (const auto& pc : production_controls) {
+            result += "Group: " + pc.first + " Control: " + Group::ProductionCMode2String(pc.second) + "\n";
+        }
+        return result;
+    }
+
 private:
     std::size_t num_phases{};
     std::map<std::string, std::vector<Scalar>> m_production_rates;

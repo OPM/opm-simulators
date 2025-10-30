@@ -1792,8 +1792,19 @@ namespace Opm {
         // Check group individual constraints.
         // iterate a few times to make sure all constraints are honored
         const std::size_t max_iter = param_.well_group_constraints_max_iterations_;
+        {
+            std::string msg = fmt::format("control modes before updating well controls \n {}", this->active_wgstate_.productionModeToString());
+            deferred_logger.debug(msg);
+            std::cout << msg << std::endl;
+        }
+
         while(!changed_well_group && iter < max_iter) {
             changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
+            {
+                std::string msg = fmt::format("control modes after updateGroupControls at iteration {} \n {}", iter, this->active_wgstate_.productionModeToString());
+                deferred_logger.debug(msg);
+                std::cout << msg << std::endl;
+            }
 
             // Check wells' group constraints and communicate.
             bool changed_well_to_group = false;
@@ -1813,6 +1824,11 @@ namespace Opm {
                     }
                 OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel: updating well controls failed: ",
                                         simulator_.gridView().comm());
+            }
+            {
+                std::string msg = fmt::format("control modes after updateWellControl at iteration {} \n {}", iter, this->active_wgstate_.productionModeToString());
+                deferred_logger.debug(msg);
+                std::cout << msg << std::endl;
             }
 
             changed_well_to_group = comm.sum(static_cast<int>(changed_well_to_group));
@@ -1838,6 +1854,11 @@ namespace Opm {
                     }
                 OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel: updating well controls failed: ",
                                         simulator_.gridView().comm());
+            }
+            {
+                std::string msg = fmt::format("control modes after updateWellControl again at iteration {} \n {}", iter, this->active_wgstate_.productionModeToString());
+                deferred_logger.debug(msg);
+                std::cout << msg << std::endl;
             }
 
             changed_well_individual = comm.sum(static_cast<int>(changed_well_individual));
