@@ -15,6 +15,12 @@
 */
 #include <config.h>
 
+// Tricks for older versions of ROCm that do not support alugrid.
+#ifdef HAVE_DUNE_ALUGRID
+#undef HAVE_DUNE_ALUGRID
+#endif
+#define HAVE_DUNE_ALUGRID 0
+
 #ifdef __HIP_PLATFORM_AMD__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
