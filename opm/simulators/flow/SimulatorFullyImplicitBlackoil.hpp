@@ -440,7 +440,9 @@ public:
                     schedule.clear_event(ScheduleEvents::TUNING_CHANGE, reportStep);
                     const auto& sched_state = schedule[reportStep];
                     const auto& tuning_max_next_tstep = sched_state.max_next_tstep(enableTUNING);
-                    max_next_tstep = std::max(max_next_tstep,tuning_max_next_tstep);
+                    if(tuning_max_next_tstep> 0) {
+                        max_next_tstep = std::max(max_next_tstep,tuning_max_next_tstep);
+                    }    
                     const auto& tuning = sched_state.tuning();
 
                     if (enableTUNING) {
@@ -452,9 +454,11 @@ public:
                         dt = this->adaptiveTimeStepping_->suggestedNextStep();
                     } else {
                         dt = max_next_tstep;
-                        this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
+                        if(max_next_tstep < std::numeric_limits<double>::max()){
+                            this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
+                        }
                     }
-                    result = max_next_tstep > 0;
+                    result = max_next_tstep < std::numeric_limits<double>::max();
                 }
 
                 const auto& wcycle = schedule[reportStep].wcycle.get();
