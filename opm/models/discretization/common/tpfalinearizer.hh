@@ -1501,21 +1501,21 @@ private:
 
                     //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
                     *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
-                    // bMat *= -1.0;
-                    // //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
-                    // *nbInfo.matBlockAddress += bMat;
-                    // ++loc;
+                    bMat *= -1.0;
+                    //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+                    *nbInfo.matBlockAddress += bMat;
+                    ++loc;
                 }
             }
 
-            // // Accumulation term.
-            // // const double volume = model_().dofTotalVolume(globI);
-            // // const Scalar storefac = volume / dt;
-            // adres = 1.0;
-            // {
-            //     // LocalResidual::computeStorage(adres, intQuantsIn);
-            // }
-            // setResAndJacobiGPUCPU(res, bMat, adres);
+            // Accumulation term.
+            // const double volume = model_().dofTotalVolume(globI);
+            // const Scalar storefac = volume / dt;
+            adres = 1.0;
+            {
+                // LocalResidual::computeStorage(adres, intQuantsIn);
+            }
+            setResAndJacobiGPUCPU(res, bMat, adres);
         }
     }
 
@@ -1530,44 +1530,44 @@ private:
         GpuResidualView GPU_LOCAL_residualView,
         const GpuBoundaryInfoView GPU_LOCAL_boundaryInfo)
     {
-        // const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
-        // // Boundary terms. Only looping over cells with nontrivial bcs.
-        // if (ii < GPU_LOCAL_boundaryInfo.size())
-        // {
-        //     // Serializing the bc handling gives correct answer but will be very slow on GPU
-        //     // I am not sure why this did not give the correct result when using atomic adds
-        //     // The only race condition I see is multiple threads fetching the matrix and residual
-        //     // elements at the same time before adding something to it...
-        //     // for (int jj = 0; jj < GPU_LOCAL_boundaryInfo.size(); ++jj)
-        //     // {
-        //         if (GPU_LOCAL_boundaryInfo[ii].bcdata.type != BCType::NONE)
-        //         {
-        //             VectorBlockType res(1.0);
-        //             MatrixBlockType bMat(2.0);
-        //             ADVectorBlockType adres(3.0);
-        //             const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
-        //             // const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-        //             // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
-        //             adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
-        //             setResAndJacobiGPUCPU(res, bMat, adres);
-        //             // GPU_LOCAL_residualView[globI] += res;
-        //             auto* residualPtr = &(GPU_LOCAL_residualView.data()[globI]);
-        //             for (int i = 0; i < numEq; ++i) {
-        //                 atomicAdd(&((*residualPtr)[i]), res[i]);
-        //             }
-        //             ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-        //             // Atomic add for matrix blocks - need to add each element individually
-        //             // *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
-        //             // auto* matPtr = reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]);
-        //             // for (int row = 0; row < bMat.size(); ++row) {
-        //             //     for (int col = 0; col < bMat.size(); ++col) {
-        //             //         double* elemPtr = &((*matPtr)[row][col]);
-        //             //         atomicAdd(elemPtr, bMat[row][col]);
-        //             //     }
-        //             // }
-        //         }
-        //     // }
-        // }
+        const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
+        // Boundary terms. Only looping over cells with nontrivial bcs.
+        if (ii < GPU_LOCAL_boundaryInfo.size())
+        {
+            // Serializing the bc handling gives correct answer but will be very slow on GPU
+            // I am not sure why this did not give the correct result when using atomic adds
+            // The only race condition I see is multiple threads fetching the matrix and residual
+            // elements at the same time before adding something to it...
+            // for (int jj = 0; jj < GPU_LOCAL_boundaryInfo.size(); ++jj)
+            // {
+                if (GPU_LOCAL_boundaryInfo[ii].bcdata.type != BCType::NONE)
+                {
+                    VectorBlockType res(1.0);
+                    MatrixBlockType bMat(2.0);
+                    ADVectorBlockType adres(3.0);
+                    const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
+                    // const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                    // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+                    adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
+                    setResAndJacobiGPUCPU(res, bMat, adres);
+                    // GPU_LOCAL_residualView[globI] += res;
+                    auto* residualPtr = &(GPU_LOCAL_residualView.data()[globI]);
+                    for (int i = 0; i < numEq; ++i) {
+                        atomicAdd(&((*residualPtr)[i]), res[i]);
+                    }
+                    ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+                    // Atomic add for matrix blocks - need to add each element individually
+                    // *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+                    auto* matPtr = reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]);
+                    for (int row = 0; row < bMat.size(); ++row) {
+                        for (int col = 0; col < bMat.size(); ++col) {
+                            double* elemPtr = &((*matPtr)[row][col]);
+                            atomicAdd(elemPtr, bMat[row][col]);
+                        }
+                    }
+                }
+            // }
+        }
     }
 
     template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView, class GpuBoundaryInfoView>
@@ -1617,41 +1617,41 @@ private:
 
                     //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
                     *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
-                    // bMat *= -1.0;
-                    // //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
-                    // *nbInfo.matBlockAddress += bMat;
-                    // ++loc;
+                    bMat *= -1.0;
+                    //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+                    *nbInfo.matBlockAddress += bMat;
+                    ++loc;
                 }
             }
 
-            // // Accumulation term.
-            // // const double volume = model_().dofTotalVolume(globI);
-            // // const Scalar storefac = volume / dt;
-            // adres = 1.0;
-            // {
-            //     // LocalResidual::computeStorage(adres, intQuantsIn);
-            // }
-            // setResAndJacobiGPUCPU(res, bMat, adres);
+            // Accumulation term.
+            // const double volume = model_().dofTotalVolume(globI);
+            // const Scalar storefac = volume / dt;
+            adres = 1.0;
+            {
+                // LocalResidual::computeStorage(adres, intQuantsIn);
+            }
+            setResAndJacobiGPUCPU(res, bMat, adres);
         }
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
-        // for (int ii = 0; ii < GPU_LOCAL_boundaryInfo.size(); ++ii)
-        // {
-        //     if (GPU_LOCAL_boundaryInfo[ii].bcdata.type != BCType::NONE)
-        //     {
-        //         VectorBlockType res(1.0);
-        //         MatrixBlockType bMat(2.0);
-        //         ADVectorBlockType adres(3.0);
-        //         const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
-        //         // const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-        //         // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
-        //         adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
-        //         setResAndJacobiGPUCPU(res, bMat, adres);
-        //         GPU_LOCAL_residualView[globI] += res;
-        //         ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-        //         // *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
-        //     }
-        // }
+        for (int ii = 0; ii < GPU_LOCAL_boundaryInfo.size(); ++ii)
+        {
+            if (GPU_LOCAL_boundaryInfo[ii].bcdata.type != BCType::NONE)
+            {
+                VectorBlockType res(1.0);
+                MatrixBlockType bMat(2.0);
+                ADVectorBlockType adres(3.0);
+                const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
+                // const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+                adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
+                setResAndJacobiGPUCPU(res, bMat, adres);
+                GPU_LOCAL_residualView[globI] += res;
+                ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+                *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+            }
+        }
     }
 #endif
 
