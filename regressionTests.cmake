@@ -900,6 +900,13 @@ add_test_compareECLFiles(CASENAME base_wt_tracer
                          DIR tracer
                          RESTART_STEP 1,3,7)
 
+add_test_compareECLFiles(CASENAME tracer_multiphase
+                         FILENAME TRACER_2WT_2GT
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR tracer)
+
 add_multiple_test_range(
   1
   3
