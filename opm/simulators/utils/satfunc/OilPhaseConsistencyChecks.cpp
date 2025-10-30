@@ -25,6 +25,8 @@
 
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
+#include <limits>
+
 // ---------------------------------------------------------------------------
 
 template <typename Scalar>
@@ -40,7 +42,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    const auto low = this->sogcr_ < Scalar{0};
+    const auto low = this->sogcr_ < Scalar{-std::numeric_limits<double>::epsilon()};
     const auto high = ! (this->sogcr_ < Scalar{1});
 
     if (low || high) {
