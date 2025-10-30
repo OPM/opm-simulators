@@ -721,20 +721,20 @@ add_multiple_tests(
 )
 
 add_test_compareECLFiles(CASENAME multflt_model2
-			  FILENAME 3_MULTFLT_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2
-			  TEST_ARGS --solver-max-time-step-in-days=10)
+                        FILENAME 3_MULTFLT_MODEL2
+                        SIMULATOR flow
+                        ABS_TOL ${abs_tol}
+                        REL_TOL ${rel_tol}
+                        DIR model2
+                        TEST_ARGS --solver-max-time-step-in-days=10)
 
 add_test_compareECLFiles(CASENAME multpvv_model2
-			  FILENAME 4_MINPVV_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2
-			  TEST_ARGS --solver-max-time-step-in-days=10)
+                         FILENAME 4_MINPVV_MODEL2
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2
+                         TEST_ARGS --solver-max-time-step-in-days=10)
 
 add_test_compareECLFiles(CASENAME 9_3d_grpctl_stw_model2
                          FILENAME 9_3D_GINJ_GAS_MAX_EXPORT_STW
@@ -766,22 +766,22 @@ add_test_compareECLFiles(CASENAME model6_msw
                          DIR model6)
 
 add_test_compareECLFiles(CASENAME wsegsicd
-			  FILENAME TEST_WSEGSICD
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol})
+                         FILENAME TEST_WSEGSICD
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME wsegaicd
-			  FILENAME BASE_MSW_WSEGAICD
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol})
+                         FILENAME BASE_MSW_WSEGAICD
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME wsegvalv
-			  FILENAME BASE_MSW_WSEGVALV
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol})
+                         FILENAME BASE_MSW_WSEGVALV
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME wsegvalv_2d_vert
                          FILENAME  MSW-2D-VERT-02
