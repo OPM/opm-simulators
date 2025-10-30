@@ -67,7 +67,7 @@ public:
         {
             for (size_type j = 0; j < dimension; ++j)
             {
-                (*this)(i, j) = mb(i, j);
+                (*this)[i][j] = mb[i][j];
             }
         }
     }
@@ -179,6 +179,12 @@ public:
 		MiniMatrix result = *this;
 		result -= other;
 		return result;
+	}
+
+	OPM_HOST_DEVICE MiniMatrix& operator=(const T& scalar) {
+		for (auto& x : data_)
+			x = scalar;
+		return *this;
 	}
 
     /**
