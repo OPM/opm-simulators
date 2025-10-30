@@ -15,11 +15,16 @@
 */
 #include <config.h>
 
-// Tricks for older versions of ROCm that do not support alugrid.
+// Tricks for older versions of ROCm that do not support alugrid
+// or dune fem
 #ifdef HAVE_DUNE_ALUGRID
 #undef HAVE_DUNE_ALUGRID
 #endif
 #define HAVE_DUNE_ALUGRID 0
+#ifdef HAVE_DUNE_FEM
+#undef HAVE_DUNE_FEM
+#endif
+#define HAVE_DUNE_FEM 0
 
 #ifdef __HIP_PLATFORM_AMD__
 #pragma clang diagnostic push
