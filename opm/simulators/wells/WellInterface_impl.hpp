@@ -1837,6 +1837,85 @@ namespace Opm
     }
 
     template <typename TypeTag>
+    template<class Value>
+    void
+    WellInterface<TypeTag>::
+    getWi(std::vector<Value>&         wi,
+          const int                   perf,
+          const IntensiveQuantities&  intQuants,
+          const Value&                trans_mult,
+          const SingleWellStateType&  ws) const
+    {
+        OPM_TIMEFUNCTION_LOCAL(Subsystem::Wells);
+        // Add a Forchheimer term to the gas phase CTF if the run uses
+        // either of the WDFAC or the WDFACCOR keywords.
+        if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
+            OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - possibly wellIndex was called with a global instead of a local perforation index!");
+        }
+
+        if constexpr (! Indices::gasEnabled) {
+            return;
+        }
+
+        const auto& wdfac = this->well_ecl_.getWDFAC();
+
+        if (! wdfac.useDFactor() || (this->well_index_[perf] == 0.0)) {
+            return;
+        }
+
+        const Scalar d = this->computeConnectionDFactor(perf, intQuants, ws);
+        if (d < 1.0e-15) {
+            return;
+        }
+
+        // Solve quadratic equations for connection rates satisfying the ipr and the flow-dependent skin.
+        // If more than one solution, pick the one corresponding to lowest absolute rate (smallest skin).
+        const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
+        const Scalar Kh = connection.Kh();
+        const Scalar scaling = 3.141592653589 * Kh * connection.wpimult();
+        const unsigned gas_comp_idx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+
+        const Scalar connection_pressure = ws.perf_data.pressure[perf];
+        const Scalar cell_pressure = getValue(intQuants.fluidState().pressure(FluidSystem::gasPhaseIdx));
+        const Scalar drawdown = cell_pressure - connection_pressure;
+        const Scalar invB = getValue(intQuants.fluidState().invB(FluidSystem::gasPhaseIdx));
+        const Scalar mob_g = getValue(intQuants.mobility(FluidSystem::gasPhaseIdx)) * invB;
+        const Scalar a = d;
+        const Scalar b = 2 * scaling / getValue(wi[gas_comp_idx]);
+        const Scalar c = -2 * scaling * mob_g * drawdown;
+
+        Scalar consistent_Q = -1.0e20;
+        // Find and check negative solutions (a --> -a)
+        const Scalar r2n = b*b + 4*a*c;
+        if (r2n >= 0) {
+            const Scalar rn = std::sqrt(r2n);
+            const Scalar xn1 = (b-rn)*0.5/a;
+            if (xn1 <= 0) {
+                consistent_Q = xn1;
+            }
+            const Scalar xn2 = (b+rn)*0.5/a;
+            if (xn2 <= 0 && xn2 > consistent_Q) {
+                consistent_Q = xn2;
+            }
+        }
+        // Find and check positive solutions
+        consistent_Q *= -1;
+        const Scalar r2p = b*b - 4*a*c;
+        if (r2p >= 0) {
+            const Scalar rp = std::sqrt(r2p);
+            const Scalar xp1 = (rp-b)*0.5/a;
+            if (xp1 > 0 && xp1 < consistent_Q) {
+                consistent_Q = xp1;
+            }
+            const Scalar xp2 = -(rp+b)*0.5/a;
+            if (xp2 > 0 && xp2 < consistent_Q) {
+                consistent_Q = xp2;
+            }
+        }
+        wi[gas_comp_idx]  = 1.0 / (1.0 / (trans_mult * this->well_index_[perf]) + (consistent_Q/2 * d / scaling));
+    }
+
+    template <typename TypeTag>
     std::vector<typename WellInterface<TypeTag>::Scalar>
     WellInterface<TypeTag>::
     wellIndex(const int                      perf,
@@ -1992,17 +2071,19 @@ namespace Opm
             return conns[connIx[perf]].CF();
         };
 
+        auto obtain = [](const Eval& value)
+                      {
+                          return getValue(value);
+                      };
+
         auto& tmult = ws.perf_data.connection_compaction_tmult;
         auto& ctf   = ws.perf_data.connection_transmissibility_factor;
 
         for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-
-            const auto& intQuants = simulator.model()
-                .intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-
-            tmult[perf] = simulator.problem()
-                .template wellTransMultiplier<double>(intQuants, cell_idx);
+            Scalar trans_mult(0.0);
+            getTransMult(trans_mult, simulator, cell_idx, obtain);
+            tmult[perf] = trans_mult;
 
             ctf[perf] = connCF(perf) * tmult[perf];
         }
@@ -2020,6 +2101,19 @@ namespace Opm
         } else {
             return fs.pressure(FluidSystem::waterPhaseIdx);
         }
+    }
+
+    template <typename TypeTag>
+    template<class Value, class Callback>
+    void
+    WellInterface<TypeTag>::
+    getTransMult(Value& trans_mult,
+                 const Simulator& simulator,
+                 const int cell_idx,
+                 Callback& extendEval) const
+    {
+        const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+        trans_mult = simulator.problem().template wellTransMultiplier<Value>(intQuants, cell_idx, extendEval);
     }
 
     template <typename TypeTag>

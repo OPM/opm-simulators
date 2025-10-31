@@ -93,7 +93,7 @@ namespace Opm
     computePerfRate(const IntensiveQuantities& intQuants,
                     const std::vector<Value>& mob,
                     const Value& bhp,
-                    const std::vector<Scalar>& Tw,
+                    const std::vector<Value>& wi,
                     const int perf,
                     const bool allow_cf,
                     std::vector<Value>& cq_s,
@@ -176,7 +176,7 @@ namespace Opm
                         rvw,
                         rsw,
                         b_perfcells_dense,
-                        Tw,
+                        wi,
                         perf,
                         allow_cf,
                         skin_pressure,
@@ -200,7 +200,7 @@ namespace Opm
                     const Value& rvw,
                     const Value& rsw,
                     std::vector<Value>& b_perfcells_dense,
-                    const std::vector<Scalar>& Tw,
+                    const std::vector<Value>& wi,
                     const int perf,
                     const bool allow_cf,
                     const Value& skin_pressure,
@@ -238,7 +238,7 @@ namespace Opm
 
             // compute component volumetric rates at standard conditions
             for (int componentIdx = 0; componentIdx < this->numConservationQuantities(); ++componentIdx) {
-                const Value cq_p = - Tw[componentIdx] * (mob[componentIdx] * drawdown);
+                const Value cq_p = - wi[componentIdx] * (mob[componentIdx] * drawdown);
                 cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
             }
 
@@ -308,7 +308,7 @@ namespace Opm
 
             // injecting connections total volumerates at standard conditions
             for (int componentIdx = 0; componentIdx < this->numConservationQuantities(); ++componentIdx) {
-                const Value cqt_i = - Tw[componentIdx] * (total_mob_dense * drawdown);
+                const Value cqt_i = - wi[componentIdx] * (total_mob_dense * drawdown);
                 Value cqt_is = cqt_i / volumeRatio;
                 cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is;
             }
@@ -510,10 +510,12 @@ namespace Opm
         getMobility(simulator, perf, mob, deferred_logger);
 
         PerforationRates<Scalar> perf_rates;
-        Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(intQuants,  cell_idx);
+        EvalWell trans_mult(0.0);
+        getTransMult(trans_mult, simulator, cell_idx);
         const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-        const std::vector<Scalar> Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
-        computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
+        std::vector<EvalWell> wi(this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
+        this->getWi(wi, perf, intQuants, trans_mult, wellstate_nupcol);
+        computePerfRate(intQuants, mob, bhp, wi, perf, allow_cf,
                         cq_s, perf_rates, deferred_logger);
 
         auto& ws = well_state.well(this->index_of_well_);
@@ -665,7 +667,25 @@ namespace Opm
         }
     }
 
-
+    template<typename TypeTag>
+    template<class Value>
+    void
+    StandardWell<TypeTag>::
+    getTransMult(Value& trans_mult,
+                 const Simulator& simulator,
+                 const int cell_idx) const
+    {
+        auto obtain = [this](const Eval& value)
+                      {
+                          if constexpr (std::is_same_v<Value, Scalar>) {
+                              static_cast<void>(this); // suppress clang warning
+                              return getValue(value);
+                          } else {
+                              return this->extendEval(value);
+                          }
+                      };
+        WellInterface<TypeTag>::getTransMult(trans_mult, simulator, cell_idx, obtain);
+    }
 
     template<typename TypeTag>
     template<class Value>
@@ -843,16 +863,15 @@ namespace Opm
             }
 
             // the well index associated with the connection
-            Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quantities, cell_idx);
+            Scalar trans_mult(0.0);
+            getTransMult(trans_mult, simulator, cell_idx);
             const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const std::vector<Scalar> tw_perf = this->wellIndex(perf,
-                                                                int_quantities,
-                                                                trans_mult,
-                                                                wellstate_nupcol);
+            std::vector<Scalar> wi(this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
+            this->getWi(wi, perf, int_quantities, trans_mult, wellstate_nupcol);
             std::vector<Scalar> ipr_a_perf(this->ipr_a_.size());
             std::vector<Scalar> ipr_b_perf(this->ipr_b_.size());
             for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
-                const Scalar tw_mob = tw_perf[comp_idx] * mob[comp_idx] * b_perf[comp_idx];
+                const Scalar tw_mob = wi[comp_idx] * mob[comp_idx] * b_perf[comp_idx];
                 ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
                 ipr_b_perf[comp_idx] += tw_mob;
             }
@@ -1486,13 +1505,15 @@ namespace Opm
             // flux for each perforation
             std::vector<Scalar> mob(this->num_conservation_quantities_, 0.);
             getMobility(simulator, perf, mob, deferred_logger);
-            Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(intQuants, cell_idx);
+            Scalar trans_mult(0.0);
+            getTransMult(trans_mult, simulator, cell_idx);
             const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const std::vector<Scalar> Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
+            std::vector<Scalar> wi(this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
+            this->getWi(wi, perf, intQuants, trans_mult, wellstate_nupcol);
 
             std::vector<Scalar> cq_s(this->num_conservation_quantities_, 0.);
             PerforationRates<Scalar> perf_rates;
-            computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
+            computePerfRate(intQuants, mob, bhp, wi, perf, allow_cf,
                             cq_s, perf_rates, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
@@ -1901,10 +1922,12 @@ namespace Opm
 
             std::vector<EvalWell> cq_s(this->num_conservation_quantities_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
             PerforationRates<Scalar> perf_rates;
-            Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quant, cell_idx);
+            EvalWell trans_mult(0.0);
+            getTransMult(trans_mult, simulator, cell_idx);
             const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const std::vector<Scalar> Tw = this->wellIndex(perf, int_quant, trans_mult, wellstate_nupcol);
-            computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf, cq_s,
+            std::vector<EvalWell> wi(this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
+            this->getWi(wi, perf, int_quant, trans_mult, wellstate_nupcol);
+            computePerfRate(int_quant, mob, bhp, wi, perf, allow_cf, cq_s,
                             perf_rates, deferred_logger);
             // TODO: make area a member
             const Scalar area = 2 * M_PI * this->perf_rep_radius_[perf] * this->perf_length_[perf];
@@ -1925,8 +1948,8 @@ namespace Opm
                 water_velocity *= PolymerModule::shrate( int_quant.pvtRegionIndex() ) / this->bore_diameters_[perf];
             }
             const EvalWell shear_factor = PolymerModule::computeShearFactor(polymer_concentration,
-                                                                int_quant.pvtRegionIndex(),
-                                                                water_velocity);
+                                                                            int_quant.pvtRegionIndex(),
+                                                                            water_velocity);
              // modify the mobility with the shear factor.
             mob[waterCompIdx] /= shear_factor;
         }
@@ -2556,11 +2579,13 @@ namespace Opm
             std::vector<Scalar> mob(this->num_conservation_quantities_, 0.);
             getMobility(simulator, perf, mob, deferred_logger);
             std::vector<Scalar> cq_s(this->num_conservation_quantities_, 0.);
-            Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(intQuants,  cell_idx);
+            Scalar trans_mult(0.0);
+            getTransMult(trans_mult, simulator, cell_idx);
             const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const std::vector<Scalar> Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
+            std::vector<Scalar> wi(this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
+            this->getWi(wi, perf, intQuants, trans_mult, wellstate_nupcol);
             PerforationRates<Scalar> perf_rates;
-            computePerfRate(intQuants, mob, bhp.value(), Tw, perf, allow_cf,
+            computePerfRate(intQuants, mob, bhp.value(), wi, perf, allow_cf,
                             cq_s, perf_rates, deferred_logger);
             for (int comp = 0; comp < this->num_conservation_quantities_; ++comp) {
                 well_q_s[comp] += cq_s[comp];
