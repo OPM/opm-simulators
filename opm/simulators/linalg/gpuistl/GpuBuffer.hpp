@@ -99,18 +99,7 @@ public:
     explicit GpuBuffer(const std::vector<T>& data)
         : GpuBuffer(data.size())
     {
-        if constexpr (std::is_same_v<T, bool>) {
-            // Special handling for std::vector<bool>
-            assert(data.size() > 0);
-            auto tmp = std::make_unique<bool[]>(m_numberOfElements);
-            for (size_t i = 0; i < m_numberOfElements; ++i) {
-                tmp[i] = static_cast<bool>(data[i]);
-            }
-            OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice, tmp.get(), m_numberOfElements * sizeof(bool), cudaMemcpyHostToDevice));
-        } else {
-            // Regular types can use data.data()
-            OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice, data.data(), m_numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
-        }
+        copyFromHost(data);
     }
 
     /**
