@@ -163,14 +163,14 @@ public:
 
     #if OPM_IS_INSIDE_DEVICE_FUNCTION
     OPM_HOST_DEVICE BlackOilPrimaryVariables()
-        : ParentType(), pressureScale_(1.0) // TODO: Make the GPU branch fetch the pressure scale from static.
+        : ParentType()
     {
         Valgrind::SetUndefined(*this);
         pvtRegionIdx_ = 0;
     }
     #else 
     OPM_HOST_DEVICE BlackOilPrimaryVariables()
-        : ParentType(), pressureScale_(BlackOilPrimaryVariables::pressureScaleStatic_)
+        : ParentType()
     {
         Valgrind::SetUndefined(*this);
         pvtRegionIdx_ = 0;
@@ -201,7 +201,7 @@ public:
     static void init()
     {
         // TODO: these parameters have undocumented non-trivial dependencies
-        pressureScaleStatic_ = Parameters::Get<Parameters::PressureScale<Scalar>>();
+        pressureScale_ = Parameters::Get<Parameters::PressureScale<Scalar>>();
     }
 
     static void registerParameters()
@@ -214,7 +214,7 @@ public:
     makeEvaluation(unsigned varIdx, unsigned timeIdx, 
                    LinearizationType linearizationType = LinearizationType()) const
     {
-        const Scalar scale = varIdx == pressureSwitchIdx ? this->pressureScale_ : Scalar{1.0};
+        const Scalar scale = varIdx == pressureSwitchIdx ? this->getPressureScale() : Scalar{1.0};
         if (std::is_same_v<Evaluation, Scalar>) {
             return (*this)[varIdx] * scale; // finite differences
         }
@@ -1046,11 +1046,22 @@ private:
 
     OPM_HOST_DEVICE Scalar pressure_() const
     {
-        return (*this)[Indices::pressureSwitchIdx] * this->pressureScale_;
+        return (*this)[Indices::pressureSwitchIdx] * this->getPressureScale();
+    }
+
+    OPM_HOST_DEVICE constexpr Scalar getPressureScale() const
+    {
+        // In device code, we do not have access to static members, so we return 1.0
+        // In most cases, the pressure scale is set to 1.0 anyway, so this is acceptable.
+        #if OPM_IS_INSIDE_DEVICE_FUNCTION
+        return Scalar(1.0);
+        #else
+        return this->pressureScale_;
+        #endif
     }
 
     void setScaledPressure_(Scalar pressure)
-    { (*this)[Indices::pressureSwitchIdx] = pressure / (this->pressureScale_); }
+    { (*this)[Indices::pressureSwitchIdx] = pressure / (this->getPressureScale()); }
 
     WaterMeaning primaryVarsMeaningWater_{WaterMeaning::Disabled};
     PressureMeaning primaryVarsMeaningPressure_{PressureMeaning::Po};
@@ -1059,8 +1070,7 @@ private:
     SolventMeaning primaryVarsMeaningSolvent_{SolventMeaning::Disabled};
     unsigned short pvtRegionIdx_;
     Scalar pcFactor_;
-    Scalar pressureScale_ = 1.0;
-    inline static Scalar pressureScaleStatic_ = 1.0;
+    inline static Scalar pressureScale_ = 1.0;
 };
 
 } // namespace Opm
