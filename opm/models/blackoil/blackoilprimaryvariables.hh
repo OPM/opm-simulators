@@ -25,10 +25,10 @@
 #define EWOMS_BLACK_OIL_PRIMARY_VARIABLES_HH
 
 #include <dune/common/fvector.hh>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
