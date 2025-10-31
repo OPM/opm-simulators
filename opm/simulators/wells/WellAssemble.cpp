@@ -100,8 +100,7 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
                          deferred_logger);
     }
     case Well::ProducerCMode::RESV: {
-        auto total_rate = rates[0]; // To get the correct type only.
-        total_rate = 0.0;
+        EvalWell total_rate = 0.0;
         std::vector<Scalar> convert_coeff(well_.numPhases(), 1.0);
         well_.rateConverter().calcCoeff(/*fipreg*/ 0, well_.pvtRegionIdx(), well_state.well(well_.indexOfWell()).surface_rates, convert_coeff);
         for (int phase = 0; phase < 3; ++phase) {
@@ -243,7 +242,9 @@ assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
             break;
         }
         default:
-            throw("Expected WATER, OIL or GAS as type for injectors " + well_.wellEcl().name());
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Expected WATER, OIL or GAS as type for injector {}", well_.wellEcl().name()),
+                             deferred_logger);
         }
 
         control_eq = coeff * injection_rate - controls.reservoir_rate;
