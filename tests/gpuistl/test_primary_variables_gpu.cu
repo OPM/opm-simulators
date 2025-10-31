@@ -16,7 +16,7 @@
 #include <config.h>
 
 // Tricks for older versions of ROCm that do not support alugrid
-// or dune fem
+// or dune fem. Note that these changes are only valid for this test file.
 #ifdef HAVE_DUNE_ALUGRID
 #undef HAVE_DUNE_ALUGRID
 #endif
@@ -26,6 +26,7 @@
 #endif
 #define HAVE_DUNE_FEM 0
 
+// Suppress enum conversion warnings from Boost.Test on ROCm platform
 #ifdef __HIP_PLATFORM_AMD__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wenum-constexpr-conversion"

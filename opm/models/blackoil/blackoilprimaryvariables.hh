@@ -210,11 +210,6 @@ public:
             ("Scaling of pressure primary variable");
     }
 
-    OPM_HOST_DEVICE void setPressureScale(Scalar val)
-    {
-        pressureScale_ = val;
-    }
-
     OPM_HOST_DEVICE Evaluation
     makeEvaluation(unsigned varIdx, unsigned timeIdx, 
                    LinearizationType linearizationType = LinearizationType()) const
