@@ -713,12 +713,11 @@ namespace Opm {
     {
         rate = 0;
 
-        if (!is_cell_perforated_[elemIdx]) {
+        if (!is_cell_perforated_[elemIdx] || cellRates_.count(elemIdx) == 0) {
             return;
         }
 
-        for (const auto& well : well_container_)
-            well->addCellRates(rate, elemIdx);
+        rate = cellRates_.at(elemIdx);
     }
 
 
@@ -734,12 +733,11 @@ namespace Opm {
         rate = 0;
         int elemIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
-        if (!is_cell_perforated_[elemIdx]) {
+        if (!is_cell_perforated_[elemIdx] || cellRates_.count(elemIdx) == 0) {
             return;
         }
 
-        for (const auto& well : well_container_)
-            well->addCellRates(rate, elemIdx);
+        rate = cellRates_.at(elemIdx);
     }
 
 
@@ -1179,6 +1177,10 @@ namespace Opm {
         }
 
         assembleWellEqWithoutIteration(dt, local_deferredLogger);
+        // Pre-compute cell rates to we don't have to do this for every cell during linearization...
+        cellRates_.clear();
+        for (const auto& well : well_container_)
+            well->addCellRates(cellRates_);
 
         // if group or well control changes we don't consider the
         // case converged

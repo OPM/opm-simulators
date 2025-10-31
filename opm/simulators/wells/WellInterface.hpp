@@ -289,7 +289,7 @@ public:
                                           const bool use_well_weights,
                                           const WellStateType& well_state) const = 0;
 
-    void addCellRates(RateVector& rates, int cellIdx) const;
+    void addCellRates(std::map<int, RateVector>& cellRates_) const;
 
     Scalar volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const;
 
