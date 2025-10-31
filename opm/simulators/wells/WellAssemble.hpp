@@ -53,28 +53,28 @@ class WellAssemble {
 public:
     explicit WellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well);
 
-    template<class EvalWell>
+    template<class ValueType>
     void assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
                                const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const WellProductionControls& controls,
-                               const EvalWell& bhp,
-                               const std::vector<EvalWell>& rates, // Always 3 canonical rates.
-                               const std::function<EvalWell()>& bhp_from_thp,
-                               EvalWell& control_eq,
+                               const ValueType& bhp,
+                               const std::vector<ValueType>& rates, // Always 3 canonical rates.
+                               const std::function<ValueType()>& bhp_from_thp,
+                               ValueType& control_eq,
                                DeferredLogger& deferred_logger) const;
 
-    template<class EvalWell>
+    template<class ValueType>
     void assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
                               const GroupState<Scalar>& group_state,
                               const Schedule& schedule,
                               const SummaryState& summaryState,
                               const WellInjectionControls& controls,
-                              const EvalWell& bhp,
-                              const EvalWell& injection_rate,
-                              const std::function<EvalWell()>& bhp_from_thp,
-                              EvalWell& control_eq,
+                              const ValueType& bhp,
+                              const ValueType& injection_rate,
+                              const std::function<ValueType()>& bhp_from_thp,
+                              ValueType& control_eq,
                               DeferredLogger& deferred_logger) const;
 
 private:
