@@ -68,11 +68,11 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
     const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor() *
                                     well_state[well_.name()].efficiency_scaling_factor;
 
-    std::string msg = fmt::format("in assembleControlEqProd Well {} under production control mode {}",
+    {std::string msg = fmt::format("in assembleControlEqProd Well {} under production control mode {}",
                                   well_.name(),
                                   WellProducerCMode2String(current));
     deferred_logger.debug(msg);
-    std::cout << msg << std::endl;
+    std::cout << msg << std::endl; }
     switch (current) {
     case Well::ProducerCMode::ORAT: {
         assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
@@ -174,11 +174,11 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
 
         };
 
-        std::string msg = fmt::format(" Well {} calling getGroupProductionControl for group {}",
+        {std::string msg = fmt::format(" Well {} calling getGroupProductionControl for group {}",
                                       well_.name(), group.name());
         deferred_logger.debug(msg);
-        std::cout << msg << std::endl;
-        WellGroupControls(well_).getGroupProductionControl(group,
+        std::cout << msg << std::endl; }
+        auto res = WellGroupControls(well_).getGroupProductionControl(group,
                                                            well_state,
                                                            group_state,
                                                            schedule,
@@ -189,6 +189,43 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
                                                            efficiencyFactor,
                                                            control_eq,
                                                            deferred_logger);
+        if (res < -1) {
+            {std::string msg = fmt::format(" Well {} group {} has no production group control, using RESV limit as control equation",
+                                  well_.name(), group.name());
+            deferred_logger.debug(msg);
+            std::cout << msg << std::endl;}
+            auto total_rate = rates[0]; // To get the correct type only.
+            total_rate = 0.0;
+            std::vector<Scalar> convert_coeff(well_.numPhases(), 1.0);
+            well_.rateConverter().calcCoeff(/*fipreg*/ 0, well_.pvtRegionIdx(), well_state.well(well_.indexOfWell()).surface_rates, convert_coeff);
+            for (int phase = 0; phase < 3; ++phase) {
+                if (FluidSystem::phaseIsActive(phase)) {
+                    const int pos = FluidSystem::canonicalToActivePhaseIdx(phase);
+                    total_rate -= rates[phase] * convert_coeff[pos]; // Note different indices.
+                }
+            }
+            if (controls.prediction_mode) {
+                control_eq = total_rate - controls.resv_rate;
+            } else {
+                std::vector<Scalar> hrates(well_.numPhases(), 0.);
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+                    hrates[water_pos] = controls.water_rate;
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+                    hrates[oil_pos] = controls.oil_rate;
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+                    hrates[gas_pos] = controls.gas_rate;
+                }
+                std::vector<Scalar> hrates_resv(well_.numPhases(), 0.);
+                well_.rateConverter().calcReservoirVoidageRates(/*fipreg*/ 0, well_.pvtRegionIdx(), hrates, hrates_resv);
+                Scalar target = std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
+                control_eq = total_rate - target;
+            }
+        }
         break;
     }
     case Well::ProducerCMode::CMODE_UNDEFINED: {

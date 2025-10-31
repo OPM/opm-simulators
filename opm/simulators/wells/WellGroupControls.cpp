@@ -202,7 +202,7 @@ getGroupInjectionTargetRate(const Group& group,
 
 template<typename Scalar, typename IndexTraits>
 template<class EvalWell>
-void WellGroupControls<Scalar, IndexTraits>::
+int WellGroupControls<Scalar, IndexTraits>::
 getGroupProductionControl(const Group& group,
                           const WellState<Scalar, IndexTraits>& well_state,
                           const GroupState<Scalar>& group_state,
@@ -233,7 +233,7 @@ getGroupProductionControl(const Group& group,
             deferred_logger.debug(msg);
             std::cout << msg << std::endl;
             control_eq = bhp - controls.bhp_limit;
-            return;
+            return -100;
         } else {
             // Produce share of parents control
             const auto& parent = schedule.getGroup(group.parent(), well_.currentStep());
@@ -242,7 +242,7 @@ getGroupProductionControl(const Group& group,
                                       schedule, summaryState, bhp,
                                       rates, rateConverter,
                                       efficiencyFactor, control_eq, deferred_logger);
-            return;
+            return 1;
         }
     }
 
@@ -252,7 +252,7 @@ getGroupProductionControl(const Group& group,
         // use bhp as control eq and let the updateControl code find a valid control
         const auto& controls = well.productionControls(summaryState);
         control_eq = bhp - controls.bhp_limit;
-        return;
+        return 1;
     }
 
     // If we are here, we are at the topmost group to be visited in the recursion.
@@ -284,7 +284,7 @@ getGroupProductionControl(const Group& group,
         const auto& controls = well.productionControls(summaryState);
         control_eq = bhp - controls.bhp_limit;
     }
-    return;
+    return 1;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -470,7 +470,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
                                  T efficiencyFactor,                     \
                                  __VA_ARGS__& control_eq,                \
                                  DeferredLogger& deferred_logger) const; \
-    template void WellGroupControls<T, BlackOilDefaultFluidSystemIndices>::                                 \
+    template int WellGroupControls<T, BlackOilDefaultFluidSystemIndices>::                                 \
         getGroupProductionControl(const Group&,                          \
                                   const WellState<T, BlackOilDefaultFluidSystemIndices>&,                   \
                                   const GroupState<T>&,                  \
