@@ -1728,8 +1728,10 @@ namespace Opm
             // getFinteWellResiduals returns false for nan/inf residuals
             {
                 const auto& [isFinite, residuals] = this->getFiniteWellResiduals(Base::B_avg_, deferred_logger);
-                if (!isFinite)
-                    return false;
+                if (!isFinite)  {
+                    converged = false; // Jump out of loop instead of returning to ensure operability status is recovered
+                    break;
+                }
 
                 residual_history.push_back(residuals);
             }
