@@ -692,6 +692,17 @@ namespace Opm {
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
+        const bool changed = BlackoilWellModelConstraints(*this).
+                             updateUnderProductionGroup(fieldGroup, reportStepIdx, this->groupState(), local_deferredLogger);
+
+        if (changed) {
+            this->updateAndCommunicateGroupData(reportStepIdx,
+                                                simulator_.model().newtonMethod().numIterations(),
+                                                param_.nupcol_group_rate_tolerance_,
+                                                /*update_wellgrouptarget*/ false,
+                                                local_deferredLogger);
+        }
+
         this->commitWGState();
 
         const Opm::Parallel::Communication& comm = grid().comm();

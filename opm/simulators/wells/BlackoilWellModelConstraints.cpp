@@ -323,6 +323,96 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
 }
 
 template<typename Scalar, typename IndexTraits>
+bool
+BlackoilWellModelConstraints<Scalar, IndexTraits>::
+checkUnderProductionGroup(const Opm::Group& group, Opm::DeferredLogger& deferred_logger) const
+{
+    bool under_producing = false;
+    const auto controls = group.productionControls(wellModel_.summaryState());
+    const Group::ProductionCMode& currentControl = wellModel_.groupState().production_control(group.name());
+    const auto& pu = wellModel_.phaseUsage();
+
+    auto reducedSumSurface = [&](int phase) -> Scalar {
+        Scalar r = wgHelper().sumWellSurfaceRates(group,
+                                                  pu.canonicalToActivePhaseIdx(phase),
+                                                  /*is_injector=*/false);
+
+        return wellModel_.comm().sum(r);
+    };
+
+    constexpr Scalar tolerance = 0.1;
+
+    switch (currentControl) {
+    case Group::ProductionCMode::ORAT: {
+        const Scalar current_rate = reducedSumSurface(oilPhaseIdx);
+        if (controls.oil_target > (1. + tolerance) * current_rate) {
+            under_producing = true;
+            deferred_logger.debug("UNDER_PROD_ORAT_GROUP", "GROUP " + group.name() + " is under producing its ORAT target");
+        }
+    break;
+    }
+    case Group::ProductionCMode::WRAT: {
+        const Scalar current_rate = reducedSumSurface(waterPhaseIdx);
+        if (controls.water_target > (1. + tolerance) * current_rate) {
+            under_producing = true;
+            deferred_logger.debug("UNDER_PROD_WRAT_GROUP",
+                                  "GROUP " + group.name() + " is under producing its WRAT target");
+        }
+        break;
+    }
+    case Group::ProductionCMode::GRAT:  {
+        const Scalar current_rate = reducedSumSurface(gasPhaseIdx);
+        if (controls.gas_target > (1. + tolerance) * current_rate) {
+            under_producing = true;
+            deferred_logger.debug("UNDER_PROD_GRAT_GROUP",
+                                  "GROUP " + group.name() + " is under producing its GRAT target");
+        }
+        break;
+    }
+    case Group::ProductionCMode::LRAT:  {
+        const Scalar current_rate =
+            reducedSumSurface(oilPhaseIdx) + reducedSumSurface(waterPhaseIdx);
+        if (controls.liquid_target > (1. + tolerance) * current_rate) {
+            under_producing = true;
+            deferred_logger.debug("UNDER_PROD_LRAT_GROUP",
+                                  "GROUP " + group.name() + " is under producing its LRAT target");
+        }
+        break;
+    }
+    case Group::ProductionCMode::RESV:  {
+        Scalar current_rate = 0.0;
+        current_rate += wgHelper().sumWellResRates(group,
+                                                   pu.canonicalToActivePhaseIdx(waterPhaseIdx),
+                                                   /*is_injector=*/false);
+        current_rate += wgHelper().sumWellResRates(group,
+                                                   pu.canonicalToActivePhaseIdx(oilPhaseIdx),
+                                                   /*is_injector=*/false);
+        current_rate += wgHelper().sumWellResRates(group,
+                                                   pu.canonicalToActivePhaseIdx(gasPhaseIdx),
+                                                   /*is_injector=*/false);
+
+        // sum over all nodes
+        current_rate = wellModel_.comm().sum(current_rate);
+
+        Scalar target = controls.resv_target;
+        if (group.has_gpmaint_control(Group::ProductionCMode::RESV)) {
+            target = wellModel_.groupState().gpmaint_target(group.name());
+        }
+
+        if ( target > (1. + tolerance) * current_rate ) {
+            under_producing = true;
+            deferred_logger.debug("UNDER_PROD_RESV_GROUP",
+                                  "GROUP " + group.name() + " is under producing its RESV target");
+        }
+        break;
+    }
+    default:
+        break;
+    }
+    return under_producing;
+}
+
+template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelConstraints<Scalar, IndexTraits>::
 checkGroupConstraints(const Group& group,
                       const int reportStepIdx,
@@ -603,6 +693,40 @@ updateGroupIndividualControl(const Group& group,
         }
     }
 
+    return changed;
+}
+
+template<typename Scalar, typename IndexTraits>
+bool
+BlackoilWellModelConstraints<Scalar, IndexTraits>::
+updateUnderProductionGroup(const Group& group,
+                           const int reportStepIdx,
+                           GroupState<Scalar>& group_state,
+                           DeferredLogger& deferred_logger) const
+{
+    bool changed = false;
+    if (group.isProductionGroup()) {
+        const bool under_producing = this->checkUnderProductionGroup(group, deferred_logger);
+        if (under_producing) {
+            group_state.production_control(group.name(), Group::ProductionCMode::NONE);
+            changed = true;
+            if (wellModel_.comm().rank() == 0) {
+                const Group::ProductionCMode currentControl = group_state.production_control(group.name());
+                const std::string msg =
+                    fmt::format(
+                        "Production group {} is under producing its target for control {}, "
+                        "and all the constraints are honored, and switching to NONE now.",
+                        group.name(),
+                        Group::ProductionCMode2String(currentControl));
+                deferred_logger.info(msg);
+            }
+        }
+    }
+
+    for (const std::string& groupName : group.groups()) {
+        const auto& grp = wellModel_.schedule().getGroup(groupName, reportStepIdx);
+        changed |= this->updateUnderProductionGroup(grp, reportStepIdx, group_state, deferred_logger);
+    }
     return changed;
 }
 
