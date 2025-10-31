@@ -197,7 +197,7 @@ namespace Opm {
         template<class Value>
         void computePerfRate(const IntensiveQuantities& int_quants,
                              const std::vector<Value>& mob_perfcells,
-                             const std::vector<Scalar>& Tw,
+                             const std::vector<Value>& Tw,
                              const int seg,
                              const int perf,
                              const Value& segment_pressure,
@@ -213,7 +213,7 @@ namespace Opm {
                         const Value& rv,
                         const std::vector<Value>& b_perfcells,
                         const std::vector<Value>& mob_perfcells,
-                        const std::vector<Scalar>& Tw,
+                        const std::vector<Value>& Tw,
                         const int perf,
                         const Value& segment_pressure,
                         const Value& segment_density,
@@ -229,6 +229,12 @@ namespace Opm {
         void computeSegmentFluidProperties(const Simulator& simulator,
                                            DeferredLogger& deferred_logger);
 
+        // get the transmissibility multiplier for specific perforation
+        template<class Value>
+        void getTransMult(Value& trans_mult,
+                          const Simulator& simulator,
+                          const int cell_indx) const;
+        
         // get the mobility for specific perforation
         template<class Value>
         void getMobility(const Simulator& simulator,
