@@ -116,17 +116,17 @@ static constexpr const char* deckString1 = "-- =============== RUNSPEC\n"
                                            "'BASIC=0' /\n"
                                            "TSTEP\n"
                                            "1 /";
-using FluidSystem = Opm::BlackOilFluidSystem<double>;
 using Evaluation = Opm::DenseAd::Evaluation<double, 2>;
 using Scalar = typename Opm::MathToolbox<Evaluation>::Scalar;
 
 using ScalarToUse = Opm::GetPropType<Opm::Properties::TTag::FlowProblem, Opm::Properties::Scalar>;
 
-using FluidSystem = Opm::BlackOilFluidSystem<ScalarToUse>;
+using FluidSystem = Opm::BlackOilFluidSystem<Scalar>;
+using FluidState = Opm::BlackOilFluidState<Scalar, FluidSystem>;
 using Evaluation = Opm::DenseAd::Evaluation<double, 2>;
 // using Scalar = typename Opm::MathToolbox<Evaluation>::Scalar;
 using BlackOilFluidSystemView
-    = Opm::BlackOilFluidSystemNonStatic<ScalarToUse, Opm::BlackOilDefaultFluidSystemIndices, Opm::gpuistl::GpuView>;
+    = Opm::BlackOilFluidSystemNonStatic<Scalar, Opm::BlackOilDefaultFluidSystemIndices, Opm::gpuistl::GpuView>;
 
 namespace Opm
 {
@@ -148,6 +148,10 @@ namespace Properties
 } // namespace Opm
 using TypeTagCPU = Opm::Properties::TTag::FlowProblem;
 using TypeTagGPU = Opm::Properties::TTag::FlowProblemGPU;
+
+using FluidSystemGPU = Opm::GetPropType<TypeTagGPU, Opm::Properties::FluidSystem>;
+using FluidStateGPU = Opm::BlackOilFluidState<Scalar, FluidSystemGPU>;
+static constexpr auto NumEq = Opm::getPropValue<TypeTagCPU, Opm::Properties::NumEq>();
 namespace
 {
 template <class FluidSystemView>
@@ -157,6 +161,21 @@ testCreationGPU(FluidSystemView fluidSystemView)
     // for now we just test that we can create a primaryvariables object
     Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariables;
 }
+template <class FluidSystemView>
+__global__ void
+testMakeEvaluationGPU(FluidSystemView fluidSystemView, std::array<Evaluation, NumEq>* outputs)
+{
+    // for now we just test that we can create a primaryvariables object
+    Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariables;
+    FluidStateGPU fluidState(fluidSystemView);
+    //primaryVariables.assignNaive(fluidState);
+
+    for (std::size_t i = 0u; i < std::size_t(NumEq); ++i) {
+    //    (*outputs)[i] = primaryVariables.makeEvaluation(i, std::size_t(0));
+    }
+}
+
+
 } // namespace
 
 BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationWithFieldVector)
@@ -166,7 +185,7 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationWithFieldVector)
     Opm::BlackOilPrimaryVariables<TypeTagCPU, Opm::gpuistl::MiniVector> primaryVariablesFieldVector;
 }
 
-BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCrationGPU)
+BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationGPU)
 {
     Opm::Parser parser;
 
@@ -184,4 +203,34 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCrationGPU)
     testCreationGPU<<<1, 1>>>(dynamicGpuFluidSystemView);
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
+}
+
+BOOST_AUTO_TEST_CASE(TestPrimaryVariablesMakeEvaluationGPU)
+{
+    Opm::Parser parser;
+
+    auto deck = parser.parseString(deckString1);
+    auto python = std::make_shared<Opm::Python>();
+    Opm::EclipseState eclState(deck);
+    Opm::Schedule schedule(deck, eclState, python);
+
+    FluidSystem::initFromState(eclState, schedule);
+
+    auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
+
+    Opm::BlackOilPrimaryVariables<TypeTagCPU> primaryVariables;
+    Opm::BlackOilFluidState<Scalar, FluidSystem> fluidState;
+    primaryVariables.assignNaive(fluidState);
+
+    auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+    auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
+    auto outputs = Opm::gpuistl::make_gpu_unique_ptr<std::array<Evaluation, NumEq>>();
+    testMakeEvaluationGPU<<<1, 1>>>(dynamicGpuFluidSystemView, outputs.get());
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    // Copy the results back to the host
+    auto hostOutputs = Opm::gpuistl::copyFromGPU(outputs.get());
+    for (std::size_t i = 0u; i < std::size_t(NumEq); ++i) {
+    //    BOOST_CHECK(!std::isnan((*hostOutputs)[i]));
+    }
 }
