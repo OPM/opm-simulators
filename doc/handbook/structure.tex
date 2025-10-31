@@ -1,39 +1,39 @@
 \chapter{Directory structure}
 
-We briefly describe the directory structure of \eWoms in terms 
-of subdirectories, source files, and tests. For more details, 
-the Doxygen documentation should be considered. 
-\eWoms comes in form of a DUNE module \texttt{ewoms}. 
-It has a similar structure as other DUNE modules like \texttt{dune-grid}. 
-The following subdirectories are within the module's root directory, 
-from now on assumed to be \texttt{/}: 
-\begin{itemize} 
-\item \texttt{CMake}: the configuration options 
-for building \eWoms using CMake. See the file \texttt{INSTALL.cmake} in 
-the root directory of the \eWoms distribution for details. Of course, 
-it is also possible to use the DUNE buildsystem just like for the other 
+We briefly describe the directory structure of \eWoms in terms
+of subdirectories, source files, and tests. For more details,
+the Doxygen documentation should be considered.
+\eWoms comes in form of a DUNE module \texttt{ewoms}.
+It has a similar structure as other DUNE modules like \texttt{dune-grid}.
+The following subdirectories are within the module's root directory,
+from now on assumed to be \texttt{/}:
+\begin{itemize}
+\item \texttt{CMake}: the configuration options
+for building \eWoms using CMake. See the file \texttt{INSTALL.cmake} in
+the root directory of the \eWoms distribution for details. Of course,
+it is also possible to use the DUNE buildsystem just like for the other
 DUNE modules.
-\item \texttt{doc}: contains the Doxygen documentation in \texttt{doxygen}, 
-this handbook in \texttt{handbook}, and the \eWoms logo in various formats in 
-\texttt{logo}. The html documentation produced by Doxygen can be accessed as usual, 
-namely, by opening \texttt{doc/doxygen/html/index.html} with a web browser. 
-\item \texttt{ewoms}: the \eWoms source files. See Section \ref{sec:ewoms} for details. 
-\item \texttt{test}: tests for each numerical model and the property system. 
-See Section \ref{sec:test} for details. 
-\item \texttt{tutorial}: contains the tutorials described in Chapter \ref{chp:tutorial}. 
+\item \texttt{doc}: contains the Doxygen documentation in \texttt{doxygen},
+this handbook in \texttt{handbook}, and the \eWoms logo in various formats in
+\texttt{logo}. The html documentation produced by Doxygen can be accessed as usual,
+namely, by opening \texttt{doc/doxygen/html/index.html} with a web browser.
+\item \texttt{ewoms}: the \eWoms source files. See Section \ref{sec:ewoms} for details.
+\item \texttt{test}: tests for each numerical model and the property system.
+See Section \ref{sec:test} for details.
+\item \texttt{tutorial}: contains the tutorials described in Chapter \ref{chp:tutorial}.
 \end{itemize}
 
 
 \subsection{The \texttt{ewoms} directory}\label{sec:ewoms}
 
-The directory \texttt{ewoms} contains the \eWoms source files. It consists of the following subdirectories (see Figure \ref{fig:ewoms-structure}): 
+The directory \texttt{ewoms} contains the \eWoms source files. It consists of the following subdirectories (see Figure \ref{fig:ewoms-structure}):
 
-\begin{itemize} 
+\begin{itemize}
 
 \item \texttt{boxmodels}: The fully implicit vertex-centered finite
   volume (box) method. This directory features the following
   sub-directories
-  \begin{itemize} 
+  \begin{itemize}
   \item \texttt{common}: The infrastructural code shared by all box
     models; For example it contains the file
     \texttt{boxfvelementgeometry.hh} which is used by the box scheme to
@@ -42,7 +42,7 @@ The directory \texttt{ewoms} contains the \eWoms source files. It consists of th
     re-used by multiple models, like a generic plug-in for the energy
     equation, models for determining the filter velocity, or plugins
     describing molecular diffusion.
-  \item Each of the other subdirectories contains 
+  \item Each of the other subdirectories contains
     a physical numerical model which uses the box discretization.
   \end{itemize}
 
@@ -109,7 +109,7 @@ considered.
 
 \begin{landscape}
 \begin{figure}[hbt]
-  \centering 
+  \centering
   \includegraphics[width=\linewidth, keepaspectratio]{EPS/ewoms_structure.eps}
   \caption{
     \label{fig:ewoms-structure}
@@ -118,7 +118,7 @@ considered.
 \end{figure}
 \end{landscape}
 
-%%% Local Variables: 
+%%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "ewoms-handbook"
-%%% End: 
+%%% End:

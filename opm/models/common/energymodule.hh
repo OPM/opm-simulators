@@ -61,7 +61,6 @@ class EnergyModule<TypeTag, /*enableEnergy=*/false>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
@@ -69,8 +68,6 @@ class EnergyModule<TypeTag, /*enableEnergy=*/false>
     using Model = GetPropType<TypeTag, Properties::Model>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
-
-    using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
 
 public:
     /*!
@@ -229,7 +226,6 @@ class EnergyModule<TypeTag, /*enableEnergy=*/true>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
@@ -242,7 +238,6 @@ class EnergyModule<TypeTag, /*enableEnergy=*/true>
     enum { energyEqIdx = Indices::energyEqIdx };
     enum { temperatureIdx = Indices::temperatureIdx };
 
-    using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
     using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
@@ -289,7 +284,7 @@ public:
         }
 
         // make the weight of the temperature primary variable inversly proportional to its value
-        return std::max(1.0 / 1000,
+        return std::max(static_cast<Scalar>(1.0) / 1000,
                         1.0 / model.solution(/*timeIdx=*/0)[globalDofIdx][temperatureIdx]);
     }
 
@@ -306,7 +301,7 @@ public:
 
         // approximate change of internal energy of 1kg of liquid water for a temperature
         // change of 30K
-        return 1.0 / (4.184e3 * 30.0);
+        return static_cast<Scalar>(1.0) / (4.184e3 * 30.0);
     }
 
     /*!
@@ -613,7 +608,6 @@ class EnergyIntensiveQuantities<TypeTag, /*enableEnergy=*/true>
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numPhases = FluidSystem::numPhases };
-    enum { energyEqIdx = Indices::energyEqIdx };
     enum { temperatureIdx = Indices::temperatureIdx };
 
     using Toolbox = Opm::MathToolbox<Evaluation>;

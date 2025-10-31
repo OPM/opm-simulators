@@ -68,10 +68,18 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
     }
 
     accelerator_mode_ = Parameters::Get<Parameters::AcceleratorMode>();
+    cpr_weights_thread_parallel_ = Parameters::Get<Parameters::CprWeightsThreadParallel>();
     gpu_device_id_ = Parameters::Get<Parameters::GpuDeviceId>();
     opencl_platform_id_ = Parameters::Get<Parameters::OpenclPlatformId>();
     opencl_ilu_parallel_ = Parameters::Get<Parameters::OpenclIluParallel>();
-    linear_solver_accelerator_ = Parameters::linearSolverAcceleratorTypeFromCLI();
+
+    // NLDD local solvers must use CPU accelerator because extractMatrix and other
+    // operations in the NLDD implementation are not GPU-compatible yet.
+    if (is_nldd_local_solver_) {
+        linear_solver_accelerator_ = Parameters::LinearSolverAcceleratorType::CPU;
+    } else {
+        linear_solver_accelerator_ = Parameters::linearSolverAcceleratorTypeFromCLI();
+    }
 
     if (linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU) {
         if (!Parameters::IsSet<Parameters::LinearSolver>()) {
@@ -176,6 +184,10 @@ void FlowLinearSolverParameters::registerParameters()
             "Note that the verification is not exhaustive, "
             "and some configurations will not verify, but will work in practice. "
             "Usage: --verify-gpu-aware-mpi=[true|false]. ");
+    Parameters::Register<Parameters::CprWeightsThreadParallel>
+        ("Enable OpenMP thread parallelization of CPR weight calculation. "
+            "This can improve performance for large models but is disabled by default."
+            "Usage: --cpr-weights-thread-parallel=[true|false]. ");
 
     Parameters::SetDefault<Parameters::LinearSolverVerbosity>(0);
 }
@@ -207,6 +219,7 @@ void FlowLinearSolverParameters::reset()
     linear_solver_accelerator_ = Parameters::LinearSolverAcceleratorType::CPU;
     gpu_aware_mpi_              = false;
     verify_gpu_aware_mpi_       = false;
+    cpr_weights_thread_parallel_ = false;
 }
 
 } // namespace Opm

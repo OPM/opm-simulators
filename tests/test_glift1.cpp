@@ -159,8 +159,8 @@ BOOST_AUTO_TEST_CASE(G1)
     well_model.calculateExplicitQuantities(deferred_logger);
     well_model.prepareTimeStep(deferred_logger);
     well_model.updateWellControls(deferred_logger);
-    Opm::WellInterface<TypeTag> *well_ptr = well_model.getWell("B-1H").get();
-    StdWell *std_well = dynamic_cast<StdWell *>(well_ptr);
+    const Opm::WellInterface<TypeTag>* well_ptr = &well_model.getWell("B-1H");
+    const StdWell *std_well = dynamic_cast<const StdWell *>(well_ptr);
 
     const auto& schedule = simulator->vanguard().schedule();
     auto wells_ecl = schedule.getWells(report_step_idx);

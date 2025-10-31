@@ -1,10 +1,10 @@
 \chapter[Models]{Physical and numerical models}
 
-\section{Physical and mathematical description} 
+\section{Physical and mathematical description}
 
 Characteristic of compositional multiphase models is that the phases
 are not only matter of a single chemical substance. Instead, their
-composition in general includes several species, and for the mass transfer, 
+composition in general includes several species, and for the mass transfer,
 the component behavior is quite different from the phase behavior. In the following, we
 give some basic definitions and assumptions that are required for the
 formulation of the model concept below. As an example, we take a
@@ -17,7 +17,7 @@ systems is straightforward and can be found, e.\ g., in
   Model Concept}
 \textbf{Components:}
 The term \emph{component} stands for constituents of the phases which
-can be associated with a unique chemical species, or, more generally, with 
+can be associated with a unique chemical species, or, more generally, with
 a group of species exploiting similar physical behavior. In this work, we
 assume a water-gas-NAPL system composed of the phases water (subscript
 $\text{w}$), gas ($\text{g}$), and NAPL ($\text{n}$). These phases are
@@ -37,12 +37,12 @@ For the nonisothermal multiphase processes in porous media under
 consideration, we state that the assumption of local thermal
 equilibrium is valid since flow velocities are small. We neglect
 chemical reactions and biological decomposition and assume chemical
-equilibrium.  Mechanical equilibrium is not valid in a porous medium, 
+equilibrium.  Mechanical equilibrium is not valid in a porous medium,
 since discontinuities in pressure can occur across a fluid-fluid
 interface due to capillary effects.
 
-\textbf{Notation:} The index $\alpha \in \{\text{w}, \text{n}, \text{g}\}$ refers 
-to the phase, while the superscript $\kappa \in \{\text{w}, \text{a}, \text{c}\}$ refers 
+\textbf{Notation:} The index $\alpha \in \{\text{w}, \text{n}, \text{g}\}$ refers
+to the phase, while the superscript $\kappa \in \{\text{w}, \text{a}, \text{c}\}$ refers
 to the component. \\
 \begin{tabular}{llll}
 $p_\alpha$ & phase pressure & $\phi$ & porosity \\
@@ -70,21 +70,21 @@ molar mass balance can be written as:
 \begin{multline}
   \label{A3:eqmass1}
  \phi \frac{\partial (\sum_\alpha \varrho_{\text{mol}, \alpha}
-    x_\alpha^\kappa S_\alpha )}{\partial t}  
+    x_\alpha^\kappa S_\alpha )}{\partial t}
  - \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
         \alpha}}{\mu_\alpha} \varrho_{\text{mol}, \alpha}
     x_\alpha^\kappa K (\grad p_\alpha -
     \varrho_{\alpha} \boldsymbol{g}) \right)  \\
-  % 
+  %
   %
  - \sum\limits_\alpha \Div \left( \tau \phi S_\alpha D_\alpha^\kappa \varrho_{\text{mol},
-      \alpha} \grad x_\alpha^\kappa \right)  
+      \alpha} \grad x_\alpha^\kappa \right)
  - q^\kappa = 0, \qquad \kappa \in \{\text{w,a,c}\}.
 \end{multline}
 
-The component mass balance can also be written in terms of mass fractions 
+The component mass balance can also be written in terms of mass fractions
 by replacing molar densities by mass densities and mole by mass fractions.
-To obtain a single conserved quantity in the temporal derivative, the total 
+To obtain a single conserved quantity in the temporal derivative, the total
 concentration, representing the mass of one component per unit volume, is defined as
 \begin{displaymath}
 C^\kappa = \sum_\alpha \phi S_\alpha \varrho_{\text{mass},\alpha} X_\alpha^\kappa \; .
@@ -93,7 +93,7 @@ Using this definition, the component mass balance is written as:
 
 \begin{multline}
   \label{A3:eqmass2}
-    \frac{\partial C^\kappa}{\partial t} = 
+    \frac{\partial C^\kappa}{\partial t} =
   \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
         \alpha}}{\mu_\alpha} \varrho_{\text{mass}, \alpha}
     X_\alpha^\kappa K (\grad p_\alpha +
@@ -101,14 +101,14 @@ Using this definition, the component mass balance is written as:
   %
   %
    + \sum\limits_\alpha \Div \left( \tau \phi S_\alpha D_\alpha^\kappa \varrho_{\text{mass},
-      \alpha} \grad X_\alpha^\kappa \right)  
+      \alpha} \grad X_\alpha^\kappa \right)
  + q^\kappa = 0, \qquad \kappa \in \{\text{w,a,c}\}.
 \end{multline}
 
 
 In the case of non-isothermal systems, we further have to balance the
 thermal energy. We assume fully reversible processes, such that entropy
-is not needed as a model parameter. Furthermore, we neglect 
+is not needed as a model parameter. Furthermore, we neglect
 dissipative effects and the heat transport due to molecular
 diffusion. The energy balance can then be
 formulated as:
@@ -118,18 +118,18 @@ formulated as:
   \phi \frac{\partial \left( \sum_\alpha \varrho_{\alpha}
       u_\alpha S_\alpha \right)}{\partial t} + \left( 1 -
     \phi \right) \frac{\partial \varrho_{\text{s}} c_{\text{s}}
-    T}{\partial t}  
+    T}{\partial t}
  - \Div \left( \lambda_{\text{pm}} \grad T \right)
    \\
    - \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
         \alpha}}{\mu_\alpha} \varrho_{\alpha} h_\alpha
     K \left( \grad p_\alpha - \varrho_{\alpha}
-      \boldsymbol{g} \right) \right)  
+      \boldsymbol{g} \right) \right)
  - q^h \; = \; 0.
 \end{multline}
 
 In order to close the system, supplementary constraints for capillary pressure, saturations and mole
-fractions are needed, \cite{A3:helmig:1997}. 
+fractions are needed, \cite{A3:helmig:1997}.
 According to the Gibbsian phase rule, the number of degrees of freedom
 in a non-isothermal compositional multiphase system is equal to the
 number of components plus one. This means we need as many independent
@@ -140,40 +140,40 @@ fractions, temperature, pressures, etc.
 \input{box}
 
 
-\section{Available models} 
-The following description of the available models is automatically extracted 
+\section{Available models}
+The following description of the available models is automatically extracted
 from the Doxygen documentation.
-% \textbf{TODO}: Unify notation. 
+% \textbf{TODO}: Unify notation.
 
-\subsection{Fully-implicit models} 
+\subsection{Fully-implicit models}
 
 The fully-implicit models described in this section are using the box
 scheme as described in Section \ref{box} for spatial and the implicit Euler
 method as temporal discretization. The models themselves are located in
 subdirectories of \texttt{ewoms/boxmodels} of the \eWoms distribution.
 
-\subsubsection{The immiscible multi-phase model} 
+\subsubsection{The immiscible multi-phase model}
 \input{ModelDescriptions/immisciblemodel}
 
-\subsubsection{The miscible multi-phase NCP model} 
+\subsubsection{The miscible multi-phase NCP model}
 \input{ModelDescriptions/pvsmodel}
 
-\subsubsection{The miscible multi-phase PVS model} 
+\subsubsection{The miscible multi-phase PVS model}
 \input{ModelDescriptions/pvsmodel}
 
-\subsubsection{The miscible multi-phase flash model} 
+\subsubsection{The miscible multi-phase flash model}
 \input{ModelDescriptions/flashmodel}
 
-\subsubsection{The Richards model} 
+\subsubsection{The Richards model}
 \input{ModelDescriptions/richardsmodel}
 
-\subsubsection{The black-oil model} 
+\subsubsection{The black-oil model}
 \input{ModelDescriptions/blackoilmodel}
 
-\subsubsection{The (Navier-)Stokes model} 
+\subsubsection{The (Navier-)Stokes model}
 \input{ModelDescriptions/stokesmodel}
 
-%%% Local Variables: 
+%%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "ewoms-handbook"
-%%% End: 
+%%% End:

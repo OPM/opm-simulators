@@ -132,7 +132,7 @@ testQuasiImpesWeights(int pressureVarIndex)
     // Calculate quasiimpes weights for CPU
     auto cpuWeights = Opm::Amg::getQuasiImpesWeights<typename TestFixture<blockSize>::MatrixType,
                                                      typename TestFixture<blockSize>::VectorType>(
-        fixture.matrix, pressureVarIndex, transpose);
+        fixture.matrix, pressureVarIndex, transpose, false);
 
     // Calculate quasiimpes weights for GPU
     auto gpuMatrix = fixture.createGpuMatrix();
@@ -165,7 +165,7 @@ testCoarseMatrixCreation(int pressureVarIndex)
     // Calculate weights for CPU
     auto cpuWeights = Opm::Amg::getQuasiImpesWeights<typename TestFixture<blockSize>::MatrixType,
                                                      typename TestFixture<blockSize>::VectorType>(
-        fixture.matrix, pressureVarIndex, transpose);
+        fixture.matrix, pressureVarIndex, transpose, false);
 
     // Calculate quasiimpes weights for GPU
     auto gpuMatrix = fixture.createGpuMatrix();
@@ -234,7 +234,7 @@ testRestriction(int pressureVarIndex)
     // Calculate weights for CPU
     auto cpuWeights = Opm::Amg::getQuasiImpesWeights<typename TestFixture<blockSize>::MatrixType,
                                                      typename TestFixture<blockSize>::VectorType>(
-        fixture.matrix, pressureVarIndex, transpose);
+        fixture.matrix, pressureVarIndex, transpose, false);
 
     // Calculate quasiimpes weights for GPU
     auto gpuMatrix = fixture.createGpuMatrix();
@@ -307,7 +307,7 @@ testProlongation(int pressureVarIndex)
     // Calculate weights and create policies
     auto cpuWeights = Opm::Amg::getQuasiImpesWeights<typename TestFixture<blockSize>::MatrixType,
                                                      typename TestFixture<blockSize>::VectorType>(
-        fixture.matrix, pressureVarIndex, transpose);
+        fixture.matrix, pressureVarIndex, transpose, false);
 
     // Calculate quasiimpes weights for GPU
     auto gpuMatrix = fixture.createGpuMatrix();

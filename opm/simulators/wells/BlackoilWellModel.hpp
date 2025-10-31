@@ -72,7 +72,7 @@
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/WellGroupHelper.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -115,8 +115,8 @@ template<class Scalar> class WellContributions;
             using ModelParameters = BlackoilModelParameters<Scalar>;
 
             using WellConnectionModule = WellConnectionAuxiliaryModule<TypeTag, BlackoilWellModel<TypeTag>>;
-
             using IndexTraits = typename FluidSystem::IndexTraitsType;
+            using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
 
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
@@ -124,7 +124,7 @@ template<class Scalar> class WellContributions;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
             static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
             static constexpr bool has_polymer_ = getPropValue<TypeTag, Properties::EnablePolymer>();
-            static constexpr bool has_energy_ = getPropValue<TypeTag, Properties::EnableEnergy>();
+            static constexpr bool has_energy_ = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
             static constexpr bool has_micp_ = Indices::enableMICP;
 
             // TODO: where we should put these types, WellInterface or Well Model?
@@ -142,8 +142,6 @@ template<class Scalar> class WellContributions;
             // For computing average pressured used by gpmaint
             using AverageRegionalPressureType = RegionAverageCalculator::
                 AverageRegionalPressure<FluidSystem, std::vector<int> >;
-
-            using WellGroupHelpersType = WellGroupHelpers<Scalar, IndexTraits>;
 
             explicit BlackoilWellModel(Simulator& simulator);
 
@@ -189,7 +187,7 @@ template<class Scalar> class WellContributions;
                                          unsigned timeIdx) const;
 
 
-            using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag> >;
+            using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag>>;
 
             using BlackoilWellModelGeneric<Scalar, IndexTraits>::initFromRestartFile;
             void initFromRestartFile(const RestartValue& restartValues)
@@ -294,7 +292,7 @@ template<class Scalar> class WellContributions;
                                     const int reportStepIdx,
                                     const int iterationIdx);
 
-            WellInterfacePtr getWell(const std::string& well_name) const;
+            const WellInterface<TypeTag>& getWell(const std::string& well_name) const;
 
             using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 

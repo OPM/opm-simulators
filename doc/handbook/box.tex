@@ -1,8 +1,8 @@
 \section{Box method - A short introduction}\label{box}
 
-For the spatial discretization the so called BOX-method is used which unites the advantages of the finite-volume (FV) and finite-element (FE) methods. 
+For the spatial discretization the so called BOX-method is used which unites the advantages of the finite-volume (FV) and finite-element (FE) methods.
 
-First, the model domain $G$ is discretized with a FE mesh consisting of nodes i and corresponding elements $E_k$. Then, a secondary FV mesh is constructed by connecting the midpoints and barycenters of the elements surrounding node i creating a box $B_i$ around node i (see Figure \ref{pc:box}a). 
+First, the model domain $G$ is discretized with a FE mesh consisting of nodes i and corresponding elements $E_k$. Then, a secondary FV mesh is constructed by connecting the midpoints and barycenters of the elements surrounding node i creating a box $B_i$ around node i (see Figure \ref{pc:box}a).
 
 \begin{figure} [h]
 \includegraphics[width=0.8\linewidth,keepaspectratio]{EPS/box_disc}
@@ -32,33 +32,33 @@ Like the FE method, the BOX-method follows the principle of weighted residuals. 
 
 \begin{minipage}[b]{0.47\textwidth}
 \begin{equation}
-\label{eq:p} 
+\label{eq:p}
 	\tilde p = \sum_i N_i \hat{p_i}
 \end{equation}
 \begin{equation}
-\label{eq:v} 
+\label{eq:v}
 	\tilde{\mathbf v} = \sum_i N_i \hat{\mathbf v}
 \end{equation}
 \begin{equation}
-\label{eq:x} 
-	\tilde x^\kappa  = \sum_i N_i \hat x^\kappa 
+\label{eq:x}
+	\tilde x^\kappa  = \sum_i N_i \hat x^\kappa
 \end{equation}
 \end{minipage}
 \hfill
 \begin{minipage}[b]{0.47\textwidth}
 \begin{equation}
-\label{eq:dp} 
+\label{eq:dp}
 	\nabla \tilde p = \sum_i \nabla N_i \hat{p_i}
 \end{equation}
 \begin{equation}
-\label{eq:dv} 
+\label{eq:dv}
 	\nabla \tilde{\mathbf v} = \sum_i \nabla N_i \hat{\mathbf v}
 \end{equation}
 \begin{equation}
-\label{eq:dx} 
+\label{eq:dx}
 	\nabla \tilde x^\kappa  = \sum_i \nabla N_i \hat x^\kappa .
 \end{equation}
-\end{minipage} 
+\end{minipage}
 
 Due to the approximation with node values and basis functions the differential equations are not exactly fulfilled anymore but a residual $\varepsilon$ is produced.
 
@@ -96,7 +96,7 @@ where $V_i$ is the volume of the FV box $B_i$ associated with node i. The applic
 	V_i \frac{\partial \hat u_i}{\partial t} + \int_{\partial G}  \left[ W_j \cdot F(\tilde u)\right]  \cdot \mathbf n \: d\varGamma_G + \int_G  \nabla W_j \cdot F(\tilde u)  \: dG- V_i \cdot q = 0 \, .
 \end{equation}
 
-Defining the weighting function $W_j$ to be piecewisely constant over a control volume box $B_i$ 
+Defining the weighting function $W_j$ to be piecewisely constant over a control volume box $B_i$
 
 \begin{equation}
 	W_j(x) = \begin{cases}
@@ -108,13 +108,13 @@ Defining the weighting function $W_j$ to be piecewisely constant over a control 
 causes $\nabla W_j = 0$:
 
 \begin{equation}
-\label{eq:disc1} 
+\label{eq:disc1}
 	V_i \frac{\partial \hat u_i}{\partial t} + \int_{\partial B_i}  \left[ W_j \cdot F(\tilde u)\right] \cdot \mathbf n  \;  d{\varGamma}_{B_i} - V_i \cdot q = 0 .
 \end{equation}
 
 The consideration of the time discretization and inserting $W_j = 1$ finally lead to the discretized form which will be applied to the mathematical flow and transport equations:
 
 \begin{equation}
-\label{eq:discfin} 
-	V_i \frac{\hat u_i^{n+1} - \hat u_i^{n}}{\Delta t} + \int_{\partial B_i}  F(\tilde u^{n+1}) \cdot \mathbf n  \;  d{\varGamma}_{B_i} - V_i \: q^{n+1} \: = 0 
+\label{eq:discfin}
+	V_i \frac{\hat u_i^{n+1} - \hat u_i^{n}}{\Delta t} + \int_{\partial B_i}  F(\tilde u^{n+1}) \cdot \mathbf n  \;  d{\varGamma}_{B_i} - V_i \: q^{n+1} \: = 0
 \end{equation}

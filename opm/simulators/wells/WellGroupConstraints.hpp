@@ -40,6 +40,7 @@ enum class InjectorType;
 using RegionId = int;
 class Schedule;
 class SummaryState;
+template<typename Scalar, typename IndexTraits> class WellGroupHelper;
 template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
 template<typename Scalar, typename IndexTraits> class WellState;
 
@@ -54,22 +55,22 @@ public:
                                             const int,
                                             const std::optional<std::string>&,
                                             std::vector<Scalar>&)>;
+    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using WellStateType = WellState<Scalar, IndexTraits>;
 
-    bool checkGroupConstraints(WellState<Scalar, IndexTraits>& well_state,
-                               const GroupState<Scalar>& group_state,
+    bool checkGroupConstraints(const WellGroupHelperType& wgHelper,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const RateConvFunc& rateConverter,
                                const bool check_guide_rate,
+                               WellStateType& well_state,
                                DeferredLogger& deferred_logger) const;
 
 private:
     std::pair<bool, Scalar>
     checkGroupConstraintsInj(const Group& group,
-                             const WellState<Scalar, IndexTraits>& well_state,
-                             const GroupState<Scalar>& group_state,
+                             const WellGroupHelperType& wgHelper,
                              const Scalar efficiencyFactor,
-                             const Schedule& schedule,
                              const SummaryState& summaryState,
                              const RateConvFunc& rateConverter,
                              const bool check_guide_rate,
@@ -77,11 +78,8 @@ private:
 
     std::pair<bool, Scalar>
     checkGroupConstraintsProd(const Group& group,
-                              const WellState<Scalar, IndexTraits>& well_state,
-                              const GroupState<Scalar>& group_state,
+                              const WellGroupHelperType& wgHelper,
                               const Scalar efficiencyFactor,
-                              const Schedule& schedule,
-                              const SummaryState& summaryState,
                               const RateConvFunc& rateConverter,
                               const bool check_guide_rate,
                               DeferredLogger& deferred_logger) const;

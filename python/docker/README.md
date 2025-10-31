@@ -233,7 +233,7 @@ paths and image tags.
 ## Build Arguments
 
 - `libtype`: "static" (default) or "shared"
-- `python_versions`: Comma-separated list of Python versions (default: "3.8,3.9,3.10,3.11,3.12,3.13")
+- `python_versions`: Comma-separated list of Python versions (default: "3.8,3.9,3.10,3.11,3.12,3.13,3.14")
 - `build_jobs`: Number of parallel build jobs (default: 4)
 - `version_common`: Git reference for opm-common (default: "master")
 - `version_grid`: Git reference for opm-grid (default: "master")

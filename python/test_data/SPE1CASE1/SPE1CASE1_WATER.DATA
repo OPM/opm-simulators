@@ -6,7 +6,7 @@
 -- Copyright (C) 2019 SINTEF
 -- Copyright (C) 2020 Equinor
 
--- This simulation deck is for flow_onephase 
+-- This simulation deck is for flow_onephase
 -- to simulate  water injection/production
 -- in a water single-phase system
 
@@ -68,11 +68,11 @@ INIT
 -- -------------------------------------------------------------------------
 NOECHO
 
-DX 
--- There are in total 300 cells with length 1000ft in x-direction	
+DX
+-- There are in total 300 cells with length 1000ft in x-direction
    	300*1000 /
 DY
--- There are in total 300 cells with length 1000ft in y-direction	
+-- There are in total 300 cells with length 1000ft in y-direction
 	300*1000 /
 DZ
 -- The layers are 20, 30 and 50 ft thick, in each layer there are 100 cells
@@ -122,7 +122,7 @@ ROCK
 	14.7 3E-6 /
 
 DENSITY
--- Density (lb per ft³) at surface cond. of 
+-- Density (lb per ft³) at surface cond. of
 -- oil, water and gas, respectively (in that order)
 
 -- Using values from Norne:
@@ -138,7 +138,7 @@ PRESSURE
 /
 
 SUMMARY
--- -------------------------------------------------------------------------	 
+-- -------------------------------------------------------------------------
 WBHP
   'INJ'
   'PROD'
@@ -177,8 +177,8 @@ COMPDAT
 	'PROD'	10	10	3	3	'OPEN'	1*	1*	0.5 /
 	'INJ'	1	1	1	1	'OPEN'	1*	1*	0.5 /
 /
--- Coordinates in item 2-5 are retreived from Odeh's figure 1 and 2 
--- Item 9 is the well bore internal diameter, 
+-- Coordinates in item 2-5 are retreived from Odeh's figure 1 and 2
+-- Item 9 is the well bore internal diameter,
 -- the radius is given to be 0.25ft in Odeh's paper
 
 

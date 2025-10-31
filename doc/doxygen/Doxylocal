@@ -23,4 +23,3 @@ INPUT                 += @abs_top_srcdir@/opm/
 # the \include command).
 
 # EXAMPLE_PATH          += @abs_top_srcdir@/examples/
-

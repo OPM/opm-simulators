@@ -121,7 +121,8 @@ protected:
     enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
+    enum { enableTemperature = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature };
     enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
@@ -130,7 +131,6 @@ protected:
     enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
-    enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableThermalFluxBoundaries = getPropValue<TypeTag, Properties::EnableThermalFluxBoundaries>() };
 
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
@@ -349,7 +349,7 @@ public:
     /*!
      * \brief Called by the simulator before each time integration.
      */
-    void beginTimeStep()
+    virtual void beginTimeStep()
     {
         OPM_TIMEBLOCK(beginTimeStep);
         const int episodeIdx = this->episodeIndex();
@@ -376,7 +376,6 @@ public:
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
-
     }
 
     /*!
@@ -1119,9 +1118,9 @@ public:
         OPM_TIMEBLOCK_LOCAL(wellTransMultiplier, Subsystem::Wells);
 
         const bool implicit = !this->explicitRockCompaction_;
-        double trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<double>(intQuants, elementIdx)
-                                     : this->simulator().problem().getRockCompTransMultVal(elementIdx);
-        trans_mult *= this->simulator().problem().template permFactTransMultiplier<double>(intQuants, elementIdx);
+        LhsEval trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx)
+                                      : this->simulator().problem().getRockCompTransMultVal(elementIdx);
+        trans_mult *= this->simulator().problem().template permFactTransMultiplier<LhsEval>(intQuants, elementIdx);
 
         return trans_mult;
     }

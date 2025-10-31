@@ -43,6 +43,7 @@
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/parametersystem.hpp>
@@ -113,7 +114,9 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     static constexpr int gasCompIdx = FluidSystem::gasCompIdx;
     static constexpr int oilCompIdx = FluidSystem::oilCompIdx;
     static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
+    enum { enableTemperature = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature };
+
     enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
     enum { enableMICP = Indices::enableMICP };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
@@ -141,8 +144,8 @@ public:
                    [this](const int idx)
                    { return simulator_.problem().eclWriter().collectOnIORank().localIdxToGlobalIdx(idx); },
                    simulator.vanguard().grid().comm(),
-                   getPropValue<TypeTag, Properties::EnableEnergy>(),
-                   getPropValue<TypeTag, Properties::EnableTemperature>(),
+                   getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
+                   getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature,
                    getPropValue<TypeTag, Properties::EnableMech>(),
                    getPropValue<TypeTag, Properties::EnableSolvent>(),
                    getPropValue<TypeTag, Properties::EnablePolymer>(),
@@ -534,8 +537,10 @@ public:
             }
         }
 
-        if (!this->temperature_.empty())
-            fs.setTemperature(this->temperature_[elemIdx]);
+        if constexpr (enableEnergy || enableTemperature) {
+            if (!this->temperature_.empty())
+                fs.setTemperature(this->temperature_[elemIdx]);
+        }
         if constexpr (enableDissolvedGas) {
             if (!this->rs_.empty())
                 fs.setRs(this->rs_[elemIdx]);

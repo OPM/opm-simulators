@@ -33,6 +33,7 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
@@ -74,8 +75,8 @@ class EquilInitializer
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
     enum { dimWorld = GridView::dimensionworld };
-    enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
+    enum { enableTemperature = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature };
     enum { enableDissolution = Indices::compositionSwitchIdx >= 0 };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
@@ -158,7 +159,7 @@ public:
             }
 
             // set the temperature.
-            if (enableTemperature || enableEnergy)
+            if constexpr (enableTemperature || enableEnergy)
                 fluidState.setTemperature(initialState.temperature()[elemIdx]);
 
             // set the phase pressures, invB factor and density

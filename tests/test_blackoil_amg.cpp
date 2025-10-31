@@ -295,7 +295,7 @@ void runBlackoilAmgLaplace()
     Opm::PropertyTree prm;
     prm.put("type", "amg"s);
     std::function<Vector()> weights = [&mat]() {
-        return Opm::Amg::getQuasiImpesWeights<BCRSMat, Vector>(mat, 0, false);
+        return Opm::Amg::getQuasiImpesWeights<BCRSMat, Vector>(mat, 0, false, false);
     };
     auto amg = Opm::PreconditionerFactory<Operator, Communication>::create(fop, prm, weights, comm);
 

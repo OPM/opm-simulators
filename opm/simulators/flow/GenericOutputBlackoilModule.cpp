@@ -295,6 +295,7 @@ calc_inplace(std::map<std::string, double>& miscSummaryData,
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
 outputWellspecReport(const std::vector<std::string>& changedWells,
+                     const bool                      changedWellLists,
                      const std::size_t               reportStepNum,
                      const double                    elapsed,
                      boost::posix_time::ptime        currentDate) const
@@ -302,7 +303,10 @@ outputWellspecReport(const std::vector<std::string>& changedWells,
     this->logOutput_.timeStamp("WELSPECS", elapsed,
                                static_cast<int>(reportStepNum),
                                currentDate);
-    this->logOutput_.wellSpecification(changedWells, reportStepNum);
+
+    this->logOutput_.wellSpecification(changedWells,
+                                       changedWellLists,
+                                       reportStepNum);
 }
 
 template<class FluidSystem>
@@ -752,7 +756,7 @@ doAllocBuffers(const unsigned bufferSize,
        Entry{&fluidPressure_,             "PRESSURE", true},
        // If TEMP is set in RPTRST we output temperature even if THERMAL
        // is not activated
-       Entry{&temperature_,                   "TEMP", enableEnergy_ || rstKeywords["TEMP"] > 0},
+       Entry{&temperature_,                   "TEMP", enableEnergy_ || (enableTemperature_ && rstKeywords["TEMP"] > 0)},
        Entry{&rs_,                              "RS", FluidSystem::enableDissolvedGas()},
        Entry{&rsw_,                            "RSW", FluidSystem::enableDissolvedGasInWater()},
        Entry{&rv_,                              "RV", FluidSystem::enableVaporizedOil()},

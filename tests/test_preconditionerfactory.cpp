@@ -95,9 +95,9 @@ testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const
     if(prm.get<std::string>("preconditioner.type") == "cprt"){
         transpose = true;
     }
-    auto wc = [&matrix, transpose]()
+    std::function<Vector()> wc = [&matrix, transpose]()
     {
-        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, 1, transpose);
+        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, 1, transpose, false);
     };
 
     auto prec = PrecFactory::create(op, prm.get_child("preconditioner"), wc, 1);

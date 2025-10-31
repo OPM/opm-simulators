@@ -32,13 +32,18 @@ set (opm-simulators_CONFIG_VAR
   OPM_COMPILE_COMPONENTS_TEMPLATE_LIST
   )
 
+# CMake 3.30.0 requires to find Boost in CONFIG mode
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.30.0)
+	set(_Boost_CONFIG_MODE CONFIG)
+endif()
+
 # dependencies
 set (opm-simulators_DEPS
   # Compile with C99 support if available
   "C99"
   # Various runtime library enhancements
   "Boost 1.44.0
-    COMPONENTS date_time system unit_test_framework REQUIRED"
+    COMPONENTS date_time unit_test_framework REQUIRED ${_Boost_CONFIG_MODE}"
   # DUNE prerequisites
   "dune-common REQUIRED"
   "dune-istl REQUIRED"
