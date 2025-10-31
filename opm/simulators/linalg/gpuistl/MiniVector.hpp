@@ -195,6 +195,65 @@ public:
         return !(*this == other);
     }
 
+    /** @return Reference to this vector after every element is assigned to 'value' */
+    OPM_HOST_DEVICE MiniVector& operator=(const value_type& value)
+    {
+        fill(value);
+        return *this;
+    }
+
+    OPM_HOST_DEVICE MiniVector operator+(const value_type& value) const
+    {
+        MiniVector result = *this;
+        for (auto& x : result.data_) {
+            x += value;
+        }
+        return result;
+    }
+
+    OPM_HOST_DEVICE MiniVector operator+(const MiniVector& value) const
+    {
+        MiniVector result = *this;
+        for (size_type i = 0; i < Dimension; ++i) {
+            result.data_[i] += value.data_[i];
+        }
+        return result;
+    }
+
+    OPM_HOST_DEVICE MiniVector& operator+=(const MiniVector& other)
+    {
+        for (size_type i = 0; i < Dimension; ++i) {
+            data_[i] += other.data_[i];
+        }
+        return *this;
+    }
+
+    OPM_HOST_DEVICE MiniVector operator-(const MiniVector& other) const
+    {
+        MiniVector result = *this;
+        for (size_type i = 0; i < Dimension; ++i) {
+            result.data_[i] -= other.data_[i];
+        }
+        return result;
+    }
+
+    OPM_HOST_DEVICE MiniVector& operator-=(const MiniVector& other)
+    {
+        for (size_type i = 0; i < Dimension; ++i) {
+            data_[i] -= other.data_[i];
+        }
+        return *this;
+    }
+
+    /** @return Reference to this vector after element‑wise multiplication with 'other' */
+    OPM_HOST_DEVICE MiniVector& operator*=(const value_type& value)
+    {
+        for (auto& x : data_) {
+            x *= value;
+        }
+        return *this;
+    }
+
 private:
     //! Element storage.
     std::array<value_type, Dimension> data_ {};
