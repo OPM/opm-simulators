@@ -123,34 +123,34 @@ BOOST_AUTO_TEST_CASE(GPUSum)
 
 BOOST_AUTO_TEST_CASE(TestArithmeticOperations)
 {
-    ::Opm::gpuistl::MiniVector<double, 3> v1 {1.0, 2.0, 3.0};
-    ::Opm::gpuistl::MiniVector<double, 3> v2 {4.0, 5.0, 6.0};
+    ::Opm::gpuistl::MiniVector<int, 3> v1 {1, 2, 3};
+    ::Opm::gpuistl::MiniVector<int, 3> v2 {4, 5, 6};
 
     auto v3 = v1;
     v3 += v2;
-    BOOST_TEST(v3[0] == 5.0, boost::test_tools::tolerance(1e-12));
-    BOOST_TEST(v3[1] == 7.0, boost::test_tools::tolerance(1e-12));
-    BOOST_TEST(v3[2] == 9.0, boost::test_tools::tolerance(1e-12));
+    BOOST_TEST(v3[0] == 5);
+    BOOST_TEST(v3[1] == 7);
+    BOOST_TEST(v3[2] == 9);
 
     v3 = v2;
     v3 -= v1;
-    BOOST_TEST(v3[0] == 3.0, boost::test_tools::tolerance(1e-12));
-    BOOST_TEST(v3[1] == 3.0, boost::test_tools::tolerance(1e-12));
-    BOOST_TEST(v3[2] == 3.0, boost::test_tools::tolerance(1e-12));
+    BOOST_TEST(v3[0] == 3);
+    BOOST_TEST(v3[1] == 3);
+    BOOST_TEST(v3[2] == 3);
 
     v3 = v1;
-    v3 *= 2.0;
-    BOOST_TEST(v3[0] == 2.0, boost::test_tools::tolerance(1e-12));
-    BOOST_TEST(v3[1] == 4.0, boost::test_tools::tolerance(1e-12));
-    BOOST_TEST(v3[2] == 6.0, boost::test_tools::tolerance(1e-12));
+    v3 *= 2;
+    BOOST_TEST(v3[0] == 2);
+    BOOST_TEST(v3[1] == 4);
+    BOOST_TEST(v3[2] == 6);
 
     v3 = v1 + v2;
-    BOOST_TEST(v3[0] == 5.0, boost::test_tools::tolerance(1e-12));
-    BOOST_TEST(v3[1] == 7.0, boost::test_tools::tolerance(1e-12));
-    BOOST_TEST(v3[2] == 9.0, boost::test_tools::tolerance(1e-12));
+    BOOST_TEST(v3[0] == 5);
+    BOOST_TEST(v3[1] == 7);
+    BOOST_TEST(v3[2] == 9);
 
     v3 = v2 - v1;
-    BOOST_TEST(v3[0] == 3.0, boost::test_tools::tolerance(1e-12));
-    BOOST_TEST(v3[1] == 3.0, boost::test_tools::tolerance(1e-12));
-    BOOST_TEST(v3[2] == 3.0, boost::test_tools::tolerance(1e-12));
+    BOOST_TEST(v3[0] == 3);
+    BOOST_TEST(v3[1] == 3);
+    BOOST_TEST(v3[2] == 3);
 }
