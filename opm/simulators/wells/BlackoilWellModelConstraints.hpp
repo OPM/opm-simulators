@@ -85,6 +85,11 @@ public:
                                       WellState<Scalar, IndexTraits>& well_state,
                                       DeferredLogger& deferred_logger) const;
 
+    bool updateUnderProductionGroup(const Group& group,
+                                    const int reportStepIdx,
+                                    GroupState<Scalar>& group_state,
+                                    DeferredLogger& deferred_logger) const;
+
 private:
     //! \brief Check and return value and type of constraints for an injection well group.
     std::pair<Group::InjectionCMode, Scalar>
@@ -96,6 +101,10 @@ private:
     std::pair<Group::ProductionCMode, Scalar>
     checkGroupProductionConstraints(const Group& group,
                                     DeferredLogger& deferred_logger) const;
+
+    //! \brief Check for under producing groups
+    bool checkUnderProductionGroup(const Group& group,
+                                   DeferredLogger& deferred_logger) const;
 
     const WellGroupHelperType& wgHelper() const { return wellModel_.wgHelper(); }
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_; //!< Reference to well model
