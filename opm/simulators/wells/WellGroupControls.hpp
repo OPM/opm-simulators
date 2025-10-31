@@ -81,7 +81,7 @@ public:
                                 DeferredLogger& deferred_logger) const;
 
     template<class EvalWell>
-    void getGroupProductionControl(const Group& group,
+    int getGroupProductionControl(const Group& group,
                                    const WellState<Scalar, IndexTraits>& well_state,
                                    const GroupState<Scalar>& group_state,
                                    const Schedule& schedule,

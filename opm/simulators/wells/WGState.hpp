@@ -56,6 +56,13 @@ struct WGState
         serializer(group_state);
         serializer(well_test_state);
     }
+    std::string productionModeToString() const
+    {
+        std::string result;
+        result += group_state.productionControlsToString();
+        result += well_state.productionModeToString();
+        return result;
+    }
 };
 
 }
