@@ -68,6 +68,11 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
     const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor() *
                                     well_state[well_.name()].efficiency_scaling_factor;
 
+    std::string msg = fmt::format("in assembleControlEqProd Well {} under production control mode {}",
+                                  well_.name(),
+                                  WellProducerCMode2String(current));
+    deferred_logger.debug(msg);
+    std::cout << msg << std::endl;
     switch (current) {
     case Well::ProducerCMode::ORAT: {
         assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
@@ -169,6 +174,10 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
 
         };
 
+        std::string msg = fmt::format(" Well {} calling getGroupProductionControl for group {}",
+                                      well_.name(), group.name());
+        deferred_logger.debug(msg);
+        std::cout << msg << std::endl;
         WellGroupControls(well_).getGroupProductionControl(group,
                                                            well_state,
                                                            group_state,

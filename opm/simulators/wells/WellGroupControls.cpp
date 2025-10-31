@@ -228,6 +228,10 @@ getGroupProductionControl(const Group& group,
             // containing groups. We will therefore use the wells' bhp
             // limit equation as a fallback.
             const auto& controls = well_.wellEcl().productionControls(summaryState);
+            const std::string msg = fmt::format("Well {}: no production group control available for group {}, using bhp limit as control equation",
+                                                    well_.name(), group.name());
+            deferred_logger.debug(msg);
+            std::cout << msg << std::endl;
             control_eq = bhp - controls.bhp_limit;
             return;
         } else {
