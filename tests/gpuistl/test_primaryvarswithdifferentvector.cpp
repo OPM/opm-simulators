@@ -34,10 +34,6 @@
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
-// do I need these?
-#include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
-#include <opm/simulators/flow/equil/InitStateEquil.hpp>
-
 
 BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationWithFieldVector)
 {
