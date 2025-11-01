@@ -162,30 +162,26 @@ testCreationGPU(FluidSystemView fluidSystemView)
     Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariables;
 }
 
-
+template<typename EvaluationType>
 __global__ void
 testMakeEvaluationGPU(Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariables,
-    std::array<Evaluation, NumEq>* outputs)
+    std::array<EvaluationType, NumEq>* outputs)
 {
     for (std::size_t i = 0u; i < std::size_t(NumEq); ++i) {
-    //    (*outputs)[i] = primaryVariables.makeEvaluation(i, std::size_t(0));
+        (*outputs)[i] = primaryVariables.makeEvaluation(i, std::size_t(0));
     }
 }
-
-
 } // namespace
 
 BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationWithFieldVector)
 {
     Opm::BlackOilPrimaryVariables<TypeTagCPU> primaryVariables;
-
     Opm::BlackOilPrimaryVariables<TypeTagCPU, Opm::gpuistl::MiniVector> primaryVariablesFieldVector;
 }
 
 BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationGPU)
 {
     Opm::Parser parser;
-
     auto deck = parser.parseString(deckString1);
     auto python = std::make_shared<Opm::Python>();
     Opm::EclipseState eclState(deck);
@@ -225,19 +221,21 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariablesMakeEvaluationGPU)
     auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
     auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
 
-    // Allocate output array on the GPU
-    auto outputs = Opm::gpuistl::make_gpu_unique_ptr<std::array<Evaluation, NumEq>>();
-
     // Now we create teh primary variables object that we will pass to the GPU kernel
     Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariablesGPU(primaryVariablesCPU);
+    // Allocate output array on the GPU
+    auto outputs = Opm::gpuistl::make_gpu_unique_ptr<std::array<decltype(primaryVariablesGPU.makeEvaluation(0, 0)), NumEq>>();
 
     // Launch the kernel
     testMakeEvaluationGPU<<<1, 1>>>(primaryVariablesGPU, outputs.get());
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
+
     // Copy the results back to the host
     auto hostOutputs = Opm::gpuistl::copyFromGPU(outputs.get());
+
+    // Now compare with CPU results
     for (std::size_t i = 0u; i < std::size_t(NumEq); ++i) {
-    //    BOOST_CHECK(!std::isnan((*hostOutputs)[i]));
+        BOOST_CHECK_EQUAL(hostOutputs[i], primaryVariablesGPU.makeEvaluation(i, std::size_t(0)));
     }
 }
