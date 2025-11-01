@@ -163,13 +163,9 @@ testCreationGPU(FluidSystemView fluidSystemView)
 }
 template <class FluidSystemView>
 __global__ void
-testMakeEvaluationGPU(FluidSystemView fluidSystemView, std::array<Evaluation, NumEq>* outputs)
+testMakeEvaluationGPU(Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariables,
+    std::array<Evaluation, NumEq>* outputs)
 {
-    // for now we just test that we can create a primaryvariables object
-    Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariables;
-    FluidStateGPU fluidState(fluidSystemView);
-    //primaryVariables.assignNaive(fluidState);
-
     for (std::size_t i = 0u; i < std::size_t(NumEq); ++i) {
     //    (*outputs)[i] = primaryVariables.makeEvaluation(i, std::size_t(0));
     }
@@ -218,14 +214,24 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariablesMakeEvaluationGPU)
 
     auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
 
-    Opm::BlackOilPrimaryVariables<TypeTagCPU> primaryVariables;
+    // Create a primary variables object on the CPU to use its assignNaive method
+    // this will be copied to the GPU (passed by value).
+    Opm::BlackOilPrimaryVariables<TypeTagCPU> primaryVariablesCPU;
     Opm::BlackOilFluidState<Scalar, FluidSystem> fluidState;
-    primaryVariables.assignNaive(fluidState);
+    primaryVariablesCPU.assignNaive(fluidState);
 
+    // Now we need the dynamic fluid system on the GPU
     auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
     auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
+
+    // Allocate output array on the GPU
     auto outputs = Opm::gpuistl::make_gpu_unique_ptr<std::array<Evaluation, NumEq>>();
-    testMakeEvaluationGPU<<<1, 1>>>(dynamicGpuFluidSystemView, outputs.get());
+
+    // Now we create teh primary variables object that we will pass to the GPU kernel
+    Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariablesGPU(primaryVariablesCPU);
+
+    // Launch the kernel
+    testMakeEvaluationGPU<<<1, 1>>>(primaryVariablesGPU, outputs.get());
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
     // Copy the results back to the host

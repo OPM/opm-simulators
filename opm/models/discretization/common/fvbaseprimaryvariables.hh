@@ -66,6 +66,25 @@ public:
     { Valgrind::SetUndefined(*this); }
 
     /*!
+     * \brief Copy constructor from another primary variables object. 
+     * \note This is typically for converting from CPU to GPU primary variables
+     *       representations and vice versa.
+     */
+    template <class OtherTypeTag, template<class, int> class OtherVectorType>
+    explicit OPM_HOST_DEVICE FvBasePrimaryVariables(
+        const FvBasePrimaryVariables<OtherTypeTag, OtherVectorType>& other)
+        : ParentType()
+    {
+        static_assert(getPropValue<TypeTag, Properties::NumEq>() ==
+                      getPropValue<OtherTypeTag, Properties::NumEq>(),
+                      "Incompatible number of equations in primary variables copy "
+                      "constructor");
+        for (unsigned i = 0; i < this->size(); ++i) {
+            (*this)[i] = other[i];
+        }
+    }
+
+    /*!
      * \brief Assignment from another primary variables object
      */
     FvBasePrimaryVariables(const FvBasePrimaryVariables& value) = default;

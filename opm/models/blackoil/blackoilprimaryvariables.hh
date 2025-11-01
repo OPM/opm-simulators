@@ -161,21 +161,32 @@ public:
         Disabled, // The primary variable is not used
     };
 
-    #if OPM_IS_INSIDE_DEVICE_FUNCTION
+    // Allow conversion between different vector types
+    template<class OtherTypeTag, template<class, int> class OtherVectorType>
+    friend class BlackOilPrimaryVariables;
+
+    /*!
+     * \copydoc FvBasePrimaryVariables::FvBasePrimaryVariables(const FvBasePrimaryVariables& )
+     */
+    template<class OtherTypeTag, template<class, int> class OtherVectorType>
+    explicit OPM_HOST_DEVICE BlackOilPrimaryVariables(
+        const BlackOilPrimaryVariables<OtherTypeTag, OtherVectorType>& other)
+        : ParentType(other)
+        , pvtRegionIdx_(other.pvtRegionIdx_)
+        , primaryVarsMeaningWater_(other.primaryVarsMeaningWater_)
+        , primaryVarsMeaningPressure_(other.primaryVarsMeaningPressure_)
+        , primaryVarsMeaningGas_(other.primaryVarsMeaningGas_)
+        , primaryVarsMeaningBrine_(other.primaryVarsMeaningBrine_)
+        , primaryVarsMeaningSolvent_(other.primaryVarsMeaningSolvent_)
+    {
+    }
+
     OPM_HOST_DEVICE BlackOilPrimaryVariables()
         : ParentType()
     {
         Valgrind::SetUndefined(*this);
         pvtRegionIdx_ = 0;
     }
-    #else 
-    OPM_HOST_DEVICE BlackOilPrimaryVariables()
-        : ParentType()
-    {
-        Valgrind::SetUndefined(*this);
-        pvtRegionIdx_ = 0;
-    }
-    #endif
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(const ImmisciblePrimaryVariables& )
