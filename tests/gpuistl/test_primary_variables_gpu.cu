@@ -161,7 +161,8 @@ testCreationGPU(FluidSystemView fluidSystemView)
     // for now we just test that we can create a primaryvariables object
     Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariables;
 }
-template <class FluidSystemView>
+
+
 __global__ void
 testMakeEvaluationGPU(Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariables,
     std::array<Evaluation, NumEq>* outputs)
