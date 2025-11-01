@@ -162,10 +162,10 @@ testCreationGPU(FluidSystemView fluidSystemView)
     Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariables;
 }
 
-template<typename EvaluationType>
+template <typename EvaluationType>
 __global__ void
 testMakeEvaluationGPU(Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariables,
-    std::array<EvaluationType, NumEq>* outputs)
+                      std::array<EvaluationType, NumEq>* outputs)
 {
     for (std::size_t i = 0u; i < std::size_t(NumEq); ++i) {
         (*outputs)[i] = primaryVariables.makeEvaluation(i, std::size_t(0));
@@ -224,7 +224,8 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariablesMakeEvaluationGPU)
     // Now we create teh primary variables object that we will pass to the GPU kernel
     Opm::BlackOilPrimaryVariables<TypeTagGPU, Opm::gpuistl::MiniVector> primaryVariablesGPU(primaryVariablesCPU);
     // Allocate output array on the GPU
-    auto outputs = Opm::gpuistl::make_gpu_unique_ptr<std::array<decltype(primaryVariablesGPU.makeEvaluation(0, 0)), NumEq>>();
+    auto outputs
+        = Opm::gpuistl::make_gpu_unique_ptr<std::array<decltype(primaryVariablesGPU.makeEvaluation(0, 0)), NumEq>>();
 
     // Launch the kernel
     testMakeEvaluationGPU<<<1, 1>>>(primaryVariablesGPU, outputs.get());
