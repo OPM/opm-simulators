@@ -36,6 +36,7 @@
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilextbomodules.hh>
+#include <opm/models/blackoil/blackoilmeanings.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 
@@ -129,37 +130,14 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
     static_assert(numComponents == 3, "The black-oil model assumes three components!");
 
 public:
-    enum class WaterMeaning : std::uint8_t {
-        Sw,  // water saturation
-        Rvw, // vaporized water
-        Rsw, // dissolved gas in water
-        Disabled, // The primary variable is not used
-    };
-
-    enum class PressureMeaning : std::uint8_t {
-        Po, // oil pressure
-        Pg, // gas pressure
-        Pw, // water pressure
-    };
-
-    enum class GasMeaning : std::uint8_t {
-        Sg, // gas saturation
-        Rs, // dissolved gas in oil
-        Rv, // vapporized oil
-        Disabled, // The primary variable is not used
-    };
-
-    enum class BrineMeaning : std::uint8_t {
-        Cs, // salt concentration
-        Sp, // (precipitated) salt saturation
-        Disabled, // The primary variable is not used
-    };
-
-    enum class SolventMeaning : std::uint8_t {
-        Ss, // solvent saturation
-        Rsolw, // dissolved solvent in water
-        Disabled, // The primary variable is not used
-    };
+    // We are instantiating this class with different TypeTags and VectorTypes,
+    // but we still want to be able to copy between them. Therefore, we
+    // need to define the same type aliases in all specializations.
+    using WaterMeaning = ::Opm::BlackOil::WaterMeaning;
+    using PressureMeaning = ::Opm::BlackOil::PressureMeaning;
+    using GasMeaning = ::Opm::BlackOil::GasMeaning;
+    using BrineMeaning = ::Opm::BlackOil::BrineMeaning;
+    using SolventMeaning = ::Opm::BlackOil::SolventMeaning;
 
     // Allow conversion between different vector types
     template<class OtherTypeTag, template<class, int> class OtherVectorType>

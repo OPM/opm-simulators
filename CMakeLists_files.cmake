@@ -709,6 +709,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilintensivequantities.hh
   opm/models/blackoil/blackoillocalresidual.hh
   opm/models/blackoil/blackoillocalresidualtpfa.hh
+  opm/models/blackoil/blackoilmeanings.hh
   opm/models/blackoil/blackoilmodel.hh
   opm/models/blackoil/blackoilnewtonmethod.hpp
   opm/models/blackoil/blackoilnewtonmethodparams.hpp
