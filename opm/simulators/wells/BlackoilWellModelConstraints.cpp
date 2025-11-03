@@ -708,18 +708,18 @@ updateUnderProductionGroup(const Group& group,
     if (group.isProductionGroup()) {
         const bool under_producing = this->checkUnderProductionGroup(group, deferred_logger);
         if (under_producing) {
-            group_state.production_control(group.name(), Group::ProductionCMode::NONE);
-            changed = true;
             if (wellModel_.comm().rank() == 0) {
                 const Group::ProductionCMode currentControl = group_state.production_control(group.name());
                 const std::string msg =
                     fmt::format(
-                        "Production group {} is under producing its target for control {}, "
-                        "and all the constraints are honored, and switching to NONE now.",
+                        "Production group {} is producing below its target for control {}.\n"
+                        "Switching the group's production control mode to NONE.",
                         group.name(),
                         Group::ProductionCMode2String(currentControl));
                 deferred_logger.info(msg);
             }
+            group_state.production_control(group.name(), Group::ProductionCMode::NONE);
+            changed = true;
         }
     }
 
