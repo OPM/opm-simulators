@@ -69,6 +69,7 @@
 #include <opm/simulators/linalg/gpuistl_hip/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/detail/preconditionerKernels/ILU_variants_helper_kernels.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/detail/gpusparse_matrix_operations.hpp>
 #else
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
@@ -76,6 +77,7 @@
 #include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/ILU_variants_helper_kernels.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #endif
 #endif
 
@@ -157,12 +159,8 @@ struct NeighborInfoStruct
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 namespace  gpuistl {
-    // Also take in the gpu_matrix because we need to compute the pointers of different non-zero entries
-    // TODO: this can _probably_ be optimized away by assuming that the DUNE matrix is always stored contiguously
-    // TODO: if that is the case, then we can know where the pointers should be be using the same offset from the
-    // TODO: first entry on the GPU as the CPU.
-    template<class MiniMatrixType, class GpuMatrix, class MatrixBlockType, class ResidualNBInfoType>
-    auto copy_to_gpu(const SparseTable<NeighborInfoStruct<ResidualNBInfoType, MatrixBlockType>>& cpu_neighbor_table, GpuMatrix& gpu_matrix)
+    template<class MiniMatrixType, class MatrixBlockType, class ResidualNBInfoType>
+    auto copy_to_gpu(const SparseTable<NeighborInfoStruct<ResidualNBInfoType, MatrixBlockType>>& cpu_neighbor_table)
     {
         // Convert the DUNE FieldVectors to MiniMatrix types
         using StructWithMinimatrix = NeighborInfoStruct<ResidualNBInfoType, MiniMatrixType>;
@@ -878,8 +876,9 @@ private:
             // Ensure we can have the domain  on the GPU.
             auto domain_buffer = copy_to_gpu(domain);
             auto domain_view = make_view(domain_buffer);
-            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_, gpuJacobian);
+            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_);
             auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
+            gpuistl::detail::SetNeighborPointers<double>(gpuJacobian, neighborInfo_view);
 
             linearize_kernel<<<1,1>>>(dispersionActive, numCells, on_full_domain, domain_view, neighborInfo_view);
             hipDeviceSynchronize();

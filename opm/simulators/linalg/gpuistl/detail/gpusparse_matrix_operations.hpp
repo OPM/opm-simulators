@@ -22,7 +22,9 @@
 #include <cstddef>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
-
+#include <opm/simulators/linalg/gpuistl/detail/gpuThreadUtils.hpp>
+#include <cuda.h>
+#include <cuda_runtime.h>
 namespace Opm::gpuistl::detail
 {
 
@@ -81,6 +83,7 @@ void copyMatDataToReorderedSplit(const T* srcMatrix,
  */
 template <class T>
 GpuBuffer<T*> getDiagPtrs(GpuSparseMatrixWrapper<T>& matrix);
+
 } // namespace Opm::gpuistl::detail
 
 #endif
