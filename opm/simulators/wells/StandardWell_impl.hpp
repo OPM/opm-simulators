@@ -391,9 +391,9 @@ namespace Opm
         auto& perf_rates = perf_data.phase_rates;
         for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             // Calculate perforation quantities.
-            std::vector<EvalWell> cq_s(this->num_conservation_quantities_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.0});
-            EvalWell water_flux_s{this->primary_variables_.numWellEq() + Indices::numEq, 0.0};
-            EvalWell cq_s_zfrac_effective{this->primary_variables_.numWellEq() + Indices::numEq, 0.0};
+            std::vector<EvalWell> cq_s(this->num_conservation_quantities_, 0.0);
+            EvalWell water_flux_s{0.0};
+            EvalWell cq_s_zfrac_effective{0.0};
             calculateSinglePerf(simulator, perf, well_state, connectionRates,
                                 cq_s, water_flux_s, cq_s_zfrac_effective, deferred_logger);
 
@@ -451,7 +451,7 @@ namespace Opm
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
             // TODO: following the development in MSW, we need to convert the volume of the wellbore to be surface volume
             // since all the rates are under surface condition
-            EvalWell resWell_loc(this->primary_variables_.numWellEq() + Indices::numEq, 0.0);
+            EvalWell resWell_loc(0.0);
             if (FluidSystem::numActivePhases() > 1) {
                 assert(dt > 0);
                 resWell_loc += (this->primary_variables_.surfaceVolumeFraction(componentIdx) -
@@ -506,7 +506,7 @@ namespace Opm
         const EvalWell& bhp = this->primary_variables_.eval(Bhp);
         const int cell_idx = this->well_cells_[perf];
         const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-        std::vector<EvalWell> mob(this->num_conservation_quantities_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
+        std::vector<EvalWell> mob(this->num_conservation_quantities_, {0.});
         getMobility(simulator, perf, mob, deferred_logger);
 
         PerforationRates<Scalar> perf_rates;
@@ -698,7 +698,7 @@ namespace Opm
             // as a result, the polymer and water share the same viscosity
             if constexpr (!Base::has_polymermw) {
                 if constexpr (std::is_same_v<Value, Scalar>) {
-                    std::vector<EvalWell> mob_eval(this->num_conservation_quantities_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
+                    std::vector<EvalWell> mob_eval(this->num_conservation_quantities_, 0.);
                     for (std::size_t i = 0; i < mob.size(); ++i) {
                         mob_eval[i].setValue(mob[i]);
                     }
@@ -1899,7 +1899,7 @@ namespace Opm
             const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(simulator);
             const EvalWell& bhp = this->primary_variables_.eval(Bhp);
 
-            std::vector<EvalWell> cq_s(this->num_conservation_quantities_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
+            std::vector<EvalWell> cq_s(this->num_conservation_quantities_, 0.);
             PerforationRates<Scalar> perf_rates;
             Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quant, cell_idx);
             const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
@@ -1974,10 +1974,9 @@ namespace Opm
                                  deferred_logger);
             }
             const auto& water_table_func = PolymerModule::getSkprwatTable(water_table_id);
-            const EvalWell throughput_eval(this->primary_variables_.numWellEq() + Indices::numEq, throughput);
+            const EvalWell throughput_eval{throughput};
             // the skin pressure when injecting water, which also means the polymer concentration is zero
-            EvalWell pskin_water(this->primary_variables_.numWellEq() + Indices::numEq, 0.0);
-            pskin_water = water_table_func.eval(throughput_eval, water_velocity);
+            EvalWell pskin_water = water_table_func.eval(throughput_eval, water_velocity);
             return pskin_water;
         } else {
             OPM_DEFLOG_THROW(std::runtime_error,
@@ -2013,10 +2012,9 @@ namespace Opm
             }
             const auto& skprpolytable = PolymerModule::getSkprpolyTable(polymer_table_id);
             const Scalar reference_concentration = skprpolytable.refConcentration;
-            const EvalWell throughput_eval(this->primary_variables_.numWellEq() + Indices::numEq, throughput);
+            const EvalWell throughput_eval{throughput};
             // the skin pressure when injecting water, which also means the polymer concentration is zero
-            EvalWell pskin_poly(this->primary_variables_.numWellEq() + Indices::numEq, 0.0);
-            pskin_poly = skprpolytable.table_func.eval(throughput_eval, water_velocity_abs);
+            const EvalWell pskin_poly = skprpolytable.table_func.eval(throughput_eval, water_velocity_abs);
             if (poly_inj_conc == reference_concentration) {
                 return sign * pskin_poly;
             }
@@ -2046,8 +2044,8 @@ namespace Opm
         if constexpr (Base::has_polymermw) {
             const int table_id = this->polymerInjTable_();
             const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
-            const EvalWell throughput_eval(this->primary_variables_.numWellEq() + Indices::numEq, throughput);
-            EvalWell molecular_weight(this->primary_variables_.numWellEq() + Indices::numEq, 0.);
+            const EvalWell throughput_eval{throughput};
+            EvalWell molecular_weight{0.};
             if (this->wpolymer() == 0.) { // not injecting polymer
                 return molecular_weight;
             }
@@ -2146,8 +2144,7 @@ namespace Opm
         const Scalar throughput = perf_water_throughput[perf];
         const int pskin_index = Bhp + 1 + this->number_of_local_perforations_ + perf;
 
-        EvalWell poly_conc(this->primary_variables_.numWellEq() + Indices::numEq, 0.0);
-        poly_conc.setValue(this->wpolymer());
+        const EvalWell poly_conc(this->wpolymer());
 
         // equation for the skin pressure
         const EvalWell eq_pskin = this->primary_variables_.eval(pskin_index)
@@ -2621,7 +2618,7 @@ namespace Opm
             }
 
             // convert to reservoir conditions
-            EvalWell cq_r_thermal(this->primary_variables_.numWellEq() + Indices::numEq, 0.);
+            EvalWell cq_r_thermal{0.};
             const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
             const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
             if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
