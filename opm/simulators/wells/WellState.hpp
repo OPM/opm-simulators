@@ -176,6 +176,14 @@ public:
                                       const int                            segment,
                                       std::vector<Scalar>&                 segment_rates);
 
+    void setSegmentPressuresFromInlets(std::vector<Scalar>& segment_pressures,
+                                       const std::vector<std::vector<int>>& segment_inlets,
+                                       const int segment);
+
+    void setSegmentPressuresFromOutlets(std::vector<Scalar>& segment_pressures,
+                                        const std::vector<std::vector<int>>& segment_outlets,
+                                        const int segment,
+                                        const int outlet_segment);
 
     void communicateGroupRates(const Parallel::Communication& comm);
 

@@ -834,29 +834,37 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
             calculateSegmentRates(ws.parallel_info, segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, ws.segments.rates);
 
-            // for the segment pressure, the segment pressure is the same with the first perforation belongs to the segment
-            // if there is no perforation associated with this segment, it uses the pressure from the outlet segment
-            // which requres the ordering is successful
-            // Not sure what is the best way to handle the initialization, hopefully, the bad initialization can be
-            // improved during the solveWellEq process
+            // Segment pressure initialization
+            // 1. If a segment has perforations, it uses the pressure from the first perforation
+            // 2. If a segment has no perforations, its pressure is set equal to the pressure of 
+            //    its first inlet segment recursively
+            // 3. If there still are unset pressures after step 2, the pressure of such segments
+            //    are set equal to the pressure of its outlet segment recursively
             {
-                // top segment is always the first one, and its pressure is the well bhp
-                auto& segment_pressure = ws.segments.pressure;
-                segment_pressure[0] = ws.bhp;
-                // The segment_indices contain the indices of the segments, that are only available on one process.
-                std::vector<int> segment_indices;
-                for (int seg = 1; seg < well_nseg; ++seg) {
+               auto& segment_pressures = ws.segments.pressure;
+                for (int seg = 0; seg < well_nseg; ++seg) {
                     if (!segment_perforations[seg].empty()) {
                         const int first_perf_global_index = segment_perforations[seg][0];
-                        segment_pressure[seg] = perforation_pressures[first_perf_global_index];
-                        segment_indices.push_back(seg);
+                        segment_pressures[seg] = perforation_pressures[first_perf_global_index];
                     } else {
-                        // seg_press_.push_back(bhp); // may not be a good decision
-                        // using the outlet segment pressure // it needs the ordering is correct
-                        const int outlet_seg = segment_set[seg].outletSegment();
-                        segment_pressure[seg] = segment_pressure[segment_set.segmentNumberToIndex(outlet_seg)];
+                        // set to negative value, fetch from inlets (or outlets) afterwards
+                        segment_pressures[seg] = -1.0;
                     }
                 }
+                // Populate unset pressures upward from inlet segments 
+                setSegmentPressuresFromInlets(segment_pressures, segment_inlets, 0 /* segment */);
+                // If there still are unset segment pressures, it means that the well has "dead ends",
+                // i.e., some segments have no perforations in inlet direction. In this case, just set these
+                // pressures equal to the closest set pressure in the outlet direction.
+                if (std::any_of(segment_pressures.begin(), segment_pressures.end(),
+                             [](const Scalar p){ return p < 0.0; })) {
+                    setSegmentPressuresFromOutlets(segment_pressures, segment_inlets, 0 /* segment */, -1 /* outlet segment */);
+                }
+                assert(!std::any_of(segment_pressures.begin(), segment_pressures.end(),
+                             [](const Scalar p){ return p < 0.0; }) &&
+                       "Segment pressures could not be initialized properly and/or reservoir has negative pressures.");
+                // finally, set the well bhp to be the top segment pressure
+                ws.bhp = segment_pressures[0];
             }
         }
     }
@@ -909,6 +917,35 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 }
             }
         }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void WellState<Scalar, IndexTraits>::
+setSegmentPressuresFromInlets(std::vector<Scalar>& segment_pressures,
+                              const std::vector<std::vector<int>>& segment_inlets,
+                              const int segment)
+{
+    for (const int& inlet_seg : segment_inlets[segment]) {
+        setSegmentPressuresFromInlets(segment_pressures, segment_inlets, inlet_seg);
+        if (segment_pressures[segment] < 0.0) {
+            segment_pressures[segment] = segment_pressures[inlet_seg];
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void WellState<Scalar, IndexTraits>::
+setSegmentPressuresFromOutlets(std::vector<Scalar>& segment_pressures,
+                               const std::vector<std::vector<int>>& segment_inlets,
+                               const int segment, 
+                               const int outlet_segment)
+{
+    if (segment_pressures[segment] < 0.0) {
+        segment_pressures[segment] = segment_pressures[outlet_segment];
+    }
+    for (const int& inlet_seg : segment_inlets[segment]) {
+        setSegmentPressuresFromOutlets(segment_pressures, segment_inlets, inlet_seg, segment);
     }
 }
 
