@@ -28,7 +28,10 @@
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 
 #include <opm/common/utility/pointerArithmetic.hpp>
+<<<<<<< HEAD
 #include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/ILU_variants_helper_kernels.hpp>
+=======
+>>>>>>> 671da64d4 (minore fixues)
 
 #include <dune/istl/bcrsmatrix.hh>
 
@@ -304,7 +307,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSparsityMatrixGeneric, T, block_sizes)
     runRandomSparsityMatrixTest<Opm::gpuistl::GpuSparseMatrixGeneric<double>, T::value>();
 }
 
+<<<<<<< HEAD
 __global__ void checkPointers(double* data, std::array<double*, 6>* ptrs, std::array<bool, 6>* correctPtrs)
+=======
+__global__ void checkPointers(double* data, std::array<void*, 6>* ptrs, std::array<bool, 6>* correctPtrs)
+>>>>>>> 671da64d4 (minore fixues)
 {
     const int row = blockIdx.x * blockDim.x + threadIdx.x;
 
