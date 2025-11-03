@@ -24,6 +24,7 @@
 #include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/grid/CpGrid.hpp>
@@ -221,6 +222,11 @@ template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::FlowGasWaterEnergyProblem> {
     static constexpr bool value = true;
 };
+
+// After a rebase the lines above were not sufficient to run a simulation with thermal effects
+template<class TypeTag>
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterEnergyProblem>
+{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
 
 template<class TypeTag>
 struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterEnergyProblem> {
