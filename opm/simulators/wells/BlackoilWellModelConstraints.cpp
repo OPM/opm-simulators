@@ -340,7 +340,7 @@ checkUnderProductionGroup(const Opm::Group& group, Opm::DeferredLogger& deferred
         return wellModel_.comm().sum(r);
     };
 
-    constexpr Scalar tolerance = 0.1;
+    constexpr Scalar tolerance = 0.03;
 
     switch (currentControl) {
     case Group::ProductionCMode::ORAT: {
