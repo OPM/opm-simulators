@@ -554,6 +554,9 @@ template<class Scalar> class WellContributions;
             // (and must) be mutable, as the functions using them are const.
             mutable BVector x_local_;
 
+            // Store cell rates after assembling to avoid iterating all wells and connections for every element
+            std::map<int, RateVector> cellRates_;
+
             void assignWellTracerRates(data::Wells& wsrpt) const;
         };
 
