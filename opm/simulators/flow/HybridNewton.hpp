@@ -84,7 +84,7 @@ public:
     *
     * This function acts as the entry point for Hybrid Newton corrections.
     * It first checks whether the Hybrid Newton mechanism is enabled
-    * (via `Parameters::UseHyNe`). If enabled, it validates the fluid system
+    * (via `Parameters::UseHybridNewton`). If enabled, it validates the fluid system
     * and loads model configurations from the parameter-specified
     * configuration file (if not already loaded).
     *
@@ -99,13 +99,13 @@ public:
     void tryApplyHybridNewton()
     {
         // Check if flag activated
-        if (!Parameters::Get<Parameters::UseHyNe>())
+        if (!Parameters::Get<Parameters::UseHybridNewton>())
             return;
 
         validateFluidSystem();
 
         if (!configsLoaded_) {
-            std::string config_file = Parameters::Get<Parameters::HyNeConfigFile>();
+            std::string config_file = Parameters::Get<Parameters::HybridNewtonConfigFile>();
             PropertyTree pt(config_file);
             for (const auto& model_key : pt.get_child_keys()) {
                 HybridNewtonConfig config(pt.get_child(model_key));

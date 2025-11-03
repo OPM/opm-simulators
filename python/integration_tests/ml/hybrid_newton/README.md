@@ -55,7 +55,7 @@ For each test case:
 3. `flow` is run with:
 
    ```bash
-   --use-hy-ne=true --hy-ne-config-file=config.json
+   --use-hybrid-newton=true --hybrid-newton-config-file=config.json
    ```
 4. Hybrid Newton iteration counts are extracted and compared to baseline.
 

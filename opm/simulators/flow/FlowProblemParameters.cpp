@@ -69,10 +69,10 @@ void registerFlowProblemParameters()
     Parameters::Register<Parameters::NumSatfuncConsistencySamplePoints>
         ("Maximum number of reported failures for each individual saturation function consistency check");
 
-    Parameters::Register<Parameters::HyNeConfigFile>
-        ("Use config files for Hybrid Newton");
+    Parameters::Register<Parameters::HybridNewtonConfigFile>
+        ("JSON Config file path for Hybrid Newton");
 
-    Parameters::Register<Parameters::UseHyNe>
+    Parameters::Register<Parameters::UseHybridNewton>
         ("Wheter or not to use Hybrid Newton");
 
     // By default, stop it after the universe will probably have stopped
