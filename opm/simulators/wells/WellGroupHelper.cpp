@@ -593,7 +593,6 @@ WellGroupHelper<Scalar, IndexTraits>::getGuideRate(const std::string& name,
     if (this->guide_rate_.has(name)) {
         return this->guide_rate_.get(name, target, this->getProductionGroupRateVector(name));
     }
-
     Scalar total_guide_rate = 0.0;
     const Group& group = this->schedule_.getGroup(name, this->report_step_);
 
@@ -616,11 +615,6 @@ WellGroupHelper<Scalar, IndexTraits>::getGuideRate(const std::string& name,
         const auto well_index = this->wellState().index(well_name);
         if (!well_index.has_value())
             continue;
-
-        if (!this->wellState().wellIsOwned(well_index.value(), well_name)) // Only sum once
-        {
-            continue;
-        }
 
         const auto& ws = this->wellState().well(well_index.value());
         if (ws.status == Well::Status::SHUT)
