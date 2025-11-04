@@ -49,7 +49,6 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 
