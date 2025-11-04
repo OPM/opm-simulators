@@ -48,6 +48,9 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystemNonStatic.hpp>
+
 #include <cassert>
 #include <cstddef>
 #include <exception>   // current_exception, rethrow_exception
@@ -256,7 +259,7 @@ namespace  gpuistl {
     // Implemented for residual_, which is a vector of FiedVectors
     // We then make a GpuBuffer of MiniVectors
     template<class CpuVecOfVecType, class GpuInnerVecType>
-    auto copy_to_gpu(CpuVecOfVecType& cpuVecOfVec)
+    auto copy_to_gpu_residual(CpuVecOfVecType& cpuVecOfVec)
     {
         std::vector<GpuInnerVecType> stdVecOfInnerVecs;
         for (const auto& vec : cpuVecOfVec) {
@@ -315,6 +318,8 @@ class TpfaLinearizer
     using MatrixBlockGPU = gpuistl::MiniMatrix<Scalar, numEq>;
     using VectorBlockGPU = gpuistl::MiniVector<Scalar, numEq>;
     using ADVectorBlockGPU = gpuistl::MiniVector<Evaluation, numEq>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using GpuFluidSystem = GetPropType<TypeTag, Properties::FluidSystemGPU>;
 #endif
 
     static constexpr bool linearizeNonLocalElements =
@@ -998,7 +1003,7 @@ private:
             // Take the residual_ and move it to the GPU
             // This requires going from doubles, to a blocked vector
             // This is done using a GpuBuffer which contains MiniVectors
-            auto gpuResidualBuffer = gpuistl::copy_to_gpu<GlobalEqVector, VectorBlockGPU>(residual_);
+            auto gpuResidualBuffer = gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual_);
             auto gpuResidualView = gpuistl::make_view(gpuResidualBuffer);
 
             using TrivialIQ = GetPropType<TypeTag, Properties::TrivialIntensiveQuantities>;
@@ -1009,6 +1014,11 @@ private:
 
             using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, typename TrivialIQ::FluidState>;
             using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
+
+            // test creating a FluidSystem that is suitable for GPU use
+            auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
+            auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+            auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
 
             // Copy boundary info to GPU
             gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);

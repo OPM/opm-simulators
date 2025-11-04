@@ -247,6 +247,16 @@ struct TrivialFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblem> { using 
 template<class TypeTag>
 struct TrivialBlackOilLocalResidualTPFA<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = FakeBlackOilLocalResidualTPFA<TypeTag>; };
 
+template<class TypeTag>
+struct FluidSystemGPU<TypeTag, TTag::FlowGasWaterEnergyProblem>
+{
+    using type = Opm::BlackOilFluidSystemNonStatic<
+        double,
+        Opm::BlackOilDefaultFluidSystemIndices,
+        Opm::gpuistl::GpuView
+    >;
+};
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowGasWaterEnergyProblem>
