@@ -41,10 +41,18 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
 
     # add a custom command that will hipify
     add_custom_command(
-        OUTPUT ${hip_file_path}
-        COMMAND bash "${PROJECT_SOURCE_DIR}/bin/hipify_file.sh" ${cuda_file_path} ${hip_file_path}
-        DEPENDS ${cuda_file_path}
-        COMMENT "Rehipifying because of change in ${cuda_file_path}"
+        OUTPUT
+          ${hip_file_path}
+        COMMAND
+          bash
+          ${PROJECT_SOURCE_DIR}/bin/hipify_file.sh
+          ${cuda_file_path}
+          ${hip_file_path}
+          $<TARGET_FILE:hipify-perl>
+        DEPENDS
+          ${cuda_file_path}
+        COMMENT
+          "Rehipifying because of change in ${cuda_file_path}"
     )
 
     # set_source_files_properties(${relpath} PROPERTIES LANGUAGE HIP)
