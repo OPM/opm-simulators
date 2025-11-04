@@ -162,7 +162,6 @@ public:
     }
 
     OPM_HOST_DEVICE BlackOilPrimaryVariables()
-        : ParentType()
     {
         Valgrind::SetUndefined(*this);
         pvtRegionIdx_ = 0;
