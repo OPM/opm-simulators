@@ -784,6 +784,7 @@ if(CUDA_FOUND)
                        gpu_resources
                        gpu_smart_pointers
                        is_gpu_pointer
+                       minivector
                        throw_macros_on_gpu
                        preconditioner_factory_gpu
                        gpuBlackOilFluidSystem
@@ -791,6 +792,7 @@ if(CUDA_FOUND)
                        conditional_storage
                        GpuPressureTransferPolicy
                        deviceBlockOperations
+                       primary_variables_gpu
                        PROPERTIES LABELS ${gpu_label})
   if(MPI_FOUND)
     set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
