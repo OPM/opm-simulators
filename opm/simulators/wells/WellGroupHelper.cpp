@@ -593,6 +593,7 @@ WellGroupHelper<Scalar, IndexTraits>::getGuideRate(const std::string& name,
     if (this->guide_rate_.has(name)) {
         return this->guide_rate_.get(name, target, this->getProductionGroupRateVector(name));
     }
+
     Scalar total_guide_rate = 0.0;
     const Group& group = this->schedule_.getGroup(name, this->report_step_);
 
