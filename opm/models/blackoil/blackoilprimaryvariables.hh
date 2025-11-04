@@ -148,16 +148,17 @@ public:
     /*!
      * \copydoc FvBasePrimaryVariables::FvBasePrimaryVariables(const FvBasePrimaryVariables& )
      */
-    template<class OtherTypeTag, template<class, int> class OtherVectorType>
-    explicit OPM_HOST_DEVICE BlackOilPrimaryVariables(
-        const BlackOilPrimaryVariables<OtherTypeTag, OtherVectorType>& other)
+    template <class OtherTypeTag, template <class, int> class OtherVectorType>
+    explicit OPM_HOST_DEVICE
+    BlackOilPrimaryVariables(const BlackOilPrimaryVariables<OtherTypeTag, OtherVectorType>& other)
         : ParentType(other)
-        , pvtRegionIdx_(other.pvtRegionIdx_)
         , primaryVarsMeaningWater_(other.primaryVarsMeaningWater_)
         , primaryVarsMeaningPressure_(other.primaryVarsMeaningPressure_)
         , primaryVarsMeaningGas_(other.primaryVarsMeaningGas_)
         , primaryVarsMeaningBrine_(other.primaryVarsMeaningBrine_)
         , primaryVarsMeaningSolvent_(other.primaryVarsMeaningSolvent_)
+        , pvtRegionIdx_(other.pvtRegionIdx_)
+        , pcFactor_(other.pcFactor_)
     {
     }
 
@@ -200,10 +201,13 @@ public:
 // compiled by a normal C++ compiler.
 #if HAVE_CUDA
         if (pressureScale_ != Scalar {1.0}) {
-            OpmLog::warning(fmt::format("Using a pressure scaling different from 1.0 is not supported "
-                                        "when compiling with GPU support. The scaling will be ignored. "
-                                        "Read value: {}",
-                                        pressureScale_));
+            OpmLog::warning(fmt::format(
+                "Using a pressure scaling different from 1.0 is not supported "
+                "when running with GPU support. We have detected that you are compiling with GPU support, but we can "
+                "not detect whether you are running with GPU support for the assembly or property evaluation. If you "
+                "are doing property evaluation or assembly on the GPU, pressure scaling will be ignored."
+                "Read value of pressure scale: {}",
+                pressureScale_));
         }
 #endif
     }
@@ -1067,6 +1071,7 @@ private:
     void setScaledPressure_(Scalar pressure)
     { (*this)[Indices::pressureSwitchIdx] = pressure / (this->getPressureScale()); }
 
+    // NOTE: When adding new member variables, be sure to update the template copy constructor,
     WaterMeaning primaryVarsMeaningWater_{WaterMeaning::Disabled};
     PressureMeaning primaryVarsMeaningPressure_{PressureMeaning::Po};
     GasMeaning primaryVarsMeaningGas_{GasMeaning::Disabled};

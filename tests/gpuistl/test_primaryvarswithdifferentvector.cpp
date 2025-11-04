@@ -21,8 +21,6 @@
 #define BOOST_TEST_MODULE TestPrimaryVariablesWithDifferentVector
 
 #include <boost/test/unit_test.hpp>
-#include <cuda.h>
-#include <cuda_runtime.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
@@ -40,5 +38,26 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationWithFieldVector)
     // Just make sure we can instantiate
     using TypeTag = Opm::Properties::TTag::FlowProblem;
     Opm::BlackOilPrimaryVariables<TypeTag> primaryVariables;
-    Opm::BlackOilPrimaryVariables<TypeTag, Opm::gpuistl::MiniVector> primaryVariablesMiniVector;
+    for (std::size_t i = 0; i < primaryVariables.size(); ++i) {
+        primaryVariables[i] = static_cast<double>(i);
+    }
+
+    primaryVariables.setPrimaryVarsMeaningBrine(Opm::BlackOil::BrineMeaning::Sp);
+    primaryVariables.setPrimaryVarsMeaningGas(Opm::BlackOil::GasMeaning::Rv);
+    primaryVariables.setPrimaryVarsMeaningWater(Opm::BlackOil::WaterMeaning::Rvw);
+    primaryVariables.setPrimaryVarsMeaningPressure(Opm::BlackOil::PressureMeaning::Pg);
+    primaryVariables.setPrimaryVarsMeaningSolvent(Opm::BlackOil::SolventMeaning::Rsolw);
+
+    // Now we instantiate with MiniVector
+    Opm::BlackOilPrimaryVariables<TypeTag, Opm::gpuistl::MiniVector> primaryVariablesMiniVector(primaryVariables);
+
+    // Check results
+    for (std::size_t i = 0; i < primaryVariablesMiniVector.size(); ++i) {
+        BOOST_CHECK_EQUAL(primaryVariablesMiniVector[i], static_cast<double>(i));
+    }
+    BOOST_CHECK(primaryVariablesMiniVector.primaryVarsMeaningBrine() == Opm::BlackOil::BrineMeaning::Sp);
+    BOOST_CHECK(primaryVariablesMiniVector.primaryVarsMeaningGas() == Opm::BlackOil::GasMeaning::Rv);
+    BOOST_CHECK(primaryVariablesMiniVector.primaryVarsMeaningWater() == Opm::BlackOil::WaterMeaning::Rvw);
+    BOOST_CHECK(primaryVariablesMiniVector.primaryVarsMeaningPressure() == Opm::BlackOil::PressureMeaning::Pg);
+    BOOST_CHECK(primaryVariablesMiniVector.primaryVarsMeaningSolvent() == Opm::BlackOil::SolventMeaning::Rsolw);
 }
