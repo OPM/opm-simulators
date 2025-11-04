@@ -70,6 +70,19 @@ if (CONVERT_CUDA_TO_HIP AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.21")
   find_package(hipsparse REQUIRED)
   find_package(hipblas REQUIRED)
   link_libraries(roc::hipblas roc::hipsparse)
+  find_program(HIPIFY_PERL_COMMAND
+               NAMES hipify-perl
+               HINTS
+                PATH /opt/rocm/bin
+  )
+  if(HIPIFY_PERL_COMMAND)
+    add_executable(hipify-perl IMPORTED GLOBAL)
+    set_target_properties(hipify-perl
+                          PROPERTIES IMPORTED_LOCATION ${HIPIFY_PERL_COMMAND}
+    )
+  else()
+    message(FATAL_ERROR "hipify-perl required to convert CUDA to HIP not found")
+  endif()
 elseif(CONVERT_CUDA_TO_HIP)
   message("To generate HIP code for AMD GPUs run CMake with version >= 3.21")
 endif()
