@@ -325,7 +325,9 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
 template<typename Scalar, typename IndexTraits>
 bool
 BlackoilWellModelConstraints<Scalar, IndexTraits>::
-checkUnderProductionGroup(const Opm::Group& group, Opm::DeferredLogger& deferred_logger) const
+checkUnderProductionGroup(const Opm::Group& group,
+                          const Opm::GroupState<Scalar>& group_state,
+                          Opm::DeferredLogger& deferred_logger) const
 {
     bool under_producing = false;
     const auto controls = group.productionControls(wellModel_.summaryState());
@@ -361,8 +363,12 @@ checkUnderProductionGroup(const Opm::Group& group, Opm::DeferredLogger& deferred
         break;
     }
     case Group::ProductionCMode::GRAT:  {
+        const Scalar grat_target = group_state.has_grat_sales_target(group.name())
+            ? group_state.grat_sales_target(group.name())
+            : controls.gas_target;
+
         const Scalar current_rate = reducedSumSurface(gasPhaseIdx);
-        if (controls.gas_target > (1. + tolerance) * current_rate) {
+        if (grat_target > (1. + tolerance) * current_rate) {
             under_producing = true;
             deferred_logger.debug("UNDER_PROD_GRAT_GROUP",
                                   "GROUP " + group.name() + " is under producing its GRAT target");
@@ -706,7 +712,7 @@ updateUnderProductionGroup(const Group& group,
 {
     bool changed = false;
     if (group.isProductionGroup()) {
-        const bool under_producing = this->checkUnderProductionGroup(group, deferred_logger);
+        const bool under_producing = this->checkUnderProductionGroup(group, group_state, deferred_logger);
         if (under_producing) {
             if (wellModel_.comm().rank() == 0) {
                 const Group::ProductionCMode currentControl = group_state.production_control(group.name());

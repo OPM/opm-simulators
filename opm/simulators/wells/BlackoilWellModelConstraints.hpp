@@ -104,6 +104,7 @@ private:
 
     //! \brief Check for under producing groups
     bool checkUnderProductionGroup(const Group& group,
+                                   const GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger) const;
 
     const WellGroupHelperType& wgHelper() const { return wellModel_.wgHelper(); }
