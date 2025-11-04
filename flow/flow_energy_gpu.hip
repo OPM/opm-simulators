@@ -89,115 +89,6 @@ protected:
 };
 
 
-template <class TypeTag>
-class FakeBlackOilLocalResidualTPFA
-{
-public:
-    using RateVector = std::array<double, 3>;
-    using IntensiveQuantities = int;
-    using ElementContext = int;
-    using Problem = int;
-    struct ResidualNBInfo
-    {
-        double trans = 0.0;
-        double faceArea = 0.0;
-        double thpres = 0.0;
-        double dZg = 0.0;
-        int faceDir = 0;
-        double Vin = 0.0;
-        double Vex = 0.0;
-        double inAlpha = 0.0;
-        double outAlpha = 0.0;
-        double diffusivity = 0.0;
-        double dispersivity = 0.0;
-    };
-
-    struct ModuleParams { int dummy = 0; };
-
-    // Fake storage computation
-    template <class LhsEval>
-    OPM_HOST_DEVICE void computeStorage(std::array<LhsEval, 3>& storage,
-                        const ElementContext& /* elemCtx */,
-                        unsigned /* dofIdx */,
-                        unsigned /* timeIdx */) const
-    { storage = {0.0, 0.0, 0.0}; }
-
-    template <class LhsEval>
-    OPM_HOST_DEVICE static void computeStorage(std::array<LhsEval, 3>& storage,
-                               const IntensiveQuantities& /* intQuants */)
-    { storage = {0.0, 0.0, 0.0}; }
-
-    // Fake flux computation
-    OPM_HOST_DEVICE static void computeFlux(RateVector& flux,
-                            RateVector& darcy,
-                            const unsigned /* globalIndexIn */,
-                            const unsigned /* globalIndexEx */,
-                            const IntensiveQuantities& /* intQuantsIn */,
-                            const IntensiveQuantities& /* intQuantsEx */,
-                            const ResidualNBInfo& /* nbInfo */,
-                            const ModuleParams& /* moduleParams */)
-    {
-        flux = {0.0, 0.0, 0.0};
-        darcy = {0.0, 0.0, 0.0};
-    }
-
-    OPM_HOST_DEVICE static void computeFlux(RateVector& flux,
-                            const ElementContext& /* elemCtx */,
-                            unsigned /* scvfIdx */,
-                            unsigned /* timeIdx */)
-    { flux = {0.0, 0.0, 0.0}; }
-
-    // Fake boundary flux computation
-    template <class BoundaryConditionData>
-    OPM_HOST_DEVICE static void computeBoundaryFlux(RateVector& bdyFlux,
-                                    const Problem& /* problem */,
-                                    const BoundaryConditionData& /* bdyInfo */,
-                                    const IntensiveQuantities& /* insideIntQuants */,
-                                    unsigned /* globalSpaceIdx */)
-    { bdyFlux = {0.0, 0.0, 0.0}; }
-
-    template <class BoundaryConditionData>
-    OPM_HOST_DEVICE static void computeBoundaryFluxRate(RateVector& bdyFlux,
-                                        const BoundaryConditionData& /* bdyInfo */)
-    { bdyFlux = {0.0, 0.0, 0.0}; }
-
-    template <class BoundaryConditionData>
-    OPM_HOST_DEVICE static void computeBoundaryFluxFree(const Problem& /* problem */,
-                                        RateVector& bdyFlux,
-                                        const BoundaryConditionData& /* bdyInfo */,
-                                        const IntensiveQuantities& /* insideIntQuants */,
-                                        unsigned /* globalSpaceIdx */)
-    { bdyFlux = {0.0, 0.0, 0.0}; }
-
-    template <class BoundaryConditionData>
-    OPM_HOST_DEVICE static void computeBoundaryThermal(const Problem& /* problem */,
-                                       RateVector& bdyFlux,
-                                       const BoundaryConditionData& /* bdyInfo */,
-                                       const IntensiveQuantities& /* insideIntQuants */,
-                                       unsigned /* globalSpaceIdx */)
-    { bdyFlux = {0.0, 0.0, 0.0}; }
-
-    // Fake source computation
-    OPM_HOST_DEVICE static void computeSource(RateVector& source,
-                              const Problem& /* problem */,
-                              const IntensiveQuantities& /* insideIntQuants */,
-                              unsigned /* globalSpaceIdex */,
-                              unsigned /* timeIdx */)
-    { source = {0.0, 0.0, 0.0};}
-
-    OPM_HOST_DEVICE static void computeSourceDense(RateVector& source,
-                                   const Problem& /* problem */,
-                                   const IntensiveQuantities& /* insideIntQuants */,
-                                   unsigned /* globalSpaceIdex */,
-                                   unsigned /* timeIdx */)
-    { source = {0.0, 0.0, 0.0}; }
-
-    OPM_HOST_DEVICE void computeSource(RateVector& source,
-                       const ElementContext& /* elemCtx */,
-                       unsigned /* dofIdx */,
-                       unsigned /* timeIdx */) const
-    { assert(false && "DO NOT USE ELEMENT CONTEXT ON GPU"); } // Should be caught in the CPU version of the assembly
-};
 
 namespace Properties {
 namespace TTag {
@@ -243,9 +134,6 @@ struct TrivialIntensiveQuantities<TypeTag, TTag::FlowGasWaterEnergyProblem> { us
 
 template<class TypeTag>
 struct TrivialFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = FakeFIBlackOilModel<TypeTag>; };
-
-template<class TypeTag>
-struct TrivialBlackOilLocalResidualTPFA<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = FakeBlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
 struct FluidSystemGPU<TypeTag, TTag::FlowGasWaterEnergyProblem>

@@ -1010,7 +1010,6 @@ private:
             TrivialIQ iq{};
 
             using TrivialFIBMod = GetPropType<TypeTag, Properties::TrivialFIBlackOilModel>;
-            using TrivialLocalResidual = GetPropType<TypeTag, Properties::TrivialBlackOilLocalResidualTPFA>;
 
             using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, typename TrivialIQ::FluidState>;
             using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
@@ -1060,7 +1059,7 @@ private:
             }
 
             auto start_gpu = std::chrono::high_resolution_clock::now();
-            linearize_kernel<TrivialIQ, TrivialFIBMod, TrivialLocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells+1023)/1024), 1024>>>(
+            linearize_kernel<TrivialIQ, TrivialFIBMod, LocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells+1023)/1024), 1024>>>(
                 dispersionActive,
                 numCells,
                 on_full_domain,
@@ -1070,7 +1069,7 @@ private:
                 gpuResidualView,
                 boundaryInfo_view);
             if (boundaryInfo_buffer.size() > 0) {
-                linearize_kernel_bc<TrivialIQ, TrivialFIBMod, TrivialLocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
+                linearize_kernel_bc<TrivialIQ, TrivialFIBMod, LocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
                     dispersionActive,
                     numCells,
                     on_full_domain,
@@ -1091,7 +1090,7 @@ private:
 
             // To make the comparison fair this has to use the same simplified objects
             auto start_cpu = std::chrono::high_resolution_clock::now();
-            linearize_kernel_CPU<TrivialIQ, TrivialFIBMod, TrivialLocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+            linearize_kernel_CPU<TrivialIQ, TrivialFIBMod, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
                 dispersionActive,
                 numCells,
                 on_full_domain,
@@ -1207,7 +1206,7 @@ private:
                 adres = 0.0;
                 {
                     OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
-                    LocalResidual::computeStorage(adres, intQuantsIn);
+                    LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
                 }
                 setResAndJacobi(res, bMat, adres);
                 // Either use cached storage term, or compute it on the fly.
@@ -1234,7 +1233,7 @@ private:
                         else {
                             Dune::FieldVector<Scalar, numEq> tmp;
                             const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                            LocalResidual::computeStorage(tmp, intQuantOld);
+                            LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
                             model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
                         }
                     }
@@ -1244,7 +1243,7 @@ private:
                     OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
                     Dune::FieldVector<Scalar, numEq> tmp;
                     const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                    LocalResidual::computeStorage(tmp, intQuantOld);
+                    LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
                     // assume volume do not change
                     res -= tmp;
                 }
@@ -1374,7 +1373,7 @@ private:
             adres = 0.0;
             {
                 OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
-                LocalResidual::computeStorage(adres, intQuantsIn);
+                LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
             }
             setResAndJacobi(res, bMat, adres);
             // Either use cached storage term, or compute it on the fly.
@@ -1401,7 +1400,7 @@ private:
                     else {
                         Dune::FieldVector<Scalar, numEq> tmp;
                         const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                        LocalResidual::computeStorage(tmp, intQuantOld);
+                        LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
                         model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
                     }
                 }
@@ -1411,7 +1410,7 @@ private:
                 OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
                 Dune::FieldVector<Scalar, numEq> tmp;
                 const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                LocalResidual::computeStorage(tmp, intQuantOld);
+                LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
                 // assume volume do not change
                 res -= tmp;
             }
@@ -1523,7 +1522,7 @@ private:
             // const Scalar storefac = volume / dt;
             adres = 1.0;
             {
-                // LocalResidual::computeStorage(adres, intQuantsIn);
+                LocalResidualKernel::template computeStorage<Scalar>(adres, intQuantsIn);
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
         }
@@ -1639,7 +1638,7 @@ private:
             // const Scalar storefac = volume / dt;
             adres = 1.0;
             {
-                // LocalResidual::computeStorage(adres, intQuantsIn);
+                LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
         }
