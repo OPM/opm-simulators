@@ -25,6 +25,7 @@
 #define EWOMS_BLACK_OIL_PRIMARY_VARIABLES_HH
 
 #include <dune/common/fvector.hh>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
@@ -41,6 +42,8 @@
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
+
+#include <fmt/format.h>
 
 #include <algorithm>
 #include <array>
@@ -191,6 +194,20 @@ public:
     {
         // TODO: these parameters have undocumented non-trivial dependencies
         pressureScale_ = Parameters::Get<Parameters::PressureScale<Scalar>>();
+
+// currently for GPU we do not have a support for the pressureScale_ variable,
+// so we issue a warning if the user has set it to something else than 1.0
+// if we are building with GPU support. Note that we can not only test if we are compiling
+// with a GPU compiler, because we might initialize the parameters from a .cpp compilation unit
+// compiled by a normal C++ compiler.
+#if HAVE_CUDA
+        if (pressureScale_ != Scalar {1.0}) {
+            OpmLog::warning(fmt::format("Using a pressure scaling different from 1.0 is not supported "
+                                        "when compiling with GPU support. The scaling will be ignored. "
+                                        "Read value: {}",
+                                        pressureScale_));
+        }
+#endif
     }
 
     static void registerParameters()
@@ -200,7 +217,7 @@ public:
     }
 
     OPM_HOST_DEVICE Evaluation
-    makeEvaluation(unsigned varIdx, unsigned timeIdx, 
+    makeEvaluation(unsigned varIdx, unsigned timeIdx,
                    LinearizationType linearizationType = LinearizationType()) const
     {
         const Scalar scale = varIdx == pressureSwitchIdx ? this->getPressureScale() : Scalar{1.0};
