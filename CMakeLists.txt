@@ -592,7 +592,7 @@ endif()
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
 
-set(FLOW_MODELS blackoil brine energy energy_gpu extbo foam gasoil gaswater
+set(FLOW_MODELS blackoil brine energy gpu extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
                 oilwater_polymer_injectivity micp polymer solvent solvent_foam
                 gasoil_energy brine_saltprecipitation
@@ -604,8 +604,8 @@ set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 
 set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
-  # Select source extension: energy_gpu uses HIP (*.hip) compiled with hipcc
-  if("${OBJ}" STREQUAL "energy_gpu")
+  # Select source extension: gpu uses HIP (*.hip) compiled with hipcc
+  if("${OBJ}" STREQUAL "gpu")
     set(flow_src flow/flow_${OBJ}.hip)
     if(NOT CMAKE_HIP_COMPILER)
       enable_language(HIP)

@@ -16,6 +16,12 @@
 */
 #include "config.h"
 
+
+// For now flow_gpu is developed to support SPE11 simulations, that is 2-phase gas-water flow with thermal effects
+// The goal is to support both property-evaluation and matrix assembly on the GPU, in addition to the linear
+// solver which already works on the GPU. The CPU would still have to manage well contributions, although
+// there are no wells in SPE11, only source-terms.
+
 // Define making clear that the simulator supports AMG
 #define FLOW_SUPPORT_AMG 1
 
