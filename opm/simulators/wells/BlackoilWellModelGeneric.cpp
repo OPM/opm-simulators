@@ -1386,7 +1386,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
             // Translate injector type from control to Phase.
-            std::optional<Scalar> group_target;
+            std::optional<std::pair<std::string, Scalar>> group_target;
             if (well->isProducer()) {
                 group_target = wg_helper.getWellGroupTargetProducer(
                     well->name(),
@@ -1420,7 +1420,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                 default:
                     throw std::logic_error("MULTI-phase injection is not supported, but was requested for well " + well->name());
                 }
-                group_target = wg_helper.getWellGroupTargetInjector(
+                group_target.second = wg_helper.getWellGroupTargetInjector(
                     well->name(),
                     well->wellEcl().groupName(),
                     group,

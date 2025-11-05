@@ -126,7 +126,7 @@ getGroupInjectionControl(const Group& group,
 
     const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
     if (target_rate) {
-        control_eq = injection_rate - *target_rate;
+        control_eq = injection_rate - target_rate->second;
     } else {
         const auto& controls = well.injectionControls(summaryState);
         control_eq = bhp - controls.bhp_limit;
@@ -197,7 +197,7 @@ getGroupInjectionTargetRate(const Group& group,
         return std::nullopt;
     }
 
-    return well_state.well(well_.indexOfWell()).group_target;
+    return well_state.well(well_.indexOfWell()).group_target->second;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -275,7 +275,7 @@ getGroupProductionControl(const Group& group,
     const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
     if (target_rate) {
         const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-        control_eq = current_rate - *target_rate;
+        control_eq = current_rate - target_rate->second;
     } else {
         const auto& controls = well.productionControls(summaryState);
         control_eq = bhp - controls.bhp_limit;
@@ -341,7 +341,7 @@ getGroupProductionTargetRate(const Group& group,
     if (!target_rate) {
         return 1.0;
     }
-    if (*target_rate == 0.0) {
+    if (target_rate->second == 0.0) {
         return 0.0;
     }
     const auto& ws = well_state.well(well_.indexOfWell());
@@ -349,7 +349,7 @@ getGroupProductionTargetRate(const Group& group,
     const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     Scalar scale = 1.0;
     if (current_rate > 1e-14)
-        scale = *target_rate / current_rate;
+        scale = target_rate->second / current_rate;
 
     return scale;
 }
