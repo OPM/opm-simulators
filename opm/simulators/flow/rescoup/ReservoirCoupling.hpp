@@ -29,6 +29,7 @@
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 namespace Opm {
@@ -126,7 +127,6 @@ enum class MessageTag : int {
     MasterStartOfReportStep,
     NumSlaveGroupTargets,
     ProductionGroupTargets,
-    SlaveSimulationStartDate,
     SlaveActivationDate,
     SlaveActivationHandshake,
     SlaveInjectionData,
@@ -224,7 +224,10 @@ struct ProductionGroupTarget {
 };
 
 // Helper functions
-void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg);
+Phase convertPhaseToReservoirCouplingPhase(::Opm::Phase phase);
+void customErrorHandler_(MPI_Comm* comm, int* err, const std::string &msg);
+void customErrorHandlerSlave_(MPI_Comm* comm, int* err, ...);
+void customErrorHandlerMaster_(MPI_Comm* comm, int* err, ...);
 void setErrhandler(MPI_Comm comm, bool is_master);
 std::pair<std::vector<char>, std::size_t> serializeStrings(const std::vector<std::string>& data);
 

@@ -21,8 +21,8 @@
 #define OPM_RESCOUP_TARGET_CALCULATOR_HPP
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
-#include <opm/simulators/flow/ReservoirCoupling.hpp>
-#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
@@ -39,9 +39,7 @@ public:
     using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
     RescoupTargetCalculator(
         GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
-        const WellState<Scalar, IndexTraits>& well_state,
-        const GroupState<Scalar>& group_state,
-        const int report_step_idx
+        WellGroupHelper<Scalar, IndexTraits>& wg_helper
     );
 
     void calculateMasterGroupTargetsAndSendToSlaves();
@@ -56,6 +54,7 @@ private:
     ) const;
 
     GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler_;
+    const WellGroupHelper<Scalar, IndexTraits>& wg_helper_;
     const WellState<Scalar, IndexTraits>& well_state_;
     const GroupState<Scalar>& group_state_;
     const int report_step_idx_;

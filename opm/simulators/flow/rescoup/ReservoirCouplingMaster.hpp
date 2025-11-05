@@ -134,7 +134,6 @@ public:
         std::size_t slave_idx,
         const std::vector<ProductionGroupTarget>& production_targets
     ) const;
-    void resizeNextReportDates(int size);
     void setDeferredLogger(DeferredLogger *deferred_logger) {
          this->logger_.setDeferredLogger(deferred_logger);
     }

@@ -33,25 +33,20 @@ template<class Scalar, class IndexTraits>
 GroupTargetCalculator<Scalar, IndexTraits>::
 GroupTargetCalculator(
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
-    const WellState<Scalar, IndexTraits>& well_state,
-    const GroupState<Scalar>& group_state,
-    const Schedule& schedule,
-    const SummaryState& summary_state,
-    const PhaseUsageInfo<IndexTraits>& phase_usage,
-    const GuideRate& guide_rate,
-    const int report_step_idx,
+    const WellGroupHelper<Scalar, IndexTraits>& wg_helper,
     DeferredLogger& deferred_logger
 ) :
     well_model_{well_model},
-    well_state_{well_state},
-    group_state_{group_state},
-    schedule_{schedule},
-    summary_state_{summary_state},
-    phase_usage_{phase_usage},
-    guide_rate_{guide_rate},
-    report_step_idx_{report_step_idx},
+    wg_helper_{wg_helper},
+    well_state_{wg_helper.wellState()},
+    group_state_{wg_helper.groupState()},
+    schedule_{wg_helper.schedule()},
+    summary_state_{wg_helper.summaryState()},
+    phase_usage_{wg_helper.phaseUsage()},
+    guide_rate_{wg_helper.guideRate()},
+    report_step_idx_{wg_helper.reportStepIdx()},
     deferred_logger_{deferred_logger},
-    resv_coeffs_inj_(phase_usage.numPhases, 0.0)
+    resv_coeffs_inj_(wg_helper.phaseUsage().numPhases, 0.0)
 {
     std::tie(this->fipnum_, this->pvtreg_) = this->well_model_.getGroupFipnumAndPvtreg();
     // Get the reservoir coefficients for injection
@@ -63,7 +58,8 @@ GroupTargetCalculator(
 template<class Scalar, class IndexTraits>
 std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::InjectionTargetInfo>
 GroupTargetCalculator<Scalar, IndexTraits>::
-groupInjectionTarget(const Group& group, Phase injection_phase) {
+groupInjectionTarget(const Group& group, ReservoirCoupling::Phase injection_phase)
+{
     GeneralCalculator general_calculator{*this, group, injection_phase};
     auto target_info = general_calculator.calculateGroupTarget();
     if (!target_info) {
@@ -103,7 +99,7 @@ GeneralCalculator::
 GeneralCalculator(
     GroupTargetCalculator<Scalar, IndexTraits>& parent_calculator,
     const Group& original_group,
-    std::optional<Phase> injection_phase  // Only used for injectors
+    std::optional<ReservoirCoupling::Phase> injection_phase  // Only used for injectors
 ) :
     parent_calculator_{parent_calculator},
     original_group_{original_group},
@@ -183,7 +179,7 @@ hasFldOrNoneControl_(const Group& group) const
     // Check if the group has control FLD or NONE.
     const auto& name = group.name();
     if (this->isInjector()) {
-        return this->groupState().has_field_or_none_control(name, this->injection_phase_.value());
+        return this->groupState().has_field_or_none_control(name, this->injectionPhase_());
     }
     else {
         return this->groupState().has_field_or_none_control(name);
@@ -197,9 +193,27 @@ GeneralCalculator::
 parentGroupControlAvailable_(const Group& group) const
 {
     if (this->isInjector()) {
-        return group.injectionGroupControlAvailable(this->injection_phase_.value());
+        return group.injectionGroupControlAvailable(this->injectionPhase_());
     } else {
         return group.productionGroupControlAvailable();
+    }
+}
+
+template<class Scalar, class IndexTraits>
+Phase
+GroupTargetCalculator<Scalar, IndexTraits>::
+GeneralCalculator::
+injectionPhase_() const
+{
+    switch (this->injection_phase_.value()) {
+        case ReservoirCoupling::Phase::Water:
+            return Phase::WATER;
+        case ReservoirCoupling::Phase::Oil:
+            return Phase::OIL;
+        case ReservoirCoupling::Phase::Gas:
+            return Phase::GAS;
+        default:
+            throw std::runtime_error("Invalid injection phase");
     }
 }
 
@@ -268,13 +282,13 @@ TopToBottomCalculator::
 initForInjector_()
 {
     const auto& toplevel_group_control_mode = this->groupState().injection_control(
-        this->group_.name(), this->injectionPhase()
+        this->group_.name(), this->injectionPhase_()
     );
     // Save the toplevel control mode for later use.
     this->toplevel_control_mode_ = toplevel_group_control_mode;
     Scalar sales_target = this->getGratSalesInjectionTarget_();
     bool has_gpmaint_control = this->group_.has_gpmaint_control(
-        this->injectionPhase(), toplevel_group_control_mode
+        this->injectionPhase_(), toplevel_group_control_mode
     );
     this->target_calculator_.template emplace<InjectionTargetCalculator>(
         toplevel_group_control_mode,
@@ -283,7 +297,7 @@ initForInjector_()
         this->group_.name(),
         sales_target,
         this->groupState(),
-        this->injectionPhase(),
+        this->injectionPhase_(),
         has_gpmaint_control,
         this->deferredLogger()
     );
@@ -291,14 +305,13 @@ initForInjector_()
         std::get<InjectionTargetCalculator>(this->target_calculator_).guideTargetMode();
     this->fraction_calculator_.emplace(
         this->schedule(),
-        this->wellState(),
-        this->groupState(),
+        this->wgHelper(),
         this->summaryState(),
         this->reportStepIdx(),
         &this->guideRate(),
         GuideRateModel::Target{guide_target_mode},
         /*is_producer=*/false,
-        this->injectionPhase()
+        this->injectionPhase_()
     );
 }
 
@@ -328,8 +341,7 @@ initForProducer_()
     auto dummy_phase = Phase::OIL; // Dummy phase, not used for producers.
     this->fraction_calculator_.emplace(
         this->schedule(),
-        this->wellState(),
-        this->groupState(),
+        this->wgHelper(),
         this->summaryState(),
         this->reportStepIdx(),
         &this->guideRate(),
@@ -373,9 +385,7 @@ GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 getGroupChainTopBot_() const
 {
-    return WellGroupHelpers<Scalar, IndexTraits>::groupChainTopBot(
-        this->bottomGroup().name(), this->group_.name(), this->schedule(), this->reportStepIdx()
-    );
+    return this->wgHelper().groupChainTopBot(this->bottomGroup().name(), this->group_.name());
 }
 
 template<class Scalar, class IndexTraits>
@@ -386,11 +396,11 @@ getTopLevelTarget_()
 {
     if (this->isInjector()) {
         auto control_mode = this->groupState().injection_control(
-            this->group_.name(), this->injectionPhase()
+            this->group_.name(), this->injectionPhase_()
         );
         std::optional<Group::InjectionControls> ctrl;
-        if (!this->group_.has_gpmaint_control(this->injectionPhase(), control_mode))
-            ctrl = this->group_.injectionControls(this->injectionPhase(), this->summaryState());
+        if (!this->group_.has_gpmaint_control(this->injectionPhase_(), control_mode))
+            ctrl = this->group_.injectionControls(this->injectionPhase_(), this->summaryState());
         return std::get<InjectionTargetCalculator>(this->target_calculator_).groupTarget(
             ctrl, this->deferredLogger()
         );

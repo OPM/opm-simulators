@@ -19,8 +19,8 @@
 
 #ifndef OPM_RESCOUP_RECEIVE_GROUP_TARGETS_HPP
 #define OPM_RESCOUP_RECEIVE_GROUP_TARGETS_HPP
-#include <opm/simulators/flow/ReservoirCoupling.hpp>
-#include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>

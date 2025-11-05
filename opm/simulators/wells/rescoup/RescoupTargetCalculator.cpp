@@ -36,20 +36,19 @@ template <class Scalar, class IndexTraits>
 RescoupTargetCalculator<Scalar, IndexTraits>::
 RescoupTargetCalculator(
     GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
-    const WellState<Scalar, IndexTraits>& well_state,
-    const GroupState<Scalar>& group_state,
-    const int report_step_idx
+    WellGroupHelper<Scalar, IndexTraits>& wg_helper
 )
     : guide_rate_handler_{guide_rate_handler}
-    , well_state_{well_state}
-    , group_state_{group_state}
-    , report_step_idx_{report_step_idx}
-    , schedule_{guide_rate_handler.schedule()}
-    , summary_state_{guide_rate_handler.summaryState()}
+    , wg_helper_{wg_helper}
+    , well_state_{wg_helper.wellState()}
+    , group_state_{wg_helper.groupState()}
+    , report_step_idx_{wg_helper.reportStepIdx()}
+    , schedule_{wg_helper.schedule()}
+    , summary_state_{wg_helper.summaryState()}
     , deferred_logger_{guide_rate_handler.deferredLogger()}
-    , reservoir_coupling_master_{guide_rate_handler.reservoirCouplingMaster()}
+    , reservoir_coupling_master_{wg_helper.reservoirCouplingMaster()}
     , well_model_{guide_rate_handler.wellModel()}
-    , phase_usage_{guide_rate_handler.phaseUsage()}
+    , phase_usage_{wg_helper.phaseUsage()}
 {
 }
 
@@ -118,13 +117,7 @@ calculateMasterGroupTargetsAndSendToSlaves()
     if (comm.rank() == 0) {
         GroupTargetCalculator calculator{
             this->well_model_,
-            this->well_state_,
-            this->group_state_,
-            this->schedule_,
-            this->summary_state_,
-            this->guide_rate_handler_.phaseUsage(),
-            this->guide_rate_handler_.guideRate(),
-            this->report_step_idx_,
+            this->wg_helper_,
             this->deferred_logger_
         };
         auto num_slaves = rescoup_master.numSlaves();
@@ -142,7 +135,7 @@ calculateMasterGroupTargetsAndSendToSlaves()
 
 // NOTE on reuse and future refactor:
 // This method relies on GroupTargetCalculator to compute group-level targets
-// for reservoir coupling. Similar target logic exists in WellGroupHelpers
+// for reservoir coupling. Similar target logic exists in WellGroupHelper
 // (checkGroupContraintsProd/getWellGroupTargetProducer and
 // checkGroupContraintsInj/getWellGroupTargetInjector). The plan is to make
 // GroupTargetCalculator the general implementation and refactor the existing
@@ -159,13 +152,15 @@ calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar,
     std::vector<InjectionGroupTarget> injection_targets;
     std::vector<ProductionGroupTarget> production_targets;
     auto& rescoup_master = this->reservoir_coupling_master_;
-    static const std::array<Phase, 3> phases = { Phase::WATER, Phase::OIL, Phase::GAS };
+    static const std::array<ReservoirCoupling::Phase, 3> phases = {
+        ReservoirCoupling::Phase::Water, ReservoirCoupling::Phase::Oil, ReservoirCoupling::Phase::Gas
+    };
     const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
     for (std::size_t group_idx = 0; group_idx < master_groups.size(); ++group_idx) {
         const auto& group_name = master_groups[group_idx];
         const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
         if (group.isInjectionGroup()) {
-            for (Phase phase : phases) {
+            for (ReservoirCoupling::Phase phase : phases) {
                 auto target_info = calculator.groupInjectionTarget(group, phase);
                 if (target_info.has_value()) {
                     injection_targets.push_back(

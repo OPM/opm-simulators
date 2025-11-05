@@ -31,7 +31,21 @@ namespace ReservoirCoupling {
 // free functions alphabetically
 // -----------------------------
 
-void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg)
+Phase convertPhaseToReservoirCouplingPhase(::Opm::Phase phase)
+{
+    switch (phase) {
+    case ::Opm::Phase::OIL:
+        return Phase::Oil;
+    case ::Opm::Phase::GAS:
+        return Phase::Gas;
+    case ::Opm::Phase::WATER:
+        return Phase::Water;
+    default:
+        throw std::invalid_argument{"Unsupported Opm::Phase value for reservoir coupling."};
+    }
+}
+
+void customErrorHandler_(MPI_Comm* comm, int* err, const std::string &msg)
 {
     // It can be useful to have a custom error handler for debugging purposes.
     // If not, MPI will use the default error handler which aborts the program, and
@@ -52,14 +66,14 @@ void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg)
     MPI_Abort(*comm, *err);
 }
 
-void custom_error_handler_slave_(MPI_Comm* comm, int* err, ...)
+void customErrorHandlerSlave_(MPI_Comm* comm, int* err, ...)
 {
-    custom_error_handler_(comm, err, "slave");
+    customErrorHandler_(comm, err, "slave");
 }
 
-void custom_error_handler_master_(MPI_Comm* comm, int* err, ...)
+void customErrorHandlerMaster_(MPI_Comm* comm, int* err, ...)
 {
-    custom_error_handler_(comm, err, "master");
+    customErrorHandler_(comm, err, "master");
 }
 
 std::pair<std::vector<char>, std::size_t> serializeStrings(const std::vector<std::string>& data)
@@ -81,10 +95,10 @@ void setErrhandler(MPI_Comm comm, bool is_master)
     //   converting lambdas that use ellipsis "..." as last argument to a C function pointer
     //   is not currently possible, so we need to use static functions instead.
     if (is_master) {
-        MPI_Comm_create_errhandler(custom_error_handler_master_, &errhandler);
+        MPI_Comm_create_errhandler(customErrorHandlerMaster_, &errhandler);
     }
     else {
-        MPI_Comm_create_errhandler(custom_error_handler_slave_, &errhandler);
+        MPI_Comm_create_errhandler(customErrorHandlerSlave_, &errhandler);
     }
     // NOTE: The errhandler is a handle (an integer) that is associated with the communicator
     //   that is why we pass this by value below. And it is safe to free the errhandler after it has

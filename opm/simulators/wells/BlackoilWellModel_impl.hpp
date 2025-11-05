@@ -532,7 +532,7 @@ namespace Opm {
 
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingMaster()) {
-            this->sendMasterGroupTargetsToSlaves(reportStepIdx);
+            this->sendMasterGroupTargetsToSlaves();
         }
 #endif
 
@@ -658,14 +658,12 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    sendMasterGroupTargetsToSlaves(const int reportStepIdx)
+    sendMasterGroupTargetsToSlaves()
     {
         // This function is called by the master process to send the group targets to the slaves.
         RescoupTargetCalculator<Scalar, IndexTraits> target_calculator{
             this->guide_rate_handler_,
-            this->wellState(),
-            this->groupState(),
-            reportStepIdx
+            this->wgHelper()
         };
         target_calculator.calculateMasterGroupTargetsAndSendToSlaves();
     }
