@@ -120,18 +120,16 @@ namespace gpuistl {
         // set pointers
         using CorrectTypeTag = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, GpuBuffer>;
         using CorrectTypeTagView = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, GpuView>;
+        using CorrectBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
+        using SimplifiedGpuBufferModel = SimplifiedGpuFIBlackOilModel<CorrectTypeTagView, GpuBuffer>;
 
-        std::vector<BlackOilIntensiveQuantities<CorrectTypeTagView>> cpuIntQuantsWithGpuPtr;
+        std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr;
         for (auto& iq : cpuModel.cachedIntensiveQuantities_) {
             cpuIntQuantsWithGpuPtr.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(ptrFluidSystem));
         }
-
-        std::abort();
         // create new blackoil model providing a gpubuffer allocated version of the intQuants
-        // SimplifiedGpuFIBlackOilModel<CorrectTypeTagView, gpuistl::GpuBuffer>
-        //     gpuSimplifiedGpuFIBlackOilModelNewName(gpuistl::GpuBuffer<BlackOilIntensiveQuantities<CorrectTypeTagView>>(cpuIntQuantsWithGpuPtr));
+        return SimplifiedGpuBufferModel(GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr));
 
-        // return gpuSimplifiedGpuFIBlackOilModelNewName;
     }
 
     // template <typename GpuSimplifiedGpuFIBlackOilModel>

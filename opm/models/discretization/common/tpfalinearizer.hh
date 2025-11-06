@@ -1027,8 +1027,7 @@ private:
 
             using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
             GpuModel gpuModel(model_().allIntensiveQuantities());
-            // auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
-            gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
+            auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
             // auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
 
             // Copy boundary info to GPU
