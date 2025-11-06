@@ -770,6 +770,8 @@ namespace Opm {
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
+        this->updateNONEProductionGroups(local_deferredLogger);
+
         this->commitWGState();
 
         //reporting output temperatures
