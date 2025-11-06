@@ -11,7 +11,7 @@
         BinPackParameters: false,
         BreakBeforeBraces: Linux,
         BreakConstructorInitializers: BeforeComma,
-        ColumnLimit: 120,
+        ColumnLimit: 100,
         Cpp11BracedListStyle: true,
         FixNamespaceComments: true,
         InsertNewlineAtEOF: true,
