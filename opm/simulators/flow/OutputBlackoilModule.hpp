@@ -1825,7 +1825,7 @@ private:
             if (this->mech_.allocated()) {
                 this->extractors_.push_back(
                     Entry{[&mech = this->mech_,
-                           &model = simulator_.problem().geoMechModel()](const Context& ectx)
+                           &model = simulator_.problem().geoMechModel(),&problem = simulator_.problem()](const Context& ectx)
                            {
                               mech.assignDelStress(ectx.globalDofIdx,
                                                    model.delstress(ectx.globalDofIdx));
@@ -1839,11 +1839,13 @@ private:
 
                               mech.assignLinStress(ectx.globalDofIdx,
                                                    model.linstress(ectx.globalDofIdx));
-
+                              // hack to write out displacement potential instead
+                              double pratio = problem.pRatio(ectx.globalDofIdx);
+                              double fac = (1-pratio)/(1-2*pratio);
                               mech.assignPotentialForces(ectx.globalDofIdx,
                                                          model.mechPotentialForce(ectx.globalDofIdx),
-                                                         model.mechPotentialPressForce(ectx.globalDofIdx),
-                                                         model.mechPotentialTempForce(ectx.globalDofIdx));
+                                                         model.mechPotentialPressForce(ectx.globalDofIdx)/fac,
+                                                         model.mechPotentialTempForce(ectx.globalDofIdx)/fac);
 
                               mech.assignStrain(ectx.globalDofIdx,
                                                 model.strain(ectx.globalDofIdx));
