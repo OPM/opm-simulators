@@ -1947,6 +1947,82 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->gen_gaslift_ == rhs.gen_gaslift_;
 }
 
+template <typename Scalar, typename IndexTraits>
+void
+BlackoilWellModelGeneric<Scalar, IndexTraits>::
+updateNONEProductionGroups(DeferredLogger& deferred_logger)
+{
+    auto& group_state = this->groupState();
+    const auto& prod_group_controls = group_state.get_production_controls();
+    if (prod_group_controls.empty()) {
+        return;
+    }
+
+    const auto& well_state = this->wellState();
+    // numbers of the group production controls
+    // one group can have multiple controls, including NONE
+    const std::size_t size_pc = prod_group_controls.size();
+    // Collect groups that currently provide production targets to any well on this rank
+    std::unordered_set<std::string> targeted_production_groups; // TODO: better name
+    targeted_production_groups.reserve(size_pc);
+
+    for (const auto& wname : well_state.wells()) {
+        const auto& ws = well_state.well(wname);
+        if (ws.producer && ws.production_cmode == WellProducerCMode::GRUP) {
+            const auto& group_target = ws.group_target;
+            if (group_target.has_value()) {
+                targeted_production_groups.insert(group_target->first);
+            }
+        }
+    }
+
+    // parallel communication to synchronize production groups used on all processes
+    std::vector<std::string> gnames;
+    gnames.reserve(size_pc);
+    for (const auto& gprod : prod_group_controls) {
+        gnames.push_back(gprod.first);
+    }
+
+    std::vector<int> local_used(size_pc, 0);
+    for (std::size_t i = 0; i < size_pc; ++i) {
+        if (targeted_production_groups.find(gnames[i]) != targeted_production_groups.end()) {
+            local_used[i] = 1;
+        }
+    }
+
+    std::vector<int> global_used(size_pc, 0);
+
+    // with the following code, we only need to communicate once
+    if (comm_.size() > 1 && size_pc > 0) {
+        std::vector<int> gathered(comm_.size() * size_pc, 0);
+        comm_.allgather(local_used.data(), static_cast<int>(size_pc), gathered.data());
+
+        for (int r = 0; r < comm_.size(); ++r) {
+            const std::size_t base = static_cast<std::size_t>(r) * size_pc;
+            for (std::size_t i = 0; i < size_pc; ++i) {
+                global_used[i] = global_used[i] || gathered[base + i];
+            }
+        }
+    } else {
+        global_used = local_used;
+    }
+
+    for (std::size_t i = 0; i < size_pc;   ++i) {
+        if (global_used[i] > 0) {
+            continue;
+        }
+        const auto& gname = gnames[i];
+        if (group_state.production_control(gname) != Group::ProductionCMode::NONE) {
+            if (comm_.rank() == 0) {
+                const std::string msg = fmt::format("Production group {} has no constraints active, setting control mode to NONE", gname);
+                deferred_logger.info(msg);
+            }
+            group_state.production_control(gname, Group::ProductionCMode::NONE);
+        }
+    }
+}
+
+
 template class BlackoilWellModelGeneric<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
