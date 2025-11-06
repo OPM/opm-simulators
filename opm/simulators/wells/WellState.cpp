@@ -832,40 +832,14 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 ws.parallel_info.get().communication().sum(perforation_pressures.data(), perforation_pressures.size());
             }
 
+            // NOTE: with default settings, producer segment rates computed here are later overwritten by
+            // initializeProducerWellState / scaleSegmentRatesWithWellRates 
             calculateSegmentRates(ws.parallel_info, segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, ws.segments.rates);
 
             // Segment pressure initialization
-            // 1. If a segment has perforations, it uses the pressure from the first perforation
-            // 2. If a segment has no perforations, its pressure is set equal to the pressure of 
-            //    its first inlet segment recursively
-            // 3. If there still are unset pressures after step 2, the pressure of such segments
-            //    are set equal to the pressure of its outlet segment recursively
-            {
-               auto& segment_pressures = ws.segments.pressure;
-                for (int seg = 0; seg < well_nseg; ++seg) {
-                    if (!segment_perforations[seg].empty()) {
-                        const int first_perf_global_index = segment_perforations[seg][0];
-                        segment_pressures[seg] = perforation_pressures[first_perf_global_index];
-                    } else {
-                        // set to negative value, fetch from inlets (or outlets) afterwards
-                        segment_pressures[seg] = -1.0;
-                    }
-                }
-                // Populate unset pressures upward from inlet segments 
-                setSegmentPressuresFromInlets(segment_pressures, segment_inlets, 0 /* segment */);
-                // If there still are unset segment pressures, it means that the well has "dead ends",
-                // i.e., some segments have no perforations in inlet direction. In this case, just set these
-                // pressures equal to the closest set pressure in the outlet direction.
-                if (std::any_of(segment_pressures.begin(), segment_pressures.end(),
-                             [](const Scalar p){ return p < 0.0; })) {
-                    setSegmentPressuresFromOutlets(segment_pressures, segment_inlets, 0 /* segment */, -1 /* outlet segment */);
-                }
-                assert(!std::any_of(segment_pressures.begin(), segment_pressures.end(),
-                             [](const Scalar p){ return p < 0.0; }) &&
-                       "Segment pressures could not be initialized properly and/or reservoir has negative pressures.");
-                // finally, set the well bhp to be the top segment pressure
-                ws.bhp = segment_pressures[0];
-            }
+            setSegmentPressuresFromPerforations(segment_inlets, segment_perforations, perforation_pressures, ws.bhp, ws.segments.pressure);
+            // finally, set the well bhp equal to the top segment pressure
+            ws.bhp = ws.segments.pressure[0];
         }
     }
 
@@ -917,6 +891,45 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 }
             }
         }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void WellState<Scalar, IndexTraits>::
+setSegmentPressuresFromPerforations(const std::vector<std::vector<int>>& segment_inlets,
+                                    const std::vector<std::vector<int>>& segment_perforations,
+                                    const std::vector<Scalar>& perforation_pressures,
+                                    const Scalar& well_bhp,
+                                    std::vector<Scalar>& segment_pressures)
+{
+    // 1. If a segment has perforations, it gets the pressure from the first perforation
+    // 2. If a segment has no perforations, its pressure is set equal to the pressure of 
+    //    its first inlet segment recursively
+    // 3. If there still are unset pressures after step 2, the pressure of such segments
+    //    are set equal to the pressure of its outlet segment recursively
+    const int well_nseg = segment_inlets.size();
+    for (int seg = 0; seg < well_nseg; ++seg) {
+        if (!segment_perforations[seg].empty()) {
+            const int first_perf_global_index = segment_perforations[seg][0];
+            segment_pressures[seg] = perforation_pressures[first_perf_global_index];
+        } else {
+            // set to negative value, fetch from inlets (or outlets) below
+            segment_pressures[seg] = -1.0;
+        }
+    }
+    // Populate unset pressures upward from inlet segments 
+    setSegmentPressuresFromInlets(segment_pressures, segment_inlets, 0 /* segment */);
+    // If there still are unset segment pressures, it means that the well has "dead ends",
+    // i.e., some segments have no perforations in inlet direction. In this case, just set these
+    // pressures equal to the closest set pressure in the outlet direction.
+    if (std::any_of(segment_pressures.begin(), segment_pressures.end(),
+                    [](const Scalar p){ return p < 0.0; })) {
+        // If top segment pressure is not set at this point, it means the well has no perforations.
+        // This shouldn't happen, but in case it does, just set the top segment pressure to the well bhp.
+        if (segment_pressures[0] < 0.0) {
+            segment_pressures[0] = well_bhp;
+        }
+        setSegmentPressuresFromOutlets(segment_pressures, segment_inlets, 0 /* segment */, 0 /* outlet segment */);
     }
 }
 
