@@ -61,6 +61,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <concepts>
 #include <cstddef>
 #include <functional>
 #include <stdexcept>
@@ -68,6 +69,29 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+namespace Opm::GeomechChecks {
+    template <typename Problem>
+    concept ProblemHasPoissonRatio = requires(Problem problem, unsigned int dofIdx)
+    {
+        { problem.pRatio(dofIdx) } -> std::convertible_to<double>;
+    };
+
+    template <typename Problem, typename Scalar>
+    concept ProvidesAllMechResponses = requires(Problem problem, unsigned int dofIdx)
+    {
+        problem.geoMechModel();
+        { problem.geoMechModel().delstress(dofIdx)               } -> std::same_as<Dune::FieldVector<Scalar,6>>;
+        { problem.geoMechModel().disp(dofIdx)                    } -> std::same_as<Dune::FieldVector<Scalar,3>>;
+        { problem.geoMechModel().fractureStress(dofIdx)          } -> std::same_as<Dune::FieldVector<Scalar,6>>;
+        { problem.geoMechModel().linstress(dofIdx)               } -> std::same_as<Dune::FieldVector<Scalar,6>>;
+        { problem.geoMechModel().mechPotentialForce(dofIdx)      } -> std::convertible_to<Scalar>;
+        { problem.geoMechModel().mechPotentialPressForce(dofIdx) } -> std::convertible_to<Scalar>;
+        { problem.geoMechModel().mechPotentialTempForce(dofIdx)  } -> std::convertible_to<Scalar>;
+        { problem.geoMechModel().outputstress(dofIdx)            } -> std::same_as<Dune::FieldVector<Scalar,6>>;
+        { problem.geoMechModel().strain(dofIdx)                  } -> std::same_as<Dune::FieldVector<Scalar,6>>;
+    };
+} // namespace Opm::GeomechChecks
 
 namespace Opm {
 
@@ -639,25 +663,6 @@ public:
     }
 
 private:
-    template <typename T>
-    using RemoveCVR = std::remove_cv_t<std::remove_reference_t<T>>;
-
-    template <typename, class = void>
-    struct HasGeoMech : public std::false_type {};
-
-    template <typename Problem>
-    struct HasGeoMech<
-        Problem, std::void_t<decltype(std::declval<Problem>().geoMechModel())>
-    > : public std::true_type {};
-
-    template <typename, class = void>
-    struct HasGeochemistry : public std::false_type {};
-
-    template <typename Problem>
-    struct HasGeochemistry<
-        Problem, std::void_t<decltype(std::declval<Problem>().geochemistryModel())>
-    > : public std::true_type {};
-
     bool isDefunctParallelWell(const std::string& wname) const override
     {
         if (simulator_.gridView().comm().size() == 1)
@@ -1856,12 +1861,17 @@ private:
         }
 
         // Geomechanics
-        if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
+        if constexpr (getPropValue<TypeTag, Properties::EnableMech>() &&
+                      GeomechChecks::ProblemHasPoissonRatio<decltype(this->simulator_.problem())> &&
+                      GeomechChecks::ProvidesAllMechResponses<decltype(this->simulator_.problem()), Scalar>)
+        {
             if (this->mech_.allocated()) {
                 this->extractors_.push_back(
                     Entry{[&mech = this->mech_,
-                           &model = simulator_.problem().geoMechModel()](const Context& ectx)
+                           &problem = simulator_.problem()](const Context& ectx)
                            {
+                              auto& model = problem.geoMechModel();
+
                               mech.assignDelStress(ectx.globalDofIdx,
                                                    model.delstress(ectx.globalDofIdx));
 
@@ -1874,11 +1884,13 @@ private:
 
                               mech.assignLinStress(ectx.globalDofIdx,
                                                    model.linstress(ectx.globalDofIdx));
-
+                              // hack to write out displacement potential instead
+                              double pratio = problem.pRatio(ectx.globalDofIdx);
+                              double fac = (1-pratio)/(1-2*pratio);
                               mech.assignPotentialForces(ectx.globalDofIdx,
                                                          model.mechPotentialForce(ectx.globalDofIdx),
-                                                         model.mechPotentialPressForce(ectx.globalDofIdx),
-                                                         model.mechPotentialTempForce(ectx.globalDofIdx));
+                                                         model.mechPotentialPressForce(ectx.globalDofIdx)/fac,
+                                                         model.mechPotentialTempForce(ectx.globalDofIdx)/fac);
 
                               mech.assignStrain(ectx.globalDofIdx,
                                                 model.strain(ectx.globalDofIdx));
