@@ -1,0 +1,150 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
+/*
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 2 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+
+  Consult the COPYING file in the top-level source directory of this
+  module for the precise wording of the license and the list of
+  copyright holders.
+*/
+/*!
+ * \file
+ *
+ * \copydoc Opm::FIBlackOilModel
+ */
+#ifndef SIMPLIFIED_BLACK_OIL_MODEL_HPP
+#define SIMPLIFIED_BLACK_OIL_MODEL_HPP
+
+#include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/utils/propertysystem.hh>
+
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/models/utils/propertysystem.hh>
+
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/utility/ElementChunks.hpp>
+
+#include <opm/models/parallel/threadmanager.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
+#include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
+
+#include <cstddef>
+#include <stdexcept>
+#include <type_traits>
+
+/*
+    This file implements a simplified version of the FIBlackOilModel
+    which can easily be used in a GPU environment.
+    This is developed wihle parallelizing the tpfa matrix assembly, so
+    only functionality needed there is implemented.
+    To start with this means just being able to access intensiveQuantities
+*/
+
+namespace Opm {
+
+template <typename TypeTag, template <class> class Storage = Opm::VectorWithDefaultAllocator>
+class SimplifiedGpuFIBlackOilModel
+{
+public:
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using TypeTagPublic = TypeTag;
+    OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(unsigned int nCells)
+        : cachedIntensiveQuantities_(nCells)
+    {}
+
+    // TODO: copy for now, but should be move!
+    OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities)
+        : cachedIntensiveQuantities_(cachedIntensiveQuantities)
+    {
+    }
+
+    OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel() = default;
+
+    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const {}
+    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const {}
+    template <class GridSubDomain>
+    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */, const GridSubDomain& /* gridSubDomain */) const {}
+    OPM_HOST_DEVICE void updateFailed() {}
+    OPM_HOST_DEVICE auto intensiveQuantities(unsigned int globalIdx, unsigned int timeIdx) const {
+        assert(timeIdx == 0); // TODO: do not use assert for this because it can be run in GPU kernel...
+        return cachedIntensiveQuantities_[globalIdx];
+    }
+
+protected:
+    OPM_HOST_DEVICE void updateCachedIntQuants(const unsigned /* timeIdx */) const {}
+    template <class EMDArg>
+    OPM_HOST_DEVICE void updateCachedIntQuants1(const unsigned /* timeIdx */) const {}
+    template <class ...Args>
+    OPM_HOST_DEVICE void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const {}
+    template <class ...Args>
+    OPM_HOST_DEVICE void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */, const unsigned /* timeIdx */) const {}
+
+public:
+    Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities_;
+};
+
+namespace gpuistl {
+    // For now we make a copy of the simplified CPU model because we need to set the fluid system pointer
+    // without breaking copy semantics
+    template <class TypeTag, typename CpuSimplifiedGpuFIBlackOilModel, typename GpuFluidSystemPtr>
+    auto copy_to_gpu_just_find_me(CpuSimplifiedGpuFIBlackOilModel cpuModel, GpuFluidSystemPtr* ptrFluidSystem)
+    {
+        // In this copy_to_gpu we need to take care of two things:
+        // 1) Copy the cachedIntensiveQuantities_ to GPU (go from vector to GpuBuffer to allocate things on GPU)
+        // 2) Ensure that the FluidSystem pointer inside each IntensiveQuantities points to a GPU FluidSystem
+        //    The pointer should be set before we move the entire thing to the GPU.
+
+        using IntQuantsType = decltype(cpuModel.cachedIntensiveQuantities_[0]);
+
+        // Here I have to declare the new type of BOIQ that I want?
+        // Because I cannot use the existing boiq and just set another type of poiner
+        // in the fluid state.
+        // the BOIQ is currently just defined from the TypeTag, so I should
+        // probably add another template argument such that I can adjust
+        // what type of fluidstate I am using (template it on the gpufluidsystem!)
+
+        // set pointers
+        using CorrectTypeTag = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, GpuBuffer>;
+        using CorrectTypeTagView = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, GpuView>;
+
+        std::vector<BlackOilIntensiveQuantities<CorrectTypeTagView>> cpuIntQuantsWithGpuPtr;
+        for (auto& iq : cpuModel.cachedIntensiveQuantities_) {
+            cpuIntQuantsWithGpuPtr.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(ptrFluidSystem));
+        }
+
+        std::abort();
+        // create new blackoil model providing a gpubuffer allocated version of the intQuants
+        // SimplifiedGpuFIBlackOilModel<CorrectTypeTagView, gpuistl::GpuBuffer>
+        //     gpuSimplifiedGpuFIBlackOilModelNewName(gpuistl::GpuBuffer<BlackOilIntensiveQuantities<CorrectTypeTagView>>(cpuIntQuantsWithGpuPtr));
+
+        // return gpuSimplifiedGpuFIBlackOilModelNewName;
+    }
+
+    // template <typename GpuSimplifiedGpuFIBlackOilModel>
+    // auto make_view_just_find_me(GpuSimplifiedGpuFIBlackOilModel& gpuSimplifiedGpuFIBlackOilModel)
+    // {
+    //     SimplifiedGpuFIBlackOilModel<
+    //         typename GpuSimplifiedGpuFIBlackOilModel::TypeTagPublic,
+    //         gpuistl::GpuView>
+    //         gpuView(make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities_));
+    //     return gpuView;
+    // }
+} // namespace gpuistl
+
+} // namespace Opm
+
+#endif // SIMPLIFIED_BLACK_OIL_MODEL_HPP

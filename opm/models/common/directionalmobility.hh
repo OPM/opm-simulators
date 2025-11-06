@@ -48,6 +48,14 @@ public:
 
     DirectionalMobility() = default;
 
+    template <class OtherTypeTag>
+    explicit DirectionalMobility(const DirectionalMobility<OtherTypeTag>& other)
+    {
+        for (unsigned i = 0; i < 3; ++i) {
+            mobility_[i] = other.getArray(i);
+        }
+    }
+
     DirectionalMobility(const array_type& mX,
                         const array_type& mY,
                         const array_type& mZ)

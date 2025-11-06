@@ -68,7 +68,9 @@
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/common/utility/pointerArithmetic.hpp>
 #if HAVE_CUDA
+#include <opm/simulators/flow/SimplifiedGpuBlackOilModel.hpp>
 #if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuView.hpp>
@@ -77,6 +79,7 @@
 #include <opm/simulators/linalg/gpuistl_hip/detail/preconditionerKernels/ILU_variants_helper_kernels.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/detail/gpusparse_matrix_operations.hpp>
 #else
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
@@ -1009,8 +1012,6 @@ private:
             using TrivialIQ = GetPropType<TypeTag, Properties::TrivialIntensiveQuantities>;
             TrivialIQ iq{};
 
-            using TrivialFIBMod = GetPropType<TypeTag, Properties::TrivialFIBlackOilModel>;
-
             using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, typename TrivialIQ::FluidState>;
             using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
 
@@ -1018,6 +1019,17 @@ private:
             auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
             auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
             auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
+
+            // We need to have a pointer to the fluidysystem that can be used inside a GPU kernel
+            // Having a pointer to the view is not good enough as the view exists on the host, so
+            // allocat a view on the GPU with a pointer to it via the make_gpu_shared_ptr function
+            auto dynamicGpuFluidSystemPtr = gpuistl::make_gpu_shared_ptr(dynamicGpuFluidSystemView);
+
+            using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
+            GpuModel gpuModel(model_().allIntensiveQuantities());
+            // auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
+            gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
+            // auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
 
             // Copy boundary info to GPU
             gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
@@ -1059,7 +1071,7 @@ private:
             }
 
             auto start_gpu = std::chrono::high_resolution_clock::now();
-            linearize_kernel<TrivialIQ, TrivialFIBMod, LocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells+1023)/1024), 1024>>>(
+            linearize_kernel<TrivialIQ, GpuModel, LocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells+1023)/1024), 1024>>>(
                 dispersionActive,
                 numCells,
                 on_full_domain,
@@ -1069,7 +1081,7 @@ private:
                 gpuResidualView,
                 boundaryInfo_view);
             if (boundaryInfo_buffer.size() > 0) {
-                linearize_kernel_bc<TrivialIQ, TrivialFIBMod, LocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
+                linearize_kernel_bc<TrivialIQ, GpuModel, LocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
                     dispersionActive,
                     numCells,
                     on_full_domain,
@@ -1090,7 +1102,7 @@ private:
 
             // To make the comparison fair this has to use the same simplified objects
             auto start_cpu = std::chrono::high_resolution_clock::now();
-            linearize_kernel_CPU<TrivialIQ, TrivialFIBMod, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+            linearize_kernel_CPU<TrivialIQ, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
                 dispersionActive,
                 numCells,
                 on_full_domain,
@@ -1486,7 +1498,7 @@ private:
             ADVectorBlockType adres(3.0);
             ADVectorBlockType darcyFlux(4.0);
             // const LocalIntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-            const LocalIntensiveQuantities& intQuantsIn = LocalModelClass{}.intensiveQuantities(globI, /*timeIdx*/ 0);
+            // const LocalIntensiveQuantities& intQuantsIn = LocalModelClass{}.intensiveQuantities(globI, /*timeIdx*/ 0);
 
             // Flux term.
             {
@@ -1498,7 +1510,7 @@ private:
                     adres = 3.0;
                     darcyFlux = 4.0;
                     // const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                    const LocalIntensiveQuantities& intQuantsEx = LocalModelClass{}.intensiveQuantities(globJ, /*timeIdx*/ 0);
+                    // const LocalIntensiveQuantities& intQuantsEx = LocalModelClass{}.intensiveQuantities(globJ, /*timeIdx*/ 0);
                     // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
                     //                         nbInfo.res_nbinfo,  problem_().moduleParams());
 
@@ -1522,7 +1534,7 @@ private:
             // const Scalar storefac = volume / dt;
             adres = 1.0;
             {
-                LocalResidualKernel::template computeStorage<Scalar>(adres, intQuantsIn);
+                // LocalResidualKernel::template computeStorage<Scalar>(adres, intQuantsIn);
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
         }
@@ -1602,7 +1614,7 @@ private:
             ADVectorBlockType adres(3.0);
             ADVectorBlockType darcyFlux(4.0);
             // const LocalIntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-            const LocalIntensiveQuantities& intQuantsIn = LocalModelClass{}.intensiveQuantities(globI, /*timeIdx*/ 0);
+            // const LocalIntensiveQuantities& intQuantsIn = LocalModelClass{}.intensiveQuantities(globI, /*timeIdx*/ 0);
 
             // Flux term.
             {
@@ -1614,7 +1626,7 @@ private:
                     adres = 3.0;
                     darcyFlux = 4.0;
                     // const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                    const LocalIntensiveQuantities& intQuantsEx = LocalModelClass{}.intensiveQuantities(globJ, /*timeIdx*/ 0);
+                    // const LocalIntensiveQuantities& intQuantsEx = LocalModelClass{}.intensiveQuantities(globJ, /*timeIdx*/ 0);
                     // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
                     //                         nbInfo.res_nbinfo,  problem_().moduleParams());
 
@@ -1638,7 +1650,7 @@ private:
             // const Scalar storefac = volume / dt;
             adres = 1.0;
             {
-                LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
+                // LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
         }

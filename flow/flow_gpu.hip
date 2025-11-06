@@ -35,6 +35,7 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
+#include <opm/simulators/flow/SimplifiedGpuBlackOilModel.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
@@ -72,34 +73,20 @@ private:
     FluidState fluidState_;
 };
 
-template <typename TypeTag>
-class FakeFIBlackOilModel
-{
-public:
-    OPM_HOST_DEVICE FakeFIBlackOilModel() {}
-    OPM_HOST_DEVICE explicit FakeFIBlackOilModel(int /* simulator */) {}
-    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const {}
-    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const {}
-    template <class GridSubDomain>
-    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */, const GridSubDomain& /* gridSubDomain */) const {}
-    OPM_HOST_DEVICE void updateFailed() {}
-    OPM_HOST_DEVICE FakeIntensiveQuantities<TypeTag> intensiveQuantities(unsigned /* globalIdx */, unsigned /* timeIdx */) const { return FakeIntensiveQuantities<TypeTag>{}; }
-protected:
-    OPM_HOST_DEVICE void updateCachedIntQuants(const unsigned /* timeIdx */) const {}
-    template <class EMDArg>
-    OPM_HOST_DEVICE void updateCachedIntQuants1(const unsigned /* timeIdx */) const {}
-    template <class ...Args>
-    OPM_HOST_DEVICE void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const {}
-    template <class ...Args>
-    OPM_HOST_DEVICE void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */, const unsigned /* timeIdx */) const {}
-};
-
-
-
 namespace Properties {
 namespace TTag {
 struct FlowGasWaterEnergyProblem {
     using InheritsFrom = std::tuple<FlowProblem>;
+};
+
+template<template<class> class Storage>
+struct FlowGasWaterEnergyProblemGPU {
+    using InheritsFrom = std::tuple<FlowGasWaterEnergyProblem>;
+};
+
+template<template<class> class Storage>
+struct to_gpu_type<FlowGasWaterEnergyProblem, Storage> {
+    using type = FlowGasWaterEnergyProblemGPU<Storage>;
 };
 }
 
@@ -139,7 +126,7 @@ template<class TypeTag>
 struct TrivialIntensiveQuantities<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = FakeIntensiveQuantities<TypeTag>; };
 
 template<class TypeTag>
-struct TrivialFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = FakeFIBlackOilModel<TypeTag>; };
+struct GpuFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = SimplifiedGpuFIBlackOilModel<TypeTag>; };
 
 template<class TypeTag>
 struct FluidSystemGPU<TypeTag, TTag::FlowGasWaterEnergyProblem>
@@ -148,6 +135,16 @@ struct FluidSystemGPU<TypeTag, TTag::FlowGasWaterEnergyProblem>
         double,
         Opm::BlackOilDefaultFluidSystemIndices,
         Opm::gpuistl::GpuView
+    >;
+};
+
+template<class TypeTag, template<class> class Storage>
+struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyProblemGPU<Storage>>
+{
+    using type = Opm::BlackOilFluidSystemNonStatic<
+        double,
+        Opm::BlackOilDefaultFluidSystemIndices,
+        Storage
     >;
 };
 
@@ -173,10 +170,7 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::oilCompIdx,
                                          getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
-
-namespace Opm {
-
+}
 
 // ----------------- Main program -----------------
 int flowGasWaterEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)

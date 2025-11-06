@@ -660,6 +660,18 @@ public:
 
         return &intensiveQuantityCache_[timeIdx][globalIdx];
     }
+    
+    // TODO: make this more efficient (avoid copy!) and still valid for gpu
+    // TODO: did not want to delve into the special IntQuants vector with special allocators
+    std::vector<IntensiveQuantities> allIntensiveQuantities()
+    {
+        std::vector<IntensiveQuantities> allIntensiveQuantities;
+        auto& timeZeroIntQuants = intensiveQuantityCache_[0];
+        allIntensiveQuantities.insert(allIntensiveQuantities.end(),
+                                        timeZeroIntQuants.begin(),
+                                        timeZeroIntQuants.end());
+        return allIntensiveQuantities;
+    }
 
     /*!
      * \brief Update the intensive quantity cache for a entity on the grid at given time.
@@ -1208,6 +1220,9 @@ public:
      */
     bool isLocalDof(unsigned globalIdx) const
     { return isLocalDof_[globalIdx]; }
+
+    size_t numDof() const
+    { return asImp_().numGridDof(); }
 
     /*!
      * \brief Returns the volume \f$\mathrm{[m^3]}\f$ of the whole grid which represents
