@@ -2156,15 +2156,47 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
         }
     }
 
-   // how to make sure production_groups consider all the processes?
-
+    // parallel handling
     auto& group_state = this->groupState();
-    for (auto& gprod : group_state.get_production_controls()) {
+    const auto& prod_controls = group_state.get_production_controls();
+    const std::size_t size_pc = prod_controls.size();
+
+    std::vector<std::string> gnames;
+    gnames.reserve(size_pc);
+    std::vector<int> local_used(size_pc, 0);
+
+    std::size_t idx = 0;
+    for (const auto& gprod : prod_controls) {
         const auto& gname = gprod.first;
+        gnames.push_back(gname);
         if (production_groups.count(gname) > 0) {
+            local_used[idx] = 1;
+        }
+        ++idx;
+    }
+
+    std::vector<int> global_used(size_pc, 0);
+
+    if (comm_.size() > 1 && size_pc > 0) {
+        std::vector<int> gathered(comm_.size() * size_pc, 0);
+        comm_.allgather(local_used.data(), static_cast<int>(size_pc), gathered.data());
+
+        for (int r = 0; r < comm_.size(); ++r) {
+            const std::size_t base = static_cast<std::size_t>(r) * size_pc;
+            for (std::size_t i = 0; i < size_pc; ++i) {
+                global_used[i] = global_used[i] || gathered[base + i];
+            }
+        }
+    } else {
+        global_used = local_used;
+    }
+
+    for (std::size_t i = 0; i < size_pc;   ++i) {
+        const auto& gname = gnames[i];
+        if (global_used[i] > 0) {
             continue;
         }
-        if (gprod.second != Group::ProductionCMode::NONE) {
+        if (group_state.production_control(gname) != Group::ProductionCMode::NONE) {
             const std::string msg = fmt::format("Production group {} has no constraints active, setting control mode to NONE", gname);
             deferred_logger.info(msg);
             group_state.production_control(gname, Group::ProductionCMode::NONE);
