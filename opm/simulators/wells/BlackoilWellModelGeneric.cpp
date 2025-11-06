@@ -2137,6 +2137,44 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->gen_gaslift_ == rhs.gen_gaslift_;
 }
 
+template <typename Scalar, typename IndexTraits>
+bool
+BlackoilWellModelGeneric<Scalar, IndexTraits>::
+updateNONEProductionGroups(DeferredLogger& deferred_logger)
+{
+    bool changed = false;
+    const auto& well_state = this->wellState();
+    std::set<std::string> production_groups; // keep tracking that the groups are used by some wells
+
+    for (const auto& wname : well_state.wells()) {
+        const auto& ws = well_state.well(wname);
+        if (ws.producer && ws.production_cmode == WellProducerCMode::GRUP) {
+            const auto& group_target = ws.group_target;
+            if (group_target.has_value()) {
+                production_groups.insert(group_target->first);
+            }
+        }
+    }
+
+   // how to make sure production_groups consider all the processes?
+
+    auto& group_state = this->groupState();
+    for (auto& gprod : group_state.get_production_controls()) {
+        const auto& gname = gprod.first;
+        if (production_groups.count(gname) > 0) {
+            continue;
+        }
+        if (gprod.second != Group::ProductionCMode::NONE) {
+            const std::string msg = fmt::format("Production group {} has no constraints active, setting control mode to NONE", gname);
+            deferred_logger.info(msg);
+            group_state.production_control(gname, Group::ProductionCMode::NONE);
+            changed = true;
+        }
+    }
+    return changed;
+}
+
+
 template class BlackoilWellModelGeneric<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
