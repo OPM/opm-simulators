@@ -617,11 +617,6 @@ WellGroupHelper<Scalar, IndexTraits>::getGuideRate(const std::string& name,
         if (!well_index.has_value())
             continue;
 
-        if (!this->wellState().wellIsOwned(well_index.value(), well_name)) // Only sum once
-        {
-            continue;
-        }
-
         const auto& ws = this->wellState().well(well_index.value());
         if (ws.status == Well::Status::SHUT)
             continue;

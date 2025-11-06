@@ -5,12 +5,13 @@ set -e # Make sure the script fails if a command fails
 # it should be run automatically on the correct files through cmake
 input_file=$1
 output_file=$2
+hipify_command=$3
 
 # make sure the output folder exists
 mkdir -p $(dirname $output_file)
 
 # hipify out-of-place
-hipify-perl $input_file > $output_file
+$hipify_command $input_file > $output_file
 
 # expand includes so we only need include_directories (path to hip)
 sed -i 's/^#include <hipblas\.h>/#include <hipblas\/hipblas.h>/g' $output_file

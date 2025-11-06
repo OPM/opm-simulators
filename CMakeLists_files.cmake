@@ -41,10 +41,18 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
 
     # add a custom command that will hipify
     add_custom_command(
-        OUTPUT ${hip_file_path}
-        COMMAND bash "${PROJECT_SOURCE_DIR}/bin/hipify_file.sh" ${cuda_file_path} ${hip_file_path}
-        DEPENDS ${cuda_file_path}
-        COMMENT "Rehipifying because of change in ${cuda_file_path}"
+        OUTPUT
+          ${hip_file_path}
+        COMMAND
+          bash
+          ${PROJECT_SOURCE_DIR}/bin/hipify_file.sh
+          ${cuda_file_path}
+          ${hip_file_path}
+          $<TARGET_FILE:hipify-perl>
+        DEPENDS
+          ${cuda_file_path}
+        COMMENT
+          "Rehipifying because of change in ${cuda_file_path}"
     )
 
     # set_source_files_properties(${relpath} PROPERTIES LANGUAGE HIP)
@@ -372,6 +380,7 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg PinnedMemoryHolder.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuPressureTransferPolicy.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/gpu_preconditioner_utils.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg MiniVector.hpp)
 
   if(MPI_FOUND)
     ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuOwnerOverlapCopy.hpp)
@@ -545,6 +554,9 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuBlackOilFluidSystem.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuPressureTransferPolicy.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_deviceBlockOperations.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_minivector.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primaryvarswithdifferentvector.cpp)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primary_variables_gpu.cu)
 
   if(MPI_FOUND)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuOwnerOverlapCopy.cpp)
@@ -563,6 +575,16 @@ if (HAVE_CUDA)
 
     foreach(file ${CU_FILES_NEEDING_RELAXED_CONSTEXPR})
         set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS "--expt-relaxed-constexpr")
+    endforeach()
+
+    set(CU_FILES_NEEDING_FPERMISSIVE
+      tests/gpuistl/test_primary_variables_gpu.cu
+    )
+
+    foreach(file ${CU_FILES_NEEDING_FPERMISSIVE})
+      # Certain structures in OPM requires the -fpermissive flag to compile with nvcc,
+      # this enables this for the specific files
+      set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS "-fpermissive --expt-relaxed-constexpr -Xcompiler=-fpermissive")
     endforeach()
   endif()
 endif()
@@ -695,6 +717,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilintensivequantities.hh
   opm/models/blackoil/blackoillocalresidual.hh
   opm/models/blackoil/blackoillocalresidualtpfa.hh
+  opm/models/blackoil/blackoilmeanings.hh
   opm/models/blackoil/blackoilmodel.hh
   opm/models/blackoil/blackoilnewtonmethod.hpp
   opm/models/blackoil/blackoilnewtonmethodparams.hpp
