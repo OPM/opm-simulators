@@ -97,6 +97,7 @@ public:
     bool has_production_control(const std::string& gname) const;
     void production_control(const std::string& gname, Group::ProductionCMode cmode);
     Group::ProductionCMode production_control(const std::string& gname) const;
+    std::map<std::string, Group::ProductionCMode>& get_production_controls() { return this->production_controls; };
 
     bool has_injection_control(const std::string& gname, Phase phase) const;
     void injection_control(const std::string& gname, Phase phase, Group::InjectionCMode cmode);
