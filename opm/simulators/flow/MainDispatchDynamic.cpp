@@ -29,6 +29,7 @@
 #include <flow/flow_blackoil_legacyassembly.hpp>
 #include <flow/flow_blackoil_nohyst.hpp>
 #include <flow/flow_blackoil_temp.hpp>
+#include <flow/flow_blackoil_tpsa.hpp>
 #include <flow/flow_brine.hpp>
 #include <flow/flow_brine_energy.hpp>
 #include <flow/flow_brine_precsalt_vapwat.hpp>
@@ -43,6 +44,7 @@
 #include <flow/flow_gaswater_brine.hpp>
 #include <flow/flow_gaswater_dissolution.hpp>
 #include <flow/flow_gaswater_dissolution_diffuse.hpp>
+#include <flow/flow_gaswater_dissolution_tpsa.hpp>
 #include <flow/flow_gaswater_energy.hpp>
 #include <flow/flow_gaswater_saltprec_energy.hpp>
 #include <flow/flow_gaswater_saltprec_vapwat.hpp>
@@ -54,6 +56,7 @@
 #include <flow/flow_oilwater_polymer_injectivity.hpp>
 #include <flow/flow_onephase.hpp>
 #include <flow/flow_onephase_energy.hpp>
+#include <flow/flow_onephase_tpsa.hpp>
 #include <flow/flow_polymer.hpp>
 #include <flow/flow_solvent.hpp>
 #include <flow/flow_solvent_foam.hpp>
@@ -178,6 +181,8 @@ int Opm::Main::runTwoPhase(const Phases& phases)
     const bool disgasw = eclipseState_->getSimulationConfig().hasDISGASW();
     const bool vapwat = eclipseState_->getSimulationConfig().hasVAPWAT();
 
+    const auto& rspec = this->eclipseState_->runspec();
+
     // oil-gas
     if (phases.active(Phase::OIL) && phases.active(Phase::GAS)) {
         if (diffusive) {
@@ -208,6 +213,8 @@ int Opm::Main::runTwoPhase(const Phases& phases)
                 return flowGasWaterDissolutionDiffuseMain(argc_, argv_,
                                                           outputCout_,
                                                           outputFiles_);
+            } else if (rspec.mech() && rspec.mechSolver().tpsa()) {
+                return flowGasWaterDissolutionTpsaMain(argc_, argv_, outputCout_, outputFiles_);
             }
 
             return flowGasWaterDissolutionMain(argc_, argv_, outputCout_, outputFiles_);
@@ -286,6 +293,8 @@ int Opm::Main::runFoam()
 
 int Opm::Main::runWaterOnly(const Phases& phases)
 {
+    const auto& rspec = this->eclipseState_->runspec();
+
     if (!phases.active(Phase::WATER) || phases.size() != 1) {
         if (outputCout_) {
             std::cerr << "No valid configuration is found for "
@@ -294,6 +303,10 @@ int Opm::Main::runWaterOnly(const Phases& phases)
         }
 
         return EXIT_FAILURE;
+    }
+
+    if (rspec.mech() && rspec.mechSolver().tpsa()) {
+        return flowWaterOnlyTpsaMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     return flowWaterOnlyMain(argc_, argv_, outputCout_, outputFiles_);
@@ -438,6 +451,12 @@ int Opm::Main::runBlackOil()
         return flowBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
     }
     if (this->eclipseState_->runspec().hysterPar().active()) {
+        const auto& rspec = this->eclipseState_->runspec();
+        if (rspec.mech() && rspec.mechSolver().tpsa()) {
+            // Blackoil + TPSA geomechanics
+            return flowBlackoilTpsaMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+
         return flowBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
     } else {
         // Use variant without hysteresis support to save memory.

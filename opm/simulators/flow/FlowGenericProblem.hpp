@@ -151,6 +151,21 @@ public:
     };
 
     /*!
+     * \brief Returns the rock compressibility of an element due to poroelasticity
+     */
+    Scalar rockBiotComp(unsigned elementIdx) const;
+
+    /*!
+    * \brief Direct access to Lame's second parameter in an element
+    */
+    Scalar lame(unsigned elementIdx) const;
+
+    /*!
+    * \brief Direct access to Biot coefficient in an element
+    */
+    Scalar biotCoeff(unsigned elementIdx) const;
+
+    /*!
      * \brief Sets the porosity of an element
      *
      */
