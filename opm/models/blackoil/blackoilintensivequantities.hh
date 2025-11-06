@@ -108,6 +108,7 @@ class BlackOilIntensiveQuantities
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
     enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
+    enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
     enum { enableMICP = Indices::enableMICP };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
@@ -585,6 +586,31 @@ public:
         if (enableSaltPrecipitation && priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
             const Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
             porosity_ *= (1.0 - Sp);
+        }
+
+
+        // Geomechanical updates to porosity/pore volume
+        if constexpr (enableMech) {
+            // TPSA calculations
+            if (problem.simulator().vanguard().eclState().runspec().tpsa().active()) {
+                // TPSA compressibility term
+                Scalar rockBiot = problem.rockBiotComp(globalSpaceIdx);
+                if (rockBiot > 0.0) {
+                    Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx);
+                    Evaluation active_pressure;
+                    if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                        active_pressure = fluidState_.pressure(oilPhaseIdx) - rockRefPressure;
+                    } else if (FluidSystem::phaseIsActive(waterPhaseIdx)){
+                        active_pressure = fluidState_.pressure(waterPhaseIdx) - rockRefPressure;
+                    } else {
+                        active_pressure = fluidState_.pressure(gasPhaseIdx) - rockRefPressure;
+                    }
+                    porosity_ += rockBiot * active_pressure;
+                }
+
+                // TPSA coupling term, pore volume changes due to mechanics
+                porosity_ += problem.rockMechPoroChange(globalSpaceIdx, /*timeIdx=*/timeIdx);
+            }
         }
     }
 
