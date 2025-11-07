@@ -143,6 +143,9 @@ public:
     void setValue(const int idx, const std::array<Scalar, numWellEq>& val)
     { value_[idx] = val; }
 
+    //! \brief Fetch surface fractions for the well.
+    void fetchWellSurfaceFractions(std::vector<Scalar> &surface_fractions) const;
+
     //! output the segments with pressure close to lower pressure limit for debugging purpose
     void outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const;
 

@@ -682,6 +682,17 @@ getWQTotal() const
 }
 
 template<class FluidSystem, class Indices>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+fetchWellSurfaceFractions(std::vector<Scalar>& surface_fractions) const
+{
+    // consider rewriting to get dierctly from value_ 
+    surface_fractions.resize(well_.numConservationQuantities(), 0.0);
+    for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
+        surface_fractions[comp_idx] = Opm::getValue(this->surfaceVolumeFraction(0, comp_idx));
+    }
+}
+
+template<class FluidSystem, class Indices>
 void
 MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const
@@ -703,6 +714,7 @@ outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const
 }
 
 #include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
+#include "MultisegmentWellPrimaryVariables.hpp"
 
 INSTANTIATE_TYPE_INDICES(MultisegmentWellPrimaryVariables, double)
 

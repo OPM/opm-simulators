@@ -44,6 +44,7 @@
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -1638,8 +1639,6 @@ namespace Opm
                 return false;
         }
 
-        updatePrimaryVariables(simulator, well_state, deferred_logger);
-
         std::vector<std::vector<Scalar> > residual_history;
         std::vector<Scalar> measure_history;
         int it = 0;
@@ -1664,7 +1663,8 @@ namespace Opm
         const auto operability_orig = this->operability_status_;
         auto well_status_cur = well_status_orig;
         // don't allow opening wells that has a stopped well status
-        const bool allow_open = well_state.well(this->index_of_well_).status == WellStatus::OPEN;
+        auto& ws = well_state.well(this->index_of_well_); 
+        const bool allow_open = ws.status == WellStatus::OPEN;
         // don't allow switcing for wells under zero rate target or requested fixed status and control
         const bool allow_switching = !this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) &&
                                      (!fixed_control || !fixed_status) && allow_open;
@@ -1672,14 +1672,26 @@ namespace Opm
         // well needs to be set operable or else solving/updating of re-opened wells is skipped
         this->operability_status_.resetOperability();
         this->operability_status_.solvable = true;
+        updatePrimaryVariables(simulator, well_state, deferred_logger);
+        // keep track of surface rate fractions for checking control feasibility
+        std::vector<Scalar> surface_fractions;
+        bool feasible_constraint = true;
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             ++its_since_last_switch;
-            if (allow_switching && its_since_last_switch >= min_its_after_switch && status_switch_count < max_status_switch){
+            if (this->isProducer()) {
+                this->primary_variables_.fetchWellSurfaceFractions(surface_fractions);
+                feasible_constraint = this->isFeasibleProductionConstraint(ws, surface_fractions, ws.production_cmode);
+            }
+            const bool check_controls = allow_switching &&
+                                        its_since_last_switch >= min_its_after_switch &&
+                                        status_switch_count < max_status_switch;
+            // if constraint is not feasible, we force a switch to prevent singularity
+            if (check_controls && !feasible_constraint) {
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
                 bool changed = this->updateWellControlAndStatusLocalIteration(
-                    simulator, wgHelper, inj_controls, prod_controls, wqTotal,
-                    well_state, deferred_logger, fixed_control, fixed_status
+                    simulator, wgHelper, inj_controls, prod_controls, wqTotal, well_state,
+                    surface_fractions, deferred_logger, fixed_control, fixed_status
                 );
                 if (changed) {
                     its_since_last_switch = 0;

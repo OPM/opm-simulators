@@ -148,6 +148,9 @@ public:
     void setValue(const int idx, const Scalar val)
     { value_[idx] = val; }
 
+    //! \brief Fetch well surface fraction values.
+    void fetchWellSurfaceFractions(std::vector<Scalar>& surface_fractions) const;
+
 private:
     //! \brief Initialize evaluations from values.
     void setEvaluationsFromValues();

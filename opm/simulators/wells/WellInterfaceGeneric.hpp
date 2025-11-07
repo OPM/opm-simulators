@@ -107,6 +107,11 @@ public:
     void setVFPProperties(const VFPProperties<Scalar, IndexTraits>* vfp_properties_arg);
     void setPrevSurfaceRates(WellStateType& well_state,
                              const WellStateType& prev_well_state) const;
+    bool isFeasibleProductionControl(const  WellStateType& well_state,
+                                     const Well::ProductionControls& prod_controls,
+                                     const std::vector<Scalar>& fractions,
+                                     const std::vector<Scalar>& fraction_scaling,
+                                     std::optional<WellProducerCMode> cmode_opt) const;
     void setGuideRate(const GuideRate* guide_rate_arg);
     void setWellEfficiencyFactor(const Scalar efficiency_factor);
     void setRepRadiusPerfLength();

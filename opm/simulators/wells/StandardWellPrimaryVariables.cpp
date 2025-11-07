@@ -760,7 +760,18 @@ checkFinite(DeferredLogger& deferred_logger) const
     }
 }
 
+template<class FluidSystem, class Indices>
+void StandardWellPrimaryVariables<FluidSystem,Indices>::
+fetchWellSurfaceFractions(std::vector<Scalar>& surface_fractions) const
+{
+    surface_fractions.resize(well_.numConservationQuantities(), 0.0);
+    for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
+        surface_fractions[comp_idx] = Opm::getValue(this->surfaceVolumeFraction(comp_idx));
+    }
+}
+
 #include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
+#include "StandardWellPrimaryVariables.hpp"
 
 INSTANTIATE_TYPE_INDICES(StandardWellPrimaryVariables, double)
 

@@ -416,6 +416,8 @@ init(const std::vector<Scalar>& cellPressures,
             new_well.reservoir_rates = prev_well.reservoir_rates;
             new_well.well_potentials = prev_well.well_potentials;
             new_well.group_target = prev_well.group_target;
+            new_well.production_cmode_group_translated = prev_well.production_cmode_group_translated;
+            new_well.injection_cmode_group_translated = prev_well.injection_cmode_group_translated;
 
             // perfPhaseRates
             //

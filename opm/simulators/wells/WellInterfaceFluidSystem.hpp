@@ -129,6 +129,33 @@ protected:
                              const GroupState<Scalar>& group_state,
                              DeferredLogger& deferredLogger) const;
 
+    bool isFeasibleProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                                        const std::vector<Scalar>& surface_fractions,
+                                        const Well::ProducerCMode cmode) const;
+
+    bool updateProducerControlMode(SingleWellState<Scalar, IndexTraits>& ws,
+                                   const SummaryState& summaryState,
+                                   const Well::ProductionControls& controls,
+                                   const std::vector<Scalar>& surface_fractions,
+                                   DeferredLogger& deferred_logger) const;
+
+    std::pair<Well::ProducerCMode, Scalar>
+    estimateStrictestProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                                          const SummaryState& summaryState,
+                                          const Well::ProductionControls& controls,
+                                          const std::vector<Scalar>& surface_fractions,
+                                          const bool skip_zero_rate_constraints,
+                                          DeferredLogger& deferred_logger,
+                                          const std::optional<Scalar> bhp_at_thp_limit = std::nullopt) const;
+
+    std::pair<Well::ProducerCMode, Scalar>
+    estimateStrictestProductionRateConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                                              const SummaryState& summaryState,
+                                              const Well::ProductionControls& controls,
+                                              const std::vector<Scalar>& surface_fractions,
+                                              const bool skip_zero_rate_constraints,
+                                              DeferredLogger& deferred_logger) const;
+
     // For the conversion between the surface volume rate and reservoir voidage rate
     const RateConverterType& rateConverter_;
 };
