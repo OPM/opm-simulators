@@ -1386,7 +1386,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
             // Translate injector type from control to Phase.
-            Scalar group_target = std::numeric_limits<Scalar>::max();
+            std::optional<Scalar> group_target;
             if (well->isProducer()) {
                 group_target = wg_helper.getWellGroupTargetProducer(
                     well->name(),
