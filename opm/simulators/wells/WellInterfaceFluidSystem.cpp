@@ -392,7 +392,6 @@ template<typename FluidSystem>
 std::pair<Well::ProducerCMode, typename FluidSystem::Scalar>
 WellInterfaceFluidSystem<FluidSystem>::
 estimateStrictestProductionRateConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
-                                          const SummaryState& summaryState,
                                           const Well::ProductionControls& controls,
                                           const std::vector<Scalar>& surface_fractions,
                                           const bool skip_zero_rate_constraints,

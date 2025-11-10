@@ -150,7 +150,6 @@ protected:
 
     std::pair<Well::ProducerCMode, Scalar>
     estimateStrictestProductionRateConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
-                                              const SummaryState& summaryState,
                                               const Well::ProductionControls& controls,
                                               const std::vector<Scalar>& surface_fractions,
                                               const bool skip_zero_rate_constraints,
