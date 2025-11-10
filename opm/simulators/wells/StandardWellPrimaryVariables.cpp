@@ -764,9 +764,46 @@ template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
 fetchWellSurfaceFractions(std::vector<Scalar>& surface_fractions) const
 {
-    surface_fractions.resize(well_.numConservationQuantities(), 0.0);
-    for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
-        surface_fractions[comp_idx] = Opm::getValue(this->surfaceVolumeFraction(comp_idx));
+    surface_fractions.resize(well_.numPhases(), 0.0);
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+        surface_fractions[oil_pos] = 1.0;
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            surface_fractions[water_pos] = value_[WFrac];
+            surface_fractions[oil_pos] -= surface_fractions[water_pos];
+        }
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            surface_fractions[gas_pos] = value_[GFrac];
+            surface_fractions[oil_pos] -= surface_fractions[gas_pos];
+        }
+    }
+    else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+        surface_fractions[water_pos] = 1.0;
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            surface_fractions[gas_pos] = value_[GFrac];
+            surface_fractions[water_pos] -= surface_fractions[gas_pos];
+        }
+    }
+    else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+        surface_fractions[gas_pos] = 1.0;
+    }
+    for (int p = 0; p < well_.numPhases(); ++p) {
+        const Scalar scale = well_.scalingFactor(p);
+        // for injection wells, there should be only one non-zero scaling factor
+        if (scale > 0.) {
+            surface_fractions[p] /= scale;
+        } else {
+            // this should only happen to injection wells
+            surface_fractions[p] = 0.;
+        }
+        surface_fractions[p] = std::max(surface_fractions[p], Scalar{0.0});
     }
 }
 

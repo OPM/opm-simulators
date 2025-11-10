@@ -2493,7 +2493,7 @@ namespace Opm
                                         its_since_last_switch >= min_its_after_switch &&
                                         status_switch_count < max_status_switch;
             // if constraint is not feasible, we force a switch to prevent singularity
-            if (check_controls && !feasible_constraint){
+            if (check_controls || !feasible_constraint){
                 const Scalar wqTotal = this->primary_variables_.eval(WQTotal).value();
                 changed = this->updateWellControlAndStatusLocalIteration(
                     simulator, wgHelper, inj_controls, prod_controls, wqTotal, well_state,

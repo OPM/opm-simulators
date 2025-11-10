@@ -380,23 +380,23 @@ updateProducerControlMode(SingleWellState<Scalar, IndexTraits>& ws,
                           const std::vector<Scalar>& surface_fractions,
                           DeferredLogger& deferred_logger) const
 {
-    // We first check pressure constraints, and return if any broken. If not,
-    // check most strict rate control. Assuming no zero rate constraints. 
-    const auto& pu = well_.phaseUsage();
-    // const auto controls = prod_controls.has_value() ? prod_controls.value() : well_.wellEcl().productionControls(summaryState);
+    // We first estimate strictest individual/group rate constraints, and return true if this is violated. Otherwise,
+    // check if thp or bhp constraints are violated.
+    // NOTE: if a well is under group control, but it's current group target is stricter than previously, this function
+    // will return true (even though the mode does not change).
     const auto currentControl = ws.production_cmode;
-    // use a relative tolerance
+    // use a relative (ad-hoc) tolerance
     const Scalar tol = 1e-5;
 
-    if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP) {
-        const Scalar bhp_limit = controls.bhp_limit;
-        Scalar current_bhp = ws.bhp;
-        if (bhp_limit > current_bhp*(1.0 + tol)) {
-            ws.production_cmode = Well::ProducerCMode::BHP;
-            return true;
-        }
+    // check most strict rate control.
+    const auto [most_strict_control, most_strict_scale] =
+        estimateStrictestProductionRateConstraint(ws, calcReservoirVoidageRates, controls,
+                                                  surface_fractions, /*skip_zero_rate_constraints*/ false, deferred_logger);
+    if (most_strict_control != Well::ProducerCMode::CMODE_UNDEFINED && most_strict_scale < 1.0 - tol) {
+        ws.production_cmode = most_strict_control;
+        return true;
     }
-
+    // check thp
     if (well_.wellHasTHPConstraints(summaryState) && currentControl != Well::ProducerCMode::THP) {
         const auto& thp = well_.getTHPConstraint(summaryState);
         Scalar current_thp = ws.thp;
@@ -430,15 +430,16 @@ updateProducerControlMode(SingleWellState<Scalar, IndexTraits>& ws,
             }
         }
     }
-
-    // check most strict rate control.
-    const auto [most_strict_control, most_strict_scale] =
-        estimateStrictestProductionRateConstraint(ws, calcReservoirVoidageRates, controls,
-                                                  surface_fractions, /*skip_zero_rate_constraints*/ false, deferred_logger);
-    if (most_strict_control != Well::ProducerCMode::CMODE_UNDEFINED && most_strict_scale < 1.0 - tol) {
-        ws.production_cmode = most_strict_control;
-        return true;
+    // check bhp
+    if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP) {
+        const Scalar bhp_limit = controls.bhp_limit;
+        Scalar current_bhp = ws.bhp;
+        if (bhp_limit > current_bhp*(1.0 + tol)) {
+            ws.production_cmode = Well::ProducerCMode::BHP;
+            return true;
+        }
     }
+    // no constraints violated
     return false;
 }
 
