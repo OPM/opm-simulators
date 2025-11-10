@@ -29,11 +29,9 @@ namespace Opm {
 
 template<class Scalar>
 PerfData<Scalar>::PerfData(const std::size_t num_perf,
-                           const Scalar pressure_first_connection_,
                            const bool injector_,
                            const std::size_t num_phases)
     : injector(injector_)
-    , pressure_first_connection(pressure_first_connection_)
     , pressure(num_perf)
     , rates(num_perf)
     , phase_rates(num_perf * num_phases)
@@ -74,7 +72,6 @@ PerfData<Scalar> PerfData<Scalar>::serializationTestObject()
 {
     PerfData result;
     result.injector = true;
-    result.pressure_first_connection = 1.0;
     result.pressure = {2.0, 3.0, 4.0};
     result.rates = {5.0, 6.0};
     result.phase_rates = {7.0};
@@ -126,7 +123,6 @@ bool PerfData<Scalar>::try_assign(const PerfData& other)
         return false;
     }
 
-    this->pressure_first_connection = other.pressure_first_connection;
     this->pressure = other.pressure;
     this->rates = other.rates;
     this->phase_rates = other.phase_rates;
@@ -153,7 +149,6 @@ template<class Scalar>
 bool PerfData<Scalar>::operator==(const PerfData& rhs) const
 {
     return (this->injector == rhs.injector)
-        && (this->pressure_first_connection == rhs.pressure_first_connection)
         && (this->pressure == rhs.pressure)
         && (this->rates == rhs.rates)
         && (this->phase_rates == rhs.phase_rates)
