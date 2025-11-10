@@ -127,8 +127,8 @@ class TestHybridNewton(unittest.TestCase):
         cmd = [
             os.environ.get("FLOW_BINARY", default="flow"),
             str(self.data_dir / self.deck_file),
-            f"--hy-ne-config-file={json_path}",
-            "--use-hy-ne=true",
+            f"--hybrid-newton-config-file={json_path}",
+            "--use-hybrid-newton=true",
             "--output-extra-convergence-info=steps,iterations",
             "--newton-min-iterations=0",
             "--output-dir=.",
