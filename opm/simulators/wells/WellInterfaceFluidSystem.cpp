@@ -39,7 +39,6 @@
 #include <opm/simulators/wells/WellGroupControls.hpp>
 #include <opm/simulators/wells/WellGroupHelper.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-#include "WellInterfaceFluidSystem.hpp"
 
 namespace Opm
 {

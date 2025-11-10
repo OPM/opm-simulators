@@ -57,7 +57,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include "WellInterfaceGeneric.hpp"
 
 namespace Opm {
 

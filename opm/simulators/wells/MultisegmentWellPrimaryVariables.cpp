@@ -750,7 +750,6 @@ outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const
 }
 
 #include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
-#include "MultisegmentWellPrimaryVariables.hpp"
 
 INSTANTIATE_TYPE_INDICES(MultisegmentWellPrimaryVariables, double)
 

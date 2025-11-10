@@ -808,7 +808,6 @@ fetchWellSurfaceFractions(std::vector<Scalar>& surface_fractions) const
 }
 
 #include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
-#include "StandardWellPrimaryVariables.hpp"
 
 INSTANTIATE_TYPE_INDICES(StandardWellPrimaryVariables, double)
 
