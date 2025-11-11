@@ -980,198 +980,198 @@ private:
             const unsigned int numCells = domain.cells.size();
             const bool on_full_domain = (numCells == model_().numTotalDof());
 
-            // gpuistl::GpuSparseMatrixWrapper<double> gpuJacobian = gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(jacobian_->istlMatrix());
+            gpuistl::GpuSparseMatrixWrapper<double> gpuJacobian = gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(jacobian_->istlMatrix());
 
-            // // Ensure we can have the domain  on the GPU.
-            // auto domain_buffer = copy_to_gpu(domain);
-            // auto domain_view = make_view(domain_buffer);
-            // auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_, gpuJacobian, jacobian_->istlMatrix());
-            // auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
+            // Ensure we can have the domain  on the GPU.
+            auto domain_buffer = copy_to_gpu(domain);
+            auto domain_view = make_view(domain_buffer);
+            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_, gpuJacobian, jacobian_->istlMatrix());
+            auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
 
-            // using NeighborInfoGPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockGPU>;
+            using NeighborInfoGPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockGPU>;
 
-            // // Verify that neighborInfo_view is indeed a SparseTable with GpuView
-            // static_assert(std::is_same_v<decltype(neighborInfo_view),
-            //                             SparseTable<NeighborInfoGPU, gpuistl::GpuView>>);
+            // Verify that neighborInfo_view is indeed a SparseTable with GpuView
+            static_assert(std::is_same_v<decltype(neighborInfo_view),
+                                        SparseTable<NeighborInfoGPU, gpuistl::GpuView>>);
 
-            // static_assert(std::is_same_v<decltype(neighborInfo_view.rowStarts()),
-            //                             const gpuistl::GpuView<int>&>);
+            static_assert(std::is_same_v<decltype(neighborInfo_view.rowStarts()),
+                                        const gpuistl::GpuView<int>&>);
 
-            // static_assert(std::is_same_v<decltype(neighborInfo_view.dataStorage()),
-            //                             const gpuistl::GpuView<NeighborInfoGPU>&>);
+            static_assert(std::is_same_v<decltype(neighborInfo_view.dataStorage()),
+                                        const gpuistl::GpuView<NeighborInfoGPU>&>);
 
-            // auto gpuBufferDiagMatAddress = gpuistl::detail::getDiagPtrs(gpuJacobian);
-            // auto diagMatAddressView = gpuistl::make_view(gpuBufferDiagMatAddress);
+            auto gpuBufferDiagMatAddress = gpuistl::detail::getDiagPtrs(gpuJacobian);
+            auto diagMatAddressView = gpuistl::make_view(gpuBufferDiagMatAddress);
 
-            // // Take the residual_ and move it to the GPU
-            // // This requires going from doubles, to a blocked vector
-            // // This is done using a GpuBuffer which contains MiniVectors
-            // auto gpuResidualBuffer = gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual_);
-            // auto gpuResidualView = gpuistl::make_view(gpuResidualBuffer);
+            // Take the residual_ and move it to the GPU
+            // This requires going from doubles, to a blocked vector
+            // This is done using a GpuBuffer which contains MiniVectors
+            auto gpuResidualBuffer = gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual_);
+            auto gpuResidualView = gpuistl::make_view(gpuResidualBuffer);
 
-            // using TrivialIQ = GetPropType<TypeTag, Properties::TrivialIntensiveQuantities>;
-            // TrivialIQ iq{};
-            // using CorrectTypeTagView = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>;
-            // using GPUBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
+            using TrivialIQ = GetPropType<TypeTag, Properties::TrivialIntensiveQuantities>;
+            TrivialIQ iq{};
+            using CorrectTypeTagView = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>;
+            using GPUBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
 
-            // using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, typename TrivialIQ::FluidState>;
-            // using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
+            using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, typename TrivialIQ::FluidState>;
+            using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
 
-            // using LocalResidualGPU = BlackOilLocalResidualTPFA<CorrectTypeTagView>;
+            using LocalResidualGPU = BlackOilLocalResidualTPFA<CorrectTypeTagView>;
 
-            // // test creating a FluidSystem that is suitable for GPU use
-            // auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
-            // auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
-            // auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
+            // test creating a FluidSystem that is suitable for GPU use
+            auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
+            auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+            auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
 
-            // // We need to have a pointer to the fluidysystem that can be used inside a GPU kernel
-            // // Having a pointer to the view is not good enough as the view exists on the host, so
-            // // allocat a view on the GPU with a pointer to it via the make_gpu_shared_ptr function
-            // auto dynamicGpuFluidSystemPtr = gpuistl::make_gpu_shared_ptr(dynamicGpuFluidSystemView);
+            // We need to have a pointer to the fluidysystem that can be used inside a GPU kernel
+            // Having a pointer to the view is not good enough as the view exists on the host, so
+            // allocat a view on the GPU with a pointer to it via the make_gpu_shared_ptr function
+            auto dynamicGpuFluidSystemPtr = gpuistl::make_gpu_shared_ptr(dynamicGpuFluidSystemView);
 
-            // using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
-            // GpuModel gpuModel(model_().allIntensiveQuantities());
-            // auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
-            // auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
+            using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
+            GpuModel gpuModel(model_().allIntensiveQuantities());
+            auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
+            auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
 
             // Copy boundary info to GPU
-            // gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
-            // auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
+            gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
+            auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
 
-            // {
-            //     int mismatches = 0;
-            //     // Compare jacobian entries
-            //     auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
-            //     int gpuJacIdx = 0;
-            //     auto& cpuJacobian = jacobian_->istlMatrix();
-            //     for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
-            //     {
-            //         for (auto col = row->begin(); col != row->end(); ++col)
-            //         {
-            //             for (int brow = 0; brow < numEq; ++brow)
-            //             {
-            //                 for (int bcol = 0; bcol < numEq; ++bcol)
-            //                 {
-            //                     double cpuVal = (*col)[brow][bcol];
-            //                     double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
-            //                     double error = std::abs(cpuVal - gpuVal);
-            //                     if (error > 1e-10) {
-            //                         printf("BEFORE linearize kernel: Jacobian mismatch at block (%d,%d) entry (%d,%d): CPU=%e, GPU=%e, error=%e\n",
-            //                             row.index(), col.index(), brow, bcol, cpuVal, gpuVal, error);
-            //                         ++mismatches;
-            //                         if (mismatches > 10) {
-            //                             bcol = numEq; // break
-            //                             brow = numEq; // break
-            //                             col = row->end(); // break
-            //                             row = cpuJacobian.end(); // break
-            //                             continue;
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
+            {
+                int mismatches = 0;
+                // Compare jacobian entries
+                auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
+                int gpuJacIdx = 0;
+                auto& cpuJacobian = jacobian_->istlMatrix();
+                for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
+                {
+                    for (auto col = row->begin(); col != row->end(); ++col)
+                    {
+                        for (int brow = 0; brow < numEq; ++brow)
+                        {
+                            for (int bcol = 0; bcol < numEq; ++bcol)
+                            {
+                                double cpuVal = (*col)[brow][bcol];
+                                double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
+                                double error = std::abs(cpuVal - gpuVal);
+                                if (error > 1e-10) {
+                                    printf("BEFORE linearize kernel: Jacobian mismatch at block (%d,%d) entry (%d,%d): CPU=%e, GPU=%e, error=%e\n",
+                                        row.index(), col.index(), brow, bcol, cpuVal, gpuVal, error);
+                                    ++mismatches;
+                                    if (mismatches > 10) {
+                                        bcol = numEq; // break
+                                        brow = numEq; // break
+                                        col = row->end(); // break
+                                        row = cpuJacobian.end(); // break
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
-            // auto start_gpu = std::chrono::high_resolution_clock::now();
-            // linearize_kernel<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells+1023)/1024), 1024>>>(
-            //     dispersionActive,
-            //     numCells,
-            //     on_full_domain,
-            //     domain_view,
-            //     neighborInfo_view,
-            //     diagMatAddressView,
-            //     gpuResidualView,
-            //     boundaryInfo_view,
-            //     gpuModelView);
-            // if (boundaryInfo_buffer.size() > 0) {
-            //     linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
-            //         dispersionActive,
-            //         numCells,
-            //         on_full_domain,
-            //         domain_view,
-            //         neighborInfo_view,
-            //         diagMatAddressView,
-            //         gpuResidualView,
-            //         boundaryInfo_view,
-            //         gpuModelView);
-            // }
-            // hipDeviceSynchronize();
-            // auto end_gpu = std::chrono::high_resolution_clock::now();
-            // auto gpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu);
-            // hipError_t err = hipGetLastError();
-            // if (err != hipSuccess) {
-            //     std::cerr << "Error during kernel launch: " << hipGetErrorString(err) << std::endl;
-            //     OPM_THROW(std::runtime_error, "GPU kernel launch failed");
-            // }
+            auto start_gpu = std::chrono::high_resolution_clock::now();
+            linearize_kernel<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells+1023)/1024), 1024>>>(
+                dispersionActive,
+                numCells,
+                on_full_domain,
+                domain_view,
+                neighborInfo_view,
+                diagMatAddressView,
+                gpuResidualView,
+                boundaryInfo_view,
+                gpuModelView);
+            if (boundaryInfo_buffer.size() > 0) {
+                linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
+                    dispersionActive,
+                    numCells,
+                    on_full_domain,
+                    domain_view,
+                    neighborInfo_view,
+                    diagMatAddressView,
+                    gpuResidualView,
+                    boundaryInfo_view,
+                    gpuModelView);
+            }
+            hipDeviceSynchronize();
+            auto end_gpu = std::chrono::high_resolution_clock::now();
+            auto gpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu);
+            hipError_t err = hipGetLastError();
+            if (err != hipSuccess) {
+                std::cerr << "Error during kernel launch: " << hipGetErrorString(err) << std::endl;
+                OPM_THROW(std::runtime_error, "GPU kernel launch failed");
+            }
 
-            // // To make the comparison fair this has to use the same simplified objects
-            // auto start_cpu = std::chrono::high_resolution_clock::now();
-            // linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
-            //     dispersionActive,
-            //     numCells,
-            //     on_full_domain,
-            //     domain,
-            //     neighborInfo_,
-            //     diagMatAddress_,
-            //     residual_,
-            //     boundaryInfo_);
-            // auto end_cpu = std::chrono::high_resolution_clock::now();
-            // auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
+            // To make the comparison fair this has to use the same simplified objects
+            auto start_cpu = std::chrono::high_resolution_clock::now();
+            linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+                dispersionActive,
+                numCells,
+                on_full_domain,
+                domain,
+                neighborInfo_,
+                diagMatAddress_,
+                residual_,
+                boundaryInfo_);
+            auto end_cpu = std::chrono::high_resolution_clock::now();
+            auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
 
-            // std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
-            // std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
+            std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
+            std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
 
-            // // Copy residual back from GPU to compare
-            // auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
+            // Copy residual back from GPU to compare
+            auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
 
-            // // Compare residuals
-            // for (unsigned i = 0; i < numCells; ++i) {
-            //     for (unsigned eq = 0; eq < numEq; ++eq) {
-            //         double cpuVal = residual_[i][eq];
-            //         double gpuVal = cpuResidualFromGpu[i][eq];
-            //         double error = std::abs(cpuVal - gpuVal);
-            //         if (error > 1e-10) {
-            //             printf("Residual mismatch at cell %u, eq %u: CPU=%e, GPU=%e, error=%e\n",
-            //                    i, eq, cpuVal, gpuVal, error);
-            //         }
-            //     }
-            // }
+            // Compare residuals
+            for (unsigned i = 0; i < numCells; ++i) {
+                for (unsigned eq = 0; eq < numEq; ++eq) {
+                    double cpuVal = residual_[i][eq];
+                    double gpuVal = cpuResidualFromGpu[i][eq];
+                    double error = std::abs(cpuVal - gpuVal);
+                    if (error > 1e-10) {
+                        printf("Residual mismatch at cell %u, eq %u: CPU=%e, GPU=%e, error=%e\n",
+                               i, eq, cpuVal, gpuVal, error);
+                    }
+                }
+            }
 
-            // {
-            //     int mismatches = 0;
-            //     // Compare jacobian entries
-            //     auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
-            //     int gpuJacIdx = 0;
-            //     auto& cpuJacobian = jacobian_->istlMatrix();
-            //     for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
-            //     {
-            //         for (auto col = row->begin(); col != row->end(); ++col)
-            //         {
-            //             for (int brow = 0; brow < numEq; ++brow)
-            //             {
-            //                 for (int bcol = 0; bcol < numEq; ++bcol)
-            //                 {
-            //                     double cpuVal = (*col)[brow][bcol];
-            //                     double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
-            //                     double error = std::abs(cpuVal - gpuVal);
-            //                     if (error > 1e-10) {
-            //                         printf("AFTER linearize kernel: Jacobian mismatch at block (%d,%d) entry (%d,%d): CPU=%e, GPU=%e, error=%e\n",
-            //                             row.index(), col.index(), brow, bcol, cpuVal, gpuVal, error);
-            //                         ++mismatches;
-            //                         if (mismatches > 10) {
-            //                             bcol = numEq; // break
-            //                             brow = numEq; // break
-            //                             col = row->end(); // break
-            //                             row = cpuJacobian.end(); // break
-            //                             continue;
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
+            {
+                int mismatches = 0;
+                // Compare jacobian entries
+                auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
+                int gpuJacIdx = 0;
+                auto& cpuJacobian = jacobian_->istlMatrix();
+                for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
+                {
+                    for (auto col = row->begin(); col != row->end(); ++col)
+                    {
+                        for (int brow = 0; brow < numEq; ++brow)
+                        {
+                            for (int bcol = 0; bcol < numEq; ++bcol)
+                            {
+                                double cpuVal = (*col)[brow][bcol];
+                                double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
+                                double error = std::abs(cpuVal - gpuVal);
+                                if (error > 1e-10) {
+                                    printf("AFTER linearize kernel: Jacobian mismatch at block (%d,%d) entry (%d,%d): CPU=%e, GPU=%e, error=%e\n",
+                                        row.index(), col.index(), brow, bcol, cpuVal, gpuVal, error);
+                                    ++mismatches;
+                                    if (mismatches > 10) {
+                                        bcol = numEq; // break
+                                        brow = numEq; // break
+                                        col = row->end(); // break
+                                        row = cpuJacobian.end(); // break
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             for (unsigned ii = 0; ii < numCells; ++ii) {
                 OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
@@ -1222,7 +1222,7 @@ private:
                 adres = 0.0;
                 {
                     OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
-                    LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
+                    LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
                 }
                 setResAndJacobi(res, bMat, adres);
                 // Either use cached storage term, or compute it on the fly.
@@ -1389,7 +1389,7 @@ private:
             adres = 0.0;
             {
                 OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
-                LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
+                LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
             }
             setResAndJacobi(res, bMat, adres);
             // Either use cached storage term, or compute it on the fly.

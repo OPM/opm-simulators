@@ -294,6 +294,8 @@ public:
                 }
             }
 
+            // adaptMassConservationQuantities_ contains nothing for SPE11C
+
             // deal with energy (if present)
             EnergyModule::template addStorage<LhsEval>(storage, intQuants);
         }
