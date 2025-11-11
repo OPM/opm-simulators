@@ -1119,7 +1119,7 @@ private:
             auto end_cpu = std::chrono::high_resolution_clock::now();
             auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
 
-            // std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
+            std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
             std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
 
             // Copy residual back from GPU to compare

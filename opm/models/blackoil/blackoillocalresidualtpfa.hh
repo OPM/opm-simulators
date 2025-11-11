@@ -224,26 +224,26 @@ public:
 
             // adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex());
 
-            // // deal with solvents (if present)
-            // SolventModule::addStorage(storage, intQuants);
+            // deal with solvents (if present)
+            SolventModule::addStorage(storage, intQuants);
 
-            // // deal with zFracton (if present)
-            // ExtboModule::addStorage(storage, intQuants);
+            // deal with zFracton (if present)
+            ExtboModule::addStorage(storage, intQuants);
 
-            // // deal with polymer (if present)
-            // PolymerModule::addStorage(storage, intQuants);
+            // deal with polymer (if present)
+            PolymerModule::addStorage(storage, intQuants);
 
-            // // deal with energy (if present)
-            // EnergyModule::addStorage(storage, intQuants);
+            // deal with energy (if present)
+            EnergyModule::template addStorage<LhsEval>(storage, intQuants);
 
-            // // deal with foam (if present)
-            // FoamModule::addStorage(storage, intQuants);
+            // deal with foam (if present)
+            FoamModule::addStorage(storage, intQuants);
 
-            // // deal with salt (if present)
-            // BrineModule::addStorage(storage, intQuants);
+            // deal with salt (if present)
+            BrineModule::addStorage(storage, intQuants);
 
-            // // deal with bioeffects (if present)
-            // BioeffectsModule::addStorage(storage, intQuants);
+            // deal with bioeffects (if present)
+            BioeffectsModule::addStorage(storage, intQuants);
         }
         else {
             auto* fsysptr = intQuants.getFluidSystem();
@@ -294,6 +294,8 @@ public:
                 }
             }
 
+            // deal with energy (if present)
+            EnergyModule::template addStorage<LhsEval>(storage, intQuants);
         }
     }
 

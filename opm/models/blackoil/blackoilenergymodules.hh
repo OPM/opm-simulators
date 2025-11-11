@@ -39,6 +39,8 @@
 #include <opm/models/io/vtkblackoilenergymodule.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
+
+
 #include <cassert>
 #include <cmath>
 #include <istream>
@@ -151,32 +153,63 @@ public:
     }
 
     // must be called after water storage is computed
-    template <class LhsEval>
-    static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
+    template <class LhsEval, class StorageType>
+    OPM_HOST_DEVICE static void addStorage(StorageType& storage,
                            const IntensiveQuantities& intQuants)
     {
         if constexpr (enableEnergy) {
-            const auto& poro = decay<LhsEval>(intQuants.porosity());
 
-            // accumulate the internal energy of the fluids
-            const auto& fs = intQuants.fluidState();
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
+            bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+            if constexpr (usesStaticFluidSystem)
+            {
+                const auto& poro = decay<LhsEval>(intQuants.porosity());
+
+                // accumulate the internal energy of the fluids
+                const auto& fs = intQuants.fluidState();
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+
+                    const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
+                    const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
+                    const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
+
+                    storage[contiEnergyEqIdx] += poro*S*u*rho;
                 }
 
-                const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
-                const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
-                const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
-
-                storage[contiEnergyEqIdx] += poro*S*u*rho;
+                // add the internal energy of the rock
+                const Scalar rockFraction = intQuants.rockFraction();
+                const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
+                storage[contiEnergyEqIdx] += rockFraction * uRock;
+                storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
             }
+            else
+            {
+                auto* fsysptr = intQuants.getFluidSystem();
 
-            // add the internal energy of the rock
-            const Scalar rockFraction = intQuants.rockFraction();
-            const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
-            storage[contiEnergyEqIdx] += rockFraction * uRock;
-            storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+                const auto& poro = decay<LhsEval>(intQuants.porosity());
+
+                // accumulate the internal energy of the fluids
+                const auto& fs = intQuants.fluidState();
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                    if (!fsysptr->phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+
+                    const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
+                    const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
+                    const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
+
+                    storage[contiEnergyEqIdx] += poro*S*u*rho;
+                }
+
+                // add the internal energy of the rock
+                const Scalar rockFraction = intQuants.rockFraction();
+                const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
+                storage[contiEnergyEqIdx] += rockFraction * uRock;
+                storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+            }
         }
     }
 
@@ -430,13 +463,14 @@ public:
         rockFraction_ = problem.rockFraction(globalSpaceIdx, timeIdx);
     }
 
-    const Evaluation& rockInternalEnergy() const
+    OPM_HOST_DEVICE const Evaluation& rockInternalEnergy() const
     { return rockInternalEnergy_; }
 
-    const Evaluation& totalThermalConductivity() const
+    OPM_HOST_DEVICE const Evaluation& totalThermalConductivity() const
     { return totalThermalConductivity_; }
 
-    Scalar rockFraction() const
+    // Does this value get transferred correctly when called from a gpukernel?
+    OPM_HOST_DEVICE Scalar rockFraction() const
     { return rockFraction_; }
 
 protected:
