@@ -32,6 +32,8 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/grid/cpgrid/LgrOutputHelpers.hpp>
+
 #include <opm/simulators/flow/BioeffectsContainer.hpp>
 #include <opm/simulators/flow/ExtboContainer.hpp>
 #include <opm/simulators/flow/FIPContainer.hpp>
@@ -54,6 +56,11 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+namespace Dune
+{
+class CpGrid;
+}
 
 namespace Opm::Parameters {
 
@@ -158,6 +165,13 @@ public:
      * \brief Move all buffers to data::Solution.
      */
     void assignToSolution(data::Solution& sol);
+
+    std::vector<data::Solution> extractLevelSolutions(const Dune::CpGrid& grid,
+                                                      const data::Solution& leafGridSolution)
+    {
+        return Opm::Lgr::extractSolutionLevelGrids<Scalar>(grid, leafGridSolution);
+    }
+
 
     void setRestart(const data::Solution& sol,
                     unsigned elemIdx,

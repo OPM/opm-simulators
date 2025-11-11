@@ -461,6 +461,8 @@ public:
 
             if (localCellData.empty()) {
                 this->outputModule_->assignToSolution(localCellData);
+                const auto dataSolutionLevelGrids = this->outputModule_->extractLevelSolutions(this->simulator_.vanguard().grid(),
+                                                                                               localCellData);
             }
 
             // Add cell data to perforations for RFT output
