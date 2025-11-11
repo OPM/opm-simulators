@@ -391,7 +391,7 @@ updateProducerControlMode(SingleWellState<Scalar, IndexTraits>& ws,
     // check most strict rate control.
     const auto [most_strict_control, most_strict_scale] =
         estimateStrictestProductionRateConstraint(ws, calcReservoirVoidageRates, controls,
-                                                  surface_fractions, /*skip_zero_rate_constraints*/ false, deferred_logger);
+                                                  surface_fractions, /*skip_zero_rate_constraints*/ false);
     if (most_strict_control != Well::ProducerCMode::CMODE_UNDEFINED && most_strict_scale < 1.0 - tol) {
         ws.production_cmode = most_strict_control;
         return true;
@@ -483,12 +483,12 @@ estimateStrictestProductionConstraint(const SingleWellState<Scalar, IndexTraits>
             }
         }
     } else if (bhp_at_thp_limit.has_value()){
-        if (*bhp_at_thp_limit > controls.bhp_limit) {
+        if (*bhp_at_thp_limit > static_cast<Scalar>(controls.bhp_limit)) {
             most_strict_control = Well::ProducerCMode::THP;
         } else {
             most_strict_control = Well::ProducerCMode::BHP;
         }
-        const Scalar most_strict_bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
+        const Scalar most_strict_bhp = std::max(*bhp_at_thp_limit, static_cast<Scalar>(controls.bhp_limit));
         const Scalar tot_ipr_b = std::accumulate(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), 0.0);
         const Scalar tot_ipr_a = std::accumulate(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), 0.0);
         const Scalar tot_rate_at_bhp = tot_ipr_b*most_strict_bhp - tot_ipr_a;
@@ -502,7 +502,7 @@ estimateStrictestProductionConstraint(const SingleWellState<Scalar, IndexTraits>
     }
     // check rate constraints
     const auto [most_strict_rate_control, most_strict_rate_scale] =
-        estimateStrictestProductionRateConstraint(ws, calcReservoirVoidageRates, controls, surface_fractions, skip_zero_rate_constraints, deferred_logger);
+        estimateStrictestProductionRateConstraint(ws, calcReservoirVoidageRates, controls, surface_fractions, skip_zero_rate_constraints);
     if (most_strict_rate_control != Well::ProducerCMode::CMODE_UNDEFINED && most_strict_rate_scale < most_strict_scale) {
         most_strict_scale = most_strict_rate_scale;
         most_strict_control = most_strict_rate_control;
@@ -530,8 +530,7 @@ estimateStrictestProductionRateConstraint(const SingleWellState<Scalar, IndexTra
                                           const RateConvFunc& calcReservoirVoidageRates,
                                           const Well::ProductionControls& controls,
                                           const std::vector<Scalar>& surface_fractions,
-                                          const bool skip_zero_rate_constraints,
-                                          DeferredLogger& deferred_logger) const
+                                          const bool skip_zero_rate_constraints) const
 {
     // Estimate the most strict rate constraint + corresponding scaling based on current rate fractions
     const auto rates = ws.surface_rates;

@@ -394,8 +394,7 @@ WellInterfaceFluidSystem<FluidSystem>::
 estimateStrictestProductionRateConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
                                           const Well::ProductionControls& controls,
                                           const std::vector<Scalar>& surface_fractions,
-                                          const bool skip_zero_rate_constraints,
-                                          DeferredLogger& deferred_logger) const
+                                          const bool skip_zero_rate_constraints) const
 {
     auto rRates = [this](const int fipreg,
                          const int pvtRegion,
@@ -407,7 +406,7 @@ estimateStrictestProductionRateConstraint(const SingleWellState<Scalar, IndexTra
     };
     return WellConstraints(*this).
             estimateStrictestProductionRateConstraint(ws, rRates, controls, surface_fractions,
-                                                      skip_zero_rate_constraints, deferred_logger);
+                                                      skip_zero_rate_constraints);
 }
 
 template<class Scalar>

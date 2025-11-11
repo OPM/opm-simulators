@@ -91,8 +91,7 @@ public:
                                           const RateConvFunc& calcReservoirVoidageRates,
                                           const Well::ProductionControls& controls,
                                           const std::vector<Scalar>& surface_fractions,
-                                          const bool skip_zero_rate_constraints,
-                                          DeferredLogger& deferred_logger) const;
+                                          const bool skip_zero_rate_constraints) const;
 
 private:
     WellInjectorCMode

@@ -152,8 +152,7 @@ protected:
     estimateStrictestProductionRateConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
                                               const Well::ProductionControls& controls,
                                               const std::vector<Scalar>& surface_fractions,
-                                              const bool skip_zero_rate_constraints,
-                                              DeferredLogger& deferred_logger) const;
+                                              const bool skip_zero_rate_constraintsr) const;
 
     // For the conversion between the surface volume rate and reservoir voidage rate
     const RateConverterType& rateConverter_;
