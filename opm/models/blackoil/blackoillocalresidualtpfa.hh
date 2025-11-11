@@ -222,7 +222,7 @@ public:
                 }
             }
 
-            // adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex());
+            adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex());
 
             // deal with solvents (if present)
             SolventModule::addStorage(storage, intQuants);

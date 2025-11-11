@@ -25,7 +25,7 @@
 // Define making clear that the simulator supports AMG
 #define FLOW_SUPPORT_AMG 1
 
-#include <flow/flow_gaswater_energy.hpp>
+#include <flow/flow_gpu.hpp>
 
 #include <opm/common/utility/gpuDecorators.hpp>
 
@@ -75,61 +75,61 @@ private:
 
 namespace Properties {
 namespace TTag {
-struct FlowGasWaterEnergyProblem {
+struct FlowGasWaterEnergyProblemGPU {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
 
 template<template<class> class Storage>
-struct FlowGasWaterEnergyProblemGPU {
-    using InheritsFrom = std::tuple<FlowGasWaterEnergyProblem>;
+struct FlowGasWaterEnergyProblemGPUTrue {
+    using InheritsFrom = std::tuple<FlowGasWaterEnergyProblemGPU>;
 };
 
 template<template<class> class Storage>
-struct to_gpu_type<FlowGasWaterEnergyProblem, Storage> {
-    using type = FlowGasWaterEnergyProblemGPU<Storage>;
+struct to_gpu_type<FlowGasWaterEnergyProblemGPU, Storage> {
+    using type = FlowGasWaterEnergyProblemGPUTrue<Storage>;
 };
 }
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowGasWaterEnergyProblem> { static constexpr bool value = true; };
+struct EnableDiffusion<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::FlowGasWaterEnergyProblem> { static constexpr bool value = true; };
+struct EnableDispersion<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowGasWaterEnergyProblem> {
+struct EnableEnergy<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
     static constexpr bool value = true;
 };
 
 // After a rebase the lines above were not sufficient to run a simulation with thermal effects
 template<class TypeTag>
-struct EnergyModuleType<TypeTag, TTag::FlowGasWaterEnergyProblem>
+struct EnergyModuleType<TypeTag, TTag::FlowGasWaterEnergyProblemGPU>
 { static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
 
 template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterEnergyProblem> {
+struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::FlowGasWaterEnergyProblem> {
+struct EnableVapwat<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct TrivialIntensiveQuantities<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = FakeIntensiveQuantities<TypeTag>; };
+struct TrivialIntensiveQuantities<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { using type = FakeIntensiveQuantities<TypeTag>; };
 
 template<class TypeTag>
-struct GpuFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = SimplifiedGpuFIBlackOilModel<TypeTag>; };
+struct GpuFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { using type = SimplifiedGpuFIBlackOilModel<TypeTag>; };
 
 template<class TypeTag>
-struct FluidSystemGPU<TypeTag, TTag::FlowGasWaterEnergyProblem>
+struct FluidSystemGPU<TypeTag, TTag::FlowGasWaterEnergyProblemGPU>
 {
     using type = Opm::BlackOilFluidSystemNonStatic<
         double,
@@ -139,7 +139,7 @@ struct FluidSystemGPU<TypeTag, TTag::FlowGasWaterEnergyProblem>
 };
 
 template<class TypeTag, template<class> class Storage>
-struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyProblemGPU<Storage>>
+struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyProblemGPUTrue<Storage>>
 {
     using type = Opm::BlackOilFluidSystemNonStatic<
         double,
@@ -150,7 +150,7 @@ struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyProblemGPU<Storage>>
 
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::FlowGasWaterEnergyProblem>
+struct Indices<TypeTag, TTag::FlowGasWaterEnergyProblemGPU>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -173,20 +173,20 @@ public:
 }
 
 // ----------------- Main program -----------------
-int flowGasWaterEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowGasWaterEnergyMainGPU(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::FlowGasWaterEnergyProblem>
+    FlowMain<Properties::TTag::FlowGasWaterEnergyProblemGPU>
         mainfunc {argc, argv, outputCout, outputFiles} ;
     return mainfunc.execute();
 }
 
-int flowGasWaterEnergyMainStandalone(int argc, char** argv)
+int flowGasWaterEnergyMainGPUStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::FlowGasWaterEnergyProblem;
+    using TypeTag = Properties::TTag::FlowGasWaterEnergyProblemGPU;
     auto mainObject = std::make_unique<::Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!

@@ -14,11 +14,17 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "config.h"
-#include <flow/flow_gpu.hpp>
+#ifndef FLOW_GPU_HIP_HPP
+#define FLOW_GPU_HIP_HPP
 
+namespace Opm {
 
-int main(int argc, char** argv)
-{
-    return Opm::flowGasWaterEnergyMainGPUStandalone(argc, argv);
+//! \brief Main function used in flow binary.
+int flowGasWaterEnergyMainGPU(int argc, char** argv, bool outputCout, bool outputFiles);
+
+//! \brief Main function used in flow_gaswater binary.
+int flowGasWaterEnergyMainGPUStandalone(int argc, char** argv);
+
 }
+
+#endif // FLOW_GPU_HIP_HPP
