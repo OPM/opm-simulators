@@ -436,7 +436,7 @@ init(const std::vector<Scalar>& cellPressures,
                 const Scalar global_num_perf_this_well = wells_ecl[w].getConnections().num_open();
 
                 auto target_rate = new_well.perf_data.phase_rates.begin();
-                for (int perf_index = 0; perf_index < num_perf_this_well; ++perf_index) {
+                for (std::size_t perf_index = 0; perf_index < num_perf_this_well; ++perf_index) {
                     for (int p = 0; p < np; ++p, ++target_rate) {
                         *target_rate = new_well.surface_rates[p] / global_num_perf_this_well;
                     }
