@@ -613,7 +613,7 @@ getProductionControlModeScale(const SingleWellState<Scalar, IndexTraits>& ws,
             for (int p = 0; p < well_.numPhases(); ++p) {
                 current_rate += -ws.reservoir_rates[p];
             }
-            if (!controls.prediction_mode || target.has_value()) {
+            if (controls.prediction_mode || target.has_value()) {
                 target_rate = target.has_value() ? *target : controls.resv_rate;
             } else {
                 const int fipreg = 0; // not considering the region for now
@@ -637,6 +637,7 @@ getProductionControlModeScale(const SingleWellState<Scalar, IndexTraits>& ws,
             break;
         default:
             // undefined mode, no scaling applied
+            return -1.0;
             break;
     }
     const bool valid_scale = (!skip_zero_rate_constraints || std::abs(target_rate) > 0.0);
