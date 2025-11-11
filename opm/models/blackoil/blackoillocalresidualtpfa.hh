@@ -165,78 +165,85 @@ public:
                                const IntensiveQuantitiesType& intQuants)
     {
         // OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
-        // // retrieve the intensive quantities for the SCV at the specified point in time
-        // const auto& fs = intQuants.fluidState();
-        // storage = 0.0;
+        // retrieve the intensive quantities for the SCV at the specified point in time
+        const auto& fs = intQuants.fluidState();
+        storage = 0.0;
 
-        // for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-        //     if (!FluidSystem::phaseIsActive(phaseIdx)) {
-        //         continue;
-        //     }
-        //     unsigned activeCompIdx =
-        //         FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-        //     LhsEval surfaceVolume =
-        //         Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
-        //         Toolbox::template decay<LhsEval>(fs.invB(phaseIdx)) *
-        //         Toolbox::template decay<LhsEval>(intQuants.porosity());
+        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+        if constexpr (usesStaticFluidSystem)
+        {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+                unsigned activeCompIdx =
+                    FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                LhsEval surfaceVolume =
+                    Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
+                    Toolbox::template decay<LhsEval>(fs.invB(phaseIdx)) *
+                    Toolbox::template decay<LhsEval>(intQuants.porosity());
 
-        //     storage[conti0EqIdx + activeCompIdx] += surfaceVolume;
+                storage[conti0EqIdx + activeCompIdx] += surfaceVolume;
 
-        //     // account for dissolved gas
-        //     if (phaseIdx == oilPhaseIdx && FluidSystem::enableDissolvedGas()) {
-        //         unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
-        //         storage[conti0EqIdx + activeGasCompIdx] +=
-        //             Toolbox::template decay<LhsEval>(intQuants.fluidState().Rs()) *
-        //             surfaceVolume;
-        //     }
+                // account for dissolved gas
+                if (phaseIdx == oilPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                    unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
+                    storage[conti0EqIdx + activeGasCompIdx] +=
+                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rs()) *
+                        surfaceVolume;
+                }
 
-        //     // account for dissolved gas in water
-        //     if (phaseIdx == waterPhaseIdx && FluidSystem::enableDissolvedGasInWater()) {
-        //         unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
-        //         storage[conti0EqIdx + activeGasCompIdx] +=
-        //             Toolbox::template decay<LhsEval>(intQuants.fluidState().Rsw()) *
-        //             surfaceVolume;
-        //     }
+                // account for dissolved gas in water
+                if (phaseIdx == waterPhaseIdx && FluidSystem::enableDissolvedGasInWater()) {
+                    unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
+                    storage[conti0EqIdx + activeGasCompIdx] +=
+                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rsw()) *
+                        surfaceVolume;
+                }
 
-        //     // account for vaporized oil
-        //     if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedOil()) {
-        //         unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
-        //         storage[conti0EqIdx + activeOilCompIdx] +=
-        //             Toolbox::template decay<LhsEval>(intQuants.fluidState().Rv()) *
-        //             surfaceVolume;
-        //     }
+                // account for vaporized oil
+                if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedOil()) {
+                    unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
+                    storage[conti0EqIdx + activeOilCompIdx] +=
+                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rv()) *
+                        surfaceVolume;
+                }
 
-        //     // account for vaporized water
-        //     if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedWater()) {
-        //         unsigned activeWaterCompIdx = FluidSystem::canonicalToActiveCompIdx(waterCompIdx);
-        //         storage[conti0EqIdx + activeWaterCompIdx] +=
-        //             Toolbox::template decay<LhsEval>(intQuants.fluidState().Rvw()) *
-        //             surfaceVolume;
-        //     }
-        // }
+                // account for vaporized water
+                if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedWater()) {
+                    unsigned activeWaterCompIdx = FluidSystem::canonicalToActiveCompIdx(waterCompIdx);
+                    storage[conti0EqIdx + activeWaterCompIdx] +=
+                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rvw()) *
+                        surfaceVolume;
+                }
+            }
 
-        // adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex());
+            // adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex());
 
-        // // deal with solvents (if present)
-        // SolventModule::addStorage(storage, intQuants);
+            // deal with solvents (if present)
+            SolventModule::addStorage(storage, intQuants);
 
-        // // deal with zFracton (if present)
-        // ExtboModule::addStorage(storage, intQuants);
+            // deal with zFracton (if present)
+            ExtboModule::addStorage(storage, intQuants);
 
-        // // deal with polymer (if present)
-        // PolymerModule::addStorage(storage, intQuants);
+            // deal with polymer (if present)
+            PolymerModule::addStorage(storage, intQuants);
 
-        // // deal with energy (if present)
-        // EnergyModule::addStorage(storage, intQuants);
+            // deal with energy (if present)
+            EnergyModule::addStorage(storage, intQuants);
 
-        // // deal with foam (if present)
-        // FoamModule::addStorage(storage, intQuants);
+            // deal with foam (if present)
+            FoamModule::addStorage(storage, intQuants);
 
-        // // deal with salt (if present)
-        // BrineModule::addStorage(storage, intQuants);
+            // deal with salt (if present)
+            BrineModule::addStorage(storage, intQuants);
 
-        // // deal with bioeffects (if present)
-        // BioeffectsModule::addStorage(storage, intQuants);
+            // deal with bioeffects (if present)
+            BioeffectsModule::addStorage(storage, intQuants);
+        }
+        else {
+            return;
+        }
     }
 
     /*!

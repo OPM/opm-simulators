@@ -98,6 +98,9 @@ struct DiscLocalResidual { using type = UndefinedProperty; };
 //! The type of the local residual function
 template<class TypeTag, class MyTypeTag>
 struct LocalResidual { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LocalResidualGPU { using type = UndefinedProperty; };
+
 //! The type of the local linearizer
 template<class TypeTag, class MyTypeTag>
 struct LocalLinearizer { using type = UndefinedProperty; };

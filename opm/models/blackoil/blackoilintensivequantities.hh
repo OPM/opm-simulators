@@ -173,7 +173,7 @@ public:
             fluidState_.setRsw(0.0);
         }
     }
-    OPM_HOST_DEVICE BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
+    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
     OPM_HOST_DEVICE BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
 

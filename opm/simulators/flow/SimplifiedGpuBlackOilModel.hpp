@@ -132,15 +132,15 @@ namespace gpuistl {
 
     }
 
-    // template <typename GpuSimplifiedGpuFIBlackOilModel>
-    // auto make_view_just_find_me(GpuSimplifiedGpuFIBlackOilModel& gpuSimplifiedGpuFIBlackOilModel)
-    // {
-    //     SimplifiedGpuFIBlackOilModel<
-    //         typename GpuSimplifiedGpuFIBlackOilModel::TypeTagPublic,
-    //         gpuistl::GpuView>
-    //         gpuView(make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities_));
-    //     return gpuView;
-    // }
+    template <typename GpuSimplifiedGpuFIBlackOilModel>
+    auto make_view_just_find_me(GpuSimplifiedGpuFIBlackOilModel& gpuSimplifiedGpuFIBlackOilModel)
+    {
+        SimplifiedGpuFIBlackOilModel<
+            typename GpuSimplifiedGpuFIBlackOilModel::TypeTagPublic,
+            gpuistl::GpuView>
+            gpuView(make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities_));
+        return gpuView;
+    }
 } // namespace gpuistl
 
 } // namespace Opm

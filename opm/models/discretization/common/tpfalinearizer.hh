@@ -1011,9 +1011,13 @@ private:
 
             using TrivialIQ = GetPropType<TypeTag, Properties::TrivialIntensiveQuantities>;
             TrivialIQ iq{};
+            using CorrectTypeTagView = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>;
+            using GPUBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
 
             using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, typename TrivialIQ::FluidState>;
             using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
+
+            using LocalResidualGPU = BlackOilLocalResidualTPFA<CorrectTypeTagView>;
 
             // test creating a FluidSystem that is suitable for GPU use
             auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
@@ -1028,7 +1032,7 @@ private:
             using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
             GpuModel gpuModel(model_().allIntensiveQuantities());
             auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
-            // auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
+            auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
 
             // Copy boundary info to GPU
             gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
@@ -1070,7 +1074,7 @@ private:
             }
 
             auto start_gpu = std::chrono::high_resolution_clock::now();
-            linearize_kernel<TrivialIQ, GpuModel, LocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells+1023)/1024), 1024>>>(
+            linearize_kernel<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells+1023)/1024), 1024>>>(
                 dispersionActive,
                 numCells,
                 on_full_domain,
@@ -1078,9 +1082,10 @@ private:
                 neighborInfo_view,
                 diagMatAddressView,
                 gpuResidualView,
-                boundaryInfo_view);
+                boundaryInfo_view,
+                gpuModelView);
             if (boundaryInfo_buffer.size() > 0) {
-                linearize_kernel_bc<TrivialIQ, GpuModel, LocalResidual, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
+                linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
                     dispersionActive,
                     numCells,
                     on_full_domain,
@@ -1088,7 +1093,8 @@ private:
                     neighborInfo_view,
                     diagMatAddressView,
                     gpuResidualView,
-                    boundaryInfo_view);
+                    boundaryInfo_view,
+                    gpuModelView);
             }
             hipDeviceSynchronize();
             auto end_gpu = std::chrono::high_resolution_clock::now();
@@ -1101,7 +1107,7 @@ private:
 
             // To make the comparison fair this has to use the same simplified objects
             auto start_cpu = std::chrono::high_resolution_clock::now();
-            linearize_kernel_CPU<TrivialIQ, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+            linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
                 dispersionActive,
                 numCells,
                 on_full_domain,
@@ -1113,7 +1119,7 @@ private:
             auto end_cpu = std::chrono::high_resolution_clock::now();
             auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
 
-            std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
+            // std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
             std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
 
             // Copy residual back from GPU to compare
@@ -1121,14 +1127,13 @@ private:
 
             // Compare residuals
             for (unsigned i = 0; i < numCells; ++i) {
-                const unsigned globI = domain.cells[i];
                 for (unsigned eq = 0; eq < numEq; ++eq) {
-                    double cpuVal = residual_[globI][eq];
+                    double cpuVal = residual_[i][eq];
                     double gpuVal = cpuResidualFromGpu[i][eq];
                     double error = std::abs(cpuVal - gpuVal);
                     if (error > 1e-10) {
                         printf("Residual mismatch at cell %u, eq %u: CPU=%e, GPU=%e, error=%e\n",
-                               globI, eq, cpuVal, gpuVal, error);
+                               i, eq, cpuVal, gpuVal, error);
                     }
                 }
             }
@@ -1485,7 +1490,8 @@ private:
         const NeighborSparseTable GPU_LOCAL_neighborInfo,
         DiagPtrType GPU_LOCAL_diagMatAddress,
         GpuResidualView GPU_LOCAL_residualView,
-        const GpuBoundaryInfoView GPU_LOCAL_boundaryInfo)
+        const GpuBoundaryInfoView GPU_LOCAL_boundaryInfo,
+        LocalModelClass localModel)
     {
         // Get the index of the cell
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
@@ -1497,7 +1503,7 @@ private:
             ADVectorBlockType adres(3.0);
             ADVectorBlockType darcyFlux(4.0);
             // const LocalIntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-            // const LocalIntensiveQuantities& intQuantsIn = LocalModelClass{}.intensiveQuantities(globI, /*timeIdx*/ 0);
+            const LocalIntensiveQuantities& intQuantsIn = localModel.intensiveQuantities(globI, /*timeIdx*/ 0);
 
             // Flux term.
             {
@@ -1536,6 +1542,10 @@ private:
                 // LocalResidualKernel::template computeStorage<Scalar>(adres, intQuantsIn);
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
+
+            // more stuff should happen here
+
+            *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
         }
     }
 
@@ -1548,7 +1558,8 @@ private:
         const NeighborSparseTable GPU_LOCAL_neighborInfo,
         DiagPtrType GPU_LOCAL_diagMatAddress,
         GpuResidualView GPU_LOCAL_residualView,
-        const GpuBoundaryInfoView GPU_LOCAL_boundaryInfo)
+        const GpuBoundaryInfoView GPU_LOCAL_boundaryInfo,
+        LocalModelClass localModel)
     {
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
         // Boundary terms. Only looping over cells with nontrivial bcs.
@@ -1590,8 +1601,10 @@ private:
         }
     }
 
+    // not static anymore because it depends on the model() function of the object calling the funciton
+    // providing model_() as an argument did not work because of some deleted copy ctor, not sure how to handle that.
     template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView, class GpuBoundaryInfoView>
-    static void linearize_kernel_CPU(
+    void linearize_kernel_CPU(
         const bool dispersionActive,
         const unsigned int numCells,
         const bool on_full_domain,
@@ -1612,7 +1625,7 @@ private:
             MatrixBlockType bMat(2.0);
             ADVectorBlockType adres(3.0);
             ADVectorBlockType darcyFlux(4.0);
-            // const LocalIntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            const LocalIntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
             // const LocalIntensiveQuantities& intQuantsIn = LocalModelClass{}.intensiveQuantities(globI, /*timeIdx*/ 0);
 
             // Flux term.
@@ -1630,7 +1643,7 @@ private:
                     //                         nbInfo.res_nbinfo,  problem_().moduleParams());
 
                     // LocalResidualKernel::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                    //                         nbInfo.res_nbinfo,  0);
+                    //                         nbInfo.res_nbinfo,  problem_().moduleParams());
                     adres *= nbInfo.res_nbinfo.faceArea;
                     setResAndJacobiGPUCPU(res, bMat, adres);
                     GPU_LOCAL_residualView[globI] += res;
@@ -1649,9 +1662,14 @@ private:
             // const Scalar storefac = volume / dt;
             adres = 1.0;
             {
-                // LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
+                LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
             }
+
             setResAndJacobiGPUCPU(res, bMat, adres);
+
+            // more stuff should happen here
+
+            *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
         }
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
