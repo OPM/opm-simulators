@@ -25,6 +25,7 @@
 
 #include <dune/grid/common/mcmgmapper.hh>
 
+#include <opm/grid/cpgrid/LgrOutputHelpers.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
@@ -552,7 +553,7 @@ doWriteOutput(const int                          reportStepNum,
 {
     const auto isParallel = this->collectOnIORank_.isParallel();
     const bool needsReordering = this->collectOnIORank_.doesNeedReordering();
-
+    
     RestartValue restartValue {
         (isParallel || needsReordering)
         ? this->collectOnIORank_.globalCellData()
@@ -600,6 +601,17 @@ doWriteOutput(const int                          reportStepNum,
             restartValue.addExtra(flores.name, UnitSystem::measure::rate, flores.values);
         }
     }
+
+    std::vector<RestartValue> restartValue_levels{}; // only serial, only CpGrid (for now)
+    if (!(isParallel || needsReordering)) {
+        // Level cells that appear on the leaf grid view get the data::Solution values from there.
+        // Other cells (i.e., parent cells that vanished due to refinement) get rubbish values for now.
+        // Only data::Solution is restricted to the level grids. Well, GroupAndNetwork, Aquifer are
+        // not modified in this method. 
+        restartValue_levels = Opm::Lgr::getRestartValueLevelGrids<Scalar>(this->grid_,
+                                                                          restartValue);
+    }
+    
     // make sure that the previous I/O request has been completed
     // and the number of incomplete tasklets does not increase between
     // time steps
