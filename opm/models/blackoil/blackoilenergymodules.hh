@@ -159,57 +159,39 @@ public:
     {
         if constexpr (enableEnergy) {
 
+            // TODO: this can be made cleaner by centralizing this logic in the getter
+            FluidSystem* fsysptr;
             bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+
             if constexpr (usesStaticFluidSystem)
             {
-                const auto& poro = decay<LhsEval>(intQuants.porosity());
+                static FluidSystem instance;
+                fsysptr = &instance;
+            } else {
+                fsysptr = intQuants.getFluidSystem();
+            }
 
-                // accumulate the internal energy of the fluids
-                const auto& fs = intQuants.fluidState();
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                        continue;
-                    }
+            const auto& poro = decay<LhsEval>(intQuants.porosity());
 
-                    const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
-                    const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
-                    const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
-
-                    storage[contiEnergyEqIdx] += poro*S*u*rho;
+            // accumulate the internal energy of the fluids
+            const auto& fs = intQuants.fluidState();
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (!fsysptr->phaseIsActive(phaseIdx)) {
+                    continue;
                 }
 
-                // add the internal energy of the rock
-                const Scalar rockFraction = intQuants.rockFraction();
-                const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
-                storage[contiEnergyEqIdx] += rockFraction * uRock;
-                storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+                const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
+                const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
+                const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
+
+                storage[contiEnergyEqIdx] += poro*S*u*rho;
             }
-            else
-            {
-                auto* fsysptr = intQuants.getFluidSystem();
 
-                const auto& poro = decay<LhsEval>(intQuants.porosity());
-
-                // accumulate the internal energy of the fluids
-                const auto& fs = intQuants.fluidState();
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                    if (!fsysptr->phaseIsActive(phaseIdx)) {
-                        continue;
-                    }
-
-                    const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
-                    const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
-                    const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
-
-                    storage[contiEnergyEqIdx] += poro*S*u*rho;
-                }
-
-                // add the internal energy of the rock
-                const Scalar rockFraction = intQuants.rockFraction();
-                const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
-                storage[contiEnergyEqIdx] += rockFraction * uRock;
-                storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
-            }
+            // add the internal energy of the rock
+            const Scalar rockFraction = intQuants.rockFraction();
+            const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
+            storage[contiEnergyEqIdx] += rockFraction * uRock;
+            storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
     }
 

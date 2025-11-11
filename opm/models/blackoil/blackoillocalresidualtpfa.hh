@@ -173,55 +173,68 @@ public:
         const auto& fs = intQuants.fluidState();
         storage = 0.0;
 
+        // TODO: this can be made cleaner by centralizing this logic in the getter
+        FluidSystem* fsysptr;
         bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+
         if constexpr (usesStaticFluidSystem)
         {
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-                unsigned activeCompIdx =
-                    FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-                LhsEval surfaceVolume =
-                    Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
-                    Toolbox::template decay<LhsEval>(fs.invB(phaseIdx)) *
-                    Toolbox::template decay<LhsEval>(intQuants.porosity());
+            static FluidSystem instance;
+            fsysptr = &instance;
+        } else {
+            fsysptr = intQuants.getFluidSystem();
+        }
 
-                storage[conti0EqIdx + activeCompIdx] += surfaceVolume;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!fsysptr->phaseIsActive(phaseIdx)) {
+                continue;
+            }
+            unsigned activeCompIdx =
+                fsysptr->canonicalToActiveCompIdx(fsysptr->solventComponentIndex(phaseIdx));
+            LhsEval surfaceVolume =
+                Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
+                Toolbox::template decay<LhsEval>(fs.invB(phaseIdx)) *
+                Toolbox::template decay<LhsEval>(intQuants.porosity());
 
-                // account for dissolved gas
-                if (phaseIdx == oilPhaseIdx && FluidSystem::enableDissolvedGas()) {
-                    unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
-                    storage[conti0EqIdx + activeGasCompIdx] +=
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rs()) *
-                        surfaceVolume;
-                }
+            storage[conti0EqIdx + activeCompIdx] += surfaceVolume;
 
-                // account for dissolved gas in water
-                if (phaseIdx == waterPhaseIdx && FluidSystem::enableDissolvedGasInWater()) {
-                    unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
-                    storage[conti0EqIdx + activeGasCompIdx] +=
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rsw()) *
-                        surfaceVolume;
-                }
-
-                // account for vaporized oil
-                if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedOil()) {
-                    unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
-                    storage[conti0EqIdx + activeOilCompIdx] +=
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rv()) *
-                        surfaceVolume;
-                }
-
-                // account for vaporized water
-                if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedWater()) {
-                    unsigned activeWaterCompIdx = FluidSystem::canonicalToActiveCompIdx(waterCompIdx);
-                    storage[conti0EqIdx + activeWaterCompIdx] +=
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rvw()) *
-                        surfaceVolume;
-                }
+            // account for dissolved gas
+            if (phaseIdx == oilPhaseIdx && fsysptr->enableDissolvedGas()) {
+                unsigned activeGasCompIdx = fsysptr->canonicalToActiveCompIdx(gasCompIdx);
+                storage[conti0EqIdx + activeGasCompIdx] +=
+                    Toolbox::template decay<LhsEval>(intQuants.fluidState().Rs()) *
+                    surfaceVolume;
             }
 
+            // account for dissolved gas in water
+            if (phaseIdx == waterPhaseIdx && fsysptr->enableDissolvedGasInWater()) {
+                unsigned activeGasCompIdx = fsysptr->canonicalToActiveCompIdx(gasCompIdx);
+                storage[conti0EqIdx + activeGasCompIdx] +=
+                    Toolbox::template decay<LhsEval>(intQuants.fluidState().Rsw()) *
+                    surfaceVolume;
+            }
+
+            // account for vaporized oil
+            if (phaseIdx == gasPhaseIdx && fsysptr->enableVaporizedOil()) {
+                unsigned activeOilCompIdx = fsysptr->canonicalToActiveCompIdx(oilCompIdx);
+                storage[conti0EqIdx + activeOilCompIdx] +=
+                    Toolbox::template decay<LhsEval>(intQuants.fluidState().Rv()) *
+                    surfaceVolume;
+            }
+
+            // account for vaporized water
+            if (phaseIdx == gasPhaseIdx && fsysptr->enableVaporizedWater()) {
+                unsigned activeWaterCompIdx = fsysptr->canonicalToActiveCompIdx(waterCompIdx);
+                storage[conti0EqIdx + activeWaterCompIdx] +=
+                    Toolbox::template decay<LhsEval>(intQuants.fluidState().Rvw()) *
+                    surfaceVolume;
+            }
+        }
+
+        // These have to be protected because I have not bothered to change the signature
+        // in each of these classes to be generic in terms of storage type.
+        if constexpr (usesStaticFluidSystem)
+        {
             adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex());
 
             // deal with solvents (if present)
@@ -232,10 +245,13 @@ public:
 
             // deal with polymer (if present)
             PolymerModule::addStorage(storage, intQuants);
+        }
 
-            // deal with energy (if present)
-            EnergyModule::template addStorage<LhsEval>(storage, intQuants);
+        // deal with energy (if present)
+        EnergyModule::template addStorage<LhsEval>(storage, intQuants);
 
+        if constexpr (usesStaticFluidSystem)
+        {
             // deal with foam (if present)
             FoamModule::addStorage(storage, intQuants);
 
@@ -244,60 +260,7 @@ public:
 
             // deal with bioeffects (if present)
             BioeffectsModule::addStorage(storage, intQuants);
-        }
-        else {
-            auto* fsysptr = intQuants.getFluidSystem();
 
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!fsysptr->phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-                unsigned activeCompIdx =
-                    fsysptr->canonicalToActiveCompIdx(fsysptr->solventComponentIndex(phaseIdx));
-                LhsEval surfaceVolume =
-                    Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
-                    Toolbox::template decay<LhsEval>(fs.invB(phaseIdx)) *
-                    Toolbox::template decay<LhsEval>(intQuants.porosity());
-
-                storage[conti0EqIdx + activeCompIdx] += surfaceVolume;
-
-                // account for dissolved gas
-                if (phaseIdx == oilPhaseIdx && fsysptr->enableDissolvedGas()) {
-                    unsigned activeGasCompIdx = fsysptr->canonicalToActiveCompIdx(gasCompIdx);
-                    storage[conti0EqIdx + activeGasCompIdx] +=
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rs()) *
-                        surfaceVolume;
-                }
-
-                // account for dissolved gas in water
-                if (phaseIdx == waterPhaseIdx && fsysptr->enableDissolvedGasInWater()) {
-                    unsigned activeGasCompIdx = fsysptr->canonicalToActiveCompIdx(gasCompIdx);
-                    storage[conti0EqIdx + activeGasCompIdx] +=
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rsw()) *
-                        surfaceVolume;
-                }
-
-                // account for vaporized oil
-                if (phaseIdx == gasPhaseIdx && fsysptr->enableVaporizedOil()) {
-                    unsigned activeOilCompIdx = fsysptr->canonicalToActiveCompIdx(oilCompIdx);
-                    storage[conti0EqIdx + activeOilCompIdx] +=
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rv()) *
-                        surfaceVolume;
-                }
-
-                // account for vaporized water
-                if (phaseIdx == gasPhaseIdx && fsysptr->enableVaporizedWater()) {
-                    unsigned activeWaterCompIdx = fsysptr->canonicalToActiveCompIdx(waterCompIdx);
-                    storage[conti0EqIdx + activeWaterCompIdx] +=
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rvw()) *
-                        surfaceVolume;
-                }
-            }
-
-            // adaptMassConservationQuantities_ contains nothing for SPE11C
-
-            // deal with energy (if present)
-            EnergyModule::template addStorage<LhsEval>(storage, intQuants);
         }
     }
 
