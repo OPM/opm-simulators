@@ -1539,7 +1539,7 @@ private:
             // const Scalar storefac = volume / dt;
             adres = 1.0;
             {
-                // LocalResidualKernel::template computeStorage<Scalar>(adres, intQuantsIn);
+                LocalResidualKernel::template computeStorage<Scalar>(adres, intQuantsIn);
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
 

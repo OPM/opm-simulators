@@ -854,6 +854,11 @@ public:
         }
     }
 
+    OPM_HOST_DEVICE auto getFluidSystem() const
+    {
+        return fluidSystem_;
+    }
+
 private:
     friend BlackOilSolventIntensiveQuantities<TypeTag, enableSolvent>;
     friend BlackOilExtboIntensiveQuantities<TypeTag, enableExtbo>;
