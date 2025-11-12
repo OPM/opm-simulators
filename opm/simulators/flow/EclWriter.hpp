@@ -77,7 +77,7 @@ struct EclOutputDoublePrecision { static constexpr bool value = false; };
 struct EnableWriteAllSolutions { static constexpr bool value = false; };
 
 // Write ESMRY file for fast loading of summary data
-struct EnableEsmry { static constexpr bool value = false; };
+struct EnableEsmry { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 
