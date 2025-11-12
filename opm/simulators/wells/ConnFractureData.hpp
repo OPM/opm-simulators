@@ -18,48 +18,46 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_CONNFILTRATEDATA_HPP
-#define OPM_CONNFILTRATEDATA_HPP
+#ifndef OPM_CONNFRACTUREDATA_HPP
+#define OPM_CONNFRACTUREDATA_HPP
 
 #include <vector>
 
 namespace Opm {
 
 template<class Scalar>
-struct ConnFiltrateData {
+struct ConnFractureData {
 
     void resize(std::size_t num_perf);
 
     template<class Serializer>
     void serializeOp(Serializer& serializer) {
-        serializer(rates);
-        serializer(total);
-        serializer(skin_factor);
-        serializer(thickness);
-        serializer(perm);
-        serializer(poro);
-        serializer(radius);
-        serializer(area_of_flow);
-        serializer(flow_factor);
-        serializer(fracture_rate);
+        serializer(area);
+        serializer(flux);
+        serializer(height);
+        serializer(length);
+        serializer(WI);
+        serializer(volume);
+        serializer(filter_volume);
+        serializer(avg_width);
+        serializer(avg_filter_width);
     }
 
-    static ConnFiltrateData serializationTestObject();
+    static ConnFractureData serializationTestObject();
 
-    bool operator==(const ConnFiltrateData& rhs) const;
+    bool operator==(const ConnFractureData& rhs) const;
 
-    std::vector<Scalar> rates;
-    std::vector<Scalar> total;
-    std::vector<Scalar> skin_factor;
-    std::vector<Scalar> thickness;
-    std::vector<Scalar> perm;
-    std::vector<Scalar> poro;
-    std::vector<Scalar> radius;
-    std::vector<Scalar> area_of_flow;
-    std::vector<Scalar> flow_factor;
-    std::vector<Scalar> fracture_rate;
+    std::vector<Scalar> area;
+    std::vector<Scalar> flux;
+    std::vector<Scalar> height;
+    std::vector<Scalar> length;
+    std::vector<Scalar> WI;
+    std::vector<Scalar> volume;
+    std::vector<Scalar> filter_volume;
+    std::vector<Scalar> avg_width;
+    std::vector<Scalar> avg_filter_width;
 };
 
-} // namespace Opm
+}
 
 #endif // OPM_CONNFILTRATEDATA_HPP

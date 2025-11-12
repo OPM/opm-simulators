@@ -668,6 +668,7 @@ reportConnections(std::vector<data::Connection>& connections,
 
     if (! ws.producer) {
         this->reportConnectionFilterCake(well_index, connections);
+        this->reportConnectionFracture(well_index, connections);
     }
 
     if (! perf_data.connFracStatistics.empty()) {
@@ -1269,6 +1270,34 @@ reportConnectionFilterCake(const std::size_t well_index,
         filtrate.perm = filtrate_data.perm[i];
         filtrate.radius = filtrate_data.radius[i];
         filtrate.area_of_flow = filtrate_data.area_of_flow[i];
+        filtrate.flow_factor = filtrate_data.flow_factor[i];
+        filtrate.fracture_rate = filtrate_data.fracture_rate[i];
+    }
+}
+
+
+template<typename Scalar, typename IndexTraits>
+void WellState<Scalar, IndexTraits>::
+reportConnectionFracture(const std::size_t well_index,
+                         std::vector<data::Connection>& connections) const
+{
+    const auto& perf_data = this->well(well_index).perf_data;
+    const auto num_perf_well = perf_data.size();
+
+    const auto& data = perf_data.fracture_data;
+
+    for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
+        auto& fracture = connections[i].fracture;
+
+        fracture.area = data.area[i];
+        fracture.flux = data.flux[i];
+        fracture.height = data.height[i];
+        fracture.length = data.length[i];
+        fracture.WI = data.WI[i];
+        fracture.volume = data.volume[i];
+        fracture.filter_volume = data.filter_volume[i];
+        fracture.avg_width = data.avg_width[i];
+        fracture.avg_filter_width = data.avg_filter_width[i];
     }
 }
 
