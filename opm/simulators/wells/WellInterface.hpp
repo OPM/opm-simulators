@@ -353,11 +353,6 @@ public:
         return connectionRates_;
     }
 
-    std::vector<Scalar> wellIndex(const int perf,
-                                  const IntensiveQuantities& intQuants,
-                                  const Scalar trans_mult,
-                                  const SingleWellStateType& ws) const;
-
     void updateConnectionDFactor(const Simulator& simulator,
                                  SingleWellStateType& ws) const;
 
@@ -478,6 +473,21 @@ protected:
                                                                 DeferredLogger& deferred_logger);
 
     Eval getPerfCellPressure(const FluidState& fs) const;
+
+    // get the transmissibility multiplier for specific perforation
+    template<class Value, class Callback>
+    void getTransMult(Value& trans_mult,
+                      const Simulator& simulator,
+                      const int cell_idx,
+                      Callback& extendEval) const;
+
+    // get the well transmissibility for specific perforation
+    template<class Value>
+    void getTw(std::vector<Value>&         wi,
+               const int                   perf,
+               const IntensiveQuantities&  intQuants,
+               const Value&                trans_mult,
+               const SingleWellStateType&  ws) const;
 
     // get the mobility for specific perforation
     template<class Value, class Callback>

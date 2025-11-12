@@ -1103,24 +1103,34 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
+        auto obtain = [](const auto& value)
+                      {
+                          if constexpr (std::is_same_v<LhsEval, Scalar>) {
+                              return getValue(value);
+                          } else {
+                              return value;
+                          }
+                      };
+        return rockCompTransMultiplier<LhsEval>(intQuants, elementIdx, obtain);
+    }
+
+    template <class LhsEval, class Callback>
+    LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx, Callback& obtain) const
+    {
         const bool implicit = !this->explicitRockCompaction_;
-        return implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx)
+        return implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx, obtain)
                         : this->simulator().problem().getRockCompTransMultVal(elementIdx);
     }
 
-
-    /*!
-     * \brief Return the well transmissibility multiplier due to rock changes.
-     */
-    template <class LhsEval>
-    LhsEval wellTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
+    template <class LhsEval, class Callback>
+    LhsEval wellTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx, Callback& obtain) const
     {
         OPM_TIMEBLOCK_LOCAL(wellTransMultiplier, Subsystem::Wells);
 
         const bool implicit = !this->explicitRockCompaction_;
-        LhsEval trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx)
+        LhsEval trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx, obtain)
                                       : this->simulator().problem().getRockCompTransMultVal(elementIdx);
-        trans_mult *= this->simulator().problem().template permFactTransMultiplier<LhsEval>(intQuants, elementIdx);
+        trans_mult *= this->simulator().problem().template permFactTransMultiplier<LhsEval>(intQuants, elementIdx, obtain);
 
         return trans_mult;
     }
@@ -1637,6 +1647,21 @@ protected:
     template <class LhsEval>
     LhsEval computeRockCompTransMultiplier_(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
+        auto obtain = [](const auto& value)
+                      {
+                          if constexpr (std::is_same_v<LhsEval, Scalar>) {
+                              return getValue(value);
+                          } else {
+                              return value;
+                          }
+                      };
+
+        return computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx, obtain);
+    }
+
+    template <class LhsEval, class Callback>
+    LhsEval computeRockCompTransMultiplier_(const IntensiveQuantities& intQuants, unsigned elementIdx, Callback& obtain) const
+    {
         OPM_TIMEBLOCK_LOCAL(computeRockCompTransMultiplier, Subsystem::PvtProps);
         if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty())
             return 1.0;
@@ -1646,12 +1671,12 @@ protected:
             tableIdx = this->rockTableIdx_[elementIdx];
 
         const auto& fs = intQuants.fluidState();
-        LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
+        LhsEval effectivePressure = obtain(fs.pressure(refPressurePhaseIdx_()));
         const auto& rock_config = this->simulator().vanguard().eclState().getSimulationConfig().rock_config();
         if (!this->minRefPressure_.empty())
             // The pore space change is irreversible
             effectivePressure =
-                min(decay<LhsEval>(fs.pressure(refPressurePhaseIdx_())),
+                min(obtain(fs.pressure(refPressurePhaseIdx_())),
                     this->minRefPressure_[elementIdx]);
 
         if (!this->overburdenPressure_.empty())
@@ -1666,7 +1691,7 @@ protected:
 
         // water compaction
         assert(!this->rockCompTransMultWc_.empty());
-        LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
+        LhsEval SwMax = max(obtain(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
         LhsEval SwDeltaMax = SwMax - asImp_().initialFluidStates()[elementIdx].saturation(waterPhaseIdx);
 
         return this->rockCompTransMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);

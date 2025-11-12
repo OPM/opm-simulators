@@ -1857,12 +1857,14 @@ namespace Opm
     }
 
     template <typename TypeTag>
-    std::vector<typename WellInterface<TypeTag>::Scalar>
+    template<class Value>
+    void
     WellInterface<TypeTag>::
-    wellIndex(const int                      perf,
-              const IntensiveQuantities&     intQuants,
-              const Scalar                   trans_mult,
-              const SingleWellStateType& ws) const
+    getTw(std::vector<Value>&         Tw,
+          const int                   perf,
+          const IntensiveQuantities&  intQuants,
+          const Value&                trans_mult,
+          const SingleWellStateType&  ws) const
     {
         OPM_TIMEFUNCTION_LOCAL(Subsystem::Wells);
         // Add a Forchheimer term to the gas phase CTF if the run uses
@@ -1870,22 +1872,20 @@ namespace Opm
         if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
             OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - possibly wellIndex was called with a global instead of a local perforation index!");
         }
-        auto wi = std::vector<Scalar>
-            (this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
 
         if constexpr (! Indices::gasEnabled) {
-            return wi;
+            return;
         }
 
         const auto& wdfac = this->well_ecl_.getWDFAC();
 
         if (! wdfac.useDFactor() || (this->well_index_[perf] == 0.0)) {
-            return wi;
+            return;
         }
 
         const Scalar d = this->computeConnectionDFactor(perf, intQuants, ws);
         if (d < 1.0e-15) {
-            return wi;
+            return;
         }
 
         // Solve quadratic equations for connection rates satisfying the ipr and the flow-dependent skin.
@@ -1901,8 +1901,8 @@ namespace Opm
         const Scalar invB = getValue(intQuants.fluidState().invB(FluidSystem::gasPhaseIdx));
         const Scalar mob_g = getValue(intQuants.mobility(FluidSystem::gasPhaseIdx)) * invB;
         const Scalar a = d;
-        const Scalar b = 2*scaling/wi[gas_comp_idx];
-        const Scalar c = -2*scaling*mob_g*drawdown;
+        const Scalar b = 2 * scaling / getValue(Tw[gas_comp_idx]);
+        const Scalar c = -2 * scaling * mob_g * drawdown;
 
         Scalar consistent_Q = -1.0e20;
         // Find and check negative solutions (a --> -a)
@@ -1932,9 +1932,7 @@ namespace Opm
                 consistent_Q = xp2;
             }
         }
-        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (consistent_Q/2 * d / scaling));
-
-        return wi;
+        Tw[gas_comp_idx]  = 1.0 / (1.0 / (trans_mult * this->well_index_[perf]) + (consistent_Q/2 * d / scaling));
     }
 
     template <typename TypeTag>
@@ -2012,17 +2010,19 @@ namespace Opm
             return conns[connIx[perf]].CF();
         };
 
+        auto obtain = [](const Eval& value)
+                      {
+                          return getValue(value);
+                      };
+
         auto& tmult = ws.perf_data.connection_compaction_tmult;
         auto& ctf   = ws.perf_data.connection_transmissibility_factor;
 
         for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-
-            const auto& intQuants = simulator.model()
-                .intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-
-            tmult[perf] = simulator.problem()
-                .template wellTransMultiplier<double>(intQuants, cell_idx);
+            Scalar trans_mult(0.0);
+            getTransMult(trans_mult, simulator, cell_idx, obtain);
+            tmult[perf] = trans_mult;
 
             ctf[perf] = connCF(perf) * tmult[perf];
         }
@@ -2040,6 +2040,19 @@ namespace Opm
         } else {
             return fs.pressure(FluidSystem::waterPhaseIdx);
         }
+    }
+
+    template <typename TypeTag>
+    template<class Value, class Callback>
+    void
+    WellInterface<TypeTag>::
+    getTransMult(Value& trans_mult,
+                 const Simulator& simulator,
+                 const int cell_idx,
+                 Callback& extendEval) const
+    {
+        const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+        trans_mult = simulator.problem().template wellTransMultiplier<Value>(intQuants, cell_idx, extendEval);
     }
 
     template <typename TypeTag>

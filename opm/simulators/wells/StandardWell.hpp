@@ -287,7 +287,7 @@ namespace Opm
         void computePerfRate(const IntensiveQuantities& intQuants,
                              const std::vector<Value>& mob,
                              const Value& bhp,
-                             const std::vector<Scalar>& Tw,
+                             const std::vector<Value>& Tw,
                              const int perf,
                              const bool allow_cf,
                              std::vector<Value>& cq_s,
@@ -303,7 +303,7 @@ namespace Opm
                              const Value& rvw,
                              const Value& rsw,
                              std::vector<Value>& b_perfcells_dense,
-                             const std::vector<Scalar>& Tw,
+                             const std::vector<Value>& Tw,
                              const int perf,
                              const bool allow_cf,
                              const Value& skin_pressure,
@@ -332,6 +332,12 @@ namespace Opm
         // return the density at the perforation[0] of the rank owning this well,
         // value is cached to minimize the number of broadcasts
         Scalar getRefDensity() const override;
+
+        // get the transmissibility multiplier for specific perforation
+        template<class Value>
+        void getTransMult(Value& trans_mult,
+                          const Simulator& simulator,
+                          const int cell_indx) const;
 
         // get the mobility for specific perforation
         template<class Value>
