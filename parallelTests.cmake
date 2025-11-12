@@ -188,6 +188,15 @@ add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                      DIR spe1
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
+add_test_compare_parallel_simulation(CASENAME spe1_temp
+                                     FILENAME SPE1CASE2_TEMP
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol}
+                                     REL_TOL ${coarse_rel_tol_parallel}
+                                     DIR spe1
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+
+
 add_test_compare_parallel_simulation(CASENAME spe1_thermal_onephase
                                      FILENAME SPE1CASE2_THERMAL_ONEPHASE
                                      SIMULATOR flow
