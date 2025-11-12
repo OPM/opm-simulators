@@ -692,7 +692,7 @@ namespace Opm {
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
-        const bool changed = this->updateNONEProductionGroups(local_deferredLogger);
+        this->updateNONEProductionGroups(local_deferredLogger);
 
         this->commitWGState();
 
