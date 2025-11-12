@@ -521,7 +521,7 @@ protected:
     void assignMassGasRate(data::Wells& wsrpt,
                            const Scalar gasDensity) const;
 
-    bool updateNONEProductionGroups(DeferredLogger& deferred_logger);
+    void updateNONEProductionGroups(DeferredLogger& deferred_logger);
 
     Schedule& schedule_;
 
