@@ -118,6 +118,9 @@ function(add_test_compareSeparateECLFiles)
   else()
     set(MPI_PROCS 1)
   endif()
+  if(NOT PARAM_DIR)
+    set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${PARAM_TEST_ARGS})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR1}
@@ -139,7 +142,8 @@ function(add_test_compareSeparateECLFiles)
                TEST_ARGS ${TEST_ARGS})
   set_tests_properties(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} PROPERTIES
                         DIRNAME ${PARAM_DIR}
-                        FILENAME ${PARAM_FILENAME}
+                        FILENAME1 ${PARAM_FILENAME1}
+                        FILENAME2 ${PARAM_FILENAME2}
                         SIMULATOR ${PARAM_SIMULATOR}
                         TESTNAME ${PARAM_CASENAME}
                         PROCESSORS ${MPI_PROCS})
