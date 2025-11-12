@@ -263,6 +263,7 @@ public:
                                                   const Well::ProductionControls& prod_controls,
                                                   const Scalar WQTotal,
                                                   WellStateType& well_state,
+                                                  const std::vector<Scalar>& surface_fractions,
                                                   DeferredLogger& deferred_logger,
                                                   const bool fixed_control = false,
                                                   const bool fixed_status = false);

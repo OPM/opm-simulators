@@ -641,7 +641,7 @@ WellGroupHelper<Scalar, IndexTraits>::getProductionGroupRateVector(const std::st
 }
 
 template <typename Scalar, typename IndexTraits>
-Scalar
+std::pair<WellInjectorCMode, Scalar>
 WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
@@ -663,7 +663,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
         || current_group_control == Group::InjectionCMode::NONE) {
         // Return if we are not available for parent group.
         if (!group.injectionGroupControlAvailable(injection_phase)) {
-            return std::numeric_limits<Scalar>::max();
+            return std::make_pair(WellInjectorCMode::CMODE_UNDEFINED, std::numeric_limits<Scalar>::max());
         }
         // Otherwise: check production share of parent's control.
         const auto& parent_group = this->schedule_.getGroup(group.parent(), this->report_step_);
@@ -680,7 +680,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
     // This can be false for FLD-controlled groups, we must therefore
     // check for FLD first (done above).
     if (!group.isInjectionGroup()) {
-        return std::numeric_limits<Scalar>::max();
+        return std::make_pair(WellInjectorCMode::CMODE_UNDEFINED, std::numeric_limits<Scalar>::max());
     }
 
     // If we are here, we are at the topmost group to be visited in the recursion.
@@ -771,11 +771,14 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
         }
     }
     // Avoid negative target rates comming from too large local reductions.
-    return std::max(Scalar(0.0), target / efficiency_factor);
+    target = std::max(Scalar(0.0), target)/efficiency_factor;
+    // Translating injector group control to individual well control requires some care.
+    // We just set it to undefined for now, and update at a later stage if needed.
+    return std::make_pair(WellInjectorCMode::CMODE_UNDEFINED, target);
 }
 
 template <typename Scalar, typename IndexTraits>
-Scalar
+std::pair<WellProducerCMode, Scalar>
 WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
@@ -798,7 +801,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
         || current_group_control == Group::ProductionCMode::NONE) {
         // Return if we are not available for parent group.
         if (!group.productionGroupControlAvailable()) {
-            return std::numeric_limits<Scalar>::max();
+            return std::make_pair(WellProducerCMode::CMODE_UNDEFINED, std::numeric_limits<Scalar>::max());
         }
         // Otherwise: check production share of parent's control.
         const auto& parent_group = this->schedule_.getGroup(group.parent(), this->report_step_);
@@ -814,7 +817,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
     // This can be false for FLD-controlled groups, we must therefore
     // check for FLD first (done above).
     if (!group.isProductionGroup()) {
-        return std::numeric_limits<Scalar>::max();
+        return std::make_pair(WellProducerCMode::CMODE_UNDEFINED, std::numeric_limits<Scalar>::max());
     }
 
     // If we are here, we are at the topmost group to be visited in the recursion.
@@ -899,8 +902,30 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
         }
     }
     // Avoid negative target rates comming from too large local reductions.
-    return std::max(Scalar(0.0), target / efficiency_factor);
-    ;
+    target = std::max(Scalar(0.0), target)/efficiency_factor;
+    // Translate group control to well control
+    WellProducerCMode mode;
+    switch (current_group_control) {
+        case Group::ProductionCMode::ORAT:
+            mode = WellProducerCMode::ORAT;
+            break;
+        case Group::ProductionCMode::GRAT:
+            mode = WellProducerCMode::GRAT;
+            break;
+        case Group::ProductionCMode::WRAT:
+            mode = WellProducerCMode::WRAT;
+            break;
+        case Group::ProductionCMode::LRAT:
+            mode = WellProducerCMode::LRAT;
+            break;
+        case Group::ProductionCMode::RESV:
+            mode = WellProducerCMode::RESV;
+            break;
+        default:
+            mode = WellProducerCMode::CMODE_UNDEFINED;
+            break;
+    }
+    return std::make_pair(mode, target);
 }
 
 template <typename Scalar, typename IndexTraits>

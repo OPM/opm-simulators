@@ -331,6 +331,84 @@ zeroGroupRateTarget(const SummaryState& summary_state,
     }
 }
 
+template<typename FluidSystem>
+bool
+WellInterfaceFluidSystem<FluidSystem>::
+isFeasibleProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                               const std::vector<Scalar>& surface_fractions,
+                               const Well::ProducerCMode cmode) const
+{
+    return WellConstraints(*this).
+        isFeasibleProductionConstraint(ws, surface_fractions, cmode);
+}
+
+template<typename FluidSystem>
+bool
+WellInterfaceFluidSystem<FluidSystem>::
+updateProducerControlMode(SingleWellState<Scalar, IndexTraits>& ws,
+                          const SummaryState& summaryState,
+                          const Well::ProductionControls& controls,
+                          const std::vector<Scalar>& surface_fractions,
+                          DeferredLogger& deferred_logger) const
+{   
+    auto rRates = [this](const int fipreg,
+                         const int pvtRegion,
+                         const std::vector<Scalar>& surface_rates,
+                         std::vector<Scalar>& voidage_rates)
+    {
+        return rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegion,
+                                                        surface_rates, voidage_rates);
+    };
+    return WellConstraints(*this).
+            updateProducerControlMode(ws, summaryState, rRates, controls, surface_fractions, deferred_logger);
+}
+
+
+template<typename FluidSystem>
+std::pair<Well::ProducerCMode, typename FluidSystem::Scalar>
+WellInterfaceFluidSystem<FluidSystem>::
+estimateStrictestProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                                    const SummaryState& summaryState,
+                                    const Well::ProductionControls& controls,
+                                    const std::vector<Scalar>& surface_fractions,
+                                    const bool skip_zero_rate_constraints,
+                                    DeferredLogger& deferred_logger,
+                                    const std::optional<Scalar> bhp_at_thp_limit) const
+{
+    auto rRates = [this](const int fipreg,
+                         const int pvtRegion,
+                         const std::vector<Scalar>& surface_rates,
+                         std::vector<Scalar>& voidage_rates)
+    {
+        return rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegion,
+                                                        surface_rates, voidage_rates);
+    };
+    return WellConstraints(*this).
+            estimateStrictestProductionConstraint(ws, summaryState, rRates, controls, surface_fractions,
+                                                  skip_zero_rate_constraints, deferred_logger, bhp_at_thp_limit);
+}
+
+template<typename FluidSystem>
+std::pair<Well::ProducerCMode, typename FluidSystem::Scalar>
+WellInterfaceFluidSystem<FluidSystem>::
+estimateStrictestProductionRateConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                                          const Well::ProductionControls& controls,
+                                          const std::vector<Scalar>& surface_fractions,
+                                          const bool skip_zero_rate_constraints) const
+{
+    auto rRates = [this](const int fipreg,
+                         const int pvtRegion,
+                         const std::vector<Scalar>& surface_rates,
+                         std::vector<Scalar>& voidage_rates)
+    {
+        return rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegion,
+                                                        surface_rates, voidage_rates);
+    };
+    return WellConstraints(*this).
+            estimateStrictestProductionRateConstraint(ws, rRates, controls, surface_fractions,
+                                                      skip_zero_rate_constraints);
+}
+
 template<class Scalar>
 using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 

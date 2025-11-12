@@ -280,6 +280,7 @@ namespace Opm
                                              const Well::ProductionControls& prod_controls,
                                              const Scalar wqTotal,
                                              WellStateType& well_state,
+                                             const std::vector<Scalar>& surface_fractions,
                                              DeferredLogger& deferred_logger,
                                              const bool fixed_control,
                                              const bool fixed_status)
@@ -296,7 +297,7 @@ namespace Opm
         }
         const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
 
-        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(well_state.well(this->index_of_well_).status == WellStatus::OPEN)) {
+        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(ws.status == WellStatus::OPEN)) {
            return false;
         }
 
@@ -311,24 +312,27 @@ namespace Opm
                     // Changing to group controls here may lead to inconsistencies in the group handling which in turn
                     // may result in excessive back and forth switching. However, we currently allow this by default.
                     // The switch check_group_constraints_inner_well_iterations_ is a temporary solution.
-
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
-                    bool isGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
-                    if (! (isGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
-                        changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                    const bool hasGroupProdTarget = ws.group_target.has_value() && ws.production_cmode_group_translated.has_value();
+                    if (this->isProducer() && (!hasGroupControl || hasGroupProdTarget)) {
+                        changed = this->updateProducerControlMode(ws, summary_state, prod_controls, surface_fractions, deferred_logger);
+                    } else {
+                        bool isGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
+                        if (! (isGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
+                            changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                        }
+                        if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
+                            changed = changed || this->checkGroupConstraints(
+                                wgHelper, schedule, summary_state, false, well_state, deferred_logger
+                            );
+                        }
                     }
-                    if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
-                        changed = changed || this->checkGroupConstraints(
-                            wgHelper, schedule, summary_state, false, well_state, deferred_logger
-                        );
-                    }
-
                     if (changed) {
                         const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
                                                                         ws.production_cmode == Well::ProducerCMode::THP;
                         if (thp_controlled){
-                             ws.thp = this->getTHPConstraint(summary_state);
+                            ws.thp = this->getTHPConstraint(summary_state);
                         } else {
                             // don't call for thp since this might trigger additional local solve
                             updateWellStateWithTarget(simulator, wgHelper, well_state, deferred_logger);

@@ -63,6 +63,36 @@ public:
                                const std::optional<Well::InjectionControls>& inj_controls = std::nullopt,
                                const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
+    bool
+    isFeasibleProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                                   const std::vector<Scalar>& surface_fractions,
+                                   const Well::ProducerCMode cmode) const;
+
+    bool
+    updateProducerControlMode(SingleWellState<Scalar, IndexTraits>& ws,
+                              const SummaryState& summaryState,
+                              const RateConvFunc& calcReservoirVoidageRates,
+                              const Well::ProductionControls& controls,
+                              const std::vector<Scalar>& surface_fractions,
+                              DeferredLogger& deferred_logger) const;
+
+    std::pair<WellProducerCMode, Scalar>
+    estimateStrictestProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                                          const SummaryState& summaryState,
+                                          const RateConvFunc& calcReservoirVoidageRates,
+                                          const WellProductionControls& controls,
+                                          const std::vector<Scalar>& surface_fractions,
+                                          const bool skip_zero_rate_constraints,
+                                          DeferredLogger& deferred_logger,
+                                          const std::optional<Scalar> bhp_at_thp_limit = std::nullopt) const;
+
+    std::pair<WellProducerCMode, Scalar>
+    estimateStrictestProductionRateConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                                          const RateConvFunc& calcReservoirVoidageRates,
+                                          const Well::ProductionControls& controls,
+                                          const std::vector<Scalar>& surface_fractions,
+                                          const bool skip_zero_rate_constraints) const;
+
 private:
     WellInjectorCMode
     activeInjectionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
@@ -78,6 +108,15 @@ private:
                                bool& thp_limit_violated_but_not_switched,
                                DeferredLogger& deferred_logger,
                                const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
+
+    Scalar
+    getProductionControlModeScale(const SingleWellState<Scalar, IndexTraits>& ws,
+                                  const RateConvFunc& calcReservoirVoidageRates,
+                                  const WellProducerCMode& cmode,
+                                  const WellProductionControls& control,
+                                  const std::vector<Scalar>& surface_fractions,
+                                  const bool skip_zero_rate_constraints,
+                                  const std::optional<Scalar> target = std::nullopt) const;
 
     const WellInterfaceGeneric<Scalar, IndexTraits>& well_; //!< Reference to well interface
 };

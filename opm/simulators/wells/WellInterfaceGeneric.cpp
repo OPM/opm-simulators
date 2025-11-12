@@ -450,7 +450,66 @@ setPrevSurfaceRates(WellState<Scalar, IndexTraits>& well_state,
         ws.prev_surface_rates = ws.surface_rates;
     }
 }
+/*
+template<typename Scalar, typename IndexTraits>
+bool WellInterfaceGeneric<Scalar, IndexTraits>::isFeasibleProductionControl(const  WellState<Scalar, IndexTraits>& well_state,
+                                                                            const Well::ProductionControls& prod_controls,
+                                                                            const std::vector<Scalar>& fractions,
+                                                                            const std::vector<Scalar>& fraction_scaling,
+                                                                            std::optional<WellProducerCMode> cmode_opt) const
+{
+    // Avoid problematic control cases like e.g., WRAT for well with approx zero
+    // water fraction.
+    assert(this->isProducer());
+    auto& ws = well_state.well(this->index_of_well_);
+    const WellProducerCMode cmode = cmode_opt.has_value() ? cmode_opt.value() : ws.production_cmode;
 
+    if (!prod_controls.hasControl(cmode)) {
+        return false; 
+    }
+    if (cmode == Well::ProducerCMode::GRUP) {
+        if (ws.production_cmode_group_translated.has_value()) {
+            cmode = ws.production_cmode_group_translated.value();
+        } else {
+            return true; // can't know
+        }
+    } else {
+        cmode = ws.production_cmode;
+    }
+     // We only need to check ORAT, WRAT, GRAT, LRAT
+    const bool do_check = (gcmode == Well::ProducerCMode::ORAT ||
+                           gcmode == Well::ProducerCMode::WRAT ||
+                           gcmode == Well::ProducerCMode::GRAT ||
+                           gcmode == Well::ProducerCMode::LRAT);
+    if (!do_check) {
+        return true;
+    }
+    const auto& pu = this->phaseUsage();
+    auto scaled_fractions = fractions;
+    for (size_t i = 0; i < scaled_fractions.size(); ++i) {
+        scaled_fractions[i] *= fraction_scaling[i];
+    }
+    const auto scaled_frac_sum = std::accumulate(scaled_fractions.begin(), scaled_fractions.end(), 0.0);
+    // Compute weighted fraction corresponding to the control mode
+    Scalar scaled_cmode_frac = 0.0;
+    if (cmode == Well::ProducerCMode::ORAT || cmode == Well::ProducerCMode::LRAT) {
+        const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+        scaled_cmode_frac += weighted_fractions[oil_pos];
+    }
+    if (cmode == Well::ProducerCMode::WRAT || cmode == Well::ProducerCMode::LRAT) {
+        const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+        scaled_cmode_frac += weighted_fractions[water_pos];
+    }
+    if (cmode == Well::ProducerCMode::GRAT) {
+        const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+        scaled_cmode_frac += weighted_fractions[gas_pos];
+    }
+    const Scalar fraction_cur = scaled_cmode_frac / scaled_frac_sum;
+    const Scalar fraction_tol = this->param_.tolerance_wells_;
+
+    return fraction_cur > fraction_tol; 
+}
+*/
 template<typename Scalar, typename IndexTraits>
 void WellInterfaceGeneric<Scalar, IndexTraits>::
 setGuideRate(const GuideRate* guide_rate_arg)
