@@ -390,6 +390,13 @@ GroupState<Scalar>::production_control(const std::string& gname) const
     return group_iter->second;
 }
 
+template<class Scalar>
+const std::map<std::string, Group::ProductionCMode>&
+GroupState<Scalar>::get_production_controls() const
+{
+    return this->production_controls;
+};
+
 //-------------------------------------------------------------------------
 
 template<class Scalar>

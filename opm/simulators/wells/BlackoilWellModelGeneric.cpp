@@ -1948,13 +1948,19 @@ operator==(const BlackoilWellModelGeneric& rhs) const
 }
 
 template <typename Scalar, typename IndexTraits>
-bool
+void
 BlackoilWellModelGeneric<Scalar, IndexTraits>::
 updateNONEProductionGroups(DeferredLogger& deferred_logger)
 {
-    bool changed = false;
+    auto& group_state = this->groupState();
+    const auto& prod_group_controls = group_state.get_production_controls();
+    if (prod_group_controls.empty()) {
+        return;
+    }
+
     const auto& well_state = this->wellState();
-    std::set<std::string> production_groups; // keep tracking that the groups are used by some wells
+    // Keep track of groups that provide production targets for one or more wells
+    std::set<std::string> production_groups; // TODO: better name
 
     for (const auto& wname : well_state.wells()) {
         const auto& ws = well_state.well(wname);
@@ -1966,17 +1972,15 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
         }
     }
 
-    // parallel handling
-    auto& group_state = this->groupState();
-    const auto& prod_controls = group_state.get_production_controls();
-    const std::size_t size_pc = prod_controls.size();
+    // parallel communication to synchronize production groups used on all processes
+    const std::size_t size_pc = prod_group_controls.size();
 
     std::vector<std::string> gnames;
     gnames.reserve(size_pc);
     std::vector<int> local_used(size_pc, 0);
 
     std::size_t idx = 0;
-    for (const auto& gprod : prod_controls) {
+    for (const auto& gprod : prod_group_controls) {
         const auto& gname = gprod.first;
         gnames.push_back(gname);
         if (production_groups.count(gname) > 0) {
@@ -2010,10 +2014,8 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
             const std::string msg = fmt::format("Production group {} has no constraints active, setting control mode to NONE", gname);
             deferred_logger.info(msg);
             group_state.production_control(gname, Group::ProductionCMode::NONE);
-            changed = true;
         }
     }
-    return changed;
 }
 
 
