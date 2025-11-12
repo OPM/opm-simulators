@@ -31,7 +31,6 @@
 
 #include <array>
 #include <cstddef>
-#include <limits>
 #include <stack>
 #include <set>
 
@@ -641,7 +640,7 @@ WellGroupHelper<Scalar, IndexTraits>::getProductionGroupRateVector(const std::st
 }
 
 template <typename Scalar, typename IndexTraits>
-Scalar
+std::optional<Scalar>
 WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
@@ -655,7 +654,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
     // 'parent' will stay fixed while 'group' will be higher up
     // in the group tree.
-    // Eficiencyfactor is the well efficiency factor for the first group the well is
+    // Efficiency factor is the well efficiency factor for the first group the well is
     // part of. Later it is the accumulated factor including the group efficiency factor
     // of the child of group.
     auto current_group_control = this->groupState().injection_control(group.name(), injection_phase);
@@ -663,7 +662,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
         || current_group_control == Group::InjectionCMode::NONE) {
         // Return if we are not available for parent group.
         if (!group.injectionGroupControlAvailable(injection_phase)) {
-            return std::numeric_limits<Scalar>::max();
+            return std::nullopt;
         }
         // Otherwise: check production share of parent's control.
         const auto& parent_group = this->schedule_.getGroup(group.parent(), this->report_step_);
@@ -680,7 +679,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
     // This can be false for FLD-controlled groups, we must therefore
     // check for FLD first (done above).
     if (!group.isInjectionGroup()) {
-        return std::numeric_limits<Scalar>::max();
+        return std::nullopt;
     }
 
     // If we are here, we are at the topmost group to be visited in the recursion.
@@ -775,7 +774,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
 }
 
 template <typename Scalar, typename IndexTraits>
-Scalar
+std::optional<Scalar>
 WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
@@ -798,7 +797,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
         || current_group_control == Group::ProductionCMode::NONE) {
         // Return if we are not available for parent group.
         if (!group.productionGroupControlAvailable()) {
-            return std::numeric_limits<Scalar>::max();
+            return std::nullopt;
         }
         // Otherwise: check production share of parent's control.
         const auto& parent_group = this->schedule_.getGroup(group.parent(), this->report_step_);
@@ -814,14 +813,14 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
     // This can be false for FLD-controlled groups, we must therefore
     // check for FLD first (done above).
     if (!group.isProductionGroup()) {
-        return std::numeric_limits<Scalar>::max();
+        return std::nullopt;
     }
 
     // If we are here, we are at the topmost group to be visited in the recursion.
     // This is the group containing the control we will check against.
 
     // gconsale may adjust the grat target.
-    // the adjusted rates is send to the targetCalculator
+    // the adjusted rates is sent to the targetCalculator
     Scalar grat_target_from_sales = 0.0;
     if (this->groupState().has_grat_sales_target(group.name()))
         grat_target_from_sales = this->groupState().grat_sales_target(group.name());
@@ -898,9 +897,8 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
             target *= local_fraction_lambda(chain[ii + 1], name);
         }
     }
-    // Avoid negative target rates comming from too large local reductions.
+    // Avoid negative target rates coming from too large local reductions.
     return std::max(Scalar(0.0), target / efficiency_factor);
-    ;
 }
 
 template <typename Scalar, typename IndexTraits>
