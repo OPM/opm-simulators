@@ -1522,8 +1522,8 @@ private:
                     // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
                     //                         nbInfo.res_nbinfo,  problem_().moduleParams());
 
-                    // LocalResidualKernel::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                    //                         nbInfo.res_nbinfo,  0);
+                    LocalResidualKernel::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+                                            nbInfo.res_nbinfo,  localModel.moduleParams());
                     adres *= nbInfo.res_nbinfo.faceArea;
                     setResAndJacobiGPUCPU(res, bMat, adres);
                     GPU_LOCAL_residualView[globI] += res;
@@ -1645,8 +1645,8 @@ private:
                     // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
                     //                         nbInfo.res_nbinfo,  problem_().moduleParams());
 
-                    // LocalResidualKernel::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                    //                         nbInfo.res_nbinfo,  problem_().moduleParams());
+                    LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+                                            nbInfo.res_nbinfo,  problem_().moduleParams());
                     adres *= nbInfo.res_nbinfo.faceArea;
                     setResAndJacobiGPUCPU(res, bMat, adres);
                     GPU_LOCAL_residualView[globI] += res;

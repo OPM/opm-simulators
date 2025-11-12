@@ -781,19 +781,25 @@ public:
     {
         using Dir = FaceDir::DirEnum;
         if (dirMob_) {
-            printf("Using directional mobility\n");
-            switch (facedir) {
-                case Dir::XMinus:
-                case Dir::XPlus:
-                    return dirMob_->getArray(0)[phaseIdx];
-                case Dir::YMinus:
-                case Dir::YPlus:
-                    return dirMob_->getArray(1)[phaseIdx];
-                case Dir::ZMinus:
-                case Dir::ZPlus:
-                    return dirMob_->getArray(2)[phaseIdx];
-                default:
-                    throw std::runtime_error("Unexpected face direction");
+            bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+            if constexpr (usesStaticFluidSystem)
+            {
+                switch (facedir) {
+                    case Dir::XMinus:
+                    case Dir::XPlus:
+                        return dirMob_->getArray(0)[phaseIdx];
+                    case Dir::YMinus:
+                    case Dir::YPlus:
+                        return dirMob_->getArray(1)[phaseIdx];
+                    case Dir::ZMinus:
+                    case Dir::ZPlus:
+                        return dirMob_->getArray(2)[phaseIdx];
+                    default:
+                        throw std::runtime_error("Unexpected face direction");
+                }
+            }
+            else{
+                assert(false && "Directional mobility with non-static fluid system is not supported yet");
             }
         }
         else {

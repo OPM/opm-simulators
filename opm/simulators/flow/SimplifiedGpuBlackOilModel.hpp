@@ -79,6 +79,10 @@ public:
     {
     }
 
+    OPM_HOST_DEVICE ModuleParams& moduleParams() {
+        return moduleParams_;
+    }
+
     OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel() = default;
 
     OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const {}

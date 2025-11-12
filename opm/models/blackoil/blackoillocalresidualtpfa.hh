@@ -277,14 +277,15 @@ public:
      * one main difference: The darcy flux is calculated here, not
      * read from the extensive quantities of the element context.
      */
-    static void computeFlux(RateVector& flux,
-                            RateVector& darcy,
+    template <class ModuleParamsT, class RateVectorT, class IntensiveQuantitiesT, class ResidualNBInfoT>
+    OPM_HOST_DEVICE static void computeFlux(RateVectorT& flux,
+                            RateVectorT& darcy,
                             const unsigned globalIndexIn,
                             const unsigned globalIndexEx,
-                            const IntensiveQuantities& intQuantsIn,
-                            const IntensiveQuantities& intQuantsEx,
-                            const ResidualNBInfo& nbInfo,
-                            const ModuleParams& moduleParams)
+                            const IntensiveQuantitiesT& intQuantsIn,
+                            const IntensiveQuantitiesT& intQuantsEx,
+                            const ResidualNBInfoT& nbInfo,
+                            const ModuleParamsT& moduleParams)
     {
         OPM_TIMEBLOCK_LOCAL(computeFlux, Subsystem::Assembly);
         flux = 0.0;
@@ -371,16 +372,17 @@ public:
                          problem.moduleParams());
     }
 
-    static void calculateFluxes_(RateVector& flux,
-                                 RateVector& darcy,
-                                 const IntensiveQuantities& intQuantsIn,
-                                 const IntensiveQuantities& intQuantsEx,
+    template <class RateVectorT, class IntensiveQuantitiesT, class ResidualNBInfoT, class ModuleParamsT>
+    OPM_HOST_DEVICE static void calculateFluxes_(RateVectorT& flux,
+                                 RateVectorT& darcy,
+                                 const IntensiveQuantitiesT& intQuantsIn,
+                                 const IntensiveQuantitiesT& intQuantsEx,
                                  const unsigned& globalIndexIn,
                                  const unsigned& globalIndexEx,
-                                 const ResidualNBInfo& nbInfo,
-                                 const ModuleParams& moduleParams)
+                                 const ResidualNBInfoT& nbInfo,
+                                 const ModuleParamsT& moduleParams)
     {
-        OPM_TIMEBLOCK_LOCAL(calculateFluxes, Subsystem::Assembly);
+        // OPM_TIMEBLOCK_LOCAL(calculateFluxes, Subsystem::Assembly);
         const Scalar Vin = nbInfo.Vin;
         const Scalar Vex = nbInfo.Vex;
         const Scalar distZg = nbInfo.dZg;
@@ -389,8 +391,20 @@ public:
         const Scalar faceArea = nbInfo.faceArea;
         FaceDir::DirEnum facedir = nbInfo.faceDir;
 
+        // TODO: this can be made cleaner by centralizing this logic in the getter
+        FluidSystem* fsysptr;
+        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+
+        if constexpr (usesStaticFluidSystem)
+        {
+            static FluidSystem instance;
+            fsysptr = &instance;
+        } else {
+            fsysptr = intQuantsIn.getFluidSystem(); // same as for intQuantsEx
+        }
+
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+            if (!fsysptr->phaseIsActive(phaseIdx)) {
                 continue;
             }
             // darcy flux calculation
@@ -434,136 +448,136 @@ public:
             }
 
             unsigned activeCompIdx =
-                FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                fsysptr->canonicalToActiveCompIdx(fsysptr->solventComponentIndex(phaseIdx));
             // NB! For the FLORES fluxes without derivatives
             darcy[conti0EqIdx + activeCompIdx] = darcyFlux.value() * faceArea;
 
             unsigned pvtRegionIdx = up.pvtRegionIndex();
             // if (upIdx == globalFocusDofIdx){
-            if (globalUpIndex == globalIndexIn) {
-                const auto& invB
-                    = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx);
-                const auto& surfaceVolumeFlux = invB * darcyFlux;
-                evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-                if constexpr (enableEnergy) {
-                    EnergyModule::template
-                        addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
-                }
-                if constexpr (enableBioeffects) {
-                    BioeffectsModule::template
-                        addBioeffectsFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
-                }
-                if constexpr (enableBrine) {
-                    BrineModule::template
-                        addBrineFluxes_<Evaluation, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
-                }
-            } else {
-                const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx);
-                const auto& surfaceVolumeFlux = invB * darcyFlux;
-                evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-                if constexpr (enableEnergy) {
-                    EnergyModule::template
-                        addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
-                }
-                if constexpr (enableBioeffects) {
-                    BioeffectsModule::template
-                        addBioeffectsFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
-                }
-                if constexpr (enableBrine) {
-                    BrineModule::template
-                        addBrineFluxes_<Scalar, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
-                }
-            }
+            // if (globalUpIndex == globalIndexIn) {
+            //     const auto& invB
+            //         = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx, *fsysptr);
+            //     const auto& surfaceVolumeFlux = invB * darcyFlux;
+            //     evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+            //     if constexpr (enableEnergy) {
+            //         EnergyModule::template // Problematic line
+            //             addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
+            //     }
+            //     if constexpr (enableBioeffects) {
+            //         BioeffectsModule::template
+            //             addBioeffectsFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
+            //     }
+            //     if constexpr (enableBrine) {
+            //         BrineModule::template
+            //             addBrineFluxes_<Evaluation, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
+            //     }
+            // } else {
+            //     const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx, *fsysptr);
+            //     const auto& surfaceVolumeFlux = invB * darcyFlux;
+            //     evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+            //     if constexpr (enableEnergy) {
+            //         EnergyModule::template
+            //             addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
+            //     }
+            //     if constexpr (enableBioeffects) {
+            //         BioeffectsModule::template
+            //             addBioeffectsFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
+            //     }
+            //     if constexpr (enableBrine) {
+            //         BrineModule::template
+            //             addBrineFluxes_<Scalar, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
+            //     }
+            // }
         }
 
-        // deal with solvents (if present)
-        static_assert(!enableSolvent,
-                      "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with solvents (if present)
+        // static_assert(!enableSolvent,
+        //               "Relevant computeFlux() method must be implemented for this module before enabling.");
+        // // SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with zFracton (if present)
-        static_assert(!enableExtbo,
-                      "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with zFracton (if present)
+        // static_assert(!enableExtbo,
+        //               "Relevant computeFlux() method must be implemented for this module before enabling.");
+        // // ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with polymer (if present)
-        static_assert(!enablePolymer,
-                      "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with polymer (if present)
+        // static_assert(!enablePolymer,
+        //               "Relevant computeFlux() method must be implemented for this module before enabling.");
+        // // PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with convective mixing
-        if constexpr (enableConvectiveMixing) {
-            ConvectiveMixingModule::addConvectiveMixingFlux(flux,
-                                                            intQuantsIn,
-                                                            intQuantsEx,
-                                                            globalIndexIn,
-                                                            globalIndexEx,
-                                                            nbInfo.dZg,
-                                                            nbInfo.trans,
-                                                            nbInfo.faceArea,
-                                                            moduleParams.convectiveMixingModuleParam);
-        }
+        // // deal with convective mixing
+        // if constexpr (enableConvectiveMixing) {
+        //     ConvectiveMixingModule::addConvectiveMixingFlux(flux,
+        //                                                     intQuantsIn,
+        //                                                     intQuantsEx,
+        //                                                     globalIndexIn,
+        //                                                     globalIndexEx,
+        //                                                     nbInfo.dZg,
+        //                                                     nbInfo.trans,
+        //                                                     nbInfo.faceArea,
+        //                                                     moduleParams.convectiveMixingModuleParam);
+        // }
 
-        // deal with energy (if present)
-        if constexpr (enableEnergy) {
-            const Scalar inAlpha = nbInfo.inAlpha;
-            const Scalar outAlpha = nbInfo.outAlpha;
-            Evaluation heatFlux;
+        // // deal with energy (if present)
+        // if constexpr (enableEnergy) {
+        //     const Scalar inAlpha = nbInfo.inAlpha;
+        //     const Scalar outAlpha = nbInfo.outAlpha;
+        //     Evaluation heatFlux;
 
-            short interiorDofIdx = 0; // NB
-            short exteriorDofIdx = 1; // NB
+        //     short interiorDofIdx = 0; // NB
+        //     short exteriorDofIdx = 1; // NB
 
-            EnergyModule::ExtensiveQuantities::updateEnergy(heatFlux,
-                                                            interiorDofIdx, // focusDofIndex,
-                                                            interiorDofIdx,
-                                                            exteriorDofIdx,
-                                                            intQuantsIn,
-                                                            intQuantsEx,
-                                                            intQuantsIn.fluidState(),
-                                                            intQuantsEx.fluidState(),
-                                                            inAlpha,
-                                                            outAlpha,
-                                                            faceArea);
-            EnergyModule::addHeatFlux(flux, heatFlux);
-        }
-        // NB need to be tha last energy call since it does scaling
-        // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        //     EnergyModule::ExtensiveQuantities::updateEnergy(heatFlux,
+        //                                                     interiorDofIdx, // focusDofIndex,
+        //                                                     interiorDofIdx,
+        //                                                     exteriorDofIdx,
+        //                                                     intQuantsIn,
+        //                                                     intQuantsEx,
+        //                                                     intQuantsIn.fluidState(),
+        //                                                     intQuantsEx.fluidState(),
+        //                                                     inAlpha,
+        //                                                     outAlpha,
+        //                                                     faceArea);
+        //     EnergyModule::addHeatFlux(flux, heatFlux);
+        // }
+        // // NB need to be tha last energy call since it does scaling
+        // // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with foam (if present)
-        static_assert(!enableFoam,
-                      "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with foam (if present)
+        // static_assert(!enableFoam,
+        //               "Relevant computeFlux() method must be implemented for this module before enabling.");
+        // // FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).
-        if constexpr (enableDiffusion) {
-            typename DiffusionModule::ExtensiveQuantities::EvaluationArray effectiveDiffusionCoefficient;
-            DiffusionModule::ExtensiveQuantities::update(effectiveDiffusionCoefficient, intQuantsIn, intQuantsEx);
-            const Scalar diffusivity = nbInfo.diffusivity;
-            const Scalar tmpdiffusivity = diffusivity / faceArea;
-            DiffusionModule::addDiffusiveFlux(flux,
-                                              intQuantsIn,
-                                              intQuantsEx,
-                                              tmpdiffusivity,
-                                              effectiveDiffusionCoefficient);
-        }
+        // // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).
+        // if constexpr (enableDiffusion) {
+        //     typename DiffusionModule::ExtensiveQuantities::EvaluationArray effectiveDiffusionCoefficient;
+        //     DiffusionModule::ExtensiveQuantities::update(effectiveDiffusionCoefficient, intQuantsIn, intQuantsEx);
+        //     const Scalar diffusivity = nbInfo.diffusivity;
+        //     const Scalar tmpdiffusivity = diffusivity / faceArea;
+        //     DiffusionModule::addDiffusiveFlux(flux,
+        //                                       intQuantsIn,
+        //                                       intQuantsEx,
+        //                                       tmpdiffusivity,
+        //                                       effectiveDiffusionCoefficient);
+        // }
 
-        // deal with dispersion (if present). opm-models expects per area flux (added in the tmpdispersivity).
-        if constexpr (enableDispersion) {
-            typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
-            DispersionModule::ExtensiveQuantities::update(normVelocityAvg, intQuantsIn, intQuantsEx);
-            const Scalar dispersivity = nbInfo.dispersivity;
-            const Scalar tmpdispersivity = dispersivity / faceArea;
-            DispersionModule::addDispersiveFlux(flux,
-                                                intQuantsIn,
-                                                intQuantsEx,
-                                                tmpdispersivity,
-                                                normVelocityAvg);
-        }
+        // // deal with dispersion (if present). opm-models expects per area flux (added in the tmpdispersivity).
+        // if constexpr (enableDispersion) {
+        //     typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
+        //     DispersionModule::ExtensiveQuantities::update(normVelocityAvg, intQuantsIn, intQuantsEx);
+        //     const Scalar dispersivity = nbInfo.dispersivity;
+        //     const Scalar tmpdispersivity = dispersivity / faceArea;
+        //     DispersionModule::addDispersiveFlux(flux,
+        //                                         intQuantsIn,
+        //                                         intQuantsEx,
+        //                                         tmpdispersivity,
+        //                                         normVelocityAvg);
+        // }
 
-        // apply the scaling for the urea equation in MICP
-        if constexpr (enableMICP) {
-            BioeffectsModule::applyScaling(flux);
-        }
+        // // apply the scaling for the urea equation in MICP
+        // if constexpr (enableMICP) {
+        //     BioeffectsModule::applyScaling(flux);
+        // }
     }
 
     template <class BoundaryConditionData>
@@ -803,6 +817,18 @@ public:
             source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
     }
+
+    // template <class UpEval, class RateVectorT, class ExtensiveQuantitiesT, class FluidState>
+    // static void evalPhaseFluxes_(RateVectorT& flux,
+    //                              unsigned phaseIdx,
+    //                              unsigned pvtRegionIdx,
+    //                              const ExtensiveQuantitiesT& extQuants,
+    //                              const FluidState& upFs)
+    // {
+    //     const auto& invB = getInvB_<FluidSystem, FluidState, UpEval>(upFs, phaseIdx, pvtRegionIdx);
+    //     const auto& surfaceVolumeFlux = invB * extQuants.volumeFlux(phaseIdx);
+    //     evalPhaseFluxes_<UpEval>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, upFs);
+    // }
 
     template <class UpEval, class FluidState>
     static void evalPhaseFluxes_(RateVector& flux,

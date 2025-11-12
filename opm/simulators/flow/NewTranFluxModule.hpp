@@ -46,6 +46,8 @@
 #include <opm/models/utils/signum.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 
+#include <opm/common/utility/gpuDecorators.hpp>
+
 #include <array>
 
 namespace Opm {
@@ -137,7 +139,7 @@ public:
     /*!
      * \brief Return the intrinsic permeability tensor at a face [m^2]
      */
-    const DimMatrix& intrinsicPermeability() const
+    OPM_HOST_DEVICE const DimMatrix& intrinsicPermeability() const
     {
         throw std::invalid_argument("The ECL transmissibility module does not provide an explicit intrinsic permeability");
     }
@@ -148,7 +150,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const EvalDimVector& potentialGrad(unsigned) const
+    OPM_HOST_DEVICE const EvalDimVector& potentialGrad(unsigned) const
     {
         throw std::invalid_argument("The ECL transmissibility module does not provide explicit potential gradients");
     }
@@ -159,7 +161,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const Evaluation& pressureDifference(unsigned phaseIdx) const
+    OPM_HOST_DEVICE const Evaluation& pressureDifference(unsigned phaseIdx) const
     { return pressureDifference_[phaseIdx]; }
 
     /*!
@@ -168,7 +170,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const EvalDimVector& filterVelocity(unsigned) const
+    OPM_HOST_DEVICE const EvalDimVector& filterVelocity(unsigned) const
     {
         throw std::invalid_argument("The ECL transmissibility module does not provide explicit filter velocities");
     }
@@ -182,7 +184,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const Evaluation& volumeFlux(unsigned phaseIdx) const
+    OPM_HOST_DEVICE const Evaluation& volumeFlux(unsigned phaseIdx) const
     { return volumeFlux_[phaseIdx]; }
 
 protected:
@@ -193,7 +195,7 @@ protected:
      * i.e., the DOF which exhibits a higher effective pressure for
      * the given phase.
      */
-    unsigned upstreamIndex_(unsigned phaseIdx) const
+    OPM_HOST_DEVICE unsigned upstreamIndex_(unsigned phaseIdx) const
     {
         assert(phaseIdx < numPhases);
 
@@ -207,22 +209,22 @@ protected:
      * i.e., the DOF which exhibits a lower effective pressure for the
      * given phase.
      */
-    unsigned downstreamIndex_(unsigned phaseIdx) const
+    OPM_HOST_DEVICE unsigned downstreamIndex_(unsigned phaseIdx) const
     {
         assert(phaseIdx < numPhases);
 
         return dnIdx_[phaseIdx];
     }
 
-    void updateSolvent(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
+    OPM_HOST_DEVICE void updateSolvent(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     { asImp_().updateVolumeFluxTrans(elemCtx, scvfIdx, timeIdx); }
 
-    void updatePolymer(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
+    OPM_HOST_DEVICE void updatePolymer(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     { asImp_().updateShearMultipliers(elemCtx, scvfIdx, timeIdx); }
 
 public:
 
-    static void volumeAndPhasePressureDifferences(std::array<short, numPhases>& upIdx,
+    OPM_HOST_DEVICE static void volumeAndPhasePressureDifferences(std::array<short, numPhases>& upIdx,
                                                   std::array<short, numPhases>& dnIdx,
                                                   Evaluation (&volumeFlux)[numPhases],
                                                   Evaluation (&pressureDifferences)[numPhases],
@@ -306,8 +308,8 @@ public:
         }
     }
 
-    template<class EvalType>
-    static void calculatePhasePressureDiff_(short& upIdx,
+    template<class EvalType, class ModuleParamsT>
+    OPM_HOST_DEVICE static void calculatePhasePressureDiff_(short& upIdx,
                                             short& dnIdx,
                                             EvalType& pressureDifference,
                                             const IntensiveQuantities& intQuantsIn,
@@ -321,7 +323,7 @@ public:
                                             const unsigned globalIndexEx,
                                             const Scalar distZg,
                                             const Scalar thpres,
-                                            const ModuleParams& moduleParams)
+                                            const ModuleParamsT& moduleParams)
     {
 
         // check shortcut: if the mobility of the phase is zero in the interior as
@@ -414,7 +416,7 @@ protected:
     /*!
      * \brief Update the required gradients for interior faces
      */
-    void calculateGradients_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
+    OPM_HOST_DEVICE void calculateGradients_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
         Valgrind::SetUndefined(*this);
 
@@ -425,7 +427,7 @@ protected:
      * \brief Update the required gradients for boundary faces
      */
     template <class FluidState>
-    void calculateBoundaryGradients_(const ElementContext& elemCtx,
+    OPM_HOST_DEVICE void calculateBoundaryGradients_(const ElementContext& elemCtx,
                                      unsigned scvfIdx,
                                      unsigned timeIdx,
                                      const FluidState& exFluidState)
@@ -469,7 +471,7 @@ public:
      * \brief Update the required gradients for boundary faces
      */
     template <class Problem, class FluidState, class EvaluationContainer>
-    static void calculateBoundaryGradients_(const Problem& problem,
+    OPM_HOST_DEVICE static void calculateBoundaryGradients_(const Problem& problem,
                                             const unsigned globalSpaceIdx,
                                             const IntensiveQuantities& intQuantsIn,
                                             const unsigned bfIdx,
@@ -568,10 +570,10 @@ protected:
     /*!
      * \brief Update the volumetric fluxes for all fluid phases on the interior faces of the context
      */
-    void calculateFluxes_(const ElementContext&, unsigned, unsigned)
+    OPM_HOST_DEVICE void calculateFluxes_(const ElementContext&, unsigned, unsigned)
     { }
 
-    void calculateBoundaryFluxes_(const ElementContext&, unsigned, unsigned)
+    OPM_HOST_DEVICE void calculateBoundaryFluxes_(const ElementContext&, unsigned, unsigned)
     {}
 
 private:
