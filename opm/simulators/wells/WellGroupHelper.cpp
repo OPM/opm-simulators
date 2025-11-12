@@ -640,7 +640,7 @@ WellGroupHelper<Scalar, IndexTraits>::getProductionGroupRateVector(const std::st
 }
 
 template <typename Scalar, typename IndexTraits>
-std::optional<Scalar>
+std::optional<std::pair<std::string, Scalar>>
 WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
@@ -769,8 +769,8 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
             target *= local_fraction_lambda(chain[ii + 1], chain[ii + 1]);
         }
     }
-    // Avoid negative target rates comming from too large local reductions.
-    return std::max(Scalar(0.0), target / efficiency_factor);
+    // Avoid negative target rates coming from too large local reductions.
+    return std::make_pair(group.name(), std::max(Scalar(0.0), target / efficiency_factor));
 }
 
 template <typename Scalar, typename IndexTraits>
@@ -787,7 +787,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
     // 'parent' will stay fixed while 'group' will be higher up
     // in the group tree.
-    // Eficiencyfactor is the well efficiency factor for the first group the well is
+    // Efficiency factor is the well efficiency factor for the first group the well is
     // part of. Later it is the accumulated factor including the group efficiency factor
     // of the child of group.
     OPM_TIMEFUNCTION();
@@ -897,8 +897,8 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
             target *= local_fraction_lambda(chain[ii + 1], name);
         }
     }
-    // Avoid negative target rates comming from too large local reductions.
-    return {group.name(), std::max(Scalar(0.0), target / efficiency_factor)};
+    // Avoid negative target rates coming from too large local reductions.
+    return std::make_pair(group.name(), std::max(Scalar(0.0), target / efficiency_factor));
 }
 
 template <typename Scalar, typename IndexTraits>
