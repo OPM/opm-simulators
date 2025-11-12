@@ -1959,8 +1959,11 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
     }
 
     const auto& well_state = this->wellState();
-    // Keep track of groups that provide production targets for one or more wells
-    std::set<std::string> production_groups; // TODO: better name
+    const std::size_t size_pc = prod_group_controls.size();
+    // TODO: check whether prod_group_controls can have more than one entries for the same group name
+    // Collect groups that currently provide production targets to any well on this rank
+    std::unordered_set<std::string> production_groups; // TODO: better name
+    production_groups.reserve(size_pc);
 
     for (const auto& wname : well_state.wells()) {
         const auto& ws = well_state.well(wname);
@@ -1973,20 +1976,18 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
     }
 
     // parallel communication to synchronize production groups used on all processes
-    const std::size_t size_pc = prod_group_controls.size();
-
     std::vector<std::string> gnames;
     gnames.reserve(size_pc);
-    std::vector<int> local_used(size_pc, 0);
-
-    std::size_t idx = 0;
     for (const auto& gprod : prod_group_controls) {
-        const auto& gname = gprod.first;
-        gnames.push_back(gname);
-        if (production_groups.count(gname) > 0) {
-            local_used[idx] = 1;
+        gnames.push_back(gprod.first);
+    }
+    std::sort(gnames.begin(), gnames.end());
+
+    std::vector<int> local_used(size_pc, 0);
+    for (std::size_t i = 0; i < size_pc; ++i) {
+        if (production_groups.find(gnames[i]) != production_groups.end()) {
+            local_used[i] = 1;
         }
-        ++idx;
     }
 
     std::vector<int> global_used(size_pc, 0);
@@ -2004,15 +2005,18 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
     } else {
         global_used = local_used;
     }
+    const bool is_root = comm_.rank() == 0;
 
     for (std::size_t i = 0; i < size_pc;   ++i) {
-        const auto& gname = gnames[i];
         if (global_used[i] > 0) {
             continue;
         }
+        const auto& gname = gnames[i];
         if (group_state.production_control(gname) != Group::ProductionCMode::NONE) {
-            const std::string msg = fmt::format("Production group {} has no constraints active, setting control mode to NONE", gname);
-            deferred_logger.info(msg);
+            if (is_root) {
+                const std::string msg = fmt::format("Production group {} has no constraints active, setting control mode to NONE", gname);
+                deferred_logger.info(msg);
+            }
             group_state.production_control(gname, Group::ProductionCMode::NONE);
         }
     }
