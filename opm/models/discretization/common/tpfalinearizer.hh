@@ -1033,14 +1033,9 @@ private:
             auto dynamicGpuFluidSystemPtr = gpuistl::make_gpu_shared_ptr(dynamicGpuFluidSystemView);
 
             using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
-            GpuModel gpuModel(model_().allIntensiveQuantities());
+            GpuModel gpuModel(model_().allIntensiveQuantities(), problem_().moduleParams());
             auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
             auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
-
-            // Make sure the convective mixing module params are on the gpu
-            auto moduleParamsBuffer = gpuistl::copy_to_gpu(problem_().moduleParams().convectiveMixingModuleParam);
-            auto moduleParamsView = gpuistl::make_view(moduleParamsBuffer);
-            using moduleParamsGpu = decltype(moduleParamsView);
 
             // Copy boundary info to GPU
             gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);

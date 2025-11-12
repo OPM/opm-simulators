@@ -170,6 +170,13 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Toolbox = MathToolbox<Evaluation>;
 
+    // TODO: figure out a way to do this more cleanly within the typetag system
+// #if HAVE_CUDA
+//     using ConvectiveMixingModuleParamT = ConvectiveMixingModuleParam<Scalar, gpuistl::GpuView>;
+// #else
+    using ConvectiveMixingModuleParamT = ConvectiveMixingModuleParam<Scalar>;
+// #endif
+
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { dimWorld = GridView::dimensionworld };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -182,12 +189,17 @@ public:
     static void beginEpisode(const EclipseState& eclState,
                              const Schedule& schedule,
                              const int episodeIdx,
-                             ConvectiveMixingModuleParam<Scalar>& info)
+                             ConvectiveMixingModuleParamT& info)
     {
         // check that Xhi and Psi didn't change
         std::size_t numRegions = eclState.runspec().tabdims().getNumPVTTables();
         const auto& control = schedule[episodeIdx].oilvap();
         if (info.active_.empty()) {
+            // TODO: figure out how risky this is (just skipping resize)
+            // I do it because gpuviews should not support resizing
+            // I think this should need to happen on the GPU as we copy these params
+            // at the beginning of the assembly, surely after an episode has been started
+
             info.active_.resize(numRegions);
             info.Xhi_.resize(numRegions);
             info.Psi_.resize(numRegions);
@@ -206,7 +218,7 @@ public:
                                  const IntensiveQuantities& intQuantsIn,
                                  const IntensiveQuantities& intQuantsEx,
                                  const unsigned phaseIdx,
-                                 const ConvectiveMixingModuleParam<Scalar>& info) {
+                                 const ConvectiveMixingModuleParamT& info) {
 
         if (info.active_.empty()) {
             return;
@@ -312,7 +324,7 @@ public:
                                         const Scalar distZg,
                                         const Scalar trans,
                                         const Scalar faceArea,
-                                        const ConvectiveMixingModuleParam<Scalar>& info)
+                                        const ConvectiveMixingModuleParamT& info)
     {
         if (info.active_.empty()) {
             return;

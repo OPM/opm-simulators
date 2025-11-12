@@ -46,6 +46,7 @@
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/blackoil/moduleparam.hh>
 
 #include <opm/common/utility/gpuDecorators.hpp>
 
@@ -54,12 +55,15 @@
 #include <stdexcept>
 #include <string>
 
+#include <opm/common/utility/gpuistl_if_available.hpp>
+
 namespace Opm {
 /*!
  * \ingroup BlackOilModel
  *
  * \brief Calculates the local residual of the black oil model.
  */
+
 template <class TypeTag>
 class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLocalResidual>
 {
@@ -119,7 +123,14 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
+
+    // TODO: do this much nicer with the to_gpu_t typetag stuff
+
+// #if HAVE_CUDA
+//     using ConvectiveMixingModuleParam = ConvectiveMixingModuleParam<Scalar, gpuistl::GpuView>;
+// #else
     using ConvectiveMixingModuleParam = ConvectiveMixingModuleParam<Scalar>;
+// #endif
 
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
@@ -142,10 +153,7 @@ public:
         ConditionalStorage<enableDispersion, double> dispersivity;
     };
 
-    struct ModuleParams
-    {
-        ConvectiveMixingModuleParam convectiveMixingModuleParam;
-    };
+    using ModuleParams = ModuleParamsType<ConvectiveMixingModuleParam>;
 
     /*!
      * \copydoc FvBaseLocalResidual::computeStorage

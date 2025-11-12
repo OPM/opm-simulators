@@ -39,6 +39,7 @@
 
 #include <opm/models/parallel/threadmanager.hpp>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/moduleparam.hh>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
@@ -64,14 +65,17 @@ public:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using TypeTagPublic = TypeTag;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ModuleParams = ModuleParamsType<ConvectiveMixingModuleParam<Scalar, Storage>>;
+
     OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(unsigned int nCells)
         : cachedIntensiveQuantities_(nCells)
     {}
 
     // TODO: copy for now, but should be move!
     OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(
-        Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities)
+        Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities, ModuleParams moduleParams)
         : cachedIntensiveQuantities_(cachedIntensiveQuantities)
+        , moduleParams_(moduleParams)
     {
     }
 
@@ -98,6 +102,7 @@ protected:
 
 public:
     Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities_;
+    ModuleParams moduleParams_;
 };
 
 namespace gpuistl {
@@ -106,6 +111,7 @@ namespace gpuistl {
     template <class TypeTag, typename CpuSimplifiedGpuFIBlackOilModel, typename GpuFluidSystemPtr>
     auto copy_to_gpu_just_find_me(CpuSimplifiedGpuFIBlackOilModel cpuModel, GpuFluidSystemPtr* ptrFluidSystem)
     {
+        using Scalar = typename CpuSimplifiedGpuFIBlackOilModel::Scalar;
         // In this copy_to_gpu we need to take care of two things:
         // 1) Copy the cachedIntensiveQuantities_ to GPU (go from vector to GpuBuffer to allocate things on GPU)
         // 2) Ensure that the FluidSystem pointer inside each IntensiveQuantities points to a GPU FluidSystem
@@ -130,19 +136,30 @@ namespace gpuistl {
         for (auto& iq : cpuModel.cachedIntensiveQuantities_) {
             cpuIntQuantsWithGpuPtr.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(ptrFluidSystem));
         }
+
+        using ModuleParams = ModuleParamsType<ConvectiveMixingModuleParam<Scalar, GpuBuffer>>;
+        ModuleParams moduleParams {
+            gpuistl::copy_to_gpu(cpuModel.moduleParams_.convectiveMixingModuleParam)
+        };
+
         // create new blackoil model providing a gpubuffer allocated version of the intQuants
-        return SimplifiedGpuBufferModel(GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr));
+        return SimplifiedGpuBufferModel(GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr), moduleParams);
 
     }
 
     template <typename GpuSimplifiedGpuFIBlackOilModel>
     auto make_view_just_find_me(GpuSimplifiedGpuFIBlackOilModel& gpuSimplifiedGpuFIBlackOilModel)
     {
-        SimplifiedGpuFIBlackOilModel<
+        using Scalar = typename GpuSimplifiedGpuFIBlackOilModel::Scalar;
+        using ModuleParams = ModuleParamsType<ConvectiveMixingModuleParam<Scalar, GpuView>>;
+
+        return SimplifiedGpuFIBlackOilModel<
             typename GpuSimplifiedGpuFIBlackOilModel::TypeTagPublic,
             gpuistl::GpuView>
-            gpuView(make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities_));
-        return gpuView;
+            (make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities_),
+             ModuleParams{
+                 make_view(gpuSimplifiedGpuFIBlackOilModel.moduleParams_.convectiveMixingModuleParam)
+             });
     }
 } // namespace gpuistl
 
