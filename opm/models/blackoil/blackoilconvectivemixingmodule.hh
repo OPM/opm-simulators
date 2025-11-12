@@ -40,6 +40,10 @@
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <opm/common/utility/VectorWithDefaultAllocator.hpp>
+
+#include <opm/common/utility/gpuistl_if_available.hpp>
+
 #if HAVE_ECL_INPUT
 #include <cstddef>
 #endif
@@ -47,6 +51,40 @@
 #include <vector>
 
 namespace Opm {
+
+    template<class Scalar, template<class> class Storage = Opm::VectorWithDefaultAllocator>
+    struct ConvectiveMixingModuleParam
+    {
+        Storage<bool> active_;
+        Storage<Scalar> Xhi_;
+        Storage<Scalar> Psi_;
+    };
+
+#ifdef HAVE_CUDA
+namespace gpuistl
+{
+    template <class Scalar>
+    ConvectiveMixingModuleParam<Scalar, GpuView> make_view(ConvectiveMixingModuleParam<Scalar, GpuBuffer>& params)
+    {
+        ConvectiveMixingModuleParam<Scalar, GpuView> view;
+        view.active_ = gpuistl::make_view(params.active_);
+        view.Xhi_ = gpuistl::make_view(params.Xhi_);
+        view.Psi_ = gpuistl::make_view(params.Psi_);
+        return view;
+    }
+
+    template <class Scalar>
+    ConvectiveMixingModuleParam<Scalar, GpuBuffer> copy_to_gpu(const ConvectiveMixingModuleParam<Scalar, Opm::VectorWithDefaultAllocator>& params)
+    {
+        return ConvectiveMixingModuleParam<Scalar, GpuBuffer>{
+            gpuistl::GpuBuffer(params.active_),
+            gpuistl::GpuBuffer(params.Xhi_),
+            gpuistl::GpuBuffer(params.Psi_)
+        };
+    }
+}
+
+#endif
 
 /*!
  * \copydoc Opm::BlackOilConvectiveMixingModule
@@ -77,14 +115,12 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/false>
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
 public:
-    struct ConvectiveMixingModuleParam
-    {};
 
     #if HAVE_ECL_INPUT
     static void beginEpisode(const EclipseState&,
                              const Schedule&,
                              const int,
-                             ConvectiveMixingModuleParam&)
+                             ConvectiveMixingModuleParam<Scalar>&)
     {}
     #endif
 
@@ -96,7 +132,7 @@ public:
                                  const IntensiveQuantities&,
                                  const IntensiveQuantities&,
                                  const unsigned int,
-                                 const ConvectiveMixingModuleParam&)
+                                 const ConvectiveMixingModuleParam<Scalar>&)
     {}
 
     template <class Context>
@@ -118,7 +154,7 @@ public:
                                         const Scalar,
                                         const Scalar,
                                         const Scalar,
-                                        const ConvectiveMixingModuleParam&)
+                                        const ConvectiveMixingModuleParam<Scalar>&)
     {}
 };
 
@@ -142,18 +178,11 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
 public:
-    struct ConvectiveMixingModuleParam
-    {
-        std::vector<bool> active_;
-        std::vector<Scalar> Xhi_;
-        std::vector<Scalar> Psi_;
-    };
-
     #if HAVE_ECL_INPUT
     static void beginEpisode(const EclipseState& eclState,
                              const Schedule& schedule,
                              const int episodeIdx,
-                             ConvectiveMixingModuleParam& info)
+                             ConvectiveMixingModuleParam<Scalar>& info)
     {
         // check that Xhi and Psi didn't change
         std::size_t numRegions = eclState.runspec().tabdims().getNumPVTTables();
@@ -177,7 +206,7 @@ public:
                                  const IntensiveQuantities& intQuantsIn,
                                  const IntensiveQuantities& intQuantsEx,
                                  const unsigned phaseIdx,
-                                 const ConvectiveMixingModuleParam& info) {
+                                 const ConvectiveMixingModuleParam<Scalar>& info) {
 
         if (info.active_.empty()) {
             return;
@@ -283,7 +312,7 @@ public:
                                         const Scalar distZg,
                                         const Scalar trans,
                                         const Scalar faceArea,
-                                        const ConvectiveMixingModuleParam& info)
+                                        const ConvectiveMixingModuleParam<Scalar>& info)
     {
         if (info.active_.empty()) {
             return;

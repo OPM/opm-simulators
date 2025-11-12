@@ -38,6 +38,7 @@
 #include <opm/grid/utility/ElementChunks.hpp>
 
 #include <opm/models/parallel/threadmanager.hpp>
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
@@ -62,12 +63,14 @@ class SimplifiedGpuFIBlackOilModel
 public:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using TypeTagPublic = TypeTag;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(unsigned int nCells)
         : cachedIntensiveQuantities_(nCells)
     {}
 
     // TODO: copy for now, but should be move!
-    OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities)
+    OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(
+        Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities)
         : cachedIntensiveQuantities_(cachedIntensiveQuantities)
     {
     }

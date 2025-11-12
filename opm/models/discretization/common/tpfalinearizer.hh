@@ -48,6 +48,9 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
 
+// TODO: fetch via typetag of another class instead of accessing directly in this class
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystemNonStatic.hpp>
 
@@ -1033,6 +1036,11 @@ private:
             GpuModel gpuModel(model_().allIntensiveQuantities());
             auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
             auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
+
+            // Make sure the convective mixing module params are on the gpu
+            auto moduleParamsBuffer = gpuistl::copy_to_gpu(problem_().moduleParams().convectiveMixingModuleParam);
+            auto moduleParamsView = gpuistl::make_view(moduleParamsBuffer);
+            using moduleParamsGpu = decltype(moduleParamsView);
 
             // Copy boundary info to GPU
             gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
