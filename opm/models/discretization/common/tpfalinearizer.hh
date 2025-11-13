@@ -1076,6 +1076,7 @@ private:
                 }
             }
 
+            hipDeviceSynchronize();
             auto start_gpu = std::chrono::high_resolution_clock::now();
             linearize_kernel<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells+1023)/1024), 1024>>>(
                 dispersionActive,
@@ -1356,6 +1357,7 @@ private:
 
             // Add sparse source terms. For now only wells.
             if (separateSparseSourceTerms_) {
+                printf("CPU adding sparse source terms\n");
                 problem_().wellModel().addReservoirSourceTerms(residual_, diagMatAddress_);
             }
 

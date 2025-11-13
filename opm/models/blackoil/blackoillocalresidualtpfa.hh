@@ -521,27 +521,27 @@ public:
         }
 
         // deal with energy (if present)
-        if constexpr (enableEnergy) {
-            const Scalar inAlpha = nbInfo.inAlpha;
-            const Scalar outAlpha = nbInfo.outAlpha;
-            Evaluation heatFlux;
+        // if constexpr (enableEnergy) {
+        //     const Scalar inAlpha = nbInfo.inAlpha;
+        //     const Scalar outAlpha = nbInfo.outAlpha;
+        //     Evaluation heatFlux;
 
-            short interiorDofIdx = 0; // NB
-            short exteriorDofIdx = 1; // NB
+        //     short interiorDofIdx = 0; // NB
+        //     short exteriorDofIdx = 1; // NB
 
-            EnergyModule::ExtensiveQuantities::updateEnergy(heatFlux,
-                                                            interiorDofIdx, // focusDofIndex,
-                                                            interiorDofIdx,
-                                                            exteriorDofIdx,
-                                                            intQuantsIn,
-                                                            intQuantsEx,
-                                                            intQuantsIn.fluidState(),
-                                                            intQuantsEx.fluidState(),
-                                                            inAlpha,
-                                                            outAlpha,
-                                                            faceArea);
-            EnergyModule::addHeatFlux(flux, heatFlux);
-        }
+        //     EnergyModule::ExtensiveQuantities::updateEnergy(heatFlux,
+        //                                                     interiorDofIdx, // focusDofIndex,
+        //                                                     interiorDofIdx,
+        //                                                     exteriorDofIdx,
+        //                                                     intQuantsIn,
+        //                                                     intQuantsEx,
+        //                                                     intQuantsIn.fluidState(),
+        //                                                     intQuantsEx.fluidState(),
+        //                                                     inAlpha,
+        //                                                     outAlpha,
+        //                                                     faceArea);
+        //     EnergyModule::addHeatFlux(flux, heatFlux);
+        // }
         // NB need to be tha last energy call since it does scaling
         // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
@@ -551,17 +551,17 @@ public:
         // FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).
-        if constexpr (enableDiffusion) {
-            typename DiffusionModule::ExtensiveQuantities::EvaluationArray effectiveDiffusionCoefficient;
-            DiffusionModule::ExtensiveQuantities::update(effectiveDiffusionCoefficient, intQuantsIn, intQuantsEx);
-            const Scalar diffusivity = nbInfo.diffusivity;
-            const Scalar tmpdiffusivity = diffusivity / faceArea;
-            DiffusionModule::addDiffusiveFlux(flux,
-                                              intQuantsIn,
-                                              intQuantsEx,
-                                              tmpdiffusivity,
-                                              effectiveDiffusionCoefficient);
-        }
+        // if constexpr (enableDiffusion) {
+        //     typename DiffusionModule::ExtensiveQuantities::EvaluationArray effectiveDiffusionCoefficient;
+        //     DiffusionModule::ExtensiveQuantities::update(effectiveDiffusionCoefficient, intQuantsIn, intQuantsEx);
+        //     const Scalar diffusivity = nbInfo.diffusivity;
+        //     const Scalar tmpdiffusivity = diffusivity / faceArea;
+        //     DiffusionModule::addDiffusiveFlux(flux,
+        //                                       intQuantsIn,
+        //                                       intQuantsEx,
+        //                                       tmpdiffusivity,
+        //                                       effectiveDiffusionCoefficient);
+        // }
 
         // deal with dispersion (if present). opm-models expects per area flux (added in the tmpdispersivity).
         // if constexpr (enableDispersion) {

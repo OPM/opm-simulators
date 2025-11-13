@@ -126,7 +126,8 @@ public:
      */
     OPM_HOST_DEVICE static void initFromState(const EclipseState& eclState)
     {
-        use_mole_fraction_ = eclState.getTableManager().diffMoleFraction();
+        // TODO: remove comment
+        // use_mole_fraction_ = eclState.getTableManager().diffMoleFraction();
     }
     #endif
 
@@ -335,12 +336,13 @@ private:
         return rhoW * mMGas / (rhoG * mMWater);
     }
 
-    static bool use_mole_fraction_;
+    // static bool use_mole_fraction_;
+    constexpr static bool use_mole_fraction_ = false; // false in spe11c
 };
 
-template <typename TypeTag>
-bool
-BlackOilDiffusionModule<TypeTag, true>::use_mole_fraction_;
+// template <typename TypeTag>
+// constexpr bool
+// BlackOilDiffusionModule<TypeTag, true>::use_mole_fraction_ = false;
 
 /*!
  * \ingroup Diffusion
