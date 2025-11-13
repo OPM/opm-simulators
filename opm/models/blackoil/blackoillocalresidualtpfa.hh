@@ -243,7 +243,7 @@ public:
         // in each of these classes to be generic in terms of storage type.
         if constexpr (usesStaticFluidSystem)
         {
-            adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex());
+            adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex(), fsysptr);
 
             // deal with solvents (if present)
             SolventModule::addStorage(storage, intQuants);
@@ -715,8 +715,17 @@ public:
         static_assert(!enablePolymer,
                       "Relevant treatment of boundary conditions must be implemented before enabling.");
 
+        // TODO: this can be made cleaner by centralizing this logic in the getter
+        FluidSystem* fsysptr;
+        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+
+        // not yet needed on gpu, so lets just use the static one for now
+        static FluidSystem instance;
+        fsysptr = &instance;
+
+                      
         // make sure that the right mass conservation quantities are used
-        adaptMassConservationQuantities_(bdyFlux, insideIntQuants.pvtRegionIndex());
+        adaptMassConservationQuantities_(bdyFlux, insideIntQuants.pvtRegionIndex(), fsysptr);
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
@@ -1073,6 +1082,36 @@ public:
                 const unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
                 container[conti0EqIdx + activeOilCompIdx] *=
                     FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
+            }
+        }
+    }
+
+    template <class ScalarVector, class FsysType>
+    OPM_HOST_DEVICE static void adaptMassConservationQuantities_(ScalarVector& container,
+                                                 unsigned pvtRegionIdx,
+                                                 FsysType* fsysptr)
+    {
+        if constexpr (!blackoilConserveSurfaceVolume) {
+            // convert "surface volume" to mass. this is complicated a bit by the fact that
+            // not all phases are necessarily enabled. (we here assume that if a fluid phase
+            // is disabled, its respective "main" component is not considered as well.)
+
+            if constexpr (waterEnabled) {
+                const unsigned activeWaterCompIdx = fsysptr->canonicalToActiveCompIdx(waterCompIdx);
+                container[conti0EqIdx + activeWaterCompIdx] *=
+                    fsysptr->referenceDensity(waterPhaseIdx, pvtRegionIdx);
+            }
+
+            if constexpr (gasEnabled) {
+                const unsigned activeGasCompIdx = fsysptr->canonicalToActiveCompIdx(gasCompIdx);
+                container[conti0EqIdx + activeGasCompIdx] *=
+                    fsysptr->referenceDensity(gasPhaseIdx, pvtRegionIdx);
+            }
+
+            if constexpr (oilEnabled) {
+                const unsigned activeOilCompIdx = fsysptr->canonicalToActiveCompIdx(oilCompIdx);
+                container[conti0EqIdx + activeOilCompIdx] *=
+                    fsysptr->referenceDensity(oilPhaseIdx, pvtRegionIdx);
             }
         }
     }

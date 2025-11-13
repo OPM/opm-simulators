@@ -68,13 +68,14 @@ public:
     using ModuleParams = ModuleParamsType<ConvectiveMixingModuleParam<Scalar, Storage>>;
 
     OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(unsigned int nCells)
-        : cachedIntensiveQuantities_(nCells)
+        : cachedIntensiveQuantities0_(nCells)
     {}
 
     // TODO: copy for now, but should be move!
     OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(
-        Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities, ModuleParams moduleParams)
-        : cachedIntensiveQuantities_(cachedIntensiveQuantities)
+        Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities0, Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities1, ModuleParams moduleParams)
+        : cachedIntensiveQuantities0_(cachedIntensiveQuantities0)
+        , cachedIntensiveQuantities1_(cachedIntensiveQuantities1)
         , moduleParams_(moduleParams)
     {
     }
@@ -91,8 +92,12 @@ public:
     OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */, const GridSubDomain& /* gridSubDomain */) const {}
     OPM_HOST_DEVICE void updateFailed() {}
     OPM_HOST_DEVICE auto intensiveQuantities(unsigned int globalIdx, unsigned int timeIdx) const {
-        assert(timeIdx == 0); // TODO: do not use assert for this because it can be run in GPU kernel...
-        return cachedIntensiveQuantities_[globalIdx];
+        assert(timeIdx == 0 || timeIdx == 1); // TODO: do not use assert for this because it can be run in GPU kernel...
+        if (timeIdx == 0) {
+            return cachedIntensiveQuantities0_[globalIdx];
+        } else {
+            return cachedIntensiveQuantities1_[globalIdx];
+        }
     }
 
 protected:
@@ -105,7 +110,9 @@ protected:
     OPM_HOST_DEVICE void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */, const unsigned /* timeIdx */) const {}
 
 public:
-    Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities_;
+    // assumes --enable-storage-cache=false so that we need not worry about updating cpu-caches from gpu kernels
+    Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities0_;
+    Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities1_;
     ModuleParams moduleParams_;
 };
 
@@ -121,7 +128,7 @@ namespace gpuistl {
         // 2) Ensure that the FluidSystem pointer inside each IntensiveQuantities points to a GPU FluidSystem
         //    The pointer should be set before we move the entire thing to the GPU.
 
-        using IntQuantsType = decltype(cpuModel.cachedIntensiveQuantities_[0]);
+        using IntQuantsType = decltype(cpuModel.cachedIntensiveQuantities0_[0]);
 
         // Here I have to declare the new type of BOIQ that I want?
         // Because I cannot use the existing boiq and just set another type of poiner
@@ -136,9 +143,14 @@ namespace gpuistl {
         using CorrectBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
         using SimplifiedGpuBufferModel = SimplifiedGpuFIBlackOilModel<CorrectTypeTagView, GpuBuffer>;
 
-        std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr;
-        for (auto& iq : cpuModel.cachedIntensiveQuantities_) {
-            cpuIntQuantsWithGpuPtr.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(ptrFluidSystem));
+        std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr0;
+        for (auto& iq : cpuModel.cachedIntensiveQuantities0_) {
+            cpuIntQuantsWithGpuPtr0.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(ptrFluidSystem));
+        }
+
+        std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr1;
+        for (auto& iq : cpuModel.cachedIntensiveQuantities1_) {
+            cpuIntQuantsWithGpuPtr1.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(ptrFluidSystem));
         }
 
         using ModuleParams = ModuleParamsType<ConvectiveMixingModuleParam<Scalar, GpuBuffer>>;
@@ -147,7 +159,7 @@ namespace gpuistl {
         };
 
         // create new blackoil model providing a gpubuffer allocated version of the intQuants
-        return SimplifiedGpuBufferModel(GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr), moduleParams);
+        return SimplifiedGpuBufferModel(GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr0), GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr1), moduleParams);
 
     }
 
@@ -160,7 +172,8 @@ namespace gpuistl {
         return SimplifiedGpuFIBlackOilModel<
             typename GpuSimplifiedGpuFIBlackOilModel::TypeTagPublic,
             gpuistl::GpuView>
-            (make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities_),
+            (make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities0_),
+             make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities1_),
              ModuleParams{
                  make_view(gpuSimplifiedGpuFIBlackOilModel.moduleParams_.convectiveMixingModuleParam)
              });

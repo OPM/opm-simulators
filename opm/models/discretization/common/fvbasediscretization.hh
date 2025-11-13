@@ -663,13 +663,41 @@ public:
     
     // TODO: make this more efficient (avoid copy!) and still valid for gpu
     // TODO: did not want to delve into the special IntQuants vector with special allocators
-    std::vector<IntensiveQuantities> allIntensiveQuantities()
+    std::vector<IntensiveQuantities> allIntensiveQuantities0()
     {
         std::vector<IntensiveQuantities> allIntensiveQuantities;
         auto& timeZeroIntQuants = intensiveQuantityCache_[0];
         allIntensiveQuantities.insert(allIntensiveQuantities.end(),
                                         timeZeroIntQuants.begin(),
                                         timeZeroIntQuants.end());
+        return allIntensiveQuantities;
+    }
+
+    std::vector<IntensiveQuantities> allIntensiveQuantities1()
+    {
+        std::vector<IntensiveQuantities> allIntensiveQuantities;
+        auto& timeOneIntQuants = intensiveQuantityCache_[1];
+        assert(!timeOneIntQuants.empty());
+        try {
+            allIntensiveQuantities.insert(allIntensiveQuantities.end(),
+                    timeOneIntQuants.begin(),
+                    timeOneIntQuants.end());
+        } catch (const std::exception& e) {
+            std::ostringstream oss;
+            oss << "Failed to insert time index 1 intensive quantities into vector. "
+            << "Current vector size: " << allIntensiveQuantities.size() 
+            << ", Source vector size: " << timeOneIntQuants.size()
+            << ", intensiveQuantityCache_ size: " << intensiveQuantityCache_.size()
+            << ", Error: " << e.what();
+            throw std::runtime_error(oss.str());
+        } catch (...) {
+            std::ostringstream oss;
+            oss << "Unknown error occurred while inserting time index 1 intensive quantities. "
+            << "Current vector size: " << allIntensiveQuantities.size() 
+            << ", Source vector size: " << timeOneIntQuants.size()
+            << ", intensiveQuantityCache_ size: " << intensiveQuantityCache_.size();
+            throw std::runtime_error(oss.str());
+        }
         return allIntensiveQuantities;
     }
 

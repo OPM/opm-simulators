@@ -1033,7 +1033,7 @@ private:
             auto dynamicGpuFluidSystemPtr = gpuistl::make_gpu_shared_ptr(dynamicGpuFluidSystemView);
 
             using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
-            GpuModel gpuModel(model_().allIntensiveQuantities(), problem_().moduleParams());
+            GpuModel gpuModel(model_().allIntensiveQuantities0(), model_().allIntensiveQuantities1(), problem_().moduleParams());
             auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
             auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
 
@@ -1299,11 +1299,14 @@ private:
                     // used, but after storage cache is shifted at the end of the
                     // timestep, it will become cached storage for timeIdx 1.
                     model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
-                    if (model_().newtonMethod().numIterations() == 0) {
+                    // printf("Using cached storage for cell %u\n", globI);
+                    if (model_().newtonMethod().numIterations() == 0) { // is sometimes false
                         // Need to update the storage cache.
+                        // printf("First iteration storage update for cell %u\n", globI);
                         if (problem_().recycleFirstIterationStorage()) {
                             // Assumes nothing have changed in the system which
                             // affects masses calculated from primary variables.
+                            // printf("Recycling first iteration storage for cell %u\n", globI);
                             if (on_full_domain) {
                                 // This is to avoid resetting the start-of-step storage
                                 // to incorrect numbers when we do local solves, where the iteration
@@ -1313,8 +1316,10 @@ private:
                                 // otherwise this will be left un-updated.
                                 model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
                             }
+                            else{ // never reached in spe11
+                            }
                         }
-                        else {
+                        else { // never reached in spe11
                             Dune::FieldVector<Scalar, numEq> tmp;
                             const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
                             LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
@@ -1612,7 +1617,13 @@ private:
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
 
-            // more stuff should happen here
+            {
+                VectorBlockType tmp;
+                const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
+                LocalResidualKernel::template computeStorage<Scalar>(tmp, intQuantOld);
+                // assume volume do not change
+                res -= tmp;
+            }
 
             *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
         }
@@ -1736,7 +1747,11 @@ private:
 
             setResAndJacobiGPUCPU(res, bMat, adres);
 
-            // more stuff should happen here
+            VectorBlockType tmp;
+            const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+            LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
+            // assume volume do not change
+            res -= tmp;
 
             *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
         }
