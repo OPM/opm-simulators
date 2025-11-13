@@ -195,7 +195,7 @@ public:
         }
     }
 
-    static void computeFlux([[maybe_unused]] RateVector& flux,
+    OPM_HOST_DEVICE static void computeFlux([[maybe_unused]] RateVector& flux,
                             [[maybe_unused]] const ElementContext& elemCtx,
                             [[maybe_unused]] unsigned scvfIdx,
                             [[maybe_unused]] unsigned timeIdx)
@@ -225,7 +225,8 @@ public:
         }
     }
 
-    static void addHeatFlux(RateVector& flux,
+    template<class RateVectorT>
+    OPM_HOST_DEVICE static void addHeatFlux(RateVectorT& flux,
                             const Evaluation& heatFlux)
     {
         if constexpr (enableEnergy) {
@@ -606,7 +607,7 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::FullyImplicitThe
 
 public:
     template<class FluidState>
-    static void updateEnergy(Evaluation& energyFlux,
+    OPM_HOST_DEVICE static void updateEnergy(Evaluation& energyFlux,
                              const unsigned& focusDofIndex,
                              const unsigned& inIdx,
                              const unsigned& exIdx,
