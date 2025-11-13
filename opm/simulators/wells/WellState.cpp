@@ -433,10 +433,12 @@ init(const std::vector<Scalar>& cellPressures,
                 new_well.perf_data.try_assign(prev_well.perf_data);
             }
             else {
-                const Scalar global_num_perf_this_well = wells_ecl[w].getConnections().num_open();
+                const auto global_num_perf_this_well =
+                    static_cast<Scalar>(wells_ecl[w].getConnections().num_open());
+
 
                 auto target_rate = new_well.perf_data.phase_rates.begin();
-                for (std::size_t perf_index = 0; perf_index < num_perf_this_well; ++perf_index) {
+                for (auto perf_index = 0*num_perf_this_well; perf_index < num_perf_this_well; ++perf_index) {
                     for (int p = 0; p < np; ++p, ++target_rate) {
                         *target_rate = new_well.surface_rates[p] / global_num_perf_this_well;
                     }
