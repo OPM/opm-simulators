@@ -91,7 +91,7 @@ private:
     std::vector<int> m_in_injecting_group;       // global_index -> int/bool
     std::vector<int> m_in_producing_group;       // global_index -> int/bool
     std::vector<int> m_is_open;                  // global_index -> int/bool
-    std::vector<Scalar> m_efficiency_scaling_factors; // global_index --> double
+    std::vector<Scalar> m_efficiency_scaling_factors {1.}; // global_index --> double
     bool is_rank0_{true};
 };
 
