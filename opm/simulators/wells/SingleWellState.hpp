@@ -118,6 +118,21 @@ public:
       vaporized_water = 3
     };
 
+    struct GroupTarget {
+        std::string group_name;
+        Scalar target_value;
+
+        bool operator==(const GroupTarget& other) const {
+            return group_name == other.group_name && target_value == other.target_value;
+        }
+
+        template<class Serializer>
+        void serializeOp(Serializer& serializer) {
+            serializer(group_name);
+            serializer(target_value);
+        }
+    };
+
     std::vector<Scalar> well_potentials;
     std::vector<Scalar> productivity_index;
     std::vector<Scalar> implicit_ipr_a;
@@ -127,7 +142,7 @@ public:
     std::vector<Scalar> prev_surface_rates;
     PerfData<Scalar> perf_data;
     bool trivial_group_target;
-    std::optional<std::pair<std::string, Scalar>> group_target;
+    std::optional<GroupTarget> group_target;
     SegmentState<Scalar> segments;
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
