@@ -177,7 +177,8 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
     if (this->schedule_.hasWell(name)
         && this->wellState().well(name).group_target) { // for wells we already have computed the target
         Scalar scale = 1.0;
-        const Scalar group_target_rate_available = (*this->wellState().well(name).group_target).second;
+        const auto& group_target = this->wellState().well(name).group_target;
+        const Scalar group_target_rate_available = group_target->target_value;
         const Scalar current_well_rate_available
             = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
         if (current_well_rate_available > 1e-12) {
@@ -319,7 +320,8 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
 
         // Switch sign since 'rates' are negative for producers.
         const Scalar current_well_rate_available = -tcalc.calcModeRateFromRates(rates);
-        const Scalar group_target_rate_available = (*this->wellState().well(name).group_target).second;
+        const auto& group_target = this->wellState().well(name).group_target;
+        const Scalar group_target_rate_available = group_target->target_value;
         Scalar scale = 1.0;
         if (current_well_rate_available > 1e-12) {
             scale = group_target_rate_available / current_well_rate_available;
@@ -553,7 +555,7 @@ getGroupRatesAvailableForHigherLevelControl(const Group& group, const bool is_in
 }
 
 template <typename Scalar, typename IndexTraits>
-std::optional<std::pair<std::string, Scalar>>
+std::optional<typename SingleWellState<Scalar, IndexTraits>::GroupTarget>
 GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
@@ -644,11 +646,11 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
                                                              do_addback);
 
     // Avoid negative target rates coming from too large local reductions.
-    return std::make_pair(group.name(), std::max(Scalar(0.0), target / efficiency_factor));
+    return GroupTarget{group.name(), std::max(Scalar(0.0), target / efficiency_factor)};
 }
 
 template <typename Scalar, typename IndexTraits>
-std::optional<std::pair<std::string, Scalar>>
+std::optional<typename SingleWellState<Scalar, IndexTraits>::GroupTarget>
 GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
@@ -740,7 +742,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
                                                              do_addback);
 
     // Avoid negative target rates coming from too large local reductions.
-    return {group.name(), std::max(Scalar(0.0), target / efficiency_factor)};
+    return GroupTarget{group.name(), std::max(Scalar(0.0), target / efficiency_factor)};
 }
 
 template <typename Scalar, typename IndexTraits>

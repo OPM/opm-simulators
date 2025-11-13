@@ -1338,7 +1338,8 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
             // Translate injector type from control to Phase.
-            std::optional<std::pair<std::string, Scalar>> group_target;
+            using GroupTarget = typename SingleWellState<Scalar, IndexTraits>::GroupTarget;
+            std::optional<GroupTarget> group_target;
             if (well->isProducer()) {
                 group_target = group_state_helper.getWellGroupTargetProducer(
                     well->name(),
@@ -1971,7 +1972,7 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
         if (ws.producer && ws.production_cmode == WellProducerCMode::GRUP) {
             const auto& group_target = ws.group_target;
             if (group_target.has_value()) {
-                targeted_production_groups.insert(group_target->first);
+                targeted_production_groups.insert(group_target->group_name);
             }
         }
     }
