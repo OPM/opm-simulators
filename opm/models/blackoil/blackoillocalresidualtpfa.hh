@@ -461,64 +461,64 @@ public:
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
                 // This line causes divergence between CPU and GPU in residual
                 evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-                // if constexpr (enableEnergy) {
-                //     EnergyModule::template // Problematic line
-                //         addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
-                // }
-                // if constexpr (enableBioeffects) {
-                //     BioeffectsModule::template
-                //         addBioeffectsFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
-                // }
-                // if constexpr (enableBrine) {
-                //     BrineModule::template
-                //         addBrineFluxes_<Evaluation, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
-                // }
+                if constexpr (enableEnergy) {
+                    EnergyModule::template // Problematic line
+                        addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
+                }
+                if constexpr (enableBioeffects) {
+                    BioeffectsModule::template
+                        addBioeffectsFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
+                }
+                if constexpr (enableBrine) {
+                    BrineModule::template
+                        addBrineFluxes_<Evaluation, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
+                }
             } else {
-                // const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx, *fsysptr);
-                // const auto& surfaceVolumeFlux = invB * darcyFlux;
-                // evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-                // if constexpr (enableEnergy) {
-                //     EnergyModule::template
-                //         addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
-                // }
-                // if constexpr (enableBioeffects) {
-                //     BioeffectsModule::template
-                //         addBioeffectsFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
-                // }
-                // if constexpr (enableBrine) {
-                //     BrineModule::template
-                //         addBrineFluxes_<Scalar, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
-                // }
+                const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx, *fsysptr);
+                const auto& surfaceVolumeFlux = invB * darcyFlux;
+                evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+                if constexpr (enableEnergy) {
+                    EnergyModule::template
+                        addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
+                }
+                if constexpr (enableBioeffects) {
+                    BioeffectsModule::template
+                        addBioeffectsFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
+                }
+                if constexpr (enableBrine) {
+                    BrineModule::template
+                        addBrineFluxes_<Scalar, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
+                }
             }
         }
 
-        // // deal with solvents (if present)
-        // static_assert(!enableSolvent,
-        //               "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // // SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // deal with solvents (if present)
+        static_assert(!enableSolvent,
+                      "Relevant computeFlux() method must be implemented for this module before enabling.");
+        // SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // // deal with zFracton (if present)
-        // static_assert(!enableExtbo,
-        //               "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // // ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // deal with zFracton (if present)
+        static_assert(!enableExtbo,
+                      "Relevant computeFlux() method must be implemented for this module before enabling.");
+        // ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // // deal with polymer (if present)
-        // static_assert(!enablePolymer,
-        //               "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // // PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // deal with polymer (if present)
+        static_assert(!enablePolymer,
+                      "Relevant computeFlux() method must be implemented for this module before enabling.");
+        // PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // // deal with convective mixing
-        // if constexpr (enableConvectiveMixing) {
-        //     ConvectiveMixingModule::addConvectiveMixingFlux(flux,
-        //                                                     intQuantsIn,
-        //                                                     intQuantsEx,
-        //                                                     globalIndexIn,
-        //                                                     globalIndexEx,
-        //                                                     nbInfo.dZg,
-        //                                                     nbInfo.trans,
-        //                                                     nbInfo.faceArea,
-        //                                                     moduleParams.convectiveMixingModuleParam);
-        // }
+        // deal with convective mixing
+        if constexpr (enableConvectiveMixing) {
+            ConvectiveMixingModule::addConvectiveMixingFlux(flux,
+                                                            intQuantsIn,
+                                                            intQuantsEx,
+                                                            globalIndexIn,
+                                                            globalIndexEx,
+                                                            nbInfo.dZg,
+                                                            nbInfo.trans,
+                                                            nbInfo.faceArea,
+                                                            moduleParams.convectiveMixingModuleParam);
+        }
 
         // // deal with energy (if present)
         // if constexpr (enableEnergy) {

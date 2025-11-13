@@ -1130,22 +1130,50 @@ private:
 
             // Compare residuals
             {
-                int mismatches = 0;
+                struct ResidualErrorInfo {
+                    double relativeError;
+                    double cpuVal, gpuVal;
+                    unsigned cell, eq;
+                };
+                
+                std::vector<ResidualErrorInfo> errors;
+                
                 for (unsigned i = 0; i < numCells; ++i) {
                     for (unsigned eq = 0; eq < numEq; ++eq) {
                         double cpuVal = residual_[i][eq];
                         double gpuVal = cpuResidualFromGpu[i][eq];
-                        double error = std::abs(cpuVal - gpuVal);
-                        if (error > 1e-10) {
-                            ++mismatches;
-                            if (mismatches > 10) {
-                                i = numCells; // break
-                                eq = numEq; // break
-                                continue;
-                            }
-                            printf("after Residual mismatch at cell %u, eq %u: CPU=%e, GPU=%e, error=%e\n",
-                                i, eq, cpuVal, gpuVal, error);
+                        double absError = std::abs(cpuVal - gpuVal);
+                        double relativeError = 0.0;
+                        
+                        // Calculate relative error avoiding division by zero
+                        if (std::abs(cpuVal) > 1e-15) {
+                            relativeError = absError / std::abs(cpuVal);
+                        } else if (absError > 1e-15) {
+                            relativeError = std::numeric_limits<double>::infinity();
                         }
+                        
+                        if (relativeError > 1e-10) {
+                            errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
+                        }
+                    }
+                }
+                
+                // Sort by relative error (descending) and keep top 3
+                std::partial_sort(errors.begin(), 
+                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
+                                errors.end(),
+                                [](const ResidualErrorInfo& a, const ResidualErrorInfo& b) {
+                                    return a.relativeError > b.relativeError;
+                                });
+                
+                // Output the 3 largest relative errors
+                int numToShow = std::min(3, static_cast<int>(errors.size()));
+                if (numToShow != 0) {
+                    printf("Top %d largest relative errors in residual:\n", numToShow);
+                    for (int i = 0; i < numToShow; ++i) {
+                        const auto& err = errors[i];
+                        printf("  %d: cell=%u, eq=%u, CPU=%e, GPU=%e, rel_error=%e\n",
+                            i+1, err.cell, err.eq, err.cpuVal, err.gpuVal, err.relativeError);
                     }
                 }
             }
@@ -1183,7 +1211,7 @@ private:
                                     relativeError = std::numeric_limits<double>::infinity();
                                 }
                                 
-                                if (relativeError > 1e-12) {
+                                if (relativeError > 1e-10) {
                                     errors.push_back({relativeError, cpuVal, gpuVal});
                                 }
                             }
@@ -1193,14 +1221,14 @@ private:
                 
                 // Sort by relative error (descending) and keep top 5
                 std::partial_sort(errors.begin(), 
-                                errors.begin() + std::min(5, static_cast<int>(errors.size())), 
+                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
                                 errors.end(),
                                 [](const ErrorInfo& a, const ErrorInfo& b) {
                                     return a.relativeError > b.relativeError;
                                 });
                 
                 // Output the 5 largest relative errors
-                int numToShow = std::min(5, static_cast<int>(errors.size()));
+                int numToShow = std::min(3, static_cast<int>(errors.size()));
                 if (numToShow != 0) {
                     printf("Top %d largest relative errors in Jacobian:\n", numToShow);
                     for (int i = 0; i < numToShow; ++i) {
