@@ -1959,18 +1959,19 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
     }
 
     const auto& well_state = this->wellState();
+    // numbers of the group production controls
+    // one group can have multiple controls, including NONE
     const std::size_t size_pc = prod_group_controls.size();
-    // TODO: check whether prod_group_controls can have more than one entries for the same group name
     // Collect groups that currently provide production targets to any well on this rank
-    std::unordered_set<std::string> production_groups; // TODO: better name
-    production_groups.reserve(size_pc);
+    std::unordered_set<std::string> targeted_production_groups; // TODO: better name
+    targeted_production_groups.reserve(size_pc);
 
     for (const auto& wname : well_state.wells()) {
         const auto& ws = well_state.well(wname);
         if (ws.producer && ws.production_cmode == WellProducerCMode::GRUP) {
             const auto& group_target = ws.group_target;
             if (group_target.has_value()) {
-                production_groups.insert(group_target->first);
+                targeted_production_groups.insert(group_target->first);
             }
         }
     }
@@ -1981,17 +1982,17 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
     for (const auto& gprod : prod_group_controls) {
         gnames.push_back(gprod.first);
     }
-    std::sort(gnames.begin(), gnames.end());
 
     std::vector<int> local_used(size_pc, 0);
     for (std::size_t i = 0; i < size_pc; ++i) {
-        if (production_groups.find(gnames[i]) != production_groups.end()) {
+        if (targeted_production_groups.find(gnames[i]) != targeted_production_groups.end()) {
             local_used[i] = 1;
         }
     }
 
     std::vector<int> global_used(size_pc, 0);
 
+    // with the following code, we only need to communicate once
     if (comm_.size() > 1 && size_pc > 0) {
         std::vector<int> gathered(comm_.size() * size_pc, 0);
         comm_.allgather(local_used.data(), static_cast<int>(size_pc), gathered.data());
@@ -2005,7 +2006,6 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
     } else {
         global_used = local_used;
     }
-    const bool is_root = comm_.rank() == 0;
 
     for (std::size_t i = 0; i < size_pc;   ++i) {
         if (global_used[i] > 0) {
@@ -2013,7 +2013,7 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
         }
         const auto& gname = gnames[i];
         if (group_state.production_control(gname) != Group::ProductionCMode::NONE) {
-            if (is_root) {
+            if (comm_.rank() == 0) {
                 const std::string msg = fmt::format("Production group {} has no constraints active, setting control mode to NONE", gname);
                 deferred_logger.info(msg);
             }
