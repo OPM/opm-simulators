@@ -198,7 +198,8 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::string
     if (this->schedule_.hasWell(name)
         && this->wellState().well(name).group_target) { // for wells we already have computed the target
         Scalar scale = 1.0;
-        const Scalar group_target_rate_available = *this->wellState().well(name).group_target;
+        const auto& group_target = this->wellState().well(name).group_target;
+        const Scalar group_target_rate_available = group_target->target_value;
         const Scalar current_well_rate_available
             = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
         if (current_well_rate_available > 1e-12) {
@@ -371,7 +372,8 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::strin
 
         // Switch sign since 'rates' are negative for producers.
         const Scalar current_well_rate_available = -tcalc.calcModeRateFromRates(rates);
-        const Scalar group_target_rate_available = *this->wellState().well(name).group_target;
+        const auto& group_target = this->wellState().well(name).group_target;
+        const Scalar group_target_rate_available = group_target->target_value;
         Scalar scale = 1.0;
         if (current_well_rate_available > 1e-12) {
             scale = group_target_rate_available / current_well_rate_available;
@@ -640,7 +642,7 @@ WellGroupHelper<Scalar, IndexTraits>::getProductionGroupRateVector(const std::st
 }
 
 template <typename Scalar, typename IndexTraits>
-std::optional<Scalar>
+std::optional<typename SingleWellState<Scalar, IndexTraits>::GroupTarget>
 WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
@@ -769,12 +771,12 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
             target *= local_fraction_lambda(chain[ii + 1], chain[ii + 1]);
         }
     }
-    // Avoid negative target rates comming from too large local reductions.
-    return std::max(Scalar(0.0), target / efficiency_factor);
+    // Avoid negative target rates coming from too large local reductions.
+    return GroupTarget{group.name(), std::max(Scalar(0.0), target / efficiency_factor)};
 }
 
 template <typename Scalar, typename IndexTraits>
-std::optional<Scalar>
+std::optional<typename SingleWellState<Scalar, IndexTraits>::GroupTarget>
 WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::string& name,
                                                                  const std::string& parent,
                                                                  const Group& group,
@@ -787,7 +789,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
     // 'parent' will stay fixed while 'group' will be higher up
     // in the group tree.
-    // Eficiencyfactor is the well efficiency factor for the first group the well is
+    // Efficiency factor is the well efficiency factor for the first group the well is
     // part of. Later it is the accumulated factor including the group efficiency factor
     // of the child of group.
     OPM_TIMEFUNCTION();
@@ -898,7 +900,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::stri
         }
     }
     // Avoid negative target rates coming from too large local reductions.
-    return std::max(Scalar(0.0), target / efficiency_factor);
+    return GroupTarget{group.name(), std::max(Scalar(0.0), target / efficiency_factor)};
 }
 
 template <typename Scalar, typename IndexTraits>
