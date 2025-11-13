@@ -33,6 +33,9 @@ popd
 
 source $WORKSPACE/deps/opm-common/jenkins/build-opm-module.sh
 
+# Add a link so scripts can find opm-simulators in a uniform way
+ln -sf $WORKSPACE $WORKSPACE/deps/opm-simulators
+
 parseRevisions
 printHeader opm-simulators
 
