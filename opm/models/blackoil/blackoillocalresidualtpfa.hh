@@ -439,6 +439,7 @@ public:
             if constexpr (enableBioeffects || enableSaltPrecipitation) {
                 transMult *= (intQuantsIn.permFactor() + Toolbox::value(intQuantsEx.permFactor())) / 2;
             }
+
             Evaluation darcyFlux;
             if (globalUpIndex == globalIndexIn) {
                     darcyFlux = pressureDifference * up.mobility(phaseIdx, facedir) * transMult * (-trans / faceArea);
@@ -454,40 +455,41 @@ public:
 
             unsigned pvtRegionIdx = up.pvtRegionIndex();
             // if (upIdx == globalFocusDofIdx){
-            // if (globalUpIndex == globalIndexIn) {
-            //     const auto& invB
-            //         = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx, *fsysptr);
-            //     const auto& surfaceVolumeFlux = invB * darcyFlux;
-            //     evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-            //     if constexpr (enableEnergy) {
-            //         EnergyModule::template // Problematic line
-            //             addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
-            //     }
-            //     if constexpr (enableBioeffects) {
-            //         BioeffectsModule::template
-            //             addBioeffectsFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
-            //     }
-            //     if constexpr (enableBrine) {
-            //         BrineModule::template
-            //             addBrineFluxes_<Evaluation, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
-            //     }
-            // } else {
-            //     const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx, *fsysptr);
-            //     const auto& surfaceVolumeFlux = invB * darcyFlux;
-            //     evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-            //     if constexpr (enableEnergy) {
-            //         EnergyModule::template
-            //             addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
-            //     }
-            //     if constexpr (enableBioeffects) {
-            //         BioeffectsModule::template
-            //             addBioeffectsFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
-            //     }
-            //     if constexpr (enableBrine) {
-            //         BrineModule::template
-            //             addBrineFluxes_<Scalar, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
-            //     }
-            // }
+            if (globalUpIndex == globalIndexIn) {
+                const auto& invB
+                    = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx, *fsysptr);
+                const auto& surfaceVolumeFlux = invB * darcyFlux;
+                // This line causes divergence between CPU and GPU in residual
+                evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+                // if constexpr (enableEnergy) {
+                //     EnergyModule::template // Problematic line
+                //         addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
+                // }
+                // if constexpr (enableBioeffects) {
+                //     BioeffectsModule::template
+                //         addBioeffectsFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
+                // }
+                // if constexpr (enableBrine) {
+                //     BrineModule::template
+                //         addBrineFluxes_<Evaluation, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
+                // }
+            } else {
+                // const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx, *fsysptr);
+                // const auto& surfaceVolumeFlux = invB * darcyFlux;
+                // evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+                // if constexpr (enableEnergy) {
+                //     EnergyModule::template
+                //         addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
+                // }
+                // if constexpr (enableBioeffects) {
+                //     BioeffectsModule::template
+                //         addBioeffectsFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
+                // }
+                // if constexpr (enableBrine) {
+                //     BrineModule::template
+                //         addBrineFluxes_<Scalar, FluidState>(flux, phaseIdx, darcyFlux, up.fluidState());
+                // }
+            }
         }
 
         // // deal with solvents (if present)
@@ -825,7 +827,19 @@ public:
     //                              const ExtensiveQuantitiesT& extQuants,
     //                              const FluidState& upFs)
     // {
-    //     const auto& invB = getInvB_<FluidSystem, FluidState, UpEval>(upFs, phaseIdx, pvtRegionIdx);
+    //     // TODO: this can be made cleaner by centralizing this logic in the getter
+    //     FluidSystem* fsysptr;
+    //     bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+
+    //     if constexpr (usesStaticFluidSystem)
+    //     {
+    //         static FluidSystem instance;
+    //         fsysptr = &instance;
+    //     } else {
+    //         fsysptr = const_cast<FluidSystem*>(&upFs.fluidSystem());
+    //     }
+
+    //     const auto& invB = getInvB_<FluidSystem, FluidState, UpEval>(upFs, phaseIdx, pvtRegionIdx, *fsysptr);
     //     const auto& surfaceVolumeFlux = invB * extQuants.volumeFlux(phaseIdx);
     //     evalPhaseFluxes_<UpEval>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, upFs);
     // }
@@ -923,6 +937,101 @@ public:
                     flux[conti0EqIdx + activeWaterCompIdx] +=
                         Rvw * surfaceVolumeFlux *
                         FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
+                }
+            }
+        }
+    }
+
+    template <class UpEval, class RateVectorT, class Eval,class FluidState>
+    OPM_HOST_DEVICE static void evalPhaseFluxes_(RateVectorT& flux,
+                                 unsigned phaseIdx,
+                                 unsigned pvtRegionIdx,
+                                 const Eval& surfaceVolumeFlux,
+                                 const FluidState& upFs)
+    {
+        // TODO: this can be made cleaner by centralizing this logic in the getter
+        FluidSystem* fsysptr;
+        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+
+        if constexpr (usesStaticFluidSystem)
+        {
+            static FluidSystem instance;
+            fsysptr = &instance;
+        } else {
+            fsysptr = const_cast<FluidSystem*>(&upFs.fluidSystem());
+        }
+
+
+        unsigned activeCompIdx =
+            fsysptr->canonicalToActiveCompIdx(fsysptr->solventComponentIndex(phaseIdx));
+
+        if constexpr (blackoilConserveSurfaceVolume) {
+            flux[conti0EqIdx + activeCompIdx] += surfaceVolumeFlux;
+        }
+        else {
+            flux[conti0EqIdx + activeCompIdx] += surfaceVolumeFlux *
+                                                 fsysptr->referenceDensity(phaseIdx, pvtRegionIdx);
+        }
+
+        if (phaseIdx == oilPhaseIdx) {
+            // dissolved gas (in the oil phase).
+            if (fsysptr->enableDissolvedGas()) {
+                const auto& Rs = BlackOil::getRs_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
+
+                const unsigned activeGasCompIdx = fsysptr->canonicalToActiveCompIdx(gasCompIdx);
+                if constexpr (blackoilConserveSurfaceVolume) {
+                    flux[conti0EqIdx + activeGasCompIdx] += Rs * surfaceVolumeFlux;
+                }
+                else {
+                    flux[conti0EqIdx + activeGasCompIdx] +=
+                        Rs * surfaceVolumeFlux *
+                        fsysptr->referenceDensity(gasPhaseIdx, pvtRegionIdx);
+                }
+            }
+        }
+        else if (phaseIdx == waterPhaseIdx) {
+            // dissolved gas (in the water phase).
+            if (fsysptr->enableDissolvedGasInWater()) {
+                const auto& Rsw = BlackOil::getRsw_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
+
+                const unsigned activeGasCompIdx = fsysptr->canonicalToActiveCompIdx(gasCompIdx);
+                if constexpr (blackoilConserveSurfaceVolume) {
+                    flux[conti0EqIdx + activeGasCompIdx] += Rsw * surfaceVolumeFlux;
+                }
+                else {
+                    flux[conti0EqIdx + activeGasCompIdx] +=
+                        Rsw * surfaceVolumeFlux *
+                        fsysptr->referenceDensity(gasPhaseIdx, pvtRegionIdx);
+                }
+            }
+        }
+        else if (phaseIdx == gasPhaseIdx) {
+            // vaporized oil (in the gas phase).
+            if (fsysptr->enableVaporizedOil()) {
+                const auto& Rv = BlackOil::getRv_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
+
+                const unsigned activeOilCompIdx = fsysptr->canonicalToActiveCompIdx(oilCompIdx);
+                if constexpr (blackoilConserveSurfaceVolume) {
+                    flux[conti0EqIdx + activeOilCompIdx] += Rv * surfaceVolumeFlux;
+                }
+                else {
+                    flux[conti0EqIdx + activeOilCompIdx] +=
+                        Rv * surfaceVolumeFlux *
+                        fsysptr->referenceDensity(oilPhaseIdx, pvtRegionIdx);
+                }
+            }
+             // vaporized water (in the gas phase).
+            if (fsysptr->enableVaporizedWater()) {
+                const auto& Rvw = BlackOil::getRvw_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
+
+                const unsigned activeWaterCompIdx = fsysptr->canonicalToActiveCompIdx(waterCompIdx);
+                if constexpr (blackoilConserveSurfaceVolume) {
+                    flux[conti0EqIdx + activeWaterCompIdx] += Rvw * surfaceVolumeFlux;
+                }
+                else {
+                    flux[conti0EqIdx + activeWaterCompIdx] +=
+                        Rvw * surfaceVolumeFlux *
+                        fsysptr->referenceDensity(waterPhaseIdx, pvtRegionIdx);
                 }
             }
         }

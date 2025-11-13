@@ -1058,7 +1058,7 @@ private:
                                 double cpuVal = (*col)[brow][bcol];
                                 double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
                                 double error = std::abs(cpuVal - gpuVal);
-                                if (error > 1e-10) {
+                                if (error > 1e-12) {
                                     printf("BEFORE linearize kernel: Jacobian mismatch at block (%d,%d) entry (%d,%d): CPU=%e, GPU=%e, error=%e\n",
                                         row.index(), col.index(), brow, bcol, cpuVal, gpuVal, error);
                                     ++mismatches;
@@ -1129,24 +1129,40 @@ private:
             auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
 
             // Compare residuals
-            for (unsigned i = 0; i < numCells; ++i) {
-                for (unsigned eq = 0; eq < numEq; ++eq) {
-                    double cpuVal = residual_[i][eq];
-                    double gpuVal = cpuResidualFromGpu[i][eq];
-                    double error = std::abs(cpuVal - gpuVal);
-                    if (error > 1e-10) {
-                        printf("Residual mismatch at cell %u, eq %u: CPU=%e, GPU=%e, error=%e\n",
-                               i, eq, cpuVal, gpuVal, error);
+            {
+                int mismatches = 0;
+                for (unsigned i = 0; i < numCells; ++i) {
+                    for (unsigned eq = 0; eq < numEq; ++eq) {
+                        double cpuVal = residual_[i][eq];
+                        double gpuVal = cpuResidualFromGpu[i][eq];
+                        double error = std::abs(cpuVal - gpuVal);
+                        if (error > 1e-10) {
+                            ++mismatches;
+                            if (mismatches > 10) {
+                                i = numCells; // break
+                                eq = numEq; // break
+                                continue;
+                            }
+                            printf("after Residual mismatch at cell %u, eq %u: CPU=%e, GPU=%e, error=%e\n",
+                                i, eq, cpuVal, gpuVal, error);
+                        }
                     }
                 }
             }
 
             {
-                int mismatches = 0;
-                // Compare jacobian entries
+                // Compare jacobian entries and find 5 largest relative errors
                 auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
                 int gpuJacIdx = 0;
                 auto& cpuJacobian = jacobian_->istlMatrix();
+                
+                struct ErrorInfo {
+                    double relativeError;
+                    double cpuVal, gpuVal;
+                };
+                
+                std::vector<ErrorInfo> errors;
+                
                 for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
                 {
                     for (auto col = row->begin(); col != row->end(); ++col)
@@ -1157,23 +1173,43 @@ private:
                             {
                                 double cpuVal = (*col)[brow][bcol];
                                 double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
-                                double error = std::abs(cpuVal - gpuVal);
-                                if (error > 1e-10) {
-                                    printf("AFTER linearize kernel: Jacobian mismatch at block (%d,%d) entry (%d,%d): CPU=%e, GPU=%e, error=%e\n",
-                                        row.index(), col.index(), brow, bcol, cpuVal, gpuVal, error);
-                                    ++mismatches;
-                                    if (mismatches > 10) {
-                                        bcol = numEq; // break
-                                        brow = numEq; // break
-                                        col = row->end(); // break
-                                        row = cpuJacobian.end(); // break
-                                        continue;
-                                    }
+                                double absError = std::abs(cpuVal - gpuVal);
+                                double relativeError = 0.0;
+                                
+                                // Calculate relative error avoiding division by zero
+                                if (std::abs(cpuVal) > 1e-15) {
+                                    relativeError = absError / std::abs(cpuVal);
+                                } else if (absError > 1e-15) {
+                                    relativeError = std::numeric_limits<double>::infinity();
+                                }
+                                
+                                if (relativeError > 1e-12) {
+                                    errors.push_back({relativeError, cpuVal, gpuVal});
                                 }
                             }
                         }
                     }
                 }
+                
+                // Sort by relative error (descending) and keep top 5
+                std::partial_sort(errors.begin(), 
+                                errors.begin() + std::min(5, static_cast<int>(errors.size())), 
+                                errors.end(),
+                                [](const ErrorInfo& a, const ErrorInfo& b) {
+                                    return a.relativeError > b.relativeError;
+                                });
+                
+                // Output the 5 largest relative errors
+                int numToShow = std::min(5, static_cast<int>(errors.size()));
+                if (numToShow != 0) {
+                    printf("Top %d largest relative errors in Jacobian:\n", numToShow);
+                    for (int i = 0; i < numToShow; ++i) {
+                        const auto& err = errors[i];
+                        printf("  %d: CPU=%e, GPU=%e, rel_error=%e\n",
+                            i+1, err.cpuVal, err.gpuVal, err.relativeError);
+                    }
+                }
+
             }
 
             for (unsigned ii = 0; ii < numCells; ++ii) {

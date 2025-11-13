@@ -247,6 +247,19 @@ public:
             volumeFlux;
     }
 
+    // more generic copy for gpu stuff
+    template <class UpEval, class RateVectorT, class Eval, class FluidState>
+    OPM_HOST_DEVICE static void addPhaseEnthalpyFluxes_(RateVectorT& flux,
+                                        unsigned phaseIdx,
+                                        const Eval& volumeFlux,
+                                        const FluidState& upFs)
+    {
+        flux[contiEnergyEqIdx] +=
+            decay<UpEval>(upFs.enthalpy(phaseIdx)) *
+            decay<UpEval>(upFs.density(phaseIdx)) *
+            volumeFlux;
+    }
+
     template <class UpstreamEval>
     static void addPhaseEnthalpyFlux_(RateVector& flux,
                                       unsigned phaseIdx,

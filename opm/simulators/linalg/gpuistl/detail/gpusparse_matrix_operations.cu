@@ -104,7 +104,8 @@ namespace
                                       const int* colIndices,
                                       int rows,
                                       T** diagPtrs,
-                                      T* values)
+                                      T* values,
+                                      size_t blocksize)
     {
         const auto rawIdx = blockDim.x * blockIdx.x + threadIdx.x;
         if (rawIdx < rows) {
@@ -115,7 +116,7 @@ namespace
                 ++diagIdx;
             }
 
-            diagPtrs[rawIdx] = &values[diagIdx];
+            diagPtrs[rawIdx] = &values[diagIdx*blocksize*blocksize];
         }
     }
 } // namespace
@@ -179,7 +180,7 @@ getDiagPtrs(GpuSparseMatrixWrapper<T>& matrix)
 
     cuComputeDiagPtrs<T>
         <<<nThreadBlocks, threadBlockSize>>>(
-            matrix->getRowIndices().data(), matrix->getColumnIndices().data(), matrix.N(), diagPtrs.data(), matrix->getNonZeroValues().data());
+            matrix->getRowIndices().data(), matrix->getColumnIndices().data(), matrix.N(), diagPtrs.data(), matrix->getNonZeroValues().data(), matrix.blockSize());
     return diagPtrs;
 }
 
