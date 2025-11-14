@@ -425,6 +425,8 @@ init(const std::vector<Scalar>& cellPressures,
             //
             // TODO: we might still need the values from the prev_well if
             // the connection structure changes.
+            // TODO: the same number of perforations does not guarantee
+            // that the perforations are the same as before
             if (const auto num_perf_this_well = new_well.perf_data.size();
                 num_perf_this_well == prev_well.perf_data.size())
             {

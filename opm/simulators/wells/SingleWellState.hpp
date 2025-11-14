@@ -50,7 +50,7 @@ public:
                     const ParallelWellInfo<Scalar>& pinfo,
                     const PhaseUsageInfo<IndexTraits>& pu,
                     bool is_producer,
-                    Scalar presssure_first_connection,
+                    Scalar pressure_first_connection,
                     const std::vector<PerforationData<Scalar>>& perf_input,
                     Scalar temp);
 
@@ -64,6 +64,7 @@ public:
         serializer(producer);
         serializer(bhp);
         serializer(thp);
+        serializer(pressure_first_connection);
         serializer(temperature);
         serializer(energy_rate);
         serializer(efficiency_scaling_factor);
@@ -97,6 +98,7 @@ public:
     PhaseUsageInfo<IndexTraits> pu;
     Scalar bhp{0};
     Scalar thp{0};
+    Scalar pressure_first_connection{0};
 
     // thermal related
     Scalar temperature{0};
