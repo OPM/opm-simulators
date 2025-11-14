@@ -954,6 +954,9 @@ private:
 #if HAVE_CUDA
         // Make sure we have can have the domain on the GPU.
         if constexpr (std::is_same_v<SubDomainType, FullDomain<>>) {
+
+            hipDeviceSynchronize();
+            auto start_gpu = std::chrono::high_resolution_clock::now();
             /*
                 One of the things I must be careful with on the GPU is all of the pointers in this class
                 Block* diagMatAddress_ for instance will be pointing to CPU memory, and many helper objects
@@ -1048,43 +1051,6 @@ private:
             gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
             auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
 
-            {
-                int mismatches = 0;
-                // Compare jacobian entries
-                auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
-                int gpuJacIdx = 0;
-                auto& cpuJacobian = jacobian_->istlMatrix();
-                for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
-                {
-                    for (auto col = row->begin(); col != row->end(); ++col)
-                    {
-                        for (int brow = 0; brow < numEq; ++brow)
-                        {
-                            for (int bcol = 0; bcol < numEq; ++bcol)
-                            {
-                                double cpuVal = (*col)[brow][bcol];
-                                double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
-                                double error = std::abs(cpuVal - gpuVal);
-                                if (error > 0) {
-                                    printf("BEFORE linearize kernel: Jacobian mismatch at block (%d,%d) entry (%d,%d): CPU=%e, GPU=%e, error=%e\n",
-                                        row.index(), col.index(), brow, bcol, cpuVal, gpuVal, error);
-                                    ++mismatches;
-                                    if (mismatches > 10) {
-                                        bcol = numEq; // break
-                                        brow = numEq; // break
-                                        col = row->end(); // break
-                                        row = cpuJacobian.end(); // break
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            hipDeviceSynchronize();
-            auto start_gpu = std::chrono::high_resolution_clock::now();
             linearize_kernel<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells/*numCells*/+1023)/1024), 1024>>>(
                 dispersionActive,
                 numCells/*numCells*/,
@@ -1110,6 +1076,20 @@ private:
                     boundaryInfo_view,
                     gpuModelView);
             }
+
+            // Now move the gpu residual into the cpu residual
+            auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
+            std::memcpy(residual_.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
+            {
+                auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
+                auto& cpuJacobian = jacobian_->istlMatrix();
+                
+                // Copy GPU jacobian back to CPU jacobian as a single contiguous operation
+                const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
+                std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(), 
+                           totalMatrixSize * sizeof(double));
+            }
+
             hipDeviceSynchronize();
             auto end_gpu = std::chrono::high_resolution_clock::now();
             auto gpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu);
@@ -1118,35 +1098,7 @@ private:
                 std::cerr << "Error during kernel launch: " << hipGetErrorString(err) << std::endl;
                 OPM_THROW(std::runtime_error, "GPU kernel launch failed");
             }
-
-
-            // Now move the gpu residual into the cpu residual
-            auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
-            for (unsigned i = 0; i < numCells; ++i) {
-                for (unsigned eq = 0; eq < numEq; ++eq) {
-                    residual_[domain.cells[i]][eq] = cpuResidualFromGpu[i][eq];
-                }
-            }
-
-            // Now move the gpu jacobian into the cpu jacobian
-            {
-                auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
-                int gpuJacIdx = 0;
-                auto& cpuJacobian = jacobian_->istlMatrix();
-                for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
-                {
-                    for (auto col = row->begin(); col != row->end(); ++col)
-                    {
-                        for (int brow = 0; brow < numEq; ++brow)
-                        {
-                            for (int bcol = 0; bcol < numEq; ++bcol)
-                            {
-                                (*col)[brow][bcol] = gpuJacobianNonZeroes[gpuJacIdx++];
-                            }
-                        }
-                    }
-                }
-            }
+            std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
 
             // To make the comparison fair this has to use the same simplified objects
             // auto start_cpu = std::chrono::high_resolution_clock::now();
@@ -1163,7 +1115,6 @@ private:
             // auto end_cpu = std::chrono::high_resolution_clock::now();
             // auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
 
-            // std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
             // std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
 
             // // Copy residual back from GPU to compare
