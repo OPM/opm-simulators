@@ -1065,7 +1065,7 @@ private:
                                 double cpuVal = (*col)[brow][bcol];
                                 double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
                                 double error = std::abs(cpuVal - gpuVal);
-                                if (error > 1e-12) {
+                                if (error > 0) {
                                     printf("BEFORE linearize kernel: Jacobian mismatch at block (%d,%d) entry (%d,%d): CPU=%e, GPU=%e, error=%e\n",
                                         row.index(), col.index(), brow, bcol, cpuVal, gpuVal, error);
                                     ++mismatches;
@@ -1158,13 +1158,9 @@ private:
                         double relativeError = 0.0;
                         
                         // Calculate relative error avoiding division by zero
-                        if (std::abs(cpuVal) > 1e-15) {
-                            relativeError = absError / std::abs(cpuVal);
-                        } else if (absError > 1e-15) {
-                            relativeError = std::numeric_limits<double>::infinity();
-                        }
+                        relativeError = absError / std::abs(cpuVal);
                         
-                        if (relativeError > 1e-10) {
+                        if (relativeError > 1e-14) {
                             errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
                         }
                     }
@@ -1217,13 +1213,9 @@ private:
                                 double relativeError = 0.0;
                                 
                                 // Calculate relative error avoiding division by zero
-                                if (std::abs(cpuVal) > 1e-15) {
-                                    relativeError = absError / std::abs(cpuVal);
-                                } else if (absError > 1e-15) {
-                                    relativeError = std::numeric_limits<double>::infinity();
-                                }
+                                relativeError = absError / std::abs(cpuVal);
                                 
-                                if (relativeError > 1e-10) {
+                                if (relativeError > 1e-14) {
                                     errors.push_back({relativeError, cpuVal, gpuVal});
                                 }
                             }
@@ -1606,8 +1598,8 @@ private:
                     // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
                     //                         nbInfo.res_nbinfo,  problem_().moduleParams());
 
-                    LocalResidualKernel::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                                            nbInfo.res_nbinfo,  localModel.moduleParams());
+                    // LocalResidualKernel::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+                    //                         nbInfo.res_nbinfo,  localModel.moduleParams());
                     adres *= nbInfo.res_nbinfo.faceArea;
                     setResAndJacobiGPUCPU(res, bMat, adres);
                     GPU_LOCAL_residualView[globI] += res;
@@ -1632,11 +1624,11 @@ private:
             setResAndJacobiGPUCPU(res, bMat, adres);
 
             {
-                // VectorBlockType tmp;
-                // const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
-                // LocalResidualKernel::template computeStorage<Scalar>(tmp, intQuantOld);
-                // // assume volume do not change
-                // res -= tmp;
+                VectorBlockType tmp;
+                const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
+                LocalResidualKernel::template computeStorage<Scalar>(tmp, intQuantOld);
+                // assume volume do not change
+                res -= tmp;
             }
 
             res *= storefac;
@@ -1645,20 +1637,20 @@ private:
             //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
 
-            // // Cell-wise source terms.
-            // // This will include well sources if SeparateSparseSourceTerms is false.
-            // res = 0.0;
-            // bMat = 0.0;
-            // adres = 0.0;
+            // Cell-wise source terms.
+            // This will include well sources if SeparateSparseSourceTerms is false.
+            res = 0.0;
+            bMat = 0.0;
+            adres = 0.0;
 
-            // // ADD SOURCES AND MATRIX WELL CONTRIBUTIONS
-            // // LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+            // ADD SOURCES AND MATRIX WELL CONTRIBUTIONS
+            // LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
 
-            // adres *= -volume;
-            // setResAndJacobiGPUCPU(res, bMat, adres);
-            // GPU_LOCAL_residualView[globI] += res;
-            // //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            // *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+            adres *= -volume;
+            setResAndJacobiGPUCPU(res, bMat, adres);
+            GPU_LOCAL_residualView[globI] += res;
+            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
 
         }
     }
@@ -1750,13 +1742,13 @@ private:
                     bMat = 0.0;
                     adres = 0.0;
                     darcyFlux = 0.0;
-                    const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+                    const LocalIntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
                     // const LocalIntensiveQuantities& intQuantsEx = LocalModelClass{}.intensiveQuantities(globJ, /*timeIdx*/ 0);
                     // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
                     //                         nbInfo.res_nbinfo,  problem_().moduleParams());
 
-                    LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                                            nbInfo.res_nbinfo,  problem_().moduleParams());
+                    // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+                    //                         nbInfo.res_nbinfo,  problem_().moduleParams());
                     adres *= nbInfo.res_nbinfo.faceArea;
                     setResAndJacobiGPUCPU(res, bMat, adres);
                     GPU_LOCAL_residualView[globI] += res;
@@ -1777,15 +1769,14 @@ private:
             {
                 LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
             }
-
             setResAndJacobiGPUCPU(res, bMat, adres);
 
             {
-                // VectorBlockType tmp;
-                // const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                // LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
-                // // assume volume do not change
-                // res -= tmp;
+                VectorBlockType tmp;
+                const LocalIntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+                LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
+                // assume volume do not change
+                res -= tmp;
             }
 
             res *= storefac;
@@ -1794,19 +1785,19 @@ private:
             //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
 
-            // // Cell-wise source terms.
-            // // This will include well sources if SeparateSparseSourceTerms is false.
-            // res = 0.0;
-            // bMat = 0.0;
-            // adres = 0.0;
+            // Cell-wise source terms.
+            // This will include well sources if SeparateSparseSourceTerms is false.
+            res = 0.0;
+            bMat = 0.0;
+            adres = 0.0;
 
-            // // ADD SOURCES AND MATRIX WELL CONTRIBUTIONS
-            // // LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
-            // adres *= -volume;
-            // setResAndJacobiGPUCPU(res, bMat, adres);
-            // GPU_LOCAL_residualView[globI] += res;
-            // //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            // *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+            // ADD SOURCES AND MATRIX WELL CONTRIBUTIONS
+            // LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+            adres *= -volume;
+            setResAndJacobiGPUCPU(res, bMat, adres);
+            GPU_LOCAL_residualView[globI] += res;
+            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
         }
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
@@ -1818,7 +1809,7 @@ private:
                 MatrixBlockType bMat(0.0);
                 ADVectorBlockType adres(0.0);
                 const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
-                const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                const LocalIntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
                 // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
                 adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
                 setResAndJacobiGPUCPU(res, bMat, adres);
