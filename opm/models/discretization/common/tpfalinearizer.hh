@@ -1119,86 +1119,20 @@ private:
                 OPM_THROW(std::runtime_error, "GPU kernel launch failed");
             }
 
-            // To make the comparison fair this has to use the same simplified objects
-            auto start_cpu = std::chrono::high_resolution_clock::now();
-            linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
-                dispersionActive,
-                numCells/*numCells*/,
-                on_full_domain,
-                domain,
-                neighborInfo_,
-                diagMatAddress_,
-                residual_,
-                boundaryInfo_,
-                dt);
-            auto end_cpu = std::chrono::high_resolution_clock::now();
-            auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
 
-            std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
-            std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
-
-            // Copy residual back from GPU to compare
+            // Now move the gpu residual into the cpu residual
             auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
-
-            // Compare residuals
-            {
-                struct ResidualErrorInfo {
-                    double relativeError;
-                    double cpuVal, gpuVal;
-                    unsigned cell, eq;
-                };
-                
-                std::vector<ResidualErrorInfo> errors;
-                
-                for (unsigned i = 0; i < numCells; ++i) {
-                    for (unsigned eq = 0; eq < numEq; ++eq) {
-                        double cpuVal = residual_[i][eq];
-                        double gpuVal = cpuResidualFromGpu[i][eq];
-                        double absError = std::abs(cpuVal - gpuVal);
-                        double relativeError = 0.0;
-                        
-                        // Calculate relative error avoiding division by zero
-                        relativeError = absError / std::abs(cpuVal);
-                        
-                        if (relativeError > 1e-14) {
-                            errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
-                        }
-                    }
-                }
-                
-                // Sort by relative error (descending) and keep top 3
-                std::partial_sort(errors.begin(), 
-                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
-                                errors.end(),
-                                [](const ResidualErrorInfo& a, const ResidualErrorInfo& b) {
-                                    return a.relativeError > b.relativeError;
-                                });
-                
-                // Output the 3 largest relative errors
-                int numToShow = std::min(3, static_cast<int>(errors.size()));
-                if (numToShow != 0) {
-                    printf("Top %d largest relative errors in residual:\n", numToShow);
-                    for (int i = 0; i < numToShow; ++i) {
-                        const auto& err = errors[i];
-                        printf("  %d: cell=%u, eq=%u, CPU=%e, GPU=%e, rel_error=%e\n",
-                            i+1, err.cell, err.eq, err.cpuVal, err.gpuVal, err.relativeError);
-                    }
+            for (unsigned i = 0; i < numCells; ++i) {
+                for (unsigned eq = 0; eq < numEq; ++eq) {
+                    residual_[domain.cells[i]][eq] = cpuResidualFromGpu[i][eq];
                 }
             }
 
+            // Now move the gpu jacobian into the cpu jacobian
             {
-                // Compare jacobian entries and find 5 largest relative errors
                 auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
                 int gpuJacIdx = 0;
                 auto& cpuJacobian = jacobian_->istlMatrix();
-                
-                struct ErrorInfo {
-                    double relativeError;
-                    double cpuVal, gpuVal;
-                };
-                
-                std::vector<ErrorInfo> errors;
-                
                 for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
                 {
                     for (auto col = row->begin(); col != row->end(); ++col)
@@ -1207,42 +1141,137 @@ private:
                         {
                             for (int bcol = 0; bcol < numEq; ++bcol)
                             {
-                                double cpuVal = (*col)[brow][bcol];
-                                double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
-                                double absError = std::abs(cpuVal - gpuVal);
-                                double relativeError = 0.0;
-                                
-                                // Calculate relative error avoiding division by zero
-                                relativeError = absError / std::abs(cpuVal);
-                                
-                                if (relativeError > 1e-14) {
-                                    errors.push_back({relativeError, cpuVal, gpuVal});
-                                }
+                                (*col)[brow][bcol] = gpuJacobianNonZeroes[gpuJacIdx++];
                             }
                         }
                     }
                 }
-                
-                // Sort by relative error (descending) and keep top 5
-                std::partial_sort(errors.begin(), 
-                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
-                                errors.end(),
-                                [](const ErrorInfo& a, const ErrorInfo& b) {
-                                    return a.relativeError > b.relativeError;
-                                });
-                
-                // Output the 5 largest relative errors
-                int numToShow = std::min(3, static_cast<int>(errors.size()));
-                if (numToShow != 0) {
-                    printf("Top %d largest relative errors in Jacobian:\n", numToShow);
-                    for (int i = 0; i < numToShow; ++i) {
-                        const auto& err = errors[i];
-                        printf("  %d: CPU=%e, GPU=%e, rel_error=%e\n",
-                            i+1, err.cpuVal, err.gpuVal, err.relativeError);
-                    }
-                }
-
             }
+
+            // To make the comparison fair this has to use the same simplified objects
+            // auto start_cpu = std::chrono::high_resolution_clock::now();
+            // linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+            //     dispersionActive,
+            //     numCells/*numCells*/,
+            //     on_full_domain,
+            //     domain,
+            //     neighborInfo_,
+            //     diagMatAddress_,
+            //     residual_,
+            //     boundaryInfo_,
+            //     dt);
+            // auto end_cpu = std::chrono::high_resolution_clock::now();
+            // auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
+
+            // std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
+            // std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
+
+            // // Copy residual back from GPU to compare
+            // auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
+
+            // // Compare residuals
+            // {
+            //     struct ResidualErrorInfo {
+            //         double relativeError;
+            //         double cpuVal, gpuVal;
+            //         unsigned cell, eq;
+            //     };
+                
+            //     std::vector<ResidualErrorInfo> errors;
+                
+            //     for (unsigned i = 0; i < numCells; ++i) {
+            //         for (unsigned eq = 0; eq < numEq; ++eq) {
+            //             double cpuVal = residual_[i][eq];
+            //             double gpuVal = cpuResidualFromGpu[i][eq];
+            //             double absError = std::abs(cpuVal - gpuVal);
+            //             double relativeError = 0.0;
+                        
+            //             // Calculate relative error avoiding division by zero
+            //             relativeError = absError / std::abs(cpuVal);
+                        
+            //             if (relativeError > 1e-14) {
+            //                 errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
+            //             }
+            //         }
+            //     }
+                
+            //     // Sort by relative error (descending) and keep top 3
+            //     std::partial_sort(errors.begin(), 
+            //                     errors.begin() + std::min(3, static_cast<int>(errors.size())), 
+            //                     errors.end(),
+            //                     [](const ResidualErrorInfo& a, const ResidualErrorInfo& b) {
+            //                         return a.relativeError > b.relativeError;
+            //                     });
+                
+            //     // Output the 3 largest relative errors
+            //     int numToShow = std::min(3, static_cast<int>(errors.size()));
+            //     if (numToShow != 0) {
+            //         printf("Top %d largest relative errors in residual:\n", numToShow);
+            //         for (int i = 0; i < numToShow; ++i) {
+            //             const auto& err = errors[i];
+            //             printf("  %d: cell=%u, eq=%u, CPU=%e, GPU=%e, rel_error=%e\n",
+            //                 i+1, err.cell, err.eq, err.cpuVal, err.gpuVal, err.relativeError);
+            //         }
+            //     }
+            // }
+
+            // {
+            //     // Compare jacobian entries and find 5 largest relative errors
+            //     auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
+            //     int gpuJacIdx = 0;
+            //     auto& cpuJacobian = jacobian_->istlMatrix();
+                
+            //     struct ErrorInfo {
+            //         double relativeError;
+            //         double cpuVal, gpuVal;
+            //     };
+                
+            //     std::vector<ErrorInfo> errors;
+                
+            //     for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
+            //     {
+            //         for (auto col = row->begin(); col != row->end(); ++col)
+            //         {
+            //             for (int brow = 0; brow < numEq; ++brow)
+            //             {
+            //                 for (int bcol = 0; bcol < numEq; ++bcol)
+            //                 {
+            //                     double cpuVal = (*col)[brow][bcol];
+            //                     double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
+            //                     double absError = std::abs(cpuVal - gpuVal);
+            //                     double relativeError = 0.0;
+                                
+            //                     // Calculate relative error avoiding division by zero
+            //                     relativeError = absError / std::abs(cpuVal);
+                                
+            //                     if (relativeError > 1e-14) {
+            //                         errors.push_back({relativeError, cpuVal, gpuVal});
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     }
+                
+            //     // Sort by relative error (descending) and keep top 5
+            //     std::partial_sort(errors.begin(), 
+            //                     errors.begin() + std::min(3, static_cast<int>(errors.size())), 
+            //                     errors.end(),
+            //                     [](const ErrorInfo& a, const ErrorInfo& b) {
+            //                         return a.relativeError > b.relativeError;
+            //                     });
+                
+            //     // Output the 5 largest relative errors
+            //     int numToShow = std::min(3, static_cast<int>(errors.size()));
+            //     if (numToShow != 0) {
+            //         printf("Top %d largest relative errors in Jacobian:\n", numToShow);
+            //         for (int i = 0; i < numToShow; ++i) {
+            //             const auto& err = errors[i];
+            //             printf("  %d: CPU=%e, GPU=%e, rel_error=%e\n",
+            //                 i+1, err.cpuVal, err.gpuVal, err.relativeError);
+            //         }
+            //     }
+
+            // }
 
             for (unsigned ii = 0; ii < numCells; ++ii) {
                 OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
@@ -1675,32 +1704,29 @@ private:
             // I am not sure why this did not give the correct result when using atomic adds
             // The only race condition I see is multiple threads fetching the matrix and residual
             // elements at the same time before adding something to it...
-            for (int jj = 0; jj < GPU_LOCAL_boundaryInfo.size(); ++jj)
+            if (GPU_LOCAL_boundaryInfo[ii].bcdata.type != BCType::NONE)
             {
-                if (GPU_LOCAL_boundaryInfo[ii].bcdata.type != BCType::NONE)
-                {
-                    VectorBlockType res(.0);
-                    MatrixBlockType bMat(0.0);
-                    ADVectorBlockType adres(0.0);
-                    const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
-                    const LocalIntensiveQuantities& insideIntQuants = localModel.intensiveQuantities(globI, /*timeIdx*/ 0);
-                    // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
-                    adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
-                    setResAndJacobiGPUCPU(res, bMat, adres);
-                    // GPU_LOCAL_residualView[globI] += res;
-                    auto* residualPtr = &(GPU_LOCAL_residualView.data()[globI]);
-                    for (int i = 0; i < numEq; ++i) {
-                        atomicAdd(&((*residualPtr)[i]), res[i]);
-                    }
-                    ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-                    // Atomic add for matrix blocks - need to add each element individually
-                    // *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
-                    auto* matPtr = reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]);
-                    for (int row = 0; row < bMat.size(); ++row) {
-                        for (int col = 0; col < bMat.size(); ++col) {
-                            double* elemPtr = &((*matPtr)[row][col]);
-                            atomicAdd(elemPtr, bMat[row][col]);
-                        }
+                VectorBlockType res(.0);
+                MatrixBlockType bMat(0.0);
+                ADVectorBlockType adres(0.0);
+                const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
+                const LocalIntensiveQuantities& insideIntQuants = localModel.intensiveQuantities(globI, /*timeIdx*/ 0);
+                // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+                adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
+                setResAndJacobiGPUCPU(res, bMat, adres);
+                // GPU_LOCAL_residualView[globI] += res;
+                auto* residualPtr = &(GPU_LOCAL_residualView.data()[globI]);
+                for (int i = 0; i < numEq; ++i) {
+                    atomicAdd(&((*residualPtr)[i]), res[i]);
+                }
+                ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+                // Atomic add for matrix blocks - need to add each element individually
+                // *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+                auto* matPtr = reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]);
+                for (int row = 0; row < bMat.size(); ++row) {
+                    for (int col = 0; col < bMat.size(); ++col) {
+                        double* elemPtr = &((*matPtr)[row][col]);
+                        atomicAdd(elemPtr, bMat[row][col]);
                     }
                 }
             }
