@@ -578,7 +578,7 @@ runStepOriginal_()
 #ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
 template <class Solver>
-ReservoirCouplingMaster&
+ReservoirCouplingMaster<typename AdaptiveTimeStepping<TypeTag>::Scalar>&
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 reservoirCouplingMaster_()
 {
@@ -589,7 +589,7 @@ reservoirCouplingMaster_()
 #ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
 template <class Solver>
-ReservoirCouplingSlave&
+ReservoirCouplingSlave<typename AdaptiveTimeStepping<TypeTag>::Scalar>&
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 reservoirCouplingSlave_()
 {
@@ -639,18 +639,24 @@ runStepReservoirCouplingMaster_()
     double current_time{this->simulator_timer_.simulationTimeElapsed()};
     double step_end_time = current_time + original_time_step;
     auto current_step_length = original_time_step;
+    auto report_step_idx = this->simulator_timer_.currentStepNum();
+    if (report_step_idx == 0 && iteration == 0) {
+        reservoirCouplingMaster_().initTimeStepping();
+    }
     SimulatorReport report;
     // The master needs to know which slaves have activated before it can start the substep loop
     reservoirCouplingMaster_().maybeReceiveActivationHandshakeFromSlaves(current_time);
     while (true) {
         reservoirCouplingMaster_().receiveNextReportDateFromSlaves();
-        if (iteration == 0) {
-            maybeUpdateTuning_(current_time, current_step_length, /*substep=*/0);
+        bool start_of_report_step = (iteration == 0);
+        if (start_of_report_step) {
+            reservoirCouplingMaster_().initStartOfReportStep(report_step_idx);
         }
         current_step_length = reservoirCouplingMaster_().maybeChopSubStep(
                                           current_step_length, current_time);
         reservoirCouplingMaster_().sendNextTimeStepToSlaves(current_step_length);
-        if (iteration == 0) {
+        if (start_of_report_step) {
+            maybeUpdateTuning_(current_time, current_step_length, /*substep=*/0);
             maybeModifySuggestedTimeStepAtBeginningOfReportStep_(current_step_length);
         }
         AdaptiveSimulatorTimer substep_timer{
@@ -689,10 +695,15 @@ runStepReservoirCouplingSlave_()
     double current_time{this->simulator_timer_.simulationTimeElapsed()};
     double step_end_time = current_time + original_time_step;
     SimulatorReport report;
+    auto report_step_idx = this->simulator_timer_.currentStepNum();
+    if (report_step_idx == 0 && iteration == 0) {
+        reservoirCouplingSlave_().initTimeStepping();
+    }
     while (true) {
+        bool start_of_report_step = (iteration == 0);
         reservoirCouplingSlave_().sendNextReportDateToMasterProcess();
         const auto timestep = reservoirCouplingSlave_().receiveNextTimeStepFromMaster();
-        if (iteration == 0) {
+        if (start_of_report_step) {
             maybeUpdateTuning_(current_time, original_time_step, /*substep=*/0);
             maybeModifySuggestedTimeStepAtBeginningOfReportStep_(timestep);
         }

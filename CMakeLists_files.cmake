@@ -1332,17 +1332,27 @@ if(dune-alugrid_FOUND)
 endif()
 if(MPI_FOUND)
   list (APPEND MAIN_SOURCE_FILES
-    opm/simulators/flow/ReservoirCoupling.cpp
-    opm/simulators/flow/ReservoirCouplingMaster.cpp
-    opm/simulators/flow/ReservoirCouplingSlave.cpp
-    opm/simulators/flow/ReservoirCouplingSpawnSlaves.cpp
+    opm/simulators/flow/rescoup/ReservoirCoupling.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingMaster.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSlave.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.cpp
+    opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.cpp
+    opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.cpp
   )
   list (APPEND PUBLIC_HEADER_FILES
-    opm/simulators/flow/ReservoirCoupling.hpp
-    opm/simulators/flow/ReservoirCouplingMpiTraits.hpp
-    opm/simulators/flow/ReservoirCouplingMaster.hpp
-    opm/simulators/flow/ReservoirCouplingSlave.hpp
-    opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp
+    opm/simulators/flow/rescoup/ReservoirCoupling.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.hpp
+    opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp
+    opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp
     )
   list (APPEND TEST_SOURCE_FILES
     tests/rescoup/test_chopstep.cpp

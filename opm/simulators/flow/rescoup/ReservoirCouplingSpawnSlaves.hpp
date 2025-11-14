@@ -21,8 +21,8 @@
 #define OPM_RESERVOIR_COUPLING_SPAWN_SLAVES_HPP
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-#include <opm/simulators/flow/ReservoirCoupling.hpp>
-#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
 
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -35,12 +35,13 @@
 
 namespace Opm {
 
+template <class Scalar>
 class ReservoirCouplingSpawnSlaves {
 public:
     using MessageTag = ReservoirCoupling::MessageTag;
 
     ReservoirCouplingSpawnSlaves(
-        ReservoirCouplingMaster &master,
+        ReservoirCouplingMaster<Scalar> &master,
         const ReservoirCoupling::CouplingInfo &rescoup
     );
 
@@ -49,20 +50,20 @@ public:
 private:
     void createMasterGroupNameOrder_();
     void createMasterGroupToSlaveNameMap_();
+    void createSlaveNameToMasterGroupsMap_();
     std::pair<std::vector<char>, std::size_t>
-        getMasterGroupNamesForSlave_(const std::string &slave_name) const;
+        getMasterGroupNamesForSlave_(std::size_t slave_idx) const;
     std::vector<char *> getSlaveArgv_(
         const std::filesystem::path &data_file,
         const std::string &slave_name,
         std::string &log_filename) const;
-    void prepareTimeStepping_();
     void receiveActivationDateFromSlaves_();
     void receiveSimulationStartDateFromSlaves_();
     void sendMasterGroupNamesToSlaves_();
     void sendSlaveNamesToSlaves_();
     void spawnSlaveProcesses_();
 
-    ReservoirCouplingMaster &master_;
+    ReservoirCouplingMaster<Scalar> &master_;
     const ReservoirCoupling::CouplingInfo &rescoup_;
     const Parallel::Communication &comm_;
     ReservoirCoupling::Logger logger_;

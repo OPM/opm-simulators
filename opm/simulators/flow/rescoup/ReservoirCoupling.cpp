@@ -19,7 +19,7 @@
 
 #include <config.h>
 
-#include <opm/simulators/flow/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
