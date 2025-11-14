@@ -104,13 +104,13 @@ struct EnableDispersion<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { static co
 
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
-    static constexpr bool value = true;
+    static constexpr bool value = false; // TEMPORARY
 };
 
 // After a rebase the lines above were not sufficient to run a simulation with thermal effects
-template<class TypeTag>
-struct EnergyModuleType<TypeTag, TTag::FlowGasWaterEnergyProblemGPU>
-{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
+// template<class TypeTag>
+// struct EnergyModuleType<TypeTag, TTag::FlowGasWaterEnergyProblemGPU>
+// { static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
 
 template<class TypeTag>
 struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {

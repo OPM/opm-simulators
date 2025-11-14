@@ -1273,149 +1273,149 @@ private:
 
             // }
 
-            for (unsigned ii = 0; ii < numCells; ++ii) {
-                OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
-                const unsigned globI = domain.cells[ii];
-                const auto& nbInfos = neighborInfo_[globI];
-                VectorBlock res(0.0);
-                MatrixBlock bMat(0.0);
-                ADVectorBlock adres(0.0);
-                ADVectorBlock darcyFlux(0.0);
-                const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            // for (unsigned ii = 0; ii < numCells; ++ii) {
+            //     OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
+            //     const unsigned globI = domain.cells[ii];
+            //     const auto& nbInfos = neighborInfo_[globI];
+            //     VectorBlock res(0.0);
+            //     MatrixBlock bMat(0.0);
+            //     ADVectorBlock adres(0.0);
+            //     ADVectorBlock darcyFlux(0.0);
+            //     const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
 
-                // Flux term.
-                {
-                    OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell, Subsystem::Assembly);
-                    short loc = 0;
-                    for (const auto& nbInfo : nbInfos) {
-                        OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace, Subsystem::Assembly);
-                        const unsigned globJ = nbInfo.neighbor;
-                        assert(globJ != globI);
-                        res = 0.0;
-                        bMat = 0.0;
-                        adres = 0.0;
-                        darcyFlux = 0.0;
-                        const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                        LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                                                nbInfo.res_nbinfo,  problem_().moduleParams());
-                        adres *= nbInfo.res_nbinfo.faceArea;
-                        if (dispersionActive || enableBioeffects) {
-                            for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
-                                velocityInfo_[globI][loc].velocity[phaseIdx] =
-                                    darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
-                            }
-                        }
-                        setResAndJacobi(res, bMat, adres);
-                        residual_[globI] += res;
-                        //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
-                        *diagMatAddress_[globI] += bMat;
-                        bMat *= -1.0;
-                        //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
-                        *nbInfo.matBlockAddress += bMat;
-                        ++loc;
-                    }
-                }
+            //     // Flux term.
+            //     {
+            //         OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell, Subsystem::Assembly);
+            //         short loc = 0;
+            //         for (const auto& nbInfo : nbInfos) {
+            //             OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace, Subsystem::Assembly);
+            //             const unsigned globJ = nbInfo.neighbor;
+            //             assert(globJ != globI);
+            //             res = 0.0;
+            //             bMat = 0.0;
+            //             adres = 0.0;
+            //             darcyFlux = 0.0;
+            //             const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+            //             LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+            //                                     nbInfo.res_nbinfo,  problem_().moduleParams());
+            //             adres *= nbInfo.res_nbinfo.faceArea;
+            //             if (dispersionActive || enableBioeffects) {
+            //                 for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
+            //                     velocityInfo_[globI][loc].velocity[phaseIdx] =
+            //                         darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+            //                 }
+            //             }
+            //             setResAndJacobi(res, bMat, adres);
+            //             residual_[globI] += res;
+            //             //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
+            //             *diagMatAddress_[globI] += bMat;
+            //             bMat *= -1.0;
+            //             //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+            //             *nbInfo.matBlockAddress += bMat;
+            //             ++loc;
+            //         }
+            //     }
 
-                // Accumulation term.
-                const double volume = model_().dofTotalVolume(globI);
-                const Scalar storefac = volume / dt;
-                adres = 0.0;
-                {
-                    OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
-                    LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
-                }
-                setResAndJacobi(res, bMat, adres);
-                // Either use cached storage term, or compute it on the fly.
-                if (model_().enableStorageCache()) {
-                    // The cached storage for timeIdx 0 (current time) is not
-                    // used, but after storage cache is shifted at the end of the
-                    // timestep, it will become cached storage for timeIdx 1.
-                    model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
-                    // printf("Using cached storage for cell %u\n", globI);
-                    if (model_().newtonMethod().numIterations() == 0) { // is sometimes false
-                        // Need to update the storage cache.
-                        // printf("First iteration storage update for cell %u\n", globI);
-                        if (problem_().recycleFirstIterationStorage()) {
-                            // Assumes nothing have changed in the system which
-                            // affects masses calculated from primary variables.
-                            // printf("Recycling first iteration storage for cell %u\n", globI);
-                            if (on_full_domain) {
-                                // This is to avoid resetting the start-of-step storage
-                                // to incorrect numbers when we do local solves, where the iteration
-                                // number will start from 0, but the starting state may not be identical
-                                // to the start-of-step state.
-                                // Note that a full assembly must be done before local solves
-                                // otherwise this will be left un-updated.
-                                model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
-                            }
-                            else{ // never reached in spe11
-                            }
-                        }
-                        else { // never reached in spe11
-                            Dune::FieldVector<Scalar, numEq> tmp;
-                            const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                            LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
-                            model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
-                        }
-                    }
-                    res -= model_().cachedStorage(globI, 1);
-                }
-                else {
-                    OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
-                    Dune::FieldVector<Scalar, numEq> tmp;
-                    const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                    LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
-                    // assume volume do not change
-                    res -= tmp;
-                }
-                res *= storefac;
-                bMat *= storefac;
-                residual_[globI] += res;
-                //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-                *diagMatAddress_[globI] += bMat;
+            //     // Accumulation term.
+            //     const double volume = model_().dofTotalVolume(globI);
+            //     const Scalar storefac = volume / dt;
+            //     adres = 0.0;
+            //     {
+            //         OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
+            //         LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
+            //     }
+            //     setResAndJacobi(res, bMat, adres);
+            //     // Either use cached storage term, or compute it on the fly.
+            //     if (model_().enableStorageCache()) {
+            //         // The cached storage for timeIdx 0 (current time) is not
+            //         // used, but after storage cache is shifted at the end of the
+            //         // timestep, it will become cached storage for timeIdx 1.
+            //         model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
+            //         // printf("Using cached storage for cell %u\n", globI);
+            //         if (model_().newtonMethod().numIterations() == 0) { // is sometimes false
+            //             // Need to update the storage cache.
+            //             // printf("First iteration storage update for cell %u\n", globI);
+            //             if (problem_().recycleFirstIterationStorage()) {
+            //                 // Assumes nothing have changed in the system which
+            //                 // affects masses calculated from primary variables.
+            //                 // printf("Recycling first iteration storage for cell %u\n", globI);
+            //                 if (on_full_domain) {
+            //                     // This is to avoid resetting the start-of-step storage
+            //                     // to incorrect numbers when we do local solves, where the iteration
+            //                     // number will start from 0, but the starting state may not be identical
+            //                     // to the start-of-step state.
+            //                     // Note that a full assembly must be done before local solves
+            //                     // otherwise this will be left un-updated.
+            //                     model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
+            //                 }
+            //                 else{ // never reached in spe11
+            //                 }
+            //             }
+            //             else { // never reached in spe11
+            //                 Dune::FieldVector<Scalar, numEq> tmp;
+            //                 const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+            //                 LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
+            //                 model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
+            //             }
+            //         }
+            //         res -= model_().cachedStorage(globI, 1);
+            //     }
+            //     else {
+            //         OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
+            //         Dune::FieldVector<Scalar, numEq> tmp;
+            //         const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+            //         LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
+            //         // assume volume do not change
+            //         res -= tmp;
+            //     }
+            //     res *= storefac;
+            //     bMat *= storefac;
+            //     residual_[globI] += res;
+            //     //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            //     *diagMatAddress_[globI] += bMat;
 
-                // Cell-wise source terms.
-                // This will include well sources if SeparateSparseSourceTerms is false.
-                res = 0.0;
-                bMat = 0.0;
-                adres = 0.0;
-                if (separateSparseSourceTerms_) {
-                    LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
-                }
-                else {
-                    LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
-                }
-                adres *= -volume;
-                setResAndJacobi(res, bMat, adres);
-                residual_[globI] += res;
-                //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-                *diagMatAddress_[globI] += bMat;
-            } // end of loop for cell globI.
+            //     // Cell-wise source terms.
+            //     // This will include well sources if SeparateSparseSourceTerms is false.
+            //     res = 0.0;
+            //     bMat = 0.0;
+            //     adres = 0.0;
+            //     if (separateSparseSourceTerms_) {
+            //         LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
+            //     }
+            //     else {
+            //         LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+            //     }
+            //     adres *= -volume;
+            //     setResAndJacobi(res, bMat, adres);
+            //     residual_[globI] += res;
+            //     //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            //     *diagMatAddress_[globI] += bMat;
+            // } // end of loop for cell globI.
 
-            // Add sparse source terms. For now only wells.
-            if (separateSparseSourceTerms_) {
-                printf("CPU adding sparse source terms\n");
-                problem_().wellModel().addReservoirSourceTerms(residual_, diagMatAddress_);
-            }
+            // // Add sparse source terms. For now only wells.
+            // if (separateSparseSourceTerms_) {
+            //     printf("CPU adding sparse source terms\n");
+            //     problem_().wellModel().addReservoirSourceTerms(residual_, diagMatAddress_);
+            // }
 
-            // Boundary terms. Only looping over cells with nontrivial bcs.
-            for (const auto& bdyInfo : boundaryInfo_) {
-                if (bdyInfo.bcdata.type == BCType::NONE) {
-                    continue;
-                }
+            // // Boundary terms. Only looping over cells with nontrivial bcs.
+            // for (const auto& bdyInfo : boundaryInfo_) {
+            //     if (bdyInfo.bcdata.type == BCType::NONE) {
+            //         continue;
+            //     }
 
-                VectorBlock res(0.0);
-                MatrixBlock bMat(0.0);
-                ADVectorBlock adres(0.0);
-                const unsigned globI = bdyInfo.cell;
-                const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-                LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
-                adres *= bdyInfo.bcdata.faceArea;
-                setResAndJacobi(res, bMat, adres);
-                residual_[globI] += res;
-                ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-                *diagMatAddress_[globI] += bMat;
-            }
+            //     VectorBlock res(0.0);
+            //     MatrixBlock bMat(0.0);
+            //     ADVectorBlock adres(0.0);
+            //     const unsigned globI = bdyInfo.cell;
+            //     const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            //     LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+            //     adres *= bdyInfo.bcdata.faceArea;
+            //     setResAndJacobi(res, bMat, adres);
+            //     residual_[globI] += res;
+            //     ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            //     *diagMatAddress_[globI] += bMat;
+            // }
         }
         else {
             assert(false && "Only FullDomain is supported on GPU");
