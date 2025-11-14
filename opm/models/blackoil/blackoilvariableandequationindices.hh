@@ -41,7 +41,7 @@ template<unsigned numSolventsV,
          unsigned numEnergyV,
          bool enableFoam,
          bool enableBrine,
-         unsigned PVOffset,
+         int PVOffset,
          unsigned numBioCompV>
 struct BlackOilVariableAndEquationIndices
 {

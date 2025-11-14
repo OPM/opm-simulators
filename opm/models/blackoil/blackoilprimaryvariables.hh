@@ -1077,8 +1077,8 @@ private:
     GasMeaning primaryVarsMeaningGas_{GasMeaning::Disabled};
     BrineMeaning primaryVarsMeaningBrine_{BrineMeaning::Disabled};
     SolventMeaning primaryVarsMeaningSolvent_{SolventMeaning::Disabled};
-    unsigned short pvtRegionIdx_;
-    Scalar pcFactor_;
+    unsigned short pvtRegionIdx_{};
+    Scalar pcFactor_{};
     inline static Scalar pressureScale_ = 1.0;
 };
 
