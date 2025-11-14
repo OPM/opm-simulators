@@ -331,7 +331,8 @@ protected:
                                                     this->cartesianIndexMapper(),
                                                     this->grid(),
                                                     this->cellCentroids(),
-                                                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
+                                                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal ||
+                                                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal,
                                                     getPropValue<TypeTag, Properties::EnableDiffusion>(),
                                                     getPropValue<TypeTag, Properties::EnableDispersion>()));
         globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans);

@@ -83,7 +83,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     static constexpr bool compositionSwitchEnabled = (compositionSwitchIdx >= 0);
 
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
-    static constexpr bool enableEnergy = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+    static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
 
@@ -267,7 +267,7 @@ public:
         BioeffectsModule::addSource(source, elemCtx, dofIdx, timeIdx);
 
         // scale the source term of the energy equation
-        if constexpr (enableEnergy) {
+        if constexpr (enableFullyImplicitThermal) {
             source[Indices::contiEnergyEqIdx] *=
                 getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }

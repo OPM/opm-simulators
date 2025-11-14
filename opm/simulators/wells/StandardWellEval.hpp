@@ -61,7 +61,7 @@ protected:
 
 public:
     using EvalWell = typename PrimaryVariables::EvalWell;
-    using Eval = DenseAd::Evaluation<Scalar, Indices::numEq>;
+    using Eval = DenseAd::Evaluation<Scalar, Indices::numDerivatives>;
     using BVectorWell = typename StandardWellEquations<Scalar, IndexTraits, Indices::numEq>::BVectorWell;
 
     //! \brief Returns a const reference to equation system.

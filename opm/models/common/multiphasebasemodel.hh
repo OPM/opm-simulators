@@ -88,6 +88,13 @@ template<class TypeTag>
 struct NumEq<TypeTag, TTag::MultiPhaseBaseModel>
 { static constexpr int value = GetPropType<TypeTag, Properties::Indices>::numEq; };
 
+//! For seqential implicit approches we may want to evaluate the intensive quantities with a larger number of derivaties
+// Default is a fully implicit approach where numDerivaties = numEq;
+template<class TypeTag>
+struct NumDerivatives<TypeTag, TTag::MultiPhaseBaseModel>
+{ static constexpr int value = GetPropType<TypeTag, Properties::Indices>::numEq; };
+
+
 //! The number of phases is determined by the fluid system
 template<class TypeTag>
 struct NumPhases<TypeTag, TTag::MultiPhaseBaseModel>
