@@ -25,6 +25,7 @@
 
 #include <dune/grid/common/mcmgmapper.hh>
 
+#include <opm/grid/cpgrid/LgrOutputHelpers.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
@@ -149,6 +150,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     double secondsElapsed_;
     Opm::RestartValue restartValue_;
     bool writeDoublePrecision_;
+    // std::vector<Opm::RestartValue> restartValue_levels_;
 
     explicit EclWriteTasklet(const Opm::Action::State& actionState,
                              const Opm::WellTestState& wtestState,
@@ -160,7 +162,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                              bool isSubStep,
                              double secondsElapsed,
                              Opm::RestartValue restartValue,
-                             bool writeDoublePrecision)
+                             bool writeDoublePrecision) // std::vector<Opm::RestartValue> restartValue_levels)
         : actionState_(actionState)
         , wtestState_(wtestState)
         , summaryState_(summaryState)
@@ -171,7 +173,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
         , isSubStep_(isSubStep)
         , secondsElapsed_(secondsElapsed)
         , restartValue_(std::move(restartValue))
-        , writeDoublePrecision_(writeDoublePrecision)
+        , writeDoublePrecision_(writeDoublePrecision) //, restartValue_levels_(std::move(restartValue_levels))
     {}
 
     // callback to eclIO serial writeTimeStep method
@@ -552,7 +554,7 @@ doWriteOutput(const int                          reportStepNum,
 {
     const auto isParallel = this->collectOnIORank_.isParallel();
     const bool needsReordering = this->collectOnIORank_.doesNeedReordering();
-
+    
     RestartValue restartValue {
         (isParallel || needsReordering)
         ? this->collectOnIORank_.globalCellData()
@@ -600,6 +602,16 @@ doWriteOutput(const int                          reportStepNum,
             restartValue.addExtra(flores.name, UnitSystem::measure::rate, flores.values);
         }
     }
+
+    std::vector<RestartValue> restartValue_levels{}; // only serial, only CpGrid (for now)
+    //  if (!(isParallel || needsReordering)) {
+        // Level cells that appear on the leaf grid view get the data::Solution values from there.
+        // Other cells (i.e., parent cells that vanished due to refinement) get rubbish values for now.
+        // Only data::Solution is restricted to the level grids. Well, GroupAndNetwork, Aquifer are
+        // not modified in this method. 
+    Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_, restartValue, restartValue_levels);
+        //  }
+    
     // make sure that the previous I/O request has been completed
     // and the number of incomplete tasklets does not increase between
     // time steps
@@ -615,7 +627,7 @@ doWriteOutput(const int                          reportStepNum,
         actionState,
         isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
         summaryState, udqState, *this->eclIO_,
-        reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
+        reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);//, std::move(restartValue_levels));
 
     // finally, start a new output writing job
     this->taskletRunner_->dispatch(std::move(eclWriteTasklet));
