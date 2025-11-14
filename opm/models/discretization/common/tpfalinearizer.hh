@@ -1088,6 +1088,7 @@ private:
                 gpuResidualView,
                 boundaryInfo_view,
                 gpuModelView);
+            // for now I do not compute BCs because I think they only make sense when doing thermal simulation
             if (boundaryInfo_buffer.size() > 0) {
                 linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
                     dispersionActive,
@@ -1610,6 +1611,7 @@ private:
 
             // Accumulation term.
             // const double volume = model_().dofTotalVolume(globI);
+            const double volume = 1.0;
             const Scalar storefac = 0.0;//volume / dt;
             adres = 0.0;
             {
@@ -1639,6 +1641,12 @@ private:
 
             // ADD SOURCES AND MATRIX WELL CONTRIBUTIONS
             // LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+
+            adres *= -volume;
+            setResAndJacobiGPUCPU(res, bMat, adres);
+            GPU_LOCAL_residualView[globI] += res;
+            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
 
         }
     }
@@ -1671,7 +1679,7 @@ private:
                     MatrixBlockType bMat(2.0);
                     ADVectorBlockType adres(3.0);
                     const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
-                    // const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                    const LocalIntensiveQuantities& insideIntQuants = localModel.intensiveQuantities(globI, /*timeIdx*/ 0);
                     // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
                     adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
                     setResAndJacobiGPUCPU(res, bMat, adres);
@@ -1751,6 +1759,7 @@ private:
 
             // Accumulation term.
             // const double volume = model_().dofTotalVolume(globI);
+            const double volume = 1.0;
             const Scalar storefac = 0.0;//volume / dt;
             adres = 0.0;
             {
@@ -1778,6 +1787,14 @@ private:
             res = 0.0;
             bMat = 0.0;
             adres = 0.0;
+
+            // ADD SOURCES AND MATRIX WELL CONTRIBUTIONS
+            // LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+            adres *= -volume;
+            setResAndJacobiGPUCPU(res, bMat, adres);
+            GPU_LOCAL_residualView[globI] += res;
+            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
         }
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
@@ -1789,7 +1806,7 @@ private:
                 MatrixBlockType bMat(2.0);
                 ADVectorBlockType adres(3.0);
                 const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
-                // const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
                 // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
                 adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
                 setResAndJacobiGPUCPU(res, bMat, adres);
