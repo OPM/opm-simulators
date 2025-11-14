@@ -462,10 +462,10 @@ public:
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
                 // This line causes divergence between CPU and GPU in residual
                 evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-                if constexpr (enableEnergy) {
-                    EnergyModule::template // Problematic line
-                        addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
-                }
+                // if constexpr (enableEnergy) {
+                //     EnergyModule::template // Problematic line
+                //         addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
+                // }
                 if constexpr (enableBioeffects) {
                     BioeffectsModule::template
                         addBioeffectsFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
@@ -478,10 +478,10 @@ public:
                 const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx, *fsysptr);
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
                 evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-                if constexpr (enableEnergy) {
-                    EnergyModule::template
-                        addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
-                }
+                // if constexpr (enableEnergy) {
+                //     EnergyModule::template
+                //         addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
+                // }
                 if constexpr (enableBioeffects) {
                     BioeffectsModule::template
                         addBioeffectsFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
