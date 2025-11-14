@@ -150,7 +150,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     double secondsElapsed_;
     Opm::RestartValue restartValue_;
     bool writeDoublePrecision_;
-    std::vector<Opm::RestartValue> restartValue_levels_;
+    // std::vector<Opm::RestartValue> restartValue_levels_;
 
     explicit EclWriteTasklet(const Opm::Action::State& actionState,
                              const Opm::WellTestState& wtestState,
@@ -162,8 +162,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                              bool isSubStep,
                              double secondsElapsed,
                              Opm::RestartValue restartValue,
-                             bool writeDoublePrecision,
-                             std::vector<Opm::RestartValue> restartValue_levels)
+                             bool writeDoublePrecision) // std::vector<Opm::RestartValue> restartValue_levels)
         : actionState_(actionState)
         , wtestState_(wtestState)
         , summaryState_(summaryState)
@@ -174,8 +173,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
         , isSubStep_(isSubStep)
         , secondsElapsed_(secondsElapsed)
         , restartValue_(std::move(restartValue))
-        , writeDoublePrecision_(writeDoublePrecision)
-        , restartValue_levels_(std::move(restartValue_levels))
+        , writeDoublePrecision_(writeDoublePrecision) //, restartValue_levels_(std::move(restartValue_levels))
     {}
 
     // callback to eclIO serial writeTimeStep method
@@ -629,7 +627,7 @@ doWriteOutput(const int                          reportStepNum,
         actionState,
         isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
         summaryState, udqState, *this->eclIO_,
-        reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision, std::move(restartValue_levels));
+        reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);//, std::move(restartValue_levels));
 
     // finally, start a new output writing job
     this->taskletRunner_->dispatch(std::move(eclWriteTasklet));
