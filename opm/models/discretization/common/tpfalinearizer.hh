@@ -1613,29 +1613,29 @@ private:
             const Scalar storefac = 0.0;//volume / dt;
             adres = 0.0;
             {
-                // LocalResidualKernel::template computeStorage<Scalar>(adres, intQuantsIn);
+                LocalResidualKernel::template computeStorage<Scalar>(adres, intQuantsIn);
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
 
             {
-                // VectorBlockType tmp;
-                // const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
-                // LocalResidualKernel::template computeStorage<Scalar>(tmp, intQuantOld);
+                VectorBlockType tmp;
+                const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
+                LocalResidualKernel::template computeStorage<Scalar>(tmp, intQuantOld);
                 // assume volume do not change
-                // res -= tmp;
+                res -= tmp;
             }
 
-            // res *= storefac;
-            // bMat *= storefac;
+            res *= storefac;
+            bMat *= storefac;
             GPU_LOCAL_residualView[globI] += res;
-            // //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            // *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
 
-            // // Cell-wise source terms.
-            // // This will include well sources if SeparateSparseSourceTerms is false.
-            // res = 0.0;
-            // bMat = 0.0;
-            // adres = 0.0;
+            // Cell-wise source terms.
+            // This will include well sources if SeparateSparseSourceTerms is false.
+            res = 0.0;
+            bMat = 0.0;
+            adres = 0.0;
 
             // ADD SOURCES AND MATRIX WELL CONTRIBUTIONS
             // LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
@@ -1754,30 +1754,30 @@ private:
             const Scalar storefac = 0.0;//volume / dt;
             adres = 0.0;
             {
-                // LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
+                LocalResidual::template computeStorage<Scalar>(adres, intQuantsIn);
             }
 
             setResAndJacobiGPUCPU(res, bMat, adres);
 
             {
-                // VectorBlockType tmp;
-                // const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                // LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
+                VectorBlockType tmp;
+                const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+                LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
                 // assume volume do not change
-                // res -= tmp;
+                res -= tmp;
             }
 
-            // res *= storefac;
-            // bMat *= storefac;
+            res *= storefac;
+            bMat *= storefac;
             GPU_LOCAL_residualView[globI] += res;
-            // //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            // *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
 
-            // // Cell-wise source terms.
-            // // This will include well sources if SeparateSparseSourceTerms is false.
-            // res = 0.0;
-            // bMat = 0.0;
-            // adres = 0.0;
+            // Cell-wise source terms.
+            // This will include well sources if SeparateSparseSourceTerms is false.
+            res = 0.0;
+            bMat = 0.0;
+            adres = 0.0;
         }
 
         // Boundary terms. Only looping over cells with nontrivial bcs.

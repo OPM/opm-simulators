@@ -255,8 +255,9 @@ public:
             PolymerModule::addStorage(storage, intQuants);
         }
 
+        // TODO: figure out why the energumodule gives really wrong answers on gpu (a couple orders of magnitutde)
         // deal with energy (if present)
-        EnergyModule::template addStorage<LhsEval>(storage, intQuants);
+        // EnergyModule::template addStorage<LhsEval>(storage, intQuants);
 
         if constexpr (usesStaticFluidSystem)
         {
