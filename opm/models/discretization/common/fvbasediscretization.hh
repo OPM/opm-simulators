@@ -769,7 +769,7 @@ public:
                     setIntensiveQuantitiesCacheEntryValidity(globalIndex, timeIdx, false);
                 }
                 // Update for this element.
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
             }
         }
     }
