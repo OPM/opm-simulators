@@ -229,9 +229,12 @@ public:
      *
      * The current state of affairs (esp. the previous and the current solutions) is
      * represented by the model object.
+     *
+     * \param domain The subdomain to linearize.
+     * \param isNlddLocalSolve If true, indicates this is an NLDD local solve.
      */
     template <class SubDomainType>
-    void linearizeDomain(const SubDomainType& domain)
+    void linearizeDomain(const SubDomainType& domain, const bool isNlddLocalSolve = false)
     {
         OPM_TIMEBLOCK(linearizeDomain);
         // we defer the initialization of the Jacobian matrix until here because the
@@ -242,15 +245,14 @@ public:
         }
 
         // Called here because it is no longer called from linearize_().
-        if (domain.cells.size() == model_().numTotalDof()) {
-            // We are on the full domain.
-            resetSystem_();
-        }
-        else {
+        if (isNlddLocalSolve) {
             resetSystem_(domain);
         }
+        else {
+            resetSystem_();
+        }
 
-        linearize_(domain);
+        linearize_(domain, isNlddLocalSolve);
     }
 
     void finalize()
@@ -716,7 +718,7 @@ public:
 
 private:
     template <class SubDomainType>
-    void linearize_(const SubDomainType& domain)
+    void linearize_(const SubDomainType& domain, bool isNlddLocalSolve)
     {
         // This check should be removed once this is addressed by
         // for example storing the previous timesteps' values for
@@ -734,7 +736,6 @@ private:
         // Instead, that must be called before starting the linearization.
         const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         const unsigned int numCells = domain.cells.size();
-        const bool on_full_domain = (numCells == model_().numTotalDof());
 
         // Fetch timestepsize used later in accumulation term.
         const double dt = simulator_().timeStepSize();
@@ -800,20 +801,18 @@ private:
                 // used, but after storage cache is shifted at the end of the
                 // timestep, it will become cached storage for timeIdx 1.
                 model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
-                if (model_().newtonMethod().numIterations() == 0) {
+                // We should not update the storage cache here for NLDD local solves.
+                // This will reset the start-of-step storage to incorrect numbers when
+                // we do local solves, where the iteration number will start from 0,
+                // but the starting state may not be identical to the start-of-step state.
+                // Note that a full assembly must be done before local solves
+                // otherwise this will be left un-updated.
+                if (model_().newtonMethod().numIterations() == 0 && !isNlddLocalSolve) {
                     // Need to update the storage cache.
                     if (problem_().recycleFirstIterationStorage()) {
                         // Assumes nothing have changed in the system which
                         // affects masses calculated from primary variables.
-                        if (on_full_domain) {
-                            // This is to avoid resetting the start-of-step storage
-                            // to incorrect numbers when we do local solves, where the iteration
-                            // number will start from 0, but the starting state may not be identical
-                            // to the start-of-step state.
-                            // Note that a full assembly must be done before local solves
-                            // otherwise this will be left un-updated.
-                            model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
-                        }
+                        model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
                     }
                     else {
                         Dune::FieldVector<Scalar, numEq> tmp;
