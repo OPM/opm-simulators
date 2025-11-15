@@ -1960,56 +1960,48 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
     }
 
     const auto& well_state = this->wellState();
-    // numbers of the group production controls
-    // one group can have multiple controls, including NONE
-    const std::size_t size_pc = prod_group_controls.size();
-    // Collect groups that currently provide production targets to any well on this rank
-    std::unordered_set<std::string> targeted_production_groups; // TODO: better name
-    targeted_production_groups.reserve(size_pc);
+    // numbers of the group production controls, including NONE mode
+    const std::size_t num_gpc = prod_group_controls.size();
+    // collect groups that currently provide production targets to any well on this rank
+    std::unordered_set<std::string> targeted_production_groups;
+    targeted_production_groups.reserve(num_gpc);
 
-    for (const auto& wname : well_state.wells()) {
-        const auto& ws = well_state.well(wname);
+    for (std::size_t w = 0; w < well_state.size(); ++w) {
+        const auto& ws = well_state.well(w);
         if (ws.producer && ws.production_cmode == WellProducerCMode::GRUP) {
             const auto& group_target = ws.group_target;
             if (group_target.has_value()) {
                 targeted_production_groups.insert(group_target->group_name);
+            } else {
+                const std::string msg = fmt::format("Well {} is on GRUP control but has no group target assigned.", ws.name);
+                deferred_logger.debug(msg);
             }
         }
     }
 
     // parallel communication to synchronize production groups used on all processes
+    // all the group names in prod_group_controls
     std::vector<std::string> gnames;
-    gnames.reserve(size_pc);
-    for (const auto& gprod : prod_group_controls) {
-        gnames.push_back(gprod.first);
+    gnames.reserve(num_gpc);
+    // the group control is enforcing constraints for at least one well on this rank
+    // then it will be globally communicated across all the processes
+    std::vector<int> production_control_used;
+    production_control_used.reserve(num_gpc);
+
+    for (const auto& kv : prod_group_controls) {
+        const auto& name = kv.first;
+        gnames.emplace_back(name);
+        const bool is_used = targeted_production_groups.find(name) != targeted_production_groups.end();
+        production_control_used.emplace_back(is_used ? 1 : 0);
     }
 
-    std::vector<int> local_used(size_pc, 0);
-    for (std::size_t i = 0; i < size_pc; ++i) {
-        if (targeted_production_groups.find(gnames[i]) != targeted_production_groups.end()) {
-            local_used[i] = 1;
-        }
+    // parallel communication to synchronize production groups used on all processes
+    if (comm_.size() > 1 && num_gpc > 0) {
+        comm_.sum(production_control_used.data(), static_cast<int>(num_gpc));
     }
 
-    std::vector<int> global_used(size_pc, 0);
-
-    // with the following code, we only need to communicate once
-    if (comm_.size() > 1 && size_pc > 0) {
-        std::vector<int> gathered(comm_.size() * size_pc, 0);
-        comm_.allgather(local_used.data(), static_cast<int>(size_pc), gathered.data());
-
-        for (int r = 0; r < comm_.size(); ++r) {
-            const std::size_t base = static_cast<std::size_t>(r) * size_pc;
-            for (std::size_t i = 0; i < size_pc; ++i) {
-                global_used[i] = global_used[i] || gathered[base + i];
-            }
-        }
-    } else {
-        global_used = local_used;
-    }
-
-    for (std::size_t i = 0; i < size_pc;   ++i) {
-        if (global_used[i] > 0) {
+    for (std::size_t i = 0; i < num_gpc;   ++i) {
+        if (production_control_used[i] > 0) {
             continue;
         }
         const auto& gname = gnames[i];
