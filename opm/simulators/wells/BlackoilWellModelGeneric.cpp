@@ -1984,32 +1984,20 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
         gnames.push_back(gprod.first);
     }
 
-    std::vector<int> local_used(size_pc, 0);
+    std::vector<int> pc_used(size_pc, 0);
     for (std::size_t i = 0; i < size_pc; ++i) {
         if (targeted_production_groups.find(gnames[i]) != targeted_production_groups.end()) {
-            local_used[i] = 1;
+            pc_used[i] = 1;
         }
     }
-
-    std::vector<int> global_used(size_pc, 0);
 
     // with the following code, we only need to communicate once
     if (comm_.size() > 1 && size_pc > 0) {
-        std::vector<int> gathered(comm_.size() * size_pc, 0);
-        comm_.allgather(local_used.data(), static_cast<int>(size_pc), gathered.data());
-
-        for (int r = 0; r < comm_.size(); ++r) {
-            const std::size_t base = static_cast<std::size_t>(r) * size_pc;
-            for (std::size_t i = 0; i < size_pc; ++i) {
-                global_used[i] = global_used[i] || gathered[base + i];
-            }
-        }
-    } else {
-        global_used = local_used;
+        comm_.sum(pc_used.data(), static_cast<int>(size_pc));
     }
 
     for (std::size_t i = 0; i < size_pc;   ++i) {
-        if (global_used[i] > 0) {
+        if (pc_used[i] > 0) {
             continue;
         }
         const auto& gname = gnames[i];
