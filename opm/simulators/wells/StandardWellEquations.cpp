@@ -159,16 +159,8 @@ void StandardWellEquations<Scalar, IndexTraits, numEq>::apply(BVector& r) const
 template<typename Scalar, typename IndexTraits, int numEq>
 void StandardWellEquations<Scalar, IndexTraits, numEq>::invert()
 {
-    try {
-        invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
-        detail::invertMatrix(invDuneD_[0][0]);
-    } catch (NumericalProblem&) {
-        // for singular matrices, use identity as the inverse
-        invDuneD_[0][0] = 0.0;
-        for (std::size_t i = 0; i < invDuneD_[0][0].rows(); ++i) {
-            invDuneD_[0][0][i][i] = 1.0;
-        }
-    }
+    invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
+    detail::invertMatrix(invDuneD_[0][0]);
 }
 
 template<typename Scalar, typename IndexTraits, int numEq>
