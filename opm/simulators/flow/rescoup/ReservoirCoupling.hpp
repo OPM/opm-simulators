@@ -115,7 +115,7 @@ public:
 private:
     // Use pointer instead of reference to enable move semantics
     // (references cannot be reassigned, which is required for move operations)
-    Logger* logger_;
+    Logger* logger_{nullptr};
 };
 
 enum class MessageTag : int {
