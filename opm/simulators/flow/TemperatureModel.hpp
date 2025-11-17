@@ -53,6 +53,9 @@ struct EnableTemperatureModel {
 } // namespace Opm::Properties
 
 namespace Opm {
+
+template<typename Scalar, typename IndexTraits> class WellState;
+
 /*!
  * \ingroup BlackOilSimulator
  *
@@ -86,6 +89,8 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using WellStateType = WellState<Scalar, IndexTraits>;
 
     using EnergyMatrix = typename BaseType::EnergyMatrix;
     using EnergyVector = typename BaseType::EnergyVector;
@@ -142,12 +147,15 @@ public:
             intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
         }
         updateStorageCache();
+
+        const int nw = simulator_.problem().wellModel().wellState().numWells();
+        this->energy_rates_.resize(nw, 0.0);
     }
 
     /*!
      * \brief Informs the temperature model that a time step has just been finished.
      */
-    void endTimeStep()
+    void endTimeStep(WellStateType& wellState)
     {
         if (!this->doTemp())
             return;
@@ -160,6 +168,14 @@ public:
             intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
         }
         advanceTemperatureFields();
+
+        // update energy_rates
+        const int nw = wellState.numWells();
+        for (auto wellID = 0*nw; wellID < nw; ++wellID) {
+            auto& ws = wellState.well(wellID);
+            ws.energy_rate = this->energy_rates_[wellID];
+        }
+
     }
 
     /*!
@@ -395,6 +411,7 @@ protected:
         const auto& eclWell = well.wellEcl();
         std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
         const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
+        this->energy_rates_[well_index] = 0.0;
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
             const auto globI = ws.perf_data.cell_index[i];
             auto fs = intQuants_[globI].fluidState(); //copy to make it possible to change the temp in the injector
@@ -424,6 +441,7 @@ protected:
                     }
                     rate *= fs.enthalpy(phaseIdx) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
                 }
+                this->energy_rates_[well_index] += getValue(rate);
                 rate *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
                 this->energyVector_[globI] -= getValue(rate);
                 (*this->energyMatrix_)[globI][globI][0][0] -= rate.derivative(Indices::temperatureIdx);
@@ -445,6 +463,8 @@ class TemperatureModel<TypeTag, false> {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using WellStateType = WellState<Scalar, IndexTraits>;
 public:
     TemperatureModel(Simulator&)
     { }
@@ -469,7 +489,7 @@ public:
 
     void init() {}
     void beginTimeStep() {}
-    void endTimeStep() {}
+    void endTimeStep(WellStateType& /*wellState*/) {}
     const Scalar temperature(size_t /*globalIdx*/) const {
         return 273.15; // return 0C to make the compiler happy
     }

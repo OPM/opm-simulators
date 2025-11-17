@@ -434,7 +434,7 @@ public:
         this->wellModel_.endTimeStep();
         this->aquiferModel_.endTimeStep();
         this->tracerModel_.endTimeStep();
-        this->temperatureModel_.endTimeStep();
+        this->temperatureModel_.endTimeStep(wellModel_.wellState());
 
         // Compute flux for output
         this->model().linearizer().updateFlowsInfo();

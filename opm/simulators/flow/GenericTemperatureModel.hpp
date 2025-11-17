@@ -89,6 +89,7 @@ protected:
     EnergyVector energyVector_;
     std::unique_ptr<EnergyMatrix> energyMatrix_;
     std::vector<Scalar> temperature_;
+    std::vector<Scalar> energy_rates_;
     bool doTemp_{false};
     Scalar maxTempChange_{5.0};
 
