@@ -136,7 +136,14 @@ enum class MessageTag : int {
     SlaveStartOfReportStep,
 };
 
-enum class Phase : std::size_t { Oil = 0, Gas, Water, Count };
+/// @brief Phase indices for reservoir coupling, we currently only support black-oil phases
+/// (oil, gas, and water).
+enum class Phase : std::size_t {
+    Oil = 0,  // Matches Opm::Phase::OIL
+    Gas,      // Matches Opm::Phase::GAS
+    Water,    // Matches Opm::Phase::WATER
+    Count
+};
 
 template <class Scalar>
 struct InjectionRates {
