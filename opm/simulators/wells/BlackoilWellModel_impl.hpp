@@ -548,6 +548,20 @@ namespace Opm {
 
             Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor() *
                                             this->wellState()[well_name].efficiency_scaling_factor;
+            {
+                const Scalar efficiency_factor_well_state = this->wellState()[well_name].efficiency_scaling_factor;
+                const Scalar efficiency_factor_well_info = this->wellState().getGlobalEfficiencyScalingFactor(well_name);
+                if (efficiency_factor_well_state != efficiency_factor_well_info) {
+                    const std::string msg = fmt::format("Inconsistent efficiency scaling factors for well {}: "
+                                                        "well state factor = {}, well info factor = {}. "
+                                                        "Using well state factor.",
+                                                        well_name,
+                                                        efficiency_factor_well_state,
+                                                        efficiency_factor_well_info);
+                    deferred_logger.info("INCONSISTENT_WELL_EFFICIENCY_SCALING_FACTOR", msg);
+                    assert(false);
+                }
+            }
             this->wgHelper().accumulateGroupEfficiencyFactor(
                 this->schedule().getGroup(wellEcl.groupName(), timeStepIdx),
                 well_efficiency_factor
