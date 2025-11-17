@@ -425,16 +425,15 @@ init(const std::vector<Scalar>& cellPressures,
             //
             // TODO: we might still need the values from the prev_well if
             // the connection structure changes.
-            int unchanged_globally =  new_well.perf_data.cell_index ==
-                prev_well.perf_data.cell_index;
+            const int unchanged_locally =  (new_well.perf_data.cell_index ==
+                                            prev_well.perf_data.cell_index);
             // Make it global
-            unchanged_globally = new_well.parallel_info.get().communication()
-                .min(unchanged_globally);
+            const int unchanged_globally = new_well.parallel_info.get().communication()
+                .min(unchanged_locally);
 
             if (unchanged_globally) {
                 new_well.perf_data.try_assign(prev_well.perf_data);
-            }
-            else {
+            } else {
                 const auto num_perf_this_well = new_well.perf_data.size();
                 const auto global_num_perf_this_well =
                     static_cast<Scalar>(wells_ecl[w].getConnections().num_open());
