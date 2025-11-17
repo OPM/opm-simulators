@@ -32,6 +32,8 @@
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 #include <opm/simulators/linalg/is_gpu_operator.hpp>
 
+#include <opm/simulators/linalg/mixed/wrapper.hpp>
+
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/solvers.hh>
@@ -181,6 +183,16 @@ namespace Dune
                                                                             tol, // desired residual reduction factor
                                                                             maxiter, // maximum number of iterations
                                                                             verbosity);
+        } else if (solver_type == "mixed-bicgstab") {
+            const std::string prec_type = prm.get<std::string>("preconditioner.type", "error");
+            bool use_mixed_dilu= (prec_type=="mixed-dilu");
+            using MatrixType = decltype(linearoperator_for_solver_->getmat());
+            linsolver_ = std::make_shared<Dune::MixedSolver<VectorType,MatrixType>>(
+                                                                            linearoperator_for_solver_->getmat(),
+                                                                            tol,
+                                                                            maxiter,
+                                                                            use_mixed_dilu
+                                                                        );
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
                                                                         *scalarproduct_,
@@ -197,7 +209,6 @@ namespace Dune
                                                                                   restart,
                                                                                   maxiter, // maximum number of iterations
                                                                                   verbosity);
-
         } else {
             if constexpr (!Opm::is_gpu_operator_v<Operator>) {
                 if (solver_type == "flexgmres") {
