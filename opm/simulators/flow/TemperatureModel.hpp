@@ -198,11 +198,12 @@ protected:
 
     void advanceTemperatureFields()
     {
-        const int maximum_number_of_newton_iterations = 20;
+        const int max_iter = 20;
+        const int min_iter = 1;
         // solve using Newton
-        for (int iter = 0; iter < maximum_number_of_newton_iterations; ++iter) {
+        for (int iter = 0; iter < max_iter; ++iter) {
             assembleEquations();
-            if (converged(iter)) {
+            if (iter > min_iter && converged(iter)) {
                 break;
             }
             solveAndUpdate();

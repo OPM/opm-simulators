@@ -2402,7 +2402,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeWellTemperature()
     {
-        if constexpr (has_energy_) {
+        if constexpr (energyModuleType_ == EnergyModules::FullyImplicitThermal || 
+                      energyModuleType_ == EnergyModules::SequentialImplicitThermal) {
             int np = this->numPhases();
             Scalar cellInternalEnergy;
             Scalar cellBinv;

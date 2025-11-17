@@ -147,8 +147,9 @@ public:
                                           Indices::numPhases>;
     using ScalarFluidState = BlackOilFluidState<Scalar,
                                                 FluidSystem,
-                                          energyModuleType == EnergyModules::ConstantTemperature,
-                                          (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
+                                                energyModuleType == EnergyModules::ConstantTemperature,
+                                                (energyModuleType == EnergyModules::FullyImplicitThermal || 
+                                                    energyModuleType == EnergyModules::SequentialImplicitThermal),
                                                 compositionSwitchEnabled,
                                                 enableVapwat,
                                                 enableBrine,
