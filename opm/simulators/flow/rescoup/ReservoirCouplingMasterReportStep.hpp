@@ -52,9 +52,7 @@ public:
          return this->master_.getMasterGroupToSlaveNameMap();
     }
     std::size_t getMasterGroupCanonicalIdx(
-        const std::string &slave_name, const std::string &master_group_name) const {
-            return this->master_.getMasterGroupCanonicalIdx(slave_name, master_group_name);
-    }
+        const std::string &slave_name, const std::string &master_group_name) const;
     MPI_Comm getSlaveComm(int index) const { return this->master_.getSlaveComm(index); }
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name) const;
     void maybeReceiveGroupInfoFromSlaves();

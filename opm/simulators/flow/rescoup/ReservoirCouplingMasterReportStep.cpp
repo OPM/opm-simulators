@@ -50,6 +50,14 @@ ReservoirCouplingMasterReportStep(
 // ------------------
 
 template <class Scalar>
+std::size_t
+ReservoirCouplingMasterReportStep<Scalar>::
+getMasterGroupCanonicalIdx(const std::string &slave_name, const std::string &master_group_name) const
+{
+    return this->master_.getMasterGroupCanonicalIdx(slave_name, master_group_name);
+}
+
+template <class Scalar>
 const ReservoirCoupling::Potentials<Scalar>&
 ReservoirCouplingMasterReportStep<Scalar>::
 getSlaveGroupPotentials(const std::string &master_group_name) const
