@@ -49,6 +49,9 @@ assemble(const int /*iterationIdx*/,
     DeferredLogger local_deferredLogger;
     this->updateWellControls(local_deferredLogger, domain);
     this->assembleWellEq(dt, domain, local_deferredLogger);
+
+    // Update cellRates_ with current contributions from wells in this domain for reservoir linearization
+    wellModel_.updateCellRatesForDomain(domain.index, this->well_domain());
 }
 
 template<typename TypeTag>

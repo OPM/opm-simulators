@@ -1178,9 +1178,7 @@ namespace Opm {
 
         assembleWellEqWithoutIteration(dt, local_deferredLogger);
         // Pre-compute cell rates to we don't have to do this for every cell during linearization...
-        cellRates_.clear();
-        for (const auto& well : well_container_)
-            well->addCellRates(cellRates_);
+        updateCellRates();
 
         // if group or well control changes we don't consider the
         // case converged
@@ -1546,6 +1544,33 @@ namespace Opm {
         OPM_END_PARALLEL_TRY_CATCH_LOG(deferred_logger, "BlackoilWellModel::assembleWellEqWithoutIteration failed: ",
                                        this->terminal_output_, grid().comm());
 
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateCellRates()
+    {
+        // Pre-compute cell rates for all wells
+        cellRates_.clear();
+        for (const auto& well : well_container_) {
+            well->addCellRates(cellRates_);
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateCellRatesForDomain(int domainIndex, const std::map<std::string, int>& well_domain_map)
+    {
+        // Pre-compute cell rates only for wells in the specified domain
+        cellRates_.clear();
+        for (const auto& well : well_container_) {
+            const auto it = well_domain_map.find(well->name());
+            if (it != well_domain_map.end() && it->second == domainIndex) {
+                well->addCellRates(cellRates_);
+            }
+        }
     }
 
 #if COMPILE_GPU_BRIDGE

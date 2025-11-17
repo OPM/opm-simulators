@@ -365,6 +365,12 @@ template<class Scalar> class WellContributions;
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellStateDomain(const BVector& x,
                                                              const int domainIdx);
+            // Update cellRates_ with contributions from all wells
+            void updateCellRates();
+
+            // Update cellRates_ with contributions from wells in a specific domain
+            void updateCellRatesForDomain(int domainIndex,
+                                          const std::map<std::string, int>& well_domain_map);
 
             const Grid& grid() const
             { return simulator_.vanguard().grid(); }
