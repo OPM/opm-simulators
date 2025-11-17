@@ -547,7 +547,7 @@ namespace Opm {
             well->init(depth_, gravity_, B_avg_, true);
 
             Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor() *
-                                            this->wellState().getGlobalEfficiencyScalingFactor(well_name);
+                                            this->wellState()[well_name].efficiency_scaling_factor;
             this->wgHelper().accumulateGroupEfficiencyFactor(
                 this->schedule().getGroup(wellEcl.groupName(), timeStepIdx),
                 well_efficiency_factor
