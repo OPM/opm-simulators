@@ -799,6 +799,7 @@ if(CUDA_FOUND)
                        cuVector_operations
                        GpuVector
                        GpuSparseMatrix
+                       GpuSparseTable
                        GpuSeqILU0
                        solver_adapter
                        GpuBuffer
@@ -809,7 +810,8 @@ if(CUDA_FOUND)
                        gpu_resources
                        gpu_smart_pointers
                        is_gpu_pointer
-                       minivector
+                       MiniMatrix
+                       MiniVector
                        throw_macros_on_gpu
                        preconditioner_factory_gpu
                        gpuBlackOilFluidSystem
@@ -818,7 +820,6 @@ if(CUDA_FOUND)
                        GpuPressureTransferPolicy
                        deviceBlockOperations
                        primary_variables_gpu
-                       MiniVector
                        PROPERTIES LABELS ${gpu_label})
   if(MPI_FOUND)
     set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
