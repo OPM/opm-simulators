@@ -208,18 +208,30 @@ public:
      * @param B Right-hand side matrix
      * @return Resulting matrix
      */
-    OPM_HOST_DEVICE MiniMatrix operator*(const MiniMatrix& B) const {
-        MiniMatrix C;
-        for (size_type row = 0; row < dimension; ++row) {
-            for (size_type col = 0; col < dimension; ++col) {
-                T sum = T{};
-                for (size_type k = 0; k < dimension; ++k)
-                    sum += (*this)[row][k] * B[k][col];
-                C[row][col] = sum;
-            }
-        }
-        return C;
-    }
+	OPM_HOST_DEVICE MiniMatrix& operator*=(const MiniMatrix& B) {
+		MiniMatrix temp = *this;  // Save original values
+		for (size_type row = 0; row < dimension; ++row) {
+			for (size_type col = 0; col < dimension; ++col) {
+				T sum = T{};
+				for (size_type k = 0; k < dimension; ++k)
+					sum += temp[row][k] * B[k][col];
+				(*this)[row][col] = sum;
+			}
+		}
+		return *this;
+	}
+
+	/**
+	 * @brief Matrix-matrix multiplication: C = A * B
+	 * @param B Right-hand side matrix
+	 * @return Resulting matrix
+	 */
+	OPM_HOST_DEVICE MiniMatrix operator*(const MiniMatrix& B) const {
+		MiniMatrix result = *this;
+		result *= B;
+		return result;
+	}
+
 
 	/**
 	 * @brief Matrix-vector multiplication: y = A * x, with MiniVector.
