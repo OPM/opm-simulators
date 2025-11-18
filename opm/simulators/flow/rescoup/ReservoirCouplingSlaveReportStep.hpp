@@ -25,24 +25,79 @@
 
 namespace Opm {
 
+/// @brief Manages slave-side reservoir coupling operations for a single report step
+///
+/// This class encapsulates the slave process's communication with the master process
+/// during a single report step in reservoir coupling simulations. It handles:
+/// - Sending production data (rates, potentials) to the master process via MPI
+/// - Sending injection data (rates) to the master process via MPI
+/// - Coordinating data exchange between slave and master processes
+///
+/// The class serves as a helper to ReservoirCouplingSlave, separating the
+/// report-step-specific communication logic from the overall coupling lifecycle
+/// management. This separation improves code organization and makes the coupling
+/// logic easier to understand and maintain.
+///
+/// @tparam Scalar Floating-point type for rate and potential values (typically double or float)
+///
+/// @note This class holds a reference to the parent ReservoirCouplingSlave object
+///       and should only be used within the scope of that object's lifetime
+/// @see ReservoirCouplingSlave
 template <class Scalar>
 class ReservoirCouplingSlaveReportStep {
 public:
     using MessageTag = ReservoirCoupling::MessageTag;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
+
+    /// @brief Construct a report step manager for the slave process
+    /// @param slave Reference to the parent ReservoirCouplingSlave object
     ReservoirCouplingSlaveReportStep(
         ReservoirCouplingSlave<Scalar> &slave
     );
 
+    /// @brief Get the MPI communicator for intra-slave communication
+    /// @return Reference to the parallel communication object
     const Parallel::Communication &comm() const { return this->slave_.getComm(); }
+
+    /// @brief Get the MPI communicator for slave-master communication
+    /// @return MPI communicator handle for communication with the master process
     MPI_Comm getSlaveMasterComm() const { return this->slave_.getMasterComm(); }
+
+    /// @brief Get the logger for reservoir coupling operations
+    /// @return Reference to the logger object for this coupling session
     ReservoirCoupling::Logger& logger() const { return this->slave_.getLogger(); }
+
+    /// @brief Send production data to the master process
+    ///
+    /// This method sends production rates, potentials, and related data for all
+    /// slave groups to the master process via MPI communication. The data is used
+    /// by the master for group control calculations and coordination.
+    ///
+    /// @param production_data Vector of production data for each slave group
+    ///
+    /// @note This is a blocking operation that waits for the master to receive the data
+    /// @note Must be called before the master attempts to receive production data
     void sendProductionDataToMaster(const std::vector<SlaveGroupProductionData> &production_data) const;
+
+    /// @brief Send injection data to the master process
+    ///
+    /// This method sends injection rates and related data for all slave groups
+    /// to the master process via MPI communication. The data is used by the master
+    /// for group control calculations and coordination.
+    ///
+    /// @param injection_data Vector of injection data for each slave group
+    ///
+    /// @note This is a blocking operation that waits for the master to receive the data
+    /// @note Must be called before the master attempts to receive injection data
     void sendInjectionDataToMaster(const std::vector<SlaveGroupInjectionData> &injection_data) const;
+
+    /// @brief Get the name of this slave process
+    /// @return Reference to the name string for this slave
     const std::string& slaveName() const { return this->slave_.getSlaveName(); }
 
 private:
+    /// Reference to the parent ReservoirCouplingSlave object
     ReservoirCouplingSlave<Scalar> &slave_;
 };
 } // namespace Opm
