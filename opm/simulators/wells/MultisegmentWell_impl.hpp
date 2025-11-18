@@ -385,7 +385,8 @@ namespace Opm
                 Scalar trans_mult(0.0);
                 getTransMult(trans_mult, simulator, cell_idx);
                 const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                std::vector<Scalar> Tw(this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
+                std::vector<Scalar> Tw(this->num_conservation_quantities_,
+                                       this->well_index_[local_perf_index] * trans_mult);
                 this->getTw(Tw, local_perf_index, intQuants, trans_mult, wellstate_nupcol);
                 const Scalar seg_pressure = segment_pressure[seg];
                 std::vector<Scalar> cq_s(this->num_conservation_quantities_, 0.);

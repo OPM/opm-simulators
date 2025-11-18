@@ -720,7 +720,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 const Connection& connection = completion_set.get(perf);
                 if (connection.state() == Connection::State::OPEN) {
                     const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
-                    if (segment_index == -1) {
+                    if (segment_index < 0) {
                         if (!connectionWithoutAssociatedSegmentsLocalErrorMessage) {
                             connectionWithoutAssociatedSegmentsLocalErrorMessage = ""; // First well with error: initialize the string
                         }
@@ -732,9 +732,10 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                             connection.getI() + 1 , connection.getJ() + 1,
                             connection.getK() + 1 );
                     }
-
-                    segment_perforations[segment_index].push_back(n_activeperf);
-                    if (ws.parallel_info.get().globalPerfToLocalPerf(perf) > -1) {
+                    else {
+                        segment_perforations[segment_index].push_back(n_activeperf);
+                    }
+                    if (ws.parallel_info.get().globalPerfToLocalPerf(perf) >= 0) {
                         active_perf_index_local_to_global.insert({n_activeperf_local, n_activeperf});
                         active_to_local.insert({n_activeperf, ws.parallel_info.get().globalPerfToLocalPerf(perf)});
                         n_activeperf_local++;
