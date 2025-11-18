@@ -23,6 +23,7 @@
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
 #include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
@@ -69,7 +70,7 @@ __global__ void MiniMatrixOperationsInKernel(MatType m1, MatType m2, bool* resul
     return;
 }
 
-BOOST_AUTO_TEST_CASE(TestMiniMatrixOperationsInKernel)
+BOOST_AUTO_TEST_CASE(TestMiniMatrixOperationsDefined)
 {
     MatType m1 = 1.0;
     MatType m2 = 1.0;
@@ -103,4 +104,108 @@ BOOST_AUTO_TEST_CASE(TestWritingToMatrixInKernel)
     MatType h_m = Opm::gpuistl::copyFromGPU(d_m.get());
 
     BOOST_CHECK(h_m[1][1] == 3.14);
+}
+
+BOOST_AUTO_TEST_CASE(TestMiniMatrixOperators)
+{
+    // A bit verbose but at least everything that is tested is clear
+    MatType m1 = {
+        1.0, 2.0, 3.0,
+        4.0, 5.0, 6.0,
+        7.0, 8.0, 9.0
+    };
+
+    MatType m2 = {
+        1.0, 3.0, 2.0,
+        2.0, 2.0, 3.0,
+        3.0, 1.0, 1.0
+    };
+
+    // test +, - and * matrix operators
+    MatType m3 = m1 + m2;
+    BOOST_CHECK(m3[0][0] == 2.0);
+    BOOST_CHECK(m3[0][1] == 5.0);
+    BOOST_CHECK(m3[0][2] == 5.0);
+    BOOST_CHECK(m3[1][0] == 6.0);
+    BOOST_CHECK(m3[1][1] == 7.0);
+    BOOST_CHECK(m3[1][2] == 9.0);
+    BOOST_CHECK(m3[2][0] == 10.0);
+    BOOST_CHECK(m3[2][1] == 9.0);
+    BOOST_CHECK(m3[2][2] == 10.0);
+
+    MatType m4 = m1 - m2;
+    BOOST_CHECK(m4[0][0] == 0.0);
+    BOOST_CHECK(m4[0][1] == -1.0);
+    BOOST_CHECK(m4[0][2] == 1.0);
+    BOOST_CHECK(m4[1][0] == 2.0);
+    BOOST_CHECK(m4[1][1] == 3.0);
+    BOOST_CHECK(m4[1][2] == 3.0);
+    BOOST_CHECK(m4[2][0] == 4.0);
+    BOOST_CHECK(m4[2][1] == 7.0);
+    BOOST_CHECK(m4[2][2] == 8.0);
+
+    MatType m5 = m1 * m2;
+    BOOST_CHECK(m5[0][0] == 14.0);
+    BOOST_CHECK(m5[0][1] == 10.0);
+    BOOST_CHECK(m5[0][2] == 11.0);
+    BOOST_CHECK(m5[1][0] == 32.0);
+    BOOST_CHECK(m5[1][1] == 28.0);
+    BOOST_CHECK(m5[1][2] == 29.0);
+    BOOST_CHECK(m5[2][0] == 50.0);
+    BOOST_CHECK(m5[2][1] == 46.0);
+    BOOST_CHECK(m5[2][2] == 47.0);
+
+    // test +=, -=, *= matrix operators
+    MatType m6 = m1;
+    m6 += m2;
+    BOOST_CHECK(m6[0][0] == 2.0);
+    BOOST_CHECK(m6[0][1] == 5.0);
+    BOOST_CHECK(m6[0][2] == 5.0);
+    BOOST_CHECK(m6[1][0] == 6.0);
+    BOOST_CHECK(m6[1][1] == 7.0);
+    BOOST_CHECK(m6[1][2] == 9.0);
+    BOOST_CHECK(m6[2][0] == 10.0);
+    BOOST_CHECK(m6[2][1] == 9.0);
+    BOOST_CHECK(m6[2][2] == 10.0);
+
+    MatType m7 = m1;;
+    m7 -= m2;
+    BOOST_CHECK(m7[0][0] == 0.0);
+    BOOST_CHECK(m7[0][1] == -1.0);
+    BOOST_CHECK(m7[0][2] == 1.0);
+    BOOST_CHECK(m7[1][0] == 2.0);
+    BOOST_CHECK(m7[1][1] == 3.0);
+    BOOST_CHECK(m7[1][2] == 3.0);
+    BOOST_CHECK(m7[2][0] == 4.0);
+    BOOST_CHECK(m7[2][1] == 7.0);
+    BOOST_CHECK(m7[2][2] == 8.0);
+
+    MatType m8 = m1;;
+    m8 *= m2;
+    BOOST_CHECK(m8[0][0] == 14.0);
+    BOOST_CHECK(m8[0][1] == 10.0);
+    BOOST_CHECK(m8[0][2] == 11.0);
+    BOOST_CHECK(m8[1][0] == 32.0);
+    BOOST_CHECK(m8[1][1] == 28.0);
+    BOOST_CHECK(m8[1][2] == 29.0);
+    BOOST_CHECK(m8[2][0] == 50.0);
+    BOOST_CHECK(m8[2][1] == 46.0);
+    BOOST_CHECK(m8[2][2] == 47.0);
+}
+
+BOOST_AUTO_TEST_CASE(TestMiniMatrixWithMiniVector)
+{
+    MatType m = {
+        1.0, 2.0, 3.0,
+        4.0, 5.0, 6.0,
+        7.0, 8.0, 9.0
+    };
+
+    Opm::gpuistl::MiniVector<double, 3> v = {1.0, 2.0, 3.0};
+
+    auto result = m * v;
+
+    BOOST_CHECK(result[0] == 14.0);
+    BOOST_CHECK(result[1] == 32.0);
+    BOOST_CHECK(result[2] == 50.0);
 }
