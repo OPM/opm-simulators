@@ -21,7 +21,6 @@
 #define OPM_RESERVOIR_COUPLING_MASTER_REPORT_STEP_HPP
 
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
-#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -32,6 +31,9 @@
 #include <vector>
 
 namespace Opm {
+
+// Avoid including the complete definition of ReservoirCouplingMaster here to avoid circular dependency.
+template <class Scalar> class ReservoirCouplingMaster;
 
 /// @brief Manages master-side reservoir coupling operations for a single report step
 ///

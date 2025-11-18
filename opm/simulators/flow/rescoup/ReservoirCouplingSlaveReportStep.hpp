@@ -21,9 +21,11 @@
 #define OPM_RESERVOIR_COUPLING_SLAVE_REPORT_STEP_HPP
 
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
-#include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 
 namespace Opm {
+
+// Avoid including the complete definition of ReservoirCouplingSlave here to avoid circular dependency.
+template <class Scalar> class ReservoirCouplingSlave;
 
 /// @brief Manages slave-side reservoir coupling operations for a single report step
 ///

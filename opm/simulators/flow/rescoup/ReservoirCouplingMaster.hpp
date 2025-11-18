@@ -22,6 +22,8 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -31,12 +33,6 @@
 #include <vector>
 
 namespace Opm {
-
-template <class Scalar>
-class ReservoirCouplingMasterReportStep;
-
-template <class Scalar>
-class ReservoirCouplingTimeStepper;
 
 template <class Scalar>
 class ReservoirCouplingMaster {
@@ -180,12 +176,5 @@ private:
 };
 
 } // namespace Opm
-
-// Include the complete definitions after the class declaration to avoid circular dependency
-// while still providing complete types for unique_ptr destructor instantiation.
-// These are included here (after namespace closing) so that when the destructor is
-// instantiated during template instantiation, the complete types are available.
-#include <opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp>
-#include <opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.hpp>
 
 #endif // OPM_RESERVOIR_COUPLING_MASTER_HPP

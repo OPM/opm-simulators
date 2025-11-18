@@ -21,6 +21,7 @@
 #define OPM_RESERVOIR_COUPLING_SLAVE_HPP
 
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
@@ -99,11 +100,5 @@ private:
 };
 
 } // namespace Opm
-
-// Include the complete definition after the class declaration to avoid circular dependency
-// while still providing complete types for unique_ptr destructor instantiation.
-// This is included here (after namespace closing) so that when the destructor is
-// instantiated during template instantiation, the complete type is available.
-#include <opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp>
 
 #endif // OPM_RESERVOIR_COUPLING_SLAVE_HPP

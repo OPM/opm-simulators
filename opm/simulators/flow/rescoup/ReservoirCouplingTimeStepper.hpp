@@ -21,7 +21,6 @@
 #define OPM_RESERVOIR_COUPLING_TIME_STEPPER_HPP
 
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
-#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -31,6 +30,9 @@
 #include <vector>
 
 namespace Opm {
+
+// Avoid including the complete definition of ReservoirCouplingMaster here to avoid circular dependency.
+template <class Scalar> class ReservoirCouplingMaster;
 
 /// @brief Manages time stepping coordination between master and slave processes
 ///
