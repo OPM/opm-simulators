@@ -34,14 +34,53 @@ namespace Dune {
 
 namespace detail {
 
-// -----------------------------------------------------------------------
-//  StructMPITraitsImpl  --  generic MPI traits implementation for structs
-//
-// Assumes that each field of the struct is either
-//   - an already defined MPI type, or
-//   - is an array or std::array of an already defined MPI type, or
-//   - is an enum with underlying type that is an already defined MPI type
-// ------------------------------------------------------------------------
+/// @brief Generic MPI traits implementation for structs
+///
+/// This class template provides automatic MPI datatype creation for C++ structs
+/// by analyzing the struct's member pointers. It generates an MPI_Datatype that
+/// correctly represents the memory layout of the struct, allowing it to be sent
+/// via MPI communication functions.
+///
+/// The implementation handles:
+/// - Scalar fields of MPI-compatible types
+/// - C-style arrays (T[N])
+/// - std::array<T, N> containers
+/// - Enum fields (using their underlying type)
+///
+/// **Thread Safety:**
+/// The MPI datatype is created exactly once using std::call_once() to ensure
+/// thread-safe initialization in case this code is called from multiple threads.
+///
+/// **Usage Example:**
+/// ```cpp
+/// struct MyData {
+///     double value;
+///     std::array<int, 3> counts;
+/// };
+///
+/// // Define the trait by listing member pointers:
+/// template<>
+/// struct MPITraits<MyData>
+///     : detail::StructMPITraits<MyData, &MyData::value, &MyData::counts>
+/// { };
+///
+/// // Now MyData can be sent via MPI:
+/// MPI_Send(&data, 1, MPITraits<MyData>::getType(), dest, tag, comm);
+/// ```
+///
+/// @tparam Struct The struct type for which to create an MPI datatype
+/// @tparam Members Variadic pack of pointers-to-members listing all fields to include
+///
+/// **Assumptions:**
+/// Each field of the struct must be either:
+/// - An already defined MPI type (int, double, float, etc.)
+/// - A C array or std::array of an already defined MPI type
+/// - An enum whose underlying type is an already defined MPI type
+///
+/// @note The order of member pointers in the template argument list determines
+///       the field order in the MPI datatype
+/// @note The datatype is automatically resized to account for struct padding
+/// @see MPITraits
 template<class Struct, auto... Members>
 struct StructMPITraitsImpl
 {
@@ -152,7 +191,19 @@ using StructMPITraits = StructMPITraitsImpl<Struct, Members...>;
 
 } // namespace Dune::detail
 
-// Trait for SlaveGroupProductionData
+/// @brief MPI datatype trait for SlaveGroupProductionData structure
+///
+/// This specialization enables SlaveGroupProductionData to be sent via MPI
+/// by defining how to construct an MPI_Datatype that matches the memory layout
+/// of the structure. The trait uses StructMPITraits to automatically generate
+/// the MPI datatype based on the listed member pointers.
+///
+/// @tparam Scalar Floating-point type (typically double or float)
+///
+/// @note This trait is used internally by MPI communication functions when
+///       sending/receiving SlaveGroupProductionData between processes
+/// @see StructMPITraits
+/// @see SlaveGroupProductionData
 template<class Scalar>
 struct MPITraits<::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>>
     : detail::StructMPITraits<
@@ -163,7 +214,19 @@ struct MPITraits<::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>>
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::gas_reinjection_rate
         >  { };
 
-// Trait for SlaveGroupInjectionData
+/// @brief MPI datatype trait for SlaveGroupInjectionData structure
+///
+/// This specialization enables SlaveGroupInjectionData to be sent via MPI
+/// by defining how to construct an MPI_Datatype that matches the memory layout
+/// of the structure. The trait uses StructMPITraits to automatically generate
+/// the MPI datatype based on the listed member pointers.
+///
+/// @tparam Scalar Floating-point type (typically double or float)
+///
+/// @note This trait is used internally by MPI communication functions when
+///       sending/receiving SlaveGroupInjectionData between processes
+/// @see StructMPITraits
+/// @see SlaveGroupInjectionData
 template<class Scalar>
 struct MPITraits<::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>>
     : detail::StructMPITraits<
