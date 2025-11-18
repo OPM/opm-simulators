@@ -99,6 +99,29 @@ public:
     const std::string& slaveName() const { return this->slave_.getSlaveName(); }
 
 private:
+    /// @brief Generic helper method for sending data to the master process via MPI
+    ///
+    /// This template method encapsulates a common MPI send pattern used for both
+    /// production and injection data. It handles:
+    /// - Rank checking (only rank 0 sends)
+    /// - MPI datatype retrieval via Dune::MPITraits
+    /// - MPI_Send operation with specified message tag
+    /// - Logging of the send operation
+    ///
+    /// @tparam DataType The type of data being sent (e.g., SlaveGroupProductionData)
+    /// @param data Vector of data structures to send
+    /// @param tag MPI message tag to identify the data type
+    /// @param data_type_name Human-readable name for logging (e.g., "production data")
+    ///
+    /// @note This is a blocking operation that waits for the master to receive the data
+    /// @note Only called from rank 0 of the slave's communicator
+    template <class DataType>
+    void sendDataToMaster_(
+        const std::vector<DataType>& data,
+        MessageTag tag,
+        const std::string& data_type_name
+    ) const;
+
     /// Reference to the parent ReservoirCouplingSlave object
     ReservoirCouplingSlave<Scalar> &slave_;
 };

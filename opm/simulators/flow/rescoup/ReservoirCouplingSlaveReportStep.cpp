@@ -56,25 +56,7 @@ sendInjectionDataToMaster(
     const std::vector<ReservoirCoupling::SlaveGroupInjectionData<Scalar>> &injection_data
 ) const
 {
-    // NOTE: The master can determine from the ordering of the injection data in the vector
-    //   which slave group for a given slave name the given injection data belong to,
-    //   so we do not need to send the slave group names also.
-    if (this->comm().rank() == 0) {
-        auto num_groups = injection_data.size();
-        auto MPI_INJECTION_DATA_TYPE = Dune::MPITraits<SlaveGroupInjectionData>::getType();
-        MPI_Send(
-            injection_data.data(),
-            /*count=*/num_groups,
-            /*datatype=*/MPI_INJECTION_DATA_TYPE,
-            /*dest_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::SlaveInjectionData),
-            this->getSlaveMasterComm()
-        );
-        this->logger().info(
-            fmt::format("Sent injection data for {} groups to master process from rank 0, slave name: {}",
-                num_groups, this->slaveName())
-        );
-    }
+    sendDataToMaster_(injection_data, MessageTag::SlaveInjectionData, "injection data");
 }
 
 template <class Scalar>
@@ -84,23 +66,40 @@ sendProductionDataToMaster(
     const std::vector<ReservoirCoupling::SlaveGroupProductionData<Scalar>> &production_data
 ) const
 {
-    // NOTE: The master can determine from the ordering of the production data in the vector
-    //   which slave group for a given slave name the given production data belong to,
+    sendDataToMaster_(production_data, MessageTag::SlaveProductionData, "production data");
+}
+
+// ------------------
+// Private methods
+// ------------------
+
+template <class Scalar>
+template <class DataType>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+sendDataToMaster_(
+    const std::vector<DataType>& data,
+    MessageTag tag,
+    const std::string& data_type_name
+) const
+{
+    // NOTE: The master can determine from the ordering of the data in the vector
+    //   which slave group for a given slave name the given data belong to,
     //   so we do not need to send the slave group names also.
     if (this->comm().rank() == 0) {
-        auto num_groups = production_data.size();
-        auto MPI_PRODUCTION_DATA_TYPE = Dune::MPITraits<SlaveGroupProductionData>::getType();
+        auto num_groups = data.size();
+        auto MPI_DATA_TYPE = Dune::MPITraits<DataType>::getType();
         MPI_Send(
-            production_data.data(),
+            data.data(),
             /*count=*/num_groups,
-            /*datatype=*/MPI_PRODUCTION_DATA_TYPE,
+            /*datatype=*/MPI_DATA_TYPE,
             /*dest_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::SlaveProductionData),
+            /*tag=*/static_cast<int>(tag),
             this->getSlaveMasterComm()
         );
         this->logger().info(
-            fmt::format("Sent production data for {} groups to master process from rank 0, slave name: {}",
-                num_groups, this->slaveName())
+            fmt::format("Sent {} for {} groups to master process from rank 0, slave name: {}",
+                data_type_name, num_groups, this->slaveName())
         );
     }
 }
