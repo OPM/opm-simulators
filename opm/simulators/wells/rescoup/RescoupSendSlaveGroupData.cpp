@@ -233,6 +233,9 @@ createInjectionRatesFromRateVector_(const std::vector<Scalar>& rate_vector) cons
         water_rate = rate_vector[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
     }
     InjectionRates injection_rates;
+    // NOTE: We could here use the more concice version of the following code:
+    //    return InjectionRates{{oil_rate, gas_rate, water_rate}};
+    // but that would be prone to silent bugs if the order of the phases is accidentally changed.
     injection_rates[ReservoirCoupling::Phase::Oil] = oil_rate;
     injection_rates[ReservoirCoupling::Phase::Gas] = gas_rate;
     injection_rates[ReservoirCoupling::Phase::Water] = water_rate;
