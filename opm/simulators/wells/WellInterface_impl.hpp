@@ -1888,34 +1888,14 @@ namespace Opm
         // either of the WDFAC or the WDFACCOR keywords.
         if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
             OPM_THROW(std::invalid_argument,
-                      "The perforation index exceeds the size of "
-                      "the local containers - possibly wellIndex "
-                      "was called with a global instead "
-                      "of a local perforation index!");
+                      "Perforation index exceeds size of containers. "
+                      "Was function getTw() called with a global "
+                      "rather than a local perforation index?");
         }
 
-        // formation multiplier assume this should not be multiplied with d
+        // Formation multiplier assume this should not be multiplied with d
         // factor contributions
-        int local_perf_index = perf;
-        if (this->isInjector() && !this->inj_fc_multiplier_.empty()) {
-            const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
-            const auto& connections = this->well_ecl_.getConnections();
-            const auto& connection = connections[perf_ecl_index];
-            if (connection.filterCakeActive()) {
-                std::transform(Tw.begin(), Tw.end(), Tw.begin(),
-                               [mult = this->inj_fc_multiplier_[local_perf_index]](const auto val)
-                               { return val * mult; });
-            }
-        }
-
-        // use intepolated well index
-        const auto perf_pressure = ws.perf_data.pressure[local_perf_index];
-        const auto frac_wellindex = this->well_index_fracture_[local_perf_index]
-            .wellIndex(perf_pressure);
-
-        std::transform(Tw.begin(), Tw.end(), Tw.begin(),
-                       [frac_wi = frac_wellindex](const auto val)
-                       { return val + frac_wi; });
+        this->includeFiltercakeEffects(perf, ws.perf_data.pressure[perf], Tw);
 
         if constexpr (! Indices::gasEnabled) {
             return;
@@ -2170,6 +2150,42 @@ namespace Opm
             }
         }
     }
+
+
+
+    template <typename TypeTag>
+    template <typename Value>
+    void
+    WellInterface<TypeTag>::
+    includeFiltercakeEffects(const int           perf,
+                             const double        perf_pressure,
+                             std::vector<Value>& Tw) const
+    {
+        const int local_perf_index = perf;
+
+        if (this->isInjector() && !this->inj_fc_multiplier_.empty()) {
+            const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
+
+            const auto& connections = this->well_ecl_.getConnections();
+            const auto& connection = connections[perf_ecl_index];
+
+            if (connection.filterCakeActive()) {
+                std::transform(Tw.begin(), Tw.end(), Tw.begin(),
+                               [mult = this->inj_fc_multiplier_[local_perf_index]](const auto val)
+                               { return val * mult; });
+            }
+        }
+
+        // Use intepolated well index.
+        const auto frac_wellindex = this->well_index_fracture_[local_perf_index]
+            .wellIndex(perf_pressure);
+
+        std::transform(Tw.begin(), Tw.end(), Tw.begin(),
+                       [frac_wi = frac_wellindex](const auto val)
+                       { return val + frac_wi; });
+    }
+
+
 
 
     template<typename TypeTag>

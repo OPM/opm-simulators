@@ -474,6 +474,24 @@ protected:
                      Callback&& extendEval,
                      [[maybe_unused]] DeferredLogger& deferred_logger) const;
 
+    /// Include filter cake effects into connection transmissibility factor
+    ///
+    /// \tparam Value Element type of CTF.
+    ///
+    /// \param[in] perf Connection for which to calculate filter cake
+    /// effects.  Linear connection index in the range 0..#open connections
+    /// on the current rank.
+    ///
+    /// \param[in] perf_pressure Connection pressure.
+    ///
+    /// \param[in,out] Tw Connection transmissibility factors.  One element
+    /// for each conserved quantity.  Filter cake effects will be added as
+    /// applicable.
+    template <typename Value>
+    void includeFiltercakeEffects(const int           perf,
+                                  const double        perf_pressure,
+                                  std::vector<Value>& Tw) const;
+
     void computeConnLevelProdInd(const FluidState& fs,
                                  const std::function<Scalar(const Scalar)>& connPICalc,
                                  const std::vector<Scalar>& mobility,
