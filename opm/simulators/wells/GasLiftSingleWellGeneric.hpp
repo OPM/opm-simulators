@@ -184,15 +184,11 @@ protected:
                      bool oil_is_limited_,
                      bool gas_is_limited_,
                      bool water_is_limited_,
-                     bool bhp_is_limited_,
-                     std::optional<Rate> oil_limiting_target_,
-                     std ::optional<Rate> water_limiting_target_)
+                     bool bhp_is_limited_)
             :  BasicRates(oil_, gas_, water_, bhp_is_limited_)
             , oil_is_limited{oil_is_limited_}
             , gas_is_limited{gas_is_limited_}
             , water_is_limited{water_is_limited_}
-            , oil_limiting_target{oil_limiting_target_}
-            , water_limiting_target{water_limiting_target_}
         {
             set_initial_limit_type_();
         }
@@ -220,8 +216,6 @@ protected:
         bool oil_is_limited;
         bool gas_is_limited;
         bool water_is_limited;
-        std::optional<Rate> oil_limiting_target;
-        std::optional<Rate> water_limiting_target;
 
     private:
         void set_initial_limit_type_()
@@ -317,7 +311,6 @@ protected:
     void displayWarning_(const std::string& warning);
 
     std::pair<Scalar, bool> getBhpWithLimit_(Scalar bhp) const;
-    std::pair<Scalar, bool> getGasRateWithLimit_(const BasicRates& rates) const;
     std::pair<Scalar, bool> getGasRateWithGroupLimit_(Scalar new_gas_rate,
                                                       Scalar gas_rate,
                                                       const std::string& gr_name_dont_limit) const;
@@ -327,22 +320,6 @@ protected:
 
     LimitedRates getLimitedRatesFromRates_(const BasicRates& rates) const;
 
-    std::tuple<Scalar,Scalar,bool,bool>
-    getLiquidRateWithGroupLimit_(const Scalar new_oil_rate,
-                                 const Scalar oil_rate,
-                                 const Scalar new_water_rate,
-                                 const Scalar water_rate,
-                                 const std::string& gr_name_dont_limit) const;
-
-    std::pair<Scalar, bool>
-    getOilRateWithGroupLimit_(Scalar new_oil_rate,
-                              Scalar oil_rate,
-                              const std::string& gr_name_dont_limit) const;
-
-    std::pair<Scalar, bool> getOilRateWithLimit_(const BasicRates& rates) const;
-
-    std::pair<Scalar, std::optional<Rate>>
-    getOilRateWithLimit2_(const BasicRates& rates) const;
 
     Scalar getProductionTarget_(Rate rate) const;
     Scalar getRate_(Rate rate_type, const BasicRates& rates) const;
@@ -350,21 +327,11 @@ protected:
     std::pair<Scalar, std::optional<Rate>>
     getRateWithLimit_(Rate rate_type, const BasicRates& rates) const;
 
-    std::tuple<Scalar, const std::string*, Scalar>
+    std::tuple<Scalar, const std::string*>
     getRateWithGroupLimit_(Rate rate_type,
                            const Scalar new_rate,
                            const Scalar old_rate,
                            const std::string& gr_name_dont_limit) const;
-
-    std::pair<Scalar, bool>
-    getWaterRateWithGroupLimit_(Scalar new_water_rate,
-                                Scalar water_rate,
-                                const std::string& gr_name_dont_limit) const;
-
-    std::pair<Scalar, bool> getWaterRateWithLimit_(const BasicRates& rates) const;
-
-    std::pair<Scalar, std::optional<Rate>>
-    getWaterRateWithLimit2_(const BasicRates& rates) const;
 
     BasicRates getWellStateRates_() const;
     bool hasProductionControl_(Rate rate) const;
