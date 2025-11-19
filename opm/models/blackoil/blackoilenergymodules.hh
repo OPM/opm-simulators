@@ -189,9 +189,14 @@ public:
 
             // add the internal energy of the rock
             const Scalar rockFraction = intQuants.rockFraction();
-            const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
+            const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy()); // this causes issues
             storage[contiEnergyEqIdx] += rockFraction * uRock;
             storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+            #if OPM_IS_INSIDE_DEVICE_FUNCTION
+            printf("dev: rockFraction = %f, uRock = %f\n", rockFraction, uRock);
+            #else
+            printf("host: rockFraction = %f, uRock = %f\n", rockFraction, uRock);
+            #endif
         }
     }
 

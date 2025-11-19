@@ -1051,9 +1051,9 @@ private:
             gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
             auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
 
-            linearize_kernel<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells/*numCells*/+1023)/1024), 1024>>>(
+            linearize_kernel<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((2/*numCells*/+1023)/1024), 1024>>>(
                 dispersionActive,
-                numCells/*numCells*/,
+                2/*numCells*/,
                 on_full_domain,
                 domain_view,
                 neighborInfo_view,
@@ -1067,7 +1067,7 @@ private:
             if (boundaryInfo_buffer.size() > 0) {
                 linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
                     dispersionActive,
-                    numCells/*numCells*/,
+                    2/*numCells*/,
                     on_full_domain,
                     domain_view,
                     neighborInfo_view,
@@ -1077,296 +1077,330 @@ private:
                     gpuModelView);
             }
 
-            // Now move the gpu residual into the cpu residual
-            auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
-            std::memcpy(residual_.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
-            {
-                auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
-                auto& cpuJacobian = jacobian_->istlMatrix();
+            // // Now move the gpu residual into the cpu residual
+            // auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
+            // std::memcpy(residual_.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
+            // {
+            //     auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
+            //     auto& cpuJacobian = jacobian_->istlMatrix();
                 
-                // Copy GPU jacobian back to CPU jacobian as a single contiguous operation
-                const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
-                std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(), 
-                           totalMatrixSize * sizeof(double));
-            }
+            //     // Copy GPU jacobian back to CPU jacobian as a single contiguous operation
+            //     const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
+            //     std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(), 
+            //                totalMatrixSize * sizeof(double));
+            // }
 
-            hipDeviceSynchronize();
-            auto end_gpu = std::chrono::high_resolution_clock::now();
-            auto gpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu);
-            hipError_t err = hipGetLastError();
-            if (err != hipSuccess) {
-                std::cerr << "Error during kernel launch: " << hipGetErrorString(err) << std::endl;
-                OPM_THROW(std::runtime_error, "GPU kernel launch failed");
-            }
-            std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
+            // hipDeviceSynchronize();
+            // auto end_gpu = std::chrono::high_resolution_clock::now();
+            // auto gpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu);
+            // hipError_t err = hipGetLastError();
+            // if (err != hipSuccess) {
+            //     std::cerr << "Error during kernel launch: " << hipGetErrorString(err) << std::endl;
+            //     OPM_THROW(std::runtime_error, "GPU kernel launch failed");
+            // }
+            // std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
 
             // To make the comparison fair this has to use the same simplified objects
             // auto start_cpu = std::chrono::high_resolution_clock::now();
-            // linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
-            //     dispersionActive,
-            //     numCells/*numCells*/,
-            //     on_full_domain,
-            //     domain,
-            //     neighborInfo_,
-            //     diagMatAddress_,
-            //     residual_,
-            //     boundaryInfo_,
-            //     dt);
+            linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+                dispersionActive,
+                2/*numCells*/,
+                on_full_domain,
+                domain,
+                neighborInfo_,
+                diagMatAddress_,
+                residual_,
+                boundaryInfo_,
+                dt);
             // auto end_cpu = std::chrono::high_resolution_clock::now();
             // auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
 
             // std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
 
-            // // Copy residual back from GPU to compare
-            // auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
+            // Copy residual back from GPU to compare
+            auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
 
-            // // Compare residuals
-            // {
-            //     struct ResidualErrorInfo {
-            //         double relativeError;
-            //         double cpuVal, gpuVal;
-            //         unsigned cell, eq;
-            //     };
+            // Compare residuals
+            {
+                struct ResidualErrorInfo {
+                    double relativeError;
+                    double cpuVal, gpuVal;
+                    unsigned cell, eq;
+                };
                 
-            //     std::vector<ResidualErrorInfo> errors;
+                std::vector<ResidualErrorInfo> errors;
                 
-            //     for (unsigned i = 0; i < numCells; ++i) {
-            //         for (unsigned eq = 0; eq < numEq; ++eq) {
-            //             double cpuVal = residual_[i][eq];
-            //             double gpuVal = cpuResidualFromGpu[i][eq];
-            //             double absError = std::abs(cpuVal - gpuVal);
-            //             double relativeError = 0.0;
+                for (unsigned i = 0; i < numCells; ++i) {
+                    for (unsigned eq = 0; eq < numEq; ++eq) {
+                        double cpuVal = residual_[i][eq];
+                        double gpuVal = cpuResidualFromGpu[i][eq];
+                        double absError = std::abs(cpuVal - gpuVal);
+                        double relativeError = 0.0;
                         
-            //             // Calculate relative error avoiding division by zero
-            //             relativeError = absError / std::abs(cpuVal);
+                        // Calculate relative error avoiding division by zero
+                        relativeError = absError / std::abs(cpuVal);
                         
-            //             if (relativeError > 1e-14) {
-            //                 errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
-            //             }
-            //         }
-            //     }
+                        if (relativeError > 1e-14) {
+                            errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
+                        }
+                    }
+                }
                 
-            //     // Sort by relative error (descending) and keep top 3
-            //     std::partial_sort(errors.begin(), 
-            //                     errors.begin() + std::min(3, static_cast<int>(errors.size())), 
-            //                     errors.end(),
-            //                     [](const ResidualErrorInfo& a, const ResidualErrorInfo& b) {
-            //                         return a.relativeError > b.relativeError;
-            //                     });
+                // Sort by relative error (descending) and keep top 3
+                std::partial_sort(errors.begin(), 
+                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
+                                errors.end(),
+                                [](const ResidualErrorInfo& a, const ResidualErrorInfo& b) {
+                                    return a.relativeError > b.relativeError;
+                                });
                 
-            //     // Output the 3 largest relative errors
-            //     int numToShow = std::min(3, static_cast<int>(errors.size()));
-            //     if (numToShow != 0) {
-            //         printf("Top %d largest relative errors in residual:\n", numToShow);
-            //         for (int i = 0; i < numToShow; ++i) {
-            //             const auto& err = errors[i];
-            //             printf("  %d: cell=%u, eq=%u, CPU=%e, GPU=%e, rel_error=%e\n",
-            //                 i+1, err.cell, err.eq, err.cpuVal, err.gpuVal, err.relativeError);
-            //         }
-            //     }
-            // }
+                // Output the 3 largest relative errors
+                int numToShow = std::min(3, static_cast<int>(errors.size()));
+                if (numToShow != 0) {
+                    printf("Top %d largest relative errors in residual:\n", numToShow);
+                    for (int i = 0; i < numToShow; ++i) {
+                        const auto& err = errors[i];
+                        printf("  %d: cell=%u, eq=%u, CPU=%e, GPU=%e, rel_error=%e\n",
+                            i+1, err.cell, err.eq, err.cpuVal, err.gpuVal, err.relativeError);
+                    }
+                }
+            }
 
-            // {
-            //     // Compare jacobian entries and find 5 largest relative errors
-            //     auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
-            //     int gpuJacIdx = 0;
-            //     auto& cpuJacobian = jacobian_->istlMatrix();
+            {
+                // Compare jacobian entries and find 5 largest relative errors
+                auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
+                int gpuJacIdx = 0;
+                auto& cpuJacobian = jacobian_->istlMatrix();
                 
-            //     struct ErrorInfo {
-            //         double relativeError;
-            //         double cpuVal, gpuVal;
-            //     };
+                struct ErrorInfo {
+                    double relativeError;
+                    double cpuVal, gpuVal;
+                };
                 
-            //     std::vector<ErrorInfo> errors;
+                std::vector<ErrorInfo> errors;
                 
-            //     for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
-            //     {
-            //         for (auto col = row->begin(); col != row->end(); ++col)
-            //         {
-            //             for (int brow = 0; brow < numEq; ++brow)
-            //             {
-            //                 for (int bcol = 0; bcol < numEq; ++bcol)
-            //                 {
-            //                     double cpuVal = (*col)[brow][bcol];
-            //                     double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
-            //                     double absError = std::abs(cpuVal - gpuVal);
-            //                     double relativeError = 0.0;
+                for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
+                {
+                    for (auto col = row->begin(); col != row->end(); ++col)
+                    {
+                        for (int brow = 0; brow < numEq; ++brow)
+                        {
+                            for (int bcol = 0; bcol < numEq; ++bcol)
+                            {
+                                double cpuVal = (*col)[brow][bcol];
+                                double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
+                                double absError = std::abs(cpuVal - gpuVal);
+                                double relativeError = 0.0;
                                 
-            //                     // Calculate relative error avoiding division by zero
-            //                     relativeError = absError / std::abs(cpuVal);
+                                // Calculate relative error avoiding division by zero
+                                relativeError = absError / std::abs(cpuVal);
                                 
-            //                     if (relativeError > 1e-14) {
-            //                         errors.push_back({relativeError, cpuVal, gpuVal});
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }
+                                if (relativeError > 1e-14) {
+                                    errors.push_back({relativeError, cpuVal, gpuVal});
+                                }
+                            }
+                        }
+                    }
+                }
                 
-            //     // Sort by relative error (descending) and keep top 5
-            //     std::partial_sort(errors.begin(), 
-            //                     errors.begin() + std::min(3, static_cast<int>(errors.size())), 
-            //                     errors.end(),
-            //                     [](const ErrorInfo& a, const ErrorInfo& b) {
-            //                         return a.relativeError > b.relativeError;
-            //                     });
+                // Sort by relative error (descending) and keep top 5
+                std::partial_sort(errors.begin(), 
+                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
+                                errors.end(),
+                                [](const ErrorInfo& a, const ErrorInfo& b) {
+                                    return a.relativeError > b.relativeError;
+                                });
                 
-            //     // Output the 5 largest relative errors
-            //     int numToShow = std::min(3, static_cast<int>(errors.size()));
-            //     if (numToShow != 0) {
-            //         printf("Top %d largest relative errors in Jacobian:\n", numToShow);
-            //         for (int i = 0; i < numToShow; ++i) {
-            //             const auto& err = errors[i];
-            //             printf("  %d: CPU=%e, GPU=%e, rel_error=%e\n",
-            //                 i+1, err.cpuVal, err.gpuVal, err.relativeError);
-            //         }
-            //     }
+                // Output the 5 largest relative errors
+                int numToShow = std::min(3, static_cast<int>(errors.size()));
+                if (numToShow != 0) {
+                    printf("Top %d largest relative errors in Jacobian:\n", numToShow);
+                    for (int i = 0; i < numToShow; ++i) {
+                        const auto& err = errors[i];
+                        printf("  %d: CPU=%e, GPU=%e, rel_error=%e\n",
+                            i+1, err.cpuVal, err.gpuVal, err.relativeError);
+                    }
+                }
 
-            // }
+            }
 
-            // for (unsigned ii = 0; ii < numCells; ++ii) {
-            //     OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
-            //     const unsigned globI = domain.cells[ii];
-            //     const auto& nbInfos = neighborInfo_[globI];
-            //     VectorBlock res(0.0);
-            //     MatrixBlock bMat(0.0);
-            //     ADVectorBlock adres(0.0);
-            //     ADVectorBlock darcyFlux(0.0);
-            //     const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            {
+                // TODO: optimize the source term thing, why do we go over every cell to ask (am I a source) when we typically have 0 to a few sources?
+                #pragma omp parallel for
+                for (unsigned ii = 0; ii < numCells; ++ii) {
 
-            //     // Flux term.
-            //     {
-            //         OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell, Subsystem::Assembly);
-            //         short loc = 0;
-            //         for (const auto& nbInfo : nbInfos) {
-            //             OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace, Subsystem::Assembly);
-            //             const unsigned globJ = nbInfo.neighbor;
-            //             assert(globJ != globI);
-            //             res = 0.0;
-            //             bMat = 0.0;
-            //             adres = 0.0;
-            //             darcyFlux = 0.0;
-            //             const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-            //             LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-            //                                     nbInfo.res_nbinfo,  problem_().moduleParams());
-            //             adres *= nbInfo.res_nbinfo.faceArea;
-            //             if (dispersionActive || enableBioeffects) {
-            //                 for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
-            //                     velocityInfo_[globI][loc].velocity[phaseIdx] =
-            //                         darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
-            //                 }
-            //             }
-            //             setResAndJacobi(res, bMat, adres);
-            //             residual_[globI] += res;
-            //             //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
-            //             *diagMatAddress_[globI] += bMat;
-            //             bMat *= -1.0;
-            //             //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
-            //             *nbInfo.matBlockAddress += bMat;
-            //             ++loc;
-            //         }
-            //     }
+                    OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
+                    const unsigned globI = domain.cells[ii];
+                    const auto& nbInfos = neighborInfo_[globI];
 
-            //     // Accumulation term.
-            //     const double volume = model_().dofTotalVolume(globI);
-            //     const Scalar storefac = volume / dt;
-            //     adres = 0.0;
-            //     {
-            //         OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
-            //         LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
-            //     }
-            //     setResAndJacobi(res, bMat, adres);
-            //     // Either use cached storage term, or compute it on the fly.
-            //     if (model_().enableStorageCache()) {
-            //         // The cached storage for timeIdx 0 (current time) is not
-            //         // used, but after storage cache is shifted at the end of the
-            //         // timestep, it will become cached storage for timeIdx 1.
-            //         model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
-            //         // printf("Using cached storage for cell %u\n", globI);
-            //         if (model_().newtonMethod().numIterations() == 0) { // is sometimes false
-            //             // Need to update the storage cache.
-            //             // printf("First iteration storage update for cell %u\n", globI);
-            //             if (problem_().recycleFirstIterationStorage()) {
-            //                 // Assumes nothing have changed in the system which
-            //                 // affects masses calculated from primary variables.
-            //                 // printf("Recycling first iteration storage for cell %u\n", globI);
-            //                 if (on_full_domain) {
-            //                     // This is to avoid resetting the start-of-step storage
-            //                     // to incorrect numbers when we do local solves, where the iteration
-            //                     // number will start from 0, but the starting state may not be identical
-            //                     // to the start-of-step state.
-            //                     // Note that a full assembly must be done before local solves
-            //                     // otherwise this will be left un-updated.
-            //                     model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
-            //                 }
-            //                 else{ // never reached in spe11
-            //                 }
-            //             }
-            //             else { // never reached in spe11
-            //                 Dune::FieldVector<Scalar, numEq> tmp;
-            //                 const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-            //                 LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
-            //                 model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
-            //             }
-            //         }
-            //         res -= model_().cachedStorage(globI, 1);
-            //     }
-            //     else {
-            //         OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
-            //         Dune::FieldVector<Scalar, numEq> tmp;
-            //         const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-            //         LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
-            //         // assume volume do not change
-            //         res -= tmp;
-            //     }
-            //     res *= storefac;
-            //     bMat *= storefac;
-            //     residual_[globI] += res;
-            //     //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            //     *diagMatAddress_[globI] += bMat;
+                    VectorBlock res(0.0);
+                    MatrixBlock bMat(0.0);
+                    ADVectorBlock adres(0.0);
+                    ADVectorBlock darcyFlux(0.0);
 
-            //     // Cell-wise source terms.
-            //     // This will include well sources if SeparateSparseSourceTerms is false.
-            //     res = 0.0;
-            //     bMat = 0.0;
-            //     adres = 0.0;
-            //     if (separateSparseSourceTerms_) {
-            //         LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
-            //     }
-            //     else {
-            //         LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
-            //     }
-            //     adres *= -volume;
-            //     setResAndJacobi(res, bMat, adres);
-            //     residual_[globI] += res;
-            //     //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            //     *diagMatAddress_[globI] += bMat;
-            // } // end of loop for cell globI.
+                    const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                    const double volume = model_().dofTotalVolume(globI);
+                    res = 0.0;
+                    bMat = 0.0;
+                    adres = 0.0;
+                    if (separateSparseSourceTerms_) {
+                        LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
+                    }
+                    else {
+                        LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+                    }
+                    adres *= -volume;
+                    setResAndJacobi(res, bMat, adres);
+                    residual_[globI] += res;
+                    //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+                    *diagMatAddress_[globI] += bMat;
+                }
+            }
 
-            // // Add sparse source terms. For now only wells.
-            // if (separateSparseSourceTerms_) {
-            //     printf("CPU adding sparse source terms\n");
-            //     problem_().wellModel().addReservoirSourceTerms(residual_, diagMatAddress_);
-            // }
+            // #pragma omp parallel for
+        //     for (unsigned ii = 0; ii < numCells; ++ii) {
+        //         OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
+        //         const unsigned globI = domain.cells[ii];
+        //         const auto& nbInfos = neighborInfo_[globI];
+        //         VectorBlock res(0.0);
+        //         MatrixBlock bMat(0.0);
+        //         ADVectorBlock adres(0.0);
+        //         ADVectorBlock darcyFlux(0.0);
+        //         const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
 
-            // // Boundary terms. Only looping over cells with nontrivial bcs.
-            // for (const auto& bdyInfo : boundaryInfo_) {
-            //     if (bdyInfo.bcdata.type == BCType::NONE) {
-            //         continue;
-            //     }
+        //         // // Flux term.
+        //         // {
+        //             OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell, Subsystem::Assembly);
+        //             short loc = 0;
+        //             for (const auto& nbInfo : nbInfos) {
+        //                 OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace, Subsystem::Assembly);
+        //                 const unsigned globJ = nbInfo.neighbor;
+        //                 assert(globJ != globI);
+        //                 res = 0.0;
+        //                 bMat = 0.0;
+        //                 adres = 0.0;
+        //                 darcyFlux = 0.0;
+        //                 const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+        //                 LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+        //                                         nbInfo.res_nbinfo,  problem_().moduleParams());
+        //                 adres *= nbInfo.res_nbinfo.faceArea;
+        //                 if (dispersionActive || enableBioeffects) {
+        //                     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
+        //                         velocityInfo_[globI][loc].velocity[phaseIdx] =
+        //                             darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+        //                     }
+        //                 }
+        //                 setResAndJacobi(res, bMat, adres);
+        //                 residual_[globI] += res;
+        //                 //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
+        //                 *diagMatAddress_[globI] += bMat;
+        //                 bMat *= -1.0;
+        //                 //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+        //                 *nbInfo.matBlockAddress += bMat;
+        //                 ++loc;
+        //             }
+        //         }
 
-            //     VectorBlock res(0.0);
-            //     MatrixBlock bMat(0.0);
-            //     ADVectorBlock adres(0.0);
-            //     const unsigned globI = bdyInfo.cell;
-            //     const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-            //     LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
-            //     adres *= bdyInfo.bcdata.faceArea;
-            //     setResAndJacobi(res, bMat, adres);
-            //     residual_[globI] += res;
-            //     ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            //     *diagMatAddress_[globI] += bMat;
-            // }
+        //         // Accumulation term.
+        //         const double volume = model_().dofTotalVolume(globI);
+        //         const Scalar storefac = volume / dt;
+        //         adres = 0.0;
+        //         {
+        //             OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
+        //             LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
+        //         }
+        //         setResAndJacobi(res, bMat, adres);
+        //         // Either use cached storage term, or compute it on the fly.
+        //         if (model_().enableStorageCache()) {
+        //             // The cached storage for timeIdx 0 (current time) is not
+        //             // used, but after storage cache is shifted at the end of the
+        //             // timestep, it will become cached storage for timeIdx 1.
+        //             model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
+        //             // printf("Using cached storage for cell %u\n", globI);
+        //             if (model_().newtonMethod().numIterations() == 0) { // is sometimes false
+        //                 // Need to update the storage cache.
+        //                 // printf("First iteration storage update for cell %u\n", globI);
+        //                 if (problem_().recycleFirstIterationStorage()) {
+        //                     // Assumes nothing have changed in the system which
+        //                     // affects masses calculated from primary variables.
+        //                     // printf("Recycling first iteration storage for cell %u\n", globI);
+        //                     if (on_full_domain) {
+        //                         // This is to avoid resetting the start-of-step storage
+        //                         // to incorrect numbers when we do local solves, where the iteration
+        //                         // number will start from 0, but the starting state may not be identical
+        //                         // to the start-of-step state.
+        //                         // Note that a full assembly must be done before local solves
+        //                         // otherwise this will be left un-updated.
+        //                         model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
+        //                     }
+        //                     else{ // never reached in spe11
+        //                     }
+        //                 }
+        //                 else { // never reached in spe11
+        //                     Dune::FieldVector<Scalar, numEq> tmp;
+        //                     const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+        //                     LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
+        //                     model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
+        //                 }
+        //             }
+        //             res -= model_().cachedStorage(globI, 1);
+        //         }
+        //         else {
+        //             OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
+        //             Dune::FieldVector<Scalar, numEq> tmp;
+        //             const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+        //             LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
+        //             // assume volume do not change
+        //             res -= tmp;
+        //         }
+        //         res *= storefac;
+        //         bMat *= storefac;
+        //         residual_[globI] += res;
+        //         //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+        //         *diagMatAddress_[globI] += bMat;
+
+        //         Cell-wise source terms.
+        //         This will include well sources if SeparateSparseSourceTerms is false.
+        //         res = 0.0;
+        //         bMat = 0.0;
+        //         adres = 0.0;
+        //         if (separateSparseSourceTerms_) {
+        //             LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
+        //         }
+        //         else {
+        //             LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+        //         }
+        //         adres *= -volume;
+        //         setResAndJacobi(res, bMat, adres);
+        //         residual_[globI] += res;
+        //         //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+        //         *diagMatAddress_[globI] += bMat;
+        //         }
+        //     } // end of loop for cell globI.
+
+        //     // Add sparse source terms. For now only wells.
+        //     if (separateSparseSourceTerms_) {
+        //         problem_().wellModel().addReservoirSourceTerms(residual_, diagMatAddress_);
+        //     }
+
+        //     // Boundary terms. Only looping over cells with nontrivial bcs.
+        //     for (const auto& bdyInfo : boundaryInfo_) {
+        //         if (bdyInfo.bcdata.type == BCType::NONE) {
+        //             continue;
+        //         }
+
+        //         VectorBlock res(0.0);
+        //         MatrixBlock bMat(0.0);
+        //         ADVectorBlock adres(0.0);
+        //         const unsigned globI = bdyInfo.cell;
+        //         const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+        //         LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+        //         adres *= bdyInfo.bcdata.faceArea;
+        //         setResAndJacobi(res, bMat, adres);
+        //         residual_[globI] += res;
+        //         ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+        //         *diagMatAddress_[globI] += bMat;
+        //     }
         }
         else {
             assert(false && "Only FullDomain is supported on GPU");
@@ -1599,7 +1633,7 @@ private:
             const Scalar storefac = volume / locDT;//volume / dt;
             adres = 0.0;
             {
-                LocalResidualKernel::template computeStorage<Evaluation>(adres, intQuantsIn);
+                // LocalResidualKernel::template computeStorage<Evaluation>(adres, intQuantsIn);
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
 
@@ -1744,7 +1778,7 @@ private:
             const Scalar storefac = volume / locDT;//volume / dt;
             adres = 0.0;
             {
-                LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
+                // LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
             }
             setResAndJacobiGPUCPU(res, bMat, adres);
 
