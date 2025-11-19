@@ -88,7 +88,7 @@
 namespace Opm {
 
 template<class Scalar> class BlackoilWellModelNldd;
-template<class T> class SparseTable;
+template<class T, template <typename, typename...> class Storage> class SparseTable;
 
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
