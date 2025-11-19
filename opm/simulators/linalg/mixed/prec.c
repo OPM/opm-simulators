@@ -122,28 +122,6 @@ void prec_init(prec_t *P, bsr_matrix const *A)
     P->noffsets=count;
 }
 
-
-/*
-void mat3_view(double const *M, char const *name)
-{
-    printf("%s = \n[\n",name);
-    for(int i=0;i<3;i++)
-    {
-        for(int j=0;j<3;j++)
-        {
-            printf("%+.4e ",M[3*j+i]);
-        }
-        printf("\n");
-    }
-    printf("\n]\n");
-}
-*/
-/*
-void mat3_T(double *B, double const *A)
-{
-    for(int i=0;i<3;i++) for(int j=0;j<3;j++) B[3*i+j] = A[i+3*j];
-}
-*/
 void mat3_matmul(double *C, const double *A, const double *B)
 {
     // assume 3x3 column-major matrices
