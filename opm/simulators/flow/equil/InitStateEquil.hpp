@@ -770,13 +770,13 @@ private:
                                        PhaseSat&              psat);
 
      template<class CellRange, class PressTable, class PhaseSat>
-     void equilibrateTiltedFaultBlockSimple(const CellRange& cells, 
+     void equilibrateTiltedFaultBlock(const CellRange& cells, 
                             const EquilReg<Scalar>& eqreg,
                             const GridView& gridView, const int numLevels,
                             const PressTable& ptable, PhaseSat& psat);
 
      template<class CellRange, class PressTable, class PhaseSat>
-     void equilibrateTiltedFaultBlockComplex(const CellRange& cells,
+     void equilibrateTiltedFaultBlockSimple(const CellRange& cells,
                            const EquilReg<Scalar>& eqreg,
                            const GridView& gridView, const int numLevels,
                            const PressTable& ptable, PhaseSat& psat);

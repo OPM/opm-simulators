@@ -198,35 +198,13 @@ std::pair<Scalar,Scalar> cellZMinMax(const Element& element)
 
 template<class Scalar>
 void computeBlockDip(const Scalar& cellThickness,
-                    const std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>>& cellCornersXY, // Maybe not very generic
+                    const std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>>& cellCornersXY,
                     Scalar& dipAngle, Scalar& dipAzimuth)
 {
     auto [Xc, Yc, Zc] = cellCornersXY;
 
-    // Calculate cell centroid
-    Scalar x_centroid = std::accumulate(Xc.begin(), Xc.end(), 0.0) / Xc.size();
-    Scalar y_centroid = std::accumulate(Yc.begin(), Yc.end(), 0.0) / Yc.size();
-    Scalar z_centroid = std::accumulate(Zc.begin(), Zc.end(), 0.0) / Zc.size();
-
-    // Calculate covariance matrix for plane fitting
-    Scalar xx = 0.0, yy = 0.0, zz = 0.0, xy = 0.0, xz = 0.0, yz = 0.0;
-
-    for (size_t i = 0; i < 8; ++i) {
-        Scalar dx = Xc[i] - x_centroid;
-        Scalar dy = Yc[i] - y_centroid;
-        Scalar dz = Zc[i] - z_centroid;
-
-        xx += dx * dx;
-        yy += dy * dy;
-        zz += dz * dz;
-        xy += dx * dy;
-        xz += dx * dz;
-        yz += dy * dz;
-    }
-
-    // Find the normal vector using principal component analysis
-    // Use three non-collinear points to define the cell plane
-    // Typically use corners 0, 1, and 2 (bottom face)
+    // Use bottom face corners 0,1,3 (forming two vectors from corner 0)
+    // This better represents the bottom face plane
     Scalar v1x = Xc[1] - Xc[0];
     Scalar v1y = Yc[1] - Yc[0];
     Scalar v1z = Zc[1] - Zc[0];
@@ -254,7 +232,7 @@ void computeBlockDip(const Scalar& cellThickness,
         // Dip azimuth (direction of dip)
         if (std::abs(nx) > 1e-10 || std::abs(ny) > 1e-10) {
             dipAzimuth = std::atan2(ny, nx);
-            // Convertion
+            // Convert to 0-2π range
             dipAzimuth = std::fmod(dipAzimuth + 2*M_PI, 2*M_PI);
         } else {
             dipAzimuth = 0.0; // Vertical cell
@@ -271,7 +249,7 @@ void computeBlockDip(const Scalar& cellThickness,
 }
 
 template <class Scalar, class Element>
-std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>> getCellCornerXY(const Element& element) // maybe not very generic too
+std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>> getCellCornerXY(const Element& element)
 {
     typedef typename Element::Geometry Geometry;
     const Geometry& geometry = element.geometry();
@@ -2030,10 +2008,6 @@ calcPressSatRsRv(const RMap& reg,
         const auto acc = rec[r].initializationTargetAccuracy();
         if (acc > 0) {
             // The grid blocks are treated as being tilted
-            //  The top and bottom faces are orientated towards their neighbors within the equilibration region. 
-            // The simulator takes an average of the conditions at N levels within each half (upper and lower) of the block, weighted according to the block’s
-            // horizontal cross-section at each level.
-
             // First check if the region has cells
             if (cells.empty()) {
                 regionIsEmpty[r] = 1;
@@ -2047,9 +2021,9 @@ calcPressSatRsRv(const RMap& reg,
             vspan[0] = std::min(vspan[0], std::min(eqreg.zgoc(), eqreg.zwoc()));
             vspan[1] = std::max(vspan[1], std::max(eqreg.zgoc(), eqreg.zwoc()));
             ptable.equilibrate(eqreg, vspan);
-            // For titled blocks, we use both vertical and horizontal subdivision
-            // The accuracy value determines the number of subdivisions in each direction
-            this->equilibrateTiltedFaultBlockSimple(cells, eqreg, gridView, acc, ptable, psat);
+            // For titled blocks, we can use a simple or complex weightening based on title of the grid
+            //this->equilibrateTiltedFaultBlockSimple(cells, eqreg, gridView, acc, ptable, psat);
+            this->equilibrateTiltedFaultBlock(cells, eqreg, gridView, acc, ptable, psat);
         }
         else if (acc == 0) {
             if (cells.empty()) {
@@ -2374,36 +2348,36 @@ equilibrateTiltedFaultBlockSimple(const CellRange& cells,
         Scalar dipAngle, dipAzimuth;
         Details::computeBlockDip(cellThickness, cellCornersXY_[cell], dipAngle, dipAzimuth);
 
-        // Reference point for TVD calculations (NOT sure to use seismic datum or cell Centers)
+        // Reference point for TVD calculations
                 std::array<Scalar, 3> referencePoint = {
             cellCenterXY_[cell].first,
             cellCenterXY_[cell].second,
             cellCenterDepth_[cell]
         };
 
-        //  We have acc levels within each half (upper and lower) of the block"
+        //  We have acc levels within each half (upper and lower) of the block
         const int numLevelsPerHalf = std::min(20, acc);
-        
+
         // Create subdivisions for upper and lower halves with cross-section weighting
         std::vector<std::pair<Scalar, Scalar>> levels;
-        
+
         // Subdivide upper and lower halves separately
         for (int half = 0; half < 2; ++half) {
             Scalar halfStart = (half == 0) ? zmin : zmin + halfThickness;
-            
+
             for (int i = 0; i < numLevelsPerHalf; ++i) {
                 // Calculate depth at the center of this subdivision
                 Scalar depth = halfStart + (i + 0.5) * (halfThickness / numLevelsPerHalf);
-                
+
                 // A simple way: we can estimate cross-section weight based on dip angle
                 // For horizontal cells: weight = 1.0, for tilted cells: weight decreases with dip
                 Scalar crossSectionWeight = (halfThickness / numLevelsPerHalf);
-                
+
                 // Apply dip correction to weight (cross-section area decreases with dip)
                 if (std::abs(dipAngle) > 1e-10) {
                     crossSectionWeight /= std::cos(dipAngle);
                 }
-                
+
                 levels.emplace_back(depth, crossSectionWeight);
             }
         }
@@ -2454,7 +2428,7 @@ equilibrateTiltedFaultBlockSimple(const CellRange& cells,
 template<class FluidSystem, class Grid, class GridView, class ElementMapper, class CartesianIndexMapper>
 template<class CellRange, class PressTable, class PhaseSat>
 void InitialStateComputer<FluidSystem, Grid, GridView, ElementMapper, CartesianIndexMapper>::
-equilibrateTiltedFaultBlockComplex(const CellRange&        cells,
+equilibrateTiltedFaultBlock(const CellRange&        cells,
                              const EquilReg<Scalar>& eqreg,
                              const GridView&         gridView,
                              const int               acc,
@@ -2465,7 +2439,13 @@ equilibrateTiltedFaultBlockComplex(const CellRange&        cells,
     using CellID  = std::remove_cv_t<std::remove_reference_t<
         decltype(std::declval<CellPos>().cell)>>;
 
-    // Polygon area calculation
+    std::vector<typename GridView::template Codim<0>::Entity> entityMap(gridView.size(0));
+    for (const auto& entity : entities(gridView, Dune::Codim<0>())) {
+        CellID idx = gridView.indexSet().index(entity);
+        entityMap[idx] = entity;
+    }
+
+    // Face Area Calculation
     auto polygonArea = [](const std::vector<std::array<Scalar, 2>>& pts) {
         if (pts.size() < 3) return Scalar(0);
         Scalar area = 0;
@@ -2476,39 +2456,24 @@ equilibrateTiltedFaultBlockComplex(const CellRange&        cells,
         return std::abs(area) * 0.5;
     };
 
-    // Compute horizontal cross-section at given depth (very expensive it looks like!)
+    // Compute horizontal cross-section at given depth
     auto computeCrossSectionArea = [&](const CellID cell, Scalar depth) -> Scalar {
         try {
-            std::vector<std::array<Scalar, 3>> corners;
-            // Hope to work with generic grid
-            bool entityFound = false;
+            const auto& entity = entityMap[cell];
+            const auto& geometry = entity.geometry();
+            const int numCorners = geometry.corners();
 
-            // Try to iterate through entities to find the one with matching index (EXPENSIVE)
-            for (const auto& entity : entities(gridView, Dune::Codim<0>())) {
-                if (gridView.indexSet().index(entity) == cell) {
-                    const auto& geometry = entity.geometry();
-                    const int numCorners = geometry.corners();
-                    corners.resize(numCorners);
-                    for (int i = 0; i < numCorners; ++i) {
-                        const auto& corner = geometry.corner(i);
-                        corners[i][0] = corner[0];
-                        corners[i][1] = corner[1];
-                        corners[i][2] = corner[2];
-                    }
-                    entityFound = true;
-                    break;
-                }
-            }
-
-            if (!entityFound || corners.empty()) {
-                return 0.0;
+            std::vector<std::array<Scalar, 3>> corners(numCorners);
+            for (int i = 0; i < numCorners; ++i) {
+                const auto& corner = geometry.corner(i);
+                corners[i] = {corner[0], corner[1], corner[2]};
             }
 
             // Find all intersections between horizontal plane and cell edges
             std::vector<std::array<Scalar, 2>> intersectionPoints;
             const Scalar tol = 1e-10;
 
-            // Check all edges between corners
+            // Check all edges between corners (could be optimized further)
             for (size_t i = 0; i < corners.size(); ++i) {
                 for (size_t j = i + 1; j < corners.size(); ++j) {
                     Scalar za = corners[i][2];
@@ -2524,7 +2489,7 @@ equilibrateTiltedFaultBlockComplex(const CellRange&        cells,
                 }
             }
 
-            // Remove duplicates (within tolerance but expensive)
+            // Remove duplicates (maybe expensive)
             if (intersectionPoints.size() > 1) {
                 auto pointsEqual = [tol](const std::array<Scalar, 2>& a, const std::array<Scalar, 2>& b) {
                     return std::abs(a[0] - b[0]) < tol && std::abs(a[1] - b[1]) < tol;
@@ -2584,7 +2549,7 @@ equilibrateTiltedFaultBlockComplex(const CellRange&        cells,
         Scalar dipAngle, dipAzimuth;
         Details::computeBlockDip(cellThickness, this->cellCornersXY_[cell], dipAngle, dipAzimuth);
 
-        // Reference point for TVD calculations (I'm sure why reg.eqnum() is not correct)
+        // Reference point for TVD calculations
         std::array<Scalar, 3> referencePoint = {
             this->cellCenterXY_[cell].first,
             this->cellCenterXY_[cell].second,
@@ -2594,7 +2559,7 @@ equilibrateTiltedFaultBlockComplex(const CellRange&        cells,
         // We have acc levels within each half (upper and lower) of the block
         const int numLevelsPerHalf = std::min(20, acc);
 
-        // Create subdivisions for upper and lower halves with  cross-section weighting
+        // Create subdivisions for upper and lower halves with cross-section weighting
         std::vector<std::pair<Scalar, Scalar>> levels;
 
         // Subdivide upper and lower halves separately
@@ -2615,7 +2580,7 @@ equilibrateTiltedFaultBlockComplex(const CellRange&        cells,
             }
         }
 
-        // Maybe not necessary (for denbug)
+        // Maybe not necessary (for debug)
         bool hasValidAreas = false;
         for (const auto& level : levels) {
             if (level.second > 1e-14) {
@@ -2654,7 +2619,7 @@ equilibrateTiltedFaultBlockComplex(const CellRange&        cells,
             auto localSaturations = psat.deriveSaturations(pos, eqreg, ptable);
             auto localPressures = psat.correctedPhasePressures();
 
-            // Apply  cross-section weighted averaging
+            // Apply cross-section weighted averaging
             saturations.axpy(localSaturations, weight);
             pressures.axpy(localPressures, weight);
             totalWeight += weight;
