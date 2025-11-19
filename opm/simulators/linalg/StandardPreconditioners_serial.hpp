@@ -38,9 +38,9 @@ class TrivialPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
     TrivialPreconditioner(){};
     virtual void update() override {};
     virtual bool hasPerfectUpdate() const override {return true;}
-    virtual void pre (X& x, Y& y) override {};
-    virtual void post (X& x) override {};
-    virtual void apply (X& x, const Y& y) override {};
+    virtual void pre ([[maybe_unused]] X& x, [[maybe_unused]] Y& y) override {};
+    virtual void post ([[maybe_unused]] X& x) override {};
+    virtual void apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y) override {};
     virtual Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
 };
 
@@ -86,10 +86,12 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
         });
         F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
+            DUNE_UNUSED_PARAMETER(op);
             return std::make_shared<TrivialPreconditioner<V,V>>();
         });
         F::addCreator("mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
+            DUNE_UNUSED_PARAMETER(op);
             return std::make_shared<TrivialPreconditioner<V,V>>();
         });
         F::addCreator("jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
