@@ -68,6 +68,8 @@
 
 #include <chrono>
 
+#include <omp.h>
+
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/common/utility/pointerArithmetic.hpp>
 #if HAVE_CUDA
@@ -1051,9 +1053,9 @@ private:
             gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
             auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
 
-            linearize_kernel<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((2/*numCells*/+1023)/1024), 1024>>>(
+            linearize_kernel<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((numCells/*numCells*/+1023)/1024), 1024>>>(
                 dispersionActive,
-                2/*numCells*/,
+                numCells/*numCells*/,
                 on_full_domain,
                 domain_view,
                 neighborInfo_view,
@@ -1067,7 +1069,7 @@ private:
             if (boundaryInfo_buffer.size() > 0) {
                 linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
                     dispersionActive,
-                    2/*numCells*/,
+                    numCells/*numCells*/,
                     on_full_domain,
                     domain_view,
                     neighborInfo_view,
@@ -1104,7 +1106,7 @@ private:
             // auto start_cpu = std::chrono::high_resolution_clock::now();
             linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
                 dispersionActive,
-                2/*numCells*/,
+                numCells/*numCells*/,
                 on_full_domain,
                 domain,
                 neighborInfo_,

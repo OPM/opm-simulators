@@ -190,6 +190,9 @@ public:
         , mobility_(other.mobility_)
         , dirMob_(/*TODO*/)
         , fluidSystem_(fluidSystemPtr)
+        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(other.rockInternalEnergy_
+                                                                    , other.totalThermalConductivity_
+                                                                    , other.rockFraction_)
     {
     }
 

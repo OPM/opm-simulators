@@ -192,11 +192,6 @@ public:
             const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy()); // this causes issues
             storage[contiEnergyEqIdx] += rockFraction * uRock;
             storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
-            #if OPM_IS_INSIDE_DEVICE_FUNCTION
-            printf("dev: rockFraction = %f, uRock = %f\n", rockFraction, uRock);
-            #else
-            printf("host: rockFraction = %f, uRock = %f\n", rockFraction, uRock);
-            #endif
         }
     }
 
@@ -393,6 +388,17 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThe
     static constexpr int temperatureIdx = Indices::temperatureIdx;
 
 public:
+    BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThermal>(Evaluation rockInternalEnergy,
+                                                                                 Evaluation totalThermalConductivity,
+                                                                                 Scalar rockFraction)
+        : rockInternalEnergy_(rockInternalEnergy)
+        , totalThermalConductivity_(totalThermalConductivity)
+        , rockFraction_(rockFraction)
+    {
+    }
+
+    BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThermal>() = default;
+
     /*!
      * \brief Update the temperature of the intensive quantity's fluid state
      *
