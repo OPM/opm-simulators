@@ -549,8 +549,8 @@ public:
     {
         //assemble csr graph
         auto& A = jacobian_->istlMatrix();
-        int *rows = new int[A.N()+1];
-        int *cols = new int[A.nonzeroes()];
+        auto rows = std::make_unique<int[]>(A.N()+1);
+        auto cols = std::make_unique<int[]>(A.nonzeroes());
 
         int irow=0;
         int icol=0;
@@ -578,10 +578,6 @@ public:
         out=fopen(filename,"w");
         fwrite(cols, sizeof(int), A.nonzeroes(),out);
         fclose(out);
-
-        // clean-up
-        delete [] rows;
-        delete [] cols;
     }
 
     void setLinearizationType(LinearizationType linearizationType)
