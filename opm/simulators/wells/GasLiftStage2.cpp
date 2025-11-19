@@ -217,7 +217,7 @@ checkRateAlreadyLimited_(const std::string& well_name,
                 well_name,
                 state.alq(),
                 (increase ? "incremental" : "decremental"),
-                (state.oilIsLimited() ? "oil" : (state.gasIsLimited() ? "gas" : "alq"))
+                (state.oilIsLimited() ? "oil" : (state.gasIsLimited() ? "gas" : (state.waterIsLimited() ? "water" : "alq")))
             );
             displayDebugMessage_(msg);
             return true;
@@ -431,7 +431,14 @@ optimizeGroup_(const Group& group)
     OPM_TIMEFUNCTION();
     const auto& group_name = group.name();
     const auto prod_control = this->group_state_.production_control(group_name);
-    if ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD))
+    const auto max_totalgas = getGroupMaxTotalGas_(group);
+    bool restricted_by_max_totalgas = false;
+    if (max_totalgas) {
+        auto [oil_rate, gas_rate, water_rate, alq] = getCurrentGroupRates_(group);
+        restricted_by_max_totalgas = (gas_rate + alq) > max_totalgas;
+    }
+
+    if (restricted_by_max_totalgas || ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD)))
     {
         if (this->debug) {
             const std::string msg = fmt::format("optimizing (control = {})", Group::ProductionCMode2String(prod_control));
