@@ -323,7 +323,7 @@ public:
         printf("n = %lu\n",x.dim());
     }
 
-    void exportSparsity(const char *path='.')
+    void exportSparsity(const char *path=".")
     {
         return;
     }
