@@ -267,7 +267,8 @@ protected:
     bool checkGroupALQrateExceeded(Scalar delta_alq,
                                    const std::string& gr_name_dont_limit = "") const;
     bool checkGroupTotalRateExceeded(Scalar delta_alq,
-                                     Scalar delta_gas_rate) const;
+                                     Scalar delta_gas_rate,
+                                     const std::string& gr_name_dont_limit = "") const;
 
     std::pair<std::optional<Scalar>, bool>
     addOrSubtractAlqIncrement_(Scalar alq, bool increase) const;

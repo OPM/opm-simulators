@@ -116,6 +116,11 @@ calcIncOrDecGradient(Scalar oil_rate,
         BasicRates oldrates = {oil_rate, gas_rate, water_rate, false};
         const auto new_rates = updateRatesToGroupLimits_(oldrates, ratesLimited, gr_name_dont_limit);
 
+        auto delta_gas_rate = new_rates.gas - gas_rate;
+        if (increase && checkGroupTotalRateExceeded(delta_alq, delta_gas_rate, gr_name_dont_limit))
+            return std::nullopt;
+
+
         if (!increase && new_rates.oil < 0) {
             return std::nullopt;
         }
@@ -293,7 +298,7 @@ addOrSubtractAlqIncrement_(Scalar alq, bool increase) const
     if (limited && checkALQequal_(orig_alq, alq))
         alq_opt = std::nullopt;
 
-    return {alq_opt, limited};
+    return {alq_opt, limited && increase };
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -1841,10 +1846,16 @@ checkGroupALQrateExceeded(Scalar delta_alq,
 template<typename Scalar, typename IndexTraits>
 bool GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 checkGroupTotalRateExceeded(Scalar delta_alq,
-                            Scalar delta_gas_rate) const
+                            Scalar delta_gas_rate,
+                            const std::string& gr_name_dont_limit) const
 {
     const auto& pairs = group_info_.getWellGroups(well_name_);
     for (const auto& [group_name, efficiency] : pairs) {
+        // in stage 2 we don't want to limit the rate to the group
+        // target we are trying to redistribute the gaslift within
+        if (gr_name_dont_limit == group_name)
+            continue;
+
         auto max_total_rate_opt = group_info_.maxTotalGasRate(group_name);
         if (max_total_rate_opt) {
             Scalar alq = group_info_.alqRate(group_name) + efficiency * delta_alq;
