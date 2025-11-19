@@ -545,7 +545,7 @@ public:
         fclose(out);
     }
 
-    void exportSparsity(const char *path='.')
+    void exportSparsity(const char *path=".")
     {
         //assemble csr graph
         auto& A = jacobian_->istlMatrix();
