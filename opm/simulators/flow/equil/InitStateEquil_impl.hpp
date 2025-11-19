@@ -198,13 +198,13 @@ std::pair<Scalar,Scalar> cellZMinMax(const Element& element)
 
 template<class Scalar>
 void computeBlockDip(const Scalar& cellThickness,
-                    const std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>>& cellCornersXY,
-                    Scalar& dipAngle, Scalar& dipAzimuth)
+                                   const CellCornerData<Scalar>& cellCorners,
+                                  Scalar& dipAngle, Scalar& dipAzimuth)
 {
-    auto [Xc, Yc, Zc] = cellCornersXY;
+    const auto& Xc = cellCorners.X;
+    const auto& Yc = cellCorners.Y;
+    const auto& Zc = cellCorners.Z;
 
-    // Use bottom face corners 0,1,3 (forming two vectors from corner 0)
-    // This better represents the bottom face plane
     Scalar v1x = Xc[1] - Xc[0];
     Scalar v1y = Yc[1] - Yc[0];
     Scalar v1z = Zc[1] - Zc[0];
@@ -249,7 +249,7 @@ void computeBlockDip(const Scalar& cellThickness,
 }
 
 template <class Scalar, class Element>
-std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>> getCellCornerXY(const Element& element)
+CellCornerData<Scalar> getCellCornerXY(const Element& element)
 {
     typedef typename Element::Geometry Geometry;
     const Geometry& geometry = element.geometry();
@@ -269,7 +269,7 @@ std::tuple<std::array<Scalar, 8>, std::array<Scalar, 8>, std::array<Scalar, 8>> 
          Z[i] = corner[zCoord];
     }
 
-    return {X, Y, Z};
+    return CellCornerData<Scalar>{X, Y, Z};
 }
 
 template<class Scalar>
@@ -1858,7 +1858,7 @@ updateCellProps_(const GridView& gridView,
     int numElements = gridView.size(/*codim=*/0);
     cellCenterDepth_.resize(numElements);
     cellCenterXY_.resize(numElements);
-    cellCornersXY_.resize(numElements);
+    cellCorners_.resize(numElements);
     cellZSpan_.resize(numElements);
     cellZMinMax_.resize(numElements);
 
@@ -1870,7 +1870,7 @@ updateCellProps_(const GridView& gridView,
         const unsigned int elemIdx = elemMapper.index(element);
         cellCenterDepth_[elemIdx] = Details::cellCenterDepth<Scalar>(element);
         cellCenterXY_[elemIdx] = Details::cellCenterXY<Scalar>(element);
-        cellCornersXY_[elemIdx] = Details::getCellCornerXY<Scalar>(element);
+        cellCorners_[elemIdx] = Details::getCellCornerXY<Scalar>(element);
         const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
         cellZSpan_[elemIdx] = Details::cellZSpan<Scalar>(element);
         cellZMinMax_[elemIdx] = Details::cellZMinMax<Scalar>(element);
@@ -2346,7 +2346,7 @@ equilibrateTiltedFaultBlockSimple(const CellRange& cells,
 
         // Calculate dip parameters from corner point geometry
         Scalar dipAngle, dipAzimuth;
-        Details::computeBlockDip(cellThickness, cellCornersXY_[cell], dipAngle, dipAzimuth);
+        Details::computeBlockDip(cellThickness, cellCorners_[cell], dipAngle, dipAzimuth);
 
         // Reference point for TVD calculations
                 std::array<Scalar, 3> referencePoint = {
@@ -2547,7 +2547,7 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
 
         // Calculate dip parameters from corner point geometry
         Scalar dipAngle, dipAzimuth;
-        Details::computeBlockDip(cellThickness, this->cellCornersXY_[cell], dipAngle, dipAzimuth);
+        Details::computeBlockDip(cellThickness, this->cellCorners_[cell], dipAngle, dipAzimuth);
 
         // Reference point for TVD calculations
         std::array<Scalar, 3> referencePoint = {
@@ -2583,7 +2583,7 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
         // Maybe not necessary (for debug)
         bool hasValidAreas = false;
         for (const auto& level : levels) {
-            if (level.second > 1e-14) {
+            if (level.second > 1e-10) {
                 hasValidAreas = true;
                 break;
             }
