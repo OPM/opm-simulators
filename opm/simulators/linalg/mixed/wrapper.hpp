@@ -9,7 +9,7 @@ class MixedSolver : public InverseOperator<X,X>
 {
     public:
 
-    MixedSolver(M A, double tol, int maxiter, bool use_dilu)
+    MixedSolver(const M &A, double tol, int maxiter, bool use_dilu)
     {
         int nrows = A.N();
         int nnz   = A.nonzeroes();
