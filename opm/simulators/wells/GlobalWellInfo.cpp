@@ -39,7 +39,7 @@ GlobalWellInfo(const Schedule& sched,
     this->m_in_injecting_group.resize(num_wells);
     this->m_in_producing_group.resize(num_wells);
     this->m_is_open.resize(num_wells);
-    this->m_efficiency_scaling_factors.resize(num_wells);
+    this->m_efficiency_scaling_factors.resize(num_wells, static_cast<Scalar>(1.0));
     for (const auto& wname : sched.wellNames(report_step)) {
         const auto& well = sched.getWell(wname, report_step);
         auto global_well_index = well.seqIndex();
