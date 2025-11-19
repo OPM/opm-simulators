@@ -2021,7 +2021,7 @@ calcPressSatRsRv(const RMap& reg,
             vspan[0] = std::min(vspan[0], std::min(eqreg.zgoc(), eqreg.zwoc()));
             vspan[1] = std::max(vspan[1], std::max(eqreg.zgoc(), eqreg.zwoc()));
             ptable.equilibrate(eqreg, vspan);
-            // For titled blocks, we can use a simple or complex weightening based on title of the grid
+            // For titled blocks, we can use a simple weightening based on title of the grid
             //this->equilibrateTiltedFaultBlockSimple(cells, eqreg, gridView, acc, ptable, psat);
             this->equilibrateTiltedFaultBlock(cells, eqreg, gridView, acc, ptable, psat);
         }
@@ -2393,7 +2393,7 @@ equilibrateTiltedFaultBlockSimple(const CellRange& cells,
             auto localSaturations = psat.deriveSaturations(pos, eqreg, ptable);
             auto localPressures = psat.correctedPhasePressures();
 
-            // Apply cross-section weighted averaging as per Eclipse manual
+            // Apply cross-section weighted averaging
             saturations.axpy(localSaturations, weight);
             pressures.axpy(localPressures, weight);
             totalWeight += weight;
@@ -2489,7 +2489,7 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
                 }
             }
 
-            // Remove duplicates (maybe expensive)
+            // Remove duplicates
             if (intersectionPoints.size() > 1) {
                 auto pointsEqual = [tol](const std::array<Scalar, 2>& a, const std::array<Scalar, 2>& b) {
                     return std::abs(a[0] - b[0]) < tol && std::abs(a[1] - b[1]) < tol;
@@ -2590,7 +2590,7 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
         }
 
         if (!hasValidAreas) {
-            // Fallback to dip-based weighting so we use equilibrateTiltedFaultBlockSimple
+            // Fallback to dip-based weighting as used in equilibrateTiltedFaultBlockSimple
             levels.clear();
             for (int half = 0; half < 2; ++half) {
                 Scalar halfStart = (half == 0) ? zmin : zmin + halfThickness;
