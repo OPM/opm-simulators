@@ -40,7 +40,10 @@ void ConnFractureData<Scalar>::resize(std::size_t num_perf)
     this->inj_pressure.resize(num_perf);
     this->inj_bhp.resize(num_perf);
     this->inj_wellrate.resize(num_perf);
+<<<<<<< HEAD
     this->water_rate.resize(num_perf);
+=======
+>>>>>>> 659a7d369 (More changes to facilitate mechanics and fracture solves)
 }
 
 template<class Scalar>
