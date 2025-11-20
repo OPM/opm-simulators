@@ -184,15 +184,19 @@ namespace Dune
                                                                             maxiter, // maximum number of iterations
                                                                             verbosity);
         } else if (solver_type == "mixed-bicgstab") {
-            const std::string prec_type = prm.get<std::string>("preconditioner.type", "error");
-            bool use_mixed_dilu= (prec_type=="mixed-dilu");
-            using MatrixType = decltype(linearoperator_for_solver_->getmat());
-            linsolver_ = std::make_shared<Dune::MixedSolver<VectorType,MatrixType>>(
+            if constexpr (!Opm::is_gpu_operator_v<Operator>) {
+                const std::string prec_type = prm.get<std::string>("preconditioner.type", "error");
+                bool use_mixed_dilu= (prec_type=="mixed-dilu");
+                using MatrixType = decltype(linearoperator_for_solver_->getmat());
+                linsolver_ = std::make_shared<Dune::MixedSolver<VectorType,MatrixType>>(
                                                                             linearoperator_for_solver_->getmat(),
                                                                             tol,
                                                                             maxiter,
                                                                             use_mixed_dilu
                                                                         );
+            } else {
+                OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for GPU operators.");
+            }
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
                                                                         *scalarproduct_,
