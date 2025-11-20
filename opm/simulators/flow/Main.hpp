@@ -310,30 +310,32 @@ protected:
                            Parameters::Get<Parameters::ParsingStrictness>(),
                            Parameters::Get<Parameters::ActionParsingStrictness>(),
                            Parameters::Get<Parameters::InputSkipMode>(),
-                           keepKeywords,
+                           keepKeywords || getPropValue<PreTypeTag, Properties::EnableMech>(),
                            getNumThreads(),
                            Parameters::Get<Parameters::EclOutputInterval>(),
                            Parameters::Get<Parameters::Slave>(),
                            cmdline_params,
                            Opm::moduleVersion(),
                            Opm::compileTimestamp());
+
             setupTime_ = externalSetupTimer.elapsed();
         }
-        catch (const std::invalid_argument& e)
-        {
-            if (outputCout_) {
-                std::cerr << "Failed to create valid EclipseState object." << std::endl;
-                std::cerr << "Exception caught: " << e.what() << std::endl;
+        catch (const std::invalid_argument& e) {
+            if (this->outputCout_) {
+                std::cerr << "Failed to create valid EclipseState object.\n"
+                          << "Exception caught: " << e.what() << std::endl;
             }
+
 #if HAVE_MPI
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 #endif
+
             exitCode = EXIT_FAILURE;
             return false;
         }
 
 #if HAVE_CUDA
-    Opm::gpuistl::printDevice();
+        Opm::gpuistl::printDevice();
 #endif
 
         exitCode = EXIT_SUCCESS;
