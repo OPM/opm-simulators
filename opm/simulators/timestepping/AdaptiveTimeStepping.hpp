@@ -16,9 +16,9 @@
 #define RESERVOIR_COUPLING_ENABLED
 #endif
 #ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/flow/ReservoirCoupling.hpp>
-#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
-#include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 #endif
 
 #include <functional>
@@ -117,8 +117,8 @@ private:
         double maxTimeStep_() const;
         SimulatorReport runStepOriginal_();
 #ifdef RESERVOIR_COUPLING_ENABLED
-        ReservoirCouplingMaster& reservoirCouplingMaster_();
-        ReservoirCouplingSlave& reservoirCouplingSlave_();
+        ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster_();
+        ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave_();
         SimulatorReport runStepReservoirCouplingMaster_();
         SimulatorReport runStepReservoirCouplingSlave_();
 #endif
