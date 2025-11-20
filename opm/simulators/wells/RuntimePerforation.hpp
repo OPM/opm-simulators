@@ -35,6 +35,12 @@ struct RuntimePerforation
 
     /// Depth at which the new connection is created.
     double depth{};
+
+    /// Segment number (1-based), if applicable (MS well).
+    int segment{};
+
+    /// MD start/end along branch if applicable (MS well).
+    std::optional<std::pair<double, double>> perf_range{};
 };
 
 } // namespace Opm
