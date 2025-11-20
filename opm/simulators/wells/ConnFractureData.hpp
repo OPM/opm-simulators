@@ -41,6 +41,9 @@ struct ConnFractureData {
         serializer(filter_volume);
         serializer(avg_width);
         serializer(avg_filter_width);
+        serializer(inj_pressure);
+        serializer(inj_bhp);
+        serializer(inj_wellrate);
     }
 
     static ConnFractureData serializationTestObject();
@@ -56,6 +59,9 @@ struct ConnFractureData {
     std::vector<Scalar> filter_volume;
     std::vector<Scalar> avg_width;
     std::vector<Scalar> avg_filter_width;
+    std::vector<Scalar> inj_pressure;
+    std::vector<Scalar> inj_bhp;
+    std::vector<Scalar> inj_wellrate;
 };
 
 }

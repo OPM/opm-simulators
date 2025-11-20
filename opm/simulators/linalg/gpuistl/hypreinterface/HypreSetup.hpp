@@ -141,6 +141,16 @@ setSolverParameters(HYPRE_Solver solver, const PropertyTree& prm, bool use_gpu_b
     HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetMaxLevels(solver, prm.get<int>("max_levels", 15)));
     HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetTol(solver, prm.get<double>("tolerance", 0.0)));
 
+    // for mechaicalproblems
+    HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetMaxRowSum(solver, prm.get<double>("max_row_sum", 0.9)));
+    HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetNumSweeps(solver, prm.get<int>("num_sweeps", 1)));
+    HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetNodal(solver, prm.get<int>("nodal", 0)));
+    //HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetNodalLevels(solver, prm.get<int>("nodal_levels", 1)));
+    //HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetNodalRelaxation(solver, prm.get<int>("nodal_relaxation", 1)));
+    HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetInterpVecVariant(solver, prm.get<int>("interp_vec_variant", 0)));
+    HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetRelaxOrder(solver, prm.get<int>("relax_order",0)));
+    //HYPRE_BoomerAMGSetDofFunc(solver,prm.get<int>("dof_func", 3));
+
     if (use_gpu_backend) {
         HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetRelaxType(solver, prm.get<int>("relax_type", 16)));
         HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetCoarsenType(solver, prm.get<int>("coarsen_type", 8)));

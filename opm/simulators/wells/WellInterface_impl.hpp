@@ -1880,7 +1880,8 @@ namespace Opm
           const int                  perf,
           const IntensiveQuantities& intQuants,
           const Value&               trans_mult,
-          const SingleWellStateType& ws) const
+          const SingleWellStateType& ws,
+          const bool                 with_fracture) const
     {
         OPM_TIMEFUNCTION_LOCAL(Subsystem::Wells);
 
@@ -1895,7 +1896,8 @@ namespace Opm
 
         // Formation multiplier assume this should not be multiplied with d
         // factor contributions
-        this->includeFiltercakeEffects(perf, ws.perf_data.pressure[perf], Tw);
+        this->includeFiltercakeEffects(perf, ws.perf_data.pressure[perf],
+                                       with_fracture, Tw);
 
         if constexpr (! Indices::gasEnabled) {
             return;
@@ -2159,6 +2161,7 @@ namespace Opm
     WellInterface<TypeTag>::
     includeFiltercakeEffects(const int           perf,
                              const double        perf_pressure,
+                             const bool          with_fracture,
                              std::vector<Value>& Tw) const
     {
         const int local_perf_index = perf;
@@ -2176,13 +2179,15 @@ namespace Opm
             }
         }
 
-        // Use intepolated well index.
-        const auto frac_wellindex = this->well_index_fracture_[local_perf_index]
-            .wellIndex(perf_pressure);
+        if (with_fracture) {
+            // Use intepolated well index.
+            const auto frac_wellindex = this->well_index_fracture_[local_perf_index]
+                .wellIndex(perf_pressure);
 
-        std::transform(Tw.begin(), Tw.end(), Tw.begin(),
-                       [frac_wi = frac_wellindex](const auto val)
-                       { return val + frac_wi; });
+            std::transform(Tw.begin(), Tw.end(), Tw.begin(),
+                           [frac_wi = frac_wellindex](const auto val)
+                           { return val + frac_wi; });
+        }
     }
 
 
