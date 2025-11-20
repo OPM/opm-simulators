@@ -298,6 +298,7 @@ public:
             });
 
             updated = true;
+            std::cout<< "updated bool got updated to true " << std::endl;
         };
 
         // calculating the TRANX, TRANY, TRANZ and NNC for output purpose
@@ -309,14 +310,17 @@ public:
                 if (simulator.vanguard().grid().comm().rank() == 0)
                     eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
             } else {
+                 std::cout<< "serial, so we call finishTransmissibilities() " << std::endl;
                 finishTransmissibilities();
-                eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
+                  std::cout<< "now we call setTransmissibilities( maybe with wrong map?) " << std::endl;
+                  eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
             }
 
             std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
                 return simulator.vanguard().gridEquilIdxToGridIdx(i);
             };
 
+            std::cout<< "now we call extraxtOutputTransAndNNC( maybe with wrong map?) " << std::endl;
             this->eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
         }
         simulator.vanguard().releaseGlobalTransmissibilities();
