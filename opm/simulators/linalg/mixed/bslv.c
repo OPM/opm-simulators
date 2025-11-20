@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L // required for posix_memalgin in <stdlib.h>
+
 #include "bslv.h"
 #include "vec.h"
 
@@ -16,7 +18,7 @@ bslv_memory *bslv_alloc()
     return mem;
 }
 
-bslv_free(bslv_memory *mem)
+void bslv_free(bslv_memory *mem)
 {
     if(mem == NULL) return;
 
