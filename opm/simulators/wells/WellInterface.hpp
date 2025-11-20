@@ -348,7 +348,8 @@ public:
                const int                   perf,
                const IntensiveQuantities&  intQuants,
                const Value&                trans_mult,
-               const SingleWellStateType&  ws) const;
+               const SingleWellStateType&  ws,
+               const bool                  with_fracture = true) const;
 
     void updateConnectionDFactor(const Simulator& simulator,
                                  SingleWellStateType& ws) const;
@@ -490,6 +491,7 @@ protected:
     template <typename Value>
     void includeFiltercakeEffects(const int           perf,
                                   const double        perf_pressure,
+                                  const bool          with_fracture,
                                   std::vector<Value>& Tw) const;
 
     void computeConnLevelProdInd(const FluidState& fs,
