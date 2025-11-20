@@ -38,6 +38,9 @@ void ConnFractureData<Scalar>::resize(std::size_t num_perf)
     this->filter_volume.resize(num_perf);
     this->avg_width.resize(num_perf);
     this->avg_filter_width.resize(num_perf);
+    this->inj_pressure.resize(num_perf);
+    this->inj_bhp.resize(num_perf);
+    this->inj_wellrate.resize(num_perf);
 }
 
 template<class Scalar>
@@ -54,6 +57,9 @@ ConnFractureData<Scalar>::serializationTestObject()
     result.filter_volume = {0.4};
     result.avg_width = {0.5};
     result.avg_filter_width = {0.05};
+    result.inj_pressure = {250.0};
+    result.inj_bhp = {200.0};
+    result.inj_wellrate = {150.0};
     return result;
 }
 
@@ -69,6 +75,9 @@ bool ConnFractureData<Scalar>::operator==(const ConnFractureData& rhs) const
         && (this->filter_volume == rhs.filter_volume)
         && (this->avg_width == rhs.avg_width)
         && (this->avg_filter_width == rhs.avg_filter_width)
+        && (this->inj_pressure == rhs.inj_pressure)
+        && (this->inj_bhp == rhs.inj_bhp)
+        && (this->inj_wellrate == rhs.inj_wellrate)
         ;
 }
 
