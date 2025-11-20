@@ -97,8 +97,6 @@ namespace
         }
     }
 
-    // TODO: Because we store this contiunously we do not actually need to load all the values
-    // TODO: Having a single address and doing pointer arithmetic should suffice
     template <class T>
     __global__ void cuComputeDiagPtrs(const int* rowIndices,
                                       const int* colIndices,
@@ -116,7 +114,8 @@ namespace
                 ++diagIdx;
             }
 
-            diagPtrs[rawIdx] = &values[diagIdx*blocksize*blocksize];
+            // Pointer arithmetic based on first element is sufficient here
+            diagPtrs[rawIdx] = values + diagIdx*blocksize*blocksize;
         }
     }
 } // namespace

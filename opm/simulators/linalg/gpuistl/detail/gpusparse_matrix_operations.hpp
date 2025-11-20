@@ -80,6 +80,7 @@ void copyMatDataToReorderedSplit(const T* srcMatrix,
 /**
  * @brief Return the pointers to diagonal elements in a GpuBuffer
  * @param matrix The matrix to extract diagonal pointers from
+ * @return GpuBuffer containing pointers to the diagonal elements
  */
 template <class T>
 GpuBuffer<T*> getDiagPtrs(GpuSparseMatrixWrapper<T>& matrix);

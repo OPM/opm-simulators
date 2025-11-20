@@ -126,6 +126,7 @@ __global__ void checkDiagonalsKernel(double** diagPtrs, std::array<double, 3>* v
     }
 }
 
+// This test ensures that getDiagPtrs works correctly for scalar matrices
 BOOST_AUTO_TEST_CASE(TestGetDiagPtrs)
 {
     const int N = 3;
@@ -133,6 +134,12 @@ BOOST_AUTO_TEST_CASE(TestGetDiagPtrs)
     using M = Dune::FieldMatrix<double, 1, 1>;
     using SpMatrix = Dune::BCRSMatrix<M>;
 
+    /*
+    Fill in a matrix with this sparsity pattern:
+        | * * * |
+        |   *   |
+        | *   * |
+    */
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row)
     {
@@ -206,6 +213,7 @@ __global__ void checkDiagBlocksKernel (double** diagPtrs, std::array<double, 12>
     }
 };
 
+// Extra getDiagPtrs test to verify functionality on block-matrices
 BOOST_AUTO_TEST_CASE(TestGetDiagPtrsBlockedNonScalar)
 {
     const int N = 3;
@@ -213,6 +221,12 @@ BOOST_AUTO_TEST_CASE(TestGetDiagPtrsBlockedNonScalar)
     using M = Dune::FieldMatrix<double, 2, 2>;
     using SpMatrix = Dune::BCRSMatrix<M>;
 
+    /*
+    Fill in a blockmatrix with this sparsity pattern:
+        | * * * |
+        |   *   |
+        | *   * |
+    */
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row)
     {
@@ -234,23 +248,35 @@ BOOST_AUTO_TEST_CASE(TestGetDiagPtrsBlockedNonScalar)
     }
 
     // Fill in the block matrix with 2x2 blocks
-    B[0][0][0][0] = 1.0; B[0][0][0][1] = 1.1;
-    B[0][0][1][0] = 1.2; B[0][0][1][1] = 1.3;
+    B[0][0][0][0] = 1.0;
+    B[0][0][0][1] = 1.1;
+    B[0][0][1][0] = 1.2;
+    B[0][0][1][1] = 1.3;
     
-    B[0][1][0][0] = 2.0; B[0][1][0][1] = 2.1;
-    B[0][1][1][0] = 2.2; B[0][1][1][1] = 2.3;
+    B[0][1][0][0] = 2.0;
+    B[0][1][0][1] = 2.1;
+    B[0][1][1][0] = 2.2;
+    B[0][1][1][1] = 2.3;
     
-    B[0][2][0][0] = 3.0; B[0][2][0][1] = 3.1;
-    B[0][2][1][0] = 3.2; B[0][2][1][1] = 3.3;
+    B[0][2][0][0] = 3.0;
+    B[0][2][0][1] = 3.1;
+    B[0][2][1][0] = 3.2;
+    B[0][2][1][1] = 3.3;
     
-    B[1][1][0][0] = 4.0; B[1][1][0][1] = 4.1;
-    B[1][1][1][0] = 4.2; B[1][1][1][1] = 4.3;
+    B[1][1][0][0] = 4.0;
+    B[1][1][0][1] = 4.1;
+    B[1][1][1][0] = 4.2;
+    B[1][1][1][1] = 4.3;
     
-    B[2][0][0][0] = 5.0; B[2][0][0][1] = 5.1;
-    B[2][0][1][0] = 5.2; B[2][0][1][1] = 5.3;
+    B[2][0][0][0] = 5.0;
+    B[2][0][0][1] = 5.1;
+    B[2][0][1][0] = 5.2;
+    B[2][0][1][1] = 5.3;
     
-    B[2][2][0][0] = 6.0; B[2][2][0][1] = 6.1;
-    B[2][2][1][0] = 6.2; B[2][2][1][1] = 6.3;
+    B[2][2][0][0] = 6.0;
+    B[2][2][0][1] = 6.1;
+    B[2][2][1][0] = 6.2;
+    B[2][2][1][1] = 6.3;
 
     auto gpuSparseMatrix = Opm::gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(B);
 
