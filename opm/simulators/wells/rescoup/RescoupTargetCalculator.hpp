@@ -26,6 +26,7 @@
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/GroupTargetCalculator.hpp>
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -39,7 +40,7 @@ public:
     using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
     RescoupTargetCalculator(
         GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
-        WellGroupHelper<Scalar, IndexTraits>& wg_helper
+        GroupStateHelper<Scalar, IndexTraits>& group_state_helper
     );
 
     void calculateMasterGroupTargetsAndSendToSlaves();
@@ -54,7 +55,7 @@ private:
     ) const;
 
     GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler_;
-    const WellGroupHelper<Scalar, IndexTraits>& wg_helper_;
+    const GroupStateHelper<Scalar, IndexTraits>& group_state_helper_;
     const WellState<Scalar, IndexTraits>& well_state_;
     const GroupState<Scalar>& group_state_;
     const int report_step_idx_;

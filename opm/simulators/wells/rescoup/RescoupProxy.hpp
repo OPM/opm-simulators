@@ -27,6 +27,7 @@
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 #else
 #include <stdexcept>
+#include <string>
 #endif
 
 namespace Opm {
@@ -106,6 +107,15 @@ public:
     ReservoirCouplingSlave<Scalar>& slave() { return *slave_; }
     const ReservoirCouplingSlave<Scalar>& slave() const { return *slave_; }
 
+    // === Facade Methods (safe to call regardless of mode) ===
+
+    /// @brief Check if a group is a master group (controls a slave reservoir)
+    /// @param group_name The name of the group to check
+    /// @return true if in master mode and the group is a master group, false otherwise
+    bool isMasterGroup(const std::string& group_name) const {
+        return master_ && master_->isMasterGroup(group_name);
+    }
+
 private:
     ReservoirCouplingMaster<Scalar>* master_ = nullptr;
     ReservoirCouplingSlave<Scalar>* slave_ = nullptr;
@@ -149,7 +159,12 @@ private:
         throw std::logic_error("ReservoirCoupling::Proxy::slave() called in non-MPI build");
     }
 
-#endif // RESERVOIR_COUPLING_ENABLED
+    // === Facade Methods (always return false/no-op in non-MPI builds) ===
+
+    bool isMasterGroup(const std::string& /*group_name*/) const noexcept {
+        return false;
+    }
+#endif // !RESERVOIR_COUPLING_ENABLED
 };
 
 } // namespace ReservoirCoupling

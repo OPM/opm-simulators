@@ -70,7 +70,7 @@ public:
 
     /// @brief Get the logger for reservoir coupling operations
     /// @return Reference to the logger object for this coupling session
-    ReservoirCoupling::Logger& logger() const { return this->slave_.getLogger(); }
+    ReservoirCoupling::Logger& logger() const { return this->slave_.logger(); }
 
     /// @brief Send production data to the master process
     ///

@@ -63,7 +63,6 @@ public:
     char *getArgv(int index) const { return this->argv_[index]; }
     char **getArgv() const { return this->argv_; }
     const Parallel::Communication &getComm() const { return this->comm_; }
-    ReservoirCoupling::Logger& getLogger() { return this->logger_; }
     /// @brief Get the master group names associated with a slave reservoir by index.
     ///
     /// This method retrieves the list of master group names that are associated with a
@@ -85,6 +84,8 @@ public:
     /// @return The canonical index of the master group for the given slave name and master group name.
     std::size_t getMasterGroupCanonicalIdx(
         const std::string &slave_name, const std::string &master_group_name) const;
+    Scalar getMasterGroupInjectionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const;
+    Scalar getMasterGroupProductionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const;
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
          return this->master_group_slave_names_;
     }
@@ -103,6 +104,8 @@ public:
     void initStartOfReportStep(int report_step_idx);
     void initTimeStepping();
     bool isMasterGroup(const std::string &group_name) const;
+    ReservoirCoupling::Logger& logger() { return this->logger_; }
+    ReservoirCoupling::Logger& logger() const { return this->logger_; }
     void maybeActivate(int report_step);
     void maybeReceiveActivationHandshakeFromSlaves(double current_time);
     double maybeChopSubStep(double suggested_timestep, double current_time) const;
@@ -170,7 +173,7 @@ private:
     // A mapping from a slave name to the master group name order used when slaves send
     //  potentials to the master process.
     std::map<std::string, std::map<std::string, std::size_t>> master_group_name_order_;
-    ReservoirCoupling::Logger logger_;
+    mutable ReservoirCoupling::Logger logger_;
     // Whether the slave has activated. Unfortunatley, we cannot use std::vector<bool> since
     // it is not supported to get a pointer to the underlying array of bools needed
     // with MPI broadcast().

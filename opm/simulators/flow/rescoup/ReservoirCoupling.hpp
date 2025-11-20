@@ -39,6 +39,8 @@ class Logger {
 public:
     Logger() = default;
     void clearDeferredLogger() { deferred_logger_ = nullptr; }
+    DeferredLogger& deferredLogger() { return *deferred_logger_; }
+    DeferredLogger& deferredLogger() const { return *deferred_logger_; }
     bool haveDeferredLogger() const { return deferred_logger_ != nullptr; }
     void info(const std::string &msg) const;
     void setDeferredLogger(DeferredLogger *deferred_logger) { deferred_logger_ = deferred_logger; }
@@ -191,8 +193,9 @@ struct SlaveGroupProductionData {
     // Production rates are used by the master group in guiderate calculations
     // when converting the guide rate target to the phase of the master group.
     ProductionRates<Scalar> surface_rates;  // Surface production rates by phase
-    // NOTE: Currently, the master does not need the individual phase reservoir rates,
-    //       we only send the total voidage replacement rate.
+    // Individual phase reservoir production rates - needed when master's parent group
+    // has RESV control mode, so the conversion uses slave's PVT properties
+    ProductionRates<Scalar> reservoir_rates;  // Reservoir production rates by phase
     Scalar voidage_rate{0.0};               // Reservoir voidage replacement rate
     Scalar gas_reinjection_rate{0.0};       // Reinjection (surface) rate for the gas phase
 };

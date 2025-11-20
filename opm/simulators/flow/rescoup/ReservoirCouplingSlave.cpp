@@ -19,6 +19,7 @@
 
 #include <config.h>
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingErrorMacros.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
@@ -26,7 +27,6 @@
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
-#include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <dune/common/parallel/mpitraits.hh>
@@ -53,7 +53,7 @@ ReservoirCouplingSlave(
     this->slave_master_comm_ = MPI_COMM_NULL;
     MPI_Comm_get_parent(&this->slave_master_comm_);
     if (this->slave_master_comm_ == MPI_COMM_NULL) {
-        OPM_THROW(std::runtime_error, "Slave process is not spawned by a master process");
+        RCOUP_LOG_THROW(std::runtime_error, "Slave process is not spawned by a master process");
     }
     // NOTE: By installing a custom error handler for all slave-master communicators, which
     //   eventually will call MPI_Abort(), there is no need to check the return value of any
@@ -213,14 +213,14 @@ checkGrupSlavGroupNames_()
             for (const auto& [slave_group_name, grup_slav] : grup_slavs) {
                 auto map_iter = this->slave_to_master_group_map_.find(slave_group_name);
                 if (map_iter == this->slave_to_master_group_map_.end()) {
-                    OPM_THROW(std::runtime_error,
+                    RCOUP_LOG_THROW(std::runtime_error,
                               "Reservoir coupling: Failed to find master group name for slave group: "
                               + slave_group_name);
                 }
                 else {
                     const auto& master_group_name = map_iter->second;
                     if (grup_slav.masterGroupName() != master_group_name) {
-                        OPM_THROW(std::runtime_error,
+                        RCOUP_LOG_THROW(std::runtime_error,
                                   "Reservoir coupling: Inconsistent master group name for slave group: "
                                   + slave_group_name);
                     }
@@ -229,7 +229,7 @@ checkGrupSlavGroupNames_()
         }
     }
     if (!grup_slav_found) {
-        OPM_THROW(std::runtime_error, "Reservoir coupling: Failed to find slave group names: "
+        RCOUP_LOG_THROW(std::runtime_error, "Reservoir coupling: Failed to find slave group names: "
                   "No GRUPSLAV keyword found in schedule");
     }
 }
@@ -246,7 +246,7 @@ getGrupSlavActivationDate_() const
             return start_date + this->schedule_.seconds(report_step);
         }
     }
-    OPM_THROW(std::runtime_error, "Reservoir coupling: Failed to find slave activation time: "
+    RCOUP_LOG_THROW(std::runtime_error, "Reservoir coupling: Failed to find slave activation time: "
               "No GRUPSLAV keyword found in schedule");
 }
 

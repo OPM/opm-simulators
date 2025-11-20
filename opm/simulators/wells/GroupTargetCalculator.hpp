@@ -19,16 +19,20 @@
 
 #ifndef OPM_GROUP_TARGET_CALCULATOR_HPP
 #define OPM_GROUP_TARGET_CALCULATOR_HPP
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <variant>
@@ -60,10 +64,15 @@ public:
         Group::InjectionCMode,
         Group::ProductionCMode
     >;
-    using FractionCalculator = WGHelpers::FractionCalculator<Scalar, IndexTraits>;
-    using InjectionTargetCalculator = WGHelpers::InjectionTargetCalculator<Scalar, IndexTraits>;
-    using TargetCalculator = WGHelpers::TargetCalculator<Scalar, IndexTraits>;
-    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using FractionCalculator = GroupStateHelpers::FractionCalculator<Scalar, IndexTraits>;
+    using InjectionTargetCalculator = GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits>;
+    using TargetCalculator = GroupStateHelpers::TargetCalculator<Scalar, IndexTraits>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
+
+    enum class TargetType {
+        Injection,
+        Production
+    };
 
     /** Generic result for a computed target and its control mode. */
     struct TargetInfo {
@@ -93,20 +102,28 @@ public:
      */
     class GeneralCalculator {
     public:
+        using TargetCalculatorType = std::variant<std::monostate, TargetCalculator, InjectionTargetCalculator>;
         GeneralCalculator(
             GroupTargetCalculator& calculator,
             const Group& original_group,  // the bottom group we want to calculate the target for
             std::optional<ReservoirCoupling::Phase> injection_phase = std::nullopt
         );
-        const Group& originalGroup() const { return this->original_group_; }
         std::optional<TargetInfo> calculateGroupTarget();
         DeferredLogger& deferredLogger() { return this->parent_calculator_.deferredLogger(); }
         int fipnum() const { return this->parent_calculator_.fipnum(); }
+        const GConSale& gconsale() const {
+            return this->schedule()[this->reportStepIdx()].gconsale();
+        }
         const GroupState<Scalar>& groupState() const { return this->parent_calculator_.groupState(); }
+        TargetCalculatorType getInjectionTargetCalculator(const Group& group);
+        TargetCalculatorType getProductionTargetCalculator(const Group& group) const;
+        TargetCalculatorType getTargetCalculator(const Group& group);
+        TargetInfo getTargetFromCalculator(
+            const TargetCalculatorType& target_calculator, const Group& group);
+        TargetInfo getTargetNoGuideRate(const Group& group);
         const GuideRate& guideRate() const { return this->parent_calculator_.guideRate(); }
-        Phase injectionPhase_() const;
-        bool isInjector() const { return this->injection_phase_.has_value(); }
-        bool isProducer() const { return !this->injection_phase_.has_value(); }
+        Phase injectionPhase_();
+        const Group& originalGroup() const { return this->original_group_; }
         const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_calculator_.phaseUsage(); }
         int pvtreg() const { return this->parent_calculator_.pvtreg(); }
         int reportStepIdx() const { return this->parent_calculator_.reportStepIdx(); }
@@ -117,15 +134,20 @@ public:
         const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel() const {
             return this->parent_calculator_.wellModel();
         }
+        TargetType targetType() const {
+            return this->injection_phase_.has_value() ? TargetType::Injection : TargetType::Production;
+        }
         const WellState<Scalar, IndexTraits>& wellState() const { return this->parent_calculator_.wellState(); }
-        const WellGroupHelper<Scalar, IndexTraits>& wgHelper() const { return this->parent_calculator_.wgHelper(); }
+        const GroupStateHelperType& groupStateHelper() const { return this->parent_calculator_.groupStateHelper(); }
     private:
         std::optional<TargetInfo> calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_factor);
-        bool hasFldOrNoneControl_(const Group& group) const;
+        bool hasFldOrNoneControl_(const Group& group);
+        bool hasGuideRate_(const Group& group) const { return this->guideRate().has(group.name()); }
+        bool hasGuideRate_(const std::string& name) const { return this->guideRate().has(name); }
         const Group& parentGroup(const Group& group) const {
             return this->schedule().getGroup(group.parent(), this->reportStepIdx());
         }
-        bool parentGroupControlAvailable_(const Group& group) const;
+        bool parentGroupControlAvailable_(const Group& group);
         Phase reservoirCouplingToOpmPhase_(ReservoirCoupling::Phase reservoir_coupling_phase) const;
 
         GroupTargetCalculator& parent_calculator_;
@@ -145,23 +167,22 @@ public:
      */
     class TopToBottomCalculator {
     public:
+        using TargetCalculatorType = std::variant<std::monostate, TargetCalculator, InjectionTargetCalculator>;
+
+        constexpr static Scalar TARGET_RATE_TOLERANCE = 1e-12;
+
         TopToBottomCalculator(
             GeneralCalculator& parent_calculator,
-            const Group& group,
+            const Group& top_group,
+            const Group& bottom_group,
             Scalar efficiency_factor
         );
 
-        const Group& bottomGroup() const { return this->parent_calculator_.originalGroup(); }
         std::optional<TargetInfo> calculateGroupTarget();
         DeferredLogger& deferredLogger() { return this->parent_calculator_.deferredLogger(); }
-        const GConSale& gconsale() const {
-            return this->schedule()[this->reportStepIdx()].gconsale();
-        }
         const GroupState<Scalar>& groupState() const { return this->parent_calculator_.groupState(); }
         const GuideRate& guideRate() const { return this->parent_calculator_.guideRate(); }
-        Phase injectionPhase_() const { return this->parent_calculator_.injectionPhase_(); }
-        bool isInjector() const { return this->parent_calculator_.isInjector(); }
-        bool isProducer() const { return this->parent_calculator_.isProducer(); }
+        TargetType targetType() const { return this->parent_calculator_.targetType(); }
         const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_calculator_.phaseUsage(); }
         int reportStepIdx() const { return this->parent_calculator_.reportStepIdx(); }
         const std::vector<Scalar>& resvCoeffsInj() const { return this->parent_calculator_.resvCoeffsInj(); }
@@ -169,21 +190,45 @@ public:
         const Schedule& schedule() const { return this->parent_calculator_.schedule(); }
         const SummaryState& summaryState() const { return this->parent_calculator_.summaryState(); }
         const WellState<Scalar, IndexTraits>& wellState() const { return this->parent_calculator_.wellState(); }
-        const WellGroupHelper<Scalar, IndexTraits>& wgHelper() const { return this->parent_calculator_.wgHelper(); }
+        const GroupStateHelperType& groupStateHelper() const { return this->parent_calculator_.groupStateHelper(); }
 
     private:
-        Scalar getTopLevelTarget_();
-        Scalar getGratSalesInjectionTarget_() const;
-        Scalar getGratSalesProductionTarget_() const;
+        Scalar computeAddbackEfficiency_(const std::vector<std::string>& chain,
+                                         const std::size_t local_reduction_level) const;
+        Scalar getBottomGroupCurrentRateAvailable_() const;
         std::vector<std::string> getGroupChainTopBot_() const;
+        std::size_t getLocalReductionLevel_(const std::vector<std::string>& chain);
+        TargetCalculatorType getProductionTargetCalculator_(const Group& group) const {
+            return this->parent_calculator_.getProductionTargetCalculator(group); }
+        TargetCalculatorType getInjectionTargetCalculator_(const Group& group) const {
+            return this->parent_calculator_.getInjectionTargetCalculator(group); }
+        TargetCalculatorType getInjectionTargetCalculator(const Group& group) const;
+        TargetCalculatorType getProductionTargetCalculator(const Group& group) const;
+        /// @brief Get the slave group's total reservoir rate for RESV scaling
+        /// @details For reservoir coupling master groups, this returns the sum of all phase
+        ///          reservoir rates from the slave (in slave's reservoir units). This is used
+        ///          when scaling targets in RESV mode.
+        /// @param group The master group to get the corresponding slave group reservoir rate for
+        /// @return Total reservoir rate, or throws an error if not a RC master group
+        Scalar getSlaveGroupReservoirRate_(const Group& master_group);
+        TargetInfo getTargetNoGuideRate_(const Group& group) const {
+            return this->parent_calculator_.getTargetNoGuideRate(group);
+        }
+        Scalar getTopLevelTarget_();
+        bool hasFLDControl_(const Group& group) const;
+        bool hasGuideRate_(const std::string& name) const { return this->guideRate().has(name); }
         void initForInjector_();
         void initForProducer_();
+        Phase injectionPhase_() const { return this->parent_calculator_.injectionPhase_(); }
+        bool isProducerAndRESVControl_(const Group& group) const;
         Scalar localFraction_(const std::string& group_name);
         Scalar localReduction_(const std::string& group_name);
 
         GeneralCalculator& parent_calculator_;
-        const Group& group_;
-        Scalar efficiency_factor_;
+        const Group& top_group_;
+        const Group& bottom_group_;
+        // Accumulated efficiency factor along the chain from top to bottom, excluding the top group.
+        Scalar chain_efficiency_factor_;
         // Active calculator used for distributing the target along the chain:
         // either production TargetCalculator or InjectionTargetCalculator.
         std::variant<std::monostate, TargetCalculator, InjectionTargetCalculator> target_calculator_;
@@ -198,7 +243,7 @@ public:
      */
     GroupTargetCalculator(
         const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
-        const WellGroupHelper<Scalar, IndexTraits>& wg_helper,
+        const GroupStateHelperType& group_state_helper,
         DeferredLogger& deferred_logger
     );
     DeferredLogger& deferredLogger() { return this->deferred_logger_; }
@@ -219,10 +264,10 @@ public:
     const SummaryState& summaryState() const { return this->summary_state_; }
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel() const { return this->well_model_; }
     const WellState<Scalar, IndexTraits>& wellState() const { return this->well_state_; }
-    const WellGroupHelper<Scalar, IndexTraits>& wgHelper() const { return this->wg_helper_; }
+    const GroupStateHelperType& groupStateHelper() const { return this->group_state_helper_; }
 private:
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model_;
-    const WellGroupHelper<Scalar, IndexTraits>& wg_helper_;
+    const GroupStateHelperType& group_state_helper_;
     const WellState<Scalar, IndexTraits >& well_state_;
     const GroupState<Scalar>& group_state_;
     const Schedule& schedule_;

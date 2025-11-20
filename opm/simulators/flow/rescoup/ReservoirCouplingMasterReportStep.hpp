@@ -100,6 +100,36 @@ public:
     /// @return MPI communicator handle for communication with the specified slave
     MPI_Comm getSlaveComm(int index) const { return this->master_.getSlaveComm(index); }
 
+    /// @brief Get the injection surface rate for a master group
+    /// @param group_name Name of the master group
+    /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
+    /// @return Injection surface rate for the specified phase
+    Scalar getMasterGroupInjectionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
+
+    /// @brief Get the injection reservoir rate for a master group
+    /// @param group_name Name of the master group
+    /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
+    /// @return Injection reservoir rate for the specified phase
+    Scalar getMasterGroupInjectionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
+
+    /// @brief Get the production surface rate for a master group
+    /// @param group_name Name of the master group
+    /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
+    /// @return Production surface rate for the specified phase
+    Scalar getMasterGroupProductionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
+
+    /// @brief Get the production reservoir rate for a master group
+    ///
+    /// This returns the production rate at reservoir conditions, computed using the
+    /// slave's PVT properties. This is needed when the master's parent group has
+    /// RESV control mode, so the conversion uses slave's formation volume factors
+    /// rather than master's.
+    ///
+    /// @param group_name Name of the master group
+    /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
+    /// @return Production reservoir rate for the specified phase
+    Scalar getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
+
     /// @brief Get the production potentials for a slave group
     /// @param master_group_name Name of the master group
     /// @return Reference to the potentials data for the specified group
@@ -116,7 +146,7 @@ public:
 
     /// @brief Get the logger for reservoir coupling operations
     /// @return Reference to the logger object for this coupling session
-    ReservoirCoupling::Logger& logger() const { return this->master_.getLogger(); }
+    ReservoirCoupling::Logger& logger() const { return this->master_.logger(); }
 
     /// @brief Receive injection data from all active slave processes
     ///
@@ -171,6 +201,14 @@ public:
     const std::string &slaveName(int index) const { return this->master_.getSlaveName(index); }
 
 private:
+    /// @brief Get a rate for a master group (helper for the public rate getters)
+    /// @param group_name Name of the master group
+    /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
+    /// @param reservoir_rates If true, return reservoir rates; if false, return surface rates
+    /// @param is_injection If true, return injection rates; if false, return production rates
+    /// @return The requested rate for the specified phase
+    Scalar getMasterGroupRate_(const std::string &group_name, ReservoirCoupling::Phase phase,
+                               bool reservoir_rates, bool is_injection) const;
 
     /// Reference to the parent ReservoirCouplingMaster object
     ReservoirCouplingMaster<Scalar> &master_;

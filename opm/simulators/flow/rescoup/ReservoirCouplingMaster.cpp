@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingErrorMacros.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp>
@@ -70,7 +71,7 @@ ReservoirCouplingMaster<Scalar>::
 getMasterGroupNamesForSlave(std::size_t slave_idx) const
 {
     if (slave_idx >= this->slave_idx_to_master_groups_.size()) {
-        OPM_THROW(
+        RCOUP_LOG_THROW(
             std::runtime_error,
             fmt::format(
                 "Slave index {} out of bounds. Valid range is [0, {})",
@@ -96,6 +97,32 @@ getMasterGroupCanonicalIdx(
 }
 
 template <class Scalar>
+Scalar
+ReservoirCouplingMaster<Scalar>::
+getMasterGroupInjectionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const
+{
+    if (res_rates) {
+        return this->report_step_data_->getMasterGroupInjectionReservoirRate(group_name, phase);
+    }
+    else {
+        return this->report_step_data_->getMasterGroupInjectionSurfaceRate(group_name, phase);
+    }
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingMaster<Scalar>::
+getMasterGroupProductionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const
+{
+    if (res_rates) {
+        return this->report_step_data_->getMasterGroupProductionReservoirRate(group_name, phase);
+    }
+    else {
+        return this->report_step_data_->getMasterGroupProductionSurfaceRate(group_name, phase);
+    }
+}
+
+template <class Scalar>
 const ReservoirCoupling::Potentials<Scalar>&
 ReservoirCouplingMaster<Scalar>::
 getSlaveGroupPotentials(const std::string &master_group_name)
@@ -113,7 +140,7 @@ getSlaveIdx(const std::string &slave_name) const
     if (it != this->slave_names_.end()) {
         return std::distance(this->slave_names_.begin(), it);
     }
-    OPM_THROW(std::runtime_error, "Slave name not found: " + slave_name);
+    RCOUP_LOG_THROW(std::runtime_error, "Slave name not found: " + slave_name);
 }
 
 template <class Scalar>
@@ -384,7 +411,7 @@ getMasterActivationDate_() const
     }
     // NOTE: Consistency between SLAVES and GRUPMAST keywords has already been checked in
     //       init() in SimulatorFullyImplicitBlackoil.hpp
-    OPM_THROW(std::runtime_error, "Reservoir coupling: Failed to find master activation time: "
+    RCOUP_LOG_THROW(std::runtime_error, "Reservoir coupling: Failed to find master activation time: "
               "No SLAVES keyword found in schedule");
 }
 

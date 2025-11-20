@@ -52,12 +52,13 @@ public:
     bool activated() const { return activated_; }
     void clearDeferredLogger() { logger_.clearDeferredLogger(); }
     const Parallel::Communication& getComm() const { return comm_; }
-    ReservoirCoupling::Logger& getLogger() { return this->logger_; }
     MPI_Comm getMasterComm() const { return slave_master_comm_; }
     const std::string& getSlaveName() const { return slave_name_; }
     const std::map<std::string, std::string>& getSlaveToMasterGroupNameMap() const {
         return slave_to_master_group_map_; }
     void initTimeStepping();
+    ReservoirCoupling::Logger& logger() { return this->logger_; }
+    ReservoirCoupling::Logger& logger() const { return this->logger_; }
     void maybeActivate(int report_step);
     std::size_t numSlaveGroups() const { return this->slave_group_order_.size(); }
     double receiveNextTimeStepFromMaster();
@@ -93,7 +94,7 @@ private:
     std::map<std::string, std::string> slave_to_master_group_map_;
     bool activated_{false};
     std::string slave_name_;  // This is the slave name as defined in the master process
-    ReservoirCoupling::Logger logger_;
+    mutable ReservoirCoupling::Logger logger_;
     // Order of the slave groups. A mapping from slave group index to slave group name.
     // The indices are determined by the order the master process sends us the group names, see
     // receiveMasterGroupNamesFromMasterProcess_()

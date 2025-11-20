@@ -116,7 +116,8 @@ BlackoilWellModelGeneric(Schedule& schedule,
                           this->schedule(),
                           summaryState,
                           guideRate_,
-                          pu)
+                          pu,
+                          comm)
     , genNetwork_(network)
 {
 
@@ -635,7 +636,6 @@ checkGroupHigherConstraints(const Group& group,
 
     bool changed = false;
     auto [fipnum, pvtreg] = this->getGroupFipnumAndPvtreg();
-    std::vector<Scalar> rates(this->numPhases(), 0.0);
 
     bool isField = group.name() == "FIELD";
     if (!isField && group.isInjectionGroup()) {
@@ -645,15 +645,8 @@ checkGroupHigherConstraints(const Group& group,
 
         // checkGroupConstraintsInj considers 'available' rates (e.g., group rates minus reduction rates).
         // So when checking constraints, current groups rate must also be subtracted it's reduction rate
-        const std::vector<Scalar> reduction_rates = this->groupState().injection_reduction_rates(group.name());
-
-        for (int phasePos = 0; phasePos < this->numPhases(); ++phasePos) {
-            const Scalar local_current_rate = this->groupStateHelper().sumWellSurfaceRates(
-                group, phasePos, /*is_injector=*/true
-            );
-            // Sum over all processes
-            rates[phasePos] = comm_.sum(local_current_rate) - reduction_rates[phasePos];
-        }
+        std::vector<Scalar> rates_available =
+            this->groupStateHelper().getGroupRatesAvailableForHigherLevelControl(group, /*is_injector=*/true);
         const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
         for (Phase phase : all) {
             const auto currentControl = this->groupState().injection_control(group.name(), phase);
@@ -691,7 +684,7 @@ checkGroupHigherConstraints(const Group& group,
                     group.name(),
                     group.parent(),
                     parentGroup,
-                    rates.data(),
+                    rates_available.data(),
                     phase,
                     group.getGroupEfficiencyFactor(),
                     resv_coeff_inj,
@@ -717,10 +710,6 @@ checkGroupHigherConstraints(const Group& group,
     }
 
     if (!isField && group.isProductionGroup()) {
-        // Obtain rates for group.
-        // checkGroupConstraintsProd considers 'available' rates (e.g., group rates minus reduction rates).
-        // So when checking constraints, current groups rate must also be subtracted it's reduction rate
-        const std::vector<Scalar> reduction_rates = this->groupState().production_reduction_rates(group.name());
         const Group::ProductionCMode currentControl = this->groupState().production_control(group.name());
         if (auto groupPos = switched_prod_groups_.find(group.name()); groupPos != switched_prod_groups_.end()) {
             auto& ctrls = groupPos->second;
@@ -741,13 +730,11 @@ checkGroupHigherConstraints(const Group& group,
                 return false;
             }
         }
-        for (int phasePos = 0; phasePos < this->numPhases(); ++phasePos) {
-            const Scalar local_current_rate = this->groupStateHelper().sumWellSurfaceRates(
-                group, phasePos, /*is_injector=*/false
-            );
-            // Sum over all processes
-            rates[phasePos] = -comm_.sum(local_current_rate) - reduction_rates[phasePos];
-        }
+        // Obtain rates for group.
+        // checkGroupConstraintsProd considers 'available' rates (e.g., group rates minus reduction rates).
+        // So when checking constraints, current groups rate must also be subtracted it's reduction rate
+        std::vector<Scalar> rates_available =
+            this->groupStateHelper().getGroupRatesAvailableForHigherLevelControl(group, /*is_injector=*/false);
         std::vector<Scalar> resv_coeff(this->numPhases(), 0.0);
         calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
         // Check higher up only if under individual (not FLD) control.
@@ -757,7 +744,7 @@ checkGroupHigherConstraints(const Group& group,
                 group.name(),
                 group.parent(),
                 parentGroup,
-                rates.data(),
+                rates_available.data(),
                 group.getGroupEfficiencyFactor(),
                 resv_coeff,
                 /*check_guide_rate*/true,

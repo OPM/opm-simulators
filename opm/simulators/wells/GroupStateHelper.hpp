@@ -115,7 +115,8 @@ public:
                     const Schedule& schedule,
                     const SummaryState& summary_state,
                     const GuideRate& guide_rate,
-                    const PhaseUsageInfo<IndexTraits>& phase_usage_info);
+                    const PhaseUsageInfo<IndexTraits>& phase_usage_info,
+                    const Parallel::Communication& comm);
 
     void accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor) const;
 
@@ -137,6 +138,10 @@ public:
                                                       const std::vector<Scalar>& resv_coeff,
                                                       const bool check_guide_rate,
                                                       DeferredLogger& deferred_logger) const;
+
+    const Parallel::Communication& comm() const { return this->comm_; }
+
+    std::vector<Scalar> getGroupRatesAvailableForHigherLevelControl(const Group& group, const bool is_injector) const;
 
     Scalar getGuideRate(const std::string& name, const GuideRateModel::Target target) const;
 
@@ -182,8 +187,29 @@ public:
         return *this->group_state_;
     }
 
-    const PhaseUsageInfo<IndexTraits>& phaseUsageInfo() const
+    const GuideRate& guideRate() const
     {
+        return this->guide_rate_;
+    }
+
+    bool isRank0() const
+    {
+        return this->well_state_->isRank0();
+    }
+
+    bool isReservoirCouplingMaster() const { return rescoup_.isMaster(); }
+
+    bool isReservoirCouplingMasterGroup(const Group& group) const { return rescoup_.isMasterGroup(group.name()); }
+
+    bool isReservoirCouplingSlave() const { return rescoup_.isSlave(); }
+
+    constexpr int numPhases() const {
+        return this->wellState().numPhases();
+    }
+
+    int phaseToActivePhaseIdx(const Phase phase) const;
+
+    const PhaseUsageInfo<IndexTraits>& phaseUsage() const {
         return this->phase_usage_info_;
     }
 
@@ -207,28 +233,28 @@ public:
         return this->schedule_;
     }
 
-    const GuideRate& guideRate() const
-    {
-        return this->guide_rate_;
+    ReservoirCoupling::Proxy<Scalar>& rescoup() {
+        return rescoup_;
     }
 
-    int phaseToActivePhaseIdx(const Phase phase) const;
-
-    const PhaseUsageInfo<IndexTraits>& phaseUsage() const {
-        return this->phase_usage_info_;
+    const ReservoirCoupling::Proxy<Scalar>& rescoup() const {
+        return rescoup_;
     }
 
-    // === Reservoir Coupling ===
+    ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {
+        return rescoup_.master();
+    }
 
-    /// @brief Get the reservoir coupling proxy
-    ReservoirCoupling::Proxy<Scalar>& rescoup() { return rescoup_; }
-    const ReservoirCoupling::Proxy<Scalar>& rescoup() const { return rescoup_; }
+    const ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() const {
+        return rescoup_.master();
+    }
 
-    bool isReservoirCouplingMaster() const { return rescoup_.isMaster(); }
-    bool isReservoirCouplingSlave() const { return rescoup_.isSlave(); }
-
-    ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() { return rescoup_.master(); }
-    ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() { return rescoup_.slave(); }
+    ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() {
+        return rescoup_.slave();
+    }
+    const ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() const {
+        return rescoup_.slave();
+    }
 
 #ifdef RESERVOIR_COUPLING_ENABLED
     void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar>* master) {
@@ -317,10 +343,15 @@ public:
     std::pair<std::optional<std::string>, Scalar>
     worstOffendingWell(const Group& group,
                        const Group::ProductionCMode& offended_control,
-                       const Parallel::Communication& comm,
                        DeferredLogger& deferred_logger) const;
 
 private:
+    /// @brief Convert active phase index to ReservoirCoupling::Phase enum
+    /// @param phase_pos Active phase index (0, 1, or 2 in a 3-phase model)
+    /// @return The corresponding ReservoirCoupling::Phase enum value
+    /// @note This uses the canonical phase ordering (Oil=0, Gas=1, Water=2)
+
+    ReservoirCoupling::Phase activePhaseIdxToRescoupPhase_(int phase_pos) const;
     //! \brief Compute partial efficiency factor for addback calculation.
     //!
     //! The addback in constraint checking must use the partial efficiency factor
@@ -338,8 +369,20 @@ private:
 
     GuideRate::RateVector getGuideRateVector_(const std::vector<Scalar>& rates) const;
 
+    Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
+                                                const int phase_pos,
+                                                const bool res_rates,
+                                                const bool is_injector) const;
+
+    Scalar getSatelliteRate_(const Group& group,
+        const int phase_pos,
+        const bool res_rates,
+        const bool is_injector) const;
+
     /// check if well/group bottom is a sub well/group of the group top
     bool isInGroupChainTopBot_(const std::string& bottom, const std::string& top) const;
+
+    bool isSatelliteGroup_(const Group& group) const;
 
     Scalar satelliteInjectionRate_(const ScheduleState& sched,
                                    const Group& group,
@@ -367,10 +410,11 @@ private:
     const Schedule& schedule_;
     const SummaryState& summary_state_;
     const GuideRate& guide_rate_;
-    int report_step_ {0};
     // NOTE: The phase usage info seems to be read-only throughout the simulation, so it should be safe
     // to store a reference to it here.
     const PhaseUsageInfo<IndexTraits>& phase_usage_info_;
+    const Parallel::Communication& comm_;
+    int report_step_ {0};
     ReservoirCoupling::Proxy<Scalar> rescoup_{};
 };
 

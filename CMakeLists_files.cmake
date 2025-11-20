@@ -1387,6 +1387,7 @@ if(MPI_FOUND)
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/flow/rescoup/ReservoirCoupling.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingErrorMacros.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp

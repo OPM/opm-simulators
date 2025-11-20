@@ -563,12 +563,12 @@ namespace Opm {
     setupRescoupScopedLogger(DeferredLogger& local_logger) {
         if (this->isReservoirCouplingMaster()) {
             return ReservoirCoupling::ScopedLoggerGuard{
-                this->reservoirCouplingMaster().getLogger(),
+                this->reservoirCouplingMaster().logger(),
                 &local_logger
             };
         } else if (this->isReservoirCouplingSlave()) {
             return ReservoirCoupling::ScopedLoggerGuard{
-                this->reservoirCouplingSlave().getLogger(),
+                this->reservoirCouplingSlave().logger(),
                 &local_logger
             };
         }
@@ -663,7 +663,7 @@ namespace Opm {
         // This function is called by the master process to send the group targets to the slaves.
         RescoupTargetCalculator<Scalar, IndexTraits> target_calculator{
             this->guide_rate_handler_,
-            this->wgHelper()
+            this->groupStateHelper()
         };
         target_calculator.calculateMasterGroupTargetsAndSendToSlaves();
     }
