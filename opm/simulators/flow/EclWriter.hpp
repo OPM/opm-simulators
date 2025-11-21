@@ -596,6 +596,7 @@ public:
                 }
 
                 this->simulator_.problem().readSolutionFromOutputModule(0, true);
+                this->simulator_.problem().temperatureModel().init();
                 ElementContext elemCtx(this->simulator_);
                 for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                     elemCtx.updatePrimaryStencil(elem);

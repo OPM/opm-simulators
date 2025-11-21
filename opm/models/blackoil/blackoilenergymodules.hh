@@ -546,8 +546,7 @@ public:
                             [[maybe_unused]] const PrimaryVariables& priVars,
                             unsigned globalDofIdx,
                             unsigned timeIdx,
-                            [[maybe_unused]] const LinearizationType& lintype
-        )
+                            [[maybe_unused]] const LinearizationType& lintype)
     {
         updateTemperature_(problem, globalDofIdx, timeIdx);
     }
@@ -957,17 +956,17 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::NoTemperature>
 
 public:
     template<class FluidState>
-    static void updateEnergy(Evaluation& energyFlux,
-                             const unsigned& focusDofIndex,
-                             const unsigned& inIdx,
-                             const unsigned& exIdx,
-                             const IntensiveQuantities& inIq,
-                             const IntensiveQuantities& exIq,
-                             const FluidState& inFs,
-                             const FluidState& exFs,
-                             const Scalar& inAlpha,
-                             const Scalar& outAlpha,
-                             const Scalar& faceArea)
+    static void updateEnergy(Evaluation& /*energyFlux*/,
+                             const unsigned& /*focusDofIndex*/,
+                             const unsigned& /*inIdx*/,
+                             const unsigned& /*exIdx*/,
+                             const IntensiveQuantities& /*inIq*/,
+                             const IntensiveQuantities& /*exIq*/,
+                             const FluidState& /*inFs*/,
+                             const FluidState& /*exFs*/,
+                             const Scalar& /*inAlpha*/,
+                             const Scalar& /*outAlpha*/,
+                             const Scalar& /*faceArea*/)
     {}
 
     void updateEnergy(const ElementContext&,

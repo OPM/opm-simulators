@@ -92,6 +92,15 @@ add_test_compare_restarted_simulation(CASENAME network_01_reroute_restart
                                       DIR network
                                       TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
 
+add_test_compare_restarted_simulation(CASENAME spe1_temp
+                                      FILENAME SPE1CASE2_TEMP
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL 5.0e-2
+                                      RESTART_STEP 3
+                                      DIR spe1
+                                      TEST_ARGS --solver-max-time-step-in-days=1)
+
 # Restart run in which a UDQ defining expression has exactly 128
 # characters.  Verifies that we don't overflow the ZUDL character
 # limit in restart files.

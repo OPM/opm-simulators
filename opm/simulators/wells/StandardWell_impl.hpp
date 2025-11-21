@@ -2728,6 +2728,7 @@ namespace Opm
                 result += Base::restrictEval(cq_r_thermal);
             }
         }
+
         return result * this->well_efficiency_factor_;
     }
 } // namespace Opm

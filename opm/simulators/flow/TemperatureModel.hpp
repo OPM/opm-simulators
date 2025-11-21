@@ -463,8 +463,6 @@ class TemperatureModel<TypeTag, false> {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using IndexTraits = typename FluidSystem::IndexTraitsType;
-    using WellStateType = WellState<Scalar, IndexTraits>;
 public:
     TemperatureModel(Simulator&)
     { }
@@ -489,7 +487,6 @@ public:
 
     void init() {}
     void beginTimeStep() {}
-    void endTimeStep(WellStateType& /*wellState*/) {}
     const Scalar temperature(size_t /*globalIdx*/) const {
         return 273.15; // return 0C to make the compiler happy
     }

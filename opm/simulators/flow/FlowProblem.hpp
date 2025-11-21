@@ -434,7 +434,9 @@ public:
         this->wellModel_.endTimeStep();
         this->aquiferModel_.endTimeStep();
         this->tracerModel_.endTimeStep();
-        this->temperatureModel_.endTimeStep(wellModel_.wellState());
+        if constexpr(energyModuleType == EnergyModules::SequentialImplicitThermal) {
+            this->temperatureModel_.endTimeStep(wellModel_.wellState());
+        }
 
         // Compute flux for output
         this->model().linearizer().updateFlowsInfo();
@@ -651,6 +653,9 @@ public:
 
     TracerModel& tracerModel()
     { return tracerModel_; }
+
+    TemperatureModel& temperatureModel() // need for restart
+    { return temperatureModel_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity

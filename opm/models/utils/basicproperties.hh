@@ -79,10 +79,9 @@ struct Scalar { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct NumEq { using type = UndefinedProperty; };
 
-//! Number of equations in the system of PDEs
+//! Number of derivatives in the system of PDEs
 template<class TypeTag, class MyTypeTag>
 struct NumDerivatives { using type = UndefinedProperty; };
-
 
 //! Property which provides a Dune::ParameterTree.
 template<class TypeTag, class MyTypeTag>
