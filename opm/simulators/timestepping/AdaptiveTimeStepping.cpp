@@ -114,8 +114,9 @@ void registerAdaptiveParameters()
          "'pid+iteration', "
          "'pid+newtoniteration', "
          "'iterationcount', "
-        "'newtoniterationcount' "
-        "and 'hardcoded'");
+         "'newtoniterationcount', "
+         "'general3rdorder' "
+         "and 'hardcoded'");
     Parameters::Register<Parameters::TimeStepControlTolerance>
         ("The tolerance used by the time step size control algorithm");
     Parameters::Register<Parameters::TimeStepControlTargetIterations>
