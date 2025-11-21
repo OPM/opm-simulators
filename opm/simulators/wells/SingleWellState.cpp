@@ -89,6 +89,7 @@ void SingleWellState<Scalar, IndexTraits>::init_timestep(const SingleWellState& 
     this->bhp = other.bhp;
     this->thp = other.thp;
     this->temperature = other.temperature;
+    this->efficiency_scaling_factor = other.efficiency_scaling_factor;
 }
 
 template<typename Scalar, typename IndexTraits>
