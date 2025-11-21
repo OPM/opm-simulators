@@ -250,6 +250,9 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
 
     for (int perf = 0; perf < nperf; ++perf) {
         this->initialiseConnectionMixture(num_quantities, perf,
+                                          waterpos,
+                                          oilpos,
+                                          gaspos,
                                           q_out_perf,
                                           phaseMixture,
                                           componentMixture);
@@ -342,6 +345,9 @@ template<typename FluidSystem, typename Indices>
 void StandardWellConnections<FluidSystem, Indices>::
 initialiseConnectionMixture(const int                  num_quantities,
                             const int                  perf,
+                            const typename std::vector<Scalar>::size_type waterpos,
+                            const typename std::vector<Scalar>::size_type oilpos,
+                            const typename std::vector<Scalar>::size_type gaspos,
                             const std::vector<Scalar>& q_out_perf,
                             const std::vector<Scalar>& phaseMixture,
                             std::vector<Scalar>&       componentMixture) const
@@ -368,15 +374,15 @@ initialiseConnectionMixture(const int                  num_quantities,
         if (this->well_.isInjector()) {
             switch (this->well_.wellEcl().injectorType()) {
             case InjectorType::WATER:
-                componentMixture[IndexTraits::waterCompIdx] = Scalar{1};
+                componentMixture[waterpos] = Scalar{1};
                 break;
 
             case InjectorType::GAS:
-                componentMixture[IndexTraits::gasCompIdx] = Scalar{1};
+                componentMixture[gaspos] = Scalar{1};
                 break;
 
             case InjectorType::OIL:
-                componentMixture[IndexTraits::oilCompIdx] = Scalar{1};
+                componentMixture[oilpos] = Scalar{1};
                 break;
 
             case InjectorType::MULTI:
@@ -395,15 +401,15 @@ initialiseConnectionMixture(const int                  num_quantities,
 
                 switch (this->well_.wellEcl().getPreferredPhase()) {
                 case Phase::OIL:
-                    componentMixture[IndexTraits::oilCompIdx] = Scalar{1};
+                    componentMixture[oilpos] = Scalar{1};
                     break;
 
                 case Phase::GAS:
-                    componentMixture[IndexTraits::gasCompIdx] = Scalar{1};
+                    componentMixture[gaspos] = Scalar{1};
                     break;
 
                 case Phase::WATER:
-                    componentMixture[IndexTraits::waterCompIdx] = Scalar{1};
+                    componentMixture[waterpos] = Scalar{1};
                     break;
 
                 default:

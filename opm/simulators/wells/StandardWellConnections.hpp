@@ -154,6 +154,9 @@ private:
 
     void initialiseConnectionMixture(const int                  num_comp,
                                      const int                  perf,
+                                     const typename std::vector<Scalar>::size_type waterpos,
+                                     const typename std::vector<Scalar>::size_type oilpos,
+                                     const typename std::vector<Scalar>::size_type gaspos,
                                      const std::vector<Scalar>& q_out_perf,
                                      const std::vector<Scalar>& currentMixture,
                                      std::vector<Scalar>&       previousMixture) const;
