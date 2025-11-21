@@ -155,6 +155,39 @@ namespace {
         }
     }
 
+    template <typename Ix>
+    std::optional<Ix>
+    preferredPhaseIndex(const bool isInjector,
+                        const Opm::Well& well,
+                        const Ix opos,
+                        const Ix gpos,
+                        const Ix wpos)
+    {
+        if (isInjector) {
+            switch (well.injectorType()) {
+                case Opm::InjectorType::WATER:
+                    return {wpos};
+                case Opm::InjectorType::OIL:
+                    return {opos};
+                case Opm::InjectorType::GAS:
+                    return {gpos};
+                default:
+                    return {};
+            }
+        } else {
+            switch (well.getPreferredPhase()) {
+                case Opm::Phase::WATER:
+                    return {wpos};
+                case Opm::Phase::OIL:
+                    return {opos};
+                case Opm::Phase::GAS:
+                    return {gpos};
+                default:
+                    return {};
+            }
+        }
+    }
+
 } // Anonymous namespace
 
 namespace Opm
@@ -248,8 +281,15 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
     auto componentMixture = std::vector<Scalar>(num_quantities, Scalar{0});
     auto phaseMixture     = std::vector<Scalar>(num_quantities, Scalar{0});
 
+    const auto preferredPhaseIdx =
+            preferredPhaseIndex(this->well_.isInjector(),
+                                this->well_.wellEcl(),
+                                oilpos, gaspos, waterpos);
+
     for (int perf = 0; perf < nperf; ++perf) {
-        this->initialiseConnectionMixture(num_quantities, perf,
+        this->initialiseConnectionMixture(num_quantities,
+                                          perf,
+                                          preferredPhaseIdx,
                                           q_out_perf,
                                           phaseMixture,
                                           componentMixture);
@@ -339,9 +379,11 @@ calculatePerforationOutflow(const std::vector<Scalar>& perfComponentRates) const
 }
 
 template<typename FluidSystem, typename Indices>
+template <typename Ix>
 void StandardWellConnections<FluidSystem, Indices>::
 initialiseConnectionMixture(const int                  num_quantities,
                             const int                  perf,
+                            const std::optional<Ix>    preferredPhaseIdx,
                             const std::vector<Scalar>& q_out_perf,
                             const std::vector<Scalar>& phaseMixture,
                             std::vector<Scalar>&       componentMixture) const
@@ -365,57 +407,12 @@ initialiseConnectionMixture(const int                  num_quantities,
         std::fill(componentMixture.begin(), componentMixture.end(), Scalar{0});
 
         // No flow => use fractions defined at well level for componentMixture.
-        if (this->well_.isInjector()) {
-            switch (this->well_.wellEcl().injectorType()) {
-            case InjectorType::WATER:
-                componentMixture[IndexTraits::waterCompIdx] = Scalar{1};
-                break;
-
-            case InjectorType::GAS:
-                componentMixture[IndexTraits::gasCompIdx] = Scalar{1};
-                break;
-
-            case InjectorType::OIL:
-                componentMixture[IndexTraits::oilCompIdx] = Scalar{1};
-                break;
-
-            case InjectorType::MULTI:
-                // Not supported.
-                // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
-                //                         "Multi phase injectors are not supported, requested for well " + name());
-                break;
-            }
-        }
-        else {
-            assert(this->well_.isProducer());
-
-            if (perf == 0) {
-                // For the first perforation without flow we use the
-                // preferred phase to decide the componentMixture initialization.
-
-                switch (this->well_.wellEcl().getPreferredPhase()) {
-                case Phase::OIL:
-                    componentMixture[IndexTraits::oilCompIdx] = Scalar{1};
-                    break;
-
-                case Phase::GAS:
-                    componentMixture[IndexTraits::gasCompIdx] = Scalar{1};
-                    break;
-
-                case Phase::WATER:
-                    componentMixture[IndexTraits::waterCompIdx] = Scalar{1};
-                    break;
-
-                default:
-                    // No others supported.
-                    break;
-                }
-            }
-            else {
-                // For the rest of the perforations without flow we use the
-                // componentMixture from the perforation above.
-                componentMixture = phaseMixture;
-            }
+        if ( (this->well_.isInjector() || (perf == 0)) &&  preferredPhaseIdx.has_value()) {
+            componentMixture[*preferredPhaseIdx] = Scalar{1};
+        } else if (!this->well_.isInjector() && (perf != 0)) {
+            // For the rest of the perforations without flow we use the
+            // componentMixture from the perforation above.
+            componentMixture = phaseMixture;
         }
     }
 }
