@@ -487,12 +487,22 @@ private:
     /// \return Simulation's status/exit code.
     int runThermal(const Phases& phases);
 
+    /// Run a regular three-phase simulation with the TEMP option
+    /// With the TEMP option the energy and blackoil eq are solved
+    /// seperatly
+    /// Called from dispatchDynamic_()
+    ///
+    /// \return Simulation's status/exit code.
+    int runBlackOilTemp();
+
     /// Run a regular three-phase simulation without thermal effects.
     ///
     /// Called from dispatchDynamic_()
     ///
     /// \return Simulation's status/exit code.
     int runBlackOil();
+
+
 
     void readDeck(const std::string& deckFilename,
                   const std::string& outputDir,

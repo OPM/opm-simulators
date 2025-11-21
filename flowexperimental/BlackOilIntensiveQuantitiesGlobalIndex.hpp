@@ -104,8 +104,6 @@ class BlackOilIntensiveQuantitiesGlobalIndex
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
-    enum { enableTemperature = (energyModuleType == EnergyModules::ConstantTemperature) };
-    enum { enableEnergy = (energyModuleType == EnergyModules::FullyImplicitThermal) };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
@@ -135,8 +133,8 @@ class BlackOilIntensiveQuantitiesGlobalIndex
 public:
     using FluidState = BlackOilFluidState<Evaluation,
                                           FluidSystem,
-                                          enableTemperature,
-                                          enableEnergy,
+                                          energyModuleType == EnergyModules::ConstantTemperature,
+                                          (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
                                           compositionSwitchEnabled,
                                           enableVapwat,
                                           enableBrine,

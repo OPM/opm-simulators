@@ -61,6 +61,7 @@
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
+#include <opm/simulators/flow/TemperatureModel.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
@@ -121,8 +122,8 @@ protected:
     enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
-    enum { enableTemperature = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature };
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    enum { enableFullyImplicitThermal = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
     enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
@@ -163,7 +164,7 @@ protected:
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
-
+    using TemperatureModel = GetPropType<TypeTag, Properties::TemperatureModel>;
     using TracerModel = GetPropType<TypeTag, Properties::TracerModel>;
     using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
 
@@ -223,13 +224,14 @@ public:
                               simulator.vanguard().cartesianIndexMapper(),
                               simulator.vanguard().grid(),
                               simulator.vanguard().cellCentroids(),
-                              enableEnergy,
-                              enableDiffusion,
+                              (energyModuleType == EnergyModules::FullyImplicitThermal ||
+                               energyModuleType == EnergyModules::SequentialImplicitThermal),                       enableDiffusion,
                               enableDispersion)
         , wellModel_(simulator)
         , aquiferModel_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
+        , temperatureModel_(simulator)
     {
         if (! Parameters::Get<Parameters::CheckSatfuncConsistency>()) {
             // User did not enable the "new" saturation function consistency
@@ -376,6 +378,8 @@ public:
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
+        temperatureModel_.beginTimeStep();
+
     }
 
     /*!
@@ -430,6 +434,9 @@ public:
         this->wellModel_.endTimeStep();
         this->aquiferModel_.endTimeStep();
         this->tracerModel_.endTimeStep();
+        if constexpr(energyModuleType == EnergyModules::SequentialImplicitThermal) {
+            this->temperatureModel_.endTimeStep(wellModel_.wellState());
+        }
 
         // Compute flux for output
         this->model().linearizer().updateFlowsInfo();
@@ -646,6 +653,9 @@ public:
 
     TracerModel& tracerModel()
     { return tracerModel_; }
+
+    TemperatureModel& temperatureModel() // need for restart
+    { return temperatureModel_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
@@ -874,6 +884,9 @@ public:
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        if constexpr (energyModuleType == EnergyModules::SequentialImplicitThermal)
+            return temperatureModel_.temperature(globalDofIdx);
+
         return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
@@ -882,7 +895,10 @@ public:
     {
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
-         return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
+        if constexpr (energyModuleType == EnergyModules::SequentialImplicitThermal)
+            return temperatureModel_.temperature(globalDofIdx);
+
+        return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
     const SolidEnergyLawParams&
@@ -1384,7 +1400,8 @@ protected:
 
     void readThermalParameters_()
     {
-        if constexpr (enableEnergy)
+        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal ||
+                      energyModuleType == EnergyModules::SequentialImplicitThermal )
         {
             const auto& simulator = this->simulator();
             const auto& vanguard = simulator.vanguard();
@@ -1487,8 +1504,8 @@ protected:
 protected:
     struct PffDofData_
     {
-        ConditionalStorage<enableEnergy, Scalar> thermalHalfTransIn;
-        ConditionalStorage<enableEnergy, Scalar> thermalHalfTransOut;
+        ConditionalStorage<enableFullyImplicitThermal, Scalar> thermalHalfTransIn;
+        ConditionalStorage<enableFullyImplicitThermal, Scalar> thermalHalfTransOut;
         ConditionalStorage<enableDiffusion, Scalar> diffusivity;
         ConditionalStorage<enableDispersion, Scalar> dispersivity;
         Scalar transmissibility;
@@ -1510,7 +1527,7 @@ protected:
                 unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
                 dofData.transmissibility = transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
 
-                if constexpr (enableEnergy) {
+                if constexpr (enableFullyImplicitThermal) {
                     *dofData.thermalHalfTransIn = transmissibilities_.thermalHalfTrans(globalCenterElemIdx, globalElemIdx);
                     *dofData.thermalHalfTransOut = transmissibilities_.thermalHalfTrans(globalElemIdx, globalCenterElemIdx);
                 }
@@ -1709,6 +1726,7 @@ protected:
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
+    TemperatureModel temperatureModel_;
 
     template<class T>
     struct BCData

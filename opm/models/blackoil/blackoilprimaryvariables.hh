@@ -112,8 +112,6 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
-    enum { enableEnergy = (energyModuleType == EnergyModules::FullyImplicitThermal) };
-    enum { enableTemperature = (energyModuleType == EnergyModules::ConstantTemperature) };
     enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
     enum { enableMICP = Indices::enableMICP };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
@@ -1014,14 +1012,13 @@ private:
 
     OPM_HOST_DEVICE Scalar temperature_(const Problem& problem, [[maybe_unused]] unsigned globalDofIdx) const
     {
-        if constexpr (enableEnergy) {
+        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
             return (*this)[Indices::temperatureIdx];
         }
-        else if constexpr (enableTemperature) {
-            return problem.temperature(globalDofIdx, /*timeIdx*/ 0);
-        }
-        else {
+        else if (energyModuleType == EnergyModules::NoTemperature) {
             return FluidSystem::reservoirTemperature();
+        } else {
+            return problem.temperature(globalDofIdx, /*timeIdx*/ 0);
         }
     }
 

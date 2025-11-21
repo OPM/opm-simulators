@@ -65,7 +65,7 @@ ComponentName<FluidSystem,Indices>::ComponentName()
         names_[Indices::polymerMoleWeightIdx] = "MolecularWeightP";
     }
 
-    if constexpr (Indices::enableEnergy) {
+    if constexpr (Indices::enableFullyImplicitThermal) {
         names_[Indices::temperatureIdx] = "Energy";
     }
 
