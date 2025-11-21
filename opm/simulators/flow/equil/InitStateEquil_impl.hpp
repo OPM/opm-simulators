@@ -1996,15 +1996,17 @@ calcPressSatRsRv(const RMap& reg,
                  const Scalar grav)
 {
     using PhaseSat = Details::PhaseSaturations<
-        MaterialLawManager, FluidSystem, EquilReg<Scalar>, typename RMap::CellId
-    >;
+        MaterialLawManager, FluidSystem, EquilReg<Scalar>, typename RMap::CellId>;
+
     auto ptable = Details::PressureTable<FluidSystem, EquilReg<Scalar>>{ grav, this->num_pressure_points_ };
     auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
     auto vspan  = std::array<Scalar, 2>{};
+
     std::vector<int> regionIsEmpty(rec.size(), 0);
     for (std::size_t r = 0; r < rec.size(); ++r) {
         const auto& cells = reg.cells(r);
         Details::verticalExtent(cells, cellZMinMax_, comm, vspan);
+
         const auto acc = rec[r].initializationTargetAccuracy();
         if (acc > 0) {
             // The grid blocks are treated as being tilted
@@ -2022,7 +2024,7 @@ calcPressSatRsRv(const RMap& reg,
             vspan[1] = std::max(vspan[1], std::max(eqreg.zgoc(), eqreg.zwoc()));
             ptable.equilibrate(eqreg, vspan);
             // For titled blocks, we can use a simple weightening based on title of the grid
-            //this->equilibrateTiltedFaultBlockSimple(cells, eqreg, gridView, acc, ptable, psat);
+            // this->equilibrateTiltedFaultBlockSimple(cells, eqreg, gridView, acc, ptable, psat);
             this->equilibrateTiltedFaultBlock(cells, eqreg, gridView, acc, ptable, psat);
         }
         else if (acc == 0) {
