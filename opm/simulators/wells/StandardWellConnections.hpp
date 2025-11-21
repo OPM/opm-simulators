@@ -27,6 +27,7 @@
 
 #include <array>
 #include <functional>
+#include <optional>
 #include <tuple>
 #include <variant>
 #include <vector>

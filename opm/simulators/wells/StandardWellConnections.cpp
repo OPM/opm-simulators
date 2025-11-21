@@ -42,6 +42,7 @@
 #include <functional>
 #include <limits>
 #include <numeric>
+#include <optional>
 #include <stdexcept>
 #include <string_view>
 #include <tuple>
