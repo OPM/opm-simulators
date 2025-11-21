@@ -740,9 +740,6 @@ private:
     void updateCellProps_(const GridView& gridView,
                           const NumericalAquifers& aquifer);
 
-    void getCellCentroids_(const EclipseState& eclState,
-                  const GridView& gridView);
-
     void applyNumericalAquifers_(const GridView& gridView,
                                  const NumericalAquifers& aquifer,
                                  const bool co2store_or_h2store);
@@ -818,8 +815,6 @@ private:
     std::vector<std::pair<Scalar,Scalar>> cellZMinMax_;
     std::vector<CellCornerData<Scalar>> cellCorners_;
     int num_pressure_points_;
-    static const int dimensionworld = Grid::dimensionworld;
-    std::vector<std::array<double, 3>> centroids_;
 };
 
 } // namespace DeckDependent

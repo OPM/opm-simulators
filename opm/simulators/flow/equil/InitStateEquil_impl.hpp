@@ -1507,7 +1507,6 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     // numerical aquifer cells might be specified with different depths.
     const auto& num_aquifers = eclipseState.aquifer().numericalAquifers();
     updateCellProps_(gridView, num_aquifers);
-    getCellCentroids_(eclipseState, gridView);
 
     // Get the equilibration records.
     const std::vector<EquilRecord> rec = getEquil(eclipseState);
@@ -1813,31 +1812,6 @@ updateInitialSaltSaturation_(const EclipseState& eclState, const RMap& reg)
             const Scalar depth = cellCenterDepth_[cell];
             this->saltSaturation_[cell] = saltpVdTable_[i].eval(depth, /*extrapolate=*/true);
         }
-    }
-}
-
-template<class FluidSystem,
-         class Grid,
-         class GridView,
-         class ElementMapper,
-         class CartesianIndexMapper>
-void InitialStateComputer<FluidSystem,
-                          Grid,
-                          GridView,
-                          ElementMapper,
-                          CartesianIndexMapper>::
-getCellCentroids_(const EclipseState& eclState,
-                  const GridView& gridView)
-{
-    ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
-    auto elemIt = gridView.template begin</*codim=*/0>();
-    const auto& elemEndIt = gridView.template end</*codim=*/0>();
-    centroids_.resize(gridView.size(0));
-    for (; elemIt != elemEndIt; ++elemIt) {
-        const Element& element = *elemIt;
-        const unsigned int elemIdx = elemMapper.index(element);
-        const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
-        centroids_[elemIdx] = eclState.getInputGrid().getCellCenter(cartIx);
     }
 }
 
