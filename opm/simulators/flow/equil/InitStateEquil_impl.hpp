@@ -2006,6 +2006,7 @@ calcPressSatRsRv(const RMap& reg,
     std::vector<int> regionIsEmpty(rec.size(), 0);
     for (std::size_t r = 0; r < rec.size(); ++r) {
         const auto& cells = reg.cells(r);
+
         Details::verticalExtent(cells, cellZMinMax_, comm, vspan);
 
         const auto acc = rec[r].initializationTargetAccuracy();
