@@ -1996,7 +1996,8 @@ calcPressSatRsRv(const RMap& reg,
                  const Scalar grav)
 {
     using PhaseSat = Details::PhaseSaturations<
-        MaterialLawManager, FluidSystem, EquilReg<Scalar>, typename RMap::CellId>;
+        MaterialLawManager, FluidSystem, EquilReg<Scalar>, typename RMap::CellId
+    >;
 
     auto ptable = Details::PressureTable<FluidSystem, EquilReg<Scalar>>{ grav, this->num_pressure_points_ };
     auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
