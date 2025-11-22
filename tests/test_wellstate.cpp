@@ -578,10 +578,10 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
 
 
 BOOST_AUTO_TEST_CASE(TESTPerfData) {
-    Opm::PerfData pd1(3, 100.0, true, 3);
-    Opm::PerfData pd2(3, 100.0, true, 3);
-    Opm::PerfData pd3(2, 100.0, true, 3);
-    Opm::PerfData pd4(3, 100.0, false, 3);
+    Opm::PerfData<double> pd1(3, true, 3);
+    Opm::PerfData<double> pd2(3, true, 3);
+    Opm::PerfData<double> pd3(2, true, 3);
+    Opm::PerfData<double> pd4(3, false, 3);
 
 
     for (std::size_t i = 0; i < 3; i++) {
