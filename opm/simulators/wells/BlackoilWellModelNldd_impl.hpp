@@ -118,6 +118,7 @@ recoverWellSolutionAndUpdateWellState(const BVector& x,
             }
             well->recoverWellSolutionAndUpdateWellState(wellModel_.simulator(),
                                                         x_local_,
+                                                        wellModel_.groupStateHelper(),
                                                         wellModel_.wellState(),
                                                         local_deferredLogger);
         }
@@ -143,8 +144,7 @@ getWellConvergence(const Domain& domain,
     for (const auto& well : wellModel_.localNonshutWells()) {
         if ((this->well_domain().at(well->name()) == domain.index)) {
             if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                report += well->getWellConvergence(wellModel_.simulator(),
-                                                   wellModel_.wellState(),
+                report += well->getWellConvergence(wellModel_.groupStateHelper(),
                                                    B_avg,
                                                    local_deferredLogger,
                                                    relax_tolerance);
