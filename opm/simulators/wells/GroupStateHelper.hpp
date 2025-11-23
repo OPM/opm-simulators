@@ -140,6 +140,13 @@ public:
 
     Scalar getGuideRate(const std::string& name, const GuideRateModel::Target target) const;
 
+    Scalar getInjectionGroupTarget(const Group& group,
+                                   const Phase& injection_phase,
+                                   const std::vector<Scalar>& resv_coeff,
+                                   DeferredLogger& deferred_logger) const;
+
+    Scalar getProductionGroupTarget(const Group& group, DeferredLogger& deferred_logger) const;
+
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
 
     std::optional<Scalar> getWellGroupTargetInjector(const std::string& name,
@@ -204,6 +211,8 @@ public:
     {
         return this->guide_rate_;
     }
+
+    int phaseToActivePhaseIdx(const Phase phase) const;
 
     const PhaseUsageInfo<IndexTraits>& phaseUsage() const {
         return this->phase_usage_info_;
@@ -318,8 +327,6 @@ private:
 
     /// check if well/group bottom is a sub well/group of the group top
     bool isInGroupChainTopBot_(const std::string& bottom, const std::string& top) const;
-
-    int phaseToActivePhaseIdx_(const Phase phase) const;
 
     Scalar satelliteInjectionRate_(const ScheduleState& sched,
                                    const Group& group,

@@ -511,9 +511,9 @@ namespace Opm {
                 if (event || dyn_status_change) {
                     try {
                         well->scaleSegmentRatesAndPressure(this->wellState());
-                        well->calculateExplicitQuantities(simulator_, this->wellState(), local_deferredLogger);
+                        well->calculateExplicitQuantities(simulator_, this->groupStateHelper(), local_deferredLogger);
                         well->updateWellStateWithTarget(simulator_, this->groupStateHelper(), this->wellState(), local_deferredLogger);
-                        well->updatePrimaryVariables(simulator_, this->wellState(), local_deferredLogger);
+                        well->updatePrimaryVariables(this->groupStateHelper(), local_deferredLogger);
                         well->solveWellEquation(
                             simulator_, this->groupStateHelper(), this->wellState(), local_deferredLogger
                         );
@@ -1529,7 +1529,7 @@ namespace Opm {
                     x_local_[i] = x[cells[i]];
                 }
                 well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
-                                                            this->wellState(), local_deferredLogger);
+                                                            this->groupStateHelper(), this->wellState(), local_deferredLogger);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
@@ -1564,7 +1564,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             if (well->isOperableAndSolvable() || well->wellIsStopped()) {
                 local_report += well->getWellConvergence(
-                        simulator_, this->wellState(), B_avg, local_deferredLogger,
+                        this->groupStateHelper(), B_avg, local_deferredLogger,
                         iterationIdx > param_.strict_outer_iter_wells_);
             } else {
                 ConvergenceReport report;
@@ -1610,7 +1610,7 @@ namespace Opm {
     {
         // TODO: checking isOperableAndSolvable() ?
         for (auto& well : well_container_) {
-            well->calculateExplicitQuantities(simulator_, this->wellState(), deferred_logger);
+            well->calculateExplicitQuantities(simulator_, this->groupStateHelper(), deferred_logger);
         }
     }
 
@@ -1796,9 +1796,7 @@ namespace Opm {
                                        this->groupStateHelper(),
                                        local_deferredLogger);
             const bool under_zero_target =
-                well->wellUnderZeroGroupRateTarget(this->simulator_,
-                                                   this->wellState(),
-                                                   local_deferredLogger);
+                well->wellUnderZeroGroupRateTarget(this->groupStateHelper(), local_deferredLogger);
             well->updateWellTestState(this->wellState().well(wname),
                                       simulationTime,
                                       /*writeMessageToOPMLog=*/ true,
@@ -1976,7 +1974,7 @@ namespace Opm {
                 well->updateWellStateWithTarget(
                     simulator_, this->groupStateHelper(), this->wellState(), deferred_logger
                 );
-                well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
+                well->updatePrimaryVariables(this->groupStateHelper(), deferred_logger);
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
                 events.clearEvent(WellState<Scalar, IndexTraits>::event_mask);
@@ -2062,7 +2060,7 @@ namespace Opm {
     updatePrimaryVariables(DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
+            well->updatePrimaryVariables(this->groupStateHelper(), deferred_logger);
         }
     }
 

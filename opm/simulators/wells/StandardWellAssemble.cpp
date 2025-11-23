@@ -33,6 +33,7 @@
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -83,10 +84,7 @@ private:
 template<class FluidSystem, class Indices>
 void
 StandardWellAssemble<FluidSystem,Indices>::
-assembleControlEq(const WellState<Scalar, IndexTraits>& well_state,
-                  const GroupState<Scalar>& group_state,
-                  const Schedule& schedule,
-                  const SummaryState& summaryState,
+assembleControlEq(const GroupStateHelperType& groupStateHelper,
                   const Well::InjectionControls& inj_controls,
                   const Well::ProductionControls& prod_controls,
                   const PrimaryVariables& primary_variables,
@@ -95,6 +93,9 @@ assembleControlEq(const WellState<Scalar, IndexTraits>& well_state,
                   const bool stopped_or_zero_target,
                   DeferredLogger& deferred_logger) const
 {
+    const auto& well_state = groupStateHelper.wellState();
+    const auto& summary_state = groupStateHelper.summaryState();
+
     static constexpr int Water = FluidSystem::waterPhaseIdx;
     static constexpr int Oil = FluidSystem::oilPhaseIdx;
     static constexpr int Gas = FluidSystem::gasPhaseIdx;
@@ -130,16 +131,13 @@ assembleControlEq(const WellState<Scalar, IndexTraits>& well_state,
             return WellBhpThpCalculator(well_).calculateBhpFromThp(well_state,
                                                                    rates,
                                                                    well,
-                                                                   summaryState,
+                                                                   summary_state,
                                                                    rho,
                                                                    deferred_logger);
         };
 
         WellAssemble(well_).
-            assembleControlEqInj(well_state,
-                                 group_state,
-                                 schedule,
-                                 summaryState,
+            assembleControlEqInj(groupStateHelper,
                                  inj_controls,
                                  primary_variables.eval(PrimaryVariables::Bhp),
                                  injection_rate,
@@ -154,15 +152,12 @@ assembleControlEq(const WellState<Scalar, IndexTraits>& well_state,
             return WellBhpThpCalculator(well_).calculateBhpFromThp(well_state,
                                                                    rates,
                                                                    well,
-                                                                   summaryState,
+                                                                   summary_state,
                                                                    rho,
                                                                    deferred_logger);
         };
         WellAssemble(well_).
-            assembleControlEqProd(well_state,
-                                  group_state,
-                                  schedule,
-                                  summaryState,
+            assembleControlEqProd(groupStateHelper,
                                   prod_controls,
                                   primary_variables.eval(PrimaryVariables::Bhp),
                                   rates,
