@@ -152,62 +152,117 @@ BOOST_AUTO_TEST_CASE(G1)
     simulator->setTimeStepSize(43200);  // 12 hours
     simulator->model().newtonMethod().setIterationIndex(0);
     WellModel& well_model = simulator->problem().wellModel();
-    int report_step_idx = 0;
-    well_model.beginReportStep(report_step_idx);
-    well_model.beginTimeStep();
-    Opm::DeferredLogger deferred_logger;
-    well_model.calculateExplicitQuantities(deferred_logger);
-    well_model.prepareTimeStep(deferred_logger);
-    well_model.updateWellControls(deferred_logger);
-    const Opm::WellInterface<TypeTag>* well_ptr = &well_model.getWell("B-1H");
-    const StdWell *std_well = dynamic_cast<const StdWell *>(well_ptr);
+    
+    // we tests 3 different setups given in the .DATA file
+    // 1) No rate limit -> well should be limited by alq 
+    // 2) No alq is needed. ORAT limit -> oil_rate = oil_limit and gas_rate is scaled 
+    // 3) Alq is needed. ORAT limit -> oil_rate = oil_limit and gas_rate is scaled
+    // 4) Alq is needed. GRAT limit -> gas_rate = gas_limit and oil_rate is scaled
+    for (int report_step_idx = 0; report_step_idx < 4; report_step_idx++ ) {
 
-    const auto& schedule = simulator->vanguard().schedule();
-    auto wells_ecl = schedule.getWells(report_step_idx);
-    std::optional<std::size_t> idx;
-    int num_producers = 0;
-    for(std::size_t i = 0; i < wells_ecl.size(); ++i) {
-        const auto &well =  wells_ecl[i];
-        if (well.isProducer()) {
-            idx = i;
-            num_producers++;
+        well_model.beginReportStep(report_step_idx);
+        well_model.beginTimeStep();
+        Opm::DeferredLogger deferred_logger;
+        well_model.calculateExplicitQuantities(deferred_logger);
+        well_model.prepareTimeStep(deferred_logger);
+        well_model.updateWellControls(deferred_logger);
+        const Opm::WellInterface<TypeTag>* well_ptr = &well_model.getWell("B-1H");
+        const StdWell *std_well = dynamic_cast<const StdWell *>(well_ptr);
+        const auto& schedule = simulator->vanguard().schedule();
+        auto wells_ecl = schedule.getWells(report_step_idx);
+        std::optional<std::size_t> idx;
+        int num_producers = 0;
+        for(std::size_t i = 0; i < wells_ecl.size(); ++i) {
+            const auto &well =  wells_ecl[i];
+            if (well.isProducer()) {
+                idx = i;
+                num_producers++;
+            }
+        }
+        BOOST_CHECK_EQUAL( num_producers, 1);
+        const auto &well = wells_ecl[*idx];
+        BOOST_CHECK_EQUAL( well.name(), "B-1H");
+        const auto& summary_state = simulator->vanguard().summaryState();
+        WellState &well_state = well_model.wellState();
+        const auto &group_state = well_model.groupState();
+        GLiftEclWells ecl_well_map;
+        Opm::BlackoilWellModelGasLift<TypeTag>::
+            initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
+        const int iteration_idx = simulator->model().newtonMethod().numIterations();
+        const auto& comm = simulator->vanguard().grid().comm();
+        GasLiftGroupInfo group_info {
+            ecl_well_map,
+            schedule,
+            summary_state,
+            simulator->episodeIndex(),
+            iteration_idx,
+            deferred_logger,
+            well_state,
+            group_state,
+            comm,
+            /*glift_debug=*/false
+        };
+        GLiftSyncGroups sync_groups;
+        GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
+            deferred_logger, well_state, group_state, group_info, sync_groups,
+            comm, /*glift_debug=*/false
+        };
+        group_info.initialize();
+        const auto& controls = well.productionControls(summary_state);
+        auto state = glift.runOptimize(iteration_idx);
+        auto pot = well_state[well.name()].well_potentials;
+
+        const auto& glo = schedule.glo(report_step_idx);
+        const auto increment = glo.gaslift_increment();
+        const auto gl_well = glo.well(well.name());
+
+        // no well limit -> alq limited
+        if (report_step_idx == 0) {
+            BOOST_CHECK(state->alqIsLimited());
+            BOOST_CHECK(state->increase().has_value());
+            BOOST_CHECK(!state->gasIsLimited());
+            BOOST_CHECK(!state->oilIsLimited());
+            BOOST_CHECK_CLOSE(state->alq(), *gl_well.max_rate(), 1e-8);
+            BOOST_CHECK_CLOSE(state->oilRate(), pot[1], 1e-8);
+            BOOST_CHECK_CLOSE(state->gasRate(), pot[2], 1e-8);
+        }
+        // ORAT limit no alq needed
+        if (report_step_idx == 1) {
+            BOOST_CHECK(!state->alqIsLimited());
+            BOOST_CHECK(!state->gasIsLimited());
+            BOOST_CHECK(state->oilIsLimited());
+            // the oil rate is constraint by the oil target
+            BOOST_CHECK_CLOSE(state->oilRate(), controls.oil_rate, 1e-8);
+            // the gas rate is scaled by the oil target / oil potential
+            BOOST_CHECK_CLOSE(state->gasRate(), pot[2] * controls.oil_rate / pot[1], 1e-6);
+            BOOST_CHECK(!state->increase().has_value());
+            BOOST_CHECK_CLOSE(state->alq(), 0.0, 1e-8);
+        }   
+        // ORAT limit, alq needed
+        if (report_step_idx == 2) {
+            BOOST_CHECK(!state->alqIsLimited());
+            BOOST_CHECK(!state->gasIsLimited());
+            BOOST_CHECK(state->oilIsLimited());
+            // the oil rate is constraint by the oil target
+            BOOST_CHECK_CLOSE(state->oilRate(), controls.oil_rate, 1e-8);
+            // the gas rate is scaled by the oil target / oil potential
+            BOOST_CHECK_CLOSE(state->gasRate(), pot[2] * controls.oil_rate / pot[1], 1e-6);
+            BOOST_CHECK(state->increase().has_value());
+            // for this setup we needed one alq increment
+            BOOST_CHECK_CLOSE(state->alq(), increment*1, 1e-8);
+        }
+        // GRAT limit, alq needed
+        if (report_step_idx == 3) {
+            BOOST_CHECK(!state->alqIsLimited());
+            BOOST_CHECK(state->gasIsLimited());
+            BOOST_CHECK(!state->oilIsLimited());
+            // the gas rate is constraint by the gas target
+            BOOST_CHECK_CLOSE(state->gasRate(), controls.gas_rate, 1e-8);
+            // the oil rate is scaled by the gas target / gas potential
+            BOOST_CHECK_CLOSE(state->oilRate(), pot[1] * controls.gas_rate / pot[2], 1e-6);
+            BOOST_CHECK(state->increase().has_value());
+            // for this setup we needed five alq increment
+            BOOST_CHECK_CLOSE(state->alq(), increment*5, 1e-8);
         }
     }
-    BOOST_CHECK_EQUAL( num_producers, 1);
-    const auto &well = wells_ecl[*idx];
-    BOOST_CHECK_EQUAL( well.name(), "B-1H");
-    const auto& summary_state = simulator->vanguard().summaryState();
-    WellState &well_state = well_model.wellState();
-    const auto &group_state = well_model.groupState();
-    GLiftEclWells ecl_well_map;
-    Opm::BlackoilWellModelGasLift<TypeTag>::
-        initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
-    const int iteration_idx = simulator->model().newtonMethod().numIterations();
-    const auto& comm = simulator->vanguard().grid().comm();
-    GasLiftGroupInfo group_info {
-        ecl_well_map,
-        schedule,
-        summary_state,
-        simulator->episodeIndex(),
-        iteration_idx,
-        deferred_logger,
-        well_state,
-        group_state,
-        comm,
-        /*glift_debug=*/false
-    };
-    GLiftSyncGroups sync_groups;
-    GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
-        deferred_logger, well_state, group_state, group_info, sync_groups,
-        comm, /*glift_debug=*/false
-    };
-    group_info.initialize();
-    auto state = glift.runOptimize(iteration_idx);
-    BOOST_CHECK_CLOSE(state->oilRate(), 0.01736111111111111, 1e-8);
-    BOOST_CHECK_CLOSE(state->gasRate(), 1.6464, 1e-1);
-    BOOST_CHECK(state->oilIsLimited());
-    BOOST_CHECK(!state->gasIsLimited());
-    BOOST_CHECK(!state->alqIsLimited());
-    BOOST_CHECK_CLOSE(state->alq(), 0.0, 1e-8);
-    BOOST_CHECK(!state->increase().has_value());
 }
