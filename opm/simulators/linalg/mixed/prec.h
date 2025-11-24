@@ -66,11 +66,6 @@ void prec_dilu_factorize(prec_t *P, bsr_matrix *A);
  */
 void prec_ilu0_factorize(prec_t *P, bsr_matrix *A);
 
-
-//void prec_apply3(prec_t *P, double *x);
-//void prec_apply3c(prec_t *P, double *x);
-
-
 /**
  * @brief Preconditioner application in mixed-precision.
  *

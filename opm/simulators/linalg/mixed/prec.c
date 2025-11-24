@@ -450,43 +450,6 @@ inline void mat3_vecfms(double *y, const double *A, const double *x)
     for(int k=0;k<3;k++) y[k]-=z[k];
 }
 
-/*
-void prec_apply3(prec_t *restrict P, double *x)
-{
-    //bsr_matrix *LT = &(P->LT);
-    bsr_matrix const *L  = P->L;
-    bsr_matrix const *D  = P->D;
-    bsr_matrix const *U  = P->U;
-
-    int b=L->b;
-    int bb=b*b;
-
-    // Lower triangular solve assuming ones on diagonal
-    for(int i=0;i<L->ncols;i++)
-    {
-        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
-        {
-            int j=L->colidx[k];
-            mat3_vecfms(x+b*j,L->dbl+k*bb,x+b*i);
-        }
-    }
-
-    // Muliply by (inverse) diagonal matrix
-    for (int i=0;i<D->ncols;i++) mat3_vecmul(D->dbl+bb*i,x+b*i);
-
-    // Upper triangular solve assuming ones on diagonal
-    for(int i=U->ncols;i>0;i--)
-    {
-        for(int k=U->rowptr[i]-1;k>U->rowptr[i-1]-1;k--)
-        {
-            int j=U->colidx[k];
-            mat3_vecfms(x+b*(i-1),U->dbl+k*bb,x+b*j);
-        }
-    }
-}
-*/
-
-
 void prec_mapply3c(prec_t *restrict P, double *x)
 {
     bsr_matrix *L  = P->L;
@@ -649,21 +612,12 @@ void prec_dapply3c(prec_t *restrict P, double *x)
     }
 }
 
-
-
-
-
-
-
-
 void prec_downcast(prec_t *P)
 {
     bsr_downcast(P->L);
     bsr_downcast(P->D);
     bsr_downcast(P->U);
 }
-
-
 
 void prec_info(prec_t *P)
 {
