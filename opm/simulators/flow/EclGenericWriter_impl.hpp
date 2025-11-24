@@ -283,9 +283,7 @@ extractOutputTransAndNNC(const std::function<unsigned int(unsigned int)>& map)
 {
     if (collectOnIORank_.isIORank()) {
         auto cartMap = cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_));
-         std::cout<< "now we call computeTrans_(cartMap,  maybe with wrong map?) " << std::endl;
         computeTrans_(cartMap, map);
-          std::cout<< "now we call exportNncStructure_(cartMap,  maybe with wrong map?) " << std::endl;
         exportNncStructure_(cartMap, map);
     }
 
@@ -341,22 +339,25 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
         return std::binary_search(numAquCell.begin(), numAquCell.end(), cellIdx);
     };
 
-    // Change - temp - currentData().back()
+    // For CpGrid with LGRs, use grid_ leaf instead of euilGrid_ (in serial)
+    bool useGrid = (this->eclState_.getLgrs().size()>0) && (this->grid_.maxLevel()>0) && (this->grid_.comm().size() == 1);
+
     const auto leafView = this->grid_.leafGridView();
-    // Use level Cartesian Mapp...
-    const GlobElementMapper globalMapp { leafView, Dune::mcmgElementLayout() };
-    for (const auto& elem : Dune::elements(leafView)){//globalGridView)) {
-        for (const auto& is : Dune::intersections(leafView/*globalGridView*/, elem)) {
+    const GlobElementMapper leafElemMapper { leafView, Dune::mcmgElementLayout() };
+
+    const auto elements = useGrid? Dune::elements(leafView) : Dune::elements(globalGridView);
+    const auto elemMapp = useGrid? leafElemMapper : globalElemMapper;
+
+    for (const auto& elem : elements){
+        const auto intersections  = useGrid? Dune::intersections(leafView, elem) : Dune::intersections(globalGridView, elem);
+        for (const auto& is : intersections) {
             if (!is.neighbor())
                 continue; // intersection is on the domain boundary
 
             // Not 'const' because remapped if 'map' is non-null.
-            //  unsigned c1 = globalElemMapper.index(is.inside());
-            //   unsigned c2 = globalElemMapper.index(is.outside());
-
-             unsigned c1 = globalMapp.index(is.inside());
-            unsigned c2 = globalMapp.index(is.outside());
-
+            unsigned c1 = elemMapp.index(is.inside());
+            unsigned c2 = elemMapp.index(is.outside());
+            
             if (c1 > c2)
                 continue; // we only need to handle each connection once, thank you.
 
@@ -379,16 +380,11 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
 
             // Re-ordering in case of non-empty mapping between equilGrid to grid
             if (map) { //
-                std::cout<< "do we use the provided map?? " << std::endl;
                 c1 = map(c1); // equilGridToGrid map
                 c2 = map(c2);
             }
 
-            std::cout<<   tranx.template data<double>().size() << " transx size";
-            
-
             if (gc2 - gc1 == 1 && cartDims[0] > 1 ) {
-                std::cout<< "globalTrans() " << std::endl;
                 tranx.template data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
                 continue; // skip other if clauses as they are false, last one needs some computation
             }
@@ -500,22 +496,24 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive,
     // Cartesian index mapper for the serial I/O grid
     const auto& equilCartMapper = *equilCartMapper_;
 
-     const auto leafView = this->grid_.leafGridView();
-    // Use level Cartesian Mapp...
-    const GlobElementMapper globalMapp { leafView, Dune::mcmgElementLayout() };
-    
-    for (const auto& elem : elements(leafView)){//globalGridView)) {
-        for (const auto& is : intersections(leafView/*globalGridView*/, elem)) {
+    // For CpGrid with LGRs, use grid_ leaf instead of euilGrid_ (in serial)
+    bool useGrid = (this->eclState_.getLgrs().size()>0) && (this->grid_.maxLevel()>0) && (this->grid_.comm().size() == 1);
+
+    const auto leafView = this->grid_.leafGridView();
+    const GlobElementMapper leafElemMapper { leafView, Dune::mcmgElementLayout() };
+
+    const auto elements = useGrid? Dune::elements(leafView) : Dune::elements(globalGridView);
+    const auto elemMapp = useGrid? leafElemMapper : globalElemMapper;
+
+    for (const auto& elem : elements){
+        const auto intersections  = useGrid? Dune::intersections(leafView, elem) : Dune::intersections(globalGridView, elem);
+        for (const auto& is : intersections) {
             if (!is.neighbor())
                 continue; // intersection is on the domain boundary
 
             // Not 'const' because remapped if 'map' is non-null.
-            //  unsigned c1 = globalElemMapper.index(is.inside());
-            // unsigned c2 = globalElemMapper.index(is.outside());
-
-             // Not 'const' because remapped if 'map' is non-null.
-            unsigned c1 = globalMapp.index(is.inside());
-            unsigned c2 = globalMapp.index(is.outside());
+            unsigned c1 = elemMapp.index(is.inside());
+            unsigned c2 = elemMapp.index(is.outside());
 
             if (c1 > c2)
                 continue; // we only need to handle each connection once, thank you.

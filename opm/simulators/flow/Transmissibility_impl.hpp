@@ -557,7 +557,6 @@ update(bool global, const TransUpdateQuantities update_quantities,
     }
 
     if (!disableNNC) {
-          std::cout<< "do we reach this? use wrong globalToLocal " << std::endl;
         // For EDITNNC and EDITNNCR we warn only once
         // If transmissibility is used for load balancing this will be done
         // when computing the gobal transmissibilities and all warnings will
