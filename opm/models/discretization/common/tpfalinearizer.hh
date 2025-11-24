@@ -414,6 +414,9 @@ public:
     GlobalEqVector& residual()
     { return residual_; }
 
+    /*!
+     * \brief Print first 16 block elements of a vector.
+     */
     void printVector(GlobalEqVector &x, const char *name="x")
     {
         int count = 1;
@@ -431,11 +434,18 @@ public:
         printf("]\n");
     }
 
+    /*!
+     * \brief Print first 16 block elements of residual.
+     */
     void printResidual(const char *name="r")
     {
         printVector(residual_, name);
     }
 
+    /*!
+     * \brief Print sparsity pattern of the first 16 rows
+     *        of the jacobian block matrix
+     */
     void printSparsity(const char *name="s")
     {
         auto& A = jacobian_->istlMatrix();
@@ -462,6 +472,10 @@ public:
         printf("]\n");
     }
 
+    /*!
+     * \brief Print block elements of the first 6 rows of the
+     * j      acobian block matrix
+     */
     void printNonzeros(const char *name="d")
     {
         auto& A = jacobian_->istlMatrix();
@@ -490,12 +504,18 @@ public:
         printf("]\n");
     }
 
+    /*!
+     * \brief Print sparsity pattern and nonzeros of jacobian block matrix
+     */
     void printJacobian()
     {
         printSparsity();
         printNonzeros();
     }
 
+    /*!
+     * \brief Export blocks-sparse linear system.
+     */
     void exportSystem(int idx, char *tag, const char *path="export")
     {
         // export sparsity only once
@@ -518,6 +538,9 @@ public:
         exportVector(residual_,tag,name);
     }
 
+    /*!
+     * \brief Export block vector.
+     */
     void exportVector(GlobalEqVector &x, const char *tag="", const char *name="export/x")
     {
         // assume double precision and contiguous data
@@ -530,6 +553,9 @@ public:
         fclose(out);
     }
 
+    /*!
+     * \brief Export nonzero blocks of jacobian block-sparse matrix
+     */
     void exportNonzeros(const char *tag="", const char *path=".")
     {
         auto& A = jacobian_->istlMatrix();
@@ -545,6 +571,9 @@ public:
         fclose(out);
     }
 
+    /*!
+     * \brief Export sparsity pattern of jacobian block-sparse matrix
+     */
     void exportSparsity(const char *path=".")
     {
         //assemble csr graph
