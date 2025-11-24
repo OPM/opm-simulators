@@ -450,6 +450,7 @@ inline void mat3_vecfms(double *y, const double *A, const double *x)
     for(int k=0;k<3;k++) y[k]-=z[k];
 }
 
+/*
 void prec_apply3(prec_t *restrict P, double *x)
 {
     //bsr_matrix *LT = &(P->LT);
@@ -483,7 +484,7 @@ void prec_apply3(prec_t *restrict P, double *x)
         }
     }
 }
-
+*/
 
 
 void prec_mapply3c(prec_t *restrict P, double *x)
