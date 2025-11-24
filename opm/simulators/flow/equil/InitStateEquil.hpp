@@ -772,13 +772,6 @@ private:
                                const PressTable&       ptable,
                                PhaseSat&               psat);
 
-    template <class CellRange, class PressTable, class PhaseSat>
-    void equilibrateHorizontalVertical(const CellRange&        cells,
-                                       const EquilReg<Scalar>& eqreg,
-                                       const int               acc,
-                                       const PressTable&      ptable,
-                                       PhaseSat&              psat);
-
      template<class CellRange, class PressTable, class PhaseSat>
      void equilibrateTiltedFaultBlock(const CellRange& cells, 
                             const EquilReg<Scalar>& eqreg,
