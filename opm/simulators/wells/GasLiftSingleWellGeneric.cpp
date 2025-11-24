@@ -160,24 +160,26 @@ runOptimize(const int iteration_idx)
                 Scalar alq = state->alq();
                 if (this->debug)
                     logSuccess_(alq, iteration_idx);
-                this->well_state_.well(this->well_name_).alq_state.set(alq);
+                auto& ws = this->well_state_.well(this->well_name_);
+                ws.alq_state.set(alq);
                 const auto& pu = this->well_state_.phaseUsageInfo();
-
-                std::vector<Scalar> well_pot(pu.numActivePhases(), 0.0);
-                if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
-                    const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-                    well_pot[oil_pos] = state->oilRate();
+                const bool isThp = (ws.production_cmode == Well::ProducerCMode::THP);
+                if (isThp) {
+                    std::vector<Scalar> well_pot(pu.numActivePhases(), 0.0);
+                    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+                        const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+                        well_pot[oil_pos] = state->oilRate();
+                    }
+                    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+                        const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+                        well_pot[water_pos] = state->waterRate();
+                    }
+                    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+                        const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+                        well_pot[gas_pos] = state->gasRate();
+                    }
+                    ws.well_potentials = well_pot;
                 }
-                if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
-                    const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-                    well_pot[water_pos] = state->waterRate();
-                }
-                if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-                    const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-                    well_pot[gas_pos] = state->gasRate();
-                }
-
-                this->well_state_[this->well_name_].well_potentials = well_pot;
             }
         }
     }

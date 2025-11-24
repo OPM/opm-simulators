@@ -136,6 +136,10 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
         num_wells_changed = glift_wells.size();
     }
     num_wells_changed = simulator.vanguard().gridView().comm().sum(num_wells_changed);
+
+    if (num_wells_changed > 0) {
+        updateWellPotentials(simulator, well_container, node_pressures, wellState, deferred_logger);
+    }
     return num_wells_changed > 0;
 }
 
