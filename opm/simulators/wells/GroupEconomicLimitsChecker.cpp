@@ -381,9 +381,12 @@ closeWellsRecursive(const Group& group, int level)
             const std::string msg = fmt::format("\n{} Closing well {}", indent, well_name);
             this->message_ += msg;
 
-            this->well_test_state_.close_well(
-                well_name, WellTestConfig::Reason::GROUP, this->simulation_time_);
-            this->well_model_.updateClosedWellsThisStep(well_name);
+            // Only update the well_test_state_ on ranks that have the well in question.
+            if (well_model_.hasLocalWell(well_name)) {
+                this->well_test_state_.close_well(
+                    well_name, WellTestConfig::Reason::GROUP, this->simulation_time_);
+                this->well_model_.updateClosedWellsThisStep(well_name);
+            }
         }
     }
 
