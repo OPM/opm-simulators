@@ -1,5 +1,3 @@
-#define _POSIX_C_SOURCE 200809L // required for posix_memalgin in <stdlib.h>
-
 #include "bslv.h"
 #include "vec.h"
 
@@ -63,13 +61,13 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
     int np = 8*((n+7)/8); // padded to nearest multiple of 8
     for(int i=0;i<narrays;i++)
     {
-        posix_memalign((void**)&(mem->dtmp[i]),64,np*sizeof(double));
+        mem->dtmp[i] = aligned_alloc(64,np*sizeof(double));
         for(int k=8*(n/8);k<np;k++) mem->dtmp[i][k] = 0.0; //zeroing out padded section
     }
 
     mem->P = prec_alloc();
     prec_init(mem->P, A); // initialize structure of L,D,U components of P
-
+/*
     // random initialization of one-dimensinal shadow space
     //   - note we fix the random seed for reproducibility
     //   - also note that this done once at solver initialzation
@@ -86,7 +84,7 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
     norm=sqrt(norm);
     for(int i=0;i<n;i++) y[i]/=norm;
     //printf("RAND_MAX=%d\n",RAND_MAX);
-
+*/
 }
 
 double __attribute__((noinline)) vec_inner2(const double *a, const double *b, int n)

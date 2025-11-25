@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <assert.h>
 
 #include <immintrin.h>
 
@@ -146,7 +147,7 @@ void bsr_downcast(bsr_matrix *M)
     int nnz = M->nnz;
     int b = M->b;
 
-    if(M->flt==NULL) posix_memalign((void**)&(M->flt),64,b*b*nnz*sizeof(float));
+    assert(M->flt);
     for(int i=0;i<b*b*nnz;i++) M->flt[i]=M->dbl[i];
 }
 
