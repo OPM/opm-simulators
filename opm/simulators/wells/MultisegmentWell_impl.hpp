@@ -1397,6 +1397,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateIPRImplicit(const Simulator& simulator,
+                      const WellGroupHelperType& wgHelper,
                       WellStateType& well_state,
                       DeferredLogger& deferred_logger)
     {
@@ -1427,7 +1428,6 @@ namespace Opm
             return;
             */
         }
-        const auto& group_state  = simulator.problem().wellModel().groupState();
 
         std::fill(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), 0.);
         std::fill(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), 0.);
@@ -1441,7 +1441,7 @@ namespace Opm
         const auto cmode = ws.production_cmode;
         ws.production_cmode = Well::ProducerCMode::BHP;
         const double dt = simulator.timeStepSize();
-        assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
         BVectorWell rhs(this->numberOfSegments());
         rhs = 0.0;
@@ -1526,7 +1526,6 @@ namespace Opm
                              WellStateType& well_state,
                              DeferredLogger& deferred_logger)
     {
-        const auto& group_state = wgHelper.groupState();
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
@@ -1555,8 +1554,8 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls,
-                                           well_state, group_state, deferred_logger);
+            assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls,
+                                           well_state, deferred_logger);
 
             const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
             if (report.converged()) {
@@ -1651,9 +1650,9 @@ namespace Opm
                              WellStateType& well_state,
                              DeferredLogger& deferred_logger,
                              const bool fixed_control /*false*/,
-                             const bool fixed_status /*false*/)
+                             const bool fixed_status /*false*/,
+                             const bool solving_with_zero_rate /*false*/)
     {
-        const auto& group_state = wgHelper.groupState();
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
 
         {
@@ -1673,7 +1672,7 @@ namespace Opm
         bool converged = false;
         bool relax_convergence = false;
         this->regularize_ = false;
-        const auto& summary_state = simulator.vanguard().summaryState();
+        const auto& summary_state = wgHelper.summaryState();
 
         // Always take a few (more than one) iterations after a switch before allowing a new switch
         // The optimal number here is subject to further investigation, but it has been observerved
@@ -1704,7 +1703,8 @@ namespace Opm
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
                 bool changed = this->updateWellControlAndStatusLocalIteration(
                     simulator, wgHelper, inj_controls, prod_controls, wqTotal,
-                    well_state, deferred_logger, fixed_control, fixed_status
+                    well_state, deferred_logger, fixed_control, fixed_status,
+                    solving_with_zero_rate
                 );
                 if (changed) {
                     its_since_last_switch = 0;
@@ -1729,8 +1729,8 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls,
-                                           well_state, group_state, deferred_logger);
+            assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls,
+                                           well_state, deferred_logger, solving_with_zero_rate);
 
 
             const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
@@ -1822,14 +1822,16 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     assembleWellEqWithoutIteration(const Simulator& simulator,
+                                   const WellGroupHelperType& wgHelper,
                                    const double dt,
                                    const Well::InjectionControls& inj_controls,
                                    const Well::ProductionControls& prod_controls,
                                    WellStateType& well_state,
-                                   const GroupState<Scalar>& group_state,
-                                   DeferredLogger& deferred_logger)
+                                   DeferredLogger& deferred_logger,
+                                   const bool solving_with_zero_rate)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
+
 
         // update the upwinding segments
         this->segments_.updateUpwindingSegments(this->primary_variables_);
@@ -1975,6 +1977,14 @@ namespace Opm
                 const auto& summaryState = simulator.vanguard().summaryState();
                 const Schedule& schedule = simulator.vanguard().schedule();
                 const bool stopped_or_zero_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+                // When solving with zero rate (well isolation), use empty group_state to isolate
+                // from group constraints in assembly.
+                // Otherwise use real group state from wgHelper.
+                const GroupState<Scalar> empty_group_state;
+                const auto& group_state = solving_with_zero_rate
+                    ? empty_group_state
+                    : wgHelper.groupState();
+
                 MultisegmentWellAssemble(*this).
                         assembleControlEq(well_state,
                                         group_state,

@@ -1599,7 +1599,7 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         for (auto& well: well_container_) {
-            well->assembleWellEqWithoutIteration(simulator_, dt, this->wellState(), this->groupState(),
+            well->assembleWellEqWithoutIteration(simulator_, this->wgHelper(), dt, this->wellState(),
                                                  deferred_logger);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(deferred_logger, "BlackoilWellModel::assembleWellEqWithoutIteration failed: ",

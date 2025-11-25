@@ -137,6 +137,7 @@ namespace Opm {
                                          DeferredLogger& deferred_logger) override; // should be const?
 
         void updateIPRImplicit(const Simulator& simulator,
+                               const WellGroupHelperType& wgHelper,
                                WellStateType& well_state,
                                DeferredLogger& deferred_logger) override;
 
@@ -234,7 +235,7 @@ namespace Opm {
         void getTransMult(Value& trans_mult,
                           const Simulator& simulator,
                           const int cell_indx) const;
-        
+
         // get the mobility for specific perforation
         template<class Value>
         void getMobility(const Simulator& simulator,
@@ -287,15 +288,17 @@ namespace Opm {
                                         WellStateType& well_state,
                                         DeferredLogger& deferred_logger,
                                         const bool fixed_control = false,
-                                        const bool fixed_status = false) override;
+                                        const bool fixed_status = false,
+                                        const bool solving_with_zero_rate = false) override;
 
         void assembleWellEqWithoutIteration(const Simulator& simulator,
+                                            const WellGroupHelperType& wgHelper,
                                             const double dt,
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
                                             WellStateType& well_state,
-                                            const GroupState<Scalar>& group_state,
-                                            DeferredLogger& deferred_logger) override;
+                                            DeferredLogger& deferred_logger,
+                                            const bool solving_with_zero_rate = false) override;
 
         void updateWaterThroughput(const double dt, WellStateType& well_state) const override;
 

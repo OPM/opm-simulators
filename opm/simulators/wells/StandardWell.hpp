@@ -212,7 +212,8 @@ namespace Opm
                                         WellStateType& well_state,
                                         DeferredLogger& deferred_logger,
                                         const bool fixed_control = false,
-                                        const bool fixed_status = false) override;
+                                        const bool fixed_status = false,
+                                        const bool solving_with_zero_rate = false) override;
 
         /* returns BHP */
         Scalar computeWellRatesAndBhpWithThpAlqProd(const Simulator& ebos_simulator,
@@ -238,6 +239,7 @@ namespace Opm
                                         bool iterate_if_no_solution) const override;
 
         void updateIPRImplicit(const Simulator& simulator,
+                               const WellGroupHelperType& wgHelper,
                                WellStateType& well_state,
                                DeferredLogger& deferred_logger) override;
 
@@ -360,20 +362,22 @@ namespace Opm
                                                  DeferredLogger& deferred_logger) const;
 
         void assembleWellEqWithoutIteration(const Simulator& simulator,
+                                            const WellGroupHelperType& wgHelper,
                                             const double dt,
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
                                             WellStateType& well_state,
-                                            const GroupState<Scalar>& group_state,
-                                            DeferredLogger& deferred_logger) override;
+                                            DeferredLogger& deferred_logger,
+                                            const bool solving_with_zero_rate = false) override;
 
         void assembleWellEqWithoutIterationImpl(const Simulator& simulator,
+                                                const WellGroupHelperType& wgHelper,
                                                 const double dt,
                                                 const Well::InjectionControls& inj_controls,
                                                 const Well::ProductionControls& prod_controls,
                                                 WellStateType& well_state,
-                                                const GroupState<Scalar>& group_state,
-                                                DeferredLogger& deferred_logger);
+                                                DeferredLogger& deferred_logger,
+                                                const bool solving_with_zero_rate);
 
         void calculateSinglePerf(const Simulator& simulator,
                                  const int perf,
