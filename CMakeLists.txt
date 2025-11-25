@@ -756,11 +756,6 @@ if(HAVE_AVX2_EXTENSION)
 endif()
 
 # must link libraries after target 'opmsimulators' has been defined
-
-if(HAVE_AVX2_EXTENSIONS)
-  target_compile_options(opmsimulators
-    ${AVX2_FLAGS})
-endif()
 if(CUDA_FOUND)
   if (NOT USE_HIP)
     target_link_libraries(opmsimulators
