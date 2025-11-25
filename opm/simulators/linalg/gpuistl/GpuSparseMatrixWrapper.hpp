@@ -386,6 +386,10 @@ public:
         m_matrix->updateNonzeroValues(matrix.get());
     }
 
+    void resetMatrix()
+    {
+        m_matrix->resetMatrix();
+    }
 
     /**
      * @brief Dispatches a function based on the block size of the matrix.

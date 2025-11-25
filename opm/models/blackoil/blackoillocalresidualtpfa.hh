@@ -552,17 +552,17 @@ public:
         // FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).
-        // if constexpr (enableDiffusion) {
-        //     typename DiffusionModule::ExtensiveQuantities::EvaluationArray effectiveDiffusionCoefficient;
-        //     DiffusionModule::ExtensiveQuantities::update(effectiveDiffusionCoefficient, intQuantsIn, intQuantsEx);
-        //     const Scalar diffusivity = nbInfo.diffusivity;
-        //     const Scalar tmpdiffusivity = diffusivity / faceArea;
-        //     DiffusionModule::addDiffusiveFlux(flux,
-        //                                       intQuantsIn,
-        //                                       intQuantsEx,
-        //                                       tmpdiffusivity,
-        //                                       effectiveDiffusionCoefficient);
-        // }
+        if constexpr (enableDiffusion) {
+            typename DiffusionModule::ExtensiveQuantities::EvaluationArray effectiveDiffusionCoefficient;
+            DiffusionModule::ExtensiveQuantities::update(effectiveDiffusionCoefficient, intQuantsIn, intQuantsEx);
+            const Scalar diffusivity = nbInfo.diffusivity;
+            const Scalar tmpdiffusivity = diffusivity / faceArea;
+            DiffusionModule::addDiffusiveFlux(flux,
+                                              intQuantsIn,
+                                              intQuantsEx,
+                                              tmpdiffusivity,
+                                              effectiveDiffusionCoefficient);
+        }
 
         // deal with dispersion (if present). opm-models expects per area flux (added in the tmpdispersivity).
         // if constexpr (enableDispersion) {

@@ -185,6 +185,19 @@ GpuSparseMatrix<T>::updateNonzeroValues(const GpuSparseMatrix<T>& matrix)
     m_nonZeroElements.copyFromDeviceToDevice(matrix.getNonZeroValues());
 }
 
+template <class T>
+void
+GpuSparseMatrix<T>::resetMatrix()
+{
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (m_genericMatrixForBlockSize1) {
+        m_genericMatrixForBlockSize1->resetMatrix();
+        return;
+    }
+
+    cudaMemset(m_nonZeroElements.data(), 0, nonzeroes() * blockSize() * blockSize() * sizeof(T));
+}
+
 template <typename T>
 void
 GpuSparseMatrix<T>::setUpperTriangular()

@@ -334,6 +334,9 @@ public:
      */
      void updateNonzeroValues(const GpuSparseMatrix<T>& matrix);
 
+
+     void resetMatrix();
+
     /**
      * @brief Dispatches a function based on the block size of the matrix.
      *
