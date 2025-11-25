@@ -105,13 +105,13 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     double * restrict e = mem->e;
     const double *r0 = b;
     //const double * restrict r0  = mem->dtmp[0]; //access randomly initialized one-dimensional shadow space
-          double * restrict p_j = mem->dtmp[1];
-          double * restrict q_j = mem->dtmp[2];
-          double * restrict r_j = mem->dtmp[3];
-          double * restrict s_j = mem->dtmp[4];
-          double * restrict t_j = mem->dtmp[5];
-          double * restrict v_j = mem->dtmp[6];
-          double * restrict x_j = x;
+    double * restrict p_j = mem->dtmp[1];
+    double * restrict q_j = mem->dtmp[2];
+    double * restrict r_j = mem->dtmp[3];
+    double * restrict s_j = mem->dtmp[4];
+    double * restrict t_j = mem->dtmp[5];
+    double * restrict v_j = mem->dtmp[6];
+    double * restrict x_j = x;
 
     prec_t * restrict P = mem->P;
     mem->use_dilu ? prec_dilu_factorize(P,A) : prec_ilu0_factorize(P,A); // choose dilu or ilu0
@@ -177,13 +177,13 @@ int bslv_pbicgstab3d(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     double * restrict e = mem->e;
     const double *r0 = b;
     //const double * restrict r0  = mem->dtmp[0]; //access randomly initialized one-dimensional shadow space
-          double * restrict p_j = mem->dtmp[1];
-          double * restrict q_j = mem->dtmp[2];
-          double * restrict r_j = mem->dtmp[3];
-          double * restrict s_j = mem->dtmp[4];
-          double * restrict t_j = mem->dtmp[5];
-          double * restrict v_j = mem->dtmp[6];
-          double * restrict x_j = x;
+    double * restrict p_j = mem->dtmp[1];
+    double * restrict q_j = mem->dtmp[2];
+    double * restrict r_j = mem->dtmp[3];
+    double * restrict s_j = mem->dtmp[4];
+    double * restrict t_j = mem->dtmp[5];
+    double * restrict v_j = mem->dtmp[6];
+    double * restrict x_j = x;
 
     prec_t * restrict P = mem->P;
     mem->use_dilu ? prec_dilu_factorize(P,A) : prec_ilu0_factorize(P,A); // choose dilu or ilu0
