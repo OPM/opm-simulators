@@ -72,24 +72,6 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
 
     mem->P = prec_alloc();
     prec_init(mem->P, A); // initialize structure of L,D,U components of P
-/*
-    // random initialization of one-dimensinal shadow space
-    //   - note we fix the random seed for reproducibility
-    //   - also note that this done once at solver initialzation
-    srand(0);
-    double rmax=RAND_MAX;
-    double *y = mem->dtmp[0];
-    double norm=0;
-    for(int i=0;i<n;i++)
-    {
-        double x = rand()/rmax;// - 0.5;
-        y[i]=x;
-        norm+=x*x;
-    }
-    norm=sqrt(norm);
-    for(int i=0;i<n;i++) y[i]/=norm;
-    //printf("RAND_MAX=%d\n",RAND_MAX);
-*/
 }
 
 double __attribute__((noinline)) vec_inner2(const double *a, const double *b, int n)
