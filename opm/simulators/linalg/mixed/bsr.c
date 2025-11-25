@@ -13,6 +13,7 @@
 bsr_matrix* bsr_alloc()
 {
     bsr_matrix *A=malloc(sizeof(bsr_matrix));
+    assert(A);
     A->nrows = 0;
     A->ncols = 0;
     A->nnz   = 0;
@@ -50,6 +51,11 @@ void bsr_init(bsr_matrix *A, int nrows, int nnz, int b)
     A->colidx = malloc(nnz*sizeof(int));
     A->dbl    = malloc(b*b*nnz*sizeof(double));
     A->flt    = malloc(b*b*nnz*sizeof(float));
+
+    assert(A->rowptr);
+    assert(A->colidx);
+    assert(A->dbl);
+    assert(A->flt);
 }
 
 void bsr_info(bsr_matrix *A)

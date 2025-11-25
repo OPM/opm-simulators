@@ -1,6 +1,7 @@
 #include "prec.h"
 
 #include <stdio.h>
+#include <assert.h>
 #include <immintrin.h>
 
 #pragma GCC push_options
@@ -10,6 +11,7 @@
 prec_t *prec_alloc()
 {
     prec_t *P = malloc(sizeof(prec_t));
+    assert(P);
     P->L=bsr_alloc();
     P->D=bsr_alloc();
     P->U=bsr_alloc();
@@ -117,6 +119,7 @@ void prec_init(prec_t *P, bsr_matrix const *A)
     int count;
     count = prec_analyze(U,NULL);
     P->offsets = malloc(3*(count+1)*sizeof(int));
+    assert(P->offsets);
     count = prec_analyze(U,P->offsets);
     P->offsets[count][0]=U->nnz;
     P->noffsets=count;

@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #pragma GCC push_options
 #pragma GCC target("avx2")
@@ -11,6 +12,7 @@
 bslv_memory *bslv_alloc()
 {
     bslv_memory *mem = malloc(sizeof(bslv_memory));
+    assert(mem);
     mem->e    = NULL;
     mem->dtmp = NULL;
     return mem;
@@ -54,14 +56,17 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
     mem->n = n;
 
     mem->e = (double*) malloc(max_iter*sizeof(double));
+    assert(mem->e);
 
     int narrays=7;
     mem->dtmp = (double**) malloc(narrays*sizeof(double*));
+    assert(mem->dtmp);
 
     int np = 8*((n+7)/8); // padded to nearest multiple of 8
     for(int i=0;i<narrays;i++)
     {
         mem->dtmp[i] = aligned_alloc(64,np*sizeof(double));
+        assert(mem->dtmp[i]);
         for(int k=8*(n/8);k<np;k++) mem->dtmp[i][k] = 0.0; //zeroing out padded section
     }
 
