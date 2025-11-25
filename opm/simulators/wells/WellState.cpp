@@ -543,6 +543,7 @@ report(const int* globalCellIdxMap,
         const auto& well_potentials = ws.well_potentials;
         const auto& wpi = ws.productivity_index;
         const auto& wv = ws.surface_rates;
+        const auto frac_rate = ws.frac_rate;
         const auto& wname = this->name(well_index);
 
         auto dummyWell = data::Well{};
@@ -561,6 +562,7 @@ report(const int* globalCellIdxMap,
         if (pu.phaseIsActive(waterPhaseIdx)) {
             const int phase_pos = pu.canonicalToActivePhaseIdx(waterPhaseIdx);
             well.rates.set(rt::wat, wv[phase_pos]);
+            well.rates.set(rt::wat_frac, frac_rate);
             well.rates.set(rt::reservoir_water, reservoir_rates[phase_pos]);
             well.rates.set(rt::productivity_index_water, wpi[phase_pos]);
             well.rates.set(rt::well_potential_water, well_potentials[phase_pos]);
