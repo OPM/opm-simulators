@@ -38,9 +38,8 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.30.0)
 	set(_Boost_CONFIG_MODE CONFIG)
 endif()
 
-# Enable when available
-#include(CheckAVX2)
-#check_for_avx2()
+include(CheckAVX2)
+check_for_avx2()
 
 # dependencies
 set (opm-simulators_DEPS
