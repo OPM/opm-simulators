@@ -155,7 +155,7 @@ public:
     // to deal with changing matrix sizes and sparsity patterns.
     GpuSparseMatrixWrapper& operator=(const GpuSparseMatrixWrapper&) = delete;
 
-    ~GpuSparseMatrixWrapper() = default;
+    virtual ~GpuSparseMatrixWrapper() = default;
 
     GpuSparseMatrixWrapper() = default;
 
