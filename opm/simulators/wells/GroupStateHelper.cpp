@@ -1724,12 +1724,10 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
         bool included = false;
         if (is_production_group) {
             const auto ctrl = this->groupState().production_control(child_group);
-            included
-                = included || (ctrl == Group::ProductionCMode::FLD) || (ctrl == Group::ProductionCMode::NONE);
+            included = (ctrl == Group::ProductionCMode::FLD || ctrl == Group::ProductionCMode::NONE);
         } else {
             const auto ctrl = this->groupState().injection_control(child_group, injection_phase);
-            included
-                = included || (ctrl == Group::InjectionCMode::FLD) || (ctrl == Group::InjectionCMode::NONE);
+            included = (ctrl == Group::InjectionCMode::FLD || ctrl == Group::InjectionCMode::NONE);
         }
 
         if (included) {
@@ -1744,14 +1742,14 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
         bool included = false;
         const Well& well = this->schedule_.getWell(child_well, this->report_step_);
         if (is_production_group && well.isProducer()) {
-            included = included || this->wellState().isProductionGrup(child_well) || group.as_choke();
+            included = (this->wellState().isProductionGrup(child_well) || group.as_choke());
         } else if (!is_production_group && !well.isProducer()) {
             const auto& well_controls = well.injectionControls(this->summary_state_);
             auto injectorType = well_controls.injector_type;
             if ((injection_phase == Phase::WATER && injectorType == InjectorType::WATER)
                 || (injection_phase == Phase::OIL && injectorType == InjectorType::OIL)
                 || (injection_phase == Phase::GAS && injectorType == InjectorType::GAS)) {
-                included = included || this->wellState().isInjectionGrup(child_well);
+                included = this->wellState().isInjectionGrup(child_well);
             }
         }
         const auto ctrl1 = this->groupState().production_control(group.name());
