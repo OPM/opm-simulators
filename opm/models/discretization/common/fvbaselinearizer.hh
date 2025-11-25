@@ -189,7 +189,7 @@ public:
     }
 
     template <class SubDomainType>
-    void linearizeDomain(const SubDomainType& domain)
+    void linearizeDomain(const SubDomainType& domain, bool isNlddLocalSolve = false)
     {
         OPM_TIMEBLOCK(linearizeDomain);
         // we defer the initialization of the Jacobian matrix until here because the
@@ -200,12 +200,11 @@ public:
         }
 
         // Called here because it is no longer called from linearize_().
-        if (static_cast<std::size_t>(domain.view.size(0)) == model_().numTotalDof()) {
-            // We are on the full domain.
-            resetSystem_();
+        if (isNlddLocalSolve) {
+            resetSystem_(domain);
         }
         else {
-            resetSystem_(domain);
+            resetSystem_();
         }
 
         int succeeded;
