@@ -756,12 +756,16 @@ namespace Opm {
 
                 const auto& well_indices_fracture = well->wellIndexFracture();
 
+                const auto& perf_data = well_state.well(well->indexOfWell()).perf_data;
+
                 auto& filtrate_data = well_state.well(well->indexOfWell())
                     .perf_data.filtrate_data;
 
                 const auto nperf = well->numLocalPerfs();
 
                 assert(well_indices_fracture.size() == nperf);
+
+                double total_flow_fracture = 0.0;
 
                 for (auto perf = 0*nperf; perf < nperf; ++perf) {
                     const auto cell_idx = well->perforationData()[perf].cell_index;
@@ -788,9 +792,20 @@ namespace Opm {
                     assert(effective_well_index >= well_index_fracture);
 
                     // NB! this change the well state for this value
-                    filtrate_data.flow_factor[perf] = (effective_well_index - well_index_fracture)
+                    const auto con_fac =
+                        filtrate_data.flow_factor[perf] =
+                        (effective_well_index - well_index_fracture)
                          / effective_well_index;
+
+                    const int np = well_state.numPhases();
+
+                    const auto frac_fac = 1.0 - con_fac;
+
+                    total_flow_fracture += frac_fac * perf_data
+                        .phase_rates[perf*np + FluidSystem::waterPhaseIdx];
                 }
+
+                well_state.well(well->indexOfWell()).frac_rate = total_flow_fracture;
             }
 
             this->updateFiltrationModelsPostStep(dt, FluidSystem::waterPhaseIdx, local_deferredLogger);
