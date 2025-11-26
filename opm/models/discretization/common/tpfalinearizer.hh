@@ -996,10 +996,20 @@ private:
             // gpuJacobian_ = gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(jacobian_->istlMatrix());
 
             // Ensure we can have the domain  on the GPU.
+
+            auto prep_domain_start = std::chrono::high_resolution_clock::now();
             auto domain_buffer = copy_to_gpu(domain);
             auto domain_view = make_view(domain_buffer);
+            auto prep_domain_end = std::chrono::high_resolution_clock::now();
+            auto prep_domain_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_domain_end - prep_domain_start);
+            std::cout << "GPU domain prep time: " << prep_domain_duration.count() << " microseconds" << std::endl;
+            
+            auto prep_neighbor_start = std::chrono::high_resolution_clock::now();
             auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_, *gpuJacobian_, jacobian_->istlMatrix());
             auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
+            auto prep_neighbor_end = std::chrono::high_resolution_clock::now();
+            auto prep_neighbor_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_neighbor_end - prep_neighbor_start);
+            std::cout << "GPU neighborInfo prep time: " << prep_neighbor_duration.count() << " microseconds" << std::endl;
 
             using NeighborInfoGPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockGPU>;
 
@@ -1018,8 +1028,13 @@ private:
             // Take the residual_ and move it to the GPU
             // This requires going from doubles, to a blocked vector
             // This is done using a GpuBuffer which contains MiniVectors
+
+            auto prep_residual_start = std::chrono::high_resolution_clock::now();
             auto gpuResidualBuffer = gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual_);
             auto gpuResidualView = gpuistl::make_view(gpuResidualBuffer);
+            auto prep_residual_end = std::chrono::high_resolution_clock::now();
+            auto prep_residual_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_residual_end - prep_residual_start);
+            std::cout << "GPU residual prep time: " << prep_residual_duration.count() << " microseconds" << std::endl;
 
             using TrivialIQ = GetPropType<TypeTag, Properties::TrivialIntensiveQuantities>;
             TrivialIQ iq{};
@@ -1032,26 +1047,39 @@ private:
             using LocalResidualGPU = BlackOilLocalResidualTPFA<CorrectTypeTagView>;
 
             // test creating a FluidSystem that is suitable for GPU use
+            auto prep_fsys_start = std::chrono::high_resolution_clock::now();
             auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
             auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
             auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
+            auto prep_fsys_end = std::chrono::high_resolution_clock::now();
+            auto prep_fsys_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_fsys_end - prep_fsys_start);
+            std::cout << "GPU fluid system prep time: " << prep_fsys_duration.count() << " microseconds" << std::endl;
 
+            auto prep_volumes_start = std::chrono::high_resolution_clock::now();
             std::vector<double> volumes(numCells);
             for (unsigned i = 0; i < numCells; ++i) {
                 volumes[domain.cells[i]] = model_().dofTotalVolume(domain.cells[i]);
             }
             auto gpuVolumesBuffer = gpuistl::GpuBuffer<double>(volumes);
             auto gpuVolumesView = gpuistl::make_view(gpuVolumesBuffer);
+            auto prep_volumes_end = std::chrono::high_resolution_clock::now();
+            auto prep_volumes_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_volumes_end - prep_volumes_start);
+            std::cout << "GPU volumes prep time: " << prep_volumes_duration.count() << " microseconds" << std::endl;
+
 
             // We need to have a pointer to the fluidysystem that can be used inside a GPU kernel
             // Having a pointer to the view is not good enough as the view exists on the host, so
             // allocat a view on the GPU with a pointer to it via the make_gpu_shared_ptr function
             auto dynamicGpuFluidSystemPtr = gpuistl::make_gpu_shared_ptr(dynamicGpuFluidSystemView);
 
+            auto prep_model_start = std::chrono::high_resolution_clock::now();
             using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
             GpuModel gpuModel(model_().allIntensiveQuantities0(), model_().allIntensiveQuantities1(), problem_().moduleParams());
             auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
             auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
+            auto prep_model_end = std::chrono::high_resolution_clock::now();
+            auto prep_model_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_model_end - prep_model_start);
+            std::cout << "GPU model prep time: " << prep_model_duration.count() << " microseconds" << std::endl;
 
             // Copy boundary info to GPU
             gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
@@ -1110,6 +1138,24 @@ private:
             std::cout << "GPU post time: " << gpu_finalize_duration.count() << " microseconds" << std::endl;
 
             // To make the comparison fair this has to use the same simplified objects
+
+            int requested_threads = 16;
+            int actual_threads = 0;
+
+            #pragma omp parallel num_threads(requested_threads)
+            {
+                #pragma omp single
+                {
+                    actual_threads = omp_get_num_threads();
+                }
+            }
+
+            if (actual_threads != requested_threads) {
+                std::cout << "Warning: Got " << actual_threads << " threads instead of " 
+                        << requested_threads << std::endl;
+                std::cout << "max available threads: " << omp_get_max_threads() << std::endl;
+            }
+
             auto start_cpu = std::chrono::high_resolution_clock::now();
             linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
                 dispersionActive,
@@ -1780,9 +1826,16 @@ private:
         const GpuBoundaryInfoView& GPU_LOCAL_boundaryInfo,
         double locDT)
     {
+
         // Get the index of the cell
-#pragma omp parallel for
+#pragma omp parallel for num_threads(16)
         for (int ii = 0; ii < numCells; ++ii) {
+            // Assert that we're running with exactly 16 threads
+            #ifdef _OPENMP
+                        assert(omp_get_num_threads() == 16 && "Expected exactly 16 OpenMP threads");
+            #else
+                        assert(false && "Expected OpenMP to be enabled with 16 threads");
+            #endif
             const unsigned globI = GPU_LOCAL_domain.cells[ii];
             const auto& nbInfos = GPU_LOCAL_neighborInfo[globI];
             VectorBlockType res(0.0);
