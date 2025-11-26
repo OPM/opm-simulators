@@ -1085,25 +1085,29 @@ private:
             //         gpuModelView);
             // }
 
-            // // Now move the gpu residual into the cpu residual
-            // auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
-            // std::memcpy(residual_.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
-            // {
-            //     auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
-            //     auto& cpuJacobian = jacobian_->istlMatrix();
-                
-            //     // Copy GPU jacobian back to CPU jacobian as a single contiguous operation
-            //     const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
-            //     std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(), 
-            //                totalMatrixSize * sizeof(double));
-            // }
-
             hipDeviceSynchronize();
             auto end_gpu = std::chrono::high_resolution_clock::now();
             auto gpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu);
-            std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
             auto gpu_prep_duration = std::chrono::duration_cast<std::chrono::microseconds>(start_gpu - enter_function);
-            std::cout << "GPU prep time: " << gpu_prep_duration.count() << " microseconds" << std::endl;
+            std::cout << "GPU pre time: " << gpu_prep_duration.count() << " microseconds" << std::endl;
+            std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
+            
+            auto gpu_finalize_start = std::chrono::high_resolution_clock::now();
+            // Now move the gpu residual into the cpu residual
+            auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
+            std::memcpy(residual_.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
+            {
+                auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
+                auto& cpuJacobian = jacobian_->istlMatrix();
+                
+                // Copy GPU jacobian back to CPU jacobian as a single contiguous operation
+                const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
+                std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(), 
+                           totalMatrixSize * sizeof(double));
+            }
+            auto gpu_finalize_end = std::chrono::high_resolution_clock::now();
+            auto gpu_finalize_duration = std::chrono::duration_cast<std::chrono::microseconds>(gpu_finalize_end - gpu_finalize_start);
+            std::cout << "GPU post time: " << gpu_finalize_duration.count() << " microseconds" << std::endl;
 
             // To make the comparison fair this has to use the same simplified objects
             auto start_cpu = std::chrono::high_resolution_clock::now();
@@ -1123,150 +1127,150 @@ private:
             std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
 
             // Compare residuals
-            {
-                // Copy residual back from GPU to compare
-                auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
-                struct ResidualErrorInfo {
-                    double relativeError;
-                    double cpuVal, gpuVal;
-                    unsigned cell, eq;
-                };
+            // {
+            //     // Copy residual back from GPU to compare
+            //     auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
+            //     struct ResidualErrorInfo {
+            //         double relativeError;
+            //         double cpuVal, gpuVal;
+            //         unsigned cell, eq;
+            //     };
                 
-                std::vector<ResidualErrorInfo> errors;
+            //     std::vector<ResidualErrorInfo> errors;
                 
-                for (unsigned i = 0; i < numCells; ++i) {
-                    for (unsigned eq = 0; eq < numEq; ++eq) {
-                        double cpuVal = residual_[i][eq];
-                        double gpuVal = cpuResidualFromGpu[i][eq];
-                        double absError = std::abs(cpuVal - gpuVal);
-                        double relativeError = 0.0;
+            //     for (unsigned i = 0; i < numCells; ++i) {
+            //         for (unsigned eq = 0; eq < numEq; ++eq) {
+            //             double cpuVal = residual_[i][eq];
+            //             double gpuVal = cpuResidualFromGpu[i][eq];
+            //             double absError = std::abs(cpuVal - gpuVal);
+            //             double relativeError = 0.0;
                         
-                        // Calculate relative error avoiding division by zero
-                        relativeError = absError / std::abs(cpuVal);
+            //             // Calculate relative error avoiding division by zero
+            //             relativeError = absError / std::abs(cpuVal);
                         
-                        if (relativeError > 1e-14) {
-                            errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
-                        }
-                    }
-                }
+            //             if (relativeError > 1e-14) {
+            //                 errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
+            //             }
+            //         }
+            //     }
                 
-                // Sort by relative error (descending) and keep top 3
-                std::partial_sort(errors.begin(), 
-                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
-                                errors.end(),
-                                [](const ResidualErrorInfo& a, const ResidualErrorInfo& b) {
-                                    return a.relativeError > b.relativeError;
-                                });
+            //     // Sort by relative error (descending) and keep top 3
+            //     std::partial_sort(errors.begin(), 
+            //                     errors.begin() + std::min(3, static_cast<int>(errors.size())), 
+            //                     errors.end(),
+            //                     [](const ResidualErrorInfo& a, const ResidualErrorInfo& b) {
+            //                         return a.relativeError > b.relativeError;
+            //                     });
                 
-                // Output the 3 largest relative errors
-                int numToShow = std::min(3, static_cast<int>(errors.size()));
-                if (numToShow != 0) {
-                    printf("Top %d largest relative errors in residual:\n", numToShow);
-                    for (int i = 0; i < numToShow; ++i) {
-                        const auto& err = errors[i];
-                        printf("  %d: cell=%u, eq=%u, CPU=%e, GPU=%e, rel_error=%e\n",
-                            i+1, err.cell, err.eq, err.cpuVal, err.gpuVal, err.relativeError);
-                    }
-                }
-            }
+            //     // Output the 3 largest relative errors
+            //     int numToShow = std::min(3, static_cast<int>(errors.size()));
+            //     if (numToShow != 0) {
+            //         printf("Top %d largest relative errors in residual:\n", numToShow);
+            //         for (int i = 0; i < numToShow; ++i) {
+            //             const auto& err = errors[i];
+            //             printf("  %d: cell=%u, eq=%u, CPU=%e, GPU=%e, rel_error=%e\n",
+            //                 i+1, err.cell, err.eq, err.cpuVal, err.gpuVal, err.relativeError);
+            //         }
+            //     }
+            // }
 
-            {
-                // Compare jacobian entries and find 5 largest relative errors
-                auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
-                int gpuJacIdx = 0;
-                auto& cpuJacobian = jacobian_->istlMatrix();
+            // {
+            //     // Compare jacobian entries and find 5 largest relative errors
+            //     auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
+            //     int gpuJacIdx = 0;
+            //     auto& cpuJacobian = jacobian_->istlMatrix();
                 
-                struct JacobianErrorInfo {
-                    double relativeError;
-                    double cpuVal, gpuVal;
-                    int rowIdx, colIdx;
-                    int blockRow, blockCol;
-                };
+            //     struct JacobianErrorInfo {
+            //         double relativeError;
+            //         double cpuVal, gpuVal;
+            //         int rowIdx, colIdx;
+            //         int blockRow, blockCol;
+            //     };
                 
-                std::vector<JacobianErrorInfo> errors;
+            //     std::vector<JacobianErrorInfo> errors;
                 
-                for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
-                {
-                    int rowIdx = row.index();
-                    for (auto col = row->begin(); col != row->end(); ++col)
-                    {
-                        int colIdx = col.index();
-                        for (int brow = 0; brow < numEq; ++brow)
-                        {
-                            for (int bcol = 0; bcol < numEq; ++bcol)
-                            {
-                                double cpuVal = (*col)[brow][bcol];
-                                double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
-                                double absError = std::abs(cpuVal - gpuVal);
-                                double relativeError = 0.0;
+            //     for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
+            //     {
+            //         int rowIdx = row.index();
+            //         for (auto col = row->begin(); col != row->end(); ++col)
+            //         {
+            //             int colIdx = col.index();
+            //             for (int brow = 0; brow < numEq; ++brow)
+            //             {
+            //                 for (int bcol = 0; bcol < numEq; ++bcol)
+            //                 {
+            //                     double cpuVal = (*col)[brow][bcol];
+            //                     double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
+            //                     double absError = std::abs(cpuVal - gpuVal);
+            //                     double relativeError = 0.0;
                                 
-                                // Calculate relative error avoiding division by zero
-                                if (std::abs(cpuVal) > 1e-30) {
-                                    relativeError = absError / std::abs(cpuVal);
-                                }
+            //                     // Calculate relative error avoiding division by zero
+            //                     if (std::abs(cpuVal) > 1e-30) {
+            //                         relativeError = absError / std::abs(cpuVal);
+            //                     }
                                 
-                                if (relativeError > 1e-14) {
-                                    errors.push_back({relativeError, cpuVal, gpuVal, rowIdx, colIdx, brow, bcol});
-                                }
-                            }
-                        }
-                    }
-                }
+            //                     if (relativeError > 1e-14) {
+            //                         errors.push_back({relativeError, cpuVal, gpuVal, rowIdx, colIdx, brow, bcol});
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     }
                 
-                // Sort by relative error (descending) and keep top 3
-                std::partial_sort(errors.begin(), 
-                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
-                                errors.end(),
-                                [](const JacobianErrorInfo& a, const JacobianErrorInfo& b) {
-                                    return a.relativeError > b.relativeError;
-                                });
+            //     // Sort by relative error (descending) and keep top 3
+            //     std::partial_sort(errors.begin(), 
+            //                     errors.begin() + std::min(3, static_cast<int>(errors.size())), 
+            //                     errors.end(),
+            //                     [](const JacobianErrorInfo& a, const JacobianErrorInfo& b) {
+            //                         return a.relativeError > b.relativeError;
+            //                     });
                 
-                // Output the 3 largest relative errors with full block information
-                int numToShow = std::min(3, static_cast<int>(errors.size()));
-                if (numToShow != 0) {
-                    printf("Top %d largest relative errors in Jacobian:\n", numToShow);
-                    for (int i = 0; i < numToShow; ++i) {
-                        const auto& err = errors[i];
-                        printf("  %d: Block[%d,%d] element[%d,%d]: CPU=%e, GPU=%e, rel_error=%e\n",
-                            i+1, err.rowIdx, err.colIdx, err.blockRow, err.blockCol, 
-                            err.cpuVal, err.gpuVal, err.relativeError);
+            //     // Output the 3 largest relative errors with full block information
+            //     int numToShow = std::min(3, static_cast<int>(errors.size()));
+            //     if (numToShow != 0) {
+            //         printf("Top %d largest relative errors in Jacobian:\n", numToShow);
+            //         for (int i = 0; i < numToShow; ++i) {
+            //             const auto& err = errors[i];
+            //             printf("  %d: Block[%d,%d] element[%d,%d]: CPU=%e, GPU=%e, rel_error=%e\n",
+            //                 i+1, err.rowIdx, err.colIdx, err.blockRow, err.blockCol, 
+            //                 err.cpuVal, err.gpuVal, err.relativeError);
                         
-                        // Print the entire CPU block
-                        auto& cpuBlock = cpuJacobian[err.rowIdx][err.colIdx];
-                        printf("    CPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
-                        for (int br = 0; br < numEq; ++br) {
-                            printf("      ");
-                            for (int bc = 0; bc < numEq; ++bc) {
-                                printf("%12.5e ", cpuBlock[br][bc]);
-                            }
-                            printf("\n");
-                        }
+            //             // Print the entire CPU block
+            //             auto& cpuBlock = cpuJacobian[err.rowIdx][err.colIdx];
+            //             printf("    CPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
+            //             for (int br = 0; br < numEq; ++br) {
+            //                 printf("      ");
+            //                 for (int bc = 0; bc < numEq; ++bc) {
+            //                     printf("%12.5e ", cpuBlock[br][bc]);
+            //                 }
+            //                 printf("\n");
+            //             }
                         
-                        // Print the entire GPU block
-                        // Find the starting index for this block in gpuJacobianNonZeroes
-                        int blockStartIdx = 0;
-                        for (auto row = cpuJacobian.begin(); row.index() < err.rowIdx; ++row) {
-                            blockStartIdx += row->size() * numEq * numEq;
-                        }
-                        auto row = cpuJacobian.begin();
-                        while (row.index() < err.rowIdx) ++row;
-                        for (auto col = row->begin(); col.index() < err.colIdx; ++col) {
-                            blockStartIdx += numEq * numEq;
-                        }
+            //             // Print the entire GPU block
+            //             // Find the starting index for this block in gpuJacobianNonZeroes
+            //             int blockStartIdx = 0;
+            //             for (auto row = cpuJacobian.begin(); row.index() < err.rowIdx; ++row) {
+            //                 blockStartIdx += row->size() * numEq * numEq;
+            //             }
+            //             auto row = cpuJacobian.begin();
+            //             while (row.index() < err.rowIdx) ++row;
+            //             for (auto col = row->begin(); col.index() < err.colIdx; ++col) {
+            //                 blockStartIdx += numEq * numEq;
+            //             }
                         
-                        printf("    GPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
-                        for (int br = 0; br < numEq; ++br) {
-                            printf("      ");
-                            for (int bc = 0; bc < numEq; ++bc) {
-                                int idx = blockStartIdx + br * numEq + bc;
-                                printf("%12.5e ", gpuJacobianNonZeroes[idx]);
-                            }
-                            printf("\n");
-                        }
-                        printf("\n");
-                    }
-                }
-            }
+            //             printf("    GPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
+            //             for (int br = 0; br < numEq; ++br) {
+            //                 printf("      ");
+            //                 for (int bc = 0; bc < numEq; ++bc) {
+            //                     int idx = blockStartIdx + br * numEq + bc;
+            //                     printf("%12.5e ", gpuJacobianNonZeroes[idx]);
+            //                 }
+            //                 printf("\n");
+            //             }
+            //             printf("\n");
+            //         }
+            //     }
+            // }
 
             {
                 // TODO: optimize the source term thing, why do we go over every cell to ask (am I a source) when we typically have 0 to a few sources?
