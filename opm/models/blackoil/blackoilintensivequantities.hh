@@ -193,6 +193,8 @@ public:
         , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(other.rockInternalEnergy_
                                                                     , other.totalThermalConductivity_
                                                                     , other.rockFraction_)
+        , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(other.tortuosity_
+                                                                      , other.diffusionCoefficient_)
     {
     }
 

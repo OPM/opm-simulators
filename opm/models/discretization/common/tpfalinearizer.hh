@@ -1176,17 +1176,21 @@ private:
                 int gpuJacIdx = 0;
                 auto& cpuJacobian = jacobian_->istlMatrix();
                 
-                struct ErrorInfo {
+                struct JacobianErrorInfo {
                     double relativeError;
                     double cpuVal, gpuVal;
+                    int rowIdx, colIdx;
+                    int blockRow, blockCol;
                 };
                 
-                std::vector<ErrorInfo> errors;
+                std::vector<JacobianErrorInfo> errors;
                 
                 for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
                 {
+                    int rowIdx = row.index();
                     for (auto col = row->begin(); col != row->end(); ++col)
                     {
+                        int colIdx = col.index();
                         for (int brow = 0; brow < numEq; ++brow)
                         {
                             for (int bcol = 0; bcol < numEq; ++bcol)
@@ -1197,32 +1201,69 @@ private:
                                 double relativeError = 0.0;
                                 
                                 // Calculate relative error avoiding division by zero
-                                relativeError = absError / std::abs(cpuVal);
+                                if (std::abs(cpuVal) > 1e-30) {
+                                    relativeError = absError / std::abs(cpuVal);
+                                }
                                 
                                 if (relativeError > 1e-14) {
-                                    errors.push_back({relativeError, cpuVal, gpuVal});
+                                    errors.push_back({relativeError, cpuVal, gpuVal, rowIdx, colIdx, brow, bcol});
                                 }
                             }
                         }
                     }
                 }
                 
-                // Sort by relative error (descending) and keep top 5
+                // Sort by relative error (descending) and keep top 3
                 std::partial_sort(errors.begin(), 
                                 errors.begin() + std::min(3, static_cast<int>(errors.size())), 
                                 errors.end(),
-                                [](const ErrorInfo& a, const ErrorInfo& b) {
+                                [](const JacobianErrorInfo& a, const JacobianErrorInfo& b) {
                                     return a.relativeError > b.relativeError;
                                 });
                 
-                // Output the 5 largest relative errors
+                // Output the 3 largest relative errors with full block information
                 int numToShow = std::min(3, static_cast<int>(errors.size()));
                 if (numToShow != 0) {
                     printf("Top %d largest relative errors in Jacobian:\n", numToShow);
                     for (int i = 0; i < numToShow; ++i) {
                         const auto& err = errors[i];
-                        printf("  %d: CPU=%e, GPU=%e, rel_error=%e\n",
-                            i+1, err.cpuVal, err.gpuVal, err.relativeError);
+                        printf("  %d: Block[%d,%d] element[%d,%d]: CPU=%e, GPU=%e, rel_error=%e\n",
+                            i+1, err.rowIdx, err.colIdx, err.blockRow, err.blockCol, 
+                            err.cpuVal, err.gpuVal, err.relativeError);
+                        
+                        // Print the entire CPU block
+                        auto& cpuBlock = cpuJacobian[err.rowIdx][err.colIdx];
+                        printf("    CPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
+                        for (int br = 0; br < numEq; ++br) {
+                            printf("      ");
+                            for (int bc = 0; bc < numEq; ++bc) {
+                                printf("%12.5e ", cpuBlock[br][bc]);
+                            }
+                            printf("\n");
+                        }
+                        
+                        // Print the entire GPU block
+                        // Find the starting index for this block in gpuJacobianNonZeroes
+                        int blockStartIdx = 0;
+                        for (auto row = cpuJacobian.begin(); row.index() < err.rowIdx; ++row) {
+                            blockStartIdx += row->size() * numEq * numEq;
+                        }
+                        auto row = cpuJacobian.begin();
+                        while (row.index() < err.rowIdx) ++row;
+                        for (auto col = row->begin(); col.index() < err.colIdx; ++col) {
+                            blockStartIdx += numEq * numEq;
+                        }
+                        
+                        printf("    GPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
+                        for (int br = 0; br < numEq; ++br) {
+                            printf("      ");
+                            for (int bc = 0; bc < numEq; ++bc) {
+                                int idx = blockStartIdx + br * numEq + bc;
+                                printf("%12.5e ", gpuJacobianNonZeroes[idx]);
+                            }
+                            printf("\n");
+                        }
+                        printf("\n");
                     }
                 }
             }

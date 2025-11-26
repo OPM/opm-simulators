@@ -180,6 +180,25 @@ public:
         }
     }
 
+    template<class T>
+    OPM_HOST_DEVICE static void printValue(T v)
+    {
+        if constexpr (std::is_same_v<T, double>) {
+        #if OPM_IS_INSIDE_DEVICE_FUNCTION
+            printf("device: %e\n", v);
+        #else
+            printf("host  : %e\n", v);
+        #endif
+        }
+        else {
+        #if OPM_IS_INSIDE_DEVICE_FUNCTION
+            printf("device: %e %e %e %e\n", v.value(), v.derivative(0), v.derivative(1), v.derivative(2));
+        #else
+            printf("host  : %e %e %e %e\n", v.value(), v.derivative(0), v.derivative(1), v.derivative(2));
+        #endif
+        }
+    }
+
     template<class IntensiveQuantities,class EvaluationArray, class RateVectorT>
     OPM_HOST_DEVICE static void addDiffusiveFlux(RateVectorT& flux,
                                  const IntensiveQuantities& inIq,
@@ -437,6 +456,12 @@ public:
 
     BlackOilDiffusionIntensiveQuantities& operator=(BlackOilDiffusionIntensiveQuantities&&) noexcept = default;
 
+    BlackOilDiffusionIntensiveQuantities(const std::array<Evaluation, numPhases>& tortuosity,
+                                       const std::array<std::array<Evaluation, numComponents>, numPhases>& diffusionCoefficient)
+        : tortuosity_(tortuosity)
+        , diffusionCoefficient_(diffusionCoefficient)
+    {}
+
     BlackOilDiffusionIntensiveQuantities&
     operator=(const BlackOilDiffusionIntensiveQuantities& rhs)
     {
@@ -572,7 +597,8 @@ protected:
         }
     }
 
-private:
+// private:
+protected:
     std::array<Evaluation, numPhases> tortuosity_{};
     std::array<std::array<Evaluation, numComponents>, numPhases> diffusionCoefficient_{};
     std::array<Evaluation, numBioInWat> bioDiffCoefficient_{};
