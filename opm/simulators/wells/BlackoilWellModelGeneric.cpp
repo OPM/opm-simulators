@@ -844,9 +844,11 @@ updateEclWellsConstraints(const int              timeStepIdx,
                          (const auto wellIdx, const auto& well)
     {
         auto& ws = this->wellState().well(wellIdx);
+        if (ws.status == WellStatus::SHUT) {
+            ws.well_state_from_action = true;
+        }
         ws.updateStatus(well.getStatus());
         ws.update_type_and_targets(well, st);
-        ws.well_state_from_action = true;
     });
 }
 
