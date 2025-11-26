@@ -412,7 +412,8 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
            this->production_cmode == rhs.production_cmode &&
            this->alq_state == rhs.alq_state &&
            this->primaryvar == rhs.primaryvar &&
-           this->group_target == rhs.group_target;
+           this->group_target == rhs.group_target &&
+           this->well_state_from_action == rhs.well_state_from_action;
 }
 
 template class SingleWellState<double, BlackOilDefaultFluidSystemIndices>;

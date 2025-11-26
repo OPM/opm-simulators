@@ -856,6 +856,7 @@ updateEclWellsConstraints(const int              timeStepIdx,
         auto& ws = this->wellState().well(wellIdx);
         ws.updateStatus(well.getStatus());
         ws.update_type_and_targets(well, st);
+        ws.well_state_from_action = true;
     });
 }
 
