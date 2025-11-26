@@ -55,11 +55,13 @@ struct ToleranceMb { static constexpr Scalar value = 1e-7; };
 template<class Scalar>
 struct ToleranceMbRelaxed { static constexpr Scalar value = 1e-6; };
 
+//TODO change to a simpler number with fewer digits
+//converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water 
 template<class Scalar>
-struct ToleranceEnergyBalance { static constexpr Scalar value = 1e-7; };
+struct ToleranceEnergyBalance { static constexpr Scalar value = 1e-7*41.82; };
 
 template<class Scalar>
-struct ToleranceEnergyBalanceRelaxed { static constexpr Scalar value = 1e-6; };
+struct ToleranceEnergyBalanceRelaxed { static constexpr Scalar value = 1e-6*41.82; };
 
 template<class Scalar>
 struct ToleranceCnv { static constexpr Scalar value = 1e-2; };
@@ -68,10 +70,10 @@ template<class Scalar>
 struct ToleranceCnvRelaxed { static constexpr Scalar value = 1.0; };
 
 template<class Scalar>
-struct ToleranceCnvEnergy { static constexpr Scalar value = 1e-2; };
+struct ToleranceCnvEnergy { static constexpr Scalar value = 1e-2*41.82; };
 
 template<class Scalar>
-struct ToleranceCnvEnergyRelaxed { static constexpr Scalar value = 1.0; };
+struct ToleranceCnvEnergyRelaxed { static constexpr Scalar value = 1.0*41.82; };
 
 template<class Scalar>
 struct ToleranceWells { static constexpr Scalar value = 1e-4; };
