@@ -48,9 +48,9 @@ class FlowsContainer
     static constexpr auto oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
-    static constexpr auto gasCompIdx = FluidSystem::gasCompIdx;
-    static constexpr auto oilCompIdx = FluidSystem::oilCompIdx;
-    static constexpr auto waterCompIdx = FluidSystem::waterCompIdx;
+//    static constexpr auto gasCompIdx = FluidSystem::gasCompIdx;
+//    static constexpr auto oilCompIdx = FluidSystem::oilCompIdx;
+//    static constexpr auto waterCompIdx = FluidSystem::waterCompIdx;
 
 public:
     FlowsContainer(const Schedule& schedule,
