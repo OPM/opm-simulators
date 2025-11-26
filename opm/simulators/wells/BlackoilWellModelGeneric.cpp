@@ -844,6 +844,9 @@ updateEclWellsConstraints(const int              timeStepIdx,
                          (const auto wellIdx, const auto& well)
     {
         auto& ws = this->wellState().well(wellIdx);
+        // whether the well was SHUT before applying the action
+        ws.was_shut_before_action_applied = (ws.status == WellStatus::SHUT);
+
         ws.updateStatus(well.getStatus());
         ws.update_type_and_targets(well, st);
     });
