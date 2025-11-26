@@ -39,6 +39,8 @@
 #include <opm/models/io/vtkblackoilenergymodule.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
+
+
 #include <cassert>
 #include <cmath>
 #include <istream>
@@ -151,17 +153,30 @@ public:
     }
 
     // must be called after water storage is computed
-    template <class LhsEval>
-    static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
+    template <class LhsEval, class StorageType>
+    OPM_HOST_DEVICE static void addStorage(StorageType& storage,
                            const IntensiveQuantities& intQuants)
     {
         if constexpr (enableEnergy) {
+
+            // TODO: this can be made cleaner by centralizing this logic in the getter
+            FluidSystem* fsysptr;
+            bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+
+            if constexpr (usesStaticFluidSystem)
+            {
+                static FluidSystem instance;
+                fsysptr = &instance;
+            } else {
+                fsysptr = intQuants.getFluidSystem();
+            }
+
             const auto& poro = decay<LhsEval>(intQuants.porosity());
 
             // accumulate the internal energy of the fluids
             const auto& fs = intQuants.fluidState();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                if (!fsysptr->phaseIsActive(phaseIdx)) {
                     continue;
                 }
 
@@ -174,13 +189,13 @@ public:
 
             // add the internal energy of the rock
             const Scalar rockFraction = intQuants.rockFraction();
-            const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
+            const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy()); // this causes issues
             storage[contiEnergyEqIdx] += rockFraction * uRock;
             storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
     }
 
-    static void computeFlux([[maybe_unused]] RateVector& flux,
+    OPM_HOST_DEVICE static void computeFlux([[maybe_unused]] RateVector& flux,
                             [[maybe_unused]] const ElementContext& elemCtx,
                             [[maybe_unused]] unsigned scvfIdx,
                             [[maybe_unused]] unsigned timeIdx)
@@ -210,7 +225,8 @@ public:
         }
     }
 
-    static void addHeatFlux(RateVector& flux,
+    template<class RateVectorT>
+    OPM_HOST_DEVICE static void addHeatFlux(RateVectorT& flux,
                             const Evaluation& heatFlux)
     {
         if constexpr (enableEnergy) {
@@ -222,6 +238,19 @@ public:
 
     template <class UpEval, class Eval, class FluidState>
     static void addPhaseEnthalpyFluxes_(RateVector& flux,
+                                        unsigned phaseIdx,
+                                        const Eval& volumeFlux,
+                                        const FluidState& upFs)
+    {
+        flux[contiEnergyEqIdx] +=
+            decay<UpEval>(upFs.enthalpy(phaseIdx)) *
+            decay<UpEval>(upFs.density(phaseIdx)) *
+            volumeFlux;
+    }
+
+    // more generic copy for gpu stuff
+    template <class UpEval, class RateVectorT, class Eval, class FluidState>
+    OPM_HOST_DEVICE static void addPhaseEnthalpyFluxes_(RateVectorT& flux,
                                         unsigned phaseIdx,
                                         const Eval& volumeFlux,
                                         const FluidState& upFs)
@@ -359,6 +388,17 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThe
     static constexpr int temperatureIdx = Indices::temperatureIdx;
 
 public:
+    BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThermal>(Evaluation rockInternalEnergy,
+                                                                                 Evaluation totalThermalConductivity,
+                                                                                 Scalar rockFraction)
+        : rockInternalEnergy_(rockInternalEnergy)
+        , totalThermalConductivity_(totalThermalConductivity)
+        , rockFraction_(rockFraction)
+    {
+    }
+
+    BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThermal>() = default;
+
     /*!
      * \brief Update the temperature of the intensive quantity's fluid state
      *
@@ -430,13 +470,14 @@ public:
         rockFraction_ = problem.rockFraction(globalSpaceIdx, timeIdx);
     }
 
-    const Evaluation& rockInternalEnergy() const
+    OPM_HOST_DEVICE const Evaluation& rockInternalEnergy() const
     { return rockInternalEnergy_; }
 
-    const Evaluation& totalThermalConductivity() const
+    OPM_HOST_DEVICE const Evaluation& totalThermalConductivity() const
     { return totalThermalConductivity_; }
 
-    Scalar rockFraction() const
+    // Does this value get transferred correctly when called from a gpukernel?
+    OPM_HOST_DEVICE Scalar rockFraction() const
     { return rockFraction_; }
 
 protected:
@@ -577,7 +618,7 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::FullyImplicitThe
 
 public:
     template<class FluidState>
-    static void updateEnergy(Evaluation& energyFlux,
+    OPM_HOST_DEVICE static void updateEnergy(Evaluation& energyFlux,
                              const unsigned& focusDofIndex,
                              const unsigned& inIdx,
                              const unsigned& exIdx,

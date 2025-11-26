@@ -78,6 +78,9 @@ struct ThermalConductionLawParams { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct FluidSystem { using type = UndefinedProperty; };
 
+template<class TypeTag, class MyTypeTag>
+struct FluidSystemGPU { using type = UndefinedProperty; };
+
 //! Specifies the relation used for velocity
 template<class TypeTag, class MyTypeTag>
 struct FluxModule { using type = UndefinedProperty; };

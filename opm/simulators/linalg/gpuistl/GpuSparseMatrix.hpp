@@ -25,6 +25,7 @@
 #include <type_traits>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
@@ -333,6 +334,8 @@ public:
      */
      void updateNonzeroValues(const GpuSparseMatrix<T>& matrix);
 
+
+     void resetMatrix();
 
     /**
      * @brief Dispatches a function based on the block size of the matrix.

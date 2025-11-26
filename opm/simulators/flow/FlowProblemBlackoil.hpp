@@ -614,7 +614,6 @@ public:
         const auto& source = this->simulator().vanguard().schedule()[this->episodeIndex()].source();
         std::array<int,3> ijk;
         this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
-
         if (source.hasSource(ijk)) {
             const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
             static std::array<SourceComponent, 3> sc_map = {SourceComponent::WATER, SourceComponent::OIL, SourceComponent::GAS};

@@ -46,6 +46,12 @@ namespace TTag {
 struct FvBaseDiscretization
 { using InheritsFrom = std::tuple<FvBaseNewtonMethod, ImplicitModel>; };
 
+template<class TypeTag, template<class> class Storage>
+struct to_gpu_type {};
+
+template<class TypeTag, template <class> class Storage>
+using to_gpu_type_t = typename to_gpu_type<TypeTag, Storage>::type;
+
 } // namespace TTag
 
 
@@ -92,6 +98,9 @@ struct DiscLocalResidual { using type = UndefinedProperty; };
 //! The type of the local residual function
 template<class TypeTag, class MyTypeTag>
 struct LocalResidual { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LocalResidualGPU { using type = UndefinedProperty; };
+
 //! The type of the local linearizer
 template<class TypeTag, class MyTypeTag>
 struct LocalLinearizer { using type = UndefinedProperty; };
@@ -131,6 +140,13 @@ struct PrimaryVariables { using type = UndefinedProperty; };
 //! The secondary variables within a sub-control volume
 template<class TypeTag, class MyTypeTag>
 struct IntensiveQuantities { using type = UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct TrivialIntensiveQuantities { using type = UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct GpuFIBlackOilModel { using type = UndefinedProperty; };
+
 //! The discretization specific part of the intensive quantities
 template<class TypeTag, class MyTypeTag>
 struct DiscIntensiveQuantities { using type = UndefinedProperty; };

@@ -592,7 +592,7 @@ endif()
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
 
-set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
+set(FLOW_MODELS blackoil brine energy gpu extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
                 oilwater_polymer_injectivity micp polymer solvent solvent_foam
                 gasoil_energy brine_saltprecipitation
@@ -604,13 +604,25 @@ set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 
 set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
-  add_library(flow_lib${OBJ} OBJECT flow/flow_${OBJ}.cpp)
+  # Select source extension: gpu uses HIP (*.hip) compiled with hipcc
+  if("${OBJ}" STREQUAL "gpu")
+    set(flow_src flow/flow_${OBJ}.hip)
+    if(NOT CMAKE_HIP_COMPILER)
+      enable_language(HIP)
+    endif()
+    set_source_files_properties(${flow_src} PROPERTIES LANGUAGE HIP)
+  else()
+    set(flow_src flow/flow_${OBJ}.cpp)
+  endif()
+
+  add_library(flow_lib${OBJ} OBJECT ${flow_src})
   list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
+
   if(TARGET fmt::fmt)
     target_link_libraries(flow_lib${OBJ} fmt::fmt)
   endif()
   if(TARGET opmcommon)
-      add_dependencies(flow_lib${OBJ} opmcommon)
+    add_dependencies(flow_lib${OBJ} opmcommon)
   endif()
   if(USE_TRACY_PROFILER AND Tracy_FOUND)
     target_link_libraries(flow_lib${OBJ} Tracy::TracyClient)
@@ -787,6 +799,7 @@ if(CUDA_FOUND)
                        cuVector_operations
                        GpuVector
                        GpuSparseMatrix
+                       GpuSparseTable
                        GpuSeqILU0
                        solver_adapter
                        GpuBuffer
