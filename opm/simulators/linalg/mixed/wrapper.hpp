@@ -1,3 +1,5 @@
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 
 #include "bsr.h"
 #include "bslv.h"
@@ -11,9 +13,17 @@ class MixedSolver : public InverseOperator<X,X>
 
     MixedSolver(const M &A, double tol, int maxiter, bool use_dilu)
     {
+        // verify that well contributions are added to the matrix
+        if (!Opm::Parameters::Get<Opm::Parameters::MatrixAddWellContributions>()) {
+        OPM_THROW(std::logic_error, "Well operators are currently not supported for mixed precision. "
+        "Use --matrix-add-well-contributions=true to add well contributions to the matrix instead.");}
+
         int nrows = A.N();
         int nnz   = A.nonzeroes();
         int b     = A[0][0].N();
+
+        // verify that block size is 3x3
+        if (b!=3) {OPM_THROW(std::logic_error, "Block sizes other than 3x3 are not supported by mixed precision.");}
 
         // create jacobian matrix object and allocate various arrays
         jacobian_ = bsr_alloc();
