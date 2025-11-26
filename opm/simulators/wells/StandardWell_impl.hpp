@@ -782,7 +782,7 @@ namespace Opm
             this->primary_variables_.updateNewtonPolyMW(dwells);
         }
 
-        this->primary_variables_.checkFinite(deferred_logger);
+        this->primary_variables_.checkFinite(deferred_logger, "Newton update");
     }
 
 
@@ -1871,7 +1871,7 @@ namespace Opm
             this->primary_variables_.updatePolyMW(well_state);
         }
 
-        this->primary_variables_.checkFinite(deferred_logger);
+        this->primary_variables_.checkFinite(deferred_logger, "updating from well state");
     }
 
 

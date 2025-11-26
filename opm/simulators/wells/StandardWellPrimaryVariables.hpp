@@ -27,6 +27,7 @@
 
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 
+#include <string_view>
 #include <vector>
 
 namespace Opm
@@ -118,7 +119,7 @@ public:
     void updateNewtonPolyMW(const BVectorWell& dwells);
 
     //! \brief Check that all values are finite.
-    void checkFinite(DeferredLogger& deferred_logger) const;
+    void checkFinite(DeferredLogger& deferred_logger, std::string_view context) const;
 
     //! \brief Copy values to well state.
     void copyToWellState(WellState<Scalar, IndexTraits>& well_state,

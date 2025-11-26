@@ -750,13 +750,16 @@ relaxationFactorFractionsProducer(const BVectorWell& dwells,
 
 template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
-checkFinite(DeferredLogger& deferred_logger) const
+checkFinite(DeferredLogger& deferred_logger, std::string_view context) const
 {
     for (const Scalar v : value_) {
-        if (!isfinite(v))
+        if (!isfinite(v)) {
+            const std::string msg =
+                    fmt::format("Non-finite primary variable for well {} after {}", well_.name(), context);
             OPM_DEFLOG_PROBLEM(NumericalProblem,
-                               "Infinite primary variable after update from wellState, well: " + well_.name(),
+                               msg,
                                deferred_logger);
+        }
     }
 }
 
