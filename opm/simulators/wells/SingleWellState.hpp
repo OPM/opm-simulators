@@ -86,6 +86,7 @@ public:
         serializer(primaryvar);
         serializer(alq_state);
         serializer(group_target);
+        serializer(well_state_from_action);
     }
 
     bool operator==(const SingleWellState&) const;
@@ -133,6 +134,7 @@ public:
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};
     std::vector<Scalar> primaryvar;
     ALQState<Scalar> alq_state;
+    bool well_state_from_action {false};
 
     /// Special purpose method to support dynamically rescaling a well's
     /// CTFs through WELPI.
