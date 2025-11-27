@@ -135,7 +135,7 @@ AdaptiveTimeStepping(double max_next_tstep,
 template<class TypeTag>
 bool
 AdaptiveTimeStepping<TypeTag>::
-operator==(const AdaptiveTimeStepping<TypeTag>& rhs)
+operator==(const AdaptiveTimeStepping<TypeTag>& rhs) const
 {
     if (this->time_step_control_type_ != rhs.time_step_control_type_ ||
         (this->time_step_control_ && !rhs.time_step_control_) ||

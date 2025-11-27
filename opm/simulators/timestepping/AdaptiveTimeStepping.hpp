@@ -199,7 +199,7 @@ public:
                          const SimulatorReport& full_report,
                          const bool terminalOutput = true);
 
-    bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs);
+    bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs) const;
 
     static void registerParameters();
     void setSuggestedNextStep(const double x);

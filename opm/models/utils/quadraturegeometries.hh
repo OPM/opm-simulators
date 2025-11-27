@@ -139,8 +139,6 @@ public:
      */
     Scalar cornerWeight(const LocalPosition& localPos, unsigned cornerIdx) const
     {
-        GlobalPosition globalPos(0.0);
-
         // this code is based on the Q1 finite element code from
         // dune-localfunctions
         Scalar weight = 1.0;
