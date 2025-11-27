@@ -1261,6 +1261,16 @@ if (HAVE_ECL_INPUT)
   )
 endif()
 
+if (HAVE_AVX2_EXTENSION)
+  list (APPEND PUBLIC_HEADER_FILES
+    opm/simulators/linalg/mixed/bslv.h
+    opm/simulators/linalg/mixed/bsr.h
+    opm/simulators/linalg/mixed/prec.h
+    opm/simulators/linalg/mixed/vec.h
+    opm/simulators/linalg/mixed/wrapper.hpp
+  )
+endif()
+
 if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/utils/DamarisKeywords.hpp
