@@ -113,9 +113,9 @@ public:
     static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool has_polymer = getPropValue<TypeTag, Properties::EnablePolymer>();
-    static constexpr bool has_energy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal;
-    static const bool has_temperature = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature
-    ;
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    static constexpr bool has_energy = energyModuleType == EnergyModules::FullyImplicitThermal;
+
     // flag for polymer molecular weight related
     static constexpr bool has_polymermw = getPropValue<TypeTag, Properties::EnablePolymerMW>();
     static constexpr bool has_foam = getPropValue<TypeTag, Properties::EnableFoam>();
@@ -129,8 +129,8 @@ public:
     // For the conversion between the surface volume rate and reservoir voidage rate
     using FluidState = BlackOilFluidState<Eval,
                                           FluidSystem,
-                                          has_temperature,
-                                          has_energy,
+                                          energyModuleType == EnergyModules::ConstantTemperature,
+                                          (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
                                           Indices::compositionSwitchIdx >= 0,
                                           has_watVapor,
                                           has_brine,
@@ -174,10 +174,11 @@ public:
                         DeferredLogger& deferred_logger);
 
     void assembleWellEqWithoutIteration(const Simulator& simulator,
+                                        const WellGroupHelperType& wgHelper,
                                         const double dt,
                                         WellStateType& well_state,
-                                        const GroupState<Scalar>& group_state,
-                                        DeferredLogger& deferred_logger);
+                                        DeferredLogger& deferred_logger,
+                                        const bool solving_with_zero_rate);
 
     // TODO: better name or further refactoring the function to make it more clear
     void prepareWellBeforeAssembling(const Simulator& simulator,
@@ -264,8 +265,9 @@ public:
                                                   const Scalar WQTotal,
                                                   WellStateType& well_state,
                                                   DeferredLogger& deferred_logger,
-                                                  const bool fixed_control = false,
-                                                  const bool fixed_status = false);
+                                                  const bool fixed_control,
+                                                  const bool fixed_status,
+                                                  const bool solving_with_zero_rate);
 
     virtual void updatePrimaryVariables(const Simulator& simulator,
                                         const WellStateType& well_state,
@@ -353,11 +355,6 @@ public:
         return connectionRates_;
     }
 
-    std::vector<Scalar> wellIndex(const int perf,
-                                  const IntensiveQuantities& intQuants,
-                                  const Scalar trans_mult,
-                                  const SingleWellStateType& ws) const;
-
     void updateConnectionDFactor(const Simulator& simulator,
                                  SingleWellStateType& ws) const;
 
@@ -371,8 +368,9 @@ public:
                                             const WellGroupHelperType& wgHelper,
                                             WellStateType& well_state,
                                             DeferredLogger& deferred_logger,
-                                            const bool fixed_control = false,
-                                            const bool fixed_status = false) = 0;
+                                            const bool fixed_control,
+                                            const bool fixed_status,
+                                            const bool solving_with_zero_rate) = 0;
 protected:
     // simulation parameters
     std::vector<RateVector> connectionRates_;
@@ -409,12 +407,13 @@ protected:
                            DeferredLogger& deferred_logger) const = 0;
 
     virtual void assembleWellEqWithoutIteration(const Simulator& simulator,
+                                                const WellGroupHelperType& wgHelper,
                                                 const double dt,
                                                 const WellInjectionControls& inj_controls,
                                                 const WellProductionControls& prod_controls,
                                                 WellStateType& well_state,
-                                                const GroupState<Scalar>& group_state,
-                                                DeferredLogger& deferred_logger) = 0;
+                                                DeferredLogger& deferred_logger,
+                                                const bool solving_with_zero_rate) = 0;
 
     // iterate well equations with the specified control until converged
     virtual bool iterateWellEqWithControl(const Simulator& simulator,
@@ -426,6 +425,7 @@ protected:
                                           DeferredLogger& deferred_logger) = 0;
 
     virtual void updateIPRImplicit(const Simulator& simulator,
+                                   const WellGroupHelperType& wgHelper,
                                    WellStateType& well_state,
                                    DeferredLogger& deferred_logger) = 0;
 
@@ -478,6 +478,21 @@ protected:
                                                                 DeferredLogger& deferred_logger);
 
     Eval getPerfCellPressure(const FluidState& fs) const;
+
+    // get the transmissibility multiplier for specific perforation
+    template<class Value, class Callback>
+    void getTransMult(Value& trans_mult,
+                      const Simulator& simulator,
+                      const int cell_idx,
+                      Callback& extendEval) const;
+
+    // get the well transmissibility for specific perforation
+    template<class Value>
+    void getTw(std::vector<Value>&         wi,
+               const int                   perf,
+               const IntensiveQuantities&  intQuants,
+               const Value&                trans_mult,
+               const SingleWellStateType&  ws) const;
 
     // get the mobility for specific perforation
     template<class Value, class Callback>

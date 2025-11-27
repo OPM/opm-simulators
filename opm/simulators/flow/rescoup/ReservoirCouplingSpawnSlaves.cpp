@@ -19,7 +19,7 @@
 
 #include <config.h>
 
-#include <opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp>
 
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
@@ -47,9 +47,10 @@ namespace Opm {
 // Public methods
 // ------------------
 
-ReservoirCouplingSpawnSlaves::
+template <class Scalar>
+ReservoirCouplingSpawnSlaves<Scalar>::
 ReservoirCouplingSpawnSlaves(
-    ReservoirCouplingMaster &master,
+    ReservoirCouplingMaster<Scalar> &master,
     const ReservoirCoupling::CouplingInfo &rescoup
 ) :
     master_{master},
@@ -58,8 +59,9 @@ ReservoirCouplingSpawnSlaves(
 {
 }
 
+template <class Scalar>
 void
-ReservoirCouplingSpawnSlaves::
+ReservoirCouplingSpawnSlaves<Scalar>::
 spawn()
 {
     // spawn the slave processes and get the simulation start date from the slaves,
@@ -70,8 +72,8 @@ spawn()
     this->sendSlaveNamesToSlaves_();
     this->createMasterGroupNameOrder_();
     this->createMasterGroupToSlaveNameMap_();
+    this->createSlaveNameToMasterGroupsMap_();
     this->sendMasterGroupNamesToSlaves_();
-    this->prepareTimeStepping_();
     this->logger_.info("Reservoir coupling slave processes was spawned successfully");
 }
 
@@ -80,8 +82,9 @@ spawn()
 // Private methods
 // ------------------
 
+template <class Scalar>
 void
-ReservoirCouplingSpawnSlaves::
+ReservoirCouplingSpawnSlaves<Scalar>::
 createMasterGroupNameOrder_()
 {
     // When the slaves send master/slave group potentials to us, we need to know
@@ -115,8 +118,9 @@ createMasterGroupNameOrder_()
         this->master_.updateMasterGroupNameOrderMap(slave_name, master_group_map);
     }
 }
+template <class Scalar>
 void
-ReservoirCouplingSpawnSlaves::
+ReservoirCouplingSpawnSlaves<Scalar>::
 createMasterGroupToSlaveNameMap_()
 {
     // When the slaves send master/slave group potentials to us, we need to know
@@ -129,7 +133,27 @@ createMasterGroupToSlaveNameMap_()
     }
 }
 
-std::vector<char *> ReservoirCouplingSpawnSlaves::
+template <class Scalar>
+void
+ReservoirCouplingSpawnSlaves<Scalar>::
+createSlaveNameToMasterGroupsMap_()
+{
+    // Creates a map from slave name to master groups
+    // This is used by the master to send master group targets to the slaves
+    // NOTE: The order of the master groups in the vector is important,
+    //   as the slaves will communicate the indices of the master groups in
+    //   this vector instead of the group names.
+    auto& slave_name_to_master_groups = this->master_.getSlaveNameToMasterGroupsMap();
+    const auto& master_groups = this->rescoup_.masterGroups();
+    for (const auto& [group_name, master_group] : master_groups) {
+        slave_name_to_master_groups[master_group.slaveName()].push_back(group_name);
+    }
+    // Also build an index-based vector as an O(1) performance optimization
+    this->master_.rebuildSlaveIdxToMasterGroupsVector();
+}
+
+template <class Scalar>
+std::vector<char *> ReservoirCouplingSpawnSlaves<Scalar>::
 getSlaveArgv_(
     const std::filesystem::path &data_file,
     const std::string &slave_name,
@@ -168,39 +192,39 @@ getSlaveArgv_(
     return slave_argv;
 }
 
+template <class Scalar>
 std::pair<std::vector<char>, std::size_t>
-ReservoirCouplingSpawnSlaves::
-getMasterGroupNamesForSlave_(const std::string &slave_name) const
+ReservoirCouplingSpawnSlaves<Scalar>::
+getMasterGroupNamesForSlave_(std::size_t slave_idx) const
 {
     // For the given slave name, get all pairs of master group names and slave group names
     // Serialize the data such that it can be sent over MPI in one chunk
+    // NOTE: The order of the names in the vector is important, as the slaves will
+    //       use this order to establish an index mapping. Later, when sending group targets,
+    //       the master will send indices instead of group names for efficiency. See:
+    //       - ReservoirCouplingSpawnSlaves::createSlaveNameToMasterGroupsMap_() which creates
+    //          the index-based mapping
+    //       - ReservoirCouplingSlave::saveMasterGroupNamesAsMap_() which establishes the same mapping
+    //          on the slave side
+    //       - RescoupTargetCalculator::calculateMasterGroupTargetsAndSendToSlaves() which uses
+    //          the index-based mapping to send the group targets to the slaves
     auto master_groups = this->rescoup_.masterGroups();
     std::vector<std::string> data;
-    std::vector<std::string> master_group_names;
-    for (const auto& [group_name, master_group] : master_groups) {
-        if (master_group.slaveName() == slave_name) {
-            data.push_back(group_name);
-            data.push_back(master_group.slaveGroupName());
-        }
+    const auto& master_group_names = this->master_.getMasterGroupNamesForSlave(slave_idx);
+    for (std::size_t group_idx = 0; group_idx < master_group_names.size(); ++group_idx) {
+        const auto& group_name = master_group_names[group_idx];
+        data.push_back(group_name);
+        const auto& slave_group_name = master_groups[group_name].slaveGroupName();
+        data.push_back(slave_group_name);
     }
     assert(data.size() % 2 == 0);
     assert(data.size() > 0);
     return ReservoirCoupling::serializeStrings(data);
 }
 
+template <class Scalar>
 void
-ReservoirCouplingSpawnSlaves::
-prepareTimeStepping_()
-{
-    // Prepare the time stepping for the master process
-    // This is done after the slave processes have been spawned
-    // and the master group names have been sent to the slaves
-    auto num_slaves = this->master_.numSlavesStarted();
-    this->master_.resizeNextReportDates(num_slaves);
-}
-
-void
-ReservoirCouplingSpawnSlaves::
+ReservoirCouplingSpawnSlaves<Scalar>::
 receiveActivationDateFromSlaves_()
 {
     // Currently, we only use the activation date to check that no slave process
@@ -241,8 +265,9 @@ receiveActivationDateFromSlaves_()
     this->logger_.info("Broadcasted slave activation dates to all ranks");
 }
 
+template <class Scalar>
 void
-ReservoirCouplingSpawnSlaves::
+ReservoirCouplingSpawnSlaves<Scalar>::
 receiveSimulationStartDateFromSlaves_()
 {
     auto num_slaves = this->master_.numSlavesStarted();
@@ -277,15 +302,16 @@ receiveSimulationStartDateFromSlaves_()
     this->logger_.info("Broadcasted slave start dates to all ranks");
 }
 
+template <class Scalar>
 void
-ReservoirCouplingSpawnSlaves::
+ReservoirCouplingSpawnSlaves<Scalar>::
 sendMasterGroupNamesToSlaves_()
 {
     if (this->comm_.rank() == 0) {
         auto num_slaves = this->master_.numSlavesStarted();
-        for (unsigned int i = 0; i < num_slaves; i++) {
-            auto slave_name = this->master_.getSlaveName(i);
-            auto [group_names, size] = this->getMasterGroupNamesForSlave_(slave_name);
+        for (unsigned int slave_idx = 0; slave_idx < num_slaves; slave_idx++) {
+            auto slave_name = this->master_.getSlaveName(slave_idx);
+            auto [group_names, size] = this->getMasterGroupNamesForSlave_(slave_idx);
             static_assert(std::is_same_v<decltype(size), std::size_t>, "size must be of type std::size_t");
             auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
             // NOTE: See comment about error handling at the top of this file.
@@ -295,7 +321,7 @@ sendMasterGroupNamesToSlaves_()
                 /*datatype=*/MPI_SIZE_T_TYPE,
                 /*dest_rank=*/0,
                 /*tag=*/static_cast<int>(MessageTag::MasterGroupNamesSize),
-                this->master_.getSlaveComm(i)
+                this->master_.getSlaveComm(slave_idx)
             );
             MPI_Send(
                 group_names.data(),
@@ -303,7 +329,7 @@ sendMasterGroupNamesToSlaves_()
                 /*datatype=*/MPI_CHAR,
                 /*dest_rank=*/0,
                 /*tag=*/static_cast<int>(MessageTag::MasterGroupNames),
-                this->master_.getSlaveComm(i)
+                this->master_.getSlaveComm(slave_idx)
             );
             this->logger_.info(fmt::format(
                 "Sent master group names to slave process rank 0 with name: {}", slave_name)
@@ -312,8 +338,9 @@ sendMasterGroupNamesToSlaves_()
    }
 }
 
+template <class Scalar>
 void
-ReservoirCouplingSpawnSlaves::
+ReservoirCouplingSpawnSlaves<Scalar>::
 sendSlaveNamesToSlaves_()
 {
     if (this->comm_.rank() == 0) {
@@ -349,8 +376,9 @@ sendSlaveNamesToSlaves_()
 
 // NOTE: This functions is executed for all ranks, but only rank 0 will spawn
 //   the slave processes
+template <class Scalar>
 void
-ReservoirCouplingSpawnSlaves::
+ReservoirCouplingSpawnSlaves<Scalar>::
 spawnSlaveProcesses_()
 {
     char *flow_program_name = this->master_.getArgv(0);
@@ -406,5 +434,12 @@ spawnSlaveProcesses_()
         this->master_.addSlaveName(slave_name);
     }
 }
+
+// Explicit template instantiations
+template class ReservoirCouplingSpawnSlaves<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class ReservoirCouplingSpawnSlaves<float>;
+#endif
 
 }  // namespace Opm

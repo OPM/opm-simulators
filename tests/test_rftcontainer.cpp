@@ -981,10 +981,10 @@ BOOST_AUTO_TEST_CASE(Single_Split_Well)
     };
 
     // Well owned by rank 2, but intersected on all ranks.
-    const auto owner = 2;
+    constexpr int owner = 2;
     auto rftc = RFTContainer {
         cse.es, cse.sched,
-        [r = comm.rank(), owner](const std::string&) { return r == owner; },
+        [r = comm.rank()](const std::string&) { return r == owner; },
         [](const std::string&) { return true; }
     };
 
@@ -1431,11 +1431,11 @@ BOOST_AUTO_TEST_CASE(Single_Split_Well)
 
     // Well owned by rank 2, but intersected on ranks 0, 1, and 3.  Does
     // typically not happen in a real simulator run...
-    const auto owner = 2;
+    constexpr int owner = 2;
     auto rftc = RFTContainer {
         cse.es, cse.sched,
-        [r = comm.rank(), owner](const std::string&) { return r == owner; },
-        [r = comm.rank(), owner](const std::string&) { return r != owner; }
+        [r = comm.rank()](const std::string&) { return r == owner; },
+        [r = comm.rank()](const std::string&) { return r != owner; }
     };
 
     rftc.allocate(0);

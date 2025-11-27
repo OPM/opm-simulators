@@ -40,11 +40,15 @@ consistentlyFailingWells(const std::vector<StepReport>& sr, bool requireRepeated
 {
     // If there are wells that cause repeated failures, we
     // close them, and restart the un-chopped timestep.
+    std::set<std::string> failing_wells;
+
+    if (sr.empty()) {
+        return failing_wells;
+    }
+
     std::ostringstream msg;
     msg << "    Excessive chopping detected in report step "
         << sr.back().report_step << ", substep " << sr.back().current_step << "\n";
-
-    std::set<std::string> failing_wells;
 
     // return empty set if no report exists
     // well failures in assembly is not yet registred
@@ -110,8 +114,9 @@ void registerAdaptiveParameters()
          "'pid+iteration', "
          "'pid+newtoniteration', "
          "'iterationcount', "
-        "'newtoniterationcount' "
-        "and 'hardcoded'");
+         "'newtoniterationcount', "
+         "'general3rdorder' "
+         "and 'hardcoded'");
     Parameters::Register<Parameters::TimeStepControlTolerance>
         ("The tolerance used by the time step size control algorithm");
     Parameters::Register<Parameters::TimeStepControlTargetIterations>

@@ -43,9 +43,10 @@ template<unsigned numSolventsV,
          unsigned numExtbosV,
          unsigned numPolymersV,
          unsigned numEnergyV,
+         bool enableSequentialImplicitThermal,
          bool enableFoam,
          bool enableBrine,
-         unsigned PVOffset,
+         int PVOffset,
          unsigned disabledCanonicalCompIdx,
          unsigned numBioCompV>
 struct BlackOilTwoPhaseIndices
@@ -65,7 +66,7 @@ struct BlackOilTwoPhaseIndices
     static constexpr bool enablePolymer = numPolymersV > 0;
 
     //! Shall energy be conserved?
-    static constexpr bool enableEnergy = numEnergyV > 0;
+    static constexpr bool enableFullyImplicitThermal = numEnergyV > 0;
 
     //! MICP only available for one phase indices
     static constexpr bool enableMICP = false;
@@ -83,7 +84,7 @@ struct BlackOilTwoPhaseIndices
     static constexpr int numPolymers = enablePolymer ? numPolymersV : 0;
 
     //! Number of energy equations to be considered
-    static constexpr int numEnergy = enableEnergy ? numEnergyV : 0;
+    static constexpr int numEnergy = enableFullyImplicitThermal ? numEnergyV : 0;
 
     //! Number of foam equations to be considered
     static constexpr int numFoam = enableFoam? 1 : 0;
@@ -103,6 +104,9 @@ struct BlackOilTwoPhaseIndices
     //! The number of equations
     static constexpr int numEq = numPhases + numSolvents + numExtbos + numPolymers +
                                  numEnergy + numFoam + numBrine + numBioComp;
+
+    //! For seqential implicit approches we evaluate the intensive quantities with a larger number of derivatives than equations
+    static constexpr int numDerivatives = numEq + enableSequentialImplicitThermal;
 
     //////////////////////////////
     // Primary variable indices
@@ -173,7 +177,7 @@ struct BlackOilTwoPhaseIndices
 
     //! Index of the primary variable for temperature
     static constexpr int temperatureIdx  =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numBioComp + numFoam + numBrine : - 1000;
+        (enableSequentialImplicitThermal || enableFullyImplicitThermal) ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numBioComp + numFoam + numBrine : - 1000;
 
     //////////////////////
     // Equation indices
@@ -222,7 +226,7 @@ struct BlackOilTwoPhaseIndices
 
     //! Index of the continuity equation for energy
     static constexpr int contiEnergyEqIdx =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numBioComp + numFoam + numBrine: -1000;
+        enableFullyImplicitThermal ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numBioComp + numFoam + numBrine: -1000;
 };
 
 } // namespace Opm

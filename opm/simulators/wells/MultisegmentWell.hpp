@@ -137,6 +137,7 @@ namespace Opm {
                                          DeferredLogger& deferred_logger) override; // should be const?
 
         void updateIPRImplicit(const Simulator& simulator,
+                               const WellGroupHelperType& wgHelper,
                                WellStateType& well_state,
                                DeferredLogger& deferred_logger) override;
 
@@ -197,7 +198,7 @@ namespace Opm {
         template<class Value>
         void computePerfRate(const IntensiveQuantities& int_quants,
                              const std::vector<Value>& mob_perfcells,
-                             const std::vector<Scalar>& Tw,
+                             const std::vector<Value>& Tw,
                              const int seg,
                              const int perf,
                              const Value& segment_pressure,
@@ -213,7 +214,7 @@ namespace Opm {
                         const Value& rv,
                         const std::vector<Value>& b_perfcells,
                         const std::vector<Value>& mob_perfcells,
-                        const std::vector<Scalar>& Tw,
+                        const std::vector<Value>& Tw,
                         const int perf,
                         const Value& segment_pressure,
                         const Value& segment_density,
@@ -228,6 +229,12 @@ namespace Opm {
         // They will be treated implicitly, so they need to be of Evaluation type
         void computeSegmentFluidProperties(const Simulator& simulator,
                                            DeferredLogger& deferred_logger);
+
+        // get the transmissibility multiplier for specific perforation
+        template<class Value>
+        void getTransMult(Value& trans_mult,
+                          const Simulator& simulator,
+                          const int cell_indx) const;
 
         // get the mobility for specific perforation
         template<class Value>
@@ -280,16 +287,18 @@ namespace Opm {
                                         const WellGroupHelperType& wgHelper,
                                         WellStateType& well_state,
                                         DeferredLogger& deferred_logger,
-                                        const bool fixed_control = false,
-                                        const bool fixed_status = false) override;
+                                        const bool fixed_control,
+                                        const bool fixed_status,
+                                        const bool solving_with_zero_rate) override;
 
         void assembleWellEqWithoutIteration(const Simulator& simulator,
+                                            const WellGroupHelperType& wgHelper,
                                             const double dt,
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
                                             WellStateType& well_state,
-                                            const GroupState<Scalar>& group_state,
-                                            DeferredLogger& deferred_logger) override;
+                                            DeferredLogger& deferred_logger,
+                                            const bool solving_with_zero_rate) override;
 
         void updateWaterThroughput(const double dt, WellStateType& well_state) const override;
 

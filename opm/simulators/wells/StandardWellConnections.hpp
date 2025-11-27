@@ -27,6 +27,7 @@
 
 #include <array>
 #include <functional>
+#include <optional>
 #include <tuple>
 #include <variant>
 #include <vector>
@@ -152,8 +153,10 @@ private:
     std::vector<Scalar>
     calculatePerforationOutflow(const std::vector<Scalar>& perfComponentRates) const;
 
+    template <typename Ix>
     void initialiseConnectionMixture(const int                  num_comp,
                                      const int                  perf,
+                                     const std::optional<Ix>    preferredPhaseIdx,
                                      const std::vector<Scalar>& q_out_perf,
                                      const std::vector<Scalar>& currentMixture,
                                      std::vector<Scalar>&       previousMixture) const;

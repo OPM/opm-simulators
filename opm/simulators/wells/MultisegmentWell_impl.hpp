@@ -382,9 +382,12 @@ namespace Opm
                 // flux for each perforation
                 std::vector<Scalar> mob(this->num_conservation_quantities_, 0.);
                 getMobility(simulator, local_perf_index, mob, deferred_logger);
-                const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(intQuants, cell_idx);
+                Scalar trans_mult(0.0);
+                getTransMult(trans_mult, simulator, cell_idx);
                 const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const std::vector<Scalar> Tw = this->wellIndex(local_perf_index, intQuants, trans_mult, wellstate_nupcol);
+                std::vector<Scalar> Tw(this->num_conservation_quantities_,
+                                       this->well_index_[local_perf_index] * trans_mult);
+                this->getTw(Tw, local_perf_index, intQuants, trans_mult, wellstate_nupcol);
                 const Scalar seg_pressure = segment_pressure[seg];
                 std::vector<Scalar> cq_s(this->num_conservation_quantities_, 0.);
                 Scalar perf_press = 0.0;
@@ -590,7 +593,10 @@ namespace Opm
             );
         } else {
             converged = well_copy.iterateWellEqWithSwitching(
-                simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger
+                simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger,
+                /*fixed_control=*/false,
+                /*fixed_status=*/false,
+                /*solving_with_zero_rate=*/false
             );
         }
 
@@ -915,7 +921,7 @@ namespace Opm
                     const Value& rv,
                     const std::vector<Value>& b_perfcells,
                     const std::vector<Value>& mob_perfcells,
-                    const std::vector<Scalar>& Tw,
+                    const std::vector<Value>& Tw,
                     const int perf,
                     const Value& segment_pressure,
                     const Value& segment_density,
@@ -1056,7 +1062,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computePerfRate(const IntensiveQuantities& int_quants,
                     const std::vector<Value>& mob_perfcells,
-                    const std::vector<Scalar>& Tw,
+                    const std::vector<Value>& Tw,
                     const int seg,
                     const int perf,
                     const Value& segment_pressure,
@@ -1152,6 +1158,26 @@ namespace Opm
                                                saltConcentration,
                                                this->primary_variables_,
                                                deferred_logger);
+    }
+
+    template<typename TypeTag>
+    template<class Value>
+    void
+    MultisegmentWell<TypeTag>::
+    getTransMult(Value& trans_mult,
+                 const Simulator& simulator,
+                 const int cell_idx) const
+    {
+        auto obtain = [this](const Eval& value)
+                      {
+                          if constexpr (std::is_same_v<Value, Scalar>) {
+                              static_cast<void>(this); // suppress clang warning
+                              return getValue(value);
+                          } else {
+                              return this->extendEval(value);
+                          }
+                      };
+        WellInterface<TypeTag>::getTransMult(trans_mult, simulator, cell_idx, obtain);
     }
 
     template <typename TypeTag>
@@ -1327,9 +1353,11 @@ namespace Opm
                 }
 
                 // the well index associated with the connection
-                const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quantities, cell_idx);
+                Scalar trans_mult(0.0);
+                getTransMult(trans_mult, simulator, cell_idx);
                 const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const std::vector<Scalar> tw_perf = this->wellIndex(local_perf_index, int_quantities, trans_mult, wellstate_nupcol);
+                std::vector<Scalar> tw_perf(this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
+                this->getTw(tw_perf, local_perf_index, int_quantities, trans_mult, wellstate_nupcol);
                 std::vector<Scalar> ipr_a_perf(this->ipr_a_.size());
                 std::vector<Scalar> ipr_b_perf(this->ipr_b_.size());
                 for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
@@ -1372,6 +1400,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateIPRImplicit(const Simulator& simulator,
+                      const WellGroupHelperType& wgHelper,
                       WellStateType& well_state,
                       DeferredLogger& deferred_logger)
     {
@@ -1402,7 +1431,6 @@ namespace Opm
             return;
             */
         }
-        const auto& group_state  = simulator.problem().wellModel().groupState();
 
         std::fill(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), 0.);
         std::fill(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), 0.);
@@ -1416,7 +1444,8 @@ namespace Opm
         const auto cmode = ws.production_cmode;
         ws.production_cmode = Well::ProducerCMode::BHP;
         const double dt = simulator.timeStepSize();
-        assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls, well_state, deferred_logger,
+                                       /*solving_with_zero_rate=*/false);
 
         BVectorWell rhs(this->numberOfSegments());
         rhs = 0.0;
@@ -1501,7 +1530,6 @@ namespace Opm
                              WellStateType& well_state,
                              DeferredLogger& deferred_logger)
     {
-        const auto& group_state = wgHelper.groupState();
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
@@ -1530,8 +1558,9 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls,
-                                           well_state, group_state, deferred_logger);
+            assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls,
+                                           well_state, deferred_logger,
+                                           /*solving_with_zero_rate=*/false);
 
             const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
             if (report.converged()) {
@@ -1626,9 +1655,9 @@ namespace Opm
                              WellStateType& well_state,
                              DeferredLogger& deferred_logger,
                              const bool fixed_control /*false*/,
-                             const bool fixed_status /*false*/)
+                             const bool fixed_status /*false*/,
+                             const bool solving_with_zero_rate /*false*/)
     {
-        const auto& group_state = wgHelper.groupState();
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
 
         {
@@ -1648,7 +1677,7 @@ namespace Opm
         bool converged = false;
         bool relax_convergence = false;
         this->regularize_ = false;
-        const auto& summary_state = simulator.vanguard().summaryState();
+        const auto& summary_state = wgHelper.summaryState();
 
         // Always take a few (more than one) iterations after a switch before allowing a new switch
         // The optimal number here is subject to further investigation, but it has been observerved
@@ -1679,7 +1708,8 @@ namespace Opm
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
                 bool changed = this->updateWellControlAndStatusLocalIteration(
                     simulator, wgHelper, inj_controls, prod_controls, wqTotal,
-                    well_state, deferred_logger, fixed_control, fixed_status
+                    well_state, deferred_logger, fixed_control, fixed_status,
+                    solving_with_zero_rate
                 );
                 if (changed) {
                     its_since_last_switch = 0;
@@ -1704,8 +1734,8 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls,
-                                           well_state, group_state, deferred_logger);
+            assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls,
+                                           well_state, deferred_logger, solving_with_zero_rate);
 
 
             const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
@@ -1797,14 +1827,16 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     assembleWellEqWithoutIteration(const Simulator& simulator,
+                                   const WellGroupHelperType& wgHelper,
                                    const double dt,
                                    const Well::InjectionControls& inj_controls,
                                    const Well::ProductionControls& prod_controls,
                                    WellStateType& well_state,
-                                   const GroupState<Scalar>& group_state,
-                                   DeferredLogger& deferred_logger)
+                                   DeferredLogger& deferred_logger,
+                                   const bool solving_with_zero_rate)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
+
 
         // update the upwinding segments
         this->segments_.updateUpwindingSegments(this->primary_variables_);
@@ -1846,9 +1878,11 @@ namespace Opm
                 const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<EvalWell> mob(this->num_conservation_quantities_, 0.0);
                 getMobility(simulator, local_perf_index, mob, deferred_logger);
-                const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quants, cell_idx);
+                EvalWell trans_mult(0.0);
+                getTransMult(trans_mult, simulator, cell_idx);
                 const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const std::vector<Scalar> Tw = this->wellIndex(local_perf_index, int_quants, trans_mult, wellstate_nupcol);
+                std::vector<EvalWell> Tw(this->num_conservation_quantities_, this->well_index_[local_perf_index] * trans_mult);
+                this->getTw(Tw, local_perf_index, int_quants, trans_mult, wellstate_nupcol);
                 std::vector<EvalWell> cq_s(this->num_conservation_quantities_, 0.0);
                 EvalWell perf_press;
                 PerforationRates<Scalar> perfRates;
@@ -1948,6 +1982,14 @@ namespace Opm
                 const auto& summaryState = simulator.vanguard().summaryState();
                 const Schedule& schedule = simulator.vanguard().schedule();
                 const bool stopped_or_zero_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+                // When solving with zero rate (well isolation), use empty group_state to isolate
+                // from group constraints in assembly.
+                // Otherwise use real group state from wgHelper.
+                const GroupState<Scalar> empty_group_state;
+                const auto& group_state = solving_with_zero_rate
+                    ? empty_group_state
+                    : wgHelper.groupState();
+
                 MultisegmentWellAssemble(*this).
                         assembleControlEq(well_state,
                                         group_state,
@@ -2251,9 +2293,11 @@ namespace Opm
                 const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<Scalar> mob(this->num_conservation_quantities_, 0.0);
                 getMobility(simulator, local_perf_index, mob, deferred_logger);
-                const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quants, cell_idx);
+                Scalar trans_mult(0.0);
+                getTransMult(trans_mult, simulator, cell_idx);
                 const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const std::vector<Scalar> Tw = this->wellIndex(local_perf_index, int_quants, trans_mult, wellstate_nupcol);
+                std::vector<Scalar> Tw(this->num_conservation_quantities_, this->well_index_[local_perf_index] * trans_mult);
+                this->getTw(Tw, local_perf_index, int_quants, trans_mult, wellstate_nupcol);
                 std::vector<Scalar> cq_s(this->num_conservation_quantities_, 0.0);
                 Scalar perf_press = 0.0;
                 PerforationRates<Scalar> perf_rates;

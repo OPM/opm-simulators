@@ -629,7 +629,7 @@ private:
     {
         OPM_TIMEBLOCK(assembleReservoirDomain);
         // -------- Mass balance equations --------
-        model_.simulator().model().linearizer().linearizeDomain(domain);
+        model_.simulator().model().linearizer().linearizeDomain(domain, /*isNlddLocalSolve=*/true);
     }
 
     //! \brief Solve the linearized system for a domain.

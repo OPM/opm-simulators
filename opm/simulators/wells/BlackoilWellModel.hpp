@@ -27,8 +27,8 @@
 #define RESERVOIR_COUPLING_ENABLED
 #endif
 #ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
-#include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 #endif
 
 #include <dune/common/fmatrix.hh>
@@ -81,6 +81,7 @@
 #include <cstddef>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -88,7 +89,7 @@
 namespace Opm {
 
 template<class Scalar> class BlackoilWellModelNldd;
-template<class T> class SparseTable;
+template<class T, template <typename, typename...> class Storage> class SparseTable;
 
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
@@ -124,7 +125,8 @@ template<class Scalar> class WellContributions;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
             static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
             static constexpr bool has_polymer_ = getPropValue<TypeTag, Properties::EnablePolymer>();
-            static constexpr bool has_energy_ = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+            static constexpr EnergyModules energyModuleType_ = getPropValue<TypeTag, Properties::EnergyModuleType>();
+            static constexpr bool has_energy_ = (energyModuleType_ == EnergyModules::FullyImplicitThermal);
             static constexpr bool has_micp_ = Indices::enableMICP;
 
             // TODO: where we should put these types, WellInterface or Well Model?
@@ -365,6 +367,12 @@ template<class Scalar> class WellContributions;
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellStateDomain(const BVector& x,
                                                              const int domainIdx);
+            // Update cellRates_ with contributions from all wells
+            void updateCellRates();
+
+            // Update cellRates_ with contributions from wells in a specific domain
+            void updateCellRatesForDomain(int domainIndex,
+                                          const std::map<std::string, int>& well_domain_map);
 
             const Grid& grid() const
             { return simulator_.vanguard().grid(); }
@@ -376,10 +384,10 @@ template<class Scalar> class WellContributions;
             { nldd_ = mod; }
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-            ReservoirCouplingMaster& reservoirCouplingMaster() {
+            ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {
                 return *(this->simulator_.reservoirCouplingMaster());
             }
-            ReservoirCouplingSlave& reservoirCouplingSlave() {
+            ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() {
                 return *(this->simulator_.reservoirCouplingSlave());
             }
             bool isReservoirCouplingMaster() const {
@@ -388,14 +396,34 @@ template<class Scalar> class WellContributions;
             bool isReservoirCouplingSlave() const {
                 return this->simulator_.reservoirCouplingSlave() != nullptr;
             }
-            void setReservoirCouplingMaster(ReservoirCouplingMaster *master)
+            void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar> *master)
             {
                 this->guide_rate_handler_.setReservoirCouplingMaster(master);
+                this->wgHelper().setReservoirCouplingMaster(master);
             }
-            void setReservoirCouplingSlave(ReservoirCouplingSlave *slave)
+            void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar> *slave)
             {
                 this->guide_rate_handler_.setReservoirCouplingSlave(slave);
+                this->wgHelper().setReservoirCouplingSlave(slave);
             }
+
+            /// \brief Send comprehensive slave group data to master
+            void sendSlaveGroupDataToMaster();
+
+            /// \brief Receive comprehensive slave group data from slaves
+            void receiveSlaveGroupData();
+
+            /// \brief Setup RAII guard for reservoir coupling logger
+            ///
+            /// Creates a scoped logger guard that automatically clears the logger
+            /// when it goes out of scope. This eliminates the need for manual cleanup.
+            ///
+            /// @param local_logger The local DeferredLogger to bind to the reservoir coupling logger
+            /// @return An optional containing the ScopedLoggerGuard if reservoir coupling is active,
+            ///         or std::nullopt if not active
+            std::optional<ReservoirCoupling::ScopedLoggerGuard>
+                setupRescoupScopedLogger(DeferredLogger& local_logger);
+
         #endif
         protected:
             Simulator& simulator_;

@@ -52,6 +52,11 @@
 #include <opm/simulators/wells/WellGroupHelper.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
+#ifdef RESERVOIR_COUPLING_ENABLED
+#include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
+#include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
+#endif
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
 
@@ -333,6 +338,9 @@ namespace Opm {
 
         DeferredLogger local_deferredLogger;
 
+#ifdef RESERVOIR_COUPLING_ENABLED
+        auto rescoup_logger_guard = this->setupRescoupScopedLogger(local_deferredLogger);
+#endif
         this->switched_prod_groups_.clear();
         this->switched_inj_groups_.clear();
 
@@ -374,6 +382,13 @@ namespace Opm {
 
             // create the well container
             createWellContainer(reportStepIdx);
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+            // Receive all slave group data early to ensure it's available for any calculations
+            if (this->isReservoirCouplingMaster()) {
+                this->receiveSlaveGroupData();
+            }
+#endif
 
             // we need to update the group data after the well is created
             // to make sure we get the correct mapping.
@@ -454,18 +469,13 @@ namespace Opm {
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
         this->guide_rate_handler_.setLogger(&local_deferredLogger);
-#ifdef RESERVOIR_COUPLING_ENABLED
-        if (this->isReservoirCouplingMaster()) {
-            this->guide_rate_handler_.receiveMasterGroupPotentialsFromSlaves();
-        }
-#endif
         //update guide rates
         this->guide_rate_handler_.updateGuideRates(
             reportStepIdx, simulationTime, this->wellState(), this->groupState()
         );
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingSlave()) {
-            this->guide_rate_handler_.sendSlaveGroupPotentialsToMaster(this->groupState());
+            this->sendSlaveGroupDataToMaster();
         }
 #endif
         std::string exc_msg;
@@ -530,6 +540,57 @@ namespace Opm {
                                          exc_type, "beginTimeStep() failed: " + exc_msg, this->terminal_output_, comm);
 
     }
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+    // Automatically manages the lifecycle of the DeferredLogger pointer
+    // in the reservoir coupling logger. Ensures the logger is properly
+    // cleared when it goes out of scope, preventing dangling pointer issues:
+    //
+    // - The ScopedLoggerGuard constructor sets the logger pointer
+    // - When the guard goes out of scope, the destructor clears the pointer
+    // - Move semantics transfer ownership safely when returning from this function
+    //    - The moved-from guard is "nullified" and its destructor does nothing
+    //    - Only the final guard in the caller will clear the logger
+    template<typename TypeTag>
+    std::optional<ReservoirCoupling::ScopedLoggerGuard>
+    BlackoilWellModel<TypeTag>::
+    setupRescoupScopedLogger(DeferredLogger& local_logger) {
+        if (this->isReservoirCouplingMaster()) {
+            return ReservoirCoupling::ScopedLoggerGuard{
+                this->reservoirCouplingMaster().getLogger(),
+                &local_logger
+            };
+        } else if (this->isReservoirCouplingSlave()) {
+            return ReservoirCoupling::ScopedLoggerGuard{
+                this->reservoirCouplingSlave().getLogger(),
+                &local_logger
+            };
+        }
+        return std::nullopt;
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    receiveSlaveGroupData()
+    {
+        assert(this->isReservoirCouplingMaster());
+        RescoupReceiveSlaveGroupData<Scalar, IndexTraits> slave_group_data_receiver{
+            this->wgHelper(),
+        };
+        slave_group_data_receiver.receiveSlaveGroupData();
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    sendSlaveGroupDataToMaster()
+    {
+        assert(this->isReservoirCouplingSlave());
+        RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{this->wgHelper()};
+        slave_group_data_sender.sendSlaveGroupDataToMaster();
+    }
+#endif // RESERVOIR_COUPLING_ENABLED
 
     template<typename TypeTag>
     void
@@ -1178,9 +1239,7 @@ namespace Opm {
 
         assembleWellEqWithoutIteration(dt, local_deferredLogger);
         // Pre-compute cell rates to we don't have to do this for every cell during linearization...
-        cellRates_.clear();
-        for (const auto& well : well_container_)
-            well->addCellRates(cellRates_);
+        updateCellRates();
 
         // if group or well control changes we don't consider the
         // case converged
@@ -1397,7 +1456,10 @@ namespace Opm {
                             const auto inj_controls = Well::InjectionControls(0);
                             const auto prod_controls = well_ecl.productionControls(summary_state);
                             well->iterateWellEqWithSwitching(
-                                this->simulator_, dt, inj_controls, prod_controls, this->wgHelper(), this->wellState(), local_deferredLogger,  false, false
+                                this->simulator_, dt, inj_controls, prod_controls, this->wgHelper(), this->wellState(), local_deferredLogger,
+                                /*fixed_control=*/false,
+                                /*fixed_status=*/false,
+                                /*solving_with_zero_rate=*/false
                             );
                             rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
                             group_rate += rate;
@@ -1540,12 +1602,40 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         for (auto& well: well_container_) {
-            well->assembleWellEqWithoutIteration(simulator_, dt, this->wellState(), this->groupState(),
-                                                 deferred_logger);
+            well->assembleWellEqWithoutIteration(simulator_, this->wgHelper(), dt, this->wellState(),
+                                                 deferred_logger,
+                                                 /*solving_with_zero_rate=*/false);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(deferred_logger, "BlackoilWellModel::assembleWellEqWithoutIteration failed: ",
                                        this->terminal_output_, grid().comm());
 
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateCellRates()
+    {
+        // Pre-compute cell rates for all wells
+        cellRates_.clear();
+        for (const auto& well : well_container_) {
+            well->addCellRates(cellRates_);
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateCellRatesForDomain(int domainIndex, const std::map<std::string, int>& well_domain_map)
+    {
+        // Pre-compute cell rates only for wells in the specified domain
+        cellRates_.clear();
+        for (const auto& well : well_container_) {
+            const auto it = well_domain_map.find(well->name());
+            if (it != well_domain_map.end() && it->second == domainIndex) {
+                well->addCellRates(cellRates_);
+            }
+        }
     }
 
 #if COMPILE_GPU_BRIDGE
@@ -2377,7 +2467,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeWellTemperature()
     {
-        if constexpr (has_energy_) {
+        if constexpr (energyModuleType_ == EnergyModules::FullyImplicitThermal || 
+                      energyModuleType_ == EnergyModules::SequentialImplicitThermal) {
             int np = this->numPhases();
             Scalar cellInternalEnergy;
             Scalar cellBinv;

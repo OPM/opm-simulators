@@ -1,27 +1,31 @@
 /*
-  Copyright 2025 Equinor ASA
+  Copyright 2025 EQUINOR ASA
+
   This file is part of the Open Porous Media project (OPM).
+
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
+
   OPM is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
+
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <config.h>
 
-#include "config.h"
-#include "opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp"
+#define BOOST_TEST_MODULE TestMiniVector
 
-#define BOOST_TEST_MODULE OpmVectorTest
-#include <boost/test/included/unit_test.hpp>
-
-#include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
-#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
+#include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
+#include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
+#include <utility> // for std::ignore
 
 BOOST_AUTO_TEST_CASE(DefaultConstructor)
 {
@@ -115,4 +119,38 @@ BOOST_AUTO_TEST_CASE(GPUSum)
 
     int sum = ::Opm::gpuistl::copyFromGPU(dout);
     BOOST_TEST(sum == 4);
+}
+
+BOOST_AUTO_TEST_CASE(TestArithmeticOperations)
+{
+    ::Opm::gpuistl::MiniVector<int, 3> v1 {1, 2, 3};
+    ::Opm::gpuistl::MiniVector<int, 3> v2 {4, 5, 6};
+
+    auto v3 = v1;
+    v3 += v2;
+    BOOST_TEST(v3[0] == 5);
+    BOOST_TEST(v3[1] == 7);
+    BOOST_TEST(v3[2] == 9);
+
+    v3 = v2;
+    v3 -= v1;
+    BOOST_TEST(v3[0] == 3);
+    BOOST_TEST(v3[1] == 3);
+    BOOST_TEST(v3[2] == 3);
+
+    v3 = v1;
+    v3 *= 2;
+    BOOST_TEST(v3[0] == 2);
+    BOOST_TEST(v3[1] == 4);
+    BOOST_TEST(v3[2] == 6);
+
+    v3 = v1 + v2;
+    BOOST_TEST(v3[0] == 5);
+    BOOST_TEST(v3[1] == 7);
+    BOOST_TEST(v3[2] == 9);
+
+    v3 = v2 - v1;
+    BOOST_TEST(v3[0] == 3);
+    BOOST_TEST(v3[1] == 3);
+    BOOST_TEST(v3[2] == 3);
 }

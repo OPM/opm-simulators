@@ -36,13 +36,14 @@ SingleWellState(const std::string& name_,
                 const ParallelWellInfo<Scalar>& pinfo,
                 const PhaseUsageInfo<IndexTraits>&  pu_arg,
                 bool is_producer,
-                Scalar pressure_first_connection,
+                Scalar pressure_first_connection_,
                 const std::vector<PerforationData<Scalar>>& perf_input,
                 Scalar temp)
     : name(name_)
     , parallel_info(pinfo)
     , producer(is_producer)
     , pu(pu_arg)
+    , pressure_first_connection(pressure_first_connection_)
     , temperature(temp)
     , well_potentials(pu.numActivePhases())
     , productivity_index(pu.numActivePhases())
@@ -51,7 +52,7 @@ SingleWellState(const std::string& name_,
     , surface_rates(pu.numActivePhases())
     , reservoir_rates(pu.numActivePhases())
     , prev_surface_rates(pu.numActivePhases())
-    , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu.numActivePhases())
+    , perf_data(perf_input.size(), !is_producer, pu.numActivePhases())
     , trivial_group_target(false)
 {
     for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
@@ -255,7 +256,7 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
         if (cmode_is_bhp)
             this->bhp = bhp_limit;
         else
-            this->bhp = this->perf_data.pressure_first_connection;
+            this->bhp = this->pressure_first_connection;
 
         return;
     }
@@ -297,7 +298,7 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
     if (cmode_is_bhp)
         this->bhp = bhp_limit;
     else
-        this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
+        this->bhp = this->pressure_first_connection * bhp_safety_factor;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -317,7 +318,7 @@ update_injector_targets(const Well& ecl_well, const SummaryState& st)
         if (cmode_is_bhp)
             this->bhp = bhp_limit;
         else
-            this->bhp = this->perf_data.pressure_first_connection;
+            this->bhp = this->pressure_first_connection;
 
         return;
     }
@@ -349,7 +350,7 @@ update_injector_targets(const Well& ecl_well, const SummaryState& st)
     if (cmode_is_bhp)
         this->bhp = bhp_limit;
     else
-        this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
+        this->bhp = this->pressure_first_connection * bhp_safety_factor;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -392,6 +393,7 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
            this->producer == rhs.producer &&
            this->bhp == rhs.bhp &&
            this->thp == rhs.thp &&
+           this->pressure_first_connection == rhs.pressure_first_connection &&
            this->temperature == rhs.temperature &&
            this->phase_mixing_rates == rhs.phase_mixing_rates &&
            this->well_potentials == rhs.well_potentials &&

@@ -20,7 +20,8 @@
 #ifndef OPM_RESERVOIR_COUPLING_SLAVE_HPP
 #define OPM_RESERVOIR_COUPLING_SLAVE_HPP
 
-#include <opm/simulators/flow/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
@@ -32,10 +33,16 @@
 
 namespace Opm {
 
+template <class Scalar>
+class ReservoirCouplingSlaveReportStep;
+
+template <class Scalar>
 class ReservoirCouplingSlave {
 public:
     using MessageTag = ReservoirCoupling::MessageTag;
-    using Potentials = ReservoirCoupling::Potentials;
+    using Potentials = ReservoirCoupling::Potentials<Scalar>;
+    using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
+    using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
 
     ReservoirCouplingSlave(
         const Parallel::Communication &comm, const Schedule &schedule, const SimulatorTimer &timer
@@ -43,15 +50,24 @@ public:
     bool activated() const { return activated_; }
     void clearDeferredLogger() { logger_.clearDeferredLogger(); }
     const Parallel::Communication& getComm() const { return comm_; }
+    ReservoirCoupling::Logger& getLogger() { return this->logger_; }
+    MPI_Comm getMasterComm() const { return slave_master_comm_; }
+    const std::string& getSlaveName() const { return slave_name_; }
     const std::map<std::string, std::string>& getSlaveToMasterGroupNameMap() const {
         return slave_to_master_group_map_; }
+    void initTimeStepping();
     void maybeActivate(int report_step);
+    std::size_t numSlaveGroups() const { return this->slave_group_order_.size(); }
     double receiveNextTimeStepFromMaster();
     void sendAndReceiveInitialData();
+    void sendInjectionDataToMaster(const std::vector<SlaveGroupInjectionData> &injection_data) const;
     void sendNextReportDateToMasterProcess() const;
-    void sendPotentialsToMaster(const std::vector<Potentials> &potentials) const;
+    void sendProductionDataToMaster(const std::vector<SlaveGroupProductionData> &production_data) const;
     void setDeferredLogger(DeferredLogger *deferred_logger) {
         this->logger_.setDeferredLogger(deferred_logger);
+    }
+    const std::string& slaveGroupIdxToGroupName(std::size_t group_idx) const {
+        return this->slave_group_order_.at(group_idx);
     }
 
 private:
@@ -59,7 +75,7 @@ private:
     double getGrupSlavActivationDate_() const;
     void receiveMasterGroupNamesFromMasterProcess_();
     void receiveSlaveNameFromMasterProcess_();
-    void saveMasterGroupNamesAsMap_(const std::vector<char>& group_names);
+    void saveMasterGroupNamesAsMapAndEstablishOrder_(const std::vector<char>& group_names);
     void sendActivationDateToMasterProcess_() const;
     void sendActivationHandshakeToMasterProcess_() const;
     void sendSimulationStartDateToMasterProcess_() const;
@@ -73,7 +89,16 @@ private:
     bool activated_{false};
     std::string slave_name_;  // This is the slave name as defined in the master process
     ReservoirCoupling::Logger logger_;
+    // Order of the slave groups. A mapping from slave group index to slave group name.
+    // The indices are determined by the order the master process sends us the group names, see
+    // receiveMasterGroupNamesFromMasterProcess_()
+    // Later, the master process will send us group name indices, and not the group names themselves,
+    // so we use this mapping to recover the slave group names from the indices.
+    std::map<std::size_t, std::string> slave_group_order_;
+    // Stores data that changes for a single report step or for timesteps within a report step.
+    std::unique_ptr<ReservoirCouplingSlaveReportStep<Scalar>> report_step_data_{nullptr};
 };
 
 } // namespace Opm
+
 #endif // OPM_RESERVOIR_COUPLING_SLAVE_HPP

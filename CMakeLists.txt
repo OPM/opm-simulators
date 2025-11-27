@@ -592,7 +592,7 @@ endif()
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
 
-set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
+set(FLOW_MODELS blackoil blackoil_temp brine energy extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
                 oilwater_polymer_injectivity micp polymer solvent solvent_foam
                 gasoil_energy brine_saltprecipitation
@@ -797,7 +797,6 @@ if(CUDA_FOUND)
                        gpu_resources
                        gpu_smart_pointers
                        is_gpu_pointer
-                       minivector
                        throw_macros_on_gpu
                        preconditioner_factory_gpu
                        gpuBlackOilFluidSystem
@@ -806,6 +805,9 @@ if(CUDA_FOUND)
                        GpuPressureTransferPolicy
                        deviceBlockOperations
                        primary_variables_gpu
+                       MiniVector
+                       MiniMatrix
+                       GpuSparseTable
                        PROPERTIES LABELS ${gpu_label})
   if(MPI_FOUND)
     set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})

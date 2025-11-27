@@ -68,12 +68,11 @@ template<class TypeTag>
 struct Evaluation<TypeTag, TTag::AutoDiffLocalLinearizer>
 {
 private:
-    static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
-
+    static constexpr unsigned numDerivatives = getPropValue<TypeTag, Properties::NumDerivatives>();
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    using type = DenseAd::Evaluation<Scalar, numEq>;
+    using type = DenseAd::Evaluation<Scalar, numDerivatives>;
 };
 
 } // namespace Opm::Properties

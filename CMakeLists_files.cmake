@@ -133,6 +133,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/FlowUtils.cpp
   opm/simulators/flow/GenericCpGridVanguard.cpp
   opm/simulators/flow/GenericOutputBlackoilModule.cpp
+  opm/simulators/flow/GenericTemperatureModel.cpp
   opm/simulators/flow/GenericThresholdPressure.cpp
   opm/simulators/flow/GenericTracerModel.cpp
   opm/simulators/flow/HybridNewtonConfig.cpp
@@ -295,7 +296,6 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/CuBlasHandle.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/gpusparse_matrix_operations.cu)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/CuSparseHandle.cpp)
-  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuBuffer.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/preconditionerKernels/DILUKernels.cu)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/preconditionerKernels/ILU_variants_helper_kernels.cu)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/preconditionerKernels/ILU0Kernels.cu)
@@ -341,6 +341,8 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuSparseMatrix.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuSparseMatrixWrapper.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuSparseMatrixGeneric.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg MiniMatrix.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg MiniVector.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/CuMatrixDescription.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/CuSparseResource.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/CuSparseResource_impl.hpp)
@@ -537,6 +539,7 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cusparse_handle.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cuSparse_matrix_operations.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuSparseMatrix.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuSparseTable.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuVector.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cuVector_operations.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_safe_conversion.cpp)
@@ -554,9 +557,10 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuBlackOilFluidSystem.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuPressureTransferPolicy.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_deviceBlockOperations.cu)
-  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_minivector.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primaryvarswithdifferentvector.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primary_variables_gpu.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniMatrix.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniVector.cu)
 
   if(MPI_FOUND)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuOwnerOverlapCopy.cpp)
@@ -568,8 +572,9 @@ if (HAVE_CUDA)
       tests/gpuistl/test_gpu_ad.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
-      tests/gpuistl/test_gpuBlackOilFluidSystem
-      tests/gpuistl/test_GpuSparseMatrix
+      tests/gpuistl/test_gpuBlackOilFluidSystem.cu
+      tests/gpuistl/test_GpuSparseMatrix.cu
+      tests/gpuistl/test_GpuSparseTable.cu
       tests/gpuistl/test_blackoilfluidstategpu.cu
     )
 
@@ -955,6 +960,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowThresholdPressure.hpp
   opm/simulators/flow/GenericCpGridVanguard.hpp
   opm/simulators/flow/GenericOutputBlackoilModule.hpp
+  opm/simulators/flow/GenericTemperatureModel.hpp
+  opm/simulators/flow/GenericTemperatureModel_impl.hpp
   opm/simulators/flow/GenericThresholdPressure.hpp
   opm/simulators/flow/GenericThresholdPressure_impl.hpp
   opm/simulators/flow/GenericTracerModel.hpp
@@ -989,6 +996,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/TTagFlowProblemGasWater.hpp
   opm/simulators/flow/TTagFlowProblemOnePhase.hpp
   opm/simulators/flow/TracerContainer.hpp
+  opm/simulators/flow/TemperatureModel.hpp
   opm/simulators/flow/TracerModel.hpp
   opm/simulators/flow/Transmissibility.hpp
   opm/simulators/flow/Transmissibility_impl.hpp
@@ -1332,17 +1340,27 @@ if(dune-alugrid_FOUND)
 endif()
 if(MPI_FOUND)
   list (APPEND MAIN_SOURCE_FILES
-    opm/simulators/flow/ReservoirCoupling.cpp
-    opm/simulators/flow/ReservoirCouplingMaster.cpp
-    opm/simulators/flow/ReservoirCouplingSlave.cpp
-    opm/simulators/flow/ReservoirCouplingSpawnSlaves.cpp
+    opm/simulators/flow/rescoup/ReservoirCoupling.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingMaster.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSlave.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.cpp
+    opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.cpp
+    opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.cpp
+    opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.cpp
   )
   list (APPEND PUBLIC_HEADER_FILES
-    opm/simulators/flow/ReservoirCoupling.hpp
-    opm/simulators/flow/ReservoirCouplingMpiTraits.hpp
-    opm/simulators/flow/ReservoirCouplingMaster.hpp
-    opm/simulators/flow/ReservoirCouplingSlave.hpp
-    opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp
+    opm/simulators/flow/rescoup/ReservoirCoupling.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.hpp
+    opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp
+    opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp
     )
   list (APPEND TEST_SOURCE_FILES
     tests/rescoup/test_chopstep.cpp

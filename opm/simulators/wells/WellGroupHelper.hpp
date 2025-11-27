@@ -18,6 +18,14 @@
 */
 #ifndef OPM_WELLGROUPHELPER_HEADER_INCLUDED
 #define OPM_WELLGROUPHELPER_HEADER_INCLUDED
+#if HAVE_MPI
+#define RESERVOIR_COUPLING_ENABLED
+#endif
+#ifdef RESERVOIR_COUPLING_ENABLED
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
+#endif
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
@@ -144,22 +152,22 @@ public:
 
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
 
-    Scalar getWellGroupTargetInjector(const std::string& name,
-                                      const std::string& parent,
-                                      const Group& group,
-                                      const Scalar* rates,
-                                      const Phase injection_phase,
-                                      const Scalar efficiency_factor,
-                                      const std::vector<Scalar>& resv_coeff,
-                                      DeferredLogger& deferred_logger) const;
+    std::optional<Scalar> getWellGroupTargetInjector(const std::string& name,
+                                                     const std::string& parent,
+                                                     const Group& group,
+                                                     const Scalar* rates,
+                                                     const Phase injection_phase,
+                                                     const Scalar efficiency_factor,
+                                                     const std::vector<Scalar>& resv_coeff,
+                                                     DeferredLogger& deferred_logger) const;
 
-    Scalar getWellGroupTargetProducer(const std::string& name,
-                                      const std::string& parent,
-                                      const Group& group,
-                                      const Scalar* rates,
-                                      const Scalar efficiency_factor,
-                                      const std::vector<Scalar>& resv_coeff,
-                                      DeferredLogger& deferred_logger) const;
+    std::optional<Scalar> getWellGroupTargetProducer(const std::string& name,
+                                                     const std::string& parent,
+                                                     const Group& group,
+                                                     const Scalar* rates,
+                                                     const Scalar efficiency_factor,
+                                                     const std::vector<Scalar>& resv_coeff,
+                                                     DeferredLogger& deferred_logger) const;
 
     GuideRate::RateVector getWellRateVector(const std::string& name) const;
 
@@ -192,6 +200,37 @@ public:
         return WellStateGuard(*this, well_state);
     }
 
+    int reportStepIdx() const
+    {
+        return report_step_;
+    }
+
+    const Schedule& schedule() const
+    {
+        return this->schedule_;
+    }
+
+    const GuideRate& guideRate() const
+    {
+        return this->guide_rate_;
+    }
+
+    const PhaseUsageInfo<IndexTraits>& phaseUsage() const {
+        return this->phase_usage_info_;
+    }
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+    ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster()
+    {
+        return *this->reservoir_coupling_master_;
+    }
+
+    ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave()
+    {
+        return *this->reservoir_coupling_slave_;
+    }
+#endif
+
     void setCmodeGroup(const Group& group, GroupState<Scalar>& group_state) const;
 
     template <class AverageRegionalPressureType>
@@ -204,6 +243,23 @@ public:
     void setReportStep(int report_step)
     {
         report_step_ = report_step;
+    }
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+    void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar>* reservoir_coupling_master)
+    {
+        reservoir_coupling_master_ = reservoir_coupling_master;
+    }
+
+    void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar>* reservoir_coupling_slave)
+    {
+        reservoir_coupling_slave_ = reservoir_coupling_slave;
+    }
+#endif
+
+    const SummaryState& summaryState() const
+    {
+        return this->summary_state_;
     }
 
     Scalar sumSolventRates(const Group& group, const bool is_injector) const;
@@ -312,6 +368,10 @@ private:
     // NOTE: The phase usage info seems to be read-only throughout the simulation, so it should be safe
     // to store a reference to it here.
     const PhaseUsageInfo<IndexTraits>& phase_usage_info_;
+#ifdef RESERVOIR_COUPLING_ENABLED
+    ReservoirCouplingMaster<Scalar>* reservoir_coupling_master_{nullptr};
+    ReservoirCouplingSlave<Scalar>* reservoir_coupling_slave_{nullptr};
+#endif
 };
 
 // -----------------------------------------------------------------------------

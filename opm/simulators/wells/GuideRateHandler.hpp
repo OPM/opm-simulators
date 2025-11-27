@@ -24,9 +24,9 @@
 #define RESERVOIR_COUPLING_ENABLED
 #endif
 #ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/flow/ReservoirCoupling.hpp>
-#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
-#include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 #endif
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/output/data/Groups.hpp>
@@ -54,7 +54,7 @@ class GuideRateHandler {
 public:
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-    using Potentials = ReservoirCoupling::Potentials;
+    using Potentials = ReservoirCoupling::Potentials<Scalar>;
 #endif
 
     /**
@@ -127,7 +127,7 @@ public:
 
 #ifdef RESERVOIR_COUPLING_ENABLED
         bool isReservoirCouplingMaster() const { return this->parent_.isReservoirCouplingMaster(); }
-        ReservoirCouplingMaster& reservoirCouplingMaster() {
+        ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {
             return this->parent_.reservoirCouplingMaster();
         }
 #endif
@@ -185,14 +185,13 @@ public:
     bool isReservoirCouplingSlave() const {
         return this->reservoir_coupling_slave_ != nullptr;
     }
-    void receiveMasterGroupPotentialsFromSlaves();
-    ReservoirCouplingMaster& reservoirCouplingMaster() { return *(this->reservoir_coupling_master_); }
-    ReservoirCouplingSlave& reservoirCouplingSlave() { return *(this->reservoir_coupling_slave_); }
+    ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() { return *(this->reservoir_coupling_master_); }
+    ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() { return *(this->reservoir_coupling_slave_); }
     void sendSlaveGroupPotentialsToMaster(const GroupState<Scalar>& group_state);
-    void setReservoirCouplingMaster(ReservoirCouplingMaster *reservoir_coupling_master) {
+    void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar> *reservoir_coupling_master) {
         this->reservoir_coupling_master_ = reservoir_coupling_master;
     }
-    void setReservoirCouplingSlave(ReservoirCouplingSlave *reservoir_coupling_slave) {
+    void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar> *reservoir_coupling_slave) {
         this->reservoir_coupling_slave_ = reservoir_coupling_slave;
     }
 #endif
@@ -207,7 +206,7 @@ public:
      */
     void debugDumpGuideRates(const int report_step_idx, const double sim_time);
     const Parallel::Communication& getComm() const { return comm_; }
-    void setLogger(DeferredLogger *deferred_logger);
+    void setLogger(DeferredLogger *deferred_logger) { deferred_logger_ = deferred_logger; }
     const Schedule& schedule() const { return schedule_; }
     /**
      * @brief Updates guide rates for the current simulation step.
@@ -232,8 +231,8 @@ private:
     GuideRate& guide_rate_;
     DeferredLogger *deferred_logger_ = nullptr;
 #ifdef RESERVOIR_COUPLING_ENABLED
-    ReservoirCouplingMaster *reservoir_coupling_master_ = nullptr;
-    ReservoirCouplingSlave *reservoir_coupling_slave_ = nullptr;
+    ReservoirCouplingMaster<Scalar> *reservoir_coupling_master_ = nullptr;
+    ReservoirCouplingSlave<Scalar> *reservoir_coupling_slave_ = nullptr;
 #endif
 };
 

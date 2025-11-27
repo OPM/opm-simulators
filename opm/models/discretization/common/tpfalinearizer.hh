@@ -60,6 +60,21 @@
 #include <unordered_map>
 #include <vector>
 
+#include <opm/common/utility/gpuDecorators.hpp>
+#if HAVE_CUDA
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/MiniMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/MiniVector.hpp>
+#else
+#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
+#endif
+#endif
+
 namespace Opm::Parameters {
 
 struct SeparateSparseSourceTerms { static constexpr bool value = false; };
@@ -71,6 +86,91 @@ namespace Opm {
 // forward declarations
 template<class TypeTag>
 class EcfvDiscretization;
+
+// Moved these structs out of the class to make them visible in the GPU code.
+template<class Storage = std::vector<int>>
+struct FullDomain
+{
+    Storage cells;
+};
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    FullDomain<gpuistl::GpuBuffer<int>> copy_to_gpu(FullDomain<> CPUDomain)
+    {
+        if (CPUDomain.cells.size() == 0) {
+            OPM_THROW(std::runtime_error, "Cannot copy empty full domain to GPU.");
+        }
+        return FullDomain<gpuistl::GpuBuffer<int>>{
+            gpuistl::GpuBuffer<int>(CPUDomain.cells)
+        };
+    };
+
+    FullDomain<gpuistl::GpuView<int>> make_view(FullDomain<gpuistl::GpuBuffer<int>>& buffer)
+    {
+        if (buffer.cells.size() == 0) {
+            OPM_THROW(std::runtime_error, "Cannot make view of empty full domain buffer.");
+        }
+        return FullDomain<gpuistl::GpuView<int>>{
+            gpuistl::make_view(buffer.cells)
+        };
+    };
+#endif
+
+template <class ResidualNBInfoType,class BlockType>
+struct NeighborInfoStruct
+{
+    unsigned int neighbor;
+    ResidualNBInfoType res_nbinfo;
+    BlockType* matBlockAddress;
+
+    template <class OtherBlockType>
+    NeighborInfoStruct(const NeighborInfoStruct<ResidualNBInfoType,OtherBlockType>& other)
+        : neighbor(other.neighbor)
+        , res_nbinfo(other.res_nbinfo)
+        , matBlockAddress(nullptr)
+    {
+        if (other.matBlockAddress) {
+            matBlockAddress = reinterpret_cast<BlockType*>(other.matBlockAddress);
+        }
+    }
+
+    template <class PtrType>
+    NeighborInfoStruct(unsigned int n, const ResidualNBInfoType& r, PtrType ptr)
+        : neighbor(n)
+        , res_nbinfo(r)
+        , matBlockAddress(static_cast<BlockType*>(ptr))
+    {
+    }
+
+    // Add a default constructor
+    NeighborInfoStruct()
+        : neighbor(0)
+        , res_nbinfo()
+        , matBlockAddress(nullptr)
+    {
+    }
+};
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+namespace  gpuistl {
+    template<class MiniMatrixType, class MatrixBlockType, class ResidualNBInfoType>
+    auto copy_to_gpu(const SparseTable<NeighborInfoStruct<ResidualNBInfoType, MatrixBlockType>>& cpuNeighborInfoTable)
+    {
+        // Convert the DUNE FieldMatrix/MatrixBlock to MiniMatrix types
+        using StructWithMinimatrix = NeighborInfoStruct<ResidualNBInfoType, MiniMatrixType>;
+        std::vector<StructWithMinimatrix> minimatrices(cpuNeighborInfoTable.dataSize());
+        size_t idx = 0;
+        for (auto e : cpuNeighborInfoTable.dataStorage()) {
+            minimatrices[idx++] = StructWithMinimatrix(e);
+        }
+
+        return SparseTable<StructWithMinimatrix, gpuistl::GpuBuffer>(
+            gpuistl::GpuBuffer<StructWithMinimatrix>(minimatrices),
+            gpuistl::GpuBuffer<int>(cpuNeighborInfoTable.rowStarts())
+        );
+    }
+}
+#endif
 
 /*!
  * \ingroup FiniteVolumeDiscretizations
@@ -115,9 +215,14 @@ class TpfaLinearizer
     using VectorBlock = Dune::FieldVector<Scalar, numEq>;
     using ADVectorBlock = GetPropType<TypeTag, Properties::RateVector>;
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    using MatrixBlockGPU = gpuistl::MiniMatrix<Scalar, numEq * numEq>;
+    using VectorBlockGPU = gpuistl::MiniVector<Scalar, numEq>;
+#endif
+
     static constexpr bool linearizeNonLocalElements =
         getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
-    static constexpr bool enableEnergy = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+    static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static const bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
@@ -229,9 +334,12 @@ public:
      *
      * The current state of affairs (esp. the previous and the current solutions) is
      * represented by the model object.
+     *
+     * \param domain The subdomain to linearize.
+     * \param isNlddLocalSolve If true, indicates this is an NLDD local solve.
      */
     template <class SubDomainType>
-    void linearizeDomain(const SubDomainType& domain)
+    void linearizeDomain(const SubDomainType& domain, const bool isNlddLocalSolve = false)
     {
         OPM_TIMEBLOCK(linearizeDomain);
         // we defer the initialization of the Jacobian matrix until here because the
@@ -242,15 +350,14 @@ public:
         }
 
         // Called here because it is no longer called from linearize_().
-        if (domain.cells.size() == model_().numTotalDof()) {
-            // We are on the full domain.
-            resetSystem_();
-        }
-        else {
+        if (isNlddLocalSolve) {
             resetSystem_(domain);
         }
+        else {
+            resetSystem_();
+        }
 
-        linearize_(domain);
+        linearize_(domain, isNlddLocalSolve);
     }
 
     void finalize()
@@ -336,6 +443,11 @@ public:
      */
     const auto& getVelocityInfo() const
     { return velocityInfo_; }
+
+    const auto& getNeighborInfo() const {
+        return neighborInfo_;
+    }
+
 
     void updateDiscretizationParameters()
     {
@@ -435,7 +547,7 @@ private:
         const Scalar gravity = problem_().gravity()[dimWorld - 1];
         unsigned numCells = model.numTotalDof();
         neighborInfo_.reserve(numCells, 6 * numCells);
-        std::vector<NeighborInfo> loc_nbinfo;
+        std::vector<NeighborInfoCPU> loc_nbinfo;
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
 
@@ -461,7 +573,7 @@ private:
                         auto faceDir = dirId < 0 ? FaceDir::DirEnum::Unknown
                                                  : FaceDir::FromIntersectionIndex(dirId);
                         ResidualNBInfo nbinfo{trans, area, thpres, dZg, faceDir, Vin, Vex, {}, {}, {}, {}};
-                        if constexpr (enableEnergy) {
+                        if constexpr (enableFullyImplicitThermal) {
                             nbinfo.inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
                             nbinfo.outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);
                         }
@@ -471,7 +583,7 @@ private:
                         if constexpr (enableDispersion) {
                             nbinfo.dispersivity = problem_().dispersivity(myIdx, neighborIdx);
                         }
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, nbinfo, nullptr};
+                        loc_nbinfo[dofIdx - 1] = NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
@@ -716,7 +828,7 @@ public:
 
 private:
     template <class SubDomainType>
-    void linearize_(const SubDomainType& domain)
+    void linearize_(const SubDomainType& domain, bool isNlddLocalSolve)
     {
         // This check should be removed once this is addressed by
         // for example storing the previous timesteps' values for
@@ -734,7 +846,6 @@ private:
         // Instead, that must be called before starting the linearization.
         const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         const unsigned int numCells = domain.cells.size();
-        const bool on_full_domain = (numCells == model_().numTotalDof());
 
         // Fetch timestepsize used later in accumulation term.
         const double dt = simulator_().timeStepSize();
@@ -800,20 +911,18 @@ private:
                 // used, but after storage cache is shifted at the end of the
                 // timestep, it will become cached storage for timeIdx 1.
                 model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
-                if (model_().newtonMethod().numIterations() == 0) {
+                // We should not update the storage cache here for NLDD local solves.
+                // This will reset the start-of-step storage to incorrect numbers when
+                // we do local solves, where the iteration number will start from 0,
+                // but the starting state may not be identical to the start-of-step state.
+                // Note that a full assembly must be done before local solves
+                // otherwise this will be left un-updated.
+                if (model_().newtonMethod().numIterations() == 0 && !isNlddLocalSolve) {
                     // Need to update the storage cache.
                     if (problem_().recycleFirstIterationStorage()) {
                         // Assumes nothing have changed in the system which
                         // affects masses calculated from primary variables.
-                        if (on_full_domain) {
-                            // This is to avoid resetting the start-of-step storage
-                            // to incorrect numbers when we do local solves, where the iteration
-                            // number will start from 0, but the starting state may not be identical
-                            // to the start-of-step state.
-                            // Note that a full assembly must be done before local solves
-                            // otherwise this will be left un-updated.
-                            model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
-                        }
+                        model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
                     }
                     else {
                         Dune::FieldVector<Scalar, numEq> tmp;
@@ -914,13 +1023,9 @@ private:
     LinearizationType linearizationType_{};
 
     using ResidualNBInfo = typename LocalResidual::ResidualNBInfo;
-    struct NeighborInfo
-    {
-        unsigned int neighbor;
-        ResidualNBInfo res_nbinfo;
-        MatrixBlock* matBlockAddress;
-    };
-    SparseTable<NeighborInfo> neighborInfo_{};
+    using NeighborInfoCPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlock>;
+
+    SparseTable<NeighborInfoCPU> neighborInfo_{};
     std::vector<MatrixBlock*> diagMatAddress_{};
 
     struct FlowInfo
@@ -961,14 +1066,8 @@ private:
 
     bool separateSparseSourceTerms_ = false;
 
-    struct FullDomain
-    {
-        std::vector<int> cells;
-        std::vector<bool> interior;
-    };
-    FullDomain fullDomain_;
+    FullDomain<> fullDomain_;
 };
-
 } // namespace Opm
 
 #endif // TPFA_LINEARIZER

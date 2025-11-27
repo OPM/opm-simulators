@@ -128,7 +128,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                             RSTConv::LocalToGlobalCellFunc globalCell,
                             const Parallel::Communication& comm,
                             bool enableEnergy,
-                            bool enableTemperature,
+                            bool constantTemperature,
                             bool enableMech,
                             bool enableSolvent,
                             bool enablePolymer,
@@ -146,7 +146,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                         declaredMaxRegionID(eclState.runspec()))
     , logOutput_(eclState, schedule, summaryState, moduleVersion)
     , enableEnergy_(enableEnergy)
-    , enableTemperature_(enableTemperature)
+    , constantTemperature_(constantTemperature)
     , enableMech_(enableMech)
     , enableSolvent_(enableSolvent)
     , enablePolymer_(enablePolymer)
@@ -756,7 +756,7 @@ doAllocBuffers(const unsigned bufferSize,
        Entry{&fluidPressure_,             "PRESSURE", true},
        // If TEMP is set in RPTRST we output temperature even if THERMAL
        // is not activated
-       Entry{&temperature_,                   "TEMP", enableEnergy_ || (enableTemperature_ && rstKeywords["TEMP"] > 0)},
+       Entry{&temperature_,                   "TEMP", enableEnergy_ || (constantTemperature_ && rstKeywords["TEMP"] > 0)},
        Entry{&rs_,                              "RS", FluidSystem::enableDissolvedGas()},
        Entry{&rsw_,                            "RSW", FluidSystem::enableDissolvedGasInWater()},
        Entry{&rv_,                              "RV", FluidSystem::enableVaporizedOil()},

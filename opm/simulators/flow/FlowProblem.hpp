@@ -61,6 +61,7 @@
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
+#include <opm/simulators/flow/TemperatureModel.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
@@ -121,8 +122,8 @@ protected:
     enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
-    enum { enableTemperature = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature };
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    enum { enableFullyImplicitThermal = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
     enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
@@ -163,7 +164,7 @@ protected:
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
-
+    using TemperatureModel = GetPropType<TypeTag, Properties::TemperatureModel>;
     using TracerModel = GetPropType<TypeTag, Properties::TracerModel>;
     using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
 
@@ -223,13 +224,14 @@ public:
                               simulator.vanguard().cartesianIndexMapper(),
                               simulator.vanguard().grid(),
                               simulator.vanguard().cellCentroids(),
-                              enableEnergy,
-                              enableDiffusion,
+                              (energyModuleType == EnergyModules::FullyImplicitThermal ||
+                               energyModuleType == EnergyModules::SequentialImplicitThermal),                       enableDiffusion,
                               enableDispersion)
         , wellModel_(simulator)
         , aquiferModel_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
+        , temperatureModel_(simulator)
     {
         if (! Parameters::Get<Parameters::CheckSatfuncConsistency>()) {
             // User did not enable the "new" saturation function consistency
@@ -376,6 +378,8 @@ public:
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
+        temperatureModel_.beginTimeStep();
+
     }
 
     /*!
@@ -430,6 +434,9 @@ public:
         this->wellModel_.endTimeStep();
         this->aquiferModel_.endTimeStep();
         this->tracerModel_.endTimeStep();
+        if constexpr(energyModuleType == EnergyModules::SequentialImplicitThermal) {
+            this->temperatureModel_.endTimeStep(wellModel_.wellState());
+        }
 
         // Compute flux for output
         this->model().linearizer().updateFlowsInfo();
@@ -646,6 +653,9 @@ public:
 
     TracerModel& tracerModel()
     { return tracerModel_; }
+
+    TemperatureModel& temperatureModel() // need for restart
+    { return temperatureModel_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
@@ -874,6 +884,9 @@ public:
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        if constexpr (energyModuleType == EnergyModules::SequentialImplicitThermal)
+            return temperatureModel_.temperature(globalDofIdx);
+
         return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
@@ -882,7 +895,10 @@ public:
     {
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
-         return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
+        if constexpr (energyModuleType == EnergyModules::SequentialImplicitThermal)
+            return temperatureModel_.temperature(globalDofIdx);
+
+        return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
     const SolidEnergyLawParams&
@@ -1103,24 +1119,34 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
+        auto obtain = [](const auto& value)
+                      {
+                          if constexpr (std::is_same_v<LhsEval, Scalar>) {
+                              return getValue(value);
+                          } else {
+                              return value;
+                          }
+                      };
+        return rockCompTransMultiplier<LhsEval>(intQuants, elementIdx, obtain);
+    }
+
+    template <class LhsEval, class Callback>
+    LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx, Callback& obtain) const
+    {
         const bool implicit = !this->explicitRockCompaction_;
-        return implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx)
+        return implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx, obtain)
                         : this->simulator().problem().getRockCompTransMultVal(elementIdx);
     }
 
-
-    /*!
-     * \brief Return the well transmissibility multiplier due to rock changes.
-     */
-    template <class LhsEval>
-    LhsEval wellTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
+    template <class LhsEval, class Callback>
+    LhsEval wellTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx, Callback& obtain) const
     {
         OPM_TIMEBLOCK_LOCAL(wellTransMultiplier, Subsystem::Wells);
 
         const bool implicit = !this->explicitRockCompaction_;
-        LhsEval trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx)
+        LhsEval trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx, obtain)
                                       : this->simulator().problem().getRockCompTransMultVal(elementIdx);
-        trans_mult *= this->simulator().problem().template permFactTransMultiplier<LhsEval>(intQuants, elementIdx);
+        trans_mult *= this->simulator().problem().template permFactTransMultiplier<LhsEval>(intQuants, elementIdx, obtain);
 
         return trans_mult;
     }
@@ -1374,7 +1400,8 @@ protected:
 
     void readThermalParameters_()
     {
-        if constexpr (enableEnergy)
+        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal ||
+                      energyModuleType == EnergyModules::SequentialImplicitThermal )
         {
             const auto& simulator = this->simulator();
             const auto& vanguard = simulator.vanguard();
@@ -1477,8 +1504,8 @@ protected:
 protected:
     struct PffDofData_
     {
-        ConditionalStorage<enableEnergy, Scalar> thermalHalfTransIn;
-        ConditionalStorage<enableEnergy, Scalar> thermalHalfTransOut;
+        ConditionalStorage<enableFullyImplicitThermal, Scalar> thermalHalfTransIn;
+        ConditionalStorage<enableFullyImplicitThermal, Scalar> thermalHalfTransOut;
         ConditionalStorage<enableDiffusion, Scalar> diffusivity;
         ConditionalStorage<enableDispersion, Scalar> dispersivity;
         Scalar transmissibility;
@@ -1500,7 +1527,7 @@ protected:
                 unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
                 dofData.transmissibility = transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
 
-                if constexpr (enableEnergy) {
+                if constexpr (enableFullyImplicitThermal) {
                     *dofData.thermalHalfTransIn = transmissibilities_.thermalHalfTrans(globalCenterElemIdx, globalElemIdx);
                     *dofData.thermalHalfTransOut = transmissibilities_.thermalHalfTrans(globalElemIdx, globalCenterElemIdx);
                 }
@@ -1637,6 +1664,21 @@ protected:
     template <class LhsEval>
     LhsEval computeRockCompTransMultiplier_(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
+        auto obtain = [](const auto& value)
+                      {
+                          if constexpr (std::is_same_v<LhsEval, Scalar>) {
+                              return getValue(value);
+                          } else {
+                              return value;
+                          }
+                      };
+
+        return computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx, obtain);
+    }
+
+    template <class LhsEval, class Callback>
+    LhsEval computeRockCompTransMultiplier_(const IntensiveQuantities& intQuants, unsigned elementIdx, Callback& obtain) const
+    {
         OPM_TIMEBLOCK_LOCAL(computeRockCompTransMultiplier, Subsystem::PvtProps);
         if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty())
             return 1.0;
@@ -1646,12 +1688,12 @@ protected:
             tableIdx = this->rockTableIdx_[elementIdx];
 
         const auto& fs = intQuants.fluidState();
-        LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
+        LhsEval effectivePressure = obtain(fs.pressure(refPressurePhaseIdx_()));
         const auto& rock_config = this->simulator().vanguard().eclState().getSimulationConfig().rock_config();
         if (!this->minRefPressure_.empty())
             // The pore space change is irreversible
             effectivePressure =
-                min(decay<LhsEval>(fs.pressure(refPressurePhaseIdx_())),
+                min(obtain(fs.pressure(refPressurePhaseIdx_())),
                     this->minRefPressure_[elementIdx]);
 
         if (!this->overburdenPressure_.empty())
@@ -1666,7 +1708,7 @@ protected:
 
         // water compaction
         assert(!this->rockCompTransMultWc_.empty());
-        LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
+        LhsEval SwMax = max(obtain(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
         LhsEval SwDeltaMax = SwMax - asImp_().initialFluidStates()[elementIdx].saturation(waterPhaseIdx);
 
         return this->rockCompTransMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
@@ -1684,6 +1726,7 @@ protected:
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
+    TemperatureModel temperatureModel_;
 
     template<class T>
     struct BCData

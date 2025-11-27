@@ -38,7 +38,6 @@ private:
 public:
     PerfData() = default;
     PerfData(std::size_t num_perf,
-             Scalar pressure_first_connection_,
              bool injector_,
              std::size_t num_phases);
 
@@ -57,7 +56,6 @@ public:
     void serializeOp(Serializer& serializer)
     {
         serializer(injector);
-        serializer(pressure_first_connection);
         serializer(pressure);
         serializer(rates);
         serializer(phase_rates);
@@ -92,7 +90,6 @@ public:
     // if you're adding a new member representing a dynamically calculated
     // result, e.g., a flow rate, then please update try_assign() as well.
 
-    Scalar pressure_first_connection{};
     std::vector<Scalar> pressure{};
     std::vector<Scalar> rates{};
     std::vector<Scalar> phase_rates{};

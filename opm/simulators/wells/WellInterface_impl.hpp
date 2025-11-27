@@ -282,7 +282,8 @@ namespace Opm
                                              WellStateType& well_state,
                                              DeferredLogger& deferred_logger,
                                              const bool fixed_control,
-                                             const bool fixed_status)
+                                             const bool fixed_status,
+                                             const bool solving_with_zero_rate)
     {
         OPM_TIMEFUNCTION();
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -308,10 +309,17 @@ namespace Opm
             } else {
                 bool changed = false;
                 if (!fixed_control) {
+                    // When solving_with_zero_rate=true, fixed_control=true, so this block should never
+                    // be entered.
+                    if (solving_with_zero_rate) {
+                        OPM_DEFLOG_THROW(std::runtime_error, fmt::format(
+                            "Well {}: solving_with_zero_rate should not be true when fixed_control is false",
+                            this->name()), deferred_logger);
+                    }
+
                     // Changing to group controls here may lead to inconsistencies in the group handling which in turn
                     // may result in excessive back and forth switching. However, we currently allow this by default.
                     // The switch check_group_constraints_inner_well_iterations_ is a temporary solution.
-
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
                     bool isGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
@@ -535,7 +543,8 @@ namespace Opm
                     );
                 } else {
                     converged = this->iterateWellEqWithSwitching(
-                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger,
+                        /*fixed_control=*/false, /*fixed_status=*/false, /*solving_with_zero_rate=*/false
                     );
                 }
             }
@@ -617,7 +626,8 @@ namespace Opm
         }
         // solve well-equation
         converged = this->iterateWellEqWithSwitching(
-            simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+            simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger,
+            /*fixed_control=*/false, /*fixed_status=*/false, /*solving_with_zero_rate=*/false
         );
 
 
@@ -626,7 +636,7 @@ namespace Opm
         if (converged && !stoppedOrZeroRateTarget(simulator, well_state, deferred_logger) && isThp) {
             auto rates = well_state.well(this->index_of_well_).surface_rates;
             this->adaptRatesForVFP(rates);
-            this->updateIPRImplicit(simulator, well_state, deferred_logger);
+            this->updateIPRImplicit(simulator, wgHelper, well_state, deferred_logger);
             bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state);
             if (!is_stable) {
                 // solution converged to an unstable point!
@@ -644,7 +654,8 @@ namespace Opm
                     // re-solve with hopefully good initial guess
                     ws.thp = this->getTHPConstraint(summary_state);
                     converged = this->iterateWellEqWithSwitching(
-                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger,
+                        /*fixed_control=*/false, /*fixed_status=*/false, /*solving_with_zero_rate=*/false
                     );
                 }
             }
@@ -680,7 +691,10 @@ namespace Opm
                                                              prod_controls,
                                                              wgHelper,
                                                              well_state,
-                                                             deferred_logger);
+                                                             deferred_logger,
+                                                             /*fixed_control=*/false,
+                                                             /*fixed_status=*/false,
+                                                             /*solving_with_zero_rate=*/false);
             }
         }
         // update operability
@@ -721,7 +735,7 @@ namespace Opm
         if (!converged || this->wellIsStopped()) {
             return std::nullopt;
         }
-        this->updateIPRImplicit(simulator, well_state, deferred_logger);
+        this->updateIPRImplicit(simulator, wgHelper, well_state, deferred_logger);
         auto rates = well_state.well(this->index_of_well_).surface_rates;
         this->adaptRatesForVFP(rates);
         return WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
@@ -767,7 +781,10 @@ namespace Opm
         // solve
         const bool converged =  this->iterateWellEqWithSwitching(
             simulator, dt, inj_controls, prod_controls, wgHelper_copy,
-            well_state, deferred_logger, /*fixed_control*/true
+            well_state, deferred_logger,
+            /*fixed_control=*/true,
+            /*fixed_status=*/false,
+            /*solving_with_zero_rate=*/false
         );
         ws.injection_cmode = cmode_inj;
         ws.production_cmode = cmode_prod;
@@ -784,22 +801,24 @@ namespace Opm
                           DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        // Solve a well as stopped
+        // Solve a well as stopped with isolation (empty group state for assembly)
         const auto well_status_orig = this->wellStatus_;
         this->stopWell();
 
-        auto group_state = GroupState<Scalar>(); // empty group
-        WellGroupHelperType wgHelper_copy = wgHelper;
-        // Ensure that wgHelper_copy uses the empty group state as GroupState for iterateWellEqWithSwitching()
-        // and the guard ensures that the original group state is restored at scope exit, i.e. at
-        // the end of this function.
-        auto group_guard = wgHelper_copy.pushGroupState(group_state);
-
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);
-        const bool converged =  this->iterateWellEqWithSwitching(
-            simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state,
-            deferred_logger, /*fixed_control*/true, /*fixed_status*/ true
+
+        // Solve with well isolation - the flag "solving_with_zero_rate=true" will be passed down to
+        // assembleWellEqWithoutIterationImpl() to create an empty group state when assembling the
+        // well equations.
+        const bool converged = this->iterateWellEqWithSwitching(
+            simulator, dt, inj_controls, prod_controls,
+            wgHelper,  // Real wgHelper - single source of truth
+            well_state,
+            deferred_logger,
+            /*fixed_control*/true,
+            /*fixed_status*/true,
+            /*solving_with_zero_rate*/true
         );
         this->wellStatus_ = well_status_orig;
         return converged;
@@ -835,7 +854,10 @@ namespace Opm
                     );
                 } else {
                     converged = this->iterateWellEqWithSwitching(
-                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger,
+                        /*fixed_control=*/false,
+                        /*fixed_status=*/false,
+                        /*solving_with_zero_rate=*/false
                     );
                 }
             }
@@ -929,9 +951,9 @@ namespace Opm
                    DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        const auto& group_state = wgHelper.groupState();
         prepareWellBeforeAssembling(simulator, dt, wgHelper, well_state, deferred_logger);
-        assembleWellEqWithoutIteration(simulator, dt, well_state, group_state, deferred_logger);
+        assembleWellEqWithoutIteration(simulator, wgHelper, dt, well_state, deferred_logger,
+                                       /*solving_with_zero_rate=*/false);
     }
 
 
@@ -940,10 +962,11 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     assembleWellEqWithoutIteration(const Simulator& simulator,
+                                   const WellGroupHelperType& wgHelper,
                                    const double dt,
                                    WellStateType& well_state,
-                                   const GroupState<Scalar>& group_state,
-                                   DeferredLogger& deferred_logger)
+                                   DeferredLogger& deferred_logger,
+                                   const bool solving_with_zero_rate)
     {
         OPM_TIMEFUNCTION();
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -951,7 +974,7 @@ namespace Opm
         const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         // TODO: the reason to have inj_controls and prod_controls in the arguments, is that we want to change the control used for the well functions
         // TODO: maybe we can use std::optional or pointers to simplify here
-        assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls, well_state, deferred_logger, solving_with_zero_rate);
     }
 
 
@@ -1857,12 +1880,14 @@ namespace Opm
     }
 
     template <typename TypeTag>
-    std::vector<typename WellInterface<TypeTag>::Scalar>
+    template<class Value>
+    void
     WellInterface<TypeTag>::
-    wellIndex(const int                      perf,
-              const IntensiveQuantities&     intQuants,
-              const Scalar                   trans_mult,
-              const SingleWellStateType& ws) const
+    getTw(std::vector<Value>&         Tw,
+          const int                   perf,
+          const IntensiveQuantities&  intQuants,
+          const Value&                trans_mult,
+          const SingleWellStateType&  ws) const
     {
         OPM_TIMEFUNCTION_LOCAL(Subsystem::Wells);
         // Add a Forchheimer term to the gas phase CTF if the run uses
@@ -1870,22 +1895,20 @@ namespace Opm
         if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
             OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - possibly wellIndex was called with a global instead of a local perforation index!");
         }
-        auto wi = std::vector<Scalar>
-            (this->num_conservation_quantities_, this->well_index_[perf] * trans_mult);
 
         if constexpr (! Indices::gasEnabled) {
-            return wi;
+            return;
         }
 
         const auto& wdfac = this->well_ecl_.getWDFAC();
 
         if (! wdfac.useDFactor() || (this->well_index_[perf] == 0.0)) {
-            return wi;
+            return;
         }
 
         const Scalar d = this->computeConnectionDFactor(perf, intQuants, ws);
         if (d < 1.0e-15) {
-            return wi;
+            return;
         }
 
         // Solve quadratic equations for connection rates satisfying the ipr and the flow-dependent skin.
@@ -1901,8 +1924,8 @@ namespace Opm
         const Scalar invB = getValue(intQuants.fluidState().invB(FluidSystem::gasPhaseIdx));
         const Scalar mob_g = getValue(intQuants.mobility(FluidSystem::gasPhaseIdx)) * invB;
         const Scalar a = d;
-        const Scalar b = 2*scaling/wi[gas_comp_idx];
-        const Scalar c = -2*scaling*mob_g*drawdown;
+        const Scalar b = 2 * scaling / getValue(Tw[gas_comp_idx]);
+        const Scalar c = -2 * scaling * mob_g * drawdown;
 
         Scalar consistent_Q = -1.0e20;
         // Find and check negative solutions (a --> -a)
@@ -1932,9 +1955,7 @@ namespace Opm
                 consistent_Q = xp2;
             }
         }
-        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (consistent_Q/2 * d / scaling));
-
-        return wi;
+        Tw[gas_comp_idx]  = 1.0 / (1.0 / (trans_mult * this->well_index_[perf]) + (consistent_Q/2 * d / scaling));
     }
 
     template <typename TypeTag>
@@ -2012,17 +2033,19 @@ namespace Opm
             return conns[connIx[perf]].CF();
         };
 
+        auto obtain = [](const Eval& value)
+                      {
+                          return getValue(value);
+                      };
+
         auto& tmult = ws.perf_data.connection_compaction_tmult;
         auto& ctf   = ws.perf_data.connection_transmissibility_factor;
 
         for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-
-            const auto& intQuants = simulator.model()
-                .intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-
-            tmult[perf] = simulator.problem()
-                .template wellTransMultiplier<double>(intQuants, cell_idx);
+            Scalar trans_mult(0.0);
+            getTransMult(trans_mult, simulator, cell_idx, obtain);
+            tmult[perf] = trans_mult;
 
             ctf[perf] = connCF(perf) * tmult[perf];
         }
@@ -2040,6 +2063,19 @@ namespace Opm
         } else {
             return fs.pressure(FluidSystem::waterPhaseIdx);
         }
+    }
+
+    template <typename TypeTag>
+    template<class Value, class Callback>
+    void
+    WellInterface<TypeTag>::
+    getTransMult(Value& trans_mult,
+                 const Simulator& simulator,
+                 const int cell_idx,
+                 Callback& extendEval) const
+    {
+        const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+        trans_mult = simulator.problem().template wellTransMultiplier<Value>(intQuants, cell_idx, extendEval);
     }
 
     template <typename TypeTag>

@@ -211,8 +211,9 @@ namespace Opm
                                         const WellGroupHelperType& wgHelper,
                                         WellStateType& well_state,
                                         DeferredLogger& deferred_logger,
-                                        const bool fixed_control = false,
-                                        const bool fixed_status = false) override;
+                                        const bool fixed_control,
+                                        const bool fixed_status,
+                                        const bool solving_with_zero_rate) override;
 
         /* returns BHP */
         Scalar computeWellRatesAndBhpWithThpAlqProd(const Simulator& ebos_simulator,
@@ -238,6 +239,7 @@ namespace Opm
                                         bool iterate_if_no_solution) const override;
 
         void updateIPRImplicit(const Simulator& simulator,
+                               const WellGroupHelperType& wgHelper,
                                WellStateType& well_state,
                                DeferredLogger& deferred_logger) override;
 
@@ -287,7 +289,7 @@ namespace Opm
         void computePerfRate(const IntensiveQuantities& intQuants,
                              const std::vector<Value>& mob,
                              const Value& bhp,
-                             const std::vector<Scalar>& Tw,
+                             const std::vector<Value>& Tw,
                              const int perf,
                              const bool allow_cf,
                              std::vector<Value>& cq_s,
@@ -303,7 +305,7 @@ namespace Opm
                              const Value& rvw,
                              const Value& rsw,
                              std::vector<Value>& b_perfcells_dense,
-                             const std::vector<Scalar>& Tw,
+                             const std::vector<Value>& Tw,
                              const int perf,
                              const bool allow_cf,
                              const Value& skin_pressure,
@@ -333,6 +335,12 @@ namespace Opm
         // value is cached to minimize the number of broadcasts
         Scalar getRefDensity() const override;
 
+        // get the transmissibility multiplier for specific perforation
+        template<class Value>
+        void getTransMult(Value& trans_mult,
+                          const Simulator& simulator,
+                          const int cell_indx) const;
+
         // get the mobility for specific perforation
         template<class Value>
         void getMobility(const Simulator& simulator,
@@ -354,20 +362,22 @@ namespace Opm
                                                  DeferredLogger& deferred_logger) const;
 
         void assembleWellEqWithoutIteration(const Simulator& simulator,
+                                            const WellGroupHelperType& wgHelper,
                                             const double dt,
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
                                             WellStateType& well_state,
-                                            const GroupState<Scalar>& group_state,
-                                            DeferredLogger& deferred_logger) override;
+                                            DeferredLogger& deferred_logger,
+                                            const bool solving_with_zero_rate) override;
 
         void assembleWellEqWithoutIterationImpl(const Simulator& simulator,
+                                                const WellGroupHelperType& wgHelper,
                                                 const double dt,
                                                 const Well::InjectionControls& inj_controls,
                                                 const Well::ProductionControls& prod_controls,
                                                 WellStateType& well_state,
-                                                const GroupState<Scalar>& group_state,
-                                                DeferredLogger& deferred_logger);
+                                                DeferredLogger& deferred_logger,
+                                                const bool solving_with_zero_rate);
 
         void calculateSinglePerf(const Simulator& simulator,
                                  const int perf,

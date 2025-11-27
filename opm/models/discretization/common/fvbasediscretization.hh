@@ -403,7 +403,7 @@ public:
         , enableIntensiveQuantityCache_(Parameters::Get<Parameters::EnableIntensiveQuantityCache>())
         , enableStorageCache_(Parameters::Get<Parameters::EnableStorageCache>())
         , enableThermodynamicHints_(Parameters::Get<Parameters::EnableThermodynamicHints>())
-        , cachedIntensiveQuantityHistorySize_(-1)
+        , cachedIntensiveQuantityHistorySize_(static_cast<unsigned>(-1))
     {
         const bool isEcfv = std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>;
         if (enableGridAdaptation_ && !isEcfv) {
@@ -769,7 +769,7 @@ public:
                     setIntensiveQuantitiesCacheEntryValidity(globalIndex, timeIdx, false);
                 }
                 // Update for this element.
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
             }
         }
     }

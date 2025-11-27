@@ -99,7 +99,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
-    static constexpr bool enableEnergy = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+    static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
@@ -134,8 +134,8 @@ public:
         FaceDir::DirEnum faceDir;
         double Vin;
         double Vex;
-        ConditionalStorage<enableEnergy, double> inAlpha;
-        ConditionalStorage<enableEnergy, double> outAlpha;
+        ConditionalStorage<enableFullyImplicitThermal, double> inAlpha;
+        ConditionalStorage<enableFullyImplicitThermal, double> outAlpha;
         ConditionalStorage<enableDiffusion, double> diffusivity;
         ConditionalStorage<enableDispersion, double> dispersivity;
     };
@@ -410,7 +410,7 @@ public:
                     = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx);
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
                 evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-                if constexpr (enableEnergy) {
+                if constexpr (enableFullyImplicitThermal) {
                     EnergyModule::template
                         addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
                 }
@@ -426,7 +426,7 @@ public:
                 const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx);
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
                 evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-                if constexpr (enableEnergy) {
+                if constexpr (enableFullyImplicitThermal) {
                     EnergyModule::template
                         addPhaseEnthalpyFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up.fluidState());
                 }
@@ -470,7 +470,7 @@ public:
         }
 
         // deal with energy (if present)
-        if constexpr (enableEnergy) {
+        if constexpr (enableFullyImplicitThermal) {
             const Scalar inAlpha = nbInfo.inAlpha;
             const Scalar outAlpha = nbInfo.outAlpha;
             Evaluation heatFlux;
@@ -616,7 +616,7 @@ public:
                                              insideIntQuants.pvtRegionIndex(),
                                              surfaceVolumeFlux,
                                              insideIntQuants.fluidState());
-                if constexpr (enableEnergy) {
+                if constexpr (enableFullyImplicitThermal) {
                     EnergyModule::template
                         addPhaseEnthalpyFluxes_<Evaluation>(tmp, phaseIdx, darcyFlux, insideIntQuants.fluidState());
                 }
@@ -631,7 +631,7 @@ public:
                                          insideIntQuants.pvtRegionIndex(),
                                          surfaceVolumeFlux,
                                          bdyInfo.exFluidState);
-                if constexpr (enableEnergy) {
+                if constexpr (enableFullyImplicitThermal) {
                     EnergyModule::template
                         addPhaseEnthalpyFluxes_<Scalar>(tmp, phaseIdx, darcyFlux, bdyInfo.exFluidState);
                 }
@@ -643,7 +643,7 @@ public:
         }
 
         // conductive heat flux from boundary
-        if constexpr (enableEnergy) {
+        if constexpr (enableFullyImplicitThermal) {
             Evaluation heatFlux;
             // avoid overload of functions with same number of elements in eclproblem
             Scalar alpha =
@@ -687,7 +687,7 @@ public:
         bdyFlux = 0.0;
 
         // conductive heat flux from boundary
-        if constexpr (enableEnergy) {
+        if constexpr (enableFullyImplicitThermal) {
             Evaluation heatFlux;
             // avoid overload of functions with same numeber of elements in eclproblem
             Scalar alpha =
@@ -725,7 +725,7 @@ public:
         BioeffectsModule::addSource(source, problem, insideIntQuants, globalSpaceIdex);
 
         // scale the source term of the energy equation
-        if constexpr (enableEnergy) {
+        if constexpr (enableFullyImplicitThermal) {
             source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
     }
@@ -743,7 +743,7 @@ public:
         BioeffectsModule::addSource(source, problem, insideIntQuants, globalSpaceIdex);
 
         // scale the source term of the energy equation
-        if constexpr (enableEnergy) {
+        if constexpr (enableFullyImplicitThermal) {
             source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
     }
@@ -764,7 +764,7 @@ public:
         BioeffectsModule::addSource(source, elemCtx, dofIdx, timeIdx);
 
         // scale the source term of the energy equation
-        if constexpr (enableEnergy) {
+        if constexpr (enableFullyImplicitThermal) {
             source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
     }

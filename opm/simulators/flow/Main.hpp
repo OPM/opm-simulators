@@ -24,6 +24,8 @@
 #define OPM_MAIN_HEADER_INCLUDED
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Schedule/Action/State.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hpp>
@@ -485,12 +487,22 @@ private:
     /// \return Simulation's status/exit code.
     int runThermal(const Phases& phases);
 
+    /// Run a regular three-phase simulation with the TEMP option
+    /// With the TEMP option the energy and blackoil eq are solved
+    /// seperatly
+    /// Called from dispatchDynamic_()
+    ///
+    /// \return Simulation's status/exit code.
+    int runBlackOilTemp();
+
     /// Run a regular three-phase simulation without thermal effects.
     ///
     /// Called from dispatchDynamic_()
     ///
     /// \return Simulation's status/exit code.
     int runBlackOil();
+
+
 
     void readDeck(const std::string& deckFilename,
                   const std::string& outputDir,

@@ -1,0 +1,129 @@
+/*
+  Copyright 2025 Equinor ASA
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#ifndef OPM_RESERVOIR_COUPLING_SLAVE_REPORT_STEP_HPP
+#define OPM_RESERVOIR_COUPLING_SLAVE_REPORT_STEP_HPP
+
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
+
+namespace Opm {
+
+// Avoid including the complete definition of ReservoirCouplingSlave here to avoid circular dependency.
+template <class Scalar> class ReservoirCouplingSlave;
+
+/// @brief Manages slave-side reservoir coupling operations for a single report step
+///
+/// This class encapsulates the slave process's communication with the master process
+/// during a single report step in reservoir coupling simulations. It handles:
+/// - Sending production data (rates, potentials) to the master process via MPI
+/// - Sending injection data (rates) to the master process via MPI
+/// - Coordinating data exchange between slave and master processes
+///
+/// The class serves as a helper to ReservoirCouplingSlave, separating the
+/// report-step-specific communication logic from the overall coupling lifecycle
+/// management. This separation improves code organization and makes the coupling
+/// logic easier to understand and maintain.
+///
+/// @tparam Scalar Floating-point type for rate and potential values (typically double or float)
+///
+/// @note This class holds a reference to the parent ReservoirCouplingSlave object
+///       and should only be used within the scope of that object's lifetime
+/// @see ReservoirCouplingSlave
+template <class Scalar>
+class ReservoirCouplingSlaveReportStep {
+public:
+    using MessageTag = ReservoirCoupling::MessageTag;
+    using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
+    using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
+
+    /// @brief Construct a report step manager for the slave process
+    /// @param slave Reference to the parent ReservoirCouplingSlave object
+    ReservoirCouplingSlaveReportStep(
+        ReservoirCouplingSlave<Scalar> &slave
+    );
+
+    /// @brief Get the MPI communicator for intra-slave communication
+    /// @return Reference to the parallel communication object
+    const Parallel::Communication &comm() const { return this->slave_.getComm(); }
+
+    /// @brief Get the MPI communicator for slave-master communication
+    /// @return MPI communicator handle for communication with the master process
+    MPI_Comm getSlaveMasterComm() const { return this->slave_.getMasterComm(); }
+
+    /// @brief Get the logger for reservoir coupling operations
+    /// @return Reference to the logger object for this coupling session
+    ReservoirCoupling::Logger& logger() const { return this->slave_.getLogger(); }
+
+    /// @brief Send production data to the master process
+    ///
+    /// This method sends production rates, potentials, and related data for all
+    /// slave groups to the master process via MPI communication. The data is used
+    /// by the master for group control calculations and coordination.
+    ///
+    /// @param production_data Vector of production data for each slave group
+    ///
+    /// @note This is a blocking operation that waits for the master to receive the data
+    /// @note Must be called before the master attempts to receive production data
+    void sendProductionDataToMaster(const std::vector<SlaveGroupProductionData> &production_data) const;
+
+    /// @brief Send injection data to the master process
+    ///
+    /// This method sends injection rates and related data for all slave groups
+    /// to the master process via MPI communication. The data is used by the master
+    /// for group control calculations and coordination.
+    ///
+    /// @param injection_data Vector of injection data for each slave group
+    ///
+    /// @note This is a blocking operation that waits for the master to receive the data
+    /// @note Must be called before the master attempts to receive injection data
+    void sendInjectionDataToMaster(const std::vector<SlaveGroupInjectionData> &injection_data) const;
+
+    /// @brief Get the name of this slave process
+    /// @return Reference to the name string for this slave
+    const std::string& slaveName() const { return this->slave_.getSlaveName(); }
+
+private:
+    /// @brief Generic helper method for sending data to the master process via MPI
+    ///
+    /// This template method encapsulates a common MPI send pattern used for both
+    /// production and injection data. It handles:
+    /// - Rank checking (only rank 0 sends)
+    /// - MPI datatype retrieval via Dune::MPITraits
+    /// - MPI_Send operation with specified message tag
+    /// - Logging of the send operation
+    ///
+    /// @tparam DataType The type of data being sent (e.g., SlaveGroupProductionData)
+    /// @param data Vector of data structures to send
+    /// @param tag MPI message tag to identify the data type
+    /// @param data_type_name Human-readable name for logging (e.g., "production data")
+    ///
+    /// @note This is a blocking operation that waits for the master to receive the data
+    /// @note Only called from rank 0 of the slave's communicator
+    template <class DataType>
+    void sendDataToMaster_(
+        const std::vector<DataType>& data,
+        MessageTag tag,
+        const std::string& data_type_name
+    ) const;
+
+    /// Reference to the parent ReservoirCouplingSlave object
+    ReservoirCouplingSlave<Scalar> &slave_;
+};
+} // namespace Opm
+#endif // OPM_RESERVOIR_COUPLING_SLAVE_REPORT_STEP_HPP

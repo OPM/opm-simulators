@@ -425,12 +425,16 @@ init(const std::vector<Scalar>& cellPressures,
             //
             // TODO: we might still need the values from the prev_well if
             // the connection structure changes.
-            if (const auto num_perf_this_well = new_well.perf_data.size();
-                num_perf_this_well == prev_well.perf_data.size())
-            {
+            const int unchanged_locally =  (new_well.perf_data.cell_index ==
+                                            prev_well.perf_data.cell_index);
+            // Make it global
+            const int unchanged_globally = new_well.parallel_info.get().communication()
+                .min(unchanged_locally);
+
+            if (unchanged_globally) {
                 new_well.perf_data.try_assign(prev_well.perf_data);
-            }
-            else {
+            } else {
+                const auto num_perf_this_well = new_well.perf_data.size();
                 const auto global_num_perf_this_well =
                     static_cast<Scalar>(wells_ecl[w].getConnections().num_open());
 
@@ -720,7 +724,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 const Connection& connection = completion_set.get(perf);
                 if (connection.state() == Connection::State::OPEN) {
                     const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
-                    if (segment_index == -1) {
+                    if (segment_index < 0) {
                         if (!connectionWithoutAssociatedSegmentsLocalErrorMessage) {
                             connectionWithoutAssociatedSegmentsLocalErrorMessage = ""; // First well with error: initialize the string
                         }
@@ -732,9 +736,10 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                             connection.getI() + 1 , connection.getJ() + 1,
                             connection.getK() + 1 );
                     }
-
-                    segment_perforations[segment_index].push_back(n_activeperf);
-                    if (ws.parallel_info.get().globalPerfToLocalPerf(perf) > -1) {
+                    else {
+                        segment_perforations[segment_index].push_back(n_activeperf);
+                    }
+                    if (ws.parallel_info.get().globalPerfToLocalPerf(perf) >= 0) {
                         active_perf_index_local_to_global.insert({n_activeperf_local, n_activeperf});
                         active_to_local.insert({n_activeperf, ws.parallel_info.get().globalPerfToLocalPerf(perf)});
                         n_activeperf_local++;
