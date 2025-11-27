@@ -1456,7 +1456,10 @@ namespace Opm {
                             const auto inj_controls = Well::InjectionControls(0);
                             const auto prod_controls = well_ecl.productionControls(summary_state);
                             well->iterateWellEqWithSwitching(
-                                this->simulator_, dt, inj_controls, prod_controls, this->wgHelper(), this->wellState(), local_deferredLogger,  false, false
+                                this->simulator_, dt, inj_controls, prod_controls, this->wgHelper(), this->wellState(), local_deferredLogger,
+                                /*fixed_control=*/false,
+                                /*fixed_status=*/false,
+                                /*solving_with_zero_rate=*/false
                             );
                             rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
                             group_rate += rate;
@@ -1599,8 +1602,9 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         for (auto& well: well_container_) {
-            well->assembleWellEqWithoutIteration(simulator_, dt, this->wellState(), this->groupState(),
-                                                 deferred_logger);
+            well->assembleWellEqWithoutIteration(simulator_, this->wgHelper(), dt, this->wellState(),
+                                                 deferred_logger,
+                                                 /*solving_with_zero_rate=*/false);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(deferred_logger, "BlackoilWellModel::assembleWellEqWithoutIteration failed: ",
                                        this->terminal_output_, grid().comm());

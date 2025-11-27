@@ -174,10 +174,11 @@ public:
                         DeferredLogger& deferred_logger);
 
     void assembleWellEqWithoutIteration(const Simulator& simulator,
+                                        const WellGroupHelperType& wgHelper,
                                         const double dt,
                                         WellStateType& well_state,
-                                        const GroupState<Scalar>& group_state,
-                                        DeferredLogger& deferred_logger);
+                                        DeferredLogger& deferred_logger,
+                                        const bool solving_with_zero_rate);
 
     // TODO: better name or further refactoring the function to make it more clear
     void prepareWellBeforeAssembling(const Simulator& simulator,
@@ -264,8 +265,9 @@ public:
                                                   const Scalar WQTotal,
                                                   WellStateType& well_state,
                                                   DeferredLogger& deferred_logger,
-                                                  const bool fixed_control = false,
-                                                  const bool fixed_status = false);
+                                                  const bool fixed_control,
+                                                  const bool fixed_status,
+                                                  const bool solving_with_zero_rate);
 
     virtual void updatePrimaryVariables(const Simulator& simulator,
                                         const WellStateType& well_state,
@@ -366,8 +368,9 @@ public:
                                             const WellGroupHelperType& wgHelper,
                                             WellStateType& well_state,
                                             DeferredLogger& deferred_logger,
-                                            const bool fixed_control = false,
-                                            const bool fixed_status = false) = 0;
+                                            const bool fixed_control,
+                                            const bool fixed_status,
+                                            const bool solving_with_zero_rate) = 0;
 protected:
     // simulation parameters
     std::vector<RateVector> connectionRates_;
@@ -404,12 +407,13 @@ protected:
                            DeferredLogger& deferred_logger) const = 0;
 
     virtual void assembleWellEqWithoutIteration(const Simulator& simulator,
+                                                const WellGroupHelperType& wgHelper,
                                                 const double dt,
                                                 const WellInjectionControls& inj_controls,
                                                 const WellProductionControls& prod_controls,
                                                 WellStateType& well_state,
-                                                const GroupState<Scalar>& group_state,
-                                                DeferredLogger& deferred_logger) = 0;
+                                                DeferredLogger& deferred_logger,
+                                                const bool solving_with_zero_rate) = 0;
 
     // iterate well equations with the specified control until converged
     virtual bool iterateWellEqWithControl(const Simulator& simulator,
@@ -421,6 +425,7 @@ protected:
                                           DeferredLogger& deferred_logger) = 0;
 
     virtual void updateIPRImplicit(const Simulator& simulator,
+                                   const WellGroupHelperType& wgHelper,
                                    WellStateType& well_state,
                                    DeferredLogger& deferred_logger) = 0;
 

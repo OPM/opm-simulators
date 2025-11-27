@@ -339,12 +339,13 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     assembleWellEqWithoutIteration(const Simulator& simulator,
+                                   const WellGroupHelperType& wgHelper,
                                    const double dt,
                                    const Well::InjectionControls& inj_controls,
                                    const Well::ProductionControls& prod_controls,
                                    WellStateType& well_state,
-                                   const GroupState<Scalar>& group_state,
-                                   DeferredLogger& deferred_logger)
+                                   DeferredLogger& deferred_logger,
+                                   const bool solving_with_zero_rate)
     {
         // TODO: only_wells should be put back to save some computation
         // for example, the matrices B C does not need to update if only_wells
@@ -353,9 +354,9 @@ namespace Opm
         // clear all entries
         this->linSys_.clear();
 
-        assembleWellEqWithoutIterationImpl(simulator, dt, inj_controls,
+        assembleWellEqWithoutIterationImpl(simulator, wgHelper, dt, inj_controls,
                                            prod_controls, well_state,
-                                           group_state, deferred_logger);
+                                           deferred_logger, solving_with_zero_rate);
     }
 
 
@@ -365,12 +366,13 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     assembleWellEqWithoutIterationImpl(const Simulator& simulator,
+                                       const WellGroupHelperType& wgHelper,
                                        const double dt,
                                        const Well::InjectionControls& inj_controls,
                                        const Well::ProductionControls& prod_controls,
                                        WellStateType& well_state,
-                                       const GroupState<Scalar>& group_state,
-                                       DeferredLogger& deferred_logger)
+                                       DeferredLogger& deferred_logger,
+                                       const bool solving_with_zero_rate)
     {
         // try to regularize equation if the well does not converge
         const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
@@ -468,16 +470,24 @@ namespace Opm
         const auto& summaryState = simulator.vanguard().summaryState();
         const Schedule& schedule = simulator.vanguard().schedule();
         const bool stopped_or_zero_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
-        StandardWellAssemble<FluidSystem,Indices>(*this).
-            assembleControlEq(well_state, group_state,
-                              schedule, summaryState,
-                              inj_controls, prod_controls,
-                              this->primary_variables_,
-                              this->getRefDensity(),
-                              this->linSys_,
-                              stopped_or_zero_target,
-                              deferred_logger);
-
+        {
+            // When solving_with_zero_rate=true (called from solveWellWithZeroRate),
+            // we use an empty GroupState to isolate the well from group constraints during assembly.
+            // This allows us to solve the well equations independently of group controls/targets.
+            const GroupState<Scalar> empty_group_state;
+            const auto& group_state = solving_with_zero_rate
+                ? empty_group_state
+                : wgHelper.groupState();
+            StandardWellAssemble<FluidSystem,Indices>(*this).
+                assembleControlEq(well_state, group_state,
+                                  schedule, summaryState,
+                                  inj_controls, prod_controls,
+                                  this->primary_variables_,
+                                  this->getRefDensity(),
+                                  this->linSys_,
+                                  stopped_or_zero_target,
+                                  deferred_logger);
+        }
 
         // do the local inversion of D.
         try {
@@ -909,6 +919,7 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updateIPRImplicit(const Simulator& simulator,
+                      const WellGroupHelperType& wgHelper,
                       WellStateType& well_state,
                       DeferredLogger& deferred_logger)
     {
@@ -939,7 +950,6 @@ namespace Opm
             return;
             */
         }
-        const auto& group_state  = simulator.problem().wellModel().groupState();
 
         std::fill(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), 0.);
         std::fill(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), 0.);
@@ -953,7 +963,8 @@ namespace Opm
         const auto cmode = ws.production_cmode;
         ws.production_cmode = Well::ProducerCMode::BHP;
         const double dt = simulator.timeStepSize();
-        assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls, well_state, deferred_logger,
+                                       /*solving_with_zero_rate=*/false);
 
         const size_t nEq = this->primary_variables_.numWellEq();
         BVectorWell rhs(1);
@@ -1702,7 +1713,10 @@ namespace Opm
             );
         } else {
             converged = well_copy.iterateWellEqWithSwitching(
-                simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger
+                simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger,
+                /*fixed_control=*/false,
+                /*fixed_status=*/false,
+                /*solving_with_zero_rate=*/false
             );
         }
 
@@ -2401,7 +2415,6 @@ namespace Opm
                              WellStateType& well_state,
                              DeferredLogger& deferred_logger)
     {
-        const auto& group_state = wgHelper.groupState();
         updatePrimaryVariables(simulator, well_state, deferred_logger);
 
         const int max_iter = this->param_.max_inner_iter_wells_;
@@ -2410,7 +2423,8 @@ namespace Opm
         bool relax_convergence = false;
         this->regularize_ = false;
         do {
-            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls, well_state, deferred_logger,
+                                           /*solving_with_zero_rate=*/false);
 
             if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;
@@ -2464,9 +2478,9 @@ namespace Opm
                                WellStateType& well_state,
                                DeferredLogger& deferred_logger,
                                const bool fixed_control /*false*/,
-                               const bool fixed_status /*false*/)
+                               const bool fixed_status /*false*/,
+                               const bool solving_with_zero_rate /*false*/)
     {
-        const auto& group_state = wgHelper.groupState();
         updatePrimaryVariables(simulator, well_state, deferred_logger);
 
         const int max_iter = this->param_.max_inner_iter_wells_;
@@ -2474,7 +2488,7 @@ namespace Opm
         bool converged = false;
         bool relax_convergence = false;
         this->regularize_ = false;
-        const auto& summary_state = simulator.vanguard().summaryState();
+        const auto& summary_state = wgHelper.summaryState();
 
         // Always take a few (more than one) iterations after a switch before allowing a new switch
         // The optimal number here is subject to further investigation, but it has been observerved
@@ -2507,7 +2521,8 @@ namespace Opm
                 const Scalar wqTotal = this->primary_variables_.eval(WQTotal).value();
                 changed = this->updateWellControlAndStatusLocalIteration(
                     simulator, wgHelper, inj_controls, prod_controls, wqTotal,
-                    well_state, deferred_logger, fixed_control, fixed_status
+                    well_state, deferred_logger, fixed_control, fixed_status,
+                    solving_with_zero_rate
                 );
                 if (changed){
                     its_since_last_switch = 0;
@@ -2527,7 +2542,7 @@ namespace Opm
                 }
             }
 
-            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls, well_state, deferred_logger, solving_with_zero_rate);
 
             if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;
