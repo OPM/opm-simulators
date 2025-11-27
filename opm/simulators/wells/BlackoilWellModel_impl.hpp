@@ -791,18 +791,23 @@ namespace Opm {
 
                     assert(effective_well_index >= well_index_fracture);
 
-                    // NB! this change the well state for this value
-                    const auto con_fac =
-                        filtrate_data.flow_factor[perf] =
-                        (effective_well_index - well_index_fracture)
-                         / effective_well_index;
+                    if (effective_well_index > 0) {
+                        // NB! this change the well state for this value
+                        const auto con_fac =
+                            filtrate_data.flow_factor[perf] =
+                            (effective_well_index - well_index_fracture)
+                             / effective_well_index;
 
-                    const int np = well_state.numPhases();
+                        const auto frac_fac = 1.0 - con_fac;
 
-                    const auto frac_fac = 1.0 - con_fac;
+                        const auto np = well_state.numPhases();
 
-                    total_flow_fracture += frac_fac * perf_data
-                        .phase_rates[perf*np + FluidSystem::waterPhaseIdx];
+                        total_flow_fracture += frac_fac * perf_data
+                            .phase_rates[perf*np + FluidSystem::waterPhaseIdx];
+                    }
+                    else {
+                        filtrate_data.flow_factor[perf] = 0.0;
+                    }
                 }
 
                 well_state.well(well->indexOfWell()).frac_rate = total_flow_fracture;
