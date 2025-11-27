@@ -144,7 +144,7 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::string
                                          this->report_step_,
                                          &this->guide_rate_,
                                          tcalc.guideTargetMode(),
-                                         /*is_production_group=*/false,
+                                         /*is_producer=*/false,
                                          injection_phase};
 
     auto local_fraction_lambda = [&](const std::string& child) { return fcalc.localFraction(child, name); };
@@ -317,7 +317,7 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::strin
                                                               this->report_step_,
                                                               &this->guide_rate_,
                                                               tcalc.guideTargetMode(),
-                                                              /*is_production_group=*/true,
+                                                              /*is_producer=*/true,
                                                               /*injection_phase=*/Phase::OIL};
 
     auto local_fraction_lambda = [&](const std::string& child) { return fcalc.localFraction(child, name); };
@@ -385,8 +385,8 @@ WellGroupHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::strin
     for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
         const int num_gr_ctrl = this->groupControlledWells(chain[ii],
                                                            /*always_included_child=*/"",
-                                                           /*is_producer=*/true,
-                                                           /*injection_phase_not_used=*/Phase::OIL);
+                                                           /*is_production_group=*/true,
+                                                           /*injection_phase=*/Phase::OIL);
         if (this->guide_rate_.has(chain[ii]) && num_gr_ctrl > 0) {
             local_reduction_level = ii;
         }
@@ -707,7 +707,7 @@ WellGroupHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::stri
                                                               this->report_step_,
                                                               &this->guide_rate_,
                                                               tcalc.guideTargetMode(),
-                                                              /*is_production_group=*/false,
+                                                              /*is_producer=*/false,
                                                               injection_phase};
 
     auto local_fraction_lambda = [&](const std::string& child, const std::string& always_incluced_name) {
@@ -1733,12 +1733,10 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
         bool included = false;
         if (is_production_group) {
             const auto ctrl = group_state.production_control(child_group);
-            included
-                = included || (ctrl == Group::ProductionCMode::FLD) || (ctrl == Group::ProductionCMode::NONE);
+            included = (ctrl == Group::ProductionCMode::FLD || ctrl == Group::ProductionCMode::NONE);
         } else {
             const auto ctrl = group_state.injection_control(child_group, injection_phase);
-            included
-                = included || (ctrl == Group::InjectionCMode::FLD) || (ctrl == Group::InjectionCMode::NONE);
+            included = (ctrl == Group::InjectionCMode::FLD || ctrl == Group::InjectionCMode::NONE);
         }
 
         if (included) {
@@ -1753,14 +1751,14 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
         bool included = false;
         const Well& well = this->schedule_.getWell(child_well, this->report_step_);
         if (is_production_group && well.isProducer()) {
-            included = included || this->wellState().isProductionGrup(child_well) || group.as_choke();
+            included = (this->wellState().isProductionGrup(child_well) || group.as_choke());
         } else if (!is_production_group && !well.isProducer()) {
             const auto& well_controls = well.injectionControls(this->summary_state_);
             auto injectorType = well_controls.injector_type;
             if ((injection_phase == Phase::WATER && injectorType == InjectorType::WATER)
                 || (injection_phase == Phase::OIL && injectorType == InjectorType::OIL)
                 || (injection_phase == Phase::GAS && injectorType == InjectorType::GAS)) {
-                included = included || this->wellState().isInjectionGrup(child_well);
+                included = this->wellState().isInjectionGrup(child_well);
             }
         }
         const auto ctrl1 = group_state.production_control(group.name());
@@ -1887,7 +1885,7 @@ WellGroupHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
                 = this->groupControlledWells(sub_group.name(),
                                              /*always_included_child=*/"",
                                              !is_injector,
-                                             /*injection_phase_not_used=*/Phase::OIL);
+                                             /*injection_phase=*/Phase::OIL);
             if (individual_control || num_group_controlled_wells == 0) {
                 for (int phase = 0; phase < np; phase++) {
                     group_target_reduction[phase]
