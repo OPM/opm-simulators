@@ -1306,6 +1306,9 @@ reportConnectionFracture(const std::size_t well_index,
         fracture.filter_volume = data.filter_volume[i];
         fracture.avg_width = data.avg_width[i];
         fracture.avg_filter_width = data.avg_filter_width[i];
+        fracture.inj_pressure = data.inj_pressure[i];
+        fracture.inj_bhp = data.inj_bhp[i];
+        fracture.inj_wellrate = data.inj_wellrate[i];
     }
 }
 
