@@ -311,7 +311,11 @@ namespace Opm
                 if (!fixed_control) {
                     // When solving_with_zero_rate=true, fixed_control=true, so this block should never
                     // be entered.
-                    assert(!solving_with_zero_rate);
+                    if (solving_with_zero_rate) {
+                        OPM_DEFLOG_THROW(std::runtime_error, fmt::format(
+                            "Well {}: solving_with_zero_rate should not be true when fixed_control is false",
+                            this->name()), deferred_logger);
+                    }
 
                     // Changing to group controls here may lead to inconsistencies in the group handling which in turn
                     // may result in excessive back and forth switching. However, we currently allow this by default.
