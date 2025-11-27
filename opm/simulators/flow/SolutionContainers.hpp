@@ -79,6 +79,29 @@ struct BioeffectsSolutionContainer {
     bool operator==(const BioeffectsSolutionContainer& rhs) const;
 };
 
+//! \brief Struct holding CO2 and H2 extension data.
+template<class Scalar>
+struct CO2H2SolutionContainer {
+    std::vector<Scalar> cXmfCO2;
+    std::vector<Scalar> cXmfH2;
+    std::vector<Scalar> cYmfwat;
+
+    static CO2H2SolutionContainer serializationTestObject();
+
+    //! \brief Resize vectors and zero initialize.
+    void resize(const unsigned numElems);
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(cXmfCO2);
+        serializer(cXmfH2);
+        serializer(cYmfwat);
+    }
+
+    bool operator==(const CO2H2SolutionContainer& rhs) const;
+};
+
 } // namespace Opm
 
 #endif // OPM_SOLUTION_CONTAINERS_HPP

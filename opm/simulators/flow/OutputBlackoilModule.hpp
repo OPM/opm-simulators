@@ -1603,6 +1603,17 @@ private:
                       }
                   }, this->bioeffectsC_.allocated()
             },
+            Entry{[&runspec = this->eclState_.runspec(),
+                   &CO2H2C = this->CO2H2C_](const Context& ectx)
+                  {
+                     const auto xwg = FluidSystem::convertRswToXwG(getValue(ectx.fs.Rsw()), ectx.pvtRegionIdx);
+                     const auto xgw = FluidSystem::convertRvwToXgW(getValue(ectx.fs.Rvw()), ectx.pvtRegionIdx);
+                     CO2H2C.assign(ectx.globalDofIdx,
+                                   FluidSystem::convertXwGToxwG(xwg, ectx.pvtRegionIdx),
+                                   FluidSystem::convertXgWToxgW(xgw, ectx.pvtRegionIdx),
+                                   runspec.co2Storage());
+                  }, this->CO2H2C_.allocated()
+            },
             Entry{[&rftC = this->rftC_,
                    &vanguard = this->simulator_.vanguard()](const Context& ectx)
                   {
