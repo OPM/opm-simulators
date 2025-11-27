@@ -166,9 +166,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver5.cpp
   opm/simulators/linalg/FlexibleSolver6.cpp
   opm/simulators/linalg/FlowLinearSolverParameters.cpp
-  opm/simulators/linalg/mixed/bsr.c
-  opm/simulators/linalg/mixed/prec.c
-  opm/simulators/linalg/mixed/bslv.c
   opm/simulators/linalg/ISTLSolver.cpp
   opm/simulators/linalg/MILU.cpp
   opm/simulators/linalg/ParallelIstlInformation.cpp
@@ -264,6 +261,15 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WellTest.cpp
   opm/simulators/wells/WGState.cpp
   )
+
+if (HAVE_AVX2_EXTENSION)
+  set (AVX2_SOURCE_FILES
+    opm/simulators/linalg/mixed/bsr.c
+    opm/simulators/linalg/mixed/prec.c
+    opm/simulators/linalg/mixed/bslv.c)
+  list (APPEND MAIN_SOURCE_FILES
+    ${AVX2_SOURCE_FILES})
+endif()
 
 if (HAVE_ECL_INPUT)
   list (APPEND MAIN_SOURCE_FILES

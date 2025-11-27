@@ -32,7 +32,9 @@
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 #include <opm/simulators/linalg/is_gpu_operator.hpp>
 
+#if HAVE_AVX2_EXTENSION
 #include <opm/simulators/linalg/mixed/wrapper.hpp>
+#endif
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -183,8 +185,9 @@ namespace Dune
                                                                             tol, // desired residual reduction factor
                                                                             maxiter, // maximum number of iterations
                                                                             verbosity);
-        } else if (solver_type == "mixed-bicgstab") {
-            if constexpr (!Opm::is_gpu_operator_v<Operator>) {
+#if HAVE_AVX2_EXTENSION
+          } else if (solver_type == "mixed-bicgstab") {
+              if constexpr (!Opm::is_gpu_operator_v<Operator>) {
                 const std::string prec_type = prm.get<std::string>("preconditioner.type", "error");
                 bool use_mixed_dilu= (prec_type=="mixed-dilu");
                 using MatrixType = decltype(linearoperator_for_solver_->getmat());
@@ -197,6 +200,7 @@ namespace Dune
             } else {
                 OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for GPU operators.");
             }
+#endif
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
                                                                         *scalarproduct_,
