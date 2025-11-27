@@ -328,17 +328,17 @@ protected:
         const Scalar outAlpha = simulator_.problem().thermalHalfTransmissibility(globJ, globI);
         short interiorDofIdx = 0; // NB
         short exteriorDofIdx = 1; // NB
-        EnergyModule::ExtensiveQuantities::template updateEnergy(heatFlux,
-                                                                 interiorDofIdx, // focusDofIndex,
-                                                                 interiorDofIdx,
-                                                                 exteriorDofIdx,
-                                                                 intQuantsIn,
-                                                                 intQuantsEx,
-                                                                 intQuantsIn.fluidState(),
-                                                                 intQuantsEx.fluidState(),
-                                                                 inAlpha,
-                                                                 outAlpha,
-                                                                 res_nbinfo.faceArea);
+        EnergyModule::ExtensiveQuantities::updateEnergy(heatFlux,
+                                                        interiorDofIdx, // focusDofIndex,
+                                                        interiorDofIdx,
+                                                        exteriorDofIdx,
+                                                        intQuantsIn,
+                                                        intQuantsEx,
+                                                        intQuantsIn.fluidState(),
+                                                        intQuantsEx.fluidState(),
+                                                        inAlpha,
+                                                        outAlpha,
+                                                        res_nbinfo.faceArea);
         heatFlux *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>()*res_nbinfo.faceArea;
     }
 
