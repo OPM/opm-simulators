@@ -539,7 +539,8 @@ namespace Opm
                     );
                 } else {
                     converged = this->iterateWellEqWithSwitching(
-                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger,
+                        /*fixed_control=*/false, /*fixed_status=*/false, /*solving_with_zero_rate=*/false
                     );
                 }
             }
@@ -621,7 +622,8 @@ namespace Opm
         }
         // solve well-equation
         converged = this->iterateWellEqWithSwitching(
-            simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+            simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger,
+            /*fixed_control=*/false, /*fixed_status=*/false, /*solving_with_zero_rate=*/false
         );
 
 
@@ -648,7 +650,8 @@ namespace Opm
                     // re-solve with hopefully good initial guess
                     ws.thp = this->getTHPConstraint(summary_state);
                     converged = this->iterateWellEqWithSwitching(
-                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger,
+                        /*fixed_control=*/false, /*fixed_status=*/false, /*solving_with_zero_rate=*/false
                     );
                 }
             }
@@ -684,7 +687,10 @@ namespace Opm
                                                              prod_controls,
                                                              wgHelper,
                                                              well_state,
-                                                             deferred_logger);
+                                                             deferred_logger,
+                                                             /*fixed_control=*/false,
+                                                             /*fixed_status=*/false,
+                                                             /*solving_with_zero_rate=*/false);
             }
         }
         // update operability
@@ -771,7 +777,10 @@ namespace Opm
         // solve
         const bool converged =  this->iterateWellEqWithSwitching(
             simulator, dt, inj_controls, prod_controls, wgHelper_copy,
-            well_state, deferred_logger, /*fixed_control*/true
+            well_state, deferred_logger,
+            /*fixed_control=*/true,
+            /*fixed_status=*/false,
+            /*solving_with_zero_rate=*/false
         );
         ws.injection_cmode = cmode_inj;
         ws.production_cmode = cmode_prod;
@@ -841,7 +850,10 @@ namespace Opm
                     );
                 } else {
                     converged = this->iterateWellEqWithSwitching(
-                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger
+                        simulator, dt, inj_controls, prod_controls, wgHelper, well_state, deferred_logger,
+                        /*fixed_control=*/false,
+                        /*fixed_status=*/false,
+                        /*solving_with_zero_rate=*/false
                     );
                 }
             }
@@ -936,7 +948,8 @@ namespace Opm
     {
         OPM_TIMEFUNCTION();
         prepareWellBeforeAssembling(simulator, dt, wgHelper, well_state, deferred_logger);
-        assembleWellEqWithoutIteration(simulator, wgHelper, dt, well_state, deferred_logger);
+        assembleWellEqWithoutIteration(simulator, wgHelper, dt, well_state, deferred_logger,
+                                       /*solving_with_zero_rate=*/false);
     }
 
 

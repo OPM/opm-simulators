@@ -593,7 +593,10 @@ namespace Opm
             );
         } else {
             converged = well_copy.iterateWellEqWithSwitching(
-                simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger
+                simulator, dt, inj_controls, prod_controls, wgHelper_copy, well_state_copy, deferred_logger,
+                /*fixed_control=*/false,
+                /*fixed_status=*/false,
+                /*solving_with_zero_rate=*/false
             );
         }
 
@@ -1441,7 +1444,8 @@ namespace Opm
         const auto cmode = ws.production_cmode;
         ws.production_cmode = Well::ProducerCMode::BHP;
         const double dt = simulator.timeStepSize();
-        assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls, well_state, deferred_logger);
+        assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls, well_state, deferred_logger,
+                                       /*solving_with_zero_rate=*/false);
 
         BVectorWell rhs(this->numberOfSegments());
         rhs = 0.0;
@@ -1555,7 +1559,8 @@ namespace Opm
             }
 
             assembleWellEqWithoutIteration(simulator, wgHelper, dt, inj_controls, prod_controls,
-                                           well_state, deferred_logger);
+                                           well_state, deferred_logger,
+                                           /*solving_with_zero_rate=*/false);
 
             const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
             if (report.converged()) {

@@ -211,9 +211,9 @@ namespace Opm
                                         const WellGroupHelperType& wgHelper,
                                         WellStateType& well_state,
                                         DeferredLogger& deferred_logger,
-                                        const bool fixed_control = false,
-                                        const bool fixed_status = false,
-                                        const bool solving_with_zero_rate = false) override;
+                                        const bool fixed_control,
+                                        const bool fixed_status,
+                                        const bool solving_with_zero_rate) override;
 
         /* returns BHP */
         Scalar computeWellRatesAndBhpWithThpAlqProd(const Simulator& ebos_simulator,
@@ -368,7 +368,7 @@ namespace Opm
                                             const Well::ProductionControls& prod_controls,
                                             WellStateType& well_state,
                                             DeferredLogger& deferred_logger,
-                                            const bool solving_with_zero_rate = false) override;
+                                            const bool solving_with_zero_rate) override;
 
         void assembleWellEqWithoutIterationImpl(const Simulator& simulator,
                                                 const WellGroupHelperType& wgHelper,

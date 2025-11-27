@@ -178,7 +178,7 @@ public:
                                         const double dt,
                                         WellStateType& well_state,
                                         DeferredLogger& deferred_logger,
-                                        const bool solving_with_zero_rate = false);
+                                        const bool solving_with_zero_rate);
 
     // TODO: better name or further refactoring the function to make it more clear
     void prepareWellBeforeAssembling(const Simulator& simulator,
@@ -265,9 +265,9 @@ public:
                                                   const Scalar WQTotal,
                                                   WellStateType& well_state,
                                                   DeferredLogger& deferred_logger,
-                                                  const bool fixed_control = false,
-                                                  const bool fixed_status = false,
-                                                  const bool solving_with_zero_rate = false);
+                                                  const bool fixed_control,
+                                                  const bool fixed_status,
+                                                  const bool solving_with_zero_rate);
 
     virtual void updatePrimaryVariables(const Simulator& simulator,
                                         const WellStateType& well_state,
@@ -368,9 +368,9 @@ public:
                                             const WellGroupHelperType& wgHelper,
                                             WellStateType& well_state,
                                             DeferredLogger& deferred_logger,
-                                            const bool fixed_control = false,
-                                            const bool fixed_status = false,
-                                            const bool solving_with_zero_rate = false) = 0;
+                                            const bool fixed_control,
+                                            const bool fixed_status,
+                                            const bool solving_with_zero_rate) = 0;
 protected:
     // simulation parameters
     std::vector<RateVector> connectionRates_;
@@ -413,7 +413,7 @@ protected:
                                                 const WellProductionControls& prod_controls,
                                                 WellStateType& well_state,
                                                 DeferredLogger& deferred_logger,
-                                                const bool solving_with_zero_rate = false) = 0;
+                                                const bool solving_with_zero_rate) = 0;
 
     // iterate well equations with the specified control until converged
     virtual bool iterateWellEqWithControl(const Simulator& simulator,
