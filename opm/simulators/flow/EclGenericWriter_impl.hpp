@@ -25,6 +25,8 @@
 
 #include <dune/grid/common/mcmgmapper.hh>
 
+
+#include <opm/grid/cpgrid/CpGridUtilities.hpp>
 #include <opm/grid/cpgrid/LgrOutputHelpers.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
@@ -236,9 +238,32 @@ EclGenericWriter(const Schedule& schedule,
     , equilGrid_      (equilGrid)
 {
     if (this->collectOnIORank_.isIORank()) {
+
+        auto eclipse_grid_output = UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid());
+
+        // Add lgr coord and zcorn
+        if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+            //Set the LGRCollection
+            eclipse_grid_output.init_lgr_cells(eclState_.getLgrs());
+
+            // Loop over all lgrs
+            for (const auto& [lgr_name, lgr_level] : grid_.getLgrNameToLevel())
+            {
+                /* if (lgr_name == "GLOBAL") {
+                    continue;
+                    }*/
+
+                const auto [lgrCartesianIdxToCellIdx, lgrIJK] = Opm::lgrIJK(grid_, lgr_name);
+                const auto [lgrCOORD, lgrZCORN] = Opm::lgrCOORDandZCORN(grid_, lgr_level, lgrCartesianIdxToCellIdx, lgrIJK);
+
+                eclipse_grid_output.set_lgr_refinement(lgr_name, lgrCOORD, lgrZCORN);
+            }
+            eclipse_grid_output.init_children_host_cells();
+
+        }
         this->eclIO_ = std::make_unique<EclipseIO>
             (this->eclState_,
-             UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
+             eclipse_grid_output,
              this->schedule_, summaryConfig, "", enableEsmry);
     }
 
