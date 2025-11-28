@@ -224,6 +224,7 @@ GRUPTREE
 
  'F1'     'M5N'  /
  'B1'     'M5S'  /
+ 'C1'     'M5N'  /
  'G1'     'M5S'  /
  /
 
@@ -244,6 +245,10 @@ INCLUDE
 WELSPECS
 --WELL     GROUP  IHEEL JHEEL   DREF PHASE   DRAD INFEQ SIINS XFLOW PRTAB  DENS
  'B-1H'  'B1'   11    3      1*   OIL     1*   1*   SHUT 1* 1* 1* /
+ 'B-2H'  'B1'    4    7      1*   OIL     1*   1*   SHUT 1* 1* 1* /
+ 'B-3H'  'B1'   11   12      1*   OIL     1*   1*   SHUT 1* 1* 1* /
+ 'C-1H'  'C1'   13   20      1*   OIL     1*   1*   SHUT 1* 1* 1* /
+ 'C-2H'  'C1'   12   27      1*   OIL     1*   1*   SHUT 1* 1* 1* /
 /
 
 WELSPECS
@@ -256,6 +261,10 @@ WELSPECS
 COMPDAT
 --WELL      I   J    K1   K2 OP/SH  SATN    TRAN    WBDIA    KH     SKIN DFACT   DIR    PEQVR
  'B-1H'    11   3    1    5   OPEN    1*      1*    0.216    1*        0    1*    Z       1* /
+ 'B-2H'     4   7    1    6   OPEN    1*      1*    0.216    1*        0    1*    Z       1* /
+ 'B-3H'    11  12    1    4   OPEN    1*      1*    0.216    1*        0    1*    Z       1* /
+ 'C-1H'    13  20    1    4   OPEN    1*      1*    0.216    1*        0    1*    Z       1* /
+ 'C-2H'    12  27    1    5   OPEN    1*      1*    0.216    1*        0    1*    Z       1* /
 /
 
 COMPDAT
@@ -267,7 +276,7 @@ COMPDAT
 
 WCONPROD
 --  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
-   'B-1H'      OPEN    ORAT  1500.0  1*     1*    3000.0  1*   100.0  30   1   1*  /
+   'B-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
 /
 
 GCONINJE
@@ -296,22 +305,155 @@ WLIFTOPT
 TSTEP
  0.5 /
 
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    ORAT  2000  1*     1*    1*  1*   100.0  30   1   1*  /
+/
 
 DATES
  1 FEB 2020 /
+/
+
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    ORAT  4500  1*     1*    1*  1*   100.0  30   1   1*  /
 /
 
 DATES
  1 MAR 2020 /
 /
 
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    GRAT  1*  1*     2.0e5    1*  1*   100.0  30   1   1*  /
+/
+
 DATES
  1 APR 2020 /
- 1 MAY 2020 /
- 1 JUN 2020 /
- 1 JLY 2020 /
- 1 AUG 2020 /
+/
 
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      SHUT    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+DATES
+ 2 APR 2020 /
+/
+
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-3H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+--Add more wells to check interation with group control
+WLIFTOPT
+ 'B-1H'   YES   150000   1.01   -1.0  /
+ 'B-2H'   YES   150000   1.01   -1.0  /
+ 'B-3H'   YES   150000   1.01   -1.0  /
+ 'C-1H'   YES   150000   1.01   -1.0  /
+ 'C-2H'   YES   150000   1.01   -1.0  /
+/
+
+-- Group lift gas limits for gas lift optimization
+GLIFTOPT
+ 'PLAT-A'  450000 /  --
+/
+
+DATES
+ 1 MAY 2020 /
+/
+
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-3H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+WLIFTOPT
+ 'B-1H'   YES   150000   1.01   -1.0  /
+ 'B-2H'   YES   150000   1.01   -1.0  /
+ 'B-3H'   YES   150000   1.01   -1.0  /
+ 'C-1H'   YES   150000   1.01   -1.0  /
+ 'C-2H'   YES   150000   1.01   -1.0  /
+/
+
+GLIFTOPT
+ 'PLAT-A'  450000 /  --
+/
+
+GCONPROD
+ 'PLAT-A' ORAT 25000 /
+/
+
+DATES
+ 1 JUN 2020 /
+/
+
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-3H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+WLIFTOPT
+ 'B-1H'   YES   150000   1.01   -1.0  /
+ 'B-2H'   YES   150000   1.01   -1.0  /
+ 'B-3H'   YES   150000   1.01   -1.0  /
+ 'C-1H'   YES   150000   1.01   -1.0  /
+ 'C-2H'   YES   150000   1.01   -1.0  /
+/
+
+GCONPROD
+ 'M5S' GRAT 2* 5e5 /
+ 'PLAT-A' ORAT 25000 /
+/
+GLIFTOPT
+ 'PLAT-A'  450000 /  --
+/
+
+DATES
+ 1 JLY 2020 /
+/
+
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-3H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+WLIFTOPT
+ 'B-1H'   YES   150000   1.01   -1.0  /
+ 'B-2H'   YES   150000   1.01   -1.0  /
+ 'B-3H'   YES   150000   1.01   -1.0  /
+ 'C-1H'   YES   150000   1.01   -1.0  /
+ 'C-2H'   YES   150000   1.01   -1.0  /
+/
+
+GCONPROD
+ 'M5S' NONE /
+ 'PLAT-A' NONE/
+/
+
+GLIFTOPT
+ 'PLAT-A'  800000 800000 /  --
+/
+
+DATES
+ 1 AUG 2020 /
 /
 
 END

@@ -136,6 +136,10 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
         num_wells_changed = glift_wells.size();
     }
     num_wells_changed = simulator.vanguard().gridView().comm().sum(num_wells_changed);
+
+    if (num_wells_changed > 0) {
+        updateWellPotentials(simulator, well_container, node_pressures, wellState, deferred_logger);
+    }
     return num_wells_changed > 0;
 }
 
@@ -246,16 +250,6 @@ gasLiftOptimizationStage1(const Simulator& simulator,
                                           group_gas_rates[j],
                                           group_water_rates[j],
                                           group_alq_rates[j]);
-                }
-            }
-            if constexpr (glift_debug) {
-                int counter = 0;
-                if (comm.rank() == i) {
-                    counter = wellState.gliftGetDebugCounter();
-                }
-                counter = comm.sum(counter);
-                if (comm.rank() != i) {
-                    wellState.gliftSetDebugCounter(counter);
                 }
             }
         }
