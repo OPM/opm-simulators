@@ -249,9 +249,9 @@ EclGenericWriter(const Schedule& schedule,
             // Loop over all lgrs
             for (const auto& [lgr_name, lgr_level] : grid_.getLgrNameToLevel())
             {
-                if (lgr_name == "GLOBAL") {
+                /* if (lgr_name == "GLOBAL") {
                     continue;
-                }
+                    }*/
 
                 const auto [lgrCartesianIdxToCellIdx, lgrIJK] = Opm::lgrIJK(grid_, lgr_name);
                 const auto [lgrCOORD, lgrZCORN] = Opm::lgrCOORDandZCORN(grid_, lgr_level, lgrCartesianIdxToCellIdx, lgrIJK);
