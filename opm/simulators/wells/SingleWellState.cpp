@@ -28,6 +28,8 @@
 
 #include <opm/simulators/wells/PerforationData.hpp>
 
+#include <fmt/format.h>
+
 namespace Opm {
 
 template<typename Scalar, typename IndexTraits>
@@ -413,6 +415,44 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
            this->alq_state == rhs.alq_state &&
            this->primaryvar == rhs.primaryvar &&
            this->group_target == rhs.group_target;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::string
+SingleWellState<Scalar, IndexTraits>::
+debugInfo() const
+{
+    std::string info = "Well name: " + this->name + " well state:\n";
+    fmt::format_to(std::back_inserter(info), " type: {}, staus: {}, control type: {}, BHP: {:8.2e} Pa, THP: {:8.2e} Pa\n",
+                   this->producer? "Producer" : " Injector", WellStatus2String(this->status),
+                   this->producer ? WellProducerCMode2String(this->production_cmode)
+                                  : WellInjectorCMode2String(this->injection_cmode),
+                   this->bhp / Opm::unit::barsa,
+                   this->thp / Opm::unit::barsa);
+
+    fmt::format_to(std::back_inserter(info), "  Surface rates (m3/s): ");
+    for (const auto& r : this->surface_rates) {
+        fmt::format_to(std::back_inserter(info), " {:8.2e}", r);
+    }
+    fmt::format_to(std::back_inserter(info), "\n");
+    fmt::format_to(std::back_inserter(info), "  Connection pressures and connection rates:\n");
+    for (std::size_t perf = 0; perf < this->perf_data.size(); perf++) {
+        fmt::format_to(std::back_inserter(info),
+                       "  Connection {:4}: Pressure: {:8.2e} Pa, Rate:",
+                       perf,
+                       this->perf_data.pressure[perf]);
+        const auto& connection_rates = this->perf_data.phase_rates;
+        const std::size_t num_phases = this->pu.numActivePhases();
+
+        for (std::size_t p = 0; p < num_phases; ++p) {
+            fmt::format_to(std::back_inserter(info), " {: 8.2e} m3/s", connection_rates[perf * num_phases + p]);
+        }
+        fmt::format_to(std::back_inserter(info), "\n");
+    }
+
+    info += this->segments.debugInfo();
+
+    return info;
 }
 
 template class SingleWellState<double, BlackOilDefaultFluidSystemIndices>;

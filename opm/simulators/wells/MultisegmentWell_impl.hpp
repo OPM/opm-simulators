@@ -283,6 +283,8 @@ namespace Opm
             // this is the process with rank zero)
             deferred_logger.problem("In MultisegmentWell::recoverWellSolutionAndUpdateWellState for well "
                                     + this->name() +": "+exp.what());
+            const auto& ws = well_state.well(this->index_of_well_);
+            this->outputDebugInfoNumericalProblem(ws, deferred_logger);
             throw;
         }
     }
@@ -632,6 +634,8 @@ namespace Opm
             // this is the process with rank zero)
             deferred_logger.problem("In MultisegmentWell::solveEqAndUpdateWellState for well "
                                     + this->name() +": "+exp.what());
+            const auto& ws = well_state.well(this->index_of_well_);
+            this->outputDebugInfoNumericalProblem(ws, deferred_logger);
             throw;
         }
     }
@@ -1607,6 +1611,8 @@ namespace Opm
                 // this is the process with rank zero)
                 deferred_logger.problem("In MultisegmentWell::iterateWellEqWithControl for well "
                                         + this->name() +": "+exp.what());
+                const auto& ws = well_state.well(this->index_of_well_);
+                this->outputDebugInfoNumericalProblem(ws, deferred_logger);
                 throw;
             }
         }
@@ -1788,6 +1794,8 @@ namespace Opm
                 // this is the process with rank zero)
                 deferred_logger.problem("In MultisegmentWell::iterateWellEqWithSwitching for well "
                                         + this->name() +": "+exp.what());
+                const auto& ws = well_state.well(this->index_of_well_);
+                this->outputDebugInfoNumericalProblem(ws, deferred_logger);
                 throw;
             }
         }
@@ -2377,6 +2385,17 @@ namespace Opm
         // The following broadcast call is neccessary to ensure that processes that do *not* contain
         // the first perforation get the correct temperature, saltConcentration and pvt_region_index
         return this->parallel_well_info_.communication().size() == 1 ? info : this->pw_info_.broadcastFirstPerforationValue(info);
+    }
+
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    outputDebugInfoNumericalProblem(const SingleWellState<Scalar, IndexTraits>& ws,
+                                    DeferredLogger& deferred_logger) const
+    {
+        std::string msg = ws.debugInfo();
+        msg += this->primary_variables_.debugInfo();
+        deferred_logger.debug(msg);
     }
 
 } // namespace Opm

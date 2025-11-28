@@ -169,6 +169,8 @@ public:
     Scalar sum_filtrate_rate() const;
     Scalar sum_filtrate_total() const;
 
+    std::string debugInfo() const;
+
 private:
     Scalar sum_connection_rates(const std::vector<Scalar>& connection_rates) const;
 };
