@@ -264,14 +264,13 @@ getGroupProductionControl(const Group& group,
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    GroupStateHelpers
-::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
-                                                           well_state.phaseUsageInfo(),
-                                      resv_coeff,
-                                      gratTargetFromSales,
-                                      group.name(),
-                                      group_state,
-                                      group.has_gpmaint_control(currentGroupControl));
+    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
+                                                                   well_state.phaseUsageInfo(),
+                                                                   resv_coeff,
+                                                                   gratTargetFromSales,
+                                                                   group.name(),
+                                                                   group_state,
+                                                                   group.has_gpmaint_control(currentGroupControl));
 
     const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
     if (target_rate) {
@@ -404,24 +403,22 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     if (groupStateHelper.groupState().has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    GroupStateHelpers
-::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
-                                                           well_state.phaseUsageInfo(),
-                                      resv_coeff,
-                                      gratTargetFromSales,
-                                      group.name(),
-                                      group_state,
-                                      group.has_gpmaint_control(currentGroupControl));
+    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
+                                                                   well_state.phaseUsageInfo(),
+                                                                   resv_coeff,
+                                                                   gratTargetFromSales,
+                                                                   group.name(),
+                                                                   group_state,
+                                                                   group.has_gpmaint_control(currentGroupControl));
 
-    GroupStateHelpers
-::FractionCalculator<Scalar, IndexTraits> fcalc(schedule,
-                                        groupStateHelper,
-                                        summaryState,
-                                        reportStepIdx,
-                                        guideRate,
-                                        tcalc.guideTargetMode(),
-                                        true,
-                                        Phase::OIL);
+    GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc(schedule,
+                                                                     groupStateHelper,
+                                                                     summaryState,
+                                                                     reportStepIdx,
+                                                                     guideRate,
+                                                                     tcalc.guideTargetMode(),
+                                                                     true,
+                                                                     Phase::OIL);
 
     auto localFraction = [&](const std::string& child) {
         return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
