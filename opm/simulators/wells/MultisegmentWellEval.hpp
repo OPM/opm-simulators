@@ -131,9 +131,6 @@ protected:
     void assembleAccelerationPressureLoss(const int seg,
                                           WellState<Scalar, IndexTraits>& well_state);
 
-    EvalWell pressureDropAutoICD(const int seg,
-                                 const UnitSystem& unit_system) const;
-
     // convert a Eval from reservoir to contain the derivative related to wells
     EvalWell extendEval(const Eval& in) const;
 
