@@ -146,6 +146,9 @@ public:
     //! output the segments with pressure close to lower pressure limit for debugging purpose
     void outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const;
 
+    //! output the debug information of the primary variables for debugging purpose
+    std::string debugInfo() const;
+
 private:
     //! \brief Initialize evaluations from values.
     void setEvaluationsFromValues();
