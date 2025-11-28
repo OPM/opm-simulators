@@ -108,16 +108,16 @@ outputRestart(data::Solution& sol, const bool isMICP)
         }
     };
 
-    auto solutionMicrobes = DataEntry{"MICROBES",  UnitSystem::measure::density, cMicrobes_};
+    auto solutionMicrobes = DataEntry{"MICROBES", UnitSystem::measure::concentration, cMicrobes_};
     insert(solutionMicrobes);
-    auto solutionBiofilm = DataEntry{"BIOFILM",  UnitSystem::measure::identity, cBiofilm_};
+    auto solutionBiofilm = DataEntry{"BIOFILM", UnitSystem::measure::identity, cBiofilm_};
     insert(solutionBiofilm);
 
     if (isMICP) {
         auto solutionVectors = std::array {
-            DataEntry{"CALCITE",  UnitSystem::measure::identity, cCalcite_},
-            DataEntry{"OXYGEN",   UnitSystem::measure::density,  cOxygen_},
-            DataEntry{"UREA",     UnitSystem::measure::density,  cUrea_},
+            DataEntry{"CALCITE", UnitSystem::measure::identity,      cCalcite_},
+            DataEntry{"OXYGEN",  UnitSystem::measure::concentration,  cOxygen_},
+            DataEntry{"UREA",    UnitSystem::measure::concentration,    cUrea_},
         };
         std::for_each(solutionVectors.begin(), solutionVectors.end(),
             [&insert](auto& entry)
