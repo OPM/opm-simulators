@@ -340,6 +340,7 @@ protected:
     std::vector<Scalar> solventSaturation_;
     std::vector<Scalar> solventRsw_;
     BioeffectsSolutionContainer<Scalar> bioeffects_;
+    CO2H2SolutionContainer<Scalar> CO2H2_;
 
     // time stepping parameters
     bool enableTuning_;

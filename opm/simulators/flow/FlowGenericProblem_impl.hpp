@@ -104,6 +104,7 @@ serializationTestObject(const EclipseState& eclState,
     result.solventRsw_ = {18.0};
     result.polymer_ = PolymerSolutionContainer<Scalar>::serializationTestObject();
     result.bioeffects_ = BioeffectsSolutionContainer<Scalar>::serializationTestObject();
+    result.CO2H2_ = CO2H2SolutionContainer<Scalar>::serializationTestObject();
 
     return result;
 }

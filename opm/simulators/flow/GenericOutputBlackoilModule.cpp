@@ -440,41 +440,8 @@ assignToSolution(data::Solution& sol)
                    data::TargetType::RESTART_SOLUTION);
     }
 
-    if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
-        auto mfrac = std::vector<double>(this->rsw_.size(), 0.0);
-
-        std::transform(this->rsw_.begin(), this->rsw_.end(),
-                       this->eclState_.fieldProps().get_int("PVTNUM").begin(),
-                       mfrac.begin(),
-            [](const auto& rsw, const int pvtReg)
-        {
-            const auto xwg = FluidSystem::convertRswToXwG(rsw, pvtReg - 1);
-            return FluidSystem::convertXwGToxwG(xwg, pvtReg - 1);
-        });
-
-        std::string moleFracName = eclState_.runspec().co2Storage() ? "XMFCO2" : "XMFH2";
-        sol.insert(moleFracName,
-                   UnitSystem::measure::identity,
-                   std::move(mfrac),
-                   data::TargetType::RESTART_OPM_EXTENDED);
-    }
-
-    if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rvw_.empty()) {
-        auto mfrac = std::vector<double>(this->rvw_.size(), 0.0);
-
-        std::transform(this->rvw_.begin(), this->rvw_.end(),
-                       this->eclState_.fieldProps().get_int("PVTNUM").begin(),
-                       mfrac.begin(),
-            [](const auto& rvw, const int pvtReg)
-        {
-            const auto xgw = FluidSystem::convertRvwToXgW(rvw, pvtReg - 1);
-            return FluidSystem::convertXgWToxgW(xgw, pvtReg - 1);
-        });
-
-        sol.insert("YMFWAT",
-                   UnitSystem::measure::identity,
-                   std::move(mfrac),
-                   data::TargetType::RESTART_OPM_EXTENDED);
+    if (this->CO2H2C_.allocated()) {
+        this->CO2H2C_.outputRestart(sol);
     }
 
     if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
@@ -945,6 +912,10 @@ doAllocBuffers(const unsigned bufferSize,
     if (enableBioeffects_) {
         // Biofilms for gas-water systems; MICP only for water systems
         this->bioeffectsC_.allocate(bufferSize, !FluidSystem::phaseIsActive(gasPhaseIdx));
+    }
+
+    if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
+        this->CO2H2C_.allocate(bufferSize, eclState_.runspec().co2Storage());
     }
 
     // tracers

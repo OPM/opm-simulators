@@ -33,6 +33,7 @@
 #include <opm/output/eclipse/Inplace.hpp>
 
 #include <opm/simulators/flow/BioeffectsContainer.hpp>
+#include <opm/simulators/flow/CO2H2Container.hpp>
 #include <opm/simulators/flow/ExtboContainer.hpp>
 #include <opm/simulators/flow/FIPContainer.hpp>
 #include <opm/simulators/flow/FlowsContainer.hpp>
@@ -224,6 +225,9 @@ public:
 
     const BioeffectsContainer<Scalar>& getBioeffects() const
     { return this->bioeffectsC_; }
+
+    const CO2H2Container<Scalar>& getCO2H2() const
+    { return this->CO2H2C_; }
 
     const FlowsContainer<FluidSystem>& getFlows() const
     { return this->flowsC_; }
@@ -431,6 +435,7 @@ protected:
     ScalarBuffer saturatedOilFormationVolumeFactor_;
     ScalarBuffer rockCompTransMultiplier_;
     BioeffectsContainer<Scalar> bioeffectsC_;
+    CO2H2Container<Scalar> CO2H2C_;
     ScalarBuffer pcgw_;
     ScalarBuffer pcow_;
     ScalarBuffer pcog_;
