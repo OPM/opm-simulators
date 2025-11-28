@@ -37,14 +37,14 @@ namespace Opm {
 template <class Scalar, class IndexTraits>
 RescoupReceiveSlaveGroupData<Scalar, IndexTraits>::
 RescoupReceiveSlaveGroupData(
-    WellGroupHelperType& wg_helper
+    GroupStateHelperType& groupStateHelper
 )
-    : wg_helper_{wg_helper}
-    , reservoir_coupling_master_{wg_helper.reservoirCouplingMaster()}
-    , schedule_{wg_helper.schedule()}
-    , group_state_{wg_helper.groupState()}
-    , phase_usage_{wg_helper.phaseUsage()}
-    , report_step_idx_{wg_helper.reportStepIdx()}
+    : groupStateHelper_{groupStateHelper}
+    , reservoir_coupling_master_{groupStateHelper.reservoirCouplingMaster()}
+    , schedule_{groupStateHelper.schedule()}
+    , group_state_{groupStateHelper.groupState()}
+    , phase_usage_{groupStateHelper.phaseUsage()}
+    , report_step_idx_{groupStateHelper.reportStepIdx()}
 {
 }
 

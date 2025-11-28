@@ -34,7 +34,7 @@
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -264,13 +264,13 @@ getGroupProductionControl(const Group& group,
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    WGHelpers::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
-                                                           well_state.phaseUsageInfo(),
-                                      resv_coeff,
-                                      gratTargetFromSales,
-                                      group.name(),
-                                      group_state,
-                                      group.has_gpmaint_control(currentGroupControl));
+    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
+                                                                   well_state.phaseUsageInfo(),
+                                                                   resv_coeff,
+                                                                   gratTargetFromSales,
+                                                                   group.name(),
+                                                                   group_state,
+                                                                   group.has_gpmaint_control(currentGroupControl));
 
     const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
     if (target_rate) {
@@ -328,7 +328,8 @@ getGroupProductionTargetRate(const Group& group,
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    WGHelpers::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
+    GroupStateHelpers
+::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
                                                            well_state.phaseUsageInfo(),
                                       resv_coeff,
                                       gratTargetFromSales,
@@ -358,7 +359,7 @@ template<typename Scalar, typename IndexTraits>
 std::pair<Scalar, Group::ProductionCMode> WellGroupControls<Scalar, IndexTraits>::
 getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       const Group& group,
-                                      const WellGroupHelperType& wgHelper,
+                                      const GroupStateHelperType& groupStateHelper,
                                       const Schedule& schedule,
                                       const SummaryState& summaryState,
                                       const std::vector<Scalar>& resv_coeff,
@@ -367,8 +368,8 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       const GuideRate* guideRate,
                                       DeferredLogger& deferred_logger)
 {
-    const auto& group_state = wgHelper.groupState();
-    const auto& well_state = wgHelper.wellState();
+    const auto& group_state = groupStateHelper.groupState();
+    const auto& well_state = groupStateHelper.wellState();
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
     if (currentGroupControl == Group::ProductionCMode::FLD ||
         currentGroupControl == Group::ProductionCMode::NONE) {
@@ -378,7 +379,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
             // Produce share of parents control
             const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
             efficiencyFactor *= group.getGroupEfficiencyFactor();
-            return getAutoChokeGroupProductionTargetRate(name, parent, wgHelper,
+            return getAutoChokeGroupProductionTargetRate(name, parent, groupStateHelper,
                                                 schedule, summaryState,
                                                 resv_coeff, efficiencyFactor, reportStepIdx,
                                                 guideRate, deferred_logger);
@@ -399,25 +400,25 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     // gconsale may adjust the grat target.
     // the adjusted rates is send to the targetCalculator
     Scalar gratTargetFromSales = 0.0;
-    if (wgHelper.groupState().has_grat_sales_target(group.name()))
+    if (groupStateHelper.groupState().has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    WGHelpers::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
-                                                           well_state.phaseUsageInfo(),
-                                      resv_coeff,
-                                      gratTargetFromSales,
-                                      group.name(),
-                                      group_state,
-                                      group.has_gpmaint_control(currentGroupControl));
+    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
+                                                                   well_state.phaseUsageInfo(),
+                                                                   resv_coeff,
+                                                                   gratTargetFromSales,
+                                                                   group.name(),
+                                                                   group_state,
+                                                                   group.has_gpmaint_control(currentGroupControl));
 
-    WGHelpers::FractionCalculator<Scalar, IndexTraits> fcalc(schedule,
-                                        wgHelper,
-                                        summaryState,
-                                        reportStepIdx,
-                                        guideRate,
-                                        tcalc.guideTargetMode(),
-                                        true,
-                                        Phase::OIL);
+    GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc(schedule,
+                                                                     groupStateHelper,
+                                                                     summaryState,
+                                                                     reportStepIdx,
+                                                                     guideRate,
+                                                                     tcalc.guideTargetMode(),
+                                                                     true,
+                                                                     Phase::OIL);
 
     auto localFraction = [&](const std::string& child) {
         return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
@@ -433,7 +434,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
         ctrl = group.productionControls(summaryState);
 
     const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = wgHelper.groupChainTopBot(name, group.name());
+    const auto chain = groupStateHelper.groupChainTopBot(name, group.name());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
     Scalar target = orig_target;

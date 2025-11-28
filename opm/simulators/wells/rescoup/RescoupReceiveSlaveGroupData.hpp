@@ -23,7 +23,7 @@
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 namespace Opm {
@@ -35,17 +35,17 @@ namespace Opm {
 /// - Receiving production data (rates, potentials) from all active slave processes
 /// - Receiving injection data (rates) from all active slave processes
 /// - Processing and storing the data in the appropriate group state structures
-/// - Coordinating with WellGroupHelper for group control calculations
+/// - Coordinating with GroupStateHelper for group control calculations
 ///
 /// The class acts as a bridge between the MPI communication layer (ReservoirCouplingMaster)
-/// and the well/group management system (WellGroupHelper), ensuring that slave group
+/// and the well/group management system (GroupStateHelper), ensuring that slave group
 /// data is properly incorporated into the master's group control logic.
 ///
 /// @tparam Scalar Floating-point type for rate and potential values (typically double or float)
 /// @tparam IndexTraits Type traits for phase indexing
 ///
 /// @see ReservoirCouplingMaster
-/// @see WellGroupHelper
+/// @see GroupStateHelper
 template<class Scalar, class IndexTraits>
 class RescoupReceiveSlaveGroupData {
 public:
@@ -53,11 +53,11 @@ public:
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
     using Potentials = ReservoirCoupling::Potentials<Scalar>;
     using ProductionRates = ReservoirCoupling::ProductionRates<Scalar>;
-    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
     /// @brief Construct a receiver for slave group data
-    /// @param wg_helper Reference to the WellGroupHelper for accessing group state and schedule
-    RescoupReceiveSlaveGroupData(WellGroupHelperType& wg_helper);
+    /// @param groupStateHelper Reference to the GroupStateHelper for accessing group state and schedule
+    RescoupReceiveSlaveGroupData(GroupStateHelperType& groupStateHelper);
 
     /// @brief Receive and process group data from all active slave processes
     ///
@@ -75,8 +75,8 @@ public:
     /// @note Must be called at appropriate synchronization points in the simulation
     void receiveSlaveGroupData();
 private:
-    /// Reference to the WellGroupHelper for group state management
-    WellGroupHelperType& wg_helper_;
+    /// Reference to the GroupStateHelper for group state management
+    GroupStateHelperType& groupStateHelper_;
 
     /// Reference to the ReservoirCouplingMaster for MPI communication with slaves
     ReservoirCouplingMaster<Scalar>& reservoir_coupling_master_;

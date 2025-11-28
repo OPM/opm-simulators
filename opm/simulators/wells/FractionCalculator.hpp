@@ -28,20 +28,21 @@
 namespace Opm {
 template<class Scalar> class GroupState;
 class Schedule;
-template<typename Scalar, typename IndexTraits> class WellGroupHelper;
+template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 template<typename Scalar, typename IndexTraits> class WellState;
 }
 
-namespace Opm::WGHelpers {
+namespace Opm::GroupStateHelpers
+ {
 
 template<typename Scalar, typename IndexTraits>
 class FractionCalculator
 {
 public:
-    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
     FractionCalculator(const Schedule& schedule,
-                       const WellGroupHelperType& wgHelper,
+                       const GroupStateHelperType& groupStateHelper,
                        const SummaryState& summary_state,
                        const int report_step,
                        const GuideRate* guide_rate,
@@ -68,10 +69,10 @@ private:
     int groupControlledWells(const std::string& group_name,
                              const std::string& always_included_child);
     GuideRate::RateVector getGroupRateVector(const std::string& group_name);
-    const WellGroupHelperType& wgHelper() const { return wgHelper_; }
+    const GroupStateHelperType& groupStateHelper() const { return groupStateHelper_; }
 
     const Schedule& schedule_;
-    const WellGroupHelperType& wgHelper_;
+    const GroupStateHelperType& groupStateHelper_;
     const SummaryState& summary_state_;
     int report_step_;
     const GuideRate* guide_rate_;
@@ -80,6 +81,7 @@ private:
     Phase injection_phase_;
 };
 
-} // namespace Opm::WGHelpers
+} // namespace Opm::GroupStateHelpers
+
 
 #endif // OPM_FRACTION_CALCULATOR_HEADER_INCLUDED

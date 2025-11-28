@@ -32,7 +32,7 @@
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <fmt/format.h>
@@ -331,7 +331,7 @@ getGuideRateValues(const Well& well) const
         return grval;
     }
 
-    const auto qs = this->wgHelper().getWellRateVector(wname);
+    const auto qs = this->groupStateHelper().getWellRateVector(wname);
 
     this->getGuideRateValues(qs, well.isInjector(), wname, grval);
 
@@ -358,7 +358,7 @@ getGuideRateValues(const Group& group) const
         return grval;
     }
 
-    const auto qs = this->wgHelper().getProductionGroupRateVector(gname);
+    const auto qs = this->groupStateHelper().getProductionGroupRateVector(gname);
 
     const auto is_inj = false; // This procedure only applies to G*PGR.
     this->getGuideRateValues(qs, is_inj, gname, grval);
@@ -437,7 +437,7 @@ calculateWellGuideRates(const int reportStepIdx) const
         const auto get_gr = parent
             || RetrieveWellGuideRate{wellModel_.guideRate(), wname};
 
-        const auto qs = this->wgHelper().getWellRateVector(wname);
+        const auto qs = this->groupStateHelper().getWellRateVector(wname);
 
         auto getGR = [this, &wname, &qs](const GuideRateModel::Target t)
         {

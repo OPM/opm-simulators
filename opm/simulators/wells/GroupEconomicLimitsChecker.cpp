@@ -31,7 +31,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 
 #include <fmt/format.h>
 
@@ -79,7 +79,7 @@ GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar, IndexTraits>& 
         auto phase_idx = this->phase_idx_map_[i];
         this->phase_idx_reverse_map_[phase_idx] = static_cast<int>(i);
         auto phase_pos = this->well_model_.phaseUsage().canonicalToActivePhaseIdx(phase_idx);
-        Scalar production_rate = this->well_model_.wgHelper().sumWellSurfaceRates(
+        Scalar production_rate = this->well_model_.groupStateHelper().sumWellSurfaceRates(
             this->group_, phase_pos, /*isInjector*/false
         );
         this->production_rates_[i] = this->well_model_.comm().sum(production_rate);

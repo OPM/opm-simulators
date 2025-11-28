@@ -23,7 +23,7 @@
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
-#include <opm/simulators/wells/WellGroupHelper.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 namespace Opm {
@@ -37,7 +37,7 @@ namespace Opm {
 /// - Converting group state data into the appropriate reservoir coupling data structures
 /// - Sending the collected data to the master process via MPI communication
 ///
-/// The class acts as a bridge between the well/group management system (WellGroupHelper)
+/// The class acts as a bridge between the well/group management system (GroupStateHelper)
 /// and the MPI communication layer (ReservoirCouplingSlave), ensuring that slave group
 /// data is properly formatted and transmitted to the master for group control calculations.
 ///
@@ -45,7 +45,7 @@ namespace Opm {
 /// @tparam IndexTraits Type traits for phase indexing
 ///
 /// @see ReservoirCouplingSlave
-/// @see WellGroupHelper
+/// @see GroupStateHelper
 template<class Scalar, class IndexTraits>
 class RescoupSendSlaveGroupData {
 public:
@@ -54,11 +54,11 @@ public:
     using Potentials = ReservoirCoupling::Potentials<Scalar>;
     using ProductionRates = ReservoirCoupling::ProductionRates<Scalar>;
     using InjectionRates = ReservoirCoupling::InjectionRates<Scalar>;
-    using WellGroupHelperType = WellGroupHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
     /// @brief Construct a sender for slave group data
-    /// @param wg_helper Reference to the WellGroupHelper for accessing group state and schedule
-    RescoupSendSlaveGroupData(WellGroupHelperType& wg_helper);
+    /// @param groupStateHelper Reference to the GroupStateHelper for accessing group state and schedule
+    RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper);
 
     /// @brief Collect and send group data to the master process
     ///
@@ -124,8 +124,8 @@ private:
     /// via MPI communication through the ReservoirCouplingSlave.
     void sendSlaveGroupInjectionDataToMaster_() const;
 
-    /// Reference to the WellGroupHelper for group state management
-    const WellGroupHelperType& wg_helper_;
+    /// Reference to the GroupStateHelper for group state management
+    const GroupStateHelperType& groupStateHelper_;
 
     /// Reference to the ReservoirCouplingSlave for MPI communication with master
     ReservoirCouplingSlave<Scalar>& reservoir_coupling_slave_;

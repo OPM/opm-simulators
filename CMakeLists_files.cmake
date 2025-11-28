@@ -220,6 +220,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/GlobalWellInfo.cpp
   opm/simulators/wells/GroupEconomicLimitsChecker.cpp
   opm/simulators/wells/GroupState.cpp
+  opm/simulators/wells/GroupStateHelper.cpp
   opm/simulators/wells/MSWellHelpers.cpp
   opm/simulators/wells/MultisegmentWellAssemble.cpp
   opm/simulators/wells/MultisegmentWellEquations.cpp
@@ -252,7 +253,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WellFilterCake.cpp
   opm/simulators/wells/WellGroupConstraints.cpp
   opm/simulators/wells/WellGroupControls.cpp
-  opm/simulators/wells/WellGroupHelper.cpp
   opm/simulators/wells/WellHelpers.cpp
   opm/simulators/wells/WellInterfaceFluidSystem.cpp
   opm/simulators/wells/WellInterfaceGeneric.cpp
@@ -1147,6 +1147,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/GlobalWellInfo.hpp
   opm/simulators/wells/GroupEconomicLimitsChecker.hpp
   opm/simulators/wells/GroupState.hpp
+  opm/simulators/wells/GroupStateHelper.hpp
   opm/simulators/wells/GuideRateHandler.hpp
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/MultisegmentWell.hpp
@@ -1190,7 +1191,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellFilterCake.hpp
   opm/simulators/wells/WellGroupConstraints.hpp
   opm/simulators/wells/WellGroupControls.hpp
-  opm/simulators/wells/WellGroupHelper.hpp
   opm/simulators/wells/WellHelpers.hpp
   opm/simulators/wells/WellInterfaceFluidSystem.hpp
   opm/simulators/wells/WellInterfaceGeneric.hpp
