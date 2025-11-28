@@ -25,6 +25,8 @@
 
 #include <dune/grid/common/mcmgmapper.hh>
 
+
+#include <opm/grid/cpgrid/CpGridUtilities.hpp>
 #include <opm/grid/cpgrid/LgrOutputHelpers.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
@@ -623,6 +625,34 @@ doWriteOutput(const int                          reportStepNum,
         // Only data::Solution is restricted to the level grids. Well, GroupAndNetwork, Aquifer are
         // not modified in this method.
         Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_, restartValue, restartValues);
+
+        // Add lgr coord and zcorn
+
+        if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+
+            //Create a new EclpseGrid for output using dims and zcorn and coords from level zero
+            const auto [l0CartesianIdxToCellIdx, l0IJK] = Opm::lgrIJK(grid_, "GLOBAL");
+            const auto [l0COORD, l0ZCORN] = Opm::lgrCOORDandZCORN(grid_, 0, l0CartesianIdxToCellIdx, l0IJK);
+            Opm::EclipseGrid eclipse_grid_output(grid_.logicalCartesianSize(), l0COORD, l0ZCORN);
+
+            //Set the LGRCollection
+            eclipse_grid_output.init_lgr_cells(eclState_.getLgrs());
+        
+            // Loop over all lgrs
+            for (const auto& [lgr_name, lgr_level] : grid_.getLgrNameToLevel())
+            {
+                if (lgr_name == "GLOBAL") {
+                    continue;
+                }
+
+                const auto [lgrCartesianIdxToCellIdx, lgrIJK] = Opm::lgrIJK(grid_, lgr_name);
+                const auto [lgrCOORD, lgrZCORN] = Opm::lgrCOORDandZCORN(grid_, lgr_level, lgrCartesianIdxToCellIdx, lgrIJK);
+
+                eclipse_grid_output.set_lgr_refinement(lgr_name, lgrCOORD, lgrZCORN);
+            }
+            eclipse_grid_output.init_children_host_cells();
+        }
+     
     }
     else {
         restartValues.reserve(1); // minimum size
