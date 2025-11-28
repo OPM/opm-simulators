@@ -25,6 +25,8 @@
 
 #include <dune/grid/common/mcmgmapper.hh>
 
+
+#include <opm/grid/cpgrid/CpGridUtilities.hpp>
 #include <opm/grid/cpgrid/LgrOutputHelpers.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
@@ -236,20 +238,64 @@ EclGenericWriter(const Schedule& schedule,
     , equilGrid_      (equilGrid)
 {
     if (this->collectOnIORank_.isIORank()) {
-        this->eclIO_ = std::make_unique<EclipseIO>
-            (this->eclState_,
-             UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
-             this->schedule_, summaryConfig, "", enableEsmry);
-    }
 
-    // create output thread if enabled and rank is I/O rank
-    // async output is enabled by default if pthread are enabled
-    int numWorkerThreads = 0;
-    if (enableAsyncOutput && collectOnIORank_.isIORank()) {
-        numWorkerThreads = 1;
-    }
+        if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+            // For CpGrid with LGRs, we generate an EclipseGrid for output using grid_
+            // rather than equilGrid_. When equilGrid_ is created as a shallow copy of
+            // grid_, some internal data members are not propagated. As a result,
+            // equilGrid_ lacks the necessary LGR information, and ResInsight cannot
+            // visualize the local grids.
+            //
+            // TODO: Resolve this by improving the CpGrid copy constructor or by introducing
+            // an alternative mechanism to ensure all relevant grid data is fully transferred.
+            if ( (this->grid_.comm().size() == 1) && (this->eclState_.getLgrs().size()>0) && (this->grid_.maxLevel()>0) ) {
 
-    this->taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
+                // Create a new EclpseGrid for output using dims and zcorn and coords from level zero
+                const auto [l0CartesianIdxToCellIdx, l0IJK] = Opm::lgrIJK(grid_, "GLOBAL");
+                const auto [l0COORD, l0ZCORN] = Opm::lgrCOORDandZCORN(grid_, 0, l0CartesianIdxToCellIdx, l0IJK);
+                Opm::EclipseGrid eclipse_grid_output(grid_.logicalCartesianSize(), l0COORD, l0ZCORN);
+
+                // Set the LGRCollection
+                eclipse_grid_output.init_lgr_cells(eclState_.getLgrs());
+
+                // Loop over all levels
+                for (const auto& [lgr_name, lgr_level] : grid_.getLgrNameToLevel())
+                {
+                    const auto [lgrCartesianIdxToCellIdx, lgrIJK] = Opm::lgrIJK(grid_, lgr_name);
+                    const auto [lgrCOORD, lgrZCORN] = Opm::lgrCOORDandZCORN(grid_, lgr_level, lgrCartesianIdxToCellIdx, lgrIJK);
+
+                    eclipse_grid_output.set_lgr_refinement(lgr_name, lgrCOORD, lgrZCORN);
+                }
+                eclipse_grid_output.init_children_host_cells();
+
+                this->eclIO_ = std::make_unique<EclipseIO>
+                    (this->eclState_,
+                     eclipse_grid_output,
+                     this->schedule_, summaryConfig, "", enableEsmry);
+
+            }
+            else {
+                this->eclIO_ = std::make_unique<EclipseIO>
+                    (this->eclState_,
+                     UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
+                     this->schedule_, summaryConfig, "", enableEsmry);
+            }
+        } else {
+            this->eclIO_ = std::make_unique<EclipseIO>
+                (this->eclState_,
+                 UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
+                 this->schedule_, summaryConfig, "", enableEsmry);
+        }
+
+        // create output thread if enabled and rank is I/O rank
+        // async output is enabled by default if pthread are enabled
+        int numWorkerThreads = 0;
+        if (enableAsyncOutput && collectOnIORank_.isIORank()) {
+            numWorkerThreads = 1;
+        }
+
+        this->taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
+    }
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
@@ -615,14 +661,16 @@ doWriteOutput(const int                          reportStepNum,
         }
     }
 
-    std::vector<Opm::RestartValue> restartValues{};
-    // only serial, only CpGrid (for now)
+    std::vector<Opm::RestartValue> restartValues{}; // Level grids RestartValues (only serial and CpGrid for now)
     if ( !isParallel && !needsReordering && (this->eclState_.getLgrs().size()>0) && (this->grid_.maxLevel()>0) ) {
         // Level cells that appear on the leaf grid view get the data::Solution values from there.
-        // Other cells (i.e., parent cells that vanished due to refinement) get rubbish values for now.
+        // Other cells (i.e., parent cells that vanished due to refinement) get average of children values for now.
         // Only data::Solution is restricted to the level grids. Well, GroupAndNetwork, Aquifer are
         // not modified in this method.
-        Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_, restartValue, restartValues);
+        Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_,
+                                                      restartValue,
+                                                      this->eclState_.fieldProps().get_double("PORV"),
+                                                      restartValues);
     }
     else {
         restartValues.reserve(1); // minimum size
