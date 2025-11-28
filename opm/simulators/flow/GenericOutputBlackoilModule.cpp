@@ -361,7 +361,7 @@ assignToSolution(data::Solution& sol)
     addEntry(baseSolutionVector, "PCOG",     UnitSystem::measure::pressure,                              pcog_);
     addEntry(baseSolutionVector, "PCOW",     UnitSystem::measure::pressure,                              pcow_);
     addEntry(baseSolutionVector, "PDEW",     UnitSystem::measure::pressure,                              dewPointPressure_);
-    addEntry(baseSolutionVector, "POLYMER",  UnitSystem::measure::identity,                              cPolymer_);
+    addEntry(baseSolutionVector, "POLYMER",  UnitSystem::measure::concentration,                         cPolymer_);
     addEntry(baseSolutionVector, "PPCW",     UnitSystem::measure::pressure,                              ppcw_);
     addEntry(baseSolutionVector, "PRESROCC", UnitSystem::measure::pressure,                              minimumOilPressure_);
     addEntry(baseSolutionVector, "PRESSURE", UnitSystem::measure::pressure,                              fluidPressure_);
