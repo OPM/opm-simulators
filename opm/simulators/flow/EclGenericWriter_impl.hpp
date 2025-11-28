@@ -25,6 +25,8 @@
 
 #include <dune/grid/common/mcmgmapper.hh>
 
+
+#include <opm/grid/cpgrid/CpGridUtilities.hpp>
 #include <opm/grid/cpgrid/LgrOutputHelpers.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
@@ -240,16 +242,16 @@ EclGenericWriter(const Schedule& schedule,
             (this->eclState_,
              UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
              this->schedule_, summaryConfig, "", enableEsmry);
-    }
 
-    // create output thread if enabled and rank is I/O rank
-    // async output is enabled by default if pthread are enabled
-    int numWorkerThreads = 0;
-    if (enableAsyncOutput && collectOnIORank_.isIORank()) {
-        numWorkerThreads = 1;
-    }
+        // create output thread if enabled and rank is I/O rank
+        // async output is enabled by default if pthread are enabled
+        int numWorkerThreads = 0;
+        if (enableAsyncOutput && collectOnIORank_.isIORank()) {
+            numWorkerThreads = 1;
+        }
 
-    this->taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
+        this->taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
+    }
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
@@ -622,8 +624,10 @@ doWriteOutput(const int                          reportStepNum,
         // Other cells (i.e., parent cells that vanished due to refinement) get rubbish values for now.
         // Only data::Solution is restricted to the level grids. Well, GroupAndNetwork, Aquifer are
         // not modified in this method.
-        Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_, restartValue, restartValues);
-    }
+        Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_,
+                                                      restartValue,
+                                                      restartValues);
+    } 
     else {
         restartValues.reserve(1); // minimum size
         restartValues.push_back(std::move(restartValue)); // no LGRs-> only one restart value
