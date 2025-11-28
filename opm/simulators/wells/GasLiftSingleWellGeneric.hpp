@@ -63,19 +63,25 @@ public:
         GradInfo() = default;
         GradInfo(Scalar grad_,
                  Scalar new_oil_rate_,
+                 Scalar new_oil_pot_,
                  bool oil_is_limited_,
                  Scalar new_gas_rate_,
+                 Scalar new_gas_pot_,
                  bool gas_is_limited_,
                  Scalar new_water_rate_,
+                 Scalar new_water_pot_,
                  bool water_is_limited_,
                  Scalar alq_,
                  bool alq_is_limited_)
             : grad{grad_}
             , new_oil_rate{new_oil_rate_}
+            , new_oil_pot{new_oil_pot_}
             , oil_is_limited{oil_is_limited_}
             , new_gas_rate{new_gas_rate_}
+            , new_gas_pot{new_gas_pot_}
             , gas_is_limited{gas_is_limited_}
             , new_water_rate{new_water_rate_}
+            , new_water_pot{new_water_pot_}
             , water_is_limited{water_is_limited_}
             , alq{alq_}
             , alq_is_limited{alq_is_limited_}
@@ -83,10 +89,13 @@ public:
 
         Scalar grad;
         Scalar new_oil_rate;
+        Scalar new_oil_pot;
         bool oil_is_limited;
         Scalar new_gas_rate;
+        Scalar new_gas_pot;
         bool gas_is_limited;
         Scalar new_water_rate;
+        Scalar new_water_pot;
         bool water_is_limited;
         Scalar alq;
         bool alq_is_limited;
@@ -179,13 +188,19 @@ protected:
     {
         enum class LimitType {well, group, none};
         LimitedRates(Scalar oil_,
+                     Scalar oil_pot_,
                      Scalar gas_,
+                     Scalar gas_pot_,
                      Scalar water_,
+                     Scalar water_pot_,
                      bool oil_is_limited_,
                      bool gas_is_limited_,
                      bool water_is_limited_,
                      bool bhp_is_limited_)
             :  BasicRates(oil_, gas_, water_, bhp_is_limited_)
+            , oil_pot(oil_pot_)
+            , gas_pot(gas_pot_)
+            , water_pot(water_pot_)
             , oil_is_limited{oil_is_limited_}
             , gas_is_limited{gas_is_limited_}
             , water_is_limited{water_is_limited_}
@@ -194,10 +209,16 @@ protected:
         }
 
         LimitedRates(const BasicRates& rates,
+                     Scalar oil_pot_,
+                     Scalar gas_pot_,
+                     Scalar water_pot_,
                      bool oil_is_limited_,
                      bool gas_is_limited_,
                      bool water_is_limited_)
             : BasicRates(rates)
+            , oil_pot(oil_pot_)
+            , gas_pot(gas_pot_)
+            , water_pot(water_pot_)
             , oil_is_limited{oil_is_limited_}
             , gas_is_limited{gas_is_limited_}
             , water_is_limited{water_is_limited_}
@@ -213,6 +234,9 @@ protected:
         // For a given ALQ value, were the rates limited due to group targets
         //   or due to well targets?
         LimitType limit_type;
+        Scalar oil_pot;
+        Scalar gas_pot;
+        Scalar water_pot;
         bool oil_is_limited;
         bool gas_is_limited;
         bool water_is_limited;

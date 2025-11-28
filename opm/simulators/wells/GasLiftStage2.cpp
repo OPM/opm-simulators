@@ -123,20 +123,20 @@ addOrRemoveALQincrement_(GradMap &grad_map,
             well_name, (add ? "adding" : "subtracting"), old_alq, new_alq);
         this->displayDebugMessage_(msg);
     }
-    this->well_state_.well(well_name).alq_state.set(gi.alq);
+    auto& ws = this->well_state_.well(well_name);
+    ws.alq_state.set(gi.alq);
     std::vector<Scalar> well_pot(this->well_state_.numPhases(), 0.0);
     const auto& pu = this->well_state_.phaseUsageInfo();
     if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
-        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = gi.new_oil_rate;
+        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = gi.new_oil_pot;
     }
     if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
-        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = gi.new_water_rate;
+        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = gi.new_water_pot;
     }
     if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = gi.new_gas_rate;
+        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = gi.new_gas_pot;
     }
-
-    this->well_state_[well_name].well_potentials = well_pot;
+    ws.well_potentials = well_pot;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -861,10 +861,10 @@ computeDelta(const std::string& well_name, bool add)
             delta_water = factor * (gi.new_water_rate - state.waterRate());
             delta_alq = factor * (gi.alq - state.alq());
         }
-        state.update(gi.new_oil_rate, gi.oil_is_limited,
-                gi.new_gas_rate, gi.gas_is_limited,
+        state.update(gi.new_oil_rate, gi.new_oil_pot, gi.oil_is_limited,
+                gi.new_gas_rate, gi.new_gas_pot, gi.gas_is_limited,
                 gi.alq, gi.alq_is_limited,
-                gi.new_water_rate, gi.water_is_limited, add);
+                gi.new_water_rate, gi.new_water_pot, gi.water_is_limited, add);
     }
 
     // and communicate the results

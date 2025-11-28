@@ -127,10 +127,13 @@ calcIncOrDecGradient(Scalar oil_rate,
         auto grad = calcEcoGradient_(oil_rate, new_rates.oil, gas_rate, new_rates.gas, increase);
         return GradInfo(grad,
                         new_rates.oil,
+                        rates.oil,
                         new_rates.oil_is_limited,
                         new_rates.gas,
+                        rates.gas,
                         new_rates.gas_is_limited,
                         new_rates.water,
+                        rates.water,
                         new_rates.water_is_limited,
                         new_alq,
                         alq_is_limited);
@@ -163,23 +166,23 @@ runOptimize(const int iteration_idx)
                 auto& ws = this->well_state_.well(this->well_name_);
                 ws.alq_state.set(alq);
                 const auto& pu = this->well_state_.phaseUsageInfo();
-                const bool isThp = (ws.production_cmode == Well::ProducerCMode::THP);
-                if (isThp) {
-                    std::vector<Scalar> well_pot(pu.numActivePhases(), 0.0);
-                    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
-                        const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-                        well_pot[oil_pos] = state->oilRate();
-                    }
-                    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
-                        const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-                        well_pot[water_pos] = state->waterRate();
-                    }
-                    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-                        const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-                        well_pot[gas_pos] = state->gasRate();
-                    }
-                    ws.well_potentials = well_pot;
+                // since alq is changed we also need to update the well potentials
+                // the well solution itself will be updated by solving the well equation
+                // after the gaslift optimization
+                std::vector<Scalar> well_pot(pu.numActivePhases(), 0.0);
+                if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+                    const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+                    well_pot[oil_pos] = state->oilPot();
                 }
+                if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+                    const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+                    well_pot[water_pos] = state->waterPot();
+                }
+                if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+                    const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+                    well_pot[gas_pos] = state->gasPot();
+                }
+                ws.well_potentials = well_pot;
             }
         }
     }
@@ -300,6 +303,8 @@ addOrSubtractAlqIncrement_(Scalar alq, bool increase) const
     if (limited && checkALQequal_(orig_alq, alq))
         alq_opt = std::nullopt;
 
+    // alq_is_limited is used to check if we can increase the alq or not
+    // i.e. only return alq_is_limited = true if both limited and increase are true
     return {alq_opt, limited && increase };
 }
 
@@ -766,6 +771,10 @@ getLimitedRatesFromRates_(const BasicRates& rates) const
     bool oil_is_limited = false;
     bool gas_is_limited = false;
     bool water_is_limited = false;
+
+    // The well rates are potentially limited by the targets
+    // The other phases are scaled accordingly. i.e. we assume the phase fractions are the same
+    // This is not 100% true but the best we can do without solving the well equation
     if (hasProductionControl_(Rate::oil)) {
         auto target = getProductionTarget_(Rate::oil);
         if (oil_rate > target) {
@@ -805,8 +814,11 @@ getLimitedRatesFromRates_(const BasicRates& rates) const
         }
     }
     return LimitedRates {oil_rate,
+                         rates.oil,
                          gas_rate,
+                         rates.gas,
                          water_rate,
+                         rates.water,
                          oil_is_limited,
                          gas_is_limited,
                          water_is_limited,
@@ -1251,12 +1263,15 @@ runOptimizeLoop_(bool increase)
         increase_opt = std::nullopt;
     }
     ret_value = std::make_unique<GasLiftWellState<Scalar>>(new_rates.oil,
+                                                           new_rates.oil_pot,
                                                            new_rates.oil_is_limited,
                                                            new_rates.gas,
+                                                           new_rates.gas_pot,
                                                            new_rates.gas_is_limited,
                                                            cur_alq,
                                                            alq_is_limited,
                                                            new_rates.water,
+                                                           new_rates.water_pot,
                                                            new_rates.water_is_limited,
                                                            increase_opt);
     return ret_value;

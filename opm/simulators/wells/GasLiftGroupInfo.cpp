@@ -547,6 +547,9 @@ getProducerWellRates_(const Well* well, int well_index)
     Scalar water_rate = water_pot;
     Scalar gas_rate = gas_pot;
 
+    // The well rates are potentially limited by the targets
+    // The other phases are scaled accordingly. i.e. we assume the phase fractions are the same
+    // This is not 100% true but the best we can do without solving the well equation
     if (controls.hasControl(Well::ProducerCMode::ORAT) && oil_rate > static_cast<Scalar>(controls.oil_rate)) {
         water_rate *= (static_cast<Scalar>(controls.oil_rate) / oil_rate);
         gas_rate *= (static_cast<Scalar>(controls.oil_rate) / oil_rate);
@@ -673,6 +676,9 @@ initializeGroupRatesRecursive_(const Group& group)
                 group.name(), oil_rate, gas_rate, water_rate, alq);
         }
 
+        // The group rates are potentially limited by the group targets
+        // The other phases are scaled accordingly. i.e. we assume the phase fractions are the same
+        // This is not 100% true but the best we can do without solving the well equation
         if (oil_target && oil_rate > *oil_target)  {
             water_rate *= (*oil_target/oil_rate);
             gas_rate *= (*oil_target/oil_rate);
