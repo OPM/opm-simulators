@@ -1753,13 +1753,13 @@ private:
             if (this->mech_.allocated()) {
                 this->extractors_.push_back(
                     Entry{[&mech = this->mech_,
-                           &model = simulator_.problem().geoMechModel()](const Context& ectx)
+                           &model = simulator_.problem().geoMechModel(),&problem = simulator_.problem()](const Context& ectx)
                            {
                               mech.assignDelStress(ectx.globalDofIdx,
                                                    model.delstress(ectx.globalDofIdx));
 
                               mech.assignDisplacement(ectx.globalDofIdx,
-                                                      model.disp(ectx.globalDofIdx, /*include_fracture*/true));
+                                                      model.disp(ectx.globalDofIdx));
 
                               // is the tresagii stress which make rock fracture
                               mech.assignFracStress(ectx.globalDofIdx,
@@ -1767,18 +1767,24 @@ private:
 
                               mech.assignLinStress(ectx.globalDofIdx,
                                                    model.linstress(ectx.globalDofIdx));
-
+                              // hack to write out displacement potential instead
+                              double pratio = problem.pRatio(ectx.globalDofIdx);
+                              double fac = (1-pratio)/(1-2*pratio);
                               mech.assignPotentialForces(ectx.globalDofIdx,
                                                          model.mechPotentialForce(ectx.globalDofIdx),
-                                                         model.mechPotentialPressForce(ectx.globalDofIdx),
-                                                         model.mechPotentialTempForce(ectx.globalDofIdx));
+                                                         model.mechPotentialPressForce(ectx.globalDofIdx)/fac,
+                                                         model.mechPotentialTempForce(ectx.globalDofIdx)/fac);
 
                               mech.assignStrain(ectx.globalDofIdx,
-                                                model.strain(ectx.globalDofIdx, /*include_fracture*/true));
+                                                model.strain(ectx.globalDofIdx));
 
-                              // Total stress is not stored but calculated result is Voigt notation
+                              // Total stress is not stored but calculated
+                              // result is Voigt notation.
+                              //
+                              // outputstress may be different from stress
+                              // if initial_stress_ is changed.
                               mech.assignStress(ectx.globalDofIdx,
-                                                model.stress(ectx.globalDofIdx, /*include_fracture*/true));
+                                                model.outputstress(ectx.globalDofIdx));
                            }
                     }
                 );
