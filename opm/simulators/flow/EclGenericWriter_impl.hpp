@@ -238,11 +238,14 @@ EclGenericWriter(const Schedule& schedule,
     , equilGrid_      (equilGrid)
 {
     if (this->collectOnIORank_.isIORank()) {
-
-        auto eclipse_grid_output = UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid());
-
-        // Add lgr coord and zcorn
+        
         if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+                 
+            //Create a new EclpseGrid for output using dims and zcorn and coords from level zero
+            const auto [l0CartesianIdxToCellIdx, l0IJK] = Opm::lgrIJK(grid_, "GLOBAL");
+            const auto [l0COORD, l0ZCORN] = Opm::lgrCOORDandZCORN(grid_, 0, l0CartesianIdxToCellIdx, l0IJK);
+            Opm::EclipseGrid eclipse_grid_output(grid_.logicalCartesianSize(), l0COORD, l0ZCORN);
+            
             //Set the LGRCollection
             eclipse_grid_output.init_lgr_cells(eclState_.getLgrs());
 
@@ -250,8 +253,8 @@ EclGenericWriter(const Schedule& schedule,
             for (const auto& [lgr_name, lgr_level] : grid_.getLgrNameToLevel())
             {
                 /* if (lgr_name == "GLOBAL") {
-                    continue;
-                    }*/
+                   continue;
+                   }*/
 
                 const auto [lgrCartesianIdxToCellIdx, lgrIJK] = Opm::lgrIJK(grid_, lgr_name);
                 const auto [lgrCOORD, lgrZCORN] = Opm::lgrCOORDandZCORN(grid_, lgr_level, lgrCartesianIdxToCellIdx, lgrIJK);
@@ -260,21 +263,28 @@ EclGenericWriter(const Schedule& schedule,
             }
             eclipse_grid_output.init_children_host_cells();
 
+            this->eclIO_ = std::make_unique<EclipseIO>
+                (this->eclState_,
+                 eclipse_grid_output,
+                 this->schedule_, summaryConfig, "", enableEsmry);
+
         }
-        this->eclIO_ = std::make_unique<EclipseIO>
-            (this->eclState_,
-             eclipse_grid_output,
-             this->schedule_, summaryConfig, "", enableEsmry);
-    }
+        else {
+            this->eclIO_ = std::make_unique<EclipseIO>
+                (this->eclState_,
+                 UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
+                 this->schedule_, summaryConfig, "", enableEsmry);
+        }
 
-    // create output thread if enabled and rank is I/O rank
-    // async output is enabled by default if pthread are enabled
-    int numWorkerThreads = 0;
-    if (enableAsyncOutput && collectOnIORank_.isIORank()) {
-        numWorkerThreads = 1;
-    }
+        // create output thread if enabled and rank is I/O rank
+        // async output is enabled by default if pthread are enabled
+        int numWorkerThreads = 0;
+        if (enableAsyncOutput && collectOnIORank_.isIORank()) {
+            numWorkerThreads = 1;
+        }
 
-    this->taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
+        this->taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
+    }
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
