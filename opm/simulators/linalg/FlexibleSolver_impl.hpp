@@ -187,7 +187,11 @@ namespace Dune
                                                                             verbosity);
 #if HAVE_AVX2_EXTENSION
           } else if (solver_type == "mixed-bicgstab") {
-              if constexpr (!Opm::is_gpu_operator_v<Operator>) {
+              if constexpr (Opm::is_gpu_operator_v<Operator>) {
+                OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for GPU operatorsg");
+            } else if constexpr (std::is_same_v<typename VectorType::field_type, float>){
+                OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for single precision.");
+            } else {
                 const std::string prec_type = prm.get<std::string>("preconditioner.type", "error");
                 bool use_mixed_dilu= (prec_type=="mixed-dilu");
                 using MatrixType = decltype(linearoperator_for_solver_->getmat());
@@ -197,8 +201,6 @@ namespace Dune
                                                                             maxiter,
                                                                             use_mixed_dilu
                                                                         );
-            } else {
-                OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for GPU operators.");
             }
 #endif
         } else if (solver_type == "loopsolver") {
