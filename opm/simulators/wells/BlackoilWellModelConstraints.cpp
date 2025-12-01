@@ -323,42 +323,6 @@ checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_log
 }
 
 template<typename Scalar, typename IndexTraits>
-bool BlackoilWellModelConstraints<Scalar, IndexTraits>::
-checkGroupConstraints(const Group& group,
-                      const int reportStepIdx,
-                      DeferredLogger& deferred_logger) const
-{
-    if (group.isInjectionGroup()) {
-        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-        for (Phase phase : all) {
-            if (!group.hasInjectionControl(phase)) {
-                continue;
-            }
-            const auto& check = this->checkGroupInjectionConstraints(group,
-                                                                     reportStepIdx,  phase);
-            if (check.first != Group::InjectionCMode::NONE) {
-                return true;
-            }
-        }
-    }
-    if (group.isProductionGroup()) {
-        const auto& check = this->checkGroupProductionConstraints(group, deferred_logger);
-        if (check.first != Group::ProductionCMode::NONE)
-        {
-            return true;
-        }
-    }
-
-    // call recursively down the group hierarchy
-    bool violated = false;
-    for (const std::string& groupName : group.groups()) {
-        const auto& grp = wellModel_.schedule().getGroup(groupName, reportStepIdx);
-        violated = violated || this->checkGroupConstraints(grp, reportStepIdx, deferred_logger);
-    }
-    return violated;
-}
-
-template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelConstraints<Scalar, IndexTraits>::
 actionOnBrokenConstraints(const Group& group,
                           const Group::InjectionCMode& newControl,
