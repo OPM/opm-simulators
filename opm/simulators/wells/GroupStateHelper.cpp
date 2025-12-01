@@ -127,8 +127,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
             = this->schedule_[this->report_step_].gconsale().get(group.name(), this->summary_state_);
         sales_target = gconsale.sales_target;
     }
-    GroupStateHelpers
-::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {
+    GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {
         current_group_control,
         this->phase_usage_info_,
         resv_coeff,
@@ -139,15 +138,14 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
         group.has_gpmaint_control(injection_phase, current_group_control),
         deferred_logger};
 
-    GroupStateHelpers
-::FractionCalculator fcalc {this->schedule_,
-                                         *this,
-                                         this->summary_state_,
-                                         this->report_step_,
-                                         &this->guide_rate_,
-                                         tcalc.guideTargetMode(),
-                                         /*is_production_group=*/false,
-                                         injection_phase};
+    GroupStateHelpers::FractionCalculator fcalc {this->schedule_,
+                                                 *this,
+                                                 this->summary_state_,
+                                                 this->report_step_,
+                                                 &this->guide_rate_,
+                                                 tcalc.guideTargetMode(),
+                                                 /*is_production_group=*/false,
+                                                 injection_phase};
 
     auto local_fraction_lambda = [&](const std::string& child) { return fcalc.localFraction(child, name); };
 
@@ -305,24 +303,22 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
     if (this->groupState().has_grat_sales_target(group.name()))
         grat_target_from_sales = this->groupState().grat_sales_target(group.name());
 
-    GroupStateHelpers
-::TargetCalculator<Scalar, IndexTraits> tcalc {current_group_control,
-                                                            this->phase_usage_info_,
-                                                            resv_coeff,
-                                                            grat_target_from_sales,
-                                                            group.name(),
-                                                            this->groupState(),
-                                                            group.has_gpmaint_control(current_group_control)};
+    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc {current_group_control,
+                                                                    this->phase_usage_info_,
+                                                                    resv_coeff,
+                                                                    grat_target_from_sales,
+                                                                    group.name(),
+                                                                    this->groupState(),
+                                                                    group.has_gpmaint_control(current_group_control)};
 
-    GroupStateHelpers
-::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
-                                                              *this,
-                                                              this->summary_state_,
-                                                              this->report_step_,
-                                                              &this->guide_rate_,
-                                                              tcalc.guideTargetMode(),
-                                                              /*is_production_group=*/true,
-                                                              /*injection_phase=*/Phase::OIL};
+    GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
+                                                                      *this,
+                                                                      this->summary_state_,
+                                                                      this->report_step_,
+                                                                      &this->guide_rate_,
+                                                                      tcalc.guideTargetMode(),
+                                                                      /*is_production_group=*/true,
+                                                                      /*injection_phase=*/Phase::OIL};
 
     auto local_fraction_lambda = [&](const std::string& child) { return fcalc.localFraction(child, name); };
 
@@ -694,8 +690,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
             = this->schedule_[this->report_step_].gconsale().get(group.name(), this->summary_state_);
         sales_target = gconsale.sales_target;
     }
-    GroupStateHelpers
-::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {
+    GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {
         current_group_control,
         this->phase_usage_info_,
         resv_coeff,
@@ -706,15 +701,14 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
         group.has_gpmaint_control(injection_phase, current_group_control),
         deferred_logger};
 
-    GroupStateHelpers
-::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
-                                                              *this,
-                                                              this->summary_state_,
-                                                              this->report_step_,
-                                                              &this->guide_rate_,
-                                                              tcalc.guideTargetMode(),
-                                                              /*is_production_group=*/false,
-                                                              injection_phase};
+    GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
+                                                                      *this,
+                                                                      this->summary_state_,
+                                                                      this->report_step_,
+                                                                      &this->guide_rate_,
+                                                                      tcalc.guideTargetMode(),
+                                                                      /*is_production_group=*/false,
+                                                                      injection_phase};
 
     auto local_fraction_lambda = [&](const std::string& child, const std::string& always_incluced_name) {
         return fcalc.localFraction(child, always_incluced_name);
@@ -831,24 +825,22 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
     if (this->groupState().has_grat_sales_target(group.name()))
         grat_target_from_sales = this->groupState().grat_sales_target(group.name());
 
-    GroupStateHelpers
-::TargetCalculator<Scalar, IndexTraits> tcalc {current_group_control,
-                                                            this->phase_usage_info_,
-                                                            resv_coeff,
-                                                            grat_target_from_sales,
-                                                            group.name(),
-                                                            this->groupState(),
-                                                            group.has_gpmaint_control(current_group_control)};
+    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc {current_group_control,
+                                                                    this->phase_usage_info_,
+                                                                    resv_coeff,
+                                                                    grat_target_from_sales,
+                                                                    group.name(),
+                                                                    this->groupState(),
+                                                                    group.has_gpmaint_control(current_group_control)};
 
-    GroupStateHelpers
-::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
-                                                              *this,
-                                                              this->summary_state_,
-                                                              this->report_step_,
-                                                              &this->guide_rate_,
-                                                              tcalc.guideTargetMode(),
-                                                              true,
-                                                              Phase::OIL};
+    GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
+                                                                      *this,
+                                                                      this->summary_state_,
+                                                                      this->report_step_,
+                                                                      &this->guide_rate_,
+                                                                      tcalc.guideTargetMode(),
+                                                                      true,
+                                                                      Phase::OIL};
     auto local_fraction_lambda = [&](const std::string& child, const std::string& always_incluced_name) {
         return fcalc.localFraction(child, always_incluced_name);
     };
@@ -1791,8 +1783,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
                     grat_target_from_sales = this->groupState().grat_sales_target(control_group_name);
 
                 std::vector<Scalar> resv_coeff(num_phases, 1.0);
-                GroupStateHelpers
-::TargetCalculator<Scalar, IndexTraits> tcalc {
+                GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc {
                     control_group_cmode,
                     this->phase_usage_info_,
                     resv_coeff,
