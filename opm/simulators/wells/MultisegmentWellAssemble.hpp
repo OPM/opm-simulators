@@ -37,6 +37,7 @@ class Schedule;
 class SummaryState;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
 template<typename Scalar, typename IndexTraits> class WellState;
+template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 
 //! \brief Class handling assemble of the equation system for MultisegmentWell.
 template<class FluidSystem, class Indices>
@@ -56,6 +57,7 @@ public:
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using Equations = MultisegmentWellEquations<Scalar, IndexTraits, numWellEq,Indices::numEq>;
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq+Indices::numEq>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
     //! \brief Constructor initializes reference to well.
     explicit MultisegmentWellAssemble(const WellInterfaceIndices<FluidSystem,Indices>& well)
@@ -63,10 +65,7 @@ public:
     {}
 
     //! \brief Assemble control equation.
-    void assembleControlEq(const WellState<Scalar, IndexTraits>& well_state,
-                           const GroupState<Scalar>& group_state,
-                           const Schedule& schedule,
-                           const SummaryState& summaryState,
+    void assembleControlEq(const GroupStateHelperType& groupStateHelper,
                            const Well::InjectionControls& inj_controls,
                            const Well::ProductionControls& prod_controls,
                            const Scalar rho,
