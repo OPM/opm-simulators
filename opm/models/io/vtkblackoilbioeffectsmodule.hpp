@@ -176,7 +176,7 @@ public:
                                           microbialConcentration_, BufferType::Dof);
             }
             if (params_.biofilmVolumeFractionOutput_) {
-                this->commitScalarBuffer_(baseWriter, "biofilm voulme fraction",
+                this->commitScalarBuffer_(baseWriter, "biofilm volume fraction",
                                           biofilmVolumeFraction_, BufferType::Dof);
             }
             if constexpr (enableMICP) {
