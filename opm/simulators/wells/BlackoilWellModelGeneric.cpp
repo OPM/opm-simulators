@@ -1224,6 +1224,7 @@ assignNodeValues(std::map<std::string, data::NodeData>& nodevalues,
     auto converged_pressures = this->groupStateHelper().computeNetworkPressures(
         network,
         *(this->vfp_properties_->getProd()),
+        schedule().getUnits(),
         this->comm_
     );
     for (const auto& [node, converged_pressure] : converged_pressures) {
@@ -1565,7 +1566,7 @@ updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor, con
     const auto previous_node_pressures = node_pressures_;
 
     node_pressures_ = this->groupStateHelper().computeNetworkPressures(
-        network, *(vfp_properties_->getProd()), comm_);
+        network, *(vfp_properties_->getProd()), schedule().getUnits(), comm_);
 
     // here, the network imbalance is the difference between the previous nodal pressure and the new nodal pressure
     Scalar network_imbalance = 0.;

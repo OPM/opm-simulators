@@ -54,6 +54,8 @@
 namespace Opm
 {
 
+class UnitSystem;
+
 template <typename Scalar, typename IndexTraits>
 class GroupStateHelper
 {
@@ -146,6 +148,7 @@ public:
 
     std::map<std::string, Scalar> computeNetworkPressures(const Network::ExtNetwork& network,
                                                           const VFPProdProperties<Scalar>& vfp_prod_props,
+                                                          const UnitSystem& unit_system,
                                                           const Parallel::Communication& comm) const;
 
     Scalar getGuideRate(const std::string& name, const GuideRateModel::Target target) const;
