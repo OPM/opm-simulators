@@ -53,11 +53,6 @@ public:
         : wellModel_(wellModel)
     {}
 
-    //! \brief Check the constraints of a well group.
-    bool checkGroupConstraints(const Group& group,
-                               const int reportStepIdx,
-                               DeferredLogger& deferred_logger) const;
-
     //! \brief Execute action for broken constraint for an injection well group.
     void actionOnBrokenConstraints(const Group& group,
                                    const Group::InjectionCMode& newControl,
