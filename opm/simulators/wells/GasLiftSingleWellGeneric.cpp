@@ -303,9 +303,7 @@ addOrSubtractAlqIncrement_(Scalar alq, bool increase) const
     if (limited && checkALQequal_(orig_alq, alq))
         alq_opt = std::nullopt;
 
-    // alq_is_limited is used to check if we can increase the alq or not
-    // i.e. only return alq_is_limited = true if both limited and increase are true
-    return {alq_opt, limited && increase };
+    return {alq_opt, limited};
 }
 
 template<typename Scalar, typename IndexTraits>
