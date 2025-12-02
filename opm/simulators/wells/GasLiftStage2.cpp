@@ -155,16 +155,14 @@ calcIncOrDecGrad_(const std::string well_name,
         return std::nullopt;
     }
     else {
-        auto [oil_rate, gas_rate] = state.getRates();
-        auto alq = state.alq();
         auto grad = gs_well.calcIncOrDecGradient(
-            oil_rate, gas_rate, state.waterRate(), alq, gr_name_dont_limit, increase, /*debug_output=*/false);
+            state, gr_name_dont_limit, increase, /*debug_output=*/false);
         if (this->debug) {
             if (grad) {
                 const std::string msg = fmt::format(
                     "well {} : alq = {} : adding {} gradient = {}",
                     well_name,
-                    alq,
+                    state.alq(),
                     (increase ? "incremental" : "decremental"),
                     grad->grad
                 );
@@ -174,7 +172,7 @@ calcIncOrDecGrad_(const std::string well_name,
                 const std::string msg = fmt::format(
                     "well {} : alq = {} : failed to compute {} gradient",
                     well_name,
-                    alq,
+                    state.alq(),
                     (increase ? "incremental" : "decremental")
                 );
                 displayDebugMessage_(msg);
@@ -852,7 +850,7 @@ computeDelta(const std::string& well_name, bool add)
         state.update(gi.new_oil_rate, gi.new_oil_pot, gi.oil_is_limited,
                 gi.new_gas_rate, gi.new_gas_pot, gi.gas_is_limited,
                 gi.alq, gi.alq_is_limited,
-                gi.new_water_rate, gi.new_water_pot, gi.water_is_limited, add);
+                gi.new_water_rate, gi.new_water_pot, gi.water_is_limited, gi.bhp, add);
     }
 
     // and communicate the results
