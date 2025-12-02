@@ -2275,6 +2275,14 @@ namespace Opm
 
     }
 
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateMaxPerfPressure(const Simulator& simulator) {
+        max_pressure_ = maxPerfPress(simulator);
+    }
+
+
 } // namespace Opm
 
 #endif

@@ -2128,21 +2128,32 @@ namespace Opm
     {
         OPM_TIMEFUNCTION();
         // Make the frates() function.
-        auto frates = [this, &simulator, &deferred_logger](const Scalar bhp) {
-            // Not solving the well equations here, which means we are
+        auto frates = [this, &wgHelper, &simulator, &deferred_logger](const Scalar bhp) {
+            // Not solving the well equations here instead use ipr, 
+            // which means we are
             // calculating at the current Fg/Fw values of the
             // well. This does not matter unless the well is
             // crossflowing, and then it is likely still a good
             // approximation.
+            const auto& well_state = wgHelper.wellState();
+            const auto & ws = well_state.well(this->index_of_well_);
             std::vector<Scalar> rates(3);
-            computeWellRatesWithBhp(simulator, bhp, rates, deferred_logger);
+            Scalar sum_rates = 0;
+            for (int comp_idx = 0; comp_idx < 3; comp_idx++) {
+                rates[comp_idx] = ws.implicit_ipr_b[comp_idx] * bhp - ws.implicit_ipr_a[comp_idx];
+                sum_rates += rates[comp_idx];
+            }
+            if (std::fabs(sum_rates) < 1e-12) {
+                computeWellRatesWithBhp(simulator, bhp, rates, deferred_logger);
+            }
+            this->adaptRatesForVFP(rates);
             return rates;
         };
 
         auto bhpAtLimit = WellBhpThpCalculator(*this).
                computeBhpAtThpLimitProd(frates,
                                         summary_state,
-                                        this->maxPerfPress(simulator),
+                                        this->max_pressure_,
                                         this->getRefDensity(),
                                         alq_value,
                                         this->getTHPConstraint(summary_state),
@@ -2166,7 +2177,7 @@ namespace Opm
        return WellBhpThpCalculator(*this).
               computeBhpAtThpLimitProd(fratesIter,
                                        summary_state,
-                                       this->maxPerfPress(simulator),
+                                       this->max_pressure_,
                                        this->getRefDensity(),
                                        alq_value,
                                        this->getTHPConstraint(summary_state),

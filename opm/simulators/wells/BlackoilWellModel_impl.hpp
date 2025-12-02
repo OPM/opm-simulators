@@ -397,6 +397,11 @@ namespace Opm {
                 well->updatePerforatedCell(is_cell_perforated_);
             }
 
+            // update max perf pressure in each well
+            for (auto& well: well_container_) {
+                well->updateMaxPerfPressure(simulator_);
+            }
+
             // calculate the efficiency factors for each well
             this->calculateEfficiencyFactors(reportStepIdx);
 
@@ -1150,6 +1155,11 @@ namespace Opm {
             if (!this->wellsActive() && !network.active()) {
                 return;
             }
+        }
+
+        // update max perf pressure in each well
+        for (auto& well: well_container_) {
+            well->updateMaxPerfPressure(simulator_);
         }
 
         if (iterationIdx == 0 && this->wellsActive()) {

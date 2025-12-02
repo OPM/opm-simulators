@@ -368,6 +368,9 @@ public:
                                             DeferredLogger& deferred_logger,
                                             const bool fixed_control = false,
                                             const bool fixed_status = false) = 0;
+    virtual Scalar maxPerfPress(const Simulator& simulator) const = 0;
+    void updateMaxPerfPressure(const Simulator& simulator);
+
 protected:
     // simulation parameters
     std::vector<RateVector> connectionRates_;
@@ -375,6 +378,7 @@ protected:
     bool changed_to_stopped_this_step_ = false;
     bool thp_update_iterations = false;
     int number_of_well_reopenings_{0};
+    Scalar max_pressure_;
 
     Scalar wpolymer() const;
     Scalar wfoam() const;
