@@ -171,7 +171,7 @@ registerParameters()
     Parameters::Register<Parameters::NewtonMaxRelax<Scalar>>
         ("The maximum relaxation factor of a Newton iteration");
     Parameters::Register<Parameters::NewtonRelaxationType>
-        ("The type of relaxation used by Newton method");
+        ("The type of relaxation used by Newton method. Valid options are: dampen or sor");
 }
 
 template struct NonlinearSolverParameters<double>;
