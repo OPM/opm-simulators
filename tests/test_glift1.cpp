@@ -154,11 +154,11 @@ BOOST_AUTO_TEST_CASE(G1)
     simulator->setTimeStepSize(43200);  // 12 hours
     simulator->model().newtonMethod().setIterationIndex(0);
     WellModel& well_model = simulator->problem().wellModel();
-    
+
     // we tests 4 different setups given in the .DATA file
     // we only look at B-1H
-    // 1) No rate limit -> well should be limited by alq 
-    // 2) No alq is needed. ORAT limit -> oil_rate = oil_limit and gas_rate is scaled 
+    // 1) No rate limit -> well should be limited by alq
+    // 2) No alq is needed. ORAT limit -> oil_rate = oil_limit and gas_rate is scaled
     // 3) Alq is needed. ORAT limit -> oil_rate = oil_limit and gas_rate is scaled
     // 4) Alq is needed. GRAT limit -> gas_rate = gas_limit and oil_rate is scaled
     for (int report_step_idx = 0; report_step_idx < 4; report_step_idx++ ) {
@@ -239,7 +239,7 @@ BOOST_AUTO_TEST_CASE(G1)
             BOOST_CHECK_CLOSE(state->gasRate(), pot[2] * controls.oil_rate / pot[1], 1e-6);
             BOOST_CHECK(!state->increase().has_value());
             BOOST_CHECK_CLOSE(state->alq(), 0.0, 1e-8);
-        }   
+        }
         // ORAT limit, alq needed
         if (report_step_idx == 2) {
             BOOST_CHECK(!state->alqIsLimited());
@@ -305,11 +305,11 @@ BOOST_AUTO_TEST_CASE(G2)
     simulator->setTimeStepSize(43200);  // 12 hours
     simulator->model().newtonMethod().setIterationIndex(0);
     WellModel& well_model = simulator->problem().wellModel();
-    
+
     const auto& comm = simulator->vanguard().grid().comm();
     const auto& summary_state = simulator->vanguard().summaryState();
 
-    // we tests 4 different setups for stage 2 optimization 
+    // we tests 4 different setups for stage 2 optimization
     // starting from report step 5 as given in the .DATA file
     // 1) No group rate limit -> group should be limited by max alq
     // 2) Group is limited by ORAT -> sufficient ALQ to production the target
