@@ -136,11 +136,15 @@ endif()
 
 if(OPM_ENABLE_PYTHON_TESTS)
   set(PYTHON_PATH ${PROJECT_BINARY_DIR}/python:${opm-common_DIR}/python:$ENV{PYTHONPATH})
+  set(cases basic fluidstate_variables primary_variables schedule throw)
+  if(MPI_FOUND)
+    list(APPEND cases mpi)
+  endif()
   # NOTE: See comment in test_basic.py for the reason why we are
   #   splitting the python tests into multiple add_test() tests instead
   #   of having a single "python -m unittest" test call that will run all
   #   the tests in the "test" sub directory.
-  foreach(case_name IN ITEMS basic fluidstate_variables mpi primary_variables schedule throw)
+  foreach(case_name IN ITEMS ${cases})
     add_test(NAME python_${case_name}
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
         COMMAND ${CMAKE_COMMAND}
