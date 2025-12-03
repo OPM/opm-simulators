@@ -248,16 +248,6 @@ gasLiftOptimizationStage1(const Simulator& simulator,
                                           group_alq_rates[j]);
                 }
             }
-            if constexpr (glift_debug) {
-                int counter = 0;
-                if (comm.rank() == i) {
-                    counter = wellState.gliftGetDebugCounter();
-                }
-                counter = comm.sum(counter);
-                if (comm.rank() != i) {
-                    wellState.gliftSetDebugCounter(counter);
-                }
-            }
         }
     }
 }

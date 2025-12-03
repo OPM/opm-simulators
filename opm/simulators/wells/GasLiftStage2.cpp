@@ -123,20 +123,20 @@ addOrRemoveALQincrement_(GradMap &grad_map,
             well_name, (add ? "adding" : "subtracting"), old_alq, new_alq);
         this->displayDebugMessage_(msg);
     }
-    this->well_state_.well(well_name).alq_state.set(gi.alq);
+    auto& ws = this->well_state_.well(well_name);
+    ws.alq_state.set(gi.alq);
     std::vector<Scalar> well_pot(this->well_state_.numPhases(), 0.0);
     const auto& pu = this->well_state_.phaseUsageInfo();
     if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
-        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = gi.new_oil_rate;
+        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = gi.new_oil_pot;
     }
     if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
-        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = gi.new_water_rate;
+        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = gi.new_water_pot;
     }
     if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = gi.new_gas_rate;
+        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = gi.new_gas_pot;
     }
-
-    this->well_state_[well_name].well_potentials = well_pot;
+    ws.well_potentials = well_pot;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -197,18 +197,6 @@ checkRateAlreadyLimited_(const std::string& well_name,
             do_check = true;
         }
     }
-    else {
-        // If current_increase is not defined, it means that stage1
-        //   was unable to either increase nor decrease the ALQ. If the
-        //   initial rates stored in "state" is limited, and if
-        //   "increase" is true, it is not likely that adding ALQ will
-        //   cause the new rates not to be limited. However, if
-        //   "increase" is false, subtracting ALQ can make the new rates
-        //   not limited.
-        if (increase) {
-            do_check = true;
-        }
-    }
     if (do_check) {
         if (state.gasIsLimited() || state.oilIsLimited() ||
             state.alqIsLimited() || state.waterIsLimited()) {
@@ -217,7 +205,7 @@ checkRateAlreadyLimited_(const std::string& well_name,
                 well_name,
                 state.alq(),
                 (increase ? "incremental" : "decremental"),
-                (state.oilIsLimited() ? "oil" : (state.gasIsLimited() ? "gas" : "alq"))
+                (state.oilIsLimited() ? "oil" : (state.gasIsLimited() ? "gas" : (state.waterIsLimited() ? "water" : "alq")))
             );
             displayDebugMessage_(msg);
             return true;
@@ -431,7 +419,14 @@ optimizeGroup_(const Group& group)
     OPM_TIMEFUNCTION();
     const auto& group_name = group.name();
     const auto prod_control = this->group_state_.production_control(group_name);
-    if ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD))
+    const auto max_totalgas = getGroupMaxTotalGas_(group);
+    bool restricted_by_max_totalgas = false;
+    if (max_totalgas) {
+        auto [oil_rate, gas_rate, water_rate, alq] = getCurrentGroupRates_(group);
+        restricted_by_max_totalgas = (gas_rate + alq) > max_totalgas;
+    }
+
+    if (restricted_by_max_totalgas || ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD)))
     {
         if (this->debug) {
             const std::string msg = fmt::format("optimizing (control = {})", Group::ProductionCMode2String(prod_control));
@@ -854,10 +849,10 @@ computeDelta(const std::string& well_name, bool add)
             delta_water = factor * (gi.new_water_rate - state.waterRate());
             delta_alq = factor * (gi.alq - state.alq());
         }
-        state.update(gi.new_oil_rate, gi.oil_is_limited,
-                gi.new_gas_rate, gi.gas_is_limited,
+        state.update(gi.new_oil_rate, gi.new_oil_pot, gi.oil_is_limited,
+                gi.new_gas_rate, gi.new_gas_pot, gi.gas_is_limited,
                 gi.alq, gi.alq_is_limited,
-                gi.new_water_rate, gi.water_is_limited, add);
+                gi.new_water_rate, gi.new_water_pot, gi.water_is_limited, add);
     }
 
     // and communicate the results

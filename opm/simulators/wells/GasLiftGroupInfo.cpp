@@ -547,17 +547,24 @@ getProducerWellRates_(const Well* well, int well_index)
     Scalar water_rate = water_pot;
     Scalar gas_rate = gas_pot;
 
+    // The well rates are potentially limited by the targets
+    // The other phases are scaled accordingly. i.e. we assume the phase fractions are the same
+    // This is not 100% true but the best we can do without solving the well equation
     if (controls.hasControl(Well::ProducerCMode::ORAT) && oil_rate > static_cast<Scalar>(controls.oil_rate)) {
         water_rate *= (static_cast<Scalar>(controls.oil_rate) / oil_rate);
+        gas_rate *= (static_cast<Scalar>(controls.oil_rate) / oil_rate);
         oil_rate = static_cast<Scalar>(controls.oil_rate);
     }
 
-    if (controls.hasControl(Well::ProducerCMode::GRAT)) {
-        gas_rate = std::min(static_cast<Scalar>(controls.gas_rate), gas_rate);
+    if (controls.hasControl(Well::ProducerCMode::GRAT) && gas_rate > static_cast<Scalar>(controls.gas_rate)) {
+        water_rate *= (static_cast<Scalar>(controls.gas_rate) / gas_rate);
+        oil_rate *= (static_cast<Scalar>(controls.gas_rate) / gas_rate);
+        gas_rate = static_cast<Scalar>(controls.gas_rate);
     }
 
     if (controls.hasControl(Well::ProducerCMode::WRAT) && water_rate > static_cast<Scalar>(controls.water_rate)) {
         oil_rate *= (static_cast<Scalar>(controls.water_rate) / water_rate);
+        gas_rate *= (static_cast<Scalar>(controls.water_rate) / water_rate);
         water_rate = static_cast<Scalar>(controls.water_rate);
     }
     if (controls.hasControl(Well::ProducerCMode::LRAT)) {
@@ -566,6 +573,7 @@ getProducerWellRates_(const Well* well, int well_index)
         if (liquid_rate > liquid_rate_lim) {
             water_rate = water_rate / liquid_rate * liquid_rate_lim;
             oil_rate = oil_rate / liquid_rate * liquid_rate_lim;
+            gas_rate = gas_rate / liquid_rate * liquid_rate_lim;
         }
     }
 
@@ -668,14 +676,22 @@ initializeGroupRatesRecursive_(const Group& group)
                 group.name(), oil_rate, gas_rate, water_rate, alq);
         }
 
+        // The group rates are potentially limited by the group targets
+        // The other phases are scaled accordingly. i.e. we assume the phase fractions are the same
+        // This is not 100% true but the best we can do without solving the well equation
         if (oil_target && oil_rate > *oil_target)  {
             water_rate *= (*oil_target/oil_rate);
+            gas_rate *= (*oil_target/oil_rate);
             oil_rate = *oil_target;
         }
-        if (gas_target && gas_rate > *gas_target)
+        if (gas_target && gas_rate > *gas_target) {
+            water_rate *= (*gas_target/gas_rate);
+            oil_rate *= (*gas_target/gas_rate);
             gas_rate = *gas_target;
+        }
         if (water_target && water_rate > *water_target) {
             oil_rate *= (*water_target/water_rate);
+            gas_rate *= (*water_target/water_rate);
             water_rate = *water_target;
         }
         if (liquid_target) {
@@ -684,6 +700,7 @@ initializeGroupRatesRecursive_(const Group& group)
             if (liquid_rate > liquid_rate_limited) {
                 oil_rate = oil_rate / liquid_rate * liquid_rate_limited;
                 water_rate = water_rate / liquid_rate * liquid_rate_limited;
+                gas_rate = gas_rate / liquid_rate * liquid_rate_limited;
             }
         }
     }
