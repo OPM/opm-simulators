@@ -32,6 +32,7 @@
 
 #include <opm/models/discretization/common/linearizationtype.hh>
 #include <opm/models/tpsa/tpsabaseproperties.hpp>
+#include <opm/models/utils/basicproperties.hh>
 
 #include <type_traits>
 
