@@ -16,25 +16,30 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp"
-#include "opm/simulators/linalg/is_gpu_operator.hpp"
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <cusparse.h>
+#include <config.h>
+#include <opm/simulators/linalg/gpuistl/GpuSeqILU0.hpp>
+
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
+
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
-#include <fmt/core.h>
+
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSeqILU0.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
+#include <opm/simulators/linalg/is_gpu_operator.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_wrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/fix_zero_diagonal.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
-#include <type_traits>
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cusparse.h>
+
+#include <fmt/core.h>
 
 // This file is based on the guide at https://docs.nvidia.com/cuda/cusparse/index.html#csrilu02_solve ,
 // it highly recommended to read that before proceeding.
