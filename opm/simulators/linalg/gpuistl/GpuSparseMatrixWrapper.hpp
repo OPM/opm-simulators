@@ -18,19 +18,20 @@
 */
 #ifndef OPM_GPUSPARSEMATRIXWRAPPER_HPP
 #define OPM_GPUSPARSEMATRIXWRAPPER_HPP
-#include <cusparse.h>
-#include <iostream>
-#include <memory>
-#include <stdexcept>
-#include <type_traits>
+
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
-#include <vector>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
+
+#include <cstddef>
+#include <cusparse.h>
+#include <memory>
+#include <stdexcept>
+#include <type_traits>
 
 namespace Opm::gpuistl
 {
@@ -57,7 +58,6 @@ namespace Opm::gpuistl
  */
 template <typename T>
 class GpuSparseMatrixWrapper
-
 {
 public:
     using field_type = T;
@@ -114,9 +114,9 @@ public:
     GpuSparseMatrixWrapper(const T* nonZeroElements,
                    const int* rowIndices,
                    const int* columnIndices,
-                   size_t numberOfNonzeroBlocks,
-                   size_t blockSize,
-                   size_t numberOfRows)
+                   std::size_t numberOfNonzeroBlocks,
+                   std::size_t blockSize,
+                   std::size_t numberOfRows)
     {
         m_matrix = std::make_unique<matrix_type>(nonZeroElements,
                                                  rowIndices,
@@ -138,7 +138,7 @@ public:
     //!       restrictions in the current version of cusparse. This might change in future versions.
     GpuSparseMatrixWrapper(const GpuVector<int>& rowIndices,
                    const GpuVector<int>& columnIndices,
-                   size_t blockSize)
+                   std::size_t blockSize)
     {
         m_matrix = std::make_unique<matrix_type>(rowIndices, columnIndices, blockSize);
     }
@@ -225,7 +225,7 @@ public:
     /**
      * @brief N returns the number of rows (which is equal to the number of columns)
      */
-    size_t N() const
+    std::size_t N() const
     {
         return m_matrix->N();
     }
@@ -234,7 +234,7 @@ public:
      * @brief nonzeroes behaves as the Dune::BCRSMatrix::nonzeros() function and returns the number of non zero blocks
      * @return number of non zero blocks.
      */
-    size_t nonzeroes() const
+    std::size_t nonzeroes() const
     {
         return m_matrix->nonzeroes();
     }
@@ -305,7 +305,7 @@ public:
      * This is equivalent to matrix.N() * matrix.blockSize()
      * @return matrix.N() * matrix.blockSize()
      */
-    size_t dim() const
+    std::size_t dim() const
     {
         return m_matrix->dim();
     }
@@ -313,7 +313,7 @@ public:
     /**
      * @brief blockSize size of the blocks
      */
-    size_t blockSize() const
+    std::size_t blockSize() const
     {
         return m_matrix->blockSize();
     }
@@ -414,8 +414,9 @@ public:
     }
 
 private:
-
-    std::unique_ptr<matrix_type> m_matrix = nullptr;
+    std::unique_ptr<matrix_type> m_matrix{};
 };
+
 } // namespace Opm::gpuistl
+
 #endif
