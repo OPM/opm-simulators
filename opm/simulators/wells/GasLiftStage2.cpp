@@ -197,18 +197,6 @@ checkRateAlreadyLimited_(const std::string& well_name,
             do_check = true;
         }
     }
-    else {
-        // If current_increase is not defined, it means that stage1
-        //   was unable to either increase nor decrease the ALQ. If the
-        //   initial rates stored in "state" is limited, and if
-        //   "increase" is true, it is not likely that adding ALQ will
-        //   cause the new rates not to be limited. However, if
-        //   "increase" is false, subtracting ALQ can make the new rates
-        //   not limited.
-        if (increase) {
-            do_check = true;
-        }
-    }
     if (do_check) {
         if (state.gasIsLimited() || state.oilIsLimited() ||
             state.alqIsLimited() || state.waterIsLimited()) {

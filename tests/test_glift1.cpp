@@ -384,6 +384,13 @@ BOOST_AUTO_TEST_CASE(G2)
         if (report_step_idx == 6) {
             BOOST_CHECK_CLOSE(group_info.alqRate("PLAT-A")*86400, 150000, 1e-8);
             BOOST_CHECK(group_info.oilRate("PLAT-A") > *group_info.oilTarget("PLAT-A"));
+
+            // also test wells
+            std::vector<std::pair<std::string, double>> wells = {{"B-1H",25000}, {"B-2H",37500}, {"B-3H",25000},
+                                                                 {"C-1H",37500}, {"C-2H",25000}};
+            for (auto well: wells) {
+                BOOST_CHECK_CLOSE(state_map[well.first]->alq()*86400, well.second, 1e-8);
+            }
         }
 
         // same as above but with GRAT limit on sub-group (i.e need some more alq)
