@@ -632,7 +632,7 @@ protected:
     * \param nextSolution The solution after the current Newton iteration
     * \param currentSolution The solution at the beginning of the current Newton iteration
     */
-    void endIteration_(const SolutionVector& nextSolution,
+    void endIteration_(const SolutionVector& /*nextSolution*/,
                        const SolutionVector& /*currentSolution*/)
     {
         ++numIterations_;

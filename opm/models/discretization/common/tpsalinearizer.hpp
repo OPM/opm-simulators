@@ -418,7 +418,6 @@ private:
         const auto& geoMechModel = geoMechModel_();
         auto& problem = problem_();
         const unsigned int numCells = domain.cells.size();
-        const bool on_full_domain = (numCells == flowModel.numTotalDof());
 
 #ifdef _OPENMP
 #pragma omp parallel for
