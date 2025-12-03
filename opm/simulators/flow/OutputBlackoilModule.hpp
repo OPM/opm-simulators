@@ -1872,6 +1872,7 @@ private:
         using Context = typename BlockExtractor::Context;
         using PhaseEntry = typename BlockExtractor::PhaseEntry;
         using ScalarEntry = typename BlockExtractor::ScalarEntry;
+        using TensorEntry = typename BlockExtractor::TensorEntry;
 
         using namespace std::string_view_literals;
 
@@ -1892,7 +1893,7 @@ private:
                   }
             };
 
-        const auto handlers = std::array{
+        auto handlers = std::vector{
             pressure_handler,
             Entry{PhaseEntry{std::array{
                                 std::array{"BWSAT"sv, "BOSAT"sv, "BGSAT"sv},
@@ -2971,6 +2972,24 @@ private:
             },
         };
 
+        if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
+            if (this->mech_.allocated()) {
+                const auto mech_handlers = std::array{
+                    Entry{TensorEntry{"BSTRSS",
+                                      [&mech = this->mech_,
+                                       &model = this->simulator_.problem().geoMechModel()]
+                                      (const VoigtIndex index, const Context& ectx)
+                                      {
+                                          const int iIdx = static_cast<int>(index);
+                                          return model.stress(ectx.globalDofIdx, true)[iIdx];
+                                      }
+                         }
+                    },
+                };
+                handlers.insert(mech_handlers.begin(), mech_handlers.end(), handlers.end());
+            }
+        }
+
         this->blockExtractors_ = BlockExtractor::setupExecMap(this->blockData_, handlers);
 
         this->extraBlockData_.clear();
@@ -2982,7 +3001,7 @@ private:
                                           [&c = this->collectOnIORank_](const int idx)
                                           { return c.isCartIdxOnThisRank(idx); });
 
-                const auto extraHandlers = std::array{
+                const auto extraHandlers = std::vector{
                     pressure_handler,
                 };
 
