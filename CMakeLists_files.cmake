@@ -518,6 +518,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_rstconv.cpp
   tests/test_stoppedwells.cpp
   tests/test_timer.cpp
+  tests/test_tpsa_primaryvariables.cpp
   tests/test_vfpproperties.cpp
   tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
