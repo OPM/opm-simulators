@@ -280,7 +280,6 @@ BOOST_AUTO_TEST_CASE(G2)
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using WellModel = Opm::BlackoilWellModel<TypeTag>;
     using WellState = Opm::WellState<double, IndexTraits>;
-    using StdWell = Opm::StandardWell<TypeTag>;
     using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
     using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double, IndexTraits>;
     using GasLiftSingleWellGeneric = Opm::GasLiftSingleWellGeneric<double, IndexTraits>;
@@ -352,7 +351,6 @@ BOOST_AUTO_TEST_CASE(G2)
                     deferred_logger, well_state, group_state, group_info, sync_groups,
                     comm, /*glift_debug=*/false
                 );
-                const auto& controls = well->wellEcl().productionControls(summary_state);
                 auto state = glift->runOptimize(iteration_idx);
                 if (state) {
                     state_map.emplace(well->name(), std::move(state));
