@@ -124,4 +124,4 @@ int flowWaterOnlyTpsaMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+}  // namespace Opm
