@@ -29,6 +29,7 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/Visitor.hpp>
+#include <opm/common/utility/VoigtArray.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 
@@ -41,7 +42,6 @@
 #include <array>
 #include <optional>
 #include <unordered_map>
-#include <set>
 #include <variant>
 #include <vector>
 
@@ -222,6 +222,10 @@ struct BlockExtractor
     /// Returns value to store in buffer for requested phase
     using PhaseFunc = std::function<Scalar(const unsigned /*phase*/, const Context&)>;
 
+    /// Callback for extractors assigned to a tensor component
+    /// Returns value to store in buffer for requested index
+    using TensorFunc = std::function<Scalar(const VoigtIndex idx, const Context&)>;
+
     struct ScalarEntry
     {
         /// A single name or a list of names for the keyword
@@ -241,8 +245,16 @@ struct BlockExtractor
         PhaseFunc extract;
     };
 
+    struct TensorEntry
+    {
+        /// A single name for the kw, postfixed by "XX", "XY", etc
+        std::string_view kw;
+        /// Associated extraction lambda
+        TensorFunc extract;
+    };
+
     //! \brief Descriptor for extractors
-    using Entry = std::variant<ScalarEntry, PhaseEntry>;
+    using Entry = std::variant<ScalarEntry, PhaseEntry, TensorEntry>;
 
     //! \brief Descriptor for extractor execution.
     struct Exec
@@ -274,8 +286,10 @@ struct BlockExtractor
     {
         using PhaseViewArray = std::array<std::string_view, numPhases>;
         using StringViewVec = std::vector<std::string_view>;
+        using StringVec = std::vector<std::string>;
 
         unsigned phase{};
+        int modulus = numPhases;
         const auto handler_info =
             std::ranges::find_if(
                 handlers,
@@ -315,7 +329,17 @@ struct BlockExtractor
                                                                     return res;
                                                                 }
                                                             }, entry.kw);
-                                      }
+                                      },
+                                      [&modulus](const TensorEntry& entry)
+                                      {
+                                            modulus = 6;
+                                            const auto pf = std::array{"XX", "YY", "ZZ",
+                                                                       "YZ", "XZ", "XY"};
+                                            StringVec res(6);
+                                            std::transform(pf.begin(), pf.end(), res.begin(),
+                                                           [kw = std::string(entry.kw)](const auto p) { return kw + p; });
+                                            return res;
+                                      },
                                   }, handler);
 
                     const auto found_handler =
@@ -348,14 +372,21 @@ struct BlockExtractor
                                              };
                                              return extract(phaseMap[phase], ectx);
                                          };
+                              },
+                              [phase](const TensorEntry& e) -> ScalarFunc
+                              {
+                                       return [phase, extract = e.extract]
+                                              (const Context& ectx)
+                                              {
+                                                  return extract(static_cast<VoigtIndex>(phase), ectx);
+                                              };
                               }
                           }, *handler_info);
     }
 
     //! \brief Setup an extractor executor map from a map of evaluations to perform.
-    template<std::size_t size>
     static ExecMap setupExecMap(std::map<std::pair<std::string, int>, double>& blockData,
-                                const std::array<Entry,size>& handlers)
+                                const std::vector<Entry>& handlers)
     {
         ExecMap extractors;
 
