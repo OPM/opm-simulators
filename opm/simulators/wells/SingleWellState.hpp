@@ -23,8 +23,9 @@
 #include <functional>
 #include <vector>
 
-#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 #include <opm/input/eclipse/Schedule/Events.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
 #include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 
@@ -118,6 +119,32 @@ public:
       vaporized_water = 3
     };
 
+    struct GroupTarget {
+        std::string group_name;
+        Group::ProductionCMode production_cmode {Group::ProductionCMode::NONE};
+        Group::InjectionCMode  injection_cmode  {Group::InjectionCMode::NONE};
+        Scalar target_value;
+
+        static GroupTarget injectionGroupTarget(const std::string& gname,
+                                                Group::InjectionCMode cmode,
+                                                Scalar value) {
+            return {gname, Group::ProductionCMode::NONE, cmode, value};
+        }
+
+        static GroupTarget productionGroupTarget(const std::string& gname,
+                                                 Group::ProductionCMode cmode,
+                                                 Scalar value) {
+            return {gname, cmode, Group::InjectionCMode::NONE, value};
+        }
+
+        bool operator==(const GroupTarget& other) const {
+            return   ( group_name == other.group_name
+                    && target_value == other.target_value
+                    && production_cmode == other.production_cmode
+                    && injection_cmode == other.injection_cmode );
+        }
+    };
+
     std::vector<Scalar> well_potentials;
     std::vector<Scalar> productivity_index;
     std::vector<Scalar> implicit_ipr_a;
@@ -127,7 +154,7 @@ public:
     std::vector<Scalar> prev_surface_rates;
     PerfData<Scalar> perf_data;
     bool trivial_group_target;
-    std::optional<Scalar> group_target;
+    std::optional<GroupTarget> group_target;
     SegmentState<Scalar> segments;
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
