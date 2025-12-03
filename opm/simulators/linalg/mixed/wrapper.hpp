@@ -1,3 +1,6 @@
+#ifndef OPM_MIXED_SOLVER_HEADER_INCLUDED
+#define OPM_MIXED_SOLVER_HEADER_INCLUDED
+
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 
@@ -102,4 +105,6 @@ class MixedSolver : public InverseOperator<X,X>
 };
 
 }
+
+#endif // OPM_MIXED_SOLVER_HEADER_INCLUDED
 
