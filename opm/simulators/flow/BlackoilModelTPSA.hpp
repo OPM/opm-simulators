@@ -212,7 +212,7 @@ public:
     }
 
 private:
-    unsigned seqIter_{0};
+    int seqIter_{0};
 };  // class BlackoilModelTPSA
 
 }  // namespace Opm
