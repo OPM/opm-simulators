@@ -10,19 +10,28 @@ extern "C" {
 
 #include <stdbool.h>
 
-// Solver memory struct
+/*!
+ * @brief Linear solver memory.
+ */
 typedef
 struct bslv_memory
 {
+    // perform dilu (ilu0) of true (False)
     bool use_dilu;
 
+    // tolerance
     double tol;
+    // maximum number of iterations
     int    max_iter;
+    // convergencey history
     double *e;
 
+    // size of linear system
     int n;
+    // pointer to temporary arrays
     double **dtmp;
 
+    // pointer to preconditioner
     prec_t *P;
 }
 bslv_memory;

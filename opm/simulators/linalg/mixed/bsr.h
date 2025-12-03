@@ -4,18 +4,28 @@
 extern "C" {
 #endif
 
-// bsr matrix struct
+/*!
+ * @brief Mixed-precision bsr matrix.
+ */
 typedef
 struct bsr_matrix
 {
+    // number or rows
     int nrows;
+    // number or columns
     int ncols;
+    // number or non-zero blocks
     int nnz;
+    // block-size
     int b;
 
+    // pointer ot row offsets
     int *rowptr;
+    // pointer to column indices
     int *colidx;
+    // pointer to double-precision values
     double *dbl;
+    // pointer to single-precision values
     float *flt;
 
 } bsr_matrix;

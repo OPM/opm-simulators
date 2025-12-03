@@ -6,14 +6,21 @@ extern "C" {
 
 #include "bsr.h"
 
-// preconditioner struct
+/*!
+ * @brief Preconditioner struct.
+ */
 typedef
 struct prec_t
 {
+    // lower triangular factor
     bsr_matrix *L;
+    // diagonal factor
     bsr_matrix *D;
+    // upper triangular factor
     bsr_matrix *U;
+    // number of off-diagonal ilu0 updates
     int noffsets;
+    // triplets uniquely identifying off-diagonal ilu0 updates
     int(*offsets)[3];
 }
 prec_t;

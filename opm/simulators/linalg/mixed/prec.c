@@ -122,6 +122,13 @@ void prec_init(prec_t *P, bsr_matrix const *A)
     P->noffsets=count;
 }
 
+/**
+ * @brief Matrix-matrix multiplication of 3x3 matrices.
+ *
+ * @param C Pointer to output matrix.
+ * @param A Pointer to left input matrix.
+ * @param B Pointer to right input matrix.
+ */
 void mat3_matmul(double *C, const double *A, const double *B)
 {
     // assume 3x3 column-major matrices
@@ -141,6 +148,13 @@ void mat3_matmul(double *C, const double *A, const double *B)
     for(int k=0;k<9;k++) C[k]=M[k];
 }
 
+/**
+ * @brief Fused multiply-subtract for 3x3 matrices.
+ *
+ * @param C Pointer to output matrix.
+ * @param A Pointer to left input matrix.
+ * @param B Pointer to right input matrix.
+ */
 void mat3_matfms(double *C, const double *A, const double *B)
 {
     // assume 3x3 column-major matrices
@@ -160,7 +174,12 @@ void mat3_matfms(double *C, const double *A, const double *B)
     for(int k=0;k<9;k++) C[k]-=M[k];
 }
 
-
+/**
+ * @brief Matrix invese for 3x3 matrix.
+ *
+ * @param invA Pointer to inverse matrix.
+ * @param    A Pointer to input matrix.
+ */
 void mat3_inv(double *invA, const double *A)
 {
     double M[9];
@@ -178,11 +197,25 @@ void mat3_inv(double *invA, const double *A)
     for(int k=0;k<9;k++) invA[k]=M[k]/detA;
 }
 
+/**
+ * @brief vector copy of 9-element vectors.
+ *
+ * @param y Pointer to output vector.
+ * @param x Pointer to input vector.
+ */
 inline void vec_copy9(double *y, double const *x)
 {
     for(int i=0;i<9;i++) y[i]=x[i];
 }
 
+/**
+ * @brief In-place right matrix-matrix multiplication for 3x3 matrices.
+ *
+ * @note Function is optimized with avx2 intrinsics
+ *
+ * @param A Pointer to left input and output matrix.
+ * @param B Pointer to right input matrix.
+ */
 void mat3_rmul(double *A, double const *B)
 {
     // load left hand matrix
@@ -211,6 +244,14 @@ void mat3_rmul(double *A, double const *B)
     }
 }
 
+/**
+ * @brief In-place left matrix-matrix multiplication for 3x3 matrices.
+ *
+ * @note Function is optimized with avx2 intrinsics
+ *
+ * @param A Pointer to left input  matrix.
+ * @param B Pointer to right input and output matrix.
+ */
 void mat3_lmul(double const *A, double *B)
 {
     // load left hand matrix
@@ -239,6 +280,15 @@ void mat3_lmul(double const *A, double *B)
     }
 }
 
+/**
+ * @brief Fused multiply-subtract for 3x3 matrices.
+ *
+ * @note Function is optimized with avx2 intrinsics
+ *
+ * @param C Pointer to output matrix.
+ * @param A Pointer to left input matrix.
+ * @param B Pointer to right input matrix.
+ */
 void mat3_vfms(double *C, double const *A, double const *B)
 {
     // load left hand matrix
@@ -408,7 +458,6 @@ void prec_ilu0_factorize(prec_t *P, bsr_matrix *A)
             next=P->offsets[++idx][0];
         }
 
-
         for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
         {
             //scale row i of U
@@ -484,8 +533,6 @@ void prec_mapply3c(prec_t *restrict P, double *x)
             __m256d vxj = _mm256_loadu_pd(xj);
             __m256d vz = (vxj - vA[0]) - (vA[1] + vA[2]);
 
-            //vz =_mm256_blend_pd(vxj,vz,0x7);  // 4th element unchanged
-            //_mm256_storeu_pd(xj,vz);
             double z[4];
             _mm256_store_pd(z,vz);
             for(int n=0;n<3;n++) xj[n]=z[n];
@@ -498,8 +545,6 @@ void prec_mapply3c(prec_t *restrict P, double *x)
         vA[2] = _mm256_cvtps_pd(_mm_loadu_ps(A+6))*vx[2]; //0b01010101
         __m256d vz = vA[0] + vA[1] + vA[2];
 
-        //vz =_mm256_blend_pd(vxi,vz,0x7);  // 4th element unchanged
-        //_mm256_storeu_pd(xi,vz);
         double z[4];
         _mm256_store_pd(z,vz);
         for(int k=0;k<3;k++) xi[k]=z[k];
@@ -524,10 +569,6 @@ void prec_mapply3c(prec_t *restrict P, double *x)
         __m256d vz = (vxi - vA[0]) - (vA[1] + vA[2]);
         vz =_mm256_blend_pd(vxi,vz,0x7);  // 4th element unchanged
         _mm256_storeu_pd(xi,vz);
-
-        //double z[4];
-        //_mm256_store_pd(z,vz);
-        //for(int k=0;k<3;k++) xi[k]=z[k];
     }
 }
 
@@ -565,8 +606,6 @@ void prec_dapply3c(prec_t *restrict P, double *x)
             __m256d vxj = _mm256_loadu_pd(xj);
             __m256d vz = (vxj - vA[0]) - (vA[1] + vA[2]);
 
-            //vz =_mm256_blend_pd(vxj,vz,0x7);  // 4th element unchanged
-            //_mm256_storeu_pd(xj,vz);
             double z[4];
             _mm256_store_pd(z,vz);
             for(int kk=0;kk<3;kk++) xj[kk]=z[kk];
@@ -579,8 +618,6 @@ void prec_dapply3c(prec_t *restrict P, double *x)
         vA[2] = _mm256_loadu_pd(A+6)*vx[2]; //0b01010101
         __m256d vz = vA[0] + vA[1] + vA[2];
 
-        //vz =_mm256_blend_pd(vxi,vz,0x7);  // 4th element unchanged
-        //_mm256_storeu_pd(xi,vz);
         double z[4];
         _mm256_store_pd(z,vz);
         for(int k=0;k<3;k++) xi[k]=z[k];
@@ -605,10 +642,6 @@ void prec_dapply3c(prec_t *restrict P, double *x)
         __m256d vz = (vxi - vA[0]) - (vA[1] + vA[2]);
         vz =_mm256_blend_pd(vxi,vz,0x7);  // 4th element unchanged
         _mm256_storeu_pd(xi,vz);
-
-        //double z[4];
-        //_mm256_store_pd(z,vz);
-        //for(int k=0;k<3;k++) xi[k]=z[k];
     }
 }
 
