@@ -305,7 +305,7 @@ public:
         const auto biot = this->biotCoeff(globalSpaceIdx);
         const auto lameParam = this->lame(globalSpaceIdx);
 
-        const auto& iq = this->model().intensiveQuantities(globalSpaceIdx, 0);
+        const auto& iq = this->model().intensiveQuantities(globalSpaceIdx, timeIdx);
         const auto& fs = iq.fluidState();
         const auto pres = decay<Scalar>(fs.pressure(this->refPressurePhaseIdx_()));
         const auto initPres = this->initialFluidState(globalSpaceIdx).pressure(this->refPressurePhaseIdx_());
