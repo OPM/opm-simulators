@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
 
 #include <cstddef>
+#include <cuda.h>
 #include <cusparse.h>
 #include <memory>
 #include <stdexcept>
