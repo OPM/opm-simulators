@@ -60,6 +60,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fmt/format.h>
+
 #include <opm/common/utility/gpuDecorators.hpp>
 #if HAVE_CUDA
 #if USE_HIP
@@ -420,18 +422,18 @@ public:
     void printVector(GlobalEqVector &x, const char *name="x")
     {
         int count = 1;
-        printf("%s =\n[\n",name);
+        fmt::print("{} =\n[\n",name);
         for (auto block = x.begin(); block != x.end(); block++)
         {
             for (auto i=block->begin(); i!=block->end(); i++)
             {
-                printf(" %+.4e",*i);
+                fmt::print(" {:+.4e}",*i);
             }
-            printf("\n");
+            fmt::print("\n");
             count++;
             if(count>16) break;
         }
-        printf("]\n");
+        fmt::print("]\n");
     }
 
     /*!
@@ -450,26 +452,26 @@ public:
     {
         auto& A = jacobian_->istlMatrix();
 
-        printf("nrows = %lu\n",A.N());
-        printf("ncols = %lu\n",A.M());
-        printf("nnz   = %lu\n",A.nonzeroes());
+        fmt::print("nrows = {:d}\n",A.N());
+        fmt::print("ncols = {:d}\n",A.M());
+        fmt::print("nnz   = {:d}\n",A.nonzeroes());
 
-        printf("%s =\n[\n",name);
+        fmt::print("{} =\n[\n",name);
         int count=1;
         int offset=0;
         for(auto row=A.begin(); row!=A.end(); row++)
         {
-            printf("%4d: ",offset);
+            fmt::print("{:4d}: ",offset);
             for(unsigned int i=0;i<row->getsize();i++)
             {
-                printf(" %4lu",row->getindexptr()[i]);
+                fmt::print(" {:4d}",row->getindexptr()[i]);
             }
-            printf("\n");
+            fmt::print("\n");
             offset+=row->getsize();
             count++;
             if(count>16) break;
         }
-        printf("]\n");
+        fmt::print("]\n");
     }
 
     /*!
@@ -479,29 +481,29 @@ public:
     void printNonzeros(const char *name="d")
     {
         auto& A = jacobian_->istlMatrix();
-        printf("%s =\n[\n",name);
+        fmt::print("{} =\n[\n",name);
         int count=1;
         for(auto row=A.begin();row!=A.end();row++)
         {
             for(unsigned int j=0;j<row->getsize();j++)
             {
-                printf("|");
+                fmt::print("|");
                 auto mat = row->getptr()[j];
                 for(auto vec=mat.begin();vec!=mat.end();vec++)
                 {
                     for(auto k=vec->begin();k!=vec->end();k++)
                     {
-                        printf(" %+.4e",*k);
+                        fmt::print(" {:+.4e}",*k);
                     }
-                    printf(" |");
+                    fmt::print(" |");
                 }
-                printf("\n");
+                fmt::print("\n");
             }
             count++;
             if(count>6) break;
-            printf("\n");
+            fmt::print("\n");
         }
-        printf("]\n");
+        fmt::print("]\n");
     }
 
     /*!
@@ -526,8 +528,8 @@ public:
         exportIndex_ = idx;
         sprintf(tag,"_%03d_%02d",exportIndex_, exportCount_);
 
-        printf("index = %d\n", exportIndex_);
-        printf("count = %d\n", exportCount_);
+        fmt::print("index = {:d}\n", exportIndex_);
+        fmt::print("count = {:d}\n", exportCount_);
 
         // export matrix
         exportNonzeros(tag,path);
