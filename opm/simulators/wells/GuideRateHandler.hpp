@@ -20,14 +20,7 @@
 #ifndef OPM_GUIDERATE_HANDLER_HPP
 #define OPM_GUIDERATE_HANDLER_HPP
 
-#if HAVE_MPI
-#define RESERVOIR_COUPLING_ENABLED
-#endif
-#ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
-#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
-#include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
-#endif
+#include <opm/simulators/wells/rescoup/RescoupProxy.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/output/data/Groups.hpp>
 #include <opm/output/data/GuideRateValue.hpp>
@@ -125,13 +118,11 @@ public:
             const int num_phases
         );
 
-#ifdef RESERVOIR_COUPLING_ENABLED
         bool isReservoirCouplingMaster() const { return this->parent_.isReservoirCouplingMaster(); }
         ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {
             return this->parent_.reservoirCouplingMaster();
         }
-#endif
-       const Parallel::Communication &comm() const { return this->parent_.comm_; }
+        const Parallel::Communication &comm() const { return this->parent_.comm_; }
         DeferredLogger &deferredLogger() { return this->parent_.deferredLogger(); }
         GuideRate &guideRate() { return this->parent_.guide_rate_; }
         const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_.wellModel().phaseUsage(); }
@@ -178,21 +169,25 @@ public:
         const Parallel::Communication& comm
     );
 
+    // === Reservoir Coupling ===
+
+    /// @brief Get the reservoir coupling proxy
+    ReservoirCoupling::Proxy<Scalar>& rescoup() { return rescoup_; }
+    const ReservoirCoupling::Proxy<Scalar>& rescoup() const { return rescoup_; }
+
+    bool isReservoirCouplingMaster() const { return rescoup_.isMaster(); }
+    bool isReservoirCouplingSlave() const { return rescoup_.isSlave(); }
+
+    ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() { return rescoup_.master(); }
+    ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() { return rescoup_.slave(); }
+
 #ifdef RESERVOIR_COUPLING_ENABLED
-    bool isReservoirCouplingMaster() const {
-        return this->reservoir_coupling_master_ != nullptr;
-    }
-    bool isReservoirCouplingSlave() const {
-        return this->reservoir_coupling_slave_ != nullptr;
-    }
-    ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() { return *(this->reservoir_coupling_master_); }
-    ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() { return *(this->reservoir_coupling_slave_); }
     void sendSlaveGroupPotentialsToMaster(const GroupState<Scalar>& group_state);
-    void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar> *reservoir_coupling_master) {
-        this->reservoir_coupling_master_ = reservoir_coupling_master;
+    void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar>* master) {
+        rescoup_.setMaster(master);
     }
-    void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar> *reservoir_coupling_slave) {
-        this->reservoir_coupling_slave_ = reservoir_coupling_slave;
+    void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar>* slave) {
+        rescoup_.setSlave(slave);
     }
 #endif
     DeferredLogger& deferredLogger();
@@ -230,10 +225,7 @@ private:
     const Parallel::Communication& comm_;
     GuideRate& guide_rate_;
     DeferredLogger *deferred_logger_ = nullptr;
-#ifdef RESERVOIR_COUPLING_ENABLED
-    ReservoirCouplingMaster<Scalar> *reservoir_coupling_master_ = nullptr;
-    ReservoirCouplingSlave<Scalar> *reservoir_coupling_slave_ = nullptr;
-#endif
+    ReservoirCoupling::Proxy<Scalar> rescoup_{};
 };
 
 } // namespace Opm
