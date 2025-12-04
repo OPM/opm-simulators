@@ -1386,6 +1386,7 @@ if(MPI_FOUND)
     opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.hpp
+    opm/simulators/wells/rescoup/RescoupProxy.hpp
     opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp
     opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp
     )

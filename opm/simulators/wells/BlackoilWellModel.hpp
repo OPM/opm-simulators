@@ -23,13 +23,7 @@
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 
-#if HAVE_MPI
-#define RESERVOIR_COUPLING_ENABLED
-#endif
-#ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
-#include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
-#endif
+#include <opm/simulators/wells/rescoup/RescoupProxy.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -380,26 +374,40 @@ template<class Scalar> class WellContributions;
             void setNlddAdapter(BlackoilWellModelNldd<TypeTag>* mod)
             { nldd_ = mod; }
 
-#ifdef RESERVOIR_COUPLING_ENABLED
+            // === Reservoir Coupling ===
+
+            /// @brief Get the reservoir coupling proxy
+            ReservoirCoupling::Proxy<Scalar>& rescoup() { return rescoup_; }
+            const ReservoirCoupling::Proxy<Scalar>& rescoup() const { return rescoup_; }
+
+            /// @brief Check if this process is a reservoir coupling master
+            bool isReservoirCouplingMaster() const { return rescoup_.isMaster(); }
+
+            /// @brief Check if this process is a reservoir coupling slave
+            bool isReservoirCouplingSlave() const { return rescoup_.isSlave(); }
+
+            /// @brief Get reference to reservoir coupling master
+            /// @note Caller must ensure isReservoirCouplingMaster() is true
             ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {
-                return *(this->simulator_.reservoirCouplingMaster());
+                return rescoup_.master();
             }
+
+            /// @brief Get reference to reservoir coupling slave
+            /// @note Caller must ensure isReservoirCouplingSlave() is true
             ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() {
-                return *(this->simulator_.reservoirCouplingSlave());
+                return rescoup_.slave();
             }
-            bool isReservoirCouplingMaster() const {
-                return this->simulator_.reservoirCouplingMaster() != nullptr;
-            }
-            bool isReservoirCouplingSlave() const {
-                return this->simulator_.reservoirCouplingSlave() != nullptr;
-            }
-            void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar> *master)
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+            void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar>* master)
             {
+                rescoup_.setMaster(master);
                 this->guide_rate_handler_.setReservoirCouplingMaster(master);
                 this->groupStateHelper().setReservoirCouplingMaster(master);
             }
-            void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar> *slave)
+            void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar>* slave)
             {
+                rescoup_.setSlave(slave);
                 this->guide_rate_handler_.setReservoirCouplingSlave(slave);
                 this->groupStateHelper().setReservoirCouplingSlave(slave);
             }
@@ -421,7 +429,7 @@ template<class Scalar> class WellContributions;
             std::optional<ReservoirCoupling::ScopedLoggerGuard>
                 setupRescoupScopedLogger(DeferredLogger& local_logger);
 
-        #endif
+#endif
 
             bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
                                               const double dt,
@@ -474,6 +482,7 @@ template<class Scalar> class WellContributions;
 
             SimulatorReportSingle last_report_{};
             GuideRateHandler<Scalar, IndexTraits> guide_rate_handler_{};
+            ReservoirCoupling::Proxy<Scalar> rescoup_{};
 
             // A flag to tell the convergence report whether we need to take another newton step
             bool network_needs_more_balancing_force_another_newton_iteration_{false};

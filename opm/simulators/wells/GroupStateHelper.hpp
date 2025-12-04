@@ -18,14 +18,8 @@
 */
 #ifndef OPM_GROUPSTATEHELPER_HEADER_INCLUDED
 #define OPM_GROUPSTATEHELPER_HEADER_INCLUDED
-#if HAVE_MPI
-#define RESERVOIR_COUPLING_ENABLED
-#endif
-#ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
-#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
-#include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
-#endif
+
+#include <opm/simulators/wells/rescoup/RescoupProxy.hpp>
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
@@ -215,15 +209,24 @@ public:
         return this->phase_usage_info_;
     }
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-    ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster()
-    {
-        return *this->reservoir_coupling_master_;
-    }
+    // === Reservoir Coupling ===
 
-    ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave()
-    {
-        return *this->reservoir_coupling_slave_;
+    /// @brief Get the reservoir coupling proxy
+    ReservoirCoupling::Proxy<Scalar>& rescoup() { return rescoup_; }
+    const ReservoirCoupling::Proxy<Scalar>& rescoup() const { return rescoup_; }
+
+    bool isReservoirCouplingMaster() const { return rescoup_.isMaster(); }
+    bool isReservoirCouplingSlave() const { return rescoup_.isSlave(); }
+
+    ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() { return rescoup_.master(); }
+    ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() { return rescoup_.slave(); }
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+    void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar>* master) {
+        rescoup_.setMaster(master);
+    }
+    void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar>* slave) {
+        rescoup_.setSlave(slave);
     }
 #endif
 
@@ -241,17 +244,6 @@ public:
         report_step_ = report_step;
     }
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-    void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar>* reservoir_coupling_master)
-    {
-        reservoir_coupling_master_ = reservoir_coupling_master;
-    }
-
-    void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar>* reservoir_coupling_slave)
-    {
-        reservoir_coupling_slave_ = reservoir_coupling_slave;
-    }
-#endif
 
     const SummaryState& summaryState() const
     {
@@ -359,10 +351,7 @@ private:
     // NOTE: The phase usage info seems to be read-only throughout the simulation, so it should be safe
     // to store a reference to it here.
     const PhaseUsageInfo<IndexTraits>& phase_usage_info_;
-#ifdef RESERVOIR_COUPLING_ENABLED
-    ReservoirCouplingMaster<Scalar>* reservoir_coupling_master_{nullptr};
-    ReservoirCouplingSlave<Scalar>* reservoir_coupling_slave_{nullptr};
-#endif
+    ReservoirCoupling::Proxy<Scalar> rescoup_{};
 };
 
 // -----------------------------------------------------------------------------
