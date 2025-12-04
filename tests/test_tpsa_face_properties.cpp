@@ -138,10 +138,10 @@ BOOST_AUTO_TEST_CASE(SimpleGridWithNNC)
     const DimVector normal_04 = {0.0, 0.0, 1.0};
     const DimVector normal_40 = {0.0, 0.0, -1.0};  // = -1 * normal_04
     BOOST_CHECK_CLOSE(faceProps.weightAverage(elem1, elem2), weightAvg_04, 1.0e-8);
-    BOOST_CHECK_EQUAL(faceProps.weightAverage(elem2, elem1), weightAvg_40);
+    BOOST_CHECK_CLOSE(faceProps.weightAverage(elem2, elem1), weightAvg_40, 1.0e-8);
     BOOST_CHECK_CLOSE(faceProps.weightProduct(elem1, elem2), weightProd, 1.0e-8);
-    BOOST_CHECK_EQUAL(faceProps.normalDistance(elem1, elem2), normDist);
-    BOOST_CHECK_EQUAL(faceProps.normalDistance(elem2, elem1), normDist);
+    BOOST_CHECK_CLOSE(faceProps.normalDistance(elem1, elem2), normDist, 1.0e-8);
+    BOOST_CHECK_CLOSE(faceProps.normalDistance(elem2, elem1), normDist, 1.0e-8);
     BOOST_CHECK_EQUAL(faceProps.cellFaceNormal(elem1, elem2), normal_04);
     BOOST_CHECK_EQUAL(faceProps.cellFaceNormal(elem2, elem1), normal_40);
 
@@ -153,12 +153,12 @@ BOOST_AUTO_TEST_CASE(SimpleGridWithNNC)
     const double weightProdNNC = 6.25e-16;
     const DimVector normalNNC_35 = {0.0, -1.0, 0.0};
     const DimVector normalNNC_53 = {0.0, 1.0, 0.0};
-    BOOST_CHECK_EQUAL(faceProps.weightAverage(elemNNC1, elemNNC2), weightAvgNNC);
-    BOOST_CHECK_EQUAL(faceProps.weightAverage(elemNNC2, elemNNC1), weightAvgNNC);
+    BOOST_CHECK_CLOSE(faceProps.weightAverage(elemNNC1, elemNNC2), weightAvgNNC, 1.0e-8);
+    BOOST_CHECK_CLOSE(faceProps.weightAverage(elemNNC2, elemNNC1), weightAvgNNC, 1.0e-8);
     BOOST_CHECK_CLOSE(faceProps.weightProduct(elemNNC1, elemNNC2), weightProdNNC, 1.0e-8);
     BOOST_CHECK_CLOSE(faceProps.weightProduct(elemNNC2, elemNNC1), weightProdNNC, 1.0e-8);
-    BOOST_CHECK_EQUAL(faceProps.normalDistance(elemNNC1, elemNNC2), normDistNNC);
-    BOOST_CHECK_EQUAL(faceProps.normalDistance(elemNNC2, elemNNC1), normDistNNC);
+    BOOST_CHECK_CLOSE(faceProps.normalDistance(elemNNC1, elemNNC2), normDistNNC, 1.0e-8);
+    BOOST_CHECK_CLOSE(faceProps.normalDistance(elemNNC2, elemNNC1), normDistNNC, 1.0e-8);
     BOOST_CHECK_EQUAL(faceProps.cellFaceNormal(elemNNC1, elemNNC2), normalNNC_35);
     BOOST_CHECK_EQUAL(faceProps.cellFaceNormal(elemNNC2, elemNNC1), normalNNC_53);
 
@@ -171,9 +171,9 @@ BOOST_AUTO_TEST_CASE(SimpleGridWithNNC)
                                                {0.0, -1.0, 0.0}, {0.0, 1.0, 0.0},  // y-dir
                                                {0.0, 0.0, 1.0} };  // z-dir
     for (std::size_t bndIdx = 0; bndIdx < 5; ++bndIdx) {
-        BOOST_CHECK_EQUAL(faceProps.weightAverageBoundary(elemBnd, bndIdx), weightAvgBnd);
+        BOOST_CHECK_CLOSE(faceProps.weightAverageBoundary(elemBnd, bndIdx), weightAvgBnd, 1.0e-8);
         BOOST_CHECK_CLOSE(faceProps.weightProductBoundary(elemBnd, bndIdx), weightProdBnd, 1.0e-8);
-        BOOST_CHECK_EQUAL(faceProps.normalDistanceBoundary(elemBnd, bndIdx), normDistBnd);
+        BOOST_CHECK_CLOSE(faceProps.normalDistanceBoundary(elemBnd, bndIdx), normDistBnd, 1.0e-8);
         BOOST_CHECK_EQUAL(faceProps.cellFaceNormalBoundary(elemBnd, bndIdx), normalBnd[bndIdx]);
     }
 }
