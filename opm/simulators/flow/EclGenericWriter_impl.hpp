@@ -285,6 +285,14 @@ extractOutputTransAndNNC(const std::function<unsigned int(unsigned int)>& map)
         auto cartMap = cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_));
         computeTrans_(cartMap, map);
         exportNncStructure_(cartMap, map);
+        // if Grid is CpGrid with LGRs, and it's a serial run
+        std::vector<Opm::data::Solution> outputTrans_levels{};
+        if ( (this->eclState_.getLgrs().size()>0) && (this->grid_.maxLevel()>0) ) {
+            Opm::Lgr::extractTransLevelGrids(this->grid_,
+                                             this->globalTrans(),
+                                             outputTrans_levels,
+                                             directVerticalNeighbors);
+        }
     }
 
 #if HAVE_MPI
