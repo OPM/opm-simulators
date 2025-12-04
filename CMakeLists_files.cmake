@@ -489,7 +489,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_group_higher_constraints.cpp
   tests/test_equil.cpp
   tests/test_extractMatrix.cpp
-  tests/test_face_properties.cpp
   tests/test_flexiblesolver.cpp
   tests/test_gconsump.cpp
   tests/test_glift1.cpp
@@ -518,6 +517,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_rstconv.cpp
   tests/test_stoppedwells.cpp
   tests/test_timer.cpp
+  tests/test_tpsa_face_properties.cpp
   tests/test_tpsa_localresidual.cpp
   tests/test_tpsa_primaryvariables.cpp
   tests/test_vfpproperties.cpp
