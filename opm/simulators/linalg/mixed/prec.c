@@ -175,7 +175,7 @@ void mat3_matfms(double *C, const double *A, const double *B)
 }
 
 /**
- * @brief Matrix invese for 3x3 matrix.
+ * @brief Matrix inverse for 3x3 matrix.
  *
  * @param invA Pointer to inverse matrix.
  * @param    A Pointer to input matrix.
@@ -467,7 +467,12 @@ void prec_ilu0_factorize(prec_t *P, bsr_matrix *A)
     }
 }
 
-
+/**
+ * @brief In-place matrix-vector multiplication for 3x3 matrices.
+ *
+ * @param A Pointer to input matrix.
+ * @param x Pointer to input/output vector.
+ */
 static inline void mat3_vecmul(const double *A, double *x)
 {
     const int b=3;
@@ -483,6 +488,13 @@ static inline void mat3_vecmul(const double *A, double *x)
     for(int k=0;k<3;k++) x[k]=z[k];
 }
 
+/**
+ * @brief In-place fused matrix-vector multiply-subtract for 3x3 matrices.
+ *
+ * @param y Pointer to input/output vector.
+ * @param A Pointer to input matrix.
+ * @param x Pointer to input vector.
+ */
 
 static inline void mat3_vecfms(double *y, const double *A, const double *x)
 {

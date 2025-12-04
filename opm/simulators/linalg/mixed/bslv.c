@@ -72,6 +72,16 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
     prec_init(mem->P, A); // initialize structure of L,D,U components of P
 }
 
+/**
+ * @brief Inner product of two vectors.
+ *
+ * @note Function assumes vectors buffered to be an
+ *       integer multiple of cacheline size (64 bytes)
+ *
+ * @param a First input vector.
+ * @param b Second input vector.
+ * @param n Vector length.
+ */
 double __attribute__((noinline)) vec_inner2(const double *a, const double *b, int n)
 {
     const double *x = __builtin_assume_aligned(a,64);
@@ -84,13 +94,11 @@ double __attribute__((noinline)) vec_inner2(const double *a, const double *b, in
     {
         for(int j=0;j<N;j++) agg[j]+=x[i+j]*y[i+j];
     }
-    //for(int j=0;j<8;j++) agg[j]+=agg[j+8];
     for(int j=0;j<4;j++) agg[j]+=agg[j+4];
     for(int j=0;j<2;j++) agg[j]+=agg[j+2];
     for(int j=0;j<1;j++) agg[j]+=agg[j+1];
 
     return agg[0];
-
 }
 
 int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
