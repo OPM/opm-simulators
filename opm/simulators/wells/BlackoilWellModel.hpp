@@ -428,7 +428,6 @@ template<class Scalar> class WellContributions;
             ///         or std::nullopt if not active
             std::optional<ReservoirCoupling::ScopedLoggerGuard>
                 setupRescoupScopedLogger(DeferredLogger& local_logger);
-
 #endif
 
             bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
