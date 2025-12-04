@@ -518,6 +518,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_rstconv.cpp
   tests/test_stoppedwells.cpp
   tests/test_timer.cpp
+  tests/test_tpsa_localresidual.cpp
   tests/test_tpsa_primaryvariables.cpp
   tests/test_vfpproperties.cpp
   tests/test_wellmodel.cpp
@@ -664,6 +665,7 @@ list (APPEND TEST_DATA_FILES
   tests/equil_humidwetgas.DATA
   tests/equil_rsvd_and_rvvd.DATA
   tests/equil_rsvd_and_rvvd_and_rvwvd.DATA
+  tests/tpsa_ex.data
   tests/wetgas.DATA
   tests/satfuncEPS_B.DATA
   tests/wells_manager_data.data
