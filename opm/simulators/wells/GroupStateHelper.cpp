@@ -24,6 +24,7 @@
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupSatelliteInjection.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/FractionCalculator.hpp>
@@ -422,8 +423,9 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
 template <typename Scalar, typename IndexTraits>
 std::map<std::string, Scalar>
 GroupStateHelper<Scalar, IndexTraits>::computeNetworkPressures(const Network::ExtNetwork& network,
-                                                              const VFPProdProperties<Scalar>& vfp_prod_props,
-                                                              const Parallel::Communication& comm) const
+                                                               const VFPProdProperties<Scalar>& vfp_prod_props,
+                                                               const UnitSystem& unit_system,
+                                                               const Parallel::Communication& comm) const
 {
     // TODO: Only dealing with production networks for now.
     OPM_TIMEFUNCTION();
@@ -541,7 +543,9 @@ GroupStateHelper<Scalar, IndexTraits>::computeNetworkPressures(const Network::Ex
                     //     (e.g., in GOR calculations) unless a branch ALQ is set in BRANPROP.
                     //
                     // @TODO: Standard network
-                    Scalar alq = (*upbranch).alq_value().value_or(0.0);
+                    const auto alq_type = vfp_prod_props.getTable(*vfp_table).getALQType();
+                    const auto dimension = VFPProdTable::ALQDimension(alq_type, unit_system);
+                    const Scalar alq = (*upbranch).alq_value(dimension).value_or(0.0);
                     node_pressures[node]
                         = vfp_prod_props.bhp(*vfp_table,
                                              rates[IndexTraits::waterPhaseIdx],
