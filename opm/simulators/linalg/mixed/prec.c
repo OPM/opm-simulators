@@ -203,7 +203,7 @@ void mat3_inv(double *invA, const double *A)
  * @param y Pointer to output vector.
  * @param x Pointer to input vector.
  */
-inline void vec_copy9(double *y, double const *x)
+static inline void vec_copy9(double *y, double const *x)
 {
     for(int i=0;i<9;i++) y[i]=x[i];
 }
@@ -468,7 +468,7 @@ void prec_ilu0_factorize(prec_t *P, bsr_matrix *A)
 }
 
 
-inline void mat3_vecmul(const double *A, double *x)
+static inline void mat3_vecmul(const double *A, double *x)
 {
     const int b=3;
     double z[3];
@@ -484,7 +484,7 @@ inline void mat3_vecmul(const double *A, double *x)
 }
 
 
-inline void mat3_vecfms(double *y, const double *A, const double *x)
+static inline void mat3_vecfms(double *y, const double *A, const double *x)
 {
     const int b=3;
     double z[3];
