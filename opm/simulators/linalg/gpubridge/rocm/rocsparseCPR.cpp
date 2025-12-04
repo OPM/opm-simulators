@@ -518,7 +518,8 @@ apply(const Scalar& y,
     template class rocsparseCPR<T,3>; \
     template class rocsparseCPR<T,4>; \
     template class rocsparseCPR<T,5>; \
-    template class rocsparseCPR<T,6>;
+    template class rocsparseCPR<T,6>; \
+    template class rocsparseCPR<T,7>;
 
 INSTANTIATE_TYPE(double)
 

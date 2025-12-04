@@ -67,7 +67,8 @@ setOpencl(std::shared_ptr<cl::Context>& context_,
     template class openclPreconditioner<T,3>; \
     template class openclPreconditioner<T,4>; \
     template class openclPreconditioner<T,5>; \
-    template class openclPreconditioner<T,6>;
+    template class openclPreconditioner<T,6>; \
+    template class openclPreconditioner<T,7>;
 
 INSTANTIATE_TYPE(double)
 

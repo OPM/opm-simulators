@@ -359,7 +359,8 @@ void openclBISAI<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x, [
     template class openclBISAI<T,3>; \
     template class openclBISAI<T,4>; \
     template class openclBISAI<T,5>; \
-    template class openclBISAI<T,6>;
+    template class openclBISAI<T,6>; \
+    template class openclBISAI<T,7>;
 
 INSTANTIATE_TYPE(double)
 

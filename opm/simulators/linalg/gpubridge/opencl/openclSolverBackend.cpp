@@ -713,7 +713,8 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
     template class openclSolverBackend<T,3>; \
     template class openclSolverBackend<T,4>; \
     template class openclSolverBackend<T,5>; \
-    template class openclSolverBackend<T,6>;
+    template class openclSolverBackend<T,6>; \
+    template class openclSolverBackend<T,7>;
 
 INSTANTIATE_TYPE(double)
 

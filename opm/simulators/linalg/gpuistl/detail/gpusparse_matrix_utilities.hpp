@@ -247,7 +247,8 @@ validateVectorMatrixSizes(size_t vectorSize, size_t matrixBlockSize, size_t matr
     INSTANTIATE_SPARSE_MATRIX_DUNE_OPERATIONS(CLASS_NAME, T, 3);                                                       \
     INSTANTIATE_SPARSE_MATRIX_DUNE_OPERATIONS(CLASS_NAME, T, 4);                                                       \
     INSTANTIATE_SPARSE_MATRIX_DUNE_OPERATIONS(CLASS_NAME, T, 5);                                                       \
-    INSTANTIATE_SPARSE_MATRIX_DUNE_OPERATIONS(CLASS_NAME, T, 6)
+    INSTANTIATE_SPARSE_MATRIX_DUNE_OPERATIONS(CLASS_NAME, T, 6);                                                       \
+    INSTANTIATE_SPARSE_MATRIX_DUNE_OPERATIONS(CLASS_NAME, T, 7);
 
 } // namespace Opm::gpuistl::detail
 

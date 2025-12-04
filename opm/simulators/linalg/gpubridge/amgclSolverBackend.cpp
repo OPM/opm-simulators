@@ -434,7 +434,8 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
     template class amgclSolverBackend<T,3>; \
     template class amgclSolverBackend<T,4>; \
     template class amgclSolverBackend<T,5>; \
-    template class amgclSolverBackend<T,6>;
+    template class amgclSolverBackend<T,6>; \
+    template class amgclSolverBackend<T,7>;
 
 INSTANTIATE_TYPE(double)
 

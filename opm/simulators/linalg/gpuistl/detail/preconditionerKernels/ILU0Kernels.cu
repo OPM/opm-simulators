@@ -512,7 +512,8 @@ LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
     INSTANTIATE_KERNEL_WRAPPERS(T, 3);                                                                                 \
     INSTANTIATE_KERNEL_WRAPPERS(T, 4);                                                                                 \
     INSTANTIATE_KERNEL_WRAPPERS(T, 5);                                                                                 \
-    INSTANTIATE_KERNEL_WRAPPERS(T, 6);
+    INSTANTIATE_KERNEL_WRAPPERS(T, 6);                                                                                 \
+    INSTANTIATE_KERNEL_WRAPPERS(T, 7);
 
 INSTANTIATE_BLOCK_SIZED_KERNEL_WRAPPERS(float)
 INSTANTIATE_BLOCK_SIZED_KERNEL_WRAPPERS(double)
@@ -554,4 +555,5 @@ INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(3);
 INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(4);
 INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(5);
 INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(6);
+INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(7);
 } // namespace Opm::gpuistl::detail::ILU0

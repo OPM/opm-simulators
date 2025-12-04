@@ -334,6 +334,7 @@ INSTANTIATE_GPUSEQILU0_DUNE(double, 3);
 INSTANTIATE_GPUSEQILU0_DUNE(double, 4);
 INSTANTIATE_GPUSEQILU0_DUNE(double, 5);
 INSTANTIATE_GPUSEQILU0_DUNE(double, 6);
+INSTANTIATE_GPUSEQILU0_DUNE(double, 7);
 template class ::Opm::gpuistl::GpuSeqILU0<Opm::gpuistl::GpuSparseMatrixWrapper<double>,
     ::Opm::gpuistl::GpuVector<double>,
     ::Opm::gpuistl::GpuVector<double>>;
@@ -344,6 +345,7 @@ INSTANTIATE_GPUSEQILU0_DUNE(float, 3);
 INSTANTIATE_GPUSEQILU0_DUNE(float, 4);
 INSTANTIATE_GPUSEQILU0_DUNE(float, 5);
 INSTANTIATE_GPUSEQILU0_DUNE(float, 6);
+INSTANTIATE_GPUSEQILU0_DUNE(float, 7);
 template class ::Opm::gpuistl::GpuSeqILU0<Opm::gpuistl::GpuSparseMatrixWrapper<float>,
     ::Opm::gpuistl::GpuVector<float>,
     ::Opm::gpuistl::GpuVector<float>>;

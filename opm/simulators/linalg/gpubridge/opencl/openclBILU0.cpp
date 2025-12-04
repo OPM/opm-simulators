@@ -340,7 +340,8 @@ void openclBILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x, [
     template class openclBILU0<T,3>; \
     template class openclBILU0<T,4>; \
     template class openclBILU0<T,5>; \
-    template class openclBILU0<T,6>;
+    template class openclBILU0<T,6>; \
+    template class openclBILU0<T,7>;
 
 INSTANTIATE_TYPE(double)
 

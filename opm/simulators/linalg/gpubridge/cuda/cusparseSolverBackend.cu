@@ -724,7 +724,8 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
     template class cusparseSolverBackend<T,3>; \
     template class cusparseSolverBackend<T,4>; \
     template class cusparseSolverBackend<T,5>; \
-    template class cusparseSolverBackend<T,6>;
+    template class cusparseSolverBackend<T,6>; \
+    template class cusparseSolverBackend<T,7>;
 
 INSTANTIATE_TYPE(double)
 

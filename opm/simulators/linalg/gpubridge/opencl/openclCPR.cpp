@@ -320,7 +320,8 @@ void openclCPR<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x, Wel
     template class openclCPR<T,3>; \
     template class openclCPR<T,4>; \
     template class openclCPR<T,5>; \
-    template class openclCPR<T,6>;
+    template class openclCPR<T,6>; \
+    template class openclCPR<T,7>;
 
 INSTANTIATE_TYPE(double)
 
