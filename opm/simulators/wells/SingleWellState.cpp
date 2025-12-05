@@ -420,25 +420,17 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
 template<typename Scalar, typename IndexTraits>
 std::string
 SingleWellState<Scalar, IndexTraits>::
-debugInfo() const
+segmentsDebugInfo() const
 {
-    std::string info = "Well name: " + this->name + " well state:\n";
-    fmt::format_to(std::back_inserter(info), " type: {}, staus: {}, control type: {}, BHP: {:8.2e} Pa, THP: {:8.2e} Pa\n",
-                   this->producer? "Producer" : " Injector", WellStatus2String(this->status),
-                   this->producer ? WellProducerCMode2String(this->production_cmode)
-                                  : WellInjectorCMode2String(this->injection_cmode),
-                   this->bhp / Opm::unit::barsa,
-                   this->thp / Opm::unit::barsa);
+    return this->segments.debugInfo();
+}
 
-    fmt::format_to(std::back_inserter(info), "  Surface rates (m3/s): ");
-    for (const auto& r : this->surface_rates) {
-        fmt::format_to(std::back_inserter(info), " {:8.2e}", r);
-    }
-    fmt::format_to(std::back_inserter(info), "\n");
-
-    info += this->segments.debugInfo();
-
-    fmt::format_to(std::back_inserter(info), "  Connection pressures and connection rates:\n");
+template<typename Scalar, typename IndexTraits>
+std::string
+SingleWellState<Scalar, IndexTraits>::
+connectionDebugInfo() const
+{
+    std::string info {"  Connection pressures and connection rates:\n"};
     for (std::size_t perf = 0; perf < this->perf_data.size(); perf++) {
         fmt::format_to(std::back_inserter(info),
                        "  Connection {:4}: Pressure: {:8.2e} Pa, Rate:",
@@ -453,6 +445,27 @@ debugInfo() const
         fmt::format_to(std::back_inserter(info), "\n");
     }
 
+    return info;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::string
+SingleWellState<Scalar, IndexTraits>::
+briefDebugInfo() const
+{
+    std::string info = "Well name: " + this->name + " well state:\n";
+    fmt::format_to(std::back_inserter(info), " type: {}, staus: {}, control type: {}, BHP: {:8.2e} Pa, THP: {:8.2e} Pa\n",
+                   this->producer? "Producer" : " Injector", WellStatus2String(this->status),
+                   this->producer ? WellProducerCMode2String(this->production_cmode)
+                                  : WellInjectorCMode2String(this->injection_cmode),
+                   this->bhp / Opm::unit::barsa,
+                   this->thp / Opm::unit::barsa);
+
+    fmt::format_to(std::back_inserter(info), "  Surface rates (m3/s): ");
+    for (const auto& r : this->surface_rates) {
+        fmt::format_to(std::back_inserter(info), " {:8.2e}", r);
+    }
+    fmt::format_to(std::back_inserter(info), "\n");
     return info;
 }
 
