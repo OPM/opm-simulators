@@ -267,6 +267,15 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WGState.cpp
   )
 
+if (HAVE_AVX2_EXTENSION)
+  set (AVX2_SOURCE_FILES
+    opm/simulators/linalg/mixed/bsr.c
+    opm/simulators/linalg/mixed/prec.c
+    opm/simulators/linalg/mixed/bslv.c)
+  list (APPEND MAIN_SOURCE_FILES
+    ${AVX2_SOURCE_FILES})
+endif()
+
 if (HAVE_ECL_INPUT)
   list (APPEND MAIN_SOURCE_FILES
     opm/simulators/utils/satfunc/GasPhaseConsistencyChecks.cpp
@@ -1261,6 +1270,16 @@ if (HAVE_ECL_INPUT)
     opm/simulators/utils/satfunc/ThreePointHorizontalConsistencyChecks.hpp
     opm/simulators/utils/satfunc/UnscaledSatfuncCheckPoint.hpp
     opm/simulators/utils/satfunc/WaterPhaseConsistencyChecks.hpp
+  )
+endif()
+
+if (HAVE_AVX2_EXTENSION)
+  list (APPEND PUBLIC_HEADER_FILES
+    opm/simulators/linalg/mixed/bslv.h
+    opm/simulators/linalg/mixed/bsr.h
+    opm/simulators/linalg/mixed/prec.h
+    opm/simulators/linalg/mixed/vec.h
+    opm/simulators/linalg/mixed/wrapper.hpp
   )
 endif()
 

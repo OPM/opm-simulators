@@ -60,6 +60,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fmt/format.h>
+
 #include <opm/common/utility/gpuDecorators.hpp>
 #if HAVE_CUDA
 #if USE_HIP
@@ -236,6 +238,8 @@ public:
     {
         simulatorPtr_ = nullptr;
         separateSparseSourceTerms_ = Parameters::Get<Parameters::SeparateSparseSourceTerms>();
+        exportIndex_=-1;
+        exportCount_=-1;
     }
 
     /*!
@@ -413,6 +417,201 @@ public:
 
     GlobalEqVector& residual()
     { return residual_; }
+
+    /*!
+     * \brief Print first 16 block elements of a vector.
+     */
+    void printVector(GlobalEqVector &x, const char *name="x")
+    {
+        int count = 1;
+        fmt::print("{} =\n[\n",name);
+        for (auto block = x.begin(); block != x.end(); block++)
+        {
+            for (auto i=block->begin(); i!=block->end(); i++)
+            {
+                fmt::print(" {:+.4e}",*i);
+            }
+            fmt::print("\n");
+            count++;
+            if(count>16) break;
+        }
+        fmt::print("]\n");
+    }
+
+    /*!
+     * \brief Print first 16 block elements of residual.
+     */
+    void printResidual(const char *name="r")
+    {
+        printVector(residual_, name);
+    }
+
+    /*!
+     * \brief Print sparsity pattern of the first 16 rows
+     *        of the jacobian block matrix
+     */
+    void printSparsity(const char *name="s")
+    {
+        auto& A = jacobian_->istlMatrix();
+
+        fmt::print("nrows = {:d}\n",A.N());
+        fmt::print("ncols = {:d}\n",A.M());
+        fmt::print("nnz   = {:d}\n",A.nonzeroes());
+
+        fmt::print("{} =\n[\n",name);
+        int count=1;
+        int offset=0;
+        for(auto row=A.begin(); row!=A.end(); row++)
+        {
+            fmt::print("{:4d}: ",offset);
+            for(unsigned int i=0;i<row->getsize();i++)
+            {
+                fmt::print(" {:4d}",row->getindexptr()[i]);
+            }
+            fmt::print("\n");
+            offset+=row->getsize();
+            count++;
+            if(count>16) break;
+        }
+        fmt::print("]\n");
+    }
+
+    /*!
+     * \brief Print block elements of the first 6 rows of the
+     * j      acobian block matrix
+     */
+    void printNonzeros(const char *name="d")
+    {
+        auto& A = jacobian_->istlMatrix();
+        fmt::print("{} =\n[\n",name);
+        int count=1;
+        for(auto row=A.begin();row!=A.end();row++)
+        {
+            for(unsigned int j=0;j<row->getsize();j++)
+            {
+                fmt::print("|");
+                auto mat = row->getptr()[j];
+                for(auto vec=mat.begin();vec!=mat.end();vec++)
+                {
+                    for(auto k=vec->begin();k!=vec->end();k++)
+                    {
+                        fmt::print(" {:+.4e}",*k);
+                    }
+                    fmt::print(" |");
+                }
+                fmt::print("\n");
+            }
+            count++;
+            if(count>6) break;
+            fmt::print("\n");
+        }
+        fmt::print("]\n");
+    }
+
+    /*!
+     * \brief Print sparsity pattern and nonzeros of jacobian block matrix
+     */
+    void printJacobian()
+    {
+        printSparsity();
+        printNonzeros();
+    }
+
+    /*!
+     * \brief Export blocks-sparse linear system.
+     */
+    void exportSystem(int idx, char *tag, const char *path="export")
+    {
+        // export sparsity only once
+        if(exportIndex_==-1) exportSparsity(path);
+
+        // increment indices and generate tag
+        exportCount_ = exportIndex_==idx ? ++exportCount_ : 0;
+        exportIndex_ = idx;
+        sprintf(tag,"_%03d_%02d",exportIndex_, exportCount_);
+
+        fmt::print("index = {:d}\n", exportIndex_);
+        fmt::print("count = {:d}\n", exportCount_);
+
+        // export matrix
+        exportNonzeros(tag,path);
+
+        // export residual
+        char name[256];
+        sprintf(name,"%s/r",path);
+        exportVector(residual_,tag,name);
+    }
+
+    /*!
+     * \brief Export block vector.
+     */
+    void exportVector(GlobalEqVector &x, const char *tag="", const char *name="export/x")
+    {
+        // assume double precision and contiguous data
+        const double *data = &x[0][0];
+
+        char filename[512];
+        sprintf(filename,"%s%s.f64",name,tag);
+        FILE *out =fopen(filename,"w");
+        fwrite(data, sizeof(double), x.dim(),out);
+        fclose(out);
+    }
+
+    /*!
+     * \brief Export nonzero blocks of jacobian block-sparse matrix
+     */
+    void exportNonzeros(const char *tag="", const char *path=".")
+    {
+        auto& A = jacobian_->istlMatrix();
+
+        // assume double precision and contiguous data
+        const double *data = &A[0][0][0][0];
+        size_t dim = A[0][0].N()*A[0][0].M()*A.nonzeroes();
+
+        char filename[256];
+        sprintf(filename,"%s/data%s.f64",path,tag);
+        FILE *out =fopen(filename,"w");
+        fwrite(data, sizeof(double), dim,out);
+        fclose(out);
+    }
+
+    /*!
+     * \brief Export sparsity pattern of jacobian block-sparse matrix
+     */
+    void exportSparsity(const char *path=".")
+    {
+        //assemble csr graph
+        auto& A = jacobian_->istlMatrix();
+        auto rows = std::make_unique<int[]>(A.N()+1);
+        auto cols = std::make_unique<int[]>(A.nonzeroes());
+
+        int irow=0;
+        int icol=0;
+        rows[0]=0;
+        for(auto row=A.begin(); row!=A.end(); row++)
+        {
+            for(unsigned int i=0;i<row->getsize();i++)
+            {
+                cols[icol++]=row->getindexptr()[i];
+            }
+            rows[irow+1]= rows[irow]+row->getsize();
+            irow++;
+        }
+
+        //export arrays
+        FILE *out;
+        char filename[256];
+
+        sprintf(filename,"%s/rows.i32",path);
+        out=fopen(filename,"w");
+        fwrite(rows, sizeof(int), A.N()+1,out);
+        fclose(out);
+
+        sprintf(filename,"%s/cols.i32",path);
+        out=fopen(filename,"w");
+        fwrite(cols, sizeof(int), A.nonzeroes(),out);
+        fclose(out);
+    }
 
     void setLinearizationType(LinearizationType linearizationType)
     { linearizationType_ = linearizationType; }
@@ -1067,6 +1266,9 @@ private:
     bool separateSparseSourceTerms_ = false;
 
     FullDomain<> fullDomain_;
+
+    int exportIndex_;
+    int exportCount_;
 };
 } // namespace Opm
 
