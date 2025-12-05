@@ -60,6 +60,7 @@ namespace Opm {
     class DeferredLogger;
     class EclipseState;
     template<typename Scalar, typename IndexTraits> class BlackoilWellModelGasLiftGeneric;
+    template<typename Scalar, typename IndexTraits> class BlackoilWellModelNetworkGeneric;
     template<typename Scalar, typename IndexTraits> class GasLiftGroupInfo;
     template<typename Scalar, typename IndexTraits> class GasLiftSingleWellGeneric;
     template<class Scalar> class GasLiftWellState;
@@ -97,6 +98,7 @@ class BlackoilWellModelGeneric
 public:
     BlackoilWellModelGeneric(Schedule& schedule,
                              BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gaslift,
+                             BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>& network,
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsageInfo<IndexTraits>& phase_usage,
@@ -122,9 +124,6 @@ public:
 
     //! \brief Returns true if well is defined, open and has connections on current rank.
     bool hasOpenLocalWell(const std::string& well_name) const;
-
-    /// return true if network is active (at least one network well in prediction mode)
-    bool networkActive() const;
 
     // whether there exists any multisegment well open on this process
     bool anyMSWellOpenLocal() const;
@@ -208,21 +207,9 @@ public:
       with storeWellState() can then subsequently be recovered with the
       resetWellState() method.
     */
-    void commitWGState()
-    {
-        this->last_valid_wgstate_ = this->active_wgstate_;
-        this->last_valid_node_pressures_ = this->node_pressures_;
-    }
+    void commitWGState();
 
     data::GroupAndNetworkValues groupAndNetworkData(const int reportStepIdx) const;
-
-    /// Checks if network is active (at least one network well on prediction).
-    void updateNetworkActiveState(const int report_step);
-
-    /// Checks if there are reasons to perform a pre-step network re-balance.
-    /// (Currently, the only reasons are network well status changes.)
-    /// (TODO: Consider if adding network change events would be helpful.)
-    bool needPreStepNetworkRebalance(const int report_step) const;
 
     /// Shut down any single well
     /// Returns true if the well was actually found and shut.
@@ -250,9 +237,6 @@ public:
 
     bool reportStepStarts() const { return report_step_starts_; }
 
-    bool shouldBalanceNetwork(const int reportStepIndex,
-                              const int iterationIdx) const;
-
     void updateClosedWellsThisStep(const std::string& well_name) const
     {
         this->closed_this_step_.insert(well_name);
@@ -270,8 +254,7 @@ public:
         serializer(local_shut_wells_);
         serializer(closed_this_step_);
         serializer(guideRate_);
-        serializer(node_pressures_);
-        serializer(last_valid_node_pressures_);
+        serializer(genNetwork_);
         serializer(prev_inj_multipliers_);
         serializer(active_wgstate_);
         serializer(last_valid_wgstate_);
@@ -305,6 +288,22 @@ public:
 
     GroupStateHelperType& groupStateHelper() { return group_state_helper_; }
     const GroupStateHelperType& groupStateHelper() const { return group_state_helper_; }
+
+    const VFPProperties<Scalar,IndexTraits>& getVFPProperties() const
+    {
+        return *vfp_properties_;
+    }
+
+    void updateAndCommunicateGroupData(const int reportStepIdx,
+                                       const int iterationIdx,
+                                       const Scalar tol_nupcol,
+                                       // we only want to update the wellgroup target
+                                       // after the groups have found their controls
+                                       const bool update_wellgrouptarget,
+                                       DeferredLogger& deferred_logger);
+
+    const EclipseState& eclState() const
+    { return eclState_; }
 
 protected:
     /*
@@ -362,7 +361,7 @@ protected:
     void resetWGState()
     {
         this->active_wgstate_ = this->last_valid_wgstate_;
-        this->node_pressures_ = this->last_valid_node_pressures_;
+        this->genNetwork_.resetState();
         // Update helper pointers to reference the restored active state
         this->group_state_helper_.updateState(this->wellState(), this->groupState());
     }
@@ -388,10 +387,6 @@ protected:
     void initializeWellPerfData();
 
     bool wasDynamicallyShutThisTimeStep(const int well_index) const;
-
-    Scalar updateNetworkPressures(const int reportStepIdx,
-                                  const Scalar damping_factor,
-                                  const Scalar update_upper_bound);
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,
@@ -435,8 +430,6 @@ protected:
                             data::GroupData& gdata) const;
     void assignGroupValues(const int reportStepIdx,
                            std::map<std::string, data::GroupData>& gvalues) const;
-    void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues,
-                          const int reportStepIdx) const;
 
     void calculateEfficiencyFactors(const int reportStepIdx);
 
@@ -455,12 +448,6 @@ protected:
                                      const int reportStepIdx,
                                      const int max_number_of_group_switch,
                                      const bool update_group_switching_log);
-
-    void updateAndCommunicateGroupData(const int reportStepIdx,
-                                       const int iterationIdx,
-                                       const Scalar tol_nupcol,
-                                       const bool update_wellgrouptarget, // we only want to update the wellgrouptarget after the groups have found their controls
-                                       DeferredLogger& deferred_logger);
 
     void inferLocalShutWells();
 
@@ -529,11 +516,9 @@ protected:
     BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gen_gaslift_;
     BlackoilWellModelWBP<Scalar, IndexTraits> wbp_;
 
-
     const PhaseUsageInfo<IndexTraits>& phase_usage_info_;
     bool terminal_output_{false};
     bool wells_active_{false};
-    bool network_active_{false};
     bool initial_step_{};
     bool report_step_starts_{};
 
@@ -568,11 +553,6 @@ protected:
     GuideRate guideRate_;
     std::unique_ptr<VFPProperties<Scalar, IndexTraits>> vfp_properties_{};
 
-    // Network pressures for output and initialization
-    std::map<std::string, Scalar> node_pressures_;
-    // Valid network pressures for output and initialization for safe restart after failed iterations
-    std::map<std::string, Scalar> last_valid_node_pressures_;
-
     // previous injection multiplier, it is used in the injection multiplier calculation for WINJMULT keyword
     std::unordered_map<std::string, std::vector<Scalar>> prev_inj_multipliers_;
 
@@ -598,6 +578,8 @@ protected:
     std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>> switched_inj_groups_;
     // Store map of group name and close offending well for output
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
+
+    BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& genNetwork_;
 
 private:
     WellInterfaceGeneric<Scalar, IndexTraits>* getGenWell(const std::string& well_name);

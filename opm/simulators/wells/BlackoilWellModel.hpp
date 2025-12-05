@@ -57,6 +57,7 @@
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
+#include <opm/simulators/wells/BlackoilWellModelNetwork.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
@@ -281,10 +282,6 @@ template<class Scalar> class WellContributions;
             bool
             updateWellControls(DeferredLogger& deferred_logger);
 
-            std::tuple<bool, Scalar>
-            updateNetworks(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);
-
-
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
                                       DeferredLogger& deferred_logger);
@@ -425,6 +422,20 @@ template<class Scalar> class WellContributions;
                 setupRescoupScopedLogger(DeferredLogger& local_logger);
 
         #endif
+
+            bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
+                                              const double dt,
+                                              DeferredLogger& local_deferredLogger);
+
+            // TODO: finding a better naming
+            void assembleWellEqWithoutIteration(const double dt, DeferredLogger& deferred_logger);
+
+            const std::vector<Scalar>& B_avg() const
+            { return B_avg_; }
+
+            const ModelParameters& param() const
+            { return param_; }
+
         protected:
             Simulator& simulator_;
 
@@ -458,7 +469,6 @@ template<class Scalar> class WellContributions;
             Scalar gravity_{};
             std::vector<Scalar> depth_{};
             bool alternative_well_rate_init_{};
-            std::map<std::string, Scalar> well_group_thp_calc_;
             std::unique_ptr<RateConverterType> rateConverter_{};
             std::map<std::string, std::unique_ptr<AverageRegionalPressureType>> regionalAveragePressureCalculator_{};
 
@@ -467,9 +477,6 @@ template<class Scalar> class WellContributions;
 
             // A flag to tell the convergence report whether we need to take another newton step
             bool network_needs_more_balancing_force_another_newton_iteration_{false};
-
-            // Pre-step network solve at static reservoir conditions (group and well states might be updated)
-            void doPreStepNetworkRebalance(DeferredLogger& deferred_logger);
 
             std::vector<Scalar> B_avg_{};
 
@@ -493,12 +500,6 @@ template<class Scalar> class WellContributions;
                                                                         const bool optimize_gas_lift,
                                                                         const double dt,
                                                                         DeferredLogger& local_deferredLogger);
-
-            bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
-                                              const double dt,
-                                              DeferredLogger& local_deferredLogger);
-
-            bool computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger);
 
             /// Update rank's notion of intersecting wells and their
             /// associate solution variables.
@@ -549,9 +550,6 @@ template<class Scalar> class WellContributions;
 
             void prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger);
 
-            // TODO: finding a better naming
-            void assembleWellEqWithoutIteration(const double dt, DeferredLogger& deferred_logger);
-
             void extractLegacyCellPvtRegionIndex_();
 
             void extractLegacyDepth_();
@@ -574,6 +572,7 @@ template<class Scalar> class WellContributions;
 
         private:
             BlackoilWellModelGasLift<TypeTag> gaslift_;
+            BlackoilWellModelNetwork<TypeTag> network_;
             BlackoilWellModelNldd<TypeTag>* nldd_ = nullptr; //!< NLDD well model adapter (not owned)
 
             // These members are used to avoid reallocation in specific functions

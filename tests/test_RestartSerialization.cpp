@@ -310,8 +310,9 @@ public:
                                  const PhaseUsage& phase_usage,
                                  const Parallel::Communication& comm,
                                  bool deserialize)
-        : BlackoilWellModelGeneric<double, IndexTraits>(schedule, gaslift, summaryState,
+        : BlackoilWellModelGeneric<double, IndexTraits>(schedule, gaslift, network_, summaryState,
                                            eclState, phase_usage, comm)
+        , network_(*this)
     {
         if (deserialize) {
             active_wgstate_.well_state = WellState<double, IndexTraits>(dummy);
@@ -328,7 +329,7 @@ public:
         local_shut_wells_ = {2, 3};
         closed_this_step_ = {"test1", "test2"};
         guideRate_.setSerializationTestData();
-        node_pressures_ = {{"test3", 4.0}};
+        genNetwork_.setNodePressures({{"test3", 4.0}});
         active_wgstate_ = WGState<double, IndexTraits>::serializationTestObject(dummy);
         last_valid_wgstate_ = WGState<double, IndexTraits>::serializationTestObject(dummy);
         nupcol_wgstate_ = WGState<double, IndexTraits>::serializationTestObject(dummy);
@@ -371,6 +372,7 @@ public:
     }
 
 private:
+    BlackoilWellModelNetworkGeneric<double, IndexTraits> network_;
     ParallelWellInfo<double> dummy;
 };
 
