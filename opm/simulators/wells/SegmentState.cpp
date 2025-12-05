@@ -31,6 +31,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <fmt/format.h>
+
 namespace {
 
 std::vector<int> make_segment_number(const Opm::WellSegments& segments)
@@ -146,6 +148,27 @@ bool SegmentState<Scalar>::operator==(const SegmentState& rhs) const
            this->pressure_drop_accel == rhs.pressure_drop_accel &&
            this->m_segment_number == rhs.m_segment_number;
 }
+
+template<class Scalar>
+std::string
+SegmentState<Scalar>::debugInfo() const
+{
+    if (this->empty()) {
+        return "";
+    }
+    const std::size_t num_phases = this->rates.size() / this->size();
+    std::string info = "SegmentState:\n";
+    for (std::size_t i = 0; i < this->size(); ++i) {
+        info += fmt::format("  Segment {:4}: Segment number {:4}, Pressure = {:8.2e} Pa, Rate: ",
+                            i, this->m_segment_number[i], this->pressure[i]);
+        for (std::size_t p = 0; p < num_phases; ++p) {
+            info += fmt::format(" {: 8.2e}", this->rates[i * num_phases + p]);
+        }
+        info += fmt::format("\n");
+    }
+    return info;
+}
+
 
 template class SegmentState<double>;
 

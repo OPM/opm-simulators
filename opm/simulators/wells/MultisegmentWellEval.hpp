@@ -136,6 +136,8 @@ protected:
 
     const WellInterfaceIndices<FluidSystem,Indices>& baseif_;
 
+    std::string debugInfo() const;
+
     Equations linSys_; //!< The equation system
     PrimaryVariables primary_variables_; //!< The primary variables
     MSWSegments segments_; //!< Segment properties
