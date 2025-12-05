@@ -28,7 +28,7 @@ namespace Opm::gpuistl
 // Forward declarations
 template <typename T>
 class GpuVector;
-template <typename T>
+template <typename T, bool ForceLegacy>
 class GpuSparseMatrixWrapper;
 template <typename T>
 class GpuSparseMatrixGeneric;
@@ -45,8 +45,8 @@ template <typename T>
 struct is_gpu_type<GpuVector<T>> : std::true_type {
 };
 
-template <typename T>
-struct is_gpu_type<GpuSparseMatrixWrapper<T>> : std::true_type {
+template <typename T, bool ForceLegacy>
+struct is_gpu_type<GpuSparseMatrixWrapper<T, ForceLegacy>> : std::true_type {
 };
 
 template <typename T>

@@ -334,6 +334,12 @@ public:
      */
      void updateNonzeroValues(const GpuSparseMatrix<T>& matrix);
 
+    /**
+     * @brief updateNonzeroValues updates the non-zero values by using the non-zero values of the supplied matrix
+     * @param matrix the GpuSparseMatrixGeneric to extract the non-zero values from
+     * @note This assumes the given matrix has the same sparsity pattern.
+     */
+     void updateNonzeroValues(const GpuSparseMatrixGeneric<T>& matrix);
 
     /**
      * @brief Dispatches a function based on the block size of the matrix.

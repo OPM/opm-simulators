@@ -57,7 +57,7 @@ namespace Opm::gpuistl
  *       This is a temporary solution, and we should migrate to the new API for all block sizes in the future by
  *       replacing this class with GpuSparseMatrixGeneric.
  */
-template <typename T>
+template <typename T, bool ForceLegacy = false>
 class GpuSparseMatrixWrapper
 {
 public:
@@ -68,11 +68,14 @@ public:
         Since the generic API for CUDA/HIP is primaryly supported on CUDA 13 (and not yet HIP) for blocked
         matrices, places wanting to use blocked matrices can invoke this class which handles which API to use.
         Basically we just check if HIP is present, or if we are using cuda and a version prior to 13.
+        If ForceLegacy is true, always use the legacy API (GpuSparseMatrix) regardless of CUDA version.
     */
 #if USE_HIP || (!USE_HIP && CUDA_VERSION < 13000)
      using matrix_type = GpuSparseMatrix<T>;
 #else
-     using matrix_type = GpuSparseMatrixGeneric<T>;
+     using matrix_type = std::conditional_t<ForceLegacy,
+                                            GpuSparseMatrix<T>,
+                                            GpuSparseMatrixGeneric<T>>;
 #endif
 
     // Arrow operator overloads for direct access to the underlying matrix
@@ -177,9 +180,9 @@ public:
      * @tparam MatrixType is assumed to be a Dune::BCRSMatrix compatible matrix.
      */
     template <class MatrixType>
-    static GpuSparseMatrixWrapper<T> fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false)
+    static GpuSparseMatrixWrapper<T, ForceLegacy> fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false)
     {
-        GpuSparseMatrixWrapper<T> gpuSparseMatrixWrapper;
+        GpuSparseMatrixWrapper<T, ForceLegacy> gpuSparseMatrixWrapper;
         gpuSparseMatrixWrapper.m_matrix = std::make_unique<matrix_type>(
             matrix_type::fromMatrix(matrix, copyNonZeroElementsDirectly));
         return gpuSparseMatrixWrapper;
@@ -382,7 +385,8 @@ public:
      * @param matrix the matrix to extract the non-zero values from
      * @note This assumes the given matrix has the same sparsity pattern.
      */
-    void updateNonzeroValues(const GpuSparseMatrixWrapper<T>& matrix)
+    template <bool OtherForceLegacy>
+    void updateNonzeroValues(const GpuSparseMatrixWrapper<T, OtherForceLegacy>& matrix)
     {
         m_matrix->updateNonzeroValues(matrix.get());
     }
