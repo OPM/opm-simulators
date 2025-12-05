@@ -308,7 +308,8 @@ analyzeAggregateMaps()
     template class CprCreation<T,3>; \
     template class CprCreation<T,4>; \
     template class CprCreation<T,5>; \
-    template class CprCreation<T,6>;
+    template class CprCreation<T,6>; \
+    template class CprCreation<T,7>;
 
 INSTANTIATE_TYPE(double)
 

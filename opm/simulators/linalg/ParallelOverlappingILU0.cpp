@@ -52,7 +52,8 @@ namespace Opm
     INSTANTIATE(T,3)        \
     INSTANTIATE(T,4)        \
     INSTANTIATE(T,5)        \
-    INSTANTIATE(T,6)
+    INSTANTIATE(T,6)        \
+    INSTANTIATE(T,7)
 
 INSTANTIATE_TYPE(double)
 

@@ -472,7 +472,8 @@ apply(const Scalar& y, Scalar& x, [[maybe_unused]] WellContributions<Scalar>& we
     template class rocsparseBILU0<T,3>; \
     template class rocsparseBILU0<T,4>; \
     template class rocsparseBILU0<T,5>; \
-    template class rocsparseBILU0<T,6>;
+    template class rocsparseBILU0<T,6>; \
+    template class rocsparseBILU0<T,7>;
 
 INSTANTIATE_TYPE(double)
 

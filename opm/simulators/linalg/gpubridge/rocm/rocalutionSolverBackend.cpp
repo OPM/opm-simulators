@@ -243,7 +243,8 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
     template class rocalutionSolverBackend<T,3>; \
     template class rocalutionSolverBackend<T,4>; \
     template class rocalutionSolverBackend<T,5>; \
-    template class rocalutionSolverBackend<T,6>;
+    template class rocalutionSolverBackend<T,6>; \
+    template class rocalutionSolverBackend<T,7>;
 
 INSTANTIATE_TYPE(double)
 

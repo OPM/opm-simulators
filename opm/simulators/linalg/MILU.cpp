@@ -283,7 +283,8 @@ void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,
     INSTANTIATE_DIM(T,3)                    \
     INSTANTIATE_DIM(T,4)                    \
     INSTANTIATE_DIM(T,5)                    \
-    INSTANTIATE_DIM(T,6)
+    INSTANTIATE_DIM(T,6)                    \
+    INSTANTIATE_DIM(T,7)
 
 INSTANTIATE_TYPE(double)
 
