@@ -219,7 +219,7 @@ protected:
         // solve using Newton
         for (int iter = 0; iter < max_iter; ++iter) {
             assembleEquations();
-            if (iter > min_iter && converged(iter)) {
+            if (iter >= min_iter && converged(iter)) {
                 break;
             }
             solveAndUpdate();
@@ -247,11 +247,13 @@ protected:
         const unsigned int numCells = simulator_.model().numTotalDof();
         Scalar maxNorm = 0.0;
         Scalar sumNorm = 0.0;
-        for (unsigned globI = 0; globI < numCells; ++globI) {
+        const auto& elemMapper = simulator_.model().elementMapper();
+        for (const auto& elem : elements(simulator_.gridView(), Dune::Partitions::interior)) {
+            unsigned globI = elemMapper.index(elem);
             maxNorm = max(maxNorm, std::abs(this->energyVector_[globI]));
             sumNorm += std::abs(this->energyVector_[globI]);
         }
-        maxNorm = simulator_.gridView().comm().sum(maxNorm);
+        maxNorm = simulator_.gridView().comm().max(maxNorm);
         sumNorm = simulator_.gridView().comm().sum(sumNorm);
         const int globalNumCells = simulator_.gridView().comm().sum(numCells);
         sumNorm /= globalNumCells;
