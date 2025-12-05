@@ -1309,6 +1309,9 @@ reportConnectionFracture(const std::size_t well_index,
         fracture.inj_pressure = data.inj_pressure[i];
         fracture.inj_bhp = data.inj_bhp[i];
         fracture.inj_wellrate = data.inj_wellrate[i];
+
+        connections[i].rates.set(data::Rates::opt::wat_frac,
+                                 data.water_rate[i]);
     }
 }
 
