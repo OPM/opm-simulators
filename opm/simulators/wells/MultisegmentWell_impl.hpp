@@ -2157,7 +2157,7 @@ namespace Opm
         auto bhpAtLimit = WellBhpThpCalculator(*this).
                computeBhpAtThpLimitProd(frates,
                                         summary_state,
-                                        this->maxPerfPress(simulator),
+                                        maxPerfPress(simulator),
                                         this->getRefDensity(),
                                         alq_value,
                                         this->getTHPConstraint(summary_state),
@@ -2181,7 +2181,7 @@ namespace Opm
        return WellBhpThpCalculator(*this).
               computeBhpAtThpLimitProd(fratesIter,
                                        summary_state,
-                                       this->maxPerfPress(simulator),
+                                       maxPerfPress(simulator),
                                        this->getRefDensity(),
                                        alq_value,
                                        this->getTHPConstraint(summary_state),

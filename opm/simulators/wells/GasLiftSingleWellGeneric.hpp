@@ -72,7 +72,8 @@ public:
                  Scalar new_water_pot_,
                  bool water_is_limited_,
                  Scalar alq_,
-                 bool alq_is_limited_)
+                 bool alq_is_limited_,
+                 Scalar bhp_)
             : grad{grad_}
             , new_oil_rate{new_oil_rate_}
             , new_oil_pot{new_oil_pot_}
@@ -85,6 +86,7 @@ public:
             , water_is_limited{water_is_limited_}
             , alq{alq_}
             , alq_is_limited{alq_is_limited_}
+            , bhp(bhp_)
         {}
 
         Scalar grad;
@@ -99,14 +101,12 @@ public:
         bool water_is_limited;
         Scalar alq;
         bool alq_is_limited;
+        Scalar bhp;
     };
 
     const std::string& name() const { return well_name_; }
 
-    std::optional<GradInfo> calcIncOrDecGradient(Scalar oil_rate,
-                                                 Scalar gas_rate,
-                                                 Scalar water_rate,
-                                                 Scalar alq,
+    std::optional<GradInfo> calcIncOrDecGradient(const GasLiftWellState<Scalar>& state,
                                                  const std::string& gr_name_dont_limit,
                                                  bool increase,
                                                  bool debug_output = true) const;
@@ -137,16 +137,19 @@ protected:
             oil{rates.oil},
             gas{rates.gas},
             water{rates.water},
+            bhp{rates.bhp},
             bhp_is_limited{rates.bhp_is_limited}
         {}
 
         BasicRates(Scalar oil_,
                    Scalar gas_,
                    Scalar water_,
+                   Scalar bhp_,
                    bool bhp_is_limited_)
             : oil{oil_}
             , gas{gas_}
             , water{water_}
+            , bhp{bhp_}
             , bhp_is_limited{bhp_is_limited_}
         {}
 
@@ -155,6 +158,7 @@ protected:
             oil = rates.oil;
             gas = rates.gas;
             water = rates.water;
+            bhp = rates.bhp;
             bhp_is_limited = rates.bhp_is_limited;
             return *this;
         }
@@ -180,7 +184,7 @@ protected:
             }
         }
 
-        Scalar oil, gas, water;
+        Scalar oil, gas, water, bhp;
         bool bhp_is_limited;
     };
 
@@ -193,11 +197,12 @@ protected:
                      Scalar gas_pot_,
                      Scalar water_,
                      Scalar water_pot_,
+                     Scalar bhp_,
                      bool oil_is_limited_,
                      bool gas_is_limited_,
                      bool water_is_limited_,
                      bool bhp_is_limited_)
-            :  BasicRates(oil_, gas_, water_, bhp_is_limited_)
+            :  BasicRates(oil_, gas_, water_, bhp_, bhp_is_limited_)
             , oil_pot(oil_pot_)
             , gas_pot(gas_pot_)
             , water_pot(water_pot_)
@@ -301,7 +306,7 @@ protected:
     bool checkInitialALQmodified_(Scalar alq, Scalar initial_alq) const;
 
     virtual bool checkThpControl_() const = 0;
-    virtual std::optional<Scalar > computeBhpAtThpLimit_(Scalar alq,
+    virtual std::optional<Scalar > computeBhpAtThpLimit_(Scalar alq, Scalar bhp,
                                                         bool debug_output = true) const = 0;
 
     std::pair<std::optional<Scalar>,Scalar>
@@ -311,13 +316,13 @@ protected:
     computeInitialWellRates_() const;
 
     std::optional<LimitedRates>
-    computeLimitedWellRatesWithALQ_(Scalar alq) const;
+    computeLimitedWellRatesWithALQ_(Scalar alq, Scalar bhp) const;
 
     virtual BasicRates computeWellRates_(Scalar bhp,
                                          bool bhp_is_limited,
                                          bool debug_output = true) const = 0;
 
-    std::optional<BasicRates> computeWellRatesWithALQ_(Scalar alq) const;
+    std::optional<BasicRates> computeWellRatesWithALQ_(Scalar alq, Scalar bhp) const;
 
     void debugCheckNegativeGradient_(Scalar grad, Scalar alq, Scalar new_alq,
                                      Scalar oil_rate, Scalar new_oil_rate,

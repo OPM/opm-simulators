@@ -200,6 +200,13 @@ public:
                                     DeferredLogger& deferred_logger,
                                     bool iterate_if_no_solution) const = 0;
 
+    std::optional<Scalar>
+    computeBhpAtThpLimitProdWithAlqUsingIPR(const Simulator& simulator,
+                                            const WellStateType& well_state,
+                                            Scalar bhp,
+                                            const SummaryState& summary_state,
+                                            const Scalar alq_value,
+                                            DeferredLogger& deferred_logger);
     /// using the solution x to recover the solution xw for wells and applying
     /// xw to update Well State
     virtual void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
@@ -371,6 +378,14 @@ public:
                                             const bool fixed_control,
                                             const bool fixed_status,
                                             const bool solving_with_zero_rate) = 0;
+
+    virtual Scalar maxPerfPress(const Simulator& simulator) const = 0;
+
+    virtual void updateIPRImplicit(const Simulator& simulator,
+                                   const GroupStateHelperType& groupStateHelper,
+                                   WellStateType& well_state,
+                                   DeferredLogger& deferred_logger) = 0;
+
 protected:
     // simulation parameters
     std::vector<RateVector> connectionRates_;
@@ -423,11 +438,6 @@ protected:
                                           const GroupStateHelperType& groupStateHelper,
                                           WellStateType& well_state,
                                           DeferredLogger& deferred_logger) = 0;
-
-    virtual void updateIPRImplicit(const Simulator& simulator,
-                                   const GroupStateHelperType& groupStateHelper,
-                                   WellStateType& well_state,
-                                   DeferredLogger& deferred_logger) = 0;
 
     bool iterateWellEquations(const Simulator& simulator,
                               const double dt,

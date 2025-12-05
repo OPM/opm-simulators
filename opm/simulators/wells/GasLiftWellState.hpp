@@ -40,6 +40,7 @@ public:
                      Scalar water_rate,
                      Scalar water_pot,
                      bool water_is_limited,
+                     Scalar bhp,
                      std::optional<bool> increase)
         : oil_rate_{oil_rate}
         , oil_pot_{oil_pot}
@@ -52,10 +53,12 @@ public:
         , water_rate_{water_rate}
         , water_pot_{water_pot}
         , water_is_limited_{water_is_limited}
+        , bhp_{bhp}
         , increase_{increase}
     {}
 
     Scalar alq() const { return alq_; }
+    Scalar bhp() const { return bhp_; }
     bool alqChanged() { return increase_.has_value(); }
     bool alqIsLimited() const { return alq_is_limited_; }
     bool gasIsLimited() const { return gas_is_limited_; }
@@ -80,6 +83,7 @@ public:
                 Scalar water_rate,
                 Scalar water_pot,
                 Scalar water_is_limited,
+                Scalar bhp,
                 bool increase)
     {
         oil_rate_ = oil_rate;
@@ -93,6 +97,7 @@ public:
         water_rate_ = water_rate;
         water_pot_ = water_pot;
         water_is_limited_ = water_is_limited;
+        bhp_ = bhp;
         increase_ = increase;
     }
 
@@ -108,6 +113,7 @@ private:
     Scalar water_rate_;
     Scalar water_pot_;
     bool water_is_limited_;
+    Scalar bhp_;
     std::optional<bool> increase_;
 };
 

@@ -40,7 +40,7 @@ namespace Opm {
 
 template<typename TypeTag>
 GasLiftSingleWell<TypeTag>::
-GasLiftSingleWell(const WellInterface<TypeTag>& well,
+GasLiftSingleWell(WellInterface<TypeTag>& well,
                   const Simulator& simulator,
                   const SummaryState& summary_state,
                   DeferredLogger& deferred_logger,
@@ -136,6 +136,7 @@ computeWellRates_(Scalar bhp, bool bhp_is_limited, bool debug_output ) const
     return {-potentials[this->oil_pos_],
             -potentials[this->gas_pos_],
             -potentials[this->water_pos_],
+            bhp,
             bhp_is_limited
     };
 }
@@ -143,17 +144,16 @@ computeWellRates_(Scalar bhp, bool bhp_is_limited, bool debug_output ) const
 template<typename TypeTag>
 std::optional<typename GasLiftSingleWell<TypeTag>::Scalar>
 GasLiftSingleWell<TypeTag>::
-computeBhpAtThpLimit_(Scalar alq, bool debug_output) const
+computeBhpAtThpLimit_(Scalar alq, Scalar bhp, bool debug_output) const
 {
     OPM_TIMEFUNCTION();
-    const auto& groupStateHelper = this->simulator_.problem().wellModel().groupStateHelper();
-    auto bhp_at_thp_limit = this->well_.computeBhpAtThpLimitProdWithAlq(
+    auto bhp_at_thp_limit = this->well_.computeBhpAtThpLimitProdWithAlqUsingIPR(
         this->simulator_,
-        groupStateHelper,
+        this->well_state_,
+        bhp,
         this->summary_state_,
         alq,
-        this->deferred_logger_,
-        /*iterate_if_no_solution */ false);
+        this->deferred_logger_);
     if (bhp_at_thp_limit) {
         if (*bhp_at_thp_limit < this->controls_.bhp_limit) {
             if (debug_output && this->debug) {

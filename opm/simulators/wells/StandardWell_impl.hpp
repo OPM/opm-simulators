@@ -2302,22 +2302,9 @@ namespace Opm
             this->adaptRatesForVFP(rates);
             return rates;
         };
-
-        Scalar max_pressure = 0.0;
-        for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
-            const int cell_idx = this->well_cells_[perf];
-            const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-            const auto& fs = int_quants.fluidState();
-            Scalar pressure_cell = this->getPerfCellPressure(fs).value();
-            max_pressure = std::max(max_pressure, pressure_cell);
-        }
-        const auto& comm = this->parallel_well_info_.communication();
-        if (comm.size() > 1) {
-            max_pressure = comm.max(max_pressure);
-        }
         auto bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(frates,
                                                                                summary_state,
-                                                                               max_pressure,
+                                                                               maxPerfPress(simulator),
                                                                                this->getRefDensity(),
                                                                                alq_value,
                                                                                this->getTHPConstraint(summary_state),
@@ -2345,7 +2332,7 @@ namespace Opm
 
         bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(fratesIter,
                                                                           summary_state,
-                                                                          max_pressure,
+                                                                          maxPerfPress(simulator),
                                                                           this->getRefDensity(),
                                                                           alq_value,
                                                                           this->getTHPConstraint(summary_state),
@@ -2746,6 +2733,26 @@ namespace Opm
 
         return result * this->well_efficiency_factor_;
     }
+
+    template <typename TypeTag>
+    typename StandardWell<TypeTag>::Scalar
+    StandardWell<TypeTag>::
+    maxPerfPress(const Simulator& simulator) const {
+        Scalar max_pressure = 0.0;
+        for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
+            const int cell_idx = this->well_cells_[perf];
+            const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+            const auto& fs = int_quants.fluidState();
+            Scalar pressure_cell = this->getPerfCellPressure(fs).value();
+            max_pressure = std::max(max_pressure, pressure_cell);
+        }
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1) {
+            max_pressure = comm.max(max_pressure);
+        }
+        return max_pressure;
+    }
+
 } // namespace Opm
 
 #endif

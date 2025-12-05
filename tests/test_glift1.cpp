@@ -205,7 +205,8 @@ BOOST_AUTO_TEST_CASE(G1)
             /*glift_debug=*/false
         };
         GLiftSyncGroups sync_groups;
-        GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
+        auto std_well_unconst = *std_well;
+        GasLiftSingleWell glift {std_well_unconst, *(simulator.get()), summary_state,
             deferred_logger, well_state, group_state, group_info, sync_groups,
             comm, /*glift_debug=*/false
         };
