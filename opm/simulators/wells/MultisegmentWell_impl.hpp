@@ -2393,8 +2393,11 @@ namespace Opm
     outputDebugInfoNumericalProblem(const SingleWellState<Scalar, IndexTraits>& ws,
                                     DeferredLogger& deferred_logger) const
     {
-        std::string msg = ws.debugInfo();
-        msg += this->primary_variables_.debugInfo();
+        // TODO: it might be the general information from well state
+        // then primary variables,
+        // then segment info
+        // then connection info
+        const std::string msg = this->primary_variables_.debugInfo() + ws.debugInfo();
         deferred_logger.debug(msg);
     }
 
