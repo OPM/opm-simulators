@@ -35,6 +35,7 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 
 #include <cassert>
+#include <stack>
 
 namespace Opm {
 
