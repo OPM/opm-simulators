@@ -44,6 +44,7 @@ struct ConnFractureData {
         serializer(inj_pressure);
         serializer(inj_bhp);
         serializer(inj_wellrate);
+        serializer(water_rate);
     }
 
     static ConnFractureData serializationTestObject();
@@ -62,6 +63,7 @@ struct ConnFractureData {
     std::vector<Scalar> inj_pressure;
     std::vector<Scalar> inj_bhp;
     std::vector<Scalar> inj_wellrate;
+    std::vector<Scalar> water_rate;
 };
 
 }
