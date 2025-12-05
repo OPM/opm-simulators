@@ -18,18 +18,19 @@
 */
 #ifndef OPM_GPUSPARSEMATRIX_HPP
 #define OPM_GPUSPARSEMATRIX_HPP
-#include <cusparse.h>
-#include <iostream>
-#include <memory>
-#include <stdexcept>
-#include <type_traits>
+
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
-#include <vector>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
+
+#include <cstddef>
+#include <cusparse.h>
+#include <memory>
+#include <stdexcept>
+#include <type_traits>
 
 namespace Opm::gpuistl
 {
@@ -87,9 +88,9 @@ public:
     GpuSparseMatrix(const T* nonZeroElements,
                    const int* rowIndices,
                    const int* columnIndices,
-                   size_t numberOfNonzeroBlocks,
-                   size_t blockSize,
-                   size_t numberOfRows);
+                   std::size_t numberOfNonzeroBlocks,
+                   std::size_t blockSize,
+                   std::size_t numberOfRows);
 
     //! Create a sparse matrix by copying the sparsity structure of another matrix, not filling in the values
     //!
@@ -103,7 +104,7 @@ public:
     //!       restrictions in the current version of cusparse. This might change in future versions.
     GpuSparseMatrix(const GpuVector<int>& rowIndices,
                    const GpuVector<int>& columnIndices,
-                   size_t blockSize);
+                   std::size_t blockSize);
 
     GpuSparseMatrix(const GpuSparseMatrix&);
 
@@ -149,7 +150,7 @@ public:
     /**
      * @brief N returns the number of rows (which is equal to the number of columns)
      */
-    size_t N() const
+    std::size_t N() const
     {
         // Technically this safe conversion is not needed since we enforce these to be
         // non-negative in the constructor, but keeping them for added sanity for now.
@@ -163,7 +164,7 @@ public:
      * @brief nonzeroes behaves as the Dune::BCRSMatrix::nonzeros() function and returns the number of non zero blocks
      * @return number of non zero blocks.
      */
-    size_t nonzeroes() const
+    std::size_t nonzeroes() const
     {
         // Technically this safe conversion is not needed since we enforce these to be
         // non-negative in the constructor, but keeping them for added sanity for now.
@@ -257,7 +258,7 @@ public:
      * This is equivalent to matrix.N() * matrix.blockSize()
      * @return matrix.N() * matrix.blockSize()
      */
-    size_t dim() const
+    std::size_t dim() const
     {
         // Technically this safe conversion is not needed since we enforce these to be
         // non-negative in the constructor, but keeping them for added sanity for now.
@@ -270,7 +271,7 @@ public:
     /**
      * @brief blockSize size of the blocks
      */
-    size_t blockSize() const
+    std::size_t blockSize() const
     {
         // Technically this safe conversion is not needed since we enforce these to be
         // non-negative in the constructor, but keeping them for added sanity for now.
@@ -396,5 +397,7 @@ private:
         }
     }
 };
+
 } // namespace Opm::gpuistl
+
 #endif
