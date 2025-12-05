@@ -388,22 +388,20 @@ init(const std::vector<Scalar>& cellPressures,
             }
 
             const auto& prev_well = prevState->well(*old_index);
-
-            auto& new_well = this->well(w);
-            new_well.init_timestep(prev_well);
-
             if (prev_well.status == Well::Status::SHUT) {
                 // Well was shut in previous state, do not use its values.
                 continue;
             }
 
-            new_well.status = prev_well.status;
-
+            auto& new_well = this->well(w);
             if (new_well.producer != prev_well.producer) {
                 // Well changed to/from injector from/to producer, do not
                 // use its previous values.
                 continue;
             }
+            // Use bhp, thp and temperature from previous values
+            new_well.init_timestep(prev_well);
+            new_well.status = prev_well.status;
 
             // If new target is set using WCONPROD, WCONINJE etc. we use the new control
             if (!new_well.events.hasEvent(WellState::event_mask)) {
