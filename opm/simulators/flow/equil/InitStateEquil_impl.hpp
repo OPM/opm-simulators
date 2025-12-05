@@ -219,7 +219,7 @@ void computeBlockDip(const Scalar& cellThickness,
     Scalar nz = v1x * v2y - v1y * v2x;
 
     // Normalize the normal vector
-    Scalar norm = std::sqrt(nx*nx + ny*ny + nz*nz);
+    Scalar norm = std::hypot(nx, ny, nz);
 
     if (norm > 1e-10) {
         nx /= norm;
@@ -298,7 +298,7 @@ Scalar calculateTrueVerticalDepth(Scalar z, Scalar x, Scalar y,
     Scalar azimuthDiff = pointAzimuth - dipAzimuth;
 
     // Calculate lateral distance
-    Scalar lateralDist = std::sqrt(dx*dx + dy*dy);
+    Scalar lateralDist = std::hypot(dx, dy);
 
     // Project lateral distance onto dip direction
     Scalar lateralInDipDir = lateralDist * std::cos(azimuthDiff);
