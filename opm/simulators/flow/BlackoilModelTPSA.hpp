@@ -38,6 +38,9 @@
 
 namespace Opm {
 
+/*!
+* \brief Black oil model for coupling Flow simulations with TPSA geomechanics
+*/
 template <class TypeTag>
 class BlackoilModelTPSA : public BlackoilModel<TypeTag>
 {
@@ -51,6 +54,11 @@ public:
 
     /*!
     * \brief Constructor
+    *
+    * \param simulator Reference to simulator object
+    * \param param Reference to parameters for model
+    * \param well_model Refenerence to well model
+    * \param terminal_output Bool for terminal output
     */
     explicit BlackoilModelTPSA(Simulator& simulator,
                                const ModelParameters& param,
@@ -65,10 +73,11 @@ public:
     * \param iteration Flow nonlinear iteration
     * \param timer Simulation timer
     * \param nonlinear_solver Nonlinear solver type
+    * \returns Report for simulator performance
     *
-    * \note Several strategies of updating flow and geomechanics may be implemented:
-    * fixed-stress: fixed-stress algorithm, i.e. iteratively solving Flow and TPSA equations in sequence
-    * lagged:       one-way coupling where Flow is solved with TPSA info from previous time step
+    * \note Strategies of coupling Flow and TPSA currently implemented:
+    * \li fixed-stress: fixed-stress algorithm, i.e. iteratively solving Flow and TPSA equations in sequence
+    * \li lagged:       one-way coupling where Flow is solved with TPSA info from previous time step
     */
     template <class NonlinearSolverType>
     SimulatorReportSingle nonlinearIteration(const int iteration,
@@ -97,6 +106,7 @@ public:
     * \param iteration Flow nonlinear iteration
     * \param timer Simulation timer
     * \param nonlinear_solver Nonlinear solver type
+    * \returns Report for simulator performance
     *
     */
     template <class NonlinearSolverType>
@@ -173,6 +183,7 @@ public:
     * \param iteration Flow nonlinear iteration
     * \param timer Simulation timer
     * \param nonlinear_solver Nonlinear solver type
+    * \returns Report for simulator performance
     *
     */
     template <class NonlinearSolverType>
@@ -202,6 +213,8 @@ public:
 
     /*!
     * \brief Solve TPSA geomechanics equations
+    *
+    * \returns Bool indicating TPSA convergence
     *
     * \note Calls Newton method for TPSA
     */
