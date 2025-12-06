@@ -45,8 +45,7 @@ namespace Opm {
 *
 * \param p Runtime/default parameters
 *
-* \note Same as Opm::setupPropertyTree() for Flow, but limit remove Flow specific linear solver variants like cpr_***.
-* Moreover, TPSA specific presets should be done here!
+* \note Same as setupPropertyTree() for Flow, but Flow specific linear solver variants like cpr_*** have been removed.
 */
 PropertyTree setupPropertyTreeTPSA(TpsaLinearSolverParameters p)
 {

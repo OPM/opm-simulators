@@ -244,7 +244,8 @@ update()
 * \brief Average (half-)weight at interface between two elements
 *
 * \param elemIdx1 Cell index 1
-* \param elemIdx1 Cell index 2
+* \param elemIdx2 Cell index 2
+* \returns Average weight
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::
@@ -269,6 +270,7 @@ weightAverage(unsigned elemIdx1, unsigned elemIdx2) const
 *
 * \param elemIdx Cell index
 * \param boundaryFaceIdx Face index
+* \returns Average weight at boundary
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::
@@ -281,7 +283,8 @@ weightAverageBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const
 * \brief Product of weights at interface between two elements
 *
 * \param elemIdx1 Cell index 1
-* \param elemIdx1 Cell index 2
+* \param elemIdx2 Cell index 2
+* \returns Weight product
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::
@@ -295,6 +298,7 @@ weightProduct(unsigned elemIdx1, unsigned elemIdx2) const
 *
 * \param elemIdx Cell index
 * \param boundaryFaceIdx Face index
+* \returns Weight product at boundary
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::
@@ -307,7 +311,8 @@ weightProductBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const
 * \brief Distance between two elements
 *
 * \param elemIdx1 Cell index 1
-* \param elemIdx1 Cell index 2
+* \param elemIdx2 Cell index 2
+* \returns Distance
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::
@@ -321,6 +326,7 @@ normalDistance(unsigned elemIdx1, unsigned elemIdx2) const
 *
 * \param elemIdx Cell index
 * \param boundaryFaceIdx Face index
+* \returns Distance to boundary
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::
@@ -333,7 +339,10 @@ normalDistanceBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const
 * \brief Cell face normal at interface between two elements
 *
 * \param elemIdx1 Cell index 1
-* \param elemIdx1 Cell index 2
+* \param elemIdx2 Cell index 2
+* \returns Face normals
+*
+* \note It is assumed that normals point from lower index to higher index!
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 typename FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::DimVector
@@ -353,6 +362,9 @@ cellFaceNormal(unsigned elemIdx1, unsigned elemIdx2)
 *
 * \param elemIdx Cell index
 * \param boundaryFaceIdx Face index
+* \returns Face normals
+*
+* \note Boundary normals points outwards
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 const typename FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::DimVector&
@@ -370,6 +382,7 @@ cellFaceNormalBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const
 *
 * \param distVec Distance vector from cell center to face center
 * \param faceNormal Face (unit) normal vector
+* \returns Distance cell center -> face center
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::
@@ -410,6 +423,8 @@ computeCellProperties(const Intersection& intersection,
 * \param inside Info describing inside face
 * \param outside Info describing outside face
 * \param faceNormal Face (unit) normal
+*
+* \warning LGR computations not implemented!
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 template<class Intersection>
@@ -447,6 +462,7 @@ computeCellProperties(const Intersection& intersection,
 *
 * \param distance Normal distance from cell to face center
 * \param smod Shear modulus
+* \returns Weight ratio
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::
@@ -460,6 +476,7 @@ computeWeight_(const Scalar distance, const Scalar smod)
 *
 * \param faceCenter Face center coordinates
 * \param cellIdx Cell index
+* \returns Distance vector cell center -> face center
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 typename FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::DimVector

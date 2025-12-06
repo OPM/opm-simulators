@@ -59,7 +59,7 @@ namespace Opm {
 /*!
 * \brief Class for setting up ISTL linear solvers for TPSA
 *
-* \note Most of the code is copied from ISTLSolver class
+* Most of the code is copied from ISTLSolver class
 */
 template <class TypeTag>
 class ISTLSolverTPSA
@@ -238,6 +238,7 @@ public:
     * \brief Solve the linear system and store result in the input Vector x
     *
     * \param x Linear system solution will be stored here
+    * \returns Bool indicating convergence
     */
     bool solve(Vector& x)
     {
@@ -288,6 +289,8 @@ public:
 
     /*!
     * \brief Get number of solver calls
+    *
+    * \returns Number of calls to linear solver
     */
     int getSolveCount() const
     {
@@ -296,6 +299,8 @@ public:
 
     /*!
     * \brief Get number of linear solver iterations
+    *
+    * \returns Number of iterations
     */
     int iterations () const
     {
@@ -305,6 +310,8 @@ public:
 protected:
     /*!
     * \brief Check for parallel session
+    *
+    * \returns Bool indicating if this is a parallel session
     *
     * \warning comm_ must be set before using this function
     */
@@ -321,6 +328,7 @@ protected:
     * \brief Check for linear solver convergence
     *
     * \param result Linear solver result container
+    * \returns Bool indicating convergence
     */
     bool checkConvergence(const Dune::InverseOperatorResult& result) const
     {
@@ -347,6 +355,8 @@ protected:
     // ///
     /*!
     * \brief Get reference to system matrix object
+    *
+    * \returns Reference to matrix
     */
     Matrix& getMatrix()
     {
@@ -358,6 +368,8 @@ protected:
 
     /*!
     * \brief Get reference to system matrix object
+    *
+    * \returns Reference to matrix
     */
     const Matrix& getMatrix() const
     {

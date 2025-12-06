@@ -41,6 +41,9 @@
 
 namespace Opm {
 
+/*!
+* \brief Calculation of (linear) elasticity model terms for the residual
+*/
 template <class TypeTag>
 class ElasticityLocalResidual
 {
@@ -66,8 +69,8 @@ public:
     * \param problem Flow problem
     * \param globalIndex Cell index
     *
-    * \note Material state, problem input and global index here might/should be merged in an "IntensiveQuantity"
-    *       container as in BlackOilLocalResidualTPFA
+    * Material state, problem input and global index here might/should be merged in an "IntensiveQuantity" container as
+    * in BlackOilLocalResidualTPFA
     */
     template <class LhsEval>
     static void computeVolumeTerm(Dune::FieldVector<LhsEval, numEq>& volTerm,
@@ -103,8 +106,8 @@ public:
     * \param globalIndexIn Inside cell index
     * \param globalIndexEx Outside cell index
     *
-    * \note Material state, problem input and global index here might/should be merged in "IntensiveQuantity" and
-    *       "NeighborInfo" containers as in BlackOilLocalResidualTPFA
+    * Material state, problem input and global index here might/should be merged in "IntensiveQuantity" and
+    * "NeighborInfo" containers as in BlackOilLocalResidualTPFA
     */
     static void computeFaceTerm(Dune::FieldVector<Evaluation, numEq>& faceTerm,
                                 const MaterialState& materialStateIn,
@@ -373,7 +376,7 @@ public:
     *
     * \param sourceTerm Source term vector
     * \param problem Flow problem
-    * \param globalIndex Cell index
+    * \param globalSpaceIdex Cell index
     * \param timeIdx Time index
     */
     static void computeSourceTerm(Dune::FieldVector<Evaluation, numEq>& sourceTerm,

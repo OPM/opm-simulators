@@ -41,6 +41,11 @@
 
 namespace Opm {
 
+/*!
+* \brief TPSA geomechanics model
+*
+* Solves the (linear) elasticity equations using Newton method.
+*/
 template <class TypeTag>
 class TpsaModel
 {
@@ -70,17 +75,32 @@ class TpsaModel
     using SymTensor = Dune::FieldVector<Scalar, 6>;
 
 public:
+    /*!
+    * \brief Small block vector wrapper class for model solutions
+    */
     class TpsaBlockVectorWrapper
     {
     protected:
         SolutionVector blockVector_;
     public:
+        /*!
+        * \brief Constructor
+        *
+        * \param
+        * \param size Size of block vector
+        */
         TpsaBlockVectorWrapper(const std::string&, const std::size_t size)
             : blockVector_(size)
         {}
 
+        /*!
+        * \brief Default constructor
+        */
         TpsaBlockVectorWrapper() = default;
 
+        /*!
+        * \brief Test function for serialization
+        */
         static TpsaBlockVectorWrapper serializationTestObject()
         {
             TpsaBlockVectorWrapper result("dummy", 3);
@@ -91,18 +111,39 @@ public:
             return result;
         }
 
+        /*!
+        * \brief Get reference of block vector
+        *
+        * \returns Block vector
+        */
         SolutionVector& blockVector()
         { return blockVector_; }
 
+        /*!
+        * \brief Get const reference of block vector
+        *
+        * \returns Block vector
+        */
         const SolutionVector& blockVector() const
         { return blockVector_; }
 
+        /*!
+        * \brief Check if incoming block vector is the same as current
+        *
+        * \param wrapper Block vector to check
+        * \returns Boolean indicating if wrapper is equal to current block vector
+        */
         bool operator==(const TpsaBlockVectorWrapper& wrapper) const
         {
             return std::equal(this->blockVector_.begin(), this->blockVector_.end(),
                               wrapper.blockVector_.begin(), wrapper.blockVector_.end());
         }
 
+        /*!
+        * \brief Serializing operation
+        *
+        * \param serializer Reference to serializer object
+        */
         template<class Serializer>
         void serializeOp(Serializer& serializer)
         {
@@ -171,7 +212,7 @@ public:
     /*!
     * \brief Sync primary variables in overlapping cells
     *
-    * \note Copied code from EcfvDiscretization::syncOverlap() to sync TPSA primary variables
+    * Copied code from EcfvDiscretization::syncOverlap() to sync TPSA primary variables
     */
     void syncOverlap()
     {
@@ -217,6 +258,8 @@ public:
     // ///
     /*!
     * \brief Return the linearizer
+    *
+    * \returns Reference to linearizer
     */
     const Linearizer& linearizer() const
     {
@@ -225,6 +268,8 @@ public:
 
     /*!
     * \brief Return the linearizer
+    *
+    * \returns Reference to linearizer
     */
     Linearizer& linearizer()
     {
@@ -233,6 +278,8 @@ public:
 
     /*!
     * \brief Return the Newton method
+    *
+    * \returns Reference to Newton method object
     */
     const NewtonMethod& newtonMethod() const
     {
@@ -241,6 +288,8 @@ public:
 
     /*!
     * \brief Return the Newton method
+    *
+    * \returns Reference to Newton method object
     */
     NewtonMethod& newtonMethod()
     {
@@ -251,6 +300,7 @@ public:
     * \brief Get reference to history solution vector
     *
     * \param timeIdx Time index
+    * \returns Reference to solution vector at time step timeIdx
     */
     const SolutionVector& solution(unsigned timeIdx) const
     {
@@ -261,6 +311,7 @@ public:
     * \brief Get reference to history solution vector
     *
     * \param timeIdx Time index
+    * \returns Reference to solution vector at time step timeIdx
     */
     SolutionVector& solution(unsigned timeIdx)
     {
@@ -269,6 +320,7 @@ public:
 
     /*!
     * \brief Return number of degrees of freedom in the grid from the Flow model
+    * \returns Number of grid DOFs
     */
     std::size_t numGridDof() const
     {
@@ -277,6 +329,7 @@ public:
 
     /*!
     * \brief Return the total number of degrees of freedom
+    * \returns Number of grid DOFs + auxillary DOFs
     */
     std::size_t numTotalDof() const
     {
@@ -287,6 +340,7 @@ public:
     * \brief Return the total grid volume from the Flow model
     *
     * \param globalIdx Cell index
+    * \returns Grid volume of grid cell
     */
     Scalar dofTotalVolume(unsigned globalIdx) const
     {
@@ -298,6 +352,7 @@ public:
     *
     * \param dofIdx Degree-of-freedom index
     * \param eqIdx Equation index
+    * \returns Weight for equation
     */
     Scalar eqWeight(unsigned /*dofIdx*/, unsigned eqIdx) const
     {
@@ -316,7 +371,8 @@ public:
     }
 
     /*!
-    * \brief Number of auxillary modules
+    * \brief Return number of auxillary modules
+    * \returns No. of auxillary modules
     */
     std::size_t numAuxiliaryModules() const
     {
@@ -324,7 +380,8 @@ public:
     }
 
     /*!
-    * \brief Number of auxillary degrees of freedom
+    * \brief Return number of auxillary degrees of freedom
+    * \returns No. of auxillary DOFs
     */
     std::size_t numAuxiliaryDof() const
     {
@@ -336,6 +393,7 @@ public:
     *
     * \param globalIdx Cell index
     * \param timeIdx Time index
+    * \returns Material state container for grid cell
     *
     * \note Cached material state not implemented yet!
     */
@@ -349,8 +407,9 @@ public:
     *
     * \param globalIdx Cell index
     * \param with_fracture Boolean to activate fracture output
+    * \returns Displacement vector at grid cell
     *
-    * \note Used in OutputBlackOilModule!
+    * \note Needed in OutputBlackOilModule!
     */
     DimVector disp(const unsigned globalIdx, const bool /*with_fracture*/) const
     {
@@ -365,6 +424,7 @@ public:
     * \brief Output (del?)stress tensor
     *
     * \param globalIdx Cell index
+    * \returns (Del?)stress tensor (Voigt notation) at grid cell
     *
     * \note Needed in OutputBlackOilModule, but zero for now!
     */
@@ -378,6 +438,7 @@ public:
     * \brief Output fracture stress tensor
     *
     * \param globalIdx Cell index
+    * \returns Fracture stress tensor (Voigt notation) at grid cell
     *
     * \note Needed in OutputBlackOilModule, but zero for now!
     */
@@ -391,6 +452,7 @@ public:
     * \brief Output linear stress tensor
     *
     * \param globalIdx Cell index
+    * \returns Linear stress tensor (Voigt notation) at grid cell
     *
     * \note Needed in OutputBlackOilModule, but zero for now!
     */
@@ -405,6 +467,7 @@ public:
     *
     * \param globalIdx Cell index
     * \param with_fracture Boolean to activate fracture output
+    * \returns Stress tensor (Voigt notation) at grid cell
     *
     * \note Needed in OutputBlackOilModule, but zero for now!
     */
@@ -419,6 +482,7 @@ public:
     *
     * \param globalIdx Cell index
     * \param with_fracture Boolean to activate fracture output
+    * \returns Strain tensor (Voigt notation) at grid cell
     *
     * \note Needed in OutputBlackOilModule, but zero for now!
     */
@@ -432,6 +496,7 @@ public:
     * \brief Output potential forces
     *
     * \param globalIdx Cell index
+    * \returns Potential forces at grid cell
     *
     * \note Needed in OutputBlackOilModule, but zero for now!
     */
@@ -444,6 +509,7 @@ public:
     * \brief Output potential pressure forces
     *
     * \param globalIdx Cell index
+    * \returns Potential pressure forces at grid cell
     *
     * \note Needed in OutputBlackOilModule, but zero for now!
     */
@@ -456,6 +522,7 @@ public:
     * \brief Output potential temparature forces
     *
     * \param globalIdx Cell index
+    * \returns Potential temperature forces at grid cell
     *
     * \note Needed in OutputBlackOilModule, but zero for now!
     */
