@@ -41,6 +41,9 @@ void VtkTpsaParams::registerParameters()
         ("Include solid pressure in VTK output files");
 }
 
+/*!
+* \brief Read runtime parameters
+*/
 void VtkTpsaParams::read()
 {
     displacementOutput_ = Parameters::Get<Parameters::VtkWriteDisplacement>();

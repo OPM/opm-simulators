@@ -32,7 +32,7 @@ namespace Opm {
 /*!
 * \brief Internalize runtime parameters
 *
-* \note Overloading FlowLinearSolverParameters::init() to read TPSA specific runtime/default parameters
+* Overloading FlowLinearSolverParameters::init() to read TPSA specific runtime/default parameters
 */
 void TpsaLinearSolverParameters::init()
 {

@@ -45,6 +45,9 @@
 
 namespace Opm {
 
+/*!
+* \brief Linearizes TPSA equations and generates system matrix and residual for linear solver
+*/
 template<class TypeTag>
 class TpsaLinearizer
 {
@@ -86,8 +89,8 @@ public:
     *
     * \param simulator Simulator object
     *
-    * \note At this point we can assume that all objects in the simulator have been allocated. We cannot assume that
-    * they are fully initialized, though.
+    * At this point we can assume that all objects in the simulator have been allocated. We cannot assume that they are
+    * fully initialized, though.
     */
     void init(Simulator& simulator)
     {
@@ -98,8 +101,8 @@ public:
     /*!
     * \brief Causes the Jacobian matrix to be recreated from scratch before the next iteration.
     *
-    * \note This method is usally called if the sparsity pattern has changed for some reason. (e.g. by modifications of
-    * the grid or changes of the auxiliary equations.)
+    * This method is usally called if the sparsity pattern has changed for some reason. (e.g. by modifications of the
+    * grid or changes of the auxiliary equations.)
     */
     void eraseMatrix()
     {
@@ -133,9 +136,6 @@ public:
 
     /*!
     * \brief Linearize the non-linear system
-    *
-    * \note The linearizationType() controls the scheme used and the focus time index. The default is fully implicit
-    * scheme, and focus index equal to 0, i.e. current time (end of step).
     */
     void linearize()
     {
@@ -146,9 +146,8 @@ public:
     /*!
     * \brief Linearize the non-linear system for the spatial domain
     *
-    * \note That means that the global Jacobian of the residual is assembled and the residual is evaluated for the
-    * current solution. The current state of affairs (esp. the previous and the current solutions) is represented by the
-    * model object.
+    * The global Jacobian of the residual is assembled and the residual is evaluated for the current solution. The
+    * current state of affairs (esp. the previous and the current solutions) is represented by the model object.
     */
     void linearizeDomain()
     {
@@ -181,9 +180,8 @@ public:
     *
     * \param domain (Sub-)domain to linearize
     *
-    * \note That means that the global Jacobian of the residual is assembled and the residual is evaluated for the
-    * current solution.  The current state of affairs (esp. the previous and the current solutions) is represented by
-    * the model object.
+    * The global Jacobian of the residual is assembled and the residual is evaluated for the current solution.  The
+    * current state of affairs (esp. the previous and the current solutions) is represented by the model object.
     */
     template <class SubDomainType>
     void linearizeDomain(const SubDomainType& domain)
@@ -262,42 +260,61 @@ public:
     // ///
     /*!
     * \brief Get Jacobian matrix
+    *
+    * \returns Reference to (sparse) Jacobian matrix object
     */
     const SparseMatrixAdapter& jacobian() const
     { return *jacobian_; }
 
     /*!
     * \brief Get Jacobian matrix
+    *
+    * \returns Reference to (sparse) Jacobian matrix object
     */
     SparseMatrixAdapter& jacobian()
     { return *jacobian_; }
 
     /*!
     * \brief Get residual vector
+    *
+    * \returns Reference to the residual
     */
     const GlobalEqVector& residual() const
     { return residual_; }
 
     /*!
     * \brief Get residual vector
+    *
+    * \returns Reference to the residual
     */
     GlobalEqVector& residual()
     { return residual_; }
 
     /*!
     * \brief Get linearization type
+    *
+    * \returns Reference to the linearization object
+    *
+    * The LinearizationType controls the scheme used and the focus time index. The default is fully implicit scheme, and
+    * focus index equal to 0, i.e. current time (end of step).
     */
     const LinearizationType& getLinearizationType() const
     { return linearizationType_; }
 
     /*!
     * \brief Get constraints map
+    *
+    * \returns Constraints map
+    *
+    * \note No constraints implemented in TPSA
     */
     std::map<unsigned, Constraints> constraintsMap() const
     { return {}; }
 
     /*!
     * \brief Set linearization type
+    *
+    * \param linearizationType Linearization object
     */
     void setLinearizationType(LinearizationType linearizationType)
     { linearizationType_ = linearizationType; }
@@ -308,6 +325,9 @@ private:
     // ///
     /*!
     * \brief Construct the Jacobian matrix and create cell-neighbor information
+    *
+    * Sets up cell-neigbor and boundary information structs for easy calculation in linearize_(). In addition, sparsity
+    * patterns for Jacobian matrix is set up,
     */
     void createMatrix_()
     {
@@ -407,6 +427,8 @@ private:
 
     /*!
     * \brief Linearize the non-linear system of equation, computing residual and its derivatives
+    *
+    * Calculates TPSA equation terms for the AD residual, which in turn is used to get the derivates for the Jacobian
     */
     template <class SubDomainType>
     void linearize_(const SubDomainType& domain)
@@ -577,7 +599,7 @@ private:
     }
 
     /*!
-    * \brief Set Jacobian matrix and residuals to zero
+    * \brief Reset Jacobian matrix and residuals to zero
     */
     void resetSystem_()
     {
@@ -593,54 +615,72 @@ private:
     // ///
     /*!
     * \brief Return simulator object
+    *
+    * \returns Reference to simulator
     */
     Simulator& simulator_()
     { return *simulatorPtr_; }
 
     /*!
     * \brief Return simulator object
+    *
+    * \returns Reference to simulator
     */
     const Simulator& simulator_() const
     { return *simulatorPtr_; }
 
     /*!
     * \brief Return problem object
+    *
+    * \returns Reference to problem
     */
     Problem& problem_()
     { return simulator_().problem(); }
 
     /*!
     * \brief Return problem object
+    *
+    * \returns Reference to problem
     */
     const Problem& problem_() const
     { return simulator_().problem(); }
 
     /*!
     * \brief Return Flow model object
+    *
+    * \returns Reference to Flow model
     */
     FlowModel& flowModel_()
     { return simulator_().model(); }
 
     /*!
     * \brief Return Flow model object
+    *
+    * \returns Reference to Flow model
     */
     const FlowModel& flowModel_() const
     { return simulator_().model(); }
 
     /*!
     * \brief Return TPSA model object
+    *
+    * \returns Reference to geomechanics model
     */
     GeomechModel& geoMechModel_()
     { return problem_().geoMechModel(); }
 
     /*!
     * \brief Return TPSA model object
+    *
+    * \returns Reference to geomechanics model
     */
     const GeomechModel& geoMechModel_() const
     { return problem_().geoMechModel(); }
 
     /*!
     * \brief Return grid view
+    *
+    * \returns Reference to grid view
     */
     const GridView& gridView_() const
     { return problem_().gridView(); }
@@ -652,7 +692,12 @@ private:
     std::unique_ptr<SparseMatrixAdapter> jacobian_{};
     GlobalEqVector residual_;
 
+    //
     // Helper structs
+    //
+    /*!
+    * \brief Neighbor information for flux terms
+    */
     struct NeighborInfo
     {
         unsigned int neighbor;
@@ -661,6 +706,9 @@ private:
     };
     SparseTable<NeighborInfo> neighborInfo_{};
 
+    /*!
+    * \brief Information for boundary conditions
+    */
     struct BoundaryConditionData
     {
         BCMECHType type;
@@ -669,6 +717,9 @@ private:
         double faceArea;
     };
 
+    /*!
+    * \brief Boundary information
+    */
     struct BoundaryInfo
     {
         unsigned int cell;
@@ -678,6 +729,9 @@ private:
     };
     std::vector<BoundaryInfo> boundaryInfo_;
 
+    /*!
+    * \brief Inforamtion of the domain to linearize
+    */
     struct FullDomain
     {
         std::vector<int> cells;
