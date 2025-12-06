@@ -47,6 +47,12 @@
 
 namespace Opm {
 
+/*!
+* \brief Newton method solving for generic TPSA model.
+*
+* Generates the Jacobian matrix, J(u^n) and residual vector, R(u^n), with a solution vector, u^n, at iteration n.
+* Subsequently the linear system J(u^n)\delta u^n = -R(u^n) is solved to get u^{n+1} = u^n + \Delta u^n.
+*/
 template <class TypeTag>
 class TpsaNewtonMethod
 {
@@ -98,14 +104,16 @@ public:
     /*!
     * \brief Finialize the construction of the object.
     *
-    * \note At this point, it can be assumed that all objects featured by the simulator have been allocated. (But not
-    * that they have been fully initialized yet.)
+    * At this point, it can be assumed that all objects featured by the simulator have been allocated. (But not that
+    * they have been fully initialized yet.)
     */
     void finishInit()
     { }
 
     /*!
     * \brief Run the Newton method.
+    *
+    * \returns Bool indicating if Newton converged
     */
     bool apply()
     {
@@ -284,8 +292,8 @@ public:
     *
     * \param value New iteration index
     *
-    * \note Normally this does not need to be called, but if the non-linear solver is implemented externally, it needs
-    * to be set in order for the model to do the Right Thing (TM) while linearizing.
+    * Normally this does not need to be called, but if the non-linear solver is implemented externally, it needs to be
+    * set in order for the model to do the Right Thing (TM) while linearizing.
     */
     void setIterationIndex(int value)
     {
@@ -304,90 +312,120 @@ public:
 
     /*!
     * \brief Returns true if the error of the solution is below the tolerance.
+    *
+    * \returns Bool indicating if convergence has been achived
     */
     bool converged() const
     { return error_ <= tolerance(); }
 
     /*!
     * \brief Returns a reference to the object describing the current physical problem.
+    *
+    * \returns Reference to problem object
     */
     Problem& problem()
     { return simulator_.problem(); }
 
     /*!
     * \brief Returns a reference to the object describing the current physical problem.
+    *
+    * \returns Reference to problem object
     */
     const Problem& problem() const
     { return simulator_.problem(); }
 
     /*!
-    * \brief Returns a reference to the numeric model.
+    * \brief Returns a reference to the geomechanics model.
+    *
+    * \returns Reference to geomechanics model object
     */
     Model& model()
     { return simulator_.problem().geoMechModel(); }
 
     /*!
-    * \brief Returns a reference to the numeric model.
+    * \brief Returns a reference to the geomechanics model.
+    *
+    * \returns Reference to geomechanics model object
     */
     const Model& model() const
     { return simulator_.problem().geoMechModel(); }
 
     /*!
     * \brief Returns the linear solver backend object for external use.
+    *
+    * \returns Reference to linear solver object
     */
     LinearSolverBackend& linearSolver()
     { return linearSolver_; }
 
     /*!
     * \brief Returns the linear solver backend object for external use.
+    *
+    * \returns Reference to linear solver object
     */
     const LinearSolverBackend& linearSolver() const
     { return linearSolver_; }
 
     /*!
     * \brief Returns the number of iterations done since the Newton method was invoked.
+    *
+    * \returns Number of Newton iteratinos
     */
     int numIterations() const
     { return numIterations_; }
 
     /*!
     * \brief Returns the number of linearizations that has done since the Newton method was invoked.
+    *
+    * \returns Number of linearizations
     */
     int numLinearizations() const
     { return numLinearizations_; }
 
     /*!
     * \brief Return the current tolerance at which the Newton method considers itself to be converged.
+    *
+    * \returns Tolerance for Newton error
     */
     Scalar tolerance() const
     { return params_.tolerance_; }
 
     /*!
     * \brief Returns minimum number of Newton iterations used
+    *
+    * \returns Minimum number of Newton iterations
     */
     Scalar minIterations() const
     { return params_.minIterations_; }
 
     /*!
     * \brief Return post-process timer
+    *
+    * \returns Reference to post-process timer object
     */
     const Timer& prePostProcessTimer() const
     { return prePostProcessTimer_; }
 
     /*!
     * \brief Return linearization timer
+    *
+    * \returns Reference to linearization timer object
     */
     const Timer& linearizeTimer() const
     { return linearizeTimer_; }
 
     /*!
     * \brief Return linear solver timer
+    *
+    * \returns Reference to linear solver timer object
     */
     const Timer& solveTimer() const
     { return solveTimer_; }
 
     /*!
-    * \brief Return update solution timer
+    * \brief Return solution update timer
+    *
+    * \returns Reference to solution update timer object
     */
     const Timer& updateTimer() const
     { return updateTimer_; }
@@ -395,6 +433,8 @@ public:
 protected:
     /*!
     * \brief Returns true if the Newton method ought to be chatty.
+    *
+    * \returns Bool indicating if the Newton procedure should be verbose
     */
     bool verbose_() const
     { return params_.verbose_ && (simulator_.gridView().comm().rank() == 0); }
@@ -501,12 +541,11 @@ protected:
     /*!
     * \brief Update the error of the solution given the previous iteration.
     *
-    * \note For our purposes, the error of a solution is defined as the maximum of the weighted residual of a given
-    * solution.
-    *
     * \param currentSolution The solution at the beginning the current iteration
     * \param currentResidual The residual (i.e., right-hand-side) of the current iteration's solution.
     * \param solutionUpdate The difference between the current and the next solution
+    *
+    * For our purposes, the error of a solution is defined as the maximum of the weighted residual of a given solution.
     */
     void postSolve_(const SolutionVector& /*currentSolution*/,
                     const GlobalEqVector& /*currentResidual*/,
@@ -516,13 +555,13 @@ protected:
     /*!
     * \brief Update the current solution with a delta vector.
     *
-    * \note Different update strategies, such as chopped updates can be implemented by overriding this method. The
-    * default behavior is use the standard Newton-Raphson update strategy, i.e. \f[ u^{k+1} = u^k - \Delta u^k \f]
-    *
     * \param nextSolution The solution vector after the current iteration
     * \param currentSolution The solution vector after the last iteration
     * \param solutionUpdate The delta vector as calculated by solving the linear system of equations
     * \param currentResidual The residual vector of the current Newton-Raphson iteraton
+    *
+    * Different update strategies, such as chopped updates can be implemented by overriding this method. The default
+    * behavior is use the standard Newton-Raphson update strategy, i.e. u^{n+1} = u^n - \Delta u^n
     */
     void update_(SolutionVector& nextSolution,
                  const SolutionVector& currentSolution,
@@ -614,7 +653,7 @@ protected:
     * \param currentSolution The solution vector after the last iteration
     * \param solutionUpdate The delta vector as calculated by solving the linear system of equations
     *
-    * \note This method is called as part of the update proceedure.
+    * This method is called as part of the update proceedure.
     */
     void writeConvergence_(const SolutionVector& currentSolution,
                            const GlobalEqVector& solutionUpdate)
@@ -654,6 +693,8 @@ protected:
 
     /*!
     * \brief Returns true iff another Newton iteration should be done.
+    *
+    * \returns Bool indicating if Newton iterations should continue
     */
     bool proceed_() const
     {
@@ -703,7 +744,9 @@ protected:
     { }
 
     /*!
-    * \brief Get constraints from properties
+    * \brief Check if constraints are enabled
+    *
+    * \returns Bool indicating if constraints are enabled
     */
     static bool enableConstraints_()
     { return getPropValue<TypeTag, Properties::EnableConstraintsTPSA>(); }

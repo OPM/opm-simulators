@@ -49,6 +49,9 @@ struct TpsaLinearSolverPrintJsonDefinition { static constexpr auto value = false
 
 namespace Opm {
 
+/*!
+* \brief Parametern for linear solver and preconditioner
+*/
 struct TpsaLinearSolverParameters : public FlowLinearSolverParameters
 {
     void init();

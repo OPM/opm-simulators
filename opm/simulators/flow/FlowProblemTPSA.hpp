@@ -55,6 +55,9 @@
 
 namespace Opm {
 
+/*!
+* \brief Problem for Flow-TPSA coupled simulations
+*/
 template <class TypeTag>
 class FlowProblemTPSA : public FlowProblemBlackoil<TypeTag>
 {
@@ -94,6 +97,8 @@ public:
     // ///
     /*!
     * \brief Constructor
+    *
+    * \param simulator Reference to simulator object
     */
     FlowProblemTPSA(Simulator& simulator)
         : ParentType(simulator)
@@ -167,7 +172,7 @@ public:
     /*!
     * \brief Set initial solution for the problem
     *
-    * \note Mostly copy of FvBaseDiscretization::applyInitialSolution and FlowProblemBlackoil::initial()
+    * This function is a combination FvBaseDiscretization::applyInitialSolution and FlowProblemBlackoil::initial()
     */
     void initialSolutionApplied()
     {
@@ -259,6 +264,9 @@ public:
     *
     * \param globalSpaceIdx Cell index
     * \param directionId Direction id
+    * \returns A pair of BCMECHType and displacement vector
+    *
+    * Output from this function is used in LocalResidual::computeBoundaryTerm
     *
     * \note Only BCMECHTYPE = FREE and NONE implemented. FIXED will/should throw an error when computed in local
     * residual!
@@ -294,6 +302,8 @@ public:
     * \param sourceTerm Source term vector
     * \param globalSpaceIdx Cell index
     * \param timeIdx Time index
+    *
+    * This term requires that intensive quantities are updated!
     */
     void tpsaSource(Dune::FieldVector<Evaluation, numEq>& sourceTerm,
                     unsigned globalSpaceIdx,
@@ -317,8 +327,9 @@ public:
     /*!
     * \brief Pore volume change due to geomechanics
     *
-    * \param globalDofIdx Cell index
+    * \param elementIdx Cell index
     * \param timeIdx Time index
+    * \returns Pore volume change (dimensionless)
     *
     * \note This is the coupling term to Flow
     */
@@ -343,6 +354,7 @@ public:
     *
     * \param globalElemIdxIn Inside cell index
     * \param globalElemIdxOut Outside cell index
+    * \returns Weight average
     */
     Scalar weightAverage(unsigned globalElemIdxIn, unsigned globalElemIdxOut)
     {
@@ -354,6 +366,7 @@ public:
     *
     * \param globalElemIdxIn Inside cell index
     * \param boundaryFaceIdx Boundary (local) face index
+    * \returns Weight average at boundary
     */
     Scalar weightAverageBoundary(unsigned globalElemIdxIn, unsigned boundaryFaceIdx) const
     {
@@ -365,6 +378,7 @@ public:
     *
     * \param globalElemIdxIn Inside cell index
     * \param globalElemIdxOut Outside cell index
+    * \returns Weight product
     */
     Scalar weightProduct(unsigned globalElemIdxIn, unsigned globalElemIdxOut) const
     {
@@ -376,6 +390,7 @@ public:
     *
     * \param globalElemIdxIn Inside cell index
     * \param globalElemIdxOut Outside cell index
+    * \returns Normal distance
     */
     Scalar normalDistance(unsigned globalElemIdxIn, unsigned globalElemIdxOut) const
     {
@@ -387,6 +402,7 @@ public:
     *
     * \param globalElemIdxIn Inside cell index
     * \param boundaryFaceIdx Boundary (local) face index
+    * \returns Normal distance to boundary
     */
     Scalar normalDistanceBoundary(unsigned globalElemIdxIn, unsigned boundaryFaceIdx) const
     {
@@ -398,6 +414,7 @@ public:
     *
     * \param globalElemIdxIn Inside cell index
     * \param globalElemIdxOut Outside cell index
+    * \returns Face normal
     */
     DimVector cellFaceNormal(unsigned globalElemIdxIn, unsigned globalElemIdxOut)
     {
@@ -409,6 +426,7 @@ public:
     *
     * \param globalElemIdxIn Inside cell index
     * \param boundaryFaceIdx Boundary (local) face index
+    * \returns Face normal on boundary
     */
     const DimVector& cellFaceNormalBoundary(unsigned globalElemIdxIn, unsigned boundaryFaceIdx) const
     {
@@ -419,6 +437,7 @@ public:
     * \brief Direct access to shear modulus in an element
     *
     * \param globalElemIdx Cell index
+    * \returns Shear modulus
     */
     Scalar shearModulus(unsigned globalElemIdx) const
     {
@@ -427,6 +446,8 @@ public:
 
     /*!
     * \brief Flow-TPSA lagged coupling scheme activated?
+    *
+    * \returns Bool indicating lagged coupling
     */
     bool laggedScheme() const
     {
@@ -436,6 +457,8 @@ public:
 
     /*!
     * \brief Flow-TPSA fixed-stress coupling scheme activated?
+    *
+    * \returns Bool indicating fixed-stress coupling
     */
     bool fixedStressScheme() const
     {
@@ -445,6 +468,8 @@ public:
 
     /*!
     * \brief Get TPSA model
+    *
+    * \returns Reference to geomechanics model
     */
     const GeomechModel& geoMechModel() const
     {
@@ -453,6 +478,8 @@ public:
 
     /*!
     * \brief Get TPSA model
+    *
+    * \returns Reference to geomechanics model
     */
     GeomechModel& geoMechModel()
     {
@@ -461,6 +488,8 @@ public:
 
     /*!
     * \brief Get fixed-stress iteration parameters
+    *
+    * \returns Pair with min/max fixed-stress iterations
     */
     std::pair<int, int> fixedStressParameters() const
     {

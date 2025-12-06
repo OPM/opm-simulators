@@ -39,6 +39,9 @@
 
 namespace Opm {
 
+/*!
+* \brief Primary variables in (linear) elasticity equations
+*/
 template <class TypeTag>
 class ElasticityPrimaryVariables
     : public Dune::FieldVector<GetPropType<TypeTag, Properties::Scalar>,
@@ -85,9 +88,11 @@ public:
     * \param varIdx Primary variable index
     * \param timeIdx Time index
     * \param linearizationType Type of linearization
+    * \returns Primary variable as Evalutation type
     *
-    * Automatic differentiation:    returns value + derivative
-    * Finite differences:           returns value only
+    * \note
+    * \li Automatic differentiation: returns value + derivative
+    * \li Finite differences: returns value only
     */
     Evaluation makeEvaluation(unsigned varIdx,
                               unsigned timeIdx,

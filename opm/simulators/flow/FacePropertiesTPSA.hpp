@@ -39,7 +39,11 @@ namespace Opm {
 
 class EclipseState;
 
-
+/*!
+* \brief Cell face properties needed in TPSA equation calculations
+*
+* Similar calculations as done in Transmissibility class for TPFA
+*/
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 class FacePropertiesTPSA {
 

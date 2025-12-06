@@ -29,6 +29,9 @@
 
 namespace Opm {
 
+/*!
+* \brief Write convergence info for TPSA Newton method
+*/
 template <class TypeTag>
 class TpsaNewtonConvergenceWriter
 {
@@ -59,10 +62,10 @@ public:
     /*!
     * \brief Write the Newton update to disk.
     *
-    * \note Called after the linear solution is found for an iteration.
-    *
     * \param uLastIter The solution vector of the previous iteration.
     * \param deltaU The negative difference between the solution vectors of the previous and the current iteration.
+    *
+    * Called after the linear solution is found for an iteration.
     */
     void writeFields(const SolutionVector& /*uLastIter*/,
                      const GlobalEqVector& /*deltaU*/)
@@ -77,7 +80,7 @@ public:
     /*!
     * \brief Called by the Newton method after Newton algorithm has been completed for any given timestep.
     *
-    * \note This method is called regardless of whether the Newton method converged or not.
+    * This method is called regardless of whether the Newton method converged or not.
     */
     void endTimeStep()
     { }
