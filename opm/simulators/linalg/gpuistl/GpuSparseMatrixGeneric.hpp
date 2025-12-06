@@ -20,21 +20,18 @@
 #define OPM_GPUSPARSEMATRIXGENERIC_HPP
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_utilities.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
-
-#include <cusparse.h>
+#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
 #include <cstddef>
+#include <cusparse.h>
 
 namespace Opm::gpuistl
 {
-
-
 
 /**
  * @brief The GpuSparseMatrixGeneric class uses cuSPARSE Generic API for sparse matrix operations.
@@ -74,9 +71,9 @@ public:
     GpuSparseMatrixGeneric(const T* nonZeroElements,
                            const int* rowIndices,
                            const int* columnIndices,
-                           size_t numberOfNonzeroBlocks,
-                           size_t blockSize,
-                           size_t numberOfRows);
+                           std::size_t numberOfNonzeroBlocks,
+                           std::size_t blockSize,
+                           std::size_t numberOfRows);
 
     //! Create a sparse matrix by copying the sparsity structure of another matrix, not filling in the values
     //!
@@ -84,7 +81,7 @@ public:
     //! \param[in] columnIndices   the column indices of the non-zero elements
     //! \param[in] blockSize size of each block matrix (typically 3)
     //!
-    GpuSparseMatrixGeneric(const GpuVector<int>& rowIndices, const GpuVector<int>& columnIndices, size_t blockSize);
+    GpuSparseMatrixGeneric(const GpuVector<int>& rowIndices, const GpuVector<int>& columnIndices, std::size_t blockSize);
 
     GpuSparseMatrixGeneric(const GpuSparseMatrixGeneric&);
 
@@ -116,7 +113,7 @@ public:
     /**
      * @brief N returns the number of rows (which is equal to the number of columns)
      */
-    size_t N() const
+    std::size_t N() const
     {
         return detail::to_size_t(m_numberOfRows);
     }
@@ -125,7 +122,7 @@ public:
      * @brief nonzeroes behaves as the Dune::BCRSMatrix::nonzeros() function and returns the number of non zero blocks
      * @return number of non zero blocks.
      */
-    size_t nonzeroes() const
+    std::size_t nonzeroes() const
     {
         // Technically this safe conversion is not needed since we enforce these to be
         // non-negative in the constructor, but keeping them for added sanity for now.
@@ -201,7 +198,7 @@ public:
      * This is equivalent to matrix.N() * matrix.blockSize()
      * @return matrix.N() * matrix.blockSize()
      */
-    size_t dim() const
+    std::size_t dim() const
     {
         // Technically this safe conversion is not needed since we enforce these to be
         // non-negative in the constructor, but keeping them for added sanity for now.
@@ -214,7 +211,7 @@ public:
     /**
      * @brief blockSize size of the blocks
      */
-    size_t blockSize() const
+    std::size_t blockSize() const
     {
         // Technically this safe conversion is not needed since we enforce these to be
         // non-negative in the constructor, but keeping them for added sanity for now.

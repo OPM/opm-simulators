@@ -101,6 +101,9 @@ protected:
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
 
 public:
+    //! \brief Empty virtual dtor.
+    virtual ~FlowBaseVanguard() = default;
+
     /*!
      * \brief Register the common run-time parameters for all ECL simulator vanguards.
      */
