@@ -101,7 +101,7 @@ public:
     /*!
     * \brief Causes the Jacobian matrix to be recreated from scratch before the next iteration.
     *
-    * This method is usally called if the sparsity pattern has changed for some reason. (e.g. by modifications of the
+    * This method is usually called if the sparsity pattern has changed for some reason. (e.g. by modifications of the
     * grid or changes of the auxiliary equations.)
     */
     void eraseMatrix()

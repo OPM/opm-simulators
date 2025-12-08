@@ -594,9 +594,9 @@ public:
             // TPSA calculations
             if (problem.simulator().vanguard().eclState().runspec().tpsa().active()) {
                 // TPSA compressibility term
-                Scalar rockBiot = problem.rockBiotComp(globalSpaceIdx);
+                const Scalar rockBiot = problem.rockBiotComp(globalSpaceIdx);
                 if (rockBiot > 0.0) {
-                    Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx);
+                    const Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx);
                     Evaluation active_pressure;
                     if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
                         active_pressure = fluidState_.pressure(oilPhaseIdx) - rockRefPressure;
