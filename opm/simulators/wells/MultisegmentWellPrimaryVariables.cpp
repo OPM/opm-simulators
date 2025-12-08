@@ -710,8 +710,8 @@ debugInfo() const
     std::string msg = fmt::format("Well {} primary variables:\n", this->well_.name());
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         fmt::format_to(std::back_inserter(msg), "  Segment {:4}: ", seg);
-        fmt::format_to(std::back_inserter(msg), "  SPres: {:8.2e} Pa, ", value_[seg][SPres]);
-        fmt::format_to(std::back_inserter(msg), "  WQTotal: {:8.2e} m3/s, ", value_[seg][WQTotal]);
+        fmt::format_to(std::back_inserter(msg), "  SPres: {:8.2e} bar, ", value_[seg][SPres] / unit::barsa);
+        fmt::format_to(std::back_inserter(msg), "  WQTotal: {: 8.2e} m3/s, ", value_[seg][WQTotal]);
         if (has_wfrac_variable) {
             fmt::format_to(std::back_inserter(msg), "  WFrac: {:5.3f}, ", value_[seg][WFrac]);
         }

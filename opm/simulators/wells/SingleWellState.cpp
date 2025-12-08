@@ -433,9 +433,9 @@ connectionDebugInfo() const
     std::string info {"  Connection pressures and connection rates:\n"};
     for (std::size_t perf = 0; perf < this->perf_data.size(); perf++) {
         fmt::format_to(std::back_inserter(info),
-                       "  Connection {:4}: Pressure: {:8.2e} Pa, Rate:",
+                       "  Connection {:4}: Pressure: {:8.2e} bar, Rate:",
                        perf,
-                       this->perf_data.pressure[perf]);
+                       this->perf_data.pressure[perf] / unit::barsa);
         const auto& connection_rates = this->perf_data.phase_rates;
         const std::size_t num_phases = this->pu.numActivePhases();
 
@@ -454,12 +454,12 @@ SingleWellState<Scalar, IndexTraits>::
 briefDebugInfo() const
 {
     std::string info = "Well name: " + this->name + " well state:\n";
-    fmt::format_to(std::back_inserter(info), " type: {}, staus: {}, control type: {}, BHP: {:8.2e} Pa, THP: {:8.2e} Pa\n",
+    fmt::format_to(std::back_inserter(info), " type: {}, staus: {}, control type: {}, BHP: {:8.2e} Bar, THP: {:8.2e} Bar\n",
                    this->producer? "Producer" : " Injector", WellStatus2String(this->status),
                    this->producer ? WellProducerCMode2String(this->production_cmode)
                                   : WellInjectorCMode2String(this->injection_cmode),
-                   this->bhp / Opm::unit::barsa,
-                   this->thp / Opm::unit::barsa);
+                   this->bhp / unit::barsa,
+                   this->thp / unit::barsa);
 
     fmt::format_to(std::back_inserter(info), "  Surface rates (m3/s): ");
     for (const auto& r : this->surface_rates) {
