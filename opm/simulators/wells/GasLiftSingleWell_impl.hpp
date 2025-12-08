@@ -112,7 +112,7 @@ GasLiftSingleWell(WellInterface<TypeTag>& well,
  ****************************************/
 
 template<typename TypeTag>
-typename GasLiftSingleWell<TypeTag>::BasicRates
+typename GasLiftSingleWell<TypeTag>::RatesAndBhp
 GasLiftSingleWell<TypeTag>::
 computeWellRates_(Scalar bhp, bool bhp_is_limited, bool debug_output ) const
 {
@@ -144,13 +144,16 @@ computeWellRates_(Scalar bhp, bool bhp_is_limited, bool debug_output ) const
 template<typename TypeTag>
 std::optional<typename GasLiftSingleWell<TypeTag>::Scalar>
 GasLiftSingleWell<TypeTag>::
-computeBhpAtThpLimit_(Scalar alq, Scalar bhp, bool debug_output) const
+computeBhpAtThpLimit_(Scalar alq, Scalar current_bhp, bool debug_output) const
 {
     OPM_TIMEFUNCTION();
+    // we compute new bhp value based on the alq rate by finding the intersection
+    // between the vfp curve and the IPR. The IPR is computed using the current bhp
+    // value
     auto bhp_at_thp_limit = this->well_.computeBhpAtThpLimitProdWithAlqUsingIPR(
         this->simulator_,
         this->well_state_,
-        bhp,
+        current_bhp,
         this->summary_state_,
         alq,
         this->deferred_logger_);

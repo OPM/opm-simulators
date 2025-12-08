@@ -42,7 +42,7 @@ class GasLiftSingleWell : public GasLiftSingleWellGeneric<GetPropType<TypeTag, P
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::GLiftSyncGroups;
-    using BasicRates = typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::BasicRates;
+    using RatesAndBhp = typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::RatesAndBhp;
 
 public:
     GasLiftSingleWell(WellInterface<TypeTag>& well,
@@ -64,7 +64,7 @@ private:
                           Scalar bhp,
                           bool debug_ouput = true) const override;
 
-    BasicRates computeWellRates_(Scalar bhp,
+    RatesAndBhp computeWellRates_(Scalar bhp,
                                  bool bhp_is_limited,
                                  bool debug_output = true) const override;
 

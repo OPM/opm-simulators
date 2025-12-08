@@ -86,7 +86,7 @@ public:
             , water_is_limited{water_is_limited_}
             , alq{alq_}
             , alq_is_limited{alq_is_limited_}
-            , bhp(bhp_)
+            , bhp{bhp_}
         {}
 
         Scalar grad;
@@ -130,10 +130,10 @@ protected:
                              const Parallel::Communication& comm,
                              bool glift_debug);
 
-    struct LimitedRates;
-    struct BasicRates
+    struct LimitedRatesAndBhp;
+    struct RatesAndBhp
     {
-        BasicRates(const BasicRates& rates) :
+        RatesAndBhp(const RatesAndBhp& rates) :
             oil{rates.oil},
             gas{rates.gas},
             water{rates.water},
@@ -141,7 +141,7 @@ protected:
             bhp_is_limited{rates.bhp_is_limited}
         {}
 
-        BasicRates(Scalar oil_,
+        RatesAndBhp(Scalar oil_,
                    Scalar gas_,
                    Scalar water_,
                    Scalar bhp_,
@@ -153,7 +153,7 @@ protected:
             , bhp_is_limited{bhp_is_limited_}
         {}
 
-        BasicRates& operator=(const BasicRates& rates)
+        RatesAndBhp& operator=(const RatesAndBhp& rates)
         {
             oil = rates.oil;
             gas = rates.gas;
@@ -163,10 +163,10 @@ protected:
             return *this;
         }
 
-        // This copy constructor cannot be defined inline here since LimitedRates
+        // This copy constructor cannot be defined inline here since LimitedRatesAndBhp
         //   has not been defined yet (it is defined below). Instead it is defined in
         //   in the .cpp file
-        explicit BasicRates(const LimitedRates& rates);
+        explicit RatesAndBhp(const LimitedRatesAndBhp& rates);
 
         Scalar operator[](Rate rate_type) const
         {
@@ -188,10 +188,10 @@ protected:
         bool bhp_is_limited;
     };
 
-    struct LimitedRates : public BasicRates
+    struct LimitedRatesAndBhp : public RatesAndBhp
     {
         enum class LimitType {well, group, none};
-        LimitedRates(Scalar oil_,
+        LimitedRatesAndBhp(Scalar oil_,
                      Scalar oil_pot_,
                      Scalar gas_,
                      Scalar gas_pot_,
@@ -202,7 +202,7 @@ protected:
                      bool gas_is_limited_,
                      bool water_is_limited_,
                      bool bhp_is_limited_)
-            :  BasicRates(oil_, gas_, water_, bhp_, bhp_is_limited_)
+            :  RatesAndBhp(oil_, gas_, water_, bhp_, bhp_is_limited_)
             , oil_pot(oil_pot_)
             , gas_pot(gas_pot_)
             , water_pot(water_pot_)
@@ -213,14 +213,14 @@ protected:
             set_initial_limit_type_();
         }
 
-        LimitedRates(const BasicRates& rates,
+        LimitedRatesAndBhp(const RatesAndBhp& rates,
                      Scalar oil_pot_,
                      Scalar gas_pot_,
                      Scalar water_pot_,
                      bool oil_is_limited_,
                      bool gas_is_limited_,
                      bool water_is_limited_)
-            : BasicRates(rates)
+            : RatesAndBhp(rates)
             , oil_pot(oil_pot_)
             , gas_pot(gas_pot_)
             , water_pot(water_pot_)
@@ -278,7 +278,7 @@ protected:
         bool checkAlqOutsideLimits(Scalar alq, Scalar oil_rate);
         bool checkEcoGradient(Scalar gradient);
         bool checkOilRateExceedsTarget(Scalar oil_rate);
-        bool checkRatesViolated(const LimitedRates& rates) const;
+        bool checkRatesViolated(const LimitedRatesAndBhp& rates) const;
 
         void debugShowIterationInfo(Scalar alq);
 
@@ -301,28 +301,28 @@ protected:
 
     bool checkALQequal_(Scalar alq1, Scalar alq2) const;
 
-    bool checkGroupTargetsViolated(const BasicRates& rates,
-                                   const BasicRates& new_rates) const;
+    bool checkGroupTargetsViolated(const RatesAndBhp& rates,
+                                   const RatesAndBhp& new_rates) const;
     bool checkInitialALQmodified_(Scalar alq, Scalar initial_alq) const;
 
     virtual bool checkThpControl_() const = 0;
-    virtual std::optional<Scalar > computeBhpAtThpLimit_(Scalar alq, Scalar bhp,
+    virtual std::optional<Scalar > computeBhpAtThpLimit_(Scalar alq, Scalar current_bhp,
                                                         bool debug_output = true) const = 0;
 
     std::pair<std::optional<Scalar>,Scalar>
     computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const;
 
-    std::pair<std::optional<BasicRates>,Scalar>
+    std::pair<std::optional<RatesAndBhp>,Scalar>
     computeInitialWellRates_() const;
 
-    std::optional<LimitedRates>
+    std::optional<LimitedRatesAndBhp>
     computeLimitedWellRatesWithALQ_(Scalar alq, Scalar bhp) const;
 
-    virtual BasicRates computeWellRates_(Scalar bhp,
+    virtual RatesAndBhp computeWellRates_(Scalar bhp,
                                          bool bhp_is_limited,
                                          bool debug_output = true) const = 0;
 
-    std::optional<BasicRates> computeWellRatesWithALQ_(Scalar alq, Scalar bhp) const;
+    std::optional<RatesAndBhp> computeWellRatesWithALQ_(Scalar alq, Scalar bhp) const;
 
     void debugCheckNegativeGradient_(Scalar grad, Scalar alq, Scalar new_alq,
                                      Scalar oil_rate, Scalar new_oil_rate,
@@ -332,7 +332,7 @@ protected:
     void debugPrintWellStateRates() const;
     void debugShowAlqIncreaseDecreaseCounts_();
     void debugShowBhpAlqTable_();
-    void debugShowLimitingTargets_(const LimitedRates& rates) const;
+    void debugShowLimitingTargets_(const LimitedRatesAndBhp& rates) const;
     void debugShowProducerControlMode() const;
     void debugShowStartIteration_(Scalar alq, bool increase, Scalar oil_rate);
     void debugShowTargets_();
@@ -344,17 +344,17 @@ protected:
                                                       Scalar gas_rate,
                                                       const std::string& gr_name_dont_limit) const;
 
-    std::pair<std::optional<LimitedRates>,Scalar >
+    std::pair<std::optional<LimitedRatesAndBhp>,Scalar >
     getInitialRatesWithLimit_() const;
 
-    LimitedRates getLimitedRatesFromRates_(const BasicRates& rates) const;
+    LimitedRatesAndBhp getLimitedRatesAndBhp_(const RatesAndBhp& rates) const;
 
 
     Scalar getProductionTarget_(Rate rate) const;
-    Scalar getRate_(Rate rate_type, const BasicRates& rates) const;
+    Scalar getRate_(Rate rate_type, const RatesAndBhp& rates) const;
 
     std::pair<Scalar, std::optional<Rate>>
-    getRateWithLimit_(Rate rate_type, const BasicRates& rates) const;
+    getRateWithLimit_(Rate rate_type, const RatesAndBhp& rates) const;
 
     std::tuple<Scalar, const std::string*>
     getRateWithGroupLimit_(Rate rate_type,
@@ -362,36 +362,36 @@ protected:
                            const Scalar old_rate,
                            const std::string& gr_name_dont_limit) const;
 
-    BasicRates getWellStateRates_() const;
+    RatesAndBhp getWellStateRates_() const;
     bool hasProductionControl_(Rate rate) const;
 
-    std::pair<LimitedRates, Scalar>
+    std::pair<LimitedRatesAndBhp, Scalar>
     increaseALQtoPositiveOilRate_(Scalar alq,
-                                  const LimitedRates& orig_rates) const;
+                                  const LimitedRatesAndBhp& orig_rates) const;
 
-    std::pair<LimitedRates, Scalar>
+    std::pair<LimitedRatesAndBhp, Scalar>
     increaseALQtoMinALQ_(Scalar alq,
-                         const LimitedRates& orig_rates) const;
+                         const LimitedRatesAndBhp& orig_rates) const;
 
     void logSuccess_(Scalar alq,
                      const int iteration_idx);
 
-    std::pair<LimitedRates, Scalar>
-    maybeAdjustALQbeforeOptimizeLoop_(const LimitedRates& rates,
+    std::pair<LimitedRatesAndBhp, Scalar>
+    maybeAdjustALQbeforeOptimizeLoop_(const LimitedRatesAndBhp& rates,
                                       Scalar alq,
                                       bool increase) const;
 
-    std::pair<LimitedRates, Scalar>
+    std::pair<LimitedRatesAndBhp, Scalar>
     reduceALQtoGroupAlqLimits_(Scalar alq,
-                               const LimitedRates& rates) const;
+                               const LimitedRatesAndBhp& rates) const;
 
-    std::pair<LimitedRates, Scalar>
+    std::pair<LimitedRatesAndBhp, Scalar>
     reduceALQtoGroupTarget(Scalar alq,
-                           const LimitedRates& rates) const;
+                           const LimitedRatesAndBhp& rates) const;
 
-    std::pair<LimitedRates, Scalar>
+    std::pair<LimitedRatesAndBhp, Scalar>
     reduceALQtoWellTarget_(Scalar alq,
-                           const LimitedRates& rates) const;
+                           const LimitedRatesAndBhp& rates) const;
 
     std::unique_ptr<GasLiftWellState<Scalar>> runOptimize1_();
     std::unique_ptr<GasLiftWellState<Scalar>> runOptimize2_();
@@ -401,13 +401,13 @@ protected:
     std::unique_ptr<GasLiftWellState<Scalar>> tryIncreaseLiftGas_();
     std::unique_ptr<GasLiftWellState<Scalar>> tryDecreaseLiftGas_();
 
-    void updateGroupRates_(const LimitedRates& rates,
-                           const LimitedRates& new_rates,
+    void updateGroupRates_(const LimitedRatesAndBhp& rates,
+                           const LimitedRatesAndBhp& new_rates,
                            Scalar delta_alq) const;
 
-    LimitedRates
-    updateRatesToGroupLimits_(const BasicRates& old_rates,
-                              const LimitedRates& rates,
+    LimitedRatesAndBhp
+    updateRatesToGroupLimits_(const RatesAndBhp& old_rates,
+                              const LimitedRatesAndBhp& rates,
                               const std::string& gr_name = "") const;
 
     void updateWellStateAlqFixedValue_(const GasLiftWell& well);
