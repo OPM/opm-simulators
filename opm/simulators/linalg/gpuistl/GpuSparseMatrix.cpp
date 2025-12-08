@@ -185,6 +185,22 @@ GpuSparseMatrix<T>::updateNonzeroValues(const GpuSparseMatrix<T>& matrix)
     m_nonZeroElements.copyFromDeviceToDevice(matrix.getNonZeroValues());
 }
 
+template <class T>
+void
+GpuSparseMatrix<T>::updateNonzeroValues(const GpuSparseMatrixGeneric<T>& matrix)
+{
+    detail::validateMatrixCompatibility(nonzeroes(), blockSize(), N(),
+                                       matrix.nonzeroes(), matrix.blockSize(), matrix.N());
+
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (m_genericMatrixForBlockSize1) {
+        m_genericMatrixForBlockSize1->updateNonzeroValues(matrix);
+        return;
+    }
+
+    m_nonZeroElements.copyFromDeviceToDevice(matrix.getNonZeroValues());
+}
+
 template <typename T>
 void
 GpuSparseMatrix<T>::setUpperTriangular()

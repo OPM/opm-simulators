@@ -330,7 +330,7 @@ private:
         }
         DamarisOutput::handleError(dam_err_, cc, "write() for GLOBAL_CELL_INDEX");
 
-        mpi_rank_var.setDamarisParameterAndShmem( {this->numElements_ } ) ;
+        mpi_rank_var.setDamarisParameterAndShmem( std::vector{this->numElements_ } ) ;
         // Fill the created memory area
         std::fill(mpi_rank_var.data(), mpi_rank_var.data() + numElements_, rank_);
 
@@ -371,13 +371,13 @@ private:
             // N.B. We have not set any position/offset values (using DamarisVar::SetDamarisPosition).
             // They are not needed for mesh data as each process has a local geometric model.
             // However, HDF5 collective and Dask arrays cannot be used for this data.
-            var_x.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
+            var_x.setDamarisParameterAndShmem( std::vector{ geomData.getNVertices() } ) ;
 
             DamarisVarDbl var_y(1, {"n_coords_local"}, "coordset/coords/values/y", rank_) ;
-            var_y.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
+            var_y.setDamarisParameterAndShmem( std::vector{ geomData.getNVertices() } ) ;
 
             DamarisVarDbl  var_z(1, {"n_coords_local"}, "coordset/coords/values/z", rank_) ;
-            var_z.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
+            var_z.setDamarisParameterAndShmem( std::vector{ geomData.getNVertices() } ) ;
 
             // Now we can use the shared memory area that Damaris has allocated and use it to write the x,y,z coordinates
             if ( geomData.writeGridPoints(var_x, var_y, var_z) < 0)
@@ -398,13 +398,13 @@ private:
 
             DamarisVarInt var_connectivity(1, {"n_connectivity_ph"},
                                            "topologies/topo/elements/connectivity", rank_) ;
-            var_connectivity.setDamarisParameterAndShmem({ geomData.getNCorners()}) ;
+            var_connectivity.setDamarisParameterAndShmem(std::vector{ geomData.getNCorners()}) ;
             DamarisVarInt  var_offsets(1, {"n_offsets_types_ph"},
                                       "topologies/topo/elements/offsets", rank_) ;
-            var_offsets.setDamarisParameterAndShmem({ geomData.getNCells()+1}) ;
+            var_offsets.setDamarisParameterAndShmem(std::vector{ geomData.getNCells()+1}) ;
             DamarisVarChar  var_types(1, {"n_offsets_types_ph"},
                                      "topologies/topo/elements/types", rank_) ;
-            var_types.setDamarisParameterAndShmem({ geomData.getNCells()}) ;
+            var_types.setDamarisParameterAndShmem(std::vector{ geomData.getNCells()}) ;
 
             // Copy the mesh data from the Dune grid
             long i = 0 ;

@@ -16,16 +16,22 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#include <config.h>
+#include <opm/simulators/linalg/gpuistl/GpuJac.hpp>
+
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
-#include <fmt/core.h>
+
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuJac.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/JacKernels.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
+
 #include <stdexcept>
+
+#include <fmt/core.h>
 
 namespace Opm::gpuistl
 {

@@ -18,19 +18,21 @@
 */
 #ifndef OPM_GPUSPARSEMATRIXWRAPPER_HPP
 #define OPM_GPUSPARSEMATRIXWRAPPER_HPP
-#include <cusparse.h>
-#include <iostream>
-#include <memory>
-#include <stdexcept>
-#include <type_traits>
+
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
-#include <vector>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
+
+#include <cstddef>
+#include <cuda.h>
+#include <cusparse.h>
+#include <memory>
+#include <stdexcept>
+#include <type_traits>
 
 namespace Opm::gpuistl
 {
@@ -55,9 +57,8 @@ namespace Opm::gpuistl
  *       This is a temporary solution, and we should migrate to the new API for all block sizes in the future by
  *       replacing this class with GpuSparseMatrixGeneric.
  */
-template <typename T>
+template <typename T, bool ForceLegacy = false>
 class GpuSparseMatrixWrapper
-
 {
 public:
     using field_type = T;
@@ -67,11 +68,14 @@ public:
         Since the generic API for CUDA/HIP is primaryly supported on CUDA 13 (and not yet HIP) for blocked
         matrices, places wanting to use blocked matrices can invoke this class which handles which API to use.
         Basically we just check if HIP is present, or if we are using cuda and a version prior to 13.
+        If ForceLegacy is true, always use the legacy API (GpuSparseMatrix) regardless of CUDA version.
     */
 #if USE_HIP || (!USE_HIP && CUDA_VERSION < 13000)
      using matrix_type = GpuSparseMatrix<T>;
 #else
-     using matrix_type = GpuSparseMatrixGeneric<T>;
+     using matrix_type = std::conditional_t<ForceLegacy,
+                                            GpuSparseMatrix<T>,
+                                            GpuSparseMatrixGeneric<T>>;
 #endif
 
     // Arrow operator overloads for direct access to the underlying matrix
@@ -114,9 +118,9 @@ public:
     GpuSparseMatrixWrapper(const T* nonZeroElements,
                    const int* rowIndices,
                    const int* columnIndices,
-                   size_t numberOfNonzeroBlocks,
-                   size_t blockSize,
-                   size_t numberOfRows)
+                   std::size_t numberOfNonzeroBlocks,
+                   std::size_t blockSize,
+                   std::size_t numberOfRows)
     {
         m_matrix = std::make_unique<matrix_type>(nonZeroElements,
                                                  rowIndices,
@@ -138,7 +142,7 @@ public:
     //!       restrictions in the current version of cusparse. This might change in future versions.
     GpuSparseMatrixWrapper(const GpuVector<int>& rowIndices,
                    const GpuVector<int>& columnIndices,
-                   size_t blockSize)
+                   std::size_t blockSize)
     {
         m_matrix = std::make_unique<matrix_type>(rowIndices, columnIndices, blockSize);
     }
@@ -176,9 +180,9 @@ public:
      * @tparam MatrixType is assumed to be a Dune::BCRSMatrix compatible matrix.
      */
     template <class MatrixType>
-    static GpuSparseMatrixWrapper<T> fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false)
+    static GpuSparseMatrixWrapper<T, ForceLegacy> fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false)
     {
-        GpuSparseMatrixWrapper<T> gpuSparseMatrixWrapper;
+        GpuSparseMatrixWrapper<T, ForceLegacy> gpuSparseMatrixWrapper;
         gpuSparseMatrixWrapper.m_matrix = std::make_unique<matrix_type>(
             matrix_type::fromMatrix(matrix, copyNonZeroElementsDirectly));
         return gpuSparseMatrixWrapper;
@@ -225,7 +229,7 @@ public:
     /**
      * @brief N returns the number of rows (which is equal to the number of columns)
      */
-    size_t N() const
+    std::size_t N() const
     {
         return m_matrix->N();
     }
@@ -234,7 +238,7 @@ public:
      * @brief nonzeroes behaves as the Dune::BCRSMatrix::nonzeros() function and returns the number of non zero blocks
      * @return number of non zero blocks.
      */
-    size_t nonzeroes() const
+    std::size_t nonzeroes() const
     {
         return m_matrix->nonzeroes();
     }
@@ -305,7 +309,7 @@ public:
      * This is equivalent to matrix.N() * matrix.blockSize()
      * @return matrix.N() * matrix.blockSize()
      */
-    size_t dim() const
+    std::size_t dim() const
     {
         return m_matrix->dim();
     }
@@ -313,7 +317,7 @@ public:
     /**
      * @brief blockSize size of the blocks
      */
-    size_t blockSize() const
+    std::size_t blockSize() const
     {
         return m_matrix->blockSize();
     }
@@ -381,7 +385,8 @@ public:
      * @param matrix the matrix to extract the non-zero values from
      * @note This assumes the given matrix has the same sparsity pattern.
      */
-    void updateNonzeroValues(const GpuSparseMatrixWrapper<T>& matrix)
+    template <bool OtherForceLegacy>
+    void updateNonzeroValues(const GpuSparseMatrixWrapper<T, OtherForceLegacy>& matrix)
     {
         m_matrix->updateNonzeroValues(matrix.get());
     }
@@ -414,8 +419,9 @@ public:
     }
 
 private:
-
-    std::unique_ptr<matrix_type> m_matrix = nullptr;
+    std::unique_ptr<matrix_type> m_matrix{};
 };
+
 } // namespace Opm::gpuistl
+
 #endif
