@@ -86,6 +86,7 @@ public:
         serializer(primaryvar);
         serializer(alq_state);
         serializer(group_target);
+        serializer(was_shut_before_action_applied);
     }
 
     bool operator==(const SingleWellState&) const;
@@ -133,6 +134,10 @@ public:
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};
     std::vector<Scalar> primaryvar;
     ALQState<Scalar> alq_state;
+    // This is used to indicate whether the well was shut before applying an action
+    // if it was SHUT, even the action set the well to OPEN, the data in the well state
+    // is not well-defined. We do not use it to overwrite the current well state.
+    bool was_shut_before_action_applied {false};
 
     /// Special purpose method to support dynamically rescaling a well's
     /// CTFs through WELPI.

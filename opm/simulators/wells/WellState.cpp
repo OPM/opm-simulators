@@ -392,7 +392,7 @@ init(const std::vector<Scalar>& cellPressures,
             auto& new_well = this->well(w);
             new_well.init_timestep(prev_well);
 
-            if (prev_well.status == Well::Status::SHUT) {
+            if (prev_well.status == Well::Status::SHUT || prev_well.was_shut_before_action_applied) {
                 // Well was shut in previous state, do not use its values.
                 continue;
             }
@@ -903,7 +903,8 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
             if (prev_well_state->has(wname)) {
                 auto& ws = this->well(w);
                 const auto& prev_ws = prev_well_state->well(wname);
-                if (prev_ws.status == Well::Status::SHUT) {
+                if (prev_ws.status == Well::Status::SHUT || prev_ws.was_shut_before_action_applied) {
+                    // Well was shut in previous state, do not use its values.
                     continue;
                 }
 
