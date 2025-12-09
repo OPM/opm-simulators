@@ -1835,6 +1835,20 @@ namespace Opm
                                    DeferredLogger& deferred_logger,
                                    const bool solving_with_zero_rate)
     {
+        //auto value = this->primary_variables_;
+        auto value = this->getPrimaryVars();
+        this->updatePrimaryVariables(simulator, well_state, deferred_logger);
+        auto new_value = this->getPrimaryVars();
+        assert(new_value.size() == value.size());
+        for(int i=0; i < new_value.size(); ++i){
+            assert(value[i] == new_value[i]);
+        }
+        // for(int i=0; i<this->numberOfSegments(); ++i) {
+        //     for(int j =0; j <Indices::numEq; ++j) {
+        //         assert(value[i][j] == this->primary_variables_[i][j]);
+        //     }
+        // }
+
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
 
