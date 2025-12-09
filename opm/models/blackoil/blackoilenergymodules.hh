@@ -158,25 +158,14 @@ public:
                            const IntensiveQuantities& intQuants)
     {
         if constexpr (enableEnergy) {
-
-            // TODO: this can be made cleaner by centralizing this logic in the getter
-            FluidSystem const* fsysptr;
-            bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
-
-            if constexpr (usesStaticFluidSystem)
-            {
-                static FluidSystem instance;
-                fsysptr = &instance;
-            } else {
-                fsysptr = intQuants.getFluidSystemPtr();
-            }
+            FluidSystem fsys = intQuants.getFluidSystem();
 
             const auto& poro = decay<LhsEval>(intQuants.porosity());
 
             // accumulate the internal energy of the fluids
             const auto& fs = intQuants.fluidState();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (!fsysptr->phaseIsActive(phaseIdx)) {
+                if (!fsys.phaseIsActive(phaseIdx)) {
                     continue;
                 }
 

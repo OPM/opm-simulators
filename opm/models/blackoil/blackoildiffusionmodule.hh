@@ -206,16 +206,7 @@ public:
                                  const Evaluation& diffusivity,
                                  const EvaluationArray& effectiveDiffusionCoefficient)
     {
-        FluidSystem const* fsysptr;
-        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
-
-        if constexpr (usesStaticFluidSystem)
-        {
-            static FluidSystem instance;
-            fsysptr = &instance;
-        } else {
-            fsysptr = inIq.getFluidSystemPtr();
-        }
+        FluidSystem const* fsysptr = inIq.getFluidSystemPtr();
 
         const auto& inFs = inIq.fluidState();
         const auto& exFs = exIq.fluidState();
@@ -721,26 +712,17 @@ public:
                        const IntensiveQuantities& intQuantsInside,
                        const IntensiveQuantities& intQuantsOutside)
     {
-        FluidSystem const* fsysptr;
-        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
-
-        if constexpr (usesStaticFluidSystem)
-        {
-            static FluidSystem instance;
-            fsysptr = &instance;
-        } else {
-            fsysptr = intQuantsInside.getFluidSystemPtr(); // same as for intQuantsOutside
-        }
+        FluidSystem fsys = intQuantsInside.getFluidSystem();
 
         // opm-models expects per area flux
         // use the arithmetic average for the effective
         // diffusion coefficients.
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!fsysptr->phaseIsActive(phaseIdx)) {
+            if (!fsys.phaseIsActive(phaseIdx)) {
                 continue;
             }
             // no diffusion in water for blackoil models
-            if (!fsysptr->enableDissolvedGasInWater() && fsysptr->waterPhaseIdx == phaseIdx) {
+            if (!fsys.enableDissolvedGasInWater() && fsys.waterPhaseIdx == phaseIdx) {
                 continue;
             }
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
