@@ -206,7 +206,7 @@ public:
                                  const Evaluation& diffusivity,
                                  const EvaluationArray& effectiveDiffusionCoefficient)
     {
-        FluidSystem* fsysptr;
+        FluidSystem const* fsysptr;
         bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
 
         if constexpr (usesStaticFluidSystem)
@@ -214,7 +214,7 @@ public:
             static FluidSystem instance;
             fsysptr = &instance;
         } else {
-            fsysptr = inIq.getFluidSystem();
+            fsysptr = inIq.getFluidSystemPtr();
         }
 
         const auto& inFs = inIq.fluidState();
@@ -721,7 +721,7 @@ public:
                        const IntensiveQuantities& intQuantsInside,
                        const IntensiveQuantities& intQuantsOutside)
     {
-        FluidSystem* fsysptr;
+        FluidSystem const* fsysptr;
         bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
 
         if constexpr (usesStaticFluidSystem)
@@ -729,7 +729,7 @@ public:
             static FluidSystem instance;
             fsysptr = &instance;
         } else {
-            fsysptr = intQuantsInside.getFluidSystem(); // same as for intQuantsOutside
+            fsysptr = intQuantsInside.getFluidSystemPtr(); // same as for intQuantsOutside
         }
 
         // opm-models expects per area flux

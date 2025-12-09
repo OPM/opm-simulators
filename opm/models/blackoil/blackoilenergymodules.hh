@@ -160,7 +160,7 @@ public:
         if constexpr (enableEnergy) {
 
             // TODO: this can be made cleaner by centralizing this logic in the getter
-            FluidSystem* fsysptr;
+            FluidSystem const* fsysptr;
             bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
 
             if constexpr (usesStaticFluidSystem)
@@ -168,7 +168,7 @@ public:
                 static FluidSystem instance;
                 fsysptr = &instance;
             } else {
-                fsysptr = intQuants.getFluidSystem();
+                fsysptr = intQuants.getFluidSystemPtr();
             }
 
             const auto& poro = decay<LhsEval>(intQuants.porosity());

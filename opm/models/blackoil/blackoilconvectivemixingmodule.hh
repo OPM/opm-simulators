@@ -221,7 +221,7 @@ public:
                                  const unsigned phaseIdx,
                                  const ConvectiveMixingModuleParam& info) {
 
-        FluidSystem* fsysptr;
+        FluidSystem const* fsysptr;
         bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
 
         if constexpr (usesStaticFluidSystem)
@@ -229,7 +229,7 @@ public:
             static FluidSystem instance;
             fsysptr = &instance;
         } else {
-            fsysptr = intQuantsIn.getFluidSystem(); // same as for intQuantsEx
+            fsysptr = intQuantsIn.getFluidSystemPtr(); // same as for intQuantsEx
         }
 
 
@@ -341,7 +341,7 @@ public:
                                         const ConvectiveMixingModuleParam& info)
     {
         // TODO: this can be made cleaner by centralizing this logic in the getter
-        FluidSystem* fsysptr;
+        FluidSystem const* fsysptr;
         bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
 
         if constexpr (usesStaticFluidSystem)
@@ -349,7 +349,7 @@ public:
             static FluidSystem instance;
             fsysptr = &instance;
         } else {
-            fsysptr = intQuantsIn.getFluidSystem(); // same as for intQuantsEx
+            fsysptr = intQuantsIn.getFluidSystemPtr(); // same as for intQuantsEx
         }
 
         if (info.active_.size() == 0) {

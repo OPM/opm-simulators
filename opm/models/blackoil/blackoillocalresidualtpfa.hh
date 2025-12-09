@@ -182,7 +182,7 @@ public:
         storage = 0.0;
 
         // TODO: this can be made cleaner by centralizing this logic in the getter
-        FluidSystem* fsysptr;
+        FluidSystem const* fsysptr;
         bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
 
         if constexpr (usesStaticFluidSystem)
@@ -190,7 +190,7 @@ public:
             static FluidSystem instance;
             fsysptr = &instance;
         } else {
-            fsysptr = intQuants.getFluidSystem();
+            fsysptr = intQuants.getFluidSystemPtr();
         }
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -239,11 +239,12 @@ public:
             }
         }
 
+        adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex(), fsysptr);
+
         // These have to be protected because I have not bothered to change the signature
         // in each of these classes to be generic in terms of storage type.
         if constexpr (usesStaticFluidSystem)
         {
-            adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex(), fsysptr);
 
             // deal with solvents (if present)
             SolventModule::addStorage(storage, intQuants);
@@ -393,7 +394,7 @@ public:
         FaceDir::DirEnum facedir = nbInfo.faceDir;
 
         // TODO: this can be made cleaner by centralizing this logic in the getter
-        FluidSystem* fsysptr;
+        FluidSystem const* fsysptr;
         bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
 
         if constexpr (usesStaticFluidSystem)
@@ -401,7 +402,7 @@ public:
             static FluidSystem instance;
             fsysptr = &instance;
         } else {
-            fsysptr = intQuantsIn.getFluidSystem(); // same as for intQuantsEx
+            fsysptr = intQuantsIn.getFluidSystemPtr(); // same as for intQuantsEx
         }
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -981,7 +982,7 @@ public:
                                  const FluidState& upFs)
     {
         // TODO: this can be made cleaner by centralizing this logic in the getter
-        FluidSystem* fsysptr;
+        FluidSystem const* fsysptr;
         bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
 
         if constexpr (usesStaticFluidSystem)
@@ -989,7 +990,7 @@ public:
             static FluidSystem instance;
             fsysptr = &instance;
         } else {
-            fsysptr = const_cast<FluidSystem*>(&upFs.fluidSystem());
+            fsysptr = upFs.fluidSystemPtr();
         }
 
 
