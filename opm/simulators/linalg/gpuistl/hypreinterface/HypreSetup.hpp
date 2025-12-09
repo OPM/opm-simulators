@@ -50,13 +50,13 @@ namespace Opm::gpuistl::HypreInterface
 {
 
 // GPU-specific helper functions
-template <typename T>
-SparsityPattern setupSparsityPatternFromGpuMatrix(const GpuSparseMatrixWrapper<T>& gpu_matrix,
+template <typename T, bool ForceLegacy>
+SparsityPattern setupSparsityPatternFromGpuMatrix(const GpuSparseMatrixWrapper<T, ForceLegacy>& gpu_matrix,
                                                   const ParallelInfo& par_info,
                                                   bool owner_first);
 
-template <typename T>
-std::vector<HYPRE_Int> computeRowIndexesWithMappingGpu(const GpuSparseMatrixWrapper<T>& gpu_matrix,
+template <typename T, bool ForceLegacy>
+std::vector<HYPRE_Int> computeRowIndexesWithMappingGpu(const GpuSparseMatrixWrapper<T, ForceLegacy>& gpu_matrix,
                                                        const std::vector<int>& local_dune_to_local_hypre);
 
 // Serial helper functions
@@ -547,9 +547,9 @@ setupSparsityPatternFromCpuMatrix(const MatrixType& matrix, const ParallelInfo& 
  * @param owner_first Whether all owned DOFs come first in the ordering
  * @return Sparsity pattern information
  */
-template <typename T>
+template <typename T, bool ForceLegacy>
 SparsityPattern
-setupSparsityPatternFromGpuMatrix(const GpuSparseMatrixWrapper<T>& gpu_matrix,
+setupSparsityPatternFromGpuMatrix(const GpuSparseMatrixWrapper<T, ForceLegacy>& gpu_matrix,
                                   const ParallelInfo& par_info,
                                   bool owner_first)
 {
@@ -712,9 +712,10 @@ computeRowIndexesWithMappingCpu(const MatrixType& matrix, const std::vector<int>
  * @param local_dune_to_local_hypre Mapping from Dune indices to Hypre indices (-1 for ghost)
  * @return Vector containing row indexes that map to full GPU matrix data positions
  */
-template <typename T>
+template <typename T, bool ForceLegacy>
 std::vector<HYPRE_Int>
-computeRowIndexesWithMappingGpu(const GpuSparseMatrixWrapper<T>& gpu_matrix, const std::vector<int>& local_dune_to_local_hypre)
+computeRowIndexesWithMappingGpu(const GpuSparseMatrixWrapper<T, ForceLegacy>& gpu_matrix,
+                                const std::vector<int>& local_dune_to_local_hypre)
 {
     const int N = std::count_if(
         local_dune_to_local_hypre.begin(), local_dune_to_local_hypre.end(), [](int val) { return val >= 0; });
