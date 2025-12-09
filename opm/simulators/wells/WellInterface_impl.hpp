@@ -2213,9 +2213,9 @@ namespace Opm
         for (std::size_t p = 0; p < rates.size(); ++p) {
             zero_rates &= rates[p] == 0.0;
         }
-        // For zero rates the implicit IPR is problematic.
+        // For zero rates or unconverged bhp the implicit IPR is problematic.
         // Use the old approach for now
-        if (zero_rates) {
+        if (zero_rates || !converged) {
             return  this->computeBhpAtThpLimitProdWithAlq(simulator, groupStateHelper, summary_state, alq_value, deferred_logger, /*iterate_if_no_solution */ false);
         }
         this->updateIPRImplicit(simulator, groupStateHelper, well_state_copy, deferred_logger);
