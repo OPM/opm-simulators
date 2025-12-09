@@ -35,6 +35,7 @@
 
 namespace Opm {
     class Schedule;
+    class UnitSystem;
     template<class Scalar, class IndexTraits> class BlackoilWellModelGeneric;
     template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
     template<typename Scalar> class VFPProdProperties;
@@ -107,6 +108,7 @@ protected:
     std::map<std::string, Scalar>
     computePressures(const Network::ExtNetwork& network,
                      const VFPProdProperties<Scalar>& vfp_prod_props,
+                     const UnitSystem& unit_system,
                      const int reportStepIdx,
                      const Parallel::Communication& comm) const;
 
