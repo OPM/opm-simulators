@@ -175,7 +175,7 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
                 std::cout << "Fracture factor?" << std::endl;
             }
 
-            filtrate_data.fracture_rate[perf] = water_rates*(1-well_fracture_factor);
+            filtrate_data.fracture_rate[perf] = conc*water_rates*(1-well_fracture_factor);
             filtrate_rate *= well_fracture_factor;
         }
 
