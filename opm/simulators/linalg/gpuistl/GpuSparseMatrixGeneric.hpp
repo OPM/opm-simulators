@@ -265,6 +265,11 @@ public:
     void updateNonzeroValues(const GpuSparseMatrixGeneric<T>& matrix);
 
     /**
+     * @brief resetMatrix resets the matrix to zero values.
+     */
+    void resetMatrix();
+
+    /**
      * @brief Dispatches a function based on the block size of the matrix.
      *
      * This method allows executing different code paths depending on the block size

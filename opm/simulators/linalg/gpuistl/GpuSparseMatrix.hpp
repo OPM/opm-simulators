@@ -20,6 +20,9 @@
 #define OPM_GPUSPARSEMATRIX_HPP
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
@@ -340,6 +343,11 @@ public:
      * @note This assumes the given matrix has the same sparsity pattern.
      */
      void updateNonzeroValues(const GpuSparseMatrixGeneric<T>& matrix);
+
+    /**
+     * @brief resetMatrix resets the matrix to zero values.
+     */
+     void resetMatrix();
 
     /**
      * @brief Dispatches a function based on the block size of the matrix.
