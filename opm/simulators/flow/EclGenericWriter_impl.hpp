@@ -239,6 +239,8 @@ EclGenericWriter(const Schedule& schedule,
 {
     if (this->collectOnIORank_.isIORank()) {
 
+        std::optional<Opm::EclipseGrid> output_grid;
+
         if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
             // For CpGrid with LGRs, we generate an EclipseGrid for output using grid_
             // rather than equilGrid_. When equilGrid_ is created as a shallow copy of
@@ -268,24 +270,21 @@ EclGenericWriter(const Schedule& schedule,
                 }
                 eclipse_grid_output.init_children_host_cells();
 
-                this->eclIO_ = std::make_unique<EclipseIO>
-                    (this->eclState_,
-                     eclipse_grid_output,
-                     this->schedule_, summaryConfig, "", enableEsmry);
-
+                output_grid = std::move(eclipse_grid_output);
             }
-            else {
-                this->eclIO_ = std::make_unique<EclipseIO>
-                    (this->eclState_,
-                     UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
-                     this->schedule_, summaryConfig, "", enableEsmry);
-            }
-        } else {
-            this->eclIO_ = std::make_unique<EclipseIO>
-                (this->eclState_,
-                 UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
-                 this->schedule_, summaryConfig, "", enableEsmry);
         }
+        // CpGrid without LGR or different grid type
+        if (!output_grid) {
+            output_grid = UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid());
+        }
+
+        this->eclIO_ = std::make_unique<EclipseIO>(this->eclState_,
+                                                   *output_grid,
+                                                   this->schedule_,
+                                                   summaryConfig,
+                                                   "",
+                                                   enableEsmry);
+
 
         // create output thread if enabled and rank is I/O rank
         // async output is enabled by default if pthread are enabled
@@ -669,7 +668,6 @@ doWriteOutput(const int                          reportStepNum,
         // not modified in this method.
         Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_,
                                                       restartValue,
-                                                      this->eclState_.fieldProps().get_double("PORV"),
                                                       restartValues);
     }
     else {
