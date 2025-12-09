@@ -75,8 +75,8 @@ namespace
             // of memory coalescing.
             diagIndices[rawIdx] = diagIdx;
         }
-
     }
+
 } // namespace
 
 
