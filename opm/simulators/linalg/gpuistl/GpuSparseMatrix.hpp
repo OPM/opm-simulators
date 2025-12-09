@@ -334,7 +334,9 @@ public:
      */
      void updateNonzeroValues(const GpuSparseMatrix<T>& matrix);
 
-
+    /**
+     * @brief resetMatrix resets the matrix to zero values.
+     */
      void resetMatrix();
 
     /**

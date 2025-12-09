@@ -386,6 +386,9 @@ public:
         m_matrix->updateNonzeroValues(matrix.get());
     }
 
+    /**
+     * @brief resetMatrix resets the matrix to zero values.
+     */
     void resetMatrix()
     {
         m_matrix->resetMatrix();
