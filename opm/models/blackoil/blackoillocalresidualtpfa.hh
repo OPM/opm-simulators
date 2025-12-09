@@ -583,31 +583,46 @@ public:
         }
     }
 
-    template <class BoundaryConditionData>
-    static void computeBoundaryFlux(RateVector& bdyFlux,
-                                    const Problem& problem,
+    template <class BoundaryConditionData, class RateVectorLocal, class LocalProblem>
+    OPM_HOST_DEVICE static void computeBoundaryFlux(RateVectorLocal& bdyFlux,
+                                    const LocalProblem& problem,
                                     const BoundaryConditionData& bdyInfo,
                                     const IntensiveQuantities& insideIntQuants,
                                     unsigned globalSpaceIdx)
     {
-        switch (bdyInfo.type) {
-        case BCType::NONE:
-            bdyFlux = 0.0;
-            break;
-        case BCType::RATE:
-            computeBoundaryFluxRate(bdyFlux, bdyInfo);
-            break;
-        case BCType::FREE:
-        case BCType::DIRICHLET:
-            computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-            break;
-        case BCType::THERMAL:
-            computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-            break;
-        default:
-            throw std::logic_error("Unknown boundary condition type " +
-                                   std::to_string(static_cast<int>(bdyInfo.type)) +
-                                   " in computeBoundaryFlux()." );
+        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+        if constexpr (usesStaticFluidSystem)
+        {
+            switch (bdyInfo.type) {
+            case BCType::NONE:
+                bdyFlux = 0.0;
+                break;
+            case BCType::RATE:
+                computeBoundaryFluxRate(bdyFlux, bdyInfo);
+                break;
+            case BCType::FREE:
+            case BCType::DIRICHLET:
+                computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            case BCType::THERMAL:
+                computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            default:
+                throw std::logic_error("Unknown boundary condition type " +
+                                    std::to_string(static_cast<int>(bdyInfo.type)) +
+                                    " in computeBoundaryFlux()." );
+            }
+        } else {
+            switch (bdyInfo.type) {
+            case BCType::NONE:
+                bdyFlux = 0.0;
+                break;
+            case BCType::THERMAL:
+                computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            default:
+                assert(false && "Only THERMAL BC supported when FluidSystem is non-static.");
+            }
         }
     }
 
@@ -736,9 +751,9 @@ public:
 #endif
     }
 
-    template <class BoundaryConditionData>
-    static void computeBoundaryThermal(const Problem& problem,
-                                       RateVector& bdyFlux,
+    template <class ProblemLocal, class BoundaryConditionData, class RateVectorLocal>
+    OPM_HOST_DEVICE static void computeBoundaryThermal(const ProblemLocal& problem,
+                                       RateVectorLocal& bdyFlux,
                                        const BoundaryConditionData& bdyInfo,
                                        const IntensiveQuantities& insideIntQuants,
                                        [[maybe_unused]] unsigned globalSpaceIdx)
@@ -751,8 +766,14 @@ public:
         if constexpr (enableEnergy) {
             Evaluation heatFlux;
             // avoid overload of functions with same numeber of elements in eclproblem
-            Scalar alpha =
-                problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+            bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
+            Scalar alpha;
+            if constexpr (usesStaticFluidSystem)
+            {
+                alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+            } else {
+                alpha = problem.getAlpha(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+            }
             unsigned inIdx = 0;//dummy
             // always calculated with derivatives of this cell
             EnergyModule::ExtensiveQuantities::updateEnergyBoundary(heatFlux,

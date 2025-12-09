@@ -171,6 +171,73 @@ struct NeighborInfoStruct
     }
 };
 
+template<class Scalar, template <class> class Storage = Opm::VectorWithDefaultAllocator>
+class GpuFlowProblemVerySimple
+{
+public:
+    GpuFlowProblemVerySimple() = default;
+
+    GpuFlowProblemVerySimple(Storage<Scalar> alpha0,
+                             Storage<Scalar> alpha1,
+                             Storage<Scalar> alpha2)
+        : alpha0_(alpha0)
+        , alpha1_(alpha1)
+        , alpha2_(alpha2)
+    {}
+
+    OPM_HOST_DEVICE Scalar getAlpha(unsigned globalIndex, unsigned boundaryFaceIndex) const
+    {
+        assert(boundaryFaceIndex < 3 && "SOMETHING IS WRONG WITH BOUNDARYFACEINDEX");
+        if (boundaryFaceIndex == 0) {
+            return alpha0_[globalIndex];
+        } else if (boundaryFaceIndex == 1) {
+            return alpha1_[globalIndex];
+        } else {
+            return alpha2_[globalIndex];
+        }
+    }
+
+    OPM_HOST_DEVICE Scalar getAlpha2() const { return 1.0;}
+
+    Storage<Scalar>& alpha0() {
+        return alpha0_;
+    }
+
+    Storage<Scalar>& alpha1() {
+        return alpha1_;
+    }
+
+    Storage<Scalar>& alpha2() {
+        return alpha2_;
+    }
+
+private:
+    Storage<Scalar> alpha0_;
+    Storage<Scalar> alpha1_;
+    Storage<Scalar> alpha2_;
+};
+
+namespace gpuistl {
+    GpuFlowProblemVerySimple<double, gpuistl::GpuBuffer>
+    copy_to_gpu(GpuFlowProblemVerySimple<double, Opm::VectorWithDefaultAllocator>& cpuProblem)
+    {
+        return GpuFlowProblemVerySimple<double, gpuistl::GpuBuffer>(
+            gpuistl::GpuBuffer<double>(cpuProblem.alpha0()),
+            gpuistl::GpuBuffer<double>(cpuProblem.alpha1()),
+            gpuistl::GpuBuffer<double>(cpuProblem.alpha2())
+        );
+    }
+
+    GpuFlowProblemVerySimple<double, gpuistl::GpuView>
+    make_view(GpuFlowProblemVerySimple<double, gpuistl::GpuBuffer>& buffer)
+    {
+        return GpuFlowProblemVerySimple<double, gpuistl::GpuView>(
+            gpuistl::make_view(buffer.alpha0()),
+            gpuistl::make_view(buffer.alpha1()),
+            gpuistl::make_view(buffer.alpha2())
+        );
+    }
+} // namespace gpuistl
 template<class VectorBlock, class ScalarFluidState>
 struct BoundaryConditionData
 {
@@ -242,23 +309,22 @@ namespace  gpuistl {
     }
 
     // Handle the BoundaryInfo structs
-    template<class GpuVecBlock, class GpuFluidState, class BoundaryInfoTypeGPU, class BoundaryInfoTypeCPU>
-    auto copy_to_gpu(const std::vector<BoundaryInfoTypeCPU>& cpu_boundary_info)
+    template<class GpuVecBlock, class GpuFluidState, class BoundaryInfoTypeGPU, class BoundaryInfoTypeCPU, typename GpuFluidSystemPtr>
+    auto copy_to_gpu(const std::vector<BoundaryInfoTypeCPU>& cpu_boundary_info, GpuFluidSystemPtr* dynamicGpuFluidSystemPtr)
     {
         std::vector<BoundaryInfoTypeGPU> gpu_boundary_info;
         for (const auto& info : cpu_boundary_info) {
             gpu_boundary_info.push_back(BoundaryInfoTypeGPU{info.cell,
                                         info.dir,
                                         info.bfIndex,
-                                        BoundaryConditionData<GpuVecBlock,
-                                                              GpuFluidState>{
+                                        BoundaryConditionData<GpuVecBlock, GpuFluidState>{
                                             info.bcdata.type,
                                             GpuVecBlock(info.bcdata.massRate),
                                             info.bcdata.pvtRegionIdx,
                                             info.bcdata.boundaryFaceIndex,
                                             info.bcdata.faceArea,
                                             info.bcdata.faceZCoord,
-                                            GpuFluidState{}}}); // for now we just create a dummy fluid state to avoid this weird conversion
+                                            info.bcdata.exFluidState.withOtherFluidSystem(dynamicGpuFluidSystemPtr)}}); // for now we just create a dummy fluid state to avoid this weird conversion
         }
 
         return gpuistl::GpuBuffer<BoundaryInfoTypeGPU>(gpu_boundary_info);
@@ -1036,13 +1102,8 @@ private:
             auto prep_residual_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_residual_end - prep_residual_start);
             std::cout << "GPU residual prep time: " << prep_residual_duration.count() << " microseconds" << std::endl;
 
-            using TrivialIQ = GetPropType<TypeTag, Properties::TrivialIntensiveQuantities>;
-            TrivialIQ iq{};
             using CorrectTypeTagView = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>;
             using GPUBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
-
-            using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, typename TrivialIQ::FluidState>;
-            using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
 
             using LocalResidualGPU = BlackOilLocalResidualTPFA<CorrectTypeTagView>;
 
@@ -1066,11 +1127,18 @@ private:
             auto prep_volumes_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_volumes_end - prep_volumes_start);
             std::cout << "GPU volumes prep time: " << prep_volumes_duration.count() << " microseconds" << std::endl;
 
-
             // We need to have a pointer to the fluidysystem that can be used inside a GPU kernel
             // Having a pointer to the view is not good enough as the view exists on the host, so
             // allocat a view on the GPU with a pointer to it via the make_gpu_shared_ptr function
             auto dynamicGpuFluidSystemPtr = gpuistl::make_gpu_shared_ptr(dynamicGpuFluidSystemView);
+
+
+            using GpuScalarFluidState = typename GPUBOIQ::ScalarFluidState;
+            using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, GpuScalarFluidState>;
+            using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
+            // Copy boundary info to GPU
+            gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(boundaryInfo_, dynamicGpuFluidSystemPtr.get());
+            auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
 
             auto prep_model_start = std::chrono::high_resolution_clock::now();
             using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
@@ -1081,9 +1149,33 @@ private:
             auto prep_model_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_model_end - prep_model_start);
             std::cout << "GPU model prep time: " << prep_model_duration.count() << " microseconds" << std::endl;
 
-            // Copy boundary info to GPU
-            gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, typename TrivialIQ::FluidState, BoundaryInfoGPU>(boundaryInfo_);
-            auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
+
+            // This is terrible, we are probably catching a very large amount of exceptions here, how to support a map on the GPU?
+            // Fetch alpha values that are needed for thermal boundary condition
+            std::vector<Scalar> alpha0(numCells);
+            std::vector<Scalar> alpha1(numCells);
+            std::vector<Scalar> alpha2(numCells);
+            for (int i = 0; i < numCells; ++i) {
+                try {
+                    alpha0[i] = problem_().eclTransmissibilities().thermalHalfTransBoundary(i, 0);
+                } catch (...) {
+                    alpha0[i] = 0.0;
+                }
+                try {
+                    alpha1[i] = problem_().eclTransmissibilities().thermalHalfTransBoundary(i, 1);
+                } catch (...) {
+                    alpha1[i] = 0.0;
+                }
+                try {
+                    alpha2[i] = problem_().eclTransmissibilities().thermalHalfTransBoundary(i, 2);
+                } catch (...) {
+                    alpha2[i] = 0.0;
+                }
+            }
+            GpuFlowProblemVerySimple<Scalar> gpuFlowProblemVerySimple(alpha0, alpha1, alpha2);
+            auto gpuFlowProblemVerySimpleBuffer = gpuistl::copy_to_gpu(gpuFlowProblemVerySimple);
+            auto gpuFlowProblemVerySimpleView = gpuistl::make_view(gpuFlowProblemVerySimpleBuffer);
+            using GpuProblem = decltype(gpuFlowProblemVerySimpleView);
 
             int constexpr blockSize = 256;
 
@@ -1097,23 +1189,22 @@ private:
                 neighborInfo_view,
                 diagMatAddressView,
                 gpuResidualView,
-                boundaryInfo_view,
                 gpuModelView,
                 dt,
                 gpuVolumesView);
-            // for now I do not compute BCs because I think they only make sense when doing thermal simulation
-            // if (boundaryInfo_buffer.size() > 0) {
-            //     linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
-            //         dispersionActive,
-            //         numCells/*numCells*/,
-            //         on_full_domain,
-            //         domain_view,
-            //         neighborInfo_view,
-            //         diagMatAddressView,
-            //         gpuResidualView,
-            //         boundaryInfo_view,
-            //         gpuModelView);
-            // }
+            if (boundaryInfo_buffer.size() > 0) {
+                linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+1023)/1024), 1024>>>(
+                    dispersionActive,
+                    numCells/*numCells*/,
+                    on_full_domain,
+                    domain_view,
+                    neighborInfo_view,
+                    diagMatAddressView,
+                    gpuResidualView,
+                    boundaryInfo_view,
+                    gpuModelView,
+                    gpuFlowProblemVerySimpleView);
+            }
 
             hipDeviceSynchronize();
             auto end_gpu = std::chrono::high_resolution_clock::now();
@@ -1122,22 +1213,22 @@ private:
             std::cout << "GPU pre time: " << gpu_prep_duration.count() << " microseconds" << std::endl;
             std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
             
-            auto gpu_finalize_start = std::chrono::high_resolution_clock::now();
-            // Now move the gpu residual into the cpu residual
-            auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
-            std::memcpy(residual_.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
-            {
-                auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
-                auto& cpuJacobian = jacobian_->istlMatrix();
+            // auto gpu_finalize_start = std::chrono::high_resolution_clock::now();
+            // // Now move the gpu residual into the cpu residual
+            // auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
+            // std::memcpy(residual_.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
+            // {
+            //     auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
+            //     auto& cpuJacobian = jacobian_->istlMatrix();
                 
-                // Copy GPU jacobian back to CPU jacobian as a single contiguous operation
-                const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
-                std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(), 
-                           totalMatrixSize * sizeof(double));
-            }
-            auto gpu_finalize_end = std::chrono::high_resolution_clock::now();
-            auto gpu_finalize_duration = std::chrono::duration_cast<std::chrono::microseconds>(gpu_finalize_end - gpu_finalize_start);
-            std::cout << "GPU post time: " << gpu_finalize_duration.count() << " microseconds" << std::endl;
+            //     // Copy GPU jacobian back to CPU jacobian as a single contiguous operation
+            //     const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
+            //     std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(), 
+            //                totalMatrixSize * sizeof(double));
+            // }
+            // auto gpu_finalize_end = std::chrono::high_resolution_clock::now();
+            // auto gpu_finalize_duration = std::chrono::duration_cast<std::chrono::microseconds>(gpu_finalize_end - gpu_finalize_start);
+            // std::cout << "GPU post time: " << gpu_finalize_duration.count() << " microseconds" << std::endl;
 
             // To make the comparison fair this has to use the same simplified objects
 
@@ -1170,150 +1261,150 @@ private:
             std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
 
             // Compare residuals
-            // {
-            //     // Copy residual back from GPU to compare
-            //     auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
-            //     struct ResidualErrorInfo {
-            //         double relativeError;
-            //         double cpuVal, gpuVal;
-            //         unsigned cell, eq;
-            //     };
+            {
+                // Copy residual back from GPU to compare
+                auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
+                struct ResidualErrorInfo {
+                    double relativeError;
+                    double cpuVal, gpuVal;
+                    unsigned cell, eq;
+                };
                 
-            //     std::vector<ResidualErrorInfo> errors;
+                std::vector<ResidualErrorInfo> errors;
                 
-            //     for (unsigned i = 0; i < numCells; ++i) {
-            //         for (unsigned eq = 0; eq < numEq; ++eq) {
-            //             double cpuVal = residual_[i][eq];
-            //             double gpuVal = cpuResidualFromGpu[i][eq];
-            //             double absError = std::abs(cpuVal - gpuVal);
-            //             double relativeError = 0.0;
+                for (unsigned i = 0; i < numCells; ++i) {
+                    for (unsigned eq = 0; eq < numEq; ++eq) {
+                        double cpuVal = residual_[i][eq];
+                        double gpuVal = cpuResidualFromGpu[i][eq];
+                        double absError = std::abs(cpuVal - gpuVal);
+                        double relativeError = 0.0;
                         
-            //             // Calculate relative error avoiding division by zero
-            //             relativeError = absError / std::abs(cpuVal);
+                        // Calculate relative error avoiding division by zero
+                        relativeError = absError / std::abs(cpuVal);
                         
-            //             if (relativeError > 1e-14) {
-            //                 errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
-            //             }
-            //         }
-            //     }
+                        if (relativeError > 1e-14) {
+                            errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
+                        }
+                    }
+                }
                 
-            //     // Sort by relative error (descending) and keep top 3
-            //     std::partial_sort(errors.begin(), 
-            //                     errors.begin() + std::min(3, static_cast<int>(errors.size())), 
-            //                     errors.end(),
-            //                     [](const ResidualErrorInfo& a, const ResidualErrorInfo& b) {
-            //                         return a.relativeError > b.relativeError;
-            //                     });
+                // Sort by relative error (descending) and keep top 3
+                std::partial_sort(errors.begin(), 
+                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
+                                errors.end(),
+                                [](const ResidualErrorInfo& a, const ResidualErrorInfo& b) {
+                                    return a.relativeError > b.relativeError;
+                                });
                 
-            //     // Output the 3 largest relative errors
-            //     int numToShow = std::min(3, static_cast<int>(errors.size()));
-            //     if (numToShow != 0) {
-            //         printf("Top %d largest relative errors in residual:\n", numToShow);
-            //         for (int i = 0; i < numToShow; ++i) {
-            //             const auto& err = errors[i];
-            //             printf("  %d: cell=%u, eq=%u, CPU=%e, GPU=%e, rel_error=%e\n",
-            //                 i+1, err.cell, err.eq, err.cpuVal, err.gpuVal, err.relativeError);
-            //         }
-            //     }
-            // }
+                // Output the 3 largest relative errors
+                int numToShow = std::min(3, static_cast<int>(errors.size()));
+                if (numToShow != 0) {
+                    printf("Top %d largest relative errors in residual:\n", numToShow);
+                    for (int i = 0; i < numToShow; ++i) {
+                        const auto& err = errors[i];
+                        printf("  %d: cell=%u, eq=%u, CPU=%e, GPU=%e, rel_error=%e\n",
+                            i+1, err.cell, err.eq, err.cpuVal, err.gpuVal, err.relativeError);
+                    }
+                }
+            }
 
-            // {
-            //     // Compare jacobian entries and find 5 largest relative errors
-            //     auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
-            //     int gpuJacIdx = 0;
-            //     auto& cpuJacobian = jacobian_->istlMatrix();
+            {
+                // Compare jacobian entries and find 5 largest relative errors
+                auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
+                int gpuJacIdx = 0;
+                auto& cpuJacobian = jacobian_->istlMatrix();
                 
-            //     struct JacobianErrorInfo {
-            //         double relativeError;
-            //         double cpuVal, gpuVal;
-            //         int rowIdx, colIdx;
-            //         int blockRow, blockCol;
-            //     };
+                struct JacobianErrorInfo {
+                    double relativeError;
+                    double cpuVal, gpuVal;
+                    int rowIdx, colIdx;
+                    int blockRow, blockCol;
+                };
                 
-            //     std::vector<JacobianErrorInfo> errors;
+                std::vector<JacobianErrorInfo> errors;
                 
-            //     for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
-            //     {
-            //         int rowIdx = row.index();
-            //         for (auto col = row->begin(); col != row->end(); ++col)
-            //         {
-            //             int colIdx = col.index();
-            //             for (int brow = 0; brow < numEq; ++brow)
-            //             {
-            //                 for (int bcol = 0; bcol < numEq; ++bcol)
-            //                 {
-            //                     double cpuVal = (*col)[brow][bcol];
-            //                     double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
-            //                     double absError = std::abs(cpuVal - gpuVal);
-            //                     double relativeError = 0.0;
+                for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
+                {
+                    int rowIdx = row.index();
+                    for (auto col = row->begin(); col != row->end(); ++col)
+                    {
+                        int colIdx = col.index();
+                        for (int brow = 0; brow < numEq; ++brow)
+                        {
+                            for (int bcol = 0; bcol < numEq; ++bcol)
+                            {
+                                double cpuVal = (*col)[brow][bcol];
+                                double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
+                                double absError = std::abs(cpuVal - gpuVal);
+                                double relativeError = 0.0;
                                 
-            //                     // Calculate relative error avoiding division by zero
-            //                     if (std::abs(cpuVal) > 1e-30) {
-            //                         relativeError = absError / std::abs(cpuVal);
-            //                     }
+                                // Calculate relative error avoiding division by zero
+                                if (std::abs(cpuVal) > 1e-30) {
+                                    relativeError = absError / std::abs(cpuVal);
+                                }
                                 
-            //                     if (relativeError > 1e-14) {
-            //                         errors.push_back({relativeError, cpuVal, gpuVal, rowIdx, colIdx, brow, bcol});
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }
+                                if (relativeError > 1e-14) {
+                                    errors.push_back({relativeError, cpuVal, gpuVal, rowIdx, colIdx, brow, bcol});
+                                }
+                            }
+                        }
+                    }
+                }
                 
-            //     // Sort by relative error (descending) and keep top 3
-            //     std::partial_sort(errors.begin(), 
-            //                     errors.begin() + std::min(3, static_cast<int>(errors.size())), 
-            //                     errors.end(),
-            //                     [](const JacobianErrorInfo& a, const JacobianErrorInfo& b) {
-            //                         return a.relativeError > b.relativeError;
-            //                     });
+                // Sort by relative error (descending) and keep top 3
+                std::partial_sort(errors.begin(), 
+                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
+                                errors.end(),
+                                [](const JacobianErrorInfo& a, const JacobianErrorInfo& b) {
+                                    return a.relativeError > b.relativeError;
+                                });
                 
-            //     // Output the 3 largest relative errors with full block information
-            //     int numToShow = std::min(3, static_cast<int>(errors.size()));
-            //     if (numToShow != 0) {
-            //         printf("Top %d largest relative errors in Jacobian:\n", numToShow);
-            //         for (int i = 0; i < numToShow; ++i) {
-            //             const auto& err = errors[i];
-            //             printf("  %d: Block[%d,%d] element[%d,%d]: CPU=%e, GPU=%e, rel_error=%e\n",
-            //                 i+1, err.rowIdx, err.colIdx, err.blockRow, err.blockCol, 
-            //                 err.cpuVal, err.gpuVal, err.relativeError);
+                // Output the 3 largest relative errors with full block information
+                int numToShow = std::min(3, static_cast<int>(errors.size()));
+                if (numToShow != 0) {
+                    printf("Top %d largest relative errors in Jacobian:\n", numToShow);
+                    for (int i = 0; i < numToShow; ++i) {
+                        const auto& err = errors[i];
+                        printf("  %d: Block[%d,%d] element[%d,%d]: CPU=%e, GPU=%e, rel_error=%e\n",
+                            i+1, err.rowIdx, err.colIdx, err.blockRow, err.blockCol, 
+                            err.cpuVal, err.gpuVal, err.relativeError);
                         
-            //             // Print the entire CPU block
-            //             auto& cpuBlock = cpuJacobian[err.rowIdx][err.colIdx];
-            //             printf("    CPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
-            //             for (int br = 0; br < numEq; ++br) {
-            //                 printf("      ");
-            //                 for (int bc = 0; bc < numEq; ++bc) {
-            //                     printf("%12.5e ", cpuBlock[br][bc]);
-            //                 }
-            //                 printf("\n");
-            //             }
+                        // Print the entire CPU block
+                        auto& cpuBlock = cpuJacobian[err.rowIdx][err.colIdx];
+                        printf("    CPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
+                        for (int br = 0; br < numEq; ++br) {
+                            printf("      ");
+                            for (int bc = 0; bc < numEq; ++bc) {
+                                printf("%12.5e ", cpuBlock[br][bc]);
+                            }
+                            printf("\n");
+                        }
                         
-            //             // Print the entire GPU block
-            //             // Find the starting index for this block in gpuJacobianNonZeroes
-            //             int blockStartIdx = 0;
-            //             for (auto row = cpuJacobian.begin(); row.index() < err.rowIdx; ++row) {
-            //                 blockStartIdx += row->size() * numEq * numEq;
-            //             }
-            //             auto row = cpuJacobian.begin();
-            //             while (row.index() < err.rowIdx) ++row;
-            //             for (auto col = row->begin(); col.index() < err.colIdx; ++col) {
-            //                 blockStartIdx += numEq * numEq;
-            //             }
+                        // Print the entire GPU block
+                        // Find the starting index for this block in gpuJacobianNonZeroes
+                        int blockStartIdx = 0;
+                        for (auto row = cpuJacobian.begin(); row.index() < err.rowIdx; ++row) {
+                            blockStartIdx += row->size() * numEq * numEq;
+                        }
+                        auto row = cpuJacobian.begin();
+                        while (row.index() < err.rowIdx) ++row;
+                        for (auto col = row->begin(); col.index() < err.colIdx; ++col) {
+                            blockStartIdx += numEq * numEq;
+                        }
                         
-            //             printf("    GPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
-            //             for (int br = 0; br < numEq; ++br) {
-            //                 printf("      ");
-            //                 for (int bc = 0; bc < numEq; ++bc) {
-            //                     int idx = blockStartIdx + br * numEq + bc;
-            //                     printf("%12.5e ", gpuJacobianNonZeroes[idx]);
-            //                 }
-            //                 printf("\n");
-            //             }
-            //             printf("\n");
-            //         }
-            //     }
-            // }
+                        printf("    GPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
+                        for (int br = 0; br < numEq; ++br) {
+                            printf("      ");
+                            for (int bc = 0; bc < numEq; ++bc) {
+                                int idx = blockStartIdx + br * numEq + bc;
+                                printf("%12.5e ", gpuJacobianNonZeroes[idx]);
+                            }
+                            printf("\n");
+                        }
+                        printf("\n");
+                    }
+                }
+            }
 
             {
                 // TODO: optimize the source term thing, why do we go over every cell to ask (am I a source) when we typically have 0 to a few sources?
@@ -1663,7 +1754,7 @@ private:
     }
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
-    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView, class GpuBoundaryInfoView>
+    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
     __global__ static void linearize_kernel(
         const bool dispersionActive,
         const unsigned int numCells,
@@ -1672,7 +1763,6 @@ private:
         const NeighborSparseTable GPU_LOCAL_neighborInfo,
         DiagPtrType GPU_LOCAL_diagMatAddress,
         GpuResidualView GPU_LOCAL_residualView,
-        const GpuBoundaryInfoView GPU_LOCAL_boundaryInfo,
         LocalModelClass localModel,
         double locDT,
         const gpuistl::GpuView<double> GPU_LOCAL_volumes)
@@ -1760,7 +1850,7 @@ private:
         }
     }
 
-    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView, class GpuBoundaryInfoView>
+    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView, class GpuBoundaryInfoView, class GpuProblem>
     __global__ static void linearize_kernel_bc(
         const bool dispersionActive,
         const unsigned int numCells,
@@ -1770,7 +1860,8 @@ private:
         DiagPtrType GPU_LOCAL_diagMatAddress,
         GpuResidualView GPU_LOCAL_residualView,
         const GpuBoundaryInfoView GPU_LOCAL_boundaryInfo,
-        LocalModelClass localModel)
+        LocalModelClass localModel,
+        GpuProblem gpuProblem)
     {
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
         // Boundary terms. Only looping over cells with nontrivial bcs.
@@ -1787,7 +1878,7 @@ private:
                 ADVectorBlockType adres(0.0);
                 const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
                 const LocalIntensiveQuantities& insideIntQuants = localModel.intensiveQuantities(globI, /*timeIdx*/ 0);
-                // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+                LocalResidualKernel::computeBoundaryFlux(adres, gpuProblem, GPU_LOCAL_boundaryInfo[ii].bcdata, insideIntQuants, globI);
                 adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
                 setResAndJacobiGPUCPU(res, bMat, adres);
                 // GPU_LOCAL_residualView[globI] += res;
@@ -1910,23 +2001,23 @@ private:
         }
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
-        // for (int ii = 0; ii < GPU_LOCAL_boundaryInfo.size(); ++ii)
-        // {
-        //     if (GPU_LOCAL_boundaryInfo[ii].bcdata.type != BCType::NONE)
-        //     {
-        //         VectorBlockType res(.0);
-        //         MatrixBlockType bMat(0.0);
-        //         ADVectorBlockType adres(0.0);
-        //         const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
-        //         const LocalIntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-        //         // LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
-        //         adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
-        //         setResAndJacobiGPUCPU(res, bMat, adres);
-        //         GPU_LOCAL_residualView[globI] += res;
-        //         ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-        //         *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
-        //     }
-        // }
+        for (int ii = 0; ii < GPU_LOCAL_boundaryInfo.size(); ++ii)
+        {
+            if (GPU_LOCAL_boundaryInfo[ii].bcdata.type != BCType::NONE)
+            {
+                VectorBlockType res(.0);
+                MatrixBlockType bMat(0.0);
+                ADVectorBlockType adres(0.0);
+                const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
+                const LocalIntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                LocalResidual::computeBoundaryFlux(adres, problem_(), GPU_LOCAL_boundaryInfo[ii].bcdata, insideIntQuants, globI);
+                adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
+                setResAndJacobiGPUCPU(res, bMat, adres);
+                GPU_LOCAL_residualView[globI] += res;
+                ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+                *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+            }
+        }
     }
 #endif
 

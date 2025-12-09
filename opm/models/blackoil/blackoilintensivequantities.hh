@@ -180,7 +180,6 @@ public:
     template<class OtherTypeTag>
     friend class BlackOilIntensiveQuantities;
 
-    // TODO: add members for blackoilenergymodules here!
     template<class OtherTypeTag>
     OPM_HOST_DEVICE explicit BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities<OtherTypeTag>& other, FluidSystem* fluidSystemPtr)
         : fluidState_(other.fluidState_.withOtherFluidSystem(fluidSystemPtr))

@@ -43,36 +43,6 @@
 
 namespace Opm {
 
-// Simple dummy fluid state
-class FakeFluidState {
-public:
-    OPM_HOST_DEVICE FakeFluidState() {}
-    OPM_HOST_DEVICE double saturation(unsigned /*phaseIdx*/) const { return 0.5; }
-    OPM_HOST_DEVICE double invB(unsigned /*phaseIdx*/) const { return 1.0; }
-    OPM_HOST_DEVICE double pressure(unsigned /*phaseIdx*/) const { return 1.0e5; }
-    OPM_HOST_DEVICE double Rs() const { return 0.0; }
-    OPM_HOST_DEVICE double Rsw() const { return 0.0; }
-    OPM_HOST_DEVICE double Rv() const { return 0.0; }
-    OPM_HOST_DEVICE double Rvw() const { return 0.0; }
-    OPM_HOST_DEVICE double temperature() const { return 300.0; }
-};
-
-// Fake intensive quantities class
-template <class TypeTag>
-class FakeIntensiveQuantities {
-public:
-    using FluidState = FakeFluidState;
-    OPM_HOST_DEVICE FakeIntensiveQuantities() : fluidState_() {}
-    OPM_HOST_DEVICE const FluidState& fluidState() const { return fluidState_; }
-    OPM_HOST_DEVICE double porosity() const { return 0.2; }
-    OPM_HOST_DEVICE unsigned pvtRegionIndex() const { return 0; }
-    OPM_HOST_DEVICE double mobility(unsigned /*phaseIdx*/, FaceDir::DirEnum /*faceDir*/) const { return 1.0; }
-    OPM_HOST_DEVICE double rockCompTransMultiplier() const { return 1.0; }
-    OPM_HOST_DEVICE double permFactor() const { return 1.0; }
-private:
-    FluidState fluidState_;
-};
-
 namespace Properties {
 namespace TTag {
 struct FlowGasWaterEnergyProblemGPU {
@@ -121,9 +91,6 @@ template<class TypeTag>
 struct EnableVapwat<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
     static constexpr bool value = true;
 };
-
-template<class TypeTag>
-struct TrivialIntensiveQuantities<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { using type = FakeIntensiveQuantities<TypeTag>; };
 
 template<class TypeTag>
 struct GpuFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { using type = SimplifiedGpuFIBlackOilModel<TypeTag>; };

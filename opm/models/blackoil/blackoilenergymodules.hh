@@ -723,7 +723,7 @@ public:
     }
 
     template <class BoundaryFluidState>
-    static void updateEnergyBoundary(Evaluation& energyFlux,
+    OPM_HOST_DEVICE static void updateEnergyBoundary(Evaluation& energyFlux,
                                      const IntensiveQuantities& inIq,
                                      unsigned focusDofIndex,
                                      unsigned inIdx,
