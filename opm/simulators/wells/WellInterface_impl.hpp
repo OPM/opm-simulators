@@ -2189,6 +2189,40 @@ namespace Opm
         }
     }
 
+    template<typename TypeTag>
+    std::optional<typename WellInterface<TypeTag>::Scalar>
+    WellInterface<TypeTag>::
+    computeBhpAtThpLimitProdWithAlqUsingIPR(const Simulator& simulator,
+                                            const WellStateType& well_state,
+                                            Scalar bhp,
+                                            const SummaryState& summary_state,
+                                            const Scalar alq_value,
+                                            DeferredLogger& deferred_logger)
+    {
+        OPM_TIMEFUNCTION();
+        WellStateType well_state_copy = well_state;
+        const auto& groupStateHelper = simulator.problem().wellModel().groupStateHelper();
+        const double dt = simulator.timeStepSize();
+        const bool converged = this->solveWellWithBhp(
+                simulator, dt, bhp, groupStateHelper, well_state_copy, deferred_logger
+            );
+
+        bool zero_rates;
+        auto rates = well_state_copy.well(this->index_of_well_).surface_rates;
+        zero_rates = true;
+        for (std::size_t p = 0; p < rates.size(); ++p) {
+            zero_rates &= rates[p] == 0.0;
+        }
+        // For zero rates the implicit IPR is problematic.
+        // Use the old approach for now
+        if (zero_rates) {
+            return  this->computeBhpAtThpLimitProdWithAlq(simulator, groupStateHelper, summary_state, alq_value, deferred_logger, /*iterate_if_no_solution */ false);
+        }
+        this->updateIPRImplicit(simulator, groupStateHelper, well_state_copy, deferred_logger);
+        this->adaptRatesForVFP(rates);
+        return WellBhpThpCalculator(*this).estimateStableBhp(well_state_copy, this->well_ecl_, rates, this->getRefDensity(), summary_state, alq_value);
+    }
+
     template <typename TypeTag>
     void
     WellInterface<TypeTag>::

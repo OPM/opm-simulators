@@ -42,10 +42,10 @@ class GasLiftSingleWell : public GasLiftSingleWellGeneric<GetPropType<TypeTag, P
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::GLiftSyncGroups;
-    using BasicRates = typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::BasicRates;
+    using RatesAndBhp = typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::RatesAndBhp;
 
 public:
-    GasLiftSingleWell(const WellInterface<TypeTag>& well,
+    GasLiftSingleWell(WellInterface<TypeTag>& well,
                       const Simulator& simulator,
                       const SummaryState& summary_state,
                       DeferredLogger& deferred_logger,
@@ -61,9 +61,10 @@ public:
 private:
     std::optional<Scalar>
     computeBhpAtThpLimit_(Scalar alq,
+                          Scalar bhp,
                           bool debug_ouput = true) const override;
 
-    BasicRates computeWellRates_(Scalar bhp,
+    RatesAndBhp computeWellRates_(Scalar bhp,
                                  bool bhp_is_limited,
                                  bool debug_output = true) const override;
 
@@ -72,7 +73,7 @@ private:
     bool checkThpControl_() const override;
 
     const Simulator& simulator_;
-    const WellInterface<TypeTag>& well_;
+    WellInterface<TypeTag>& well_;
 };
 
 } // namespace Opm

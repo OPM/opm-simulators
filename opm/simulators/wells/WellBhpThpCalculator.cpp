@@ -936,6 +936,18 @@ estimateStableBhp(const WellState<Scalar, IndexTraits>& well_state,
                   const Scalar rho,
                   const SummaryState& summaryState) const
 {
+    return estimateStableBhp(well_state, well, rates, rho, summaryState, well_.getALQ(well_state));
+}
+
+template<typename Scalar, typename IndexTraits>
+std::optional<Scalar> WellBhpThpCalculator<Scalar, IndexTraits>::
+estimateStableBhp(const WellState<Scalar, IndexTraits>& well_state,
+                  const Well& well,
+                  const std::vector<Scalar>& rates,
+                  const Scalar rho,
+                  const SummaryState& summaryState,
+                  const Scalar alq) const
+{
     // Given a *converged* well_state with ipr, estimate bhp of the stable solution
     const auto& controls = well.productionControls(summaryState);
     const Scalar thp = well_.getTHPConstraint(summaryState);
@@ -964,7 +976,7 @@ estimateStableBhp(const WellState<Scalar, IndexTraits>& well_state,
            return bhp - dp_hydro + getVfpBhpAdjustment(bhp, thp);
        };
     const auto retval = VFPHelpers<double>::intersectWithIPR(table, thp, wfr, gfr,
-                                                             well_.getALQ(well_state),
+                                                             alq,
                                                              ipr.first, ipr.second,
                                                              bhp_adjusted);
     if (retval.has_value()) {

@@ -89,34 +89,31 @@ GasLiftSingleWellGeneric(DeferredLogger& deferred_logger,
 template<typename Scalar, typename IndexTraits>
 std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::GradInfo>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-calcIncOrDecGradient(Scalar oil_rate,
-                     Scalar gas_rate,
-                     Scalar water_rate,
-                     Scalar alq,
+calcIncOrDecGradient(const GasLiftWellState<Scalar>& state,
                      const std::string& gr_name_dont_limit,
                      bool increase,
                      bool debug_output) const
 {
-    auto [new_alq_opt, alq_is_limited] = addOrSubtractAlqIncrement_(alq, increase);
+    auto [new_alq_opt, alq_is_limited] = addOrSubtractAlqIncrement_(state.alq(), increase);
     // TODO: What to do if ALQ is limited and new_alq != alq?
     if (!new_alq_opt)
         return std::nullopt;
 
     Scalar new_alq = *new_alq_opt;
 
-    auto delta_alq = new_alq - alq;
+    auto delta_alq = new_alq - state.alq();
     if (checkGroupALQrateExceeded(delta_alq, gr_name_dont_limit))
         return std::nullopt;
 
-    if (auto bhp = computeBhpAtThpLimit_(new_alq, debug_output)) {
+    if (auto bhp = computeBhpAtThpLimit_(new_alq, state.bhp(), debug_output)) {
         auto [new_bhp, bhp_is_limited] = getBhpWithLimit_(*bhp);
         // TODO: What to do if BHP is limited?
         auto rates = computeWellRates_(new_bhp, bhp_is_limited, debug_output);
-        const auto ratesLimited = getLimitedRatesFromRates_(rates);
-        BasicRates oldrates = {oil_rate, gas_rate, water_rate, false};
+        const auto ratesLimited = getLimitedRatesAndBhp_(rates);
+        RatesAndBhp oldrates = {state.oilRate(), state.gasRate(), state.waterRate(), new_bhp, false};
         const auto new_rates = updateRatesToGroupLimits_(oldrates, ratesLimited, gr_name_dont_limit);
 
-        auto delta_gas_rate = new_rates.gas - gas_rate;
+        auto delta_gas_rate = new_rates.gas - state.gasRate();
         if (increase && checkGroupTotalRateExceeded(delta_alq, delta_gas_rate, gr_name_dont_limit))
             return std::nullopt;
 
@@ -124,7 +121,7 @@ calcIncOrDecGradient(Scalar oil_rate,
         if (!increase && new_rates.oil < 0) {
             return std::nullopt;
         }
-        auto grad = calcEcoGradient_(oil_rate, new_rates.oil, gas_rate, new_rates.gas, increase);
+        auto grad = calcEcoGradient_(state.oilRate(), new_rates.oil, state.gasRate(), new_rates.gas, increase);
         return GradInfo(grad,
                         new_rates.oil,
                         rates.oil,
@@ -136,7 +133,8 @@ calcIncOrDecGradient(Scalar oil_rate,
                         rates.water,
                         new_rates.water_is_limited,
                         new_alq,
-                        alq_is_limited);
+                        alq_is_limited,
+                        new_bhp);
     } else {
         return std::nullopt;
     }
@@ -201,9 +199,10 @@ wellTestALQ()
 
     Scalar temp_alq = std::max(this->min_alq_, Scalar(0.0));
     auto cur_alq = temp_alq;
-    auto init_rates = computeLimitedWellRatesWithALQ_(temp_alq);
-    LimitedRates new_rates = *init_rates;
-    std::optional<LimitedRates> rates;
+    Scalar cur_bhp = this->well_state_.well(this->well_name_).bhp;
+    auto init_rates = computeLimitedWellRatesWithALQ_(temp_alq, cur_bhp);
+    LimitedRatesAndBhp new_rates = *init_rates;
+    std::optional<LimitedRatesAndBhp> rates;
     Scalar old_gradient = 0.0;
     bool alq_is_limited = false;
     bool increase = true;
@@ -222,7 +221,7 @@ wellTestALQ()
         if (this->debug)
             state.debugShowIterationInfo(temp_alq);
         rates = new_rates;
-        auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq);
+        auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq, (*rates).bhp);
         if (!temp_rates)
             temp_rates->oil = 0.0;
         if (temp_rates->bhp_is_limited)
@@ -340,8 +339,8 @@ checkALQequal_(Scalar alq1, Scalar alq2) const
 
 template<typename Scalar, typename IndexTraits>
 bool GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-checkGroupTargetsViolated(const BasicRates& rates,
-                          const BasicRates& new_rates) const
+checkGroupTargetsViolated(const RatesAndBhp& rates,
+                          const RatesAndBhp& new_rates) const
 {
     const auto& pairs = this->group_info_.getWellGroups(this->well_name_);
     for (const auto& [group_name, efficiency] : pairs) {
@@ -391,24 +390,25 @@ GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const
 {
     auto alq = this->orig_alq_;
+    Scalar bhp = this->well_state_.well(this->well_name_).bhp;
     Scalar new_alq = alq;
-    std::optional<Scalar> bhp;
+    std::optional<Scalar> new_bhp;
     while ((alq < this->max_alq_) || checkALQequal_(alq, this->max_alq_)) {
-        if (bhp = computeBhpAtThpLimit_(alq); bhp) {
+        if (new_bhp = computeBhpAtThpLimit_(alq, bhp); new_bhp) {
             new_alq = alq;
             break;
         }
         alq += this->increment_;
     }
-    return {bhp, new_alq};
+    return {new_bhp, new_alq};
 }
 
 template<typename Scalar, typename IndexTraits>
-std::pair<std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::BasicRates>,
+std::pair<std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::RatesAndBhp>,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::computeInitialWellRates_() const
 {
-    std::optional<BasicRates> rates;
+    std::optional<RatesAndBhp> rates;
     Scalar initial_alq = this->orig_alq_;
     // auto alq = initial_alq;
     // if (auto bhp = computeBhpAtThpLimit_(this->orig_alq_); bhp) {
@@ -436,28 +436,28 @@ GasLiftSingleWellGeneric<Scalar, IndexTraits>::computeInitialWellRates_() const
 }
 
 template<typename Scalar, typename IndexTraits>
-std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRates>
+std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-computeLimitedWellRatesWithALQ_(Scalar alq) const
+computeLimitedWellRatesWithALQ_(Scalar alq, Scalar bhp) const
 {
-    std::optional<LimitedRates> limited_rates;
-    if (auto rates = computeWellRatesWithALQ_(alq); rates) {
-        limited_rates = getLimitedRatesFromRates_(*rates);
+    std::optional<LimitedRatesAndBhp> limited_rates;
+    if (auto rates = computeWellRatesWithALQ_(alq, bhp); rates) {
+        limited_rates = getLimitedRatesAndBhp_(*rates);
     }
     return limited_rates;
 }
 
 template<typename Scalar, typename IndexTraits>
-std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::BasicRates>
+std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::RatesAndBhp>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-computeWellRatesWithALQ_(Scalar alq) const
+computeWellRatesWithALQ_(Scalar alq, Scalar bhp) const
 {
     OPM_TIMEFUNCTION();
-    std::optional<BasicRates> rates;
-    auto bhp_opt = computeBhpAtThpLimit_(alq);
+    std::optional<RatesAndBhp> rates;
+    auto bhp_opt = computeBhpAtThpLimit_(alq, bhp);
     if (bhp_opt) {
-        auto [bhp, bhp_is_limited] = getBhpWithLimit_(*bhp_opt);
-        rates = computeWellRates_(bhp, bhp_is_limited);
+        auto [bhp_new, bhp_is_limited] = getBhpWithLimit_(*bhp_opt);
+        rates = computeWellRates_(bhp_new, bhp_is_limited);
     }
     return rates;
 }
@@ -512,6 +512,8 @@ void GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 debugShowBhpAlqTable_()
 {
     Scalar alq = 0.0;
+    Scalar bhp = this->well_state_.well(this->well_name_).bhp;
+    bool bhp_is_limited = false;
     constexpr std::string_view fmt_fmt1 {"{:^12s} {:^12s} {:^12s} {:^12s}"};
     constexpr std::string_view fmt_fmt2 {"{:>12.5g} {:>12.5g} {:>12.5g} {:>12.5g}"};
     const std::string header = fmt::format(fmt_fmt1, "ALQ", "BHP", "oil", "gas");
@@ -519,14 +521,14 @@ debugShowBhpAlqTable_()
     auto max_it = 50;
     auto it = 1;
     while (alq <= (this->max_alq_ + this->increment_)) {
-        auto bhp_at_thp_limit = computeBhpAtThpLimit_(alq);
+        auto bhp_at_thp_limit = computeBhpAtThpLimit_(alq, bhp);
         if (!bhp_at_thp_limit) {
             const std::string msg = fmt::format("Failed to get converged potentials "
                                                 "for ALQ = {}. Skipping.",
                                                 alq);
             displayDebugMessage_(msg);
         } else {
-            auto [bhp, bhp_is_limited] = getBhpWithLimit_(*bhp_at_thp_limit);
+            std::tie(bhp, bhp_is_limited) = getBhpWithLimit_(*bhp_at_thp_limit);
             auto rates = computeWellRates_(bhp, bhp_is_limited, /*debug_out=*/false);
             const std::string msg = fmt::format(fmt_fmt2, alq, bhp, rates.oil, rates.gas);
             displayDebugMessage_(msg);
@@ -543,7 +545,7 @@ debugShowBhpAlqTable_()
 
 template<typename Scalar, typename IndexTraits>
 void GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-debugShowLimitingTargets_(const LimitedRates& rates) const
+debugShowLimitingTargets_(const LimitedRatesAndBhp& rates) const
 {
     if (rates.limited()) {
         if (rates.oil_is_limited) {
@@ -640,7 +642,7 @@ getBhpWithLimit_(Scalar bhp) const
 template<typename Scalar, typename IndexTraits>
 Scalar
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-getRate_(Rate rate, const BasicRates& rates) const
+getRate_(Rate rate, const RatesAndBhp& rates) const
 {
     switch (rate) {
     case Rate::oil:
@@ -737,19 +739,19 @@ getRateWithGroupLimit_(Rate rate_type,
 }
 
 template<typename Scalar, typename IndexTraits>
-std::pair<std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRates>,
+std::pair<std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp>,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 getInitialRatesWithLimit_() const
 {
-    std::optional<LimitedRates> limited_rates;
+    std::optional<LimitedRatesAndBhp> limited_rates;
     Scalar initial_alq = this->orig_alq_;
     if (auto [rates, alq] = computeInitialWellRates_(); rates) {
         if (this->debug) {
             displayDebugMessage_("Maybe limiting initial rates before optimize loop..");
         }
-        auto temp_rates = getLimitedRatesFromRates_(*rates);
-        BasicRates old_rates = getWellStateRates_();
+        auto temp_rates = getLimitedRatesAndBhp_(*rates);
+        RatesAndBhp old_rates = getWellStateRates_();
         limited_rates = updateRatesToGroupLimits_(old_rates, temp_rates);
 
         initial_alq = alq;
@@ -758,9 +760,9 @@ getInitialRatesWithLimit_() const
 }
 
 template<typename Scalar, typename IndexTraits>
-typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRates
+typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-getLimitedRatesFromRates_(const BasicRates& rates) const
+getLimitedRatesAndBhp_(const RatesAndBhp& rates) const
 {
 
     Scalar oil_rate = getRate_(Rate::oil, rates);
@@ -811,12 +813,13 @@ getLimitedRatesFromRates_(const BasicRates& rates) const
                 oil_is_limited = true;
         }
     }
-    return LimitedRates {oil_rate,
+    return LimitedRatesAndBhp {oil_rate,
                          rates.oil,
                          gas_rate,
                          rates.gas,
                          water_rate,
                          rates.water,
+                         rates.bhp,
                          oil_is_limited,
                          gas_is_limited,
                          water_is_limited,
@@ -824,7 +827,7 @@ getLimitedRatesFromRates_(const BasicRates& rates) const
 }
 
 template<typename Scalar, typename IndexTraits>
-typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::BasicRates
+typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::RatesAndBhp
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 getWellStateRates_() const
 {
@@ -849,7 +852,7 @@ getWellStateRates_() const
                                             water_rate);
         displayDebugMessage_(msg);
     }
-    return BasicRates {oil_rate, gas_rate, water_rate, /*bhp_is_limited=*/false};
+    return RatesAndBhp {oil_rate, gas_rate, water_rate, ws.bhp, /*bhp_is_limited=*/false};
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -872,20 +875,20 @@ hasProductionControl_(Rate rate) const
 }
 
 template<typename Scalar, typename IndexTraits>
-std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRates,
+std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 increaseALQtoPositiveOilRate_(Scalar alq,
-                              const LimitedRates& orig_rates) const
+                              const LimitedRatesAndBhp& orig_rates) const
 {
     Scalar temp_alq = alq;
     // use the copy constructor to only copy the rates
-    BasicRates rates = orig_rates;
+    RatesAndBhp rates = orig_rates;
     while (true) {
         temp_alq += this->increment_;
         if (temp_alq > this->max_alq_)
             break;
-        auto temp_rates = computeWellRatesWithALQ_(temp_alq);
+        auto temp_rates = computeWellRatesWithALQ_(temp_alq, rates.bhp);
         if (!temp_rates)
             break;
         alq = temp_alq;
@@ -894,22 +897,22 @@ increaseALQtoPositiveOilRate_(Scalar alq,
             break;
     }
     // TODO: what about group limits?
-    return {getLimitedRatesFromRates_(rates), alq};
+    return {getLimitedRatesAndBhp_(rates), alq};
 }
 
 template<typename Scalar, typename IndexTraits>
-std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRates,
+std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 increaseALQtoMinALQ_(const Scalar orig_alq,
-                    const LimitedRates& orig_rates) const
+                    const LimitedRatesAndBhp& orig_rates) const
 {
     auto min_alq = this->min_alq_;
     assert(min_alq >= 0);
     assert(orig_alq < min_alq);
     assert(min_alq < this->max_alq_);
     Scalar alq = orig_alq;
-    LimitedRates rates = orig_rates;
+    LimitedRatesAndBhp rates = orig_rates;
     while (true) {
         Scalar temp_alq = alq + this->increment_;
 
@@ -917,7 +920,7 @@ increaseALQtoMinALQ_(const Scalar orig_alq,
         if (temp_alq >= min_alq)
             break;
 
-        auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq);
+        auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq, rates.bhp);
 
         if (temp_rates) {
             rates = *temp_rates;
@@ -942,15 +945,15 @@ logSuccess_(Scalar alq, const int iteration_idx)
 }
 
 template<typename Scalar, typename IndexTraits>
-std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRates,
+std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-maybeAdjustALQbeforeOptimizeLoop_(const LimitedRates& orig_rates,
+maybeAdjustALQbeforeOptimizeLoop_(const LimitedRatesAndBhp& orig_rates,
                                   const Scalar orig_alq,
                                   const bool increase) const
 {
     Scalar alq = orig_alq;
-    LimitedRates rates = orig_rates;
+    LimitedRatesAndBhp rates = orig_rates;
 
     if (this->debug) {
         const std::string msg = fmt::format("initial ALQ: {}", alq);
@@ -1000,14 +1003,14 @@ maybeAdjustALQbeforeOptimizeLoop_(const LimitedRates& orig_rates,
 //   least one rate limited w.r.t. group targets, or reduce ALQ to zero if
 //   such positive ALQ value cannot be found.
 template<typename Scalar, typename IndexTraits>
-std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRates,
+std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 reduceALQtoGroupAlqLimits_(const Scalar orig_alq,
-                           const LimitedRates& orig_rates) const
+                           const LimitedRatesAndBhp& orig_rates) const
 {
     Scalar alq = orig_alq;
-    BasicRates rates {orig_rates};
+    RatesAndBhp rates {orig_rates};
     Scalar temp_alq = orig_alq;
     while (true) {
         if (temp_alq == 0)
@@ -1015,7 +1018,8 @@ reduceALQtoGroupAlqLimits_(const Scalar orig_alq,
         temp_alq -= this->increment_;
         if (temp_alq < 0)
             temp_alq = 0;
-        auto new_rates = computeWellRatesWithALQ_(temp_alq);
+
+        auto new_rates = computeWellRatesWithALQ_(temp_alq, rates.bhp);
         if (!new_rates)
             break;
         auto delta_alq = temp_alq - orig_alq;
@@ -1029,7 +1033,7 @@ reduceALQtoGroupAlqLimits_(const Scalar orig_alq,
     if (alq == orig_alq) {
         return {orig_rates, orig_alq};
     } else {
-        LimitedRates limited_rates = getLimitedRatesFromRates_(rates);
+        LimitedRatesAndBhp limited_rates = getLimitedRatesAndBhp_(rates);
         return {limited_rates, alq};
     }
 }
@@ -1037,11 +1041,11 @@ reduceALQtoGroupAlqLimits_(const Scalar orig_alq,
 //   least one rate limited w.r.t. group targets, or reduce ALQ to zero if
 //   such positive ALQ value cannot be found.
 template<typename Scalar, typename IndexTraits>
-std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRates,
+std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 reduceALQtoGroupTarget(const Scalar orig_alq,
-                      const LimitedRates& orig_rates) const
+                      const LimitedRatesAndBhp& orig_rates) const
 {
     bool stop_this_iteration = true;
     const std::vector<std::pair<std::string, Scalar>>& pairs = this->group_info_.getWellGroups(this->well_name_);
@@ -1056,7 +1060,7 @@ reduceALQtoGroupTarget(const Scalar orig_alq,
         }
     }
     Scalar alq = orig_alq;
-    BasicRates rates {orig_rates};
+    RatesAndBhp rates {orig_rates};
     Scalar temp_alq = orig_alq;
     while (!stop_this_iteration) {
         if (temp_alq == 0)
@@ -1064,7 +1068,7 @@ reduceALQtoGroupTarget(const Scalar orig_alq,
         temp_alq -= this->increment_;
         if (temp_alq < 0)
             temp_alq = 0;
-        auto new_rates = computeWellRatesWithALQ_(temp_alq);
+        auto new_rates = computeWellRatesWithALQ_(temp_alq, rates.bhp);
         if (!new_rates)
             break;
         if (!checkGroupTargetsViolated(rates, *new_rates)) {
@@ -1076,7 +1080,7 @@ reduceALQtoGroupTarget(const Scalar orig_alq,
     if (alq == orig_alq) {
         return {orig_rates, orig_alq};
     } else {
-        LimitedRates limited_rates = getLimitedRatesFromRates_(rates);
+        LimitedRatesAndBhp limited_rates = getLimitedRatesAndBhp_(rates);
         return {limited_rates, alq};
     }
 }
@@ -1085,11 +1089,11 @@ reduceALQtoGroupTarget(const Scalar orig_alq,
 //   least one rate limited w.r.t. well targets, or reduce ALQ to zero if
 //   such positive ALQ value cannot be found.
 template<typename Scalar, typename IndexTraits>
-std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRates,
+std::pair<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 reduceALQtoWellTarget_(const Scalar orig_alq,
-                       const LimitedRates& rates) const
+                       const LimitedRatesAndBhp& rates) const
 {
     // this method should only be called if "rates" is limited
     assert(rates.limited());
@@ -1099,14 +1103,15 @@ reduceALQtoWellTarget_(const Scalar orig_alq,
     }
     Scalar alq = orig_alq;
     Scalar temp_alq = alq;
-    std::optional<LimitedRates> new_rates;
+    std::optional<LimitedRatesAndBhp> new_rates = rates;
     while (true) {
         if (temp_alq == 0)
             break;
         temp_alq -= this->increment_;
         if (temp_alq < 0)
             temp_alq = 0;
-        auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq);
+
+        auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq, (*new_rates).bhp);
         if (!temp_rates)
             break; // failed to compute BHP given THP limit and ALQ
         // keep iterating until no rate is limited
@@ -1171,7 +1176,7 @@ runOptimizeLoop_(bool increase)
         debugShowTargets_();
     bool success = false; // did we succeed to increase alq?
     bool alq_is_limited = false;
-    LimitedRates new_rates = *rates;
+    LimitedRatesAndBhp new_rates = *rates;
     auto [temp_rates2, new_alq] = maybeAdjustALQbeforeOptimizeLoop_(*rates, cur_alq, increase);
     if (checkInitialALQmodified_(new_alq, this->orig_alq_)) {
         auto delta_alq = new_alq - cur_alq;
@@ -1213,7 +1218,8 @@ runOptimizeLoop_(bool increase)
         if (this->debug)
             state.debugShowIterationInfo(temp_alq);
         rates = new_rates;
-        auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq);
+
+        auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq, new_rates.bhp);
         if (!temp_rates)
             break;
         if (temp_rates->bhp_is_limited)
@@ -1271,6 +1277,7 @@ runOptimizeLoop_(bool increase)
                                                            new_rates.water,
                                                            new_rates.water_pot,
                                                            new_rates.water_is_limited,
+                                                           new_rates.bhp,
                                                            increase_opt);
     return ret_value;
 }
@@ -1361,8 +1368,8 @@ setAlqMinRate_(const GasLiftWell& well)
 
 template<typename Scalar, typename IndexTraits>
 void GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-updateGroupRates_(const LimitedRates& rates,
-                  const LimitedRates& new_rates,
+updateGroupRates_(const LimitedRatesAndBhp& rates,
+                  const LimitedRatesAndBhp& new_rates,
                   Scalar delta_alq) const
 {
     Scalar delta_oil = new_rates.oil - rates.oil;
@@ -1384,13 +1391,13 @@ updateGroupRates_(const LimitedRates& rates,
 }
 
 template<typename Scalar, typename IndexTraits>
-typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRates
+typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-updateRatesToGroupLimits_(const BasicRates& old_rates,
-                          const LimitedRates& rates,
+updateRatesToGroupLimits_(const RatesAndBhp& old_rates,
+                          const LimitedRatesAndBhp& rates,
                           const std::string& gr_name_dont_limit) const
 {
-    LimitedRates new_rates = rates;
+    LimitedRatesAndBhp new_rates = rates;
     auto oil_rate = rates.oil;
     auto gas_rate = rates.gas;
     auto water_rate = rates.water;
@@ -1434,7 +1441,7 @@ updateRatesToGroupLimits_(const BasicRates& old_rates,
     new_rates.gas_is_limited = rates.gas_is_limited || gas_is_limited;
     new_rates.water_is_limited = rates.water_is_limited || water_is_limited;
     if (oil_is_limited || gas_is_limited || water_is_limited) {
-        new_rates.limit_type = LimitedRates::LimitType::group;
+        new_rates.limit_type = LimitedRatesAndBhp::LimitType::group;
     }
     return new_rates;
 }
@@ -1750,7 +1757,7 @@ checkEcoGradient(Scalar gradient)
 
 template<typename Scalar, typename IndexTraits>
 bool GasLiftSingleWellGeneric<Scalar, IndexTraits>::OptimizeState::
-checkRatesViolated(const LimitedRates& rates) const
+checkRatesViolated(const LimitedRatesAndBhp& rates) const
 {
     if (!this->increase) {
         if (rates.oil < 0) {
@@ -1764,7 +1771,7 @@ checkRatesViolated(const LimitedRates& rates) const
     }
     if (rates.limited()) {
         if (this->parent.debug) {
-            const std::string well_or_group = rates.limit_type == LimitedRates::LimitType::well ? "well" : "group";
+            const std::string well_or_group = rates.limit_type == LimitedRatesAndBhp::LimitType::well ? "well" : "group";
             std::string target_type;
             std::string rate_type;
             if (rates.oil_is_limited) {
@@ -1825,16 +1832,17 @@ getBhpWithLimit()
 }
 
 /****************************************
- * Methods declared in BasicRates
+ * Methods declared in RatesAndBhp
  ****************************************/
 
 template<typename Scalar, typename IndexTraits>
-GasLiftSingleWellGeneric<Scalar, IndexTraits>::BasicRates::
-BasicRates(const LimitedRates& rates)
+GasLiftSingleWellGeneric<Scalar, IndexTraits>::RatesAndBhp::
+RatesAndBhp(const LimitedRatesAndBhp& rates)
 {
     oil = rates.oil;
     gas = rates.gas;
     water = rates.water;
+    bhp = rates.bhp;
     bhp_is_limited = rates.bhp_is_limited;
 }
 

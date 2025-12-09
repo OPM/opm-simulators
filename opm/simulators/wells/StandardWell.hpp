@@ -248,6 +248,8 @@ namespace Opm
                                      std::vector<Scalar>& well_flux,
                                      DeferredLogger& deferred_logger) const override;
 
+        Scalar maxPerfPress(const Simulator& simulator) const override;
+
         // NOTE: These cannot be protected since they are used by GasLiftRuntime
         using Base::vfp_properties_;
 

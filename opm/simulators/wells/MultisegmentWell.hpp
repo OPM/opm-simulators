@@ -330,7 +330,7 @@ namespace Opm {
                                 const SummaryState& summary_state,
                                 DeferredLogger& deferred_logger) const;
 
-        Scalar maxPerfPress(const Simulator& simulator) const;
+        Scalar maxPerfPress(const Simulator& simulator) const override;
 
         // check whether the well is operable under BHP limit with current reservoir condition
         void checkOperabilityUnderBHPLimit(const WellStateType& well_state,
