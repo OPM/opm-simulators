@@ -1750,16 +1750,6 @@ private:
 #endif
     }
 
-/*
-            linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
-                numCells,
-                domain,
-                neighborInfo_,
-                diagMatAddress_,
-                residual_,
-                boundaryInfo_,
-                dt);
-*/
     template<bool useGPU, class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class ResidualType>
     void linearize_parallelization_wrapper(
         const unsigned int numCells,
@@ -1892,29 +1882,33 @@ private:
             }
         }
 
-        // // Accumulation term.
-        // // const double volume = model_().dofTotalVolume(globI);
-        // const double volume = GPU_LOCAL_volumes[globI];
-        // const Scalar storefac = volume / locDT;//volume / dt;
-        // adres = 0.0;
-        // {
-        //     LocalResidualKernel::template computeStorage<Evaluation>(adres, intQuantsIn);
-        // }
-        // setResAndJacobiGPUCPU(res, bMat, adres);
+        // Accumulation term.
+        double volume;
+        if constexpr (useGPU) {
+            volume = GPU_LOCAL_volumes[globI];
+        } else {
+            volume = localModel.dofTotalVolume(globI);
+        }
+        const Scalar storefac = volume / locDT;//volume / dt;
+        adres = 0.0;
+        {
+            LocalResidualKernel::template computeStorage<Evaluation>(adres, intQuantsIn);
+        }
+        setResAndJacobiGPUCPU(res, bMat, adres);
 
-        // {
-        //     VectorBlockType tmp;
-        //     const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
-        //     LocalResidualKernel::template computeStorage<Scalar>(tmp, intQuantOld);
-        //     // assume volume do not change
-        //     res -= tmp;
-        // }
+        {
+            VectorBlockType tmp;
+            const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
+            LocalResidualKernel::template computeStorage<Scalar>(tmp, intQuantOld);
+            // assume volume do not change
+            res -= tmp;
+        }
 
-        // res *= storefac;
-        // bMat *= storefac;
-        // GPU_LOCAL_residualView[globI] += res;
-        // //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-        // *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
+        res *= storefac;
+        bMat *= storefac;
+        GPU_LOCAL_residualView[globI] += res;
+        //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+        *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
     }
 
     template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class GpuResidualView, class GpuBoundaryInfoView, class GpuProblem>
@@ -1960,80 +1954,6 @@ private:
                 }
             }
         }
-    }
-
-    // not static anymore because it depends on the model() function of the object calling the funciton
-    // providing model_() as an argument did not work because of some deleted copy ctor, not sure how to handle that.
-    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
-    void linearize_kernel_CPU(
-        const unsigned int ii,
-        const DomainType& GPU_LOCAL_domain,
-        const NeighborSparseTable& GPU_LOCAL_neighborInfo,
-        DiagPtrType& GPU_LOCAL_diagMatAddress,
-        GpuResidualView& GPU_LOCAL_residualView,
-        LocalModelClass& localModel,
-        double locDT)
-    {
-        // Get the index of the cell
-            const unsigned globI = GPU_LOCAL_domain.cells[ii];
-            const auto& nbInfos = GPU_LOCAL_neighborInfo[globI];
-            VectorBlockType res(0.0);
-            MatrixBlockType bMat(0.0);
-            ADVectorBlockType adres(0.0);
-            ADVectorBlockType darcyFlux(0.0);
-            const LocalIntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-
-            // Flux term.
-            {
-                short loc = 0;
-                for (const auto& nbInfo : nbInfos) {
-                    const unsigned globJ = nbInfo.neighbor;
-                    res = 0.0;
-                    bMat = 0.0;
-                    adres = 0.0;
-                    darcyFlux = 0.0;
-                    const LocalIntensiveQuantities& intQuantsEx = localModel.intensiveQuantities(globJ, /*timeIdx*/ 0);
-                    // const LocalIntensiveQuantities& intQuantsEx = LocalModelClass{}.intensiveQuantities(globJ, /*timeIdx*/ 0);
-                    // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                    //                         nbInfo.res_nbinfo,  problem_().moduleParams());
-
-                    LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                                            nbInfo.res_nbinfo,  problem_().moduleParams());
-                    adres *= nbInfo.res_nbinfo.faceArea;
-                    setResAndJacobiGPUCPU(res, bMat, adres);
-                    GPU_LOCAL_residualView[globI] += res;
-
-                    //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
-                    *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
-                    bMat *= -1.0;
-                    //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
-                    *nbInfo.matBlockAddress += bMat;
-                    ++loc;
-                }
-            }
-
-            // Accumulation term.
-            const double volume = localModel.dofTotalVolume(globI);
-            const Scalar storefac = volume / locDT;//volume / dt;
-            adres = 0.0;
-            {
-                LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
-            }
-            setResAndJacobiGPUCPU(res, bMat, adres);
-
-            {
-                VectorBlockType tmp;
-                const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
-                LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
-                // assume volume do not change
-                res -= tmp;
-            }
-
-            res *= storefac;
-            bMat *= storefac;
-            GPU_LOCAL_residualView[globI] += res;
-            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
     }
 
     template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class GpuResidualView, class GpuBoundaryInfoView>
