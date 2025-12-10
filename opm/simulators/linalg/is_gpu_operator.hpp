@@ -66,7 +66,8 @@ static constexpr bool is_gpu_operator_v = is_gpu_operator<T>::value;
 
      static constexpr bool value
          = std::is_same_v<T, Opm::gpuistl::GpuSparseMatrix<typename T::field_type>>
-         || std::is_same_v<T, Opm::gpuistl::GpuSparseMatrixWrapper<typename T::field_type>>
+        || std::is_same_v<T, Opm::gpuistl::GpuSparseMatrixWrapper<typename T::field_type>>
+        || std::is_same_v<T, Opm::gpuistl::GpuSparseMatrixWrapper<typename T::field_type, true>>
          || std::is_same_v<T, Opm::gpuistl::GpuSparseMatrixGeneric<typename T::field_type>>;
  #else
      // If CUDA is not enabled, we assume that the matrix is not a GPU matrix.
