@@ -148,10 +148,11 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
         const auto crate = connection_rates[perf * np + water_index];
         qwpos_sum += std::max(Scalar{0.}, crate);
         qw_sum += crate;
-        if (qwpos_sum > qw_sum && qwpos_sum > 1.0e-12) {
-            xfact = qw_sum / qwpos_sum;
-        }
     }
+    if (qwpos_sum > qw_sum && qwpos_sum > 1.0e-12) {
+        xfact = qw_sum / qwpos_sum;
+    }
+
 
     for (int perf = 0; perf < nperf; ++perf) {
         const auto perf_ecl_index = well.perforationData()[perf].ecl_index;
