@@ -20,20 +20,15 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#include "config.h"
-#include "TestTypeTag.hpp"
 
 #define BOOST_TEST_MODULE Glift1
 
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hpp>
-#include <opm/models/utils/start.hh>
+#include "SimulatorFixture.hpp"
 
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/flow/BlackoilModel.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -45,87 +40,18 @@
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
-#if HAVE_DUNE_FEM
-#include <dune/fem/misc/mpimanager.hh>
-#else
-#include <dune/common/parallel/mpihelper.hh>
-#endif
-
-#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include <boost/test/unit_test.hpp>
-#include <boost/version.hpp>
-#if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 < 71
-#include <boost/test/floating_point_comparison.hpp>
-#else
-#include <boost/test/tools/floating_point_comparison.hpp>
-#endif
-
-namespace Opm::Properties {
-    namespace TTag {
-        struct TestGliftTypeTag {
-            using InheritsFrom = std::tuple<TestTypeTag>;
-        };
-    }
-}
-
-template <class TypeTag>
-std::unique_ptr<Opm::GetPropType<TypeTag, Opm::Properties::Simulator>>
-initSimulator(const char *filename)
-{
-    using namespace Opm;
-    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-
-    std::string filename_arg = "--ecl-deck-file-name=";
-    filename_arg += filename;
-
-    const char* argv[] = {
-        "test_equil",
-        filename_arg.c_str()
+namespace Opm::Properties::TTag {
+    struct TestGliftTypeTag {
+        using InheritsFrom = std::tuple<TestTypeTag>;
     };
-
-    Parameters::reset();
-    registerAllParameters_<TypeTag>(false);
-    registerEclTimeSteppingParameters<double>();
-    BlackoilModelParameters<double>::registerParameters();
-    Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
-    Opm::Parameters::SetDefault<Opm::Parameters::ThreadsPerProcess>(2);
-    Parameters::endRegistration();
-    setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
-                              argv,
-                              /*registerParams=*/false,
-                              /*allowUnused*/false,
-                              /*handleHelp*/true,
-                              /*myRank*/0);
-
-    FlowGenericVanguard::readDeck(filename);
-    return std::make_unique<Simulator>();
 }
 
-
-namespace {
-
-struct GliftFixture
-{
-    GliftFixture()
-    {
-        int argc = boost::unit_test::framework::master_test_suite().argc;
-        char** argv = boost::unit_test::framework::master_test_suite().argv;
-    #if HAVE_DUNE_FEM
-        Dune::Fem::MPIManager::initialize(argc, argv);
-    #else
-        Dune::MPIHelper::instance(argc, argv);
-#endif
-        Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
-    }
-};
-
-}
-
-BOOST_GLOBAL_FIXTURE(GliftFixture);
+using SimulatorFixture = Opm::SimulatorFixture;
+BOOST_GLOBAL_FIXTURE(SimulatorFixture);
 
 BOOST_AUTO_TEST_CASE(G1)
 {
@@ -145,7 +71,7 @@ BOOST_AUTO_TEST_CASE(G1)
     const std::string filename = "GLIFT1.DATA";
     using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
 
-    auto simulator = initSimulator<TypeTag>(filename.data());
+    auto simulator = Opm::initSimulator<TypeTag>(filename.data(), "test_glift1", /*threads=*/2);
 
     simulator->model().applyInitialSolution();
     simulator->setEpisodeIndex(-1);
@@ -296,7 +222,7 @@ BOOST_AUTO_TEST_CASE(G2)
     const std::string filename = "GLIFT1.DATA";
     using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
 
-    auto simulator = initSimulator<TypeTag>(filename.data());
+    auto simulator = Opm::initSimulator<TypeTag>(filename.data(), "test_glift1", /*threads=*/2);
 
     simulator->model().applyInitialSolution();
     simulator->setEpisodeIndex(-1);
