@@ -28,6 +28,12 @@
 #ifndef OPM_GENERIC_TEMPERATURE_MODEL_IMPL_HPP
 #define OPM_GENERIC_TEMPERATURE_MODEL_IMPL_HPP
 
+// Improve IDE experience
+#ifndef OPM_GENERIC_TEMPERATURE_MODEL_HPP
+#include <config.h>
+#include <opm/simulators/flow/GenericTemperatureModel.hpp>
+#endif
+
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/schwarz.hh>
@@ -43,19 +49,16 @@
 
 #include <opm/models/discretization/ecfv/ecfvstencil.hh>
 
-#include <opm/simulators/flow/GenericTemperatureModel.hpp>
 #include <opm/simulators/linalg/ilufirstelement.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 
-#include <fmt/format.h>
-
-#include <array>
-#include <functional>
 #include <memory>
 #include <set>
 #include <stdexcept>
 #include <string>
+
+#include <fmt/format.h>
 
 namespace Opm {
 
@@ -106,7 +109,6 @@ GenericTemperatureModel(const GridView& gridView,
     , dofMapper_(dofMapper)
 {
 }
-
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
 void GenericTemperatureModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
@@ -188,8 +190,8 @@ linearSolve_(const EnergyMatrix& M, EnergyVector& x, EnergyVector& b)
         return result.converged;
     }
     else
-    {
 #endif
+    {
         using EnergySolver = Dune::BiCGSTABSolver<EnergyVector>;
         using EnergyOperator = Dune::MatrixAdapter<EnergyMatrix,EnergyVector,EnergyVector>;
         using EnergyScalarProduct = Dune::SeqScalarProduct<EnergyVector>;
@@ -208,9 +210,7 @@ linearSolve_(const EnergyMatrix& M, EnergyVector& x, EnergyVector& b)
 
         // return the result of the solver
         return result.converged;
-#if HAVE_MPI
     }
-#endif
 }
 
 } // namespace Opm
