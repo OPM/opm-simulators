@@ -146,6 +146,7 @@ updatePressures(const int reportStepIdx,
 
     node_pressures_ = this->computePressures(network,
                                              *well_model_.getVFPProperties().getProd(),
+                                             well_model_.schedule().getUnits(),
                                              reportStepIdx,
                                              well_model_.comm());
 
@@ -235,6 +236,7 @@ assignNodeValues(std::map<std::string, data::NodeData>& nodevalues,
 
     auto converged_pressures = this->computePressures(network,
                                                       *well_model_.getVFPProperties().getProd(),
+                                                      well_model_.schedule().getUnits(),
                                                       reportStepIdx,
                                                       well_model_.comm());
     for (const auto& [node, converged_pressure] : converged_pressures) {
@@ -289,6 +291,7 @@ std::map<std::string, Scalar>
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 computePressures(const Network::ExtNetwork& network,
                  const VFPProdProperties<Scalar>& vfp_prod_props,
+                 const UnitSystem& unit_system,
                  const int reportStepIdx,
                  const Parallel::Communication& comm) const
 {
@@ -412,7 +415,9 @@ computePressures(const Network::ExtNetwork& network,
                     //     (e.g., in GOR calculations) unless a branch ALQ is set in BRANPROP.
                     //
                     // @TODO: Standard network
-                    Scalar alq = (*upbranch).alq_value().value_or(0.0);
+                    const auto alq_type = vfp_prod_props.getTable(*vfp_table).getALQType();
+                    const auto dimension = VFPProdTable::ALQDimension(alq_type, unit_system);
+                    const Scalar alq = (*upbranch).alq_value(dimension).value_or(0.0);
                     node_pressures[node]
                         = vfp_prod_props.bhp(*vfp_table,
                                              rates[IndexTraits::waterPhaseIdx],
