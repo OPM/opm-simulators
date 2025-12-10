@@ -30,16 +30,17 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/models/parallel/gridcommhandles.hh>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/GenericTemperatureModel.hpp>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
-#include <opm/models/parallel/gridcommhandles.hh>
 
-#include <array>
+#include <algorithm>
+#include <cassert>
+#include <cmath>
 #include <cstddef>
-#include <memory>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -102,13 +103,13 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
 
 public:
-    TemperatureModel(Simulator& simulator)
+    explicit TemperatureModel(Simulator& simulator)
         : BaseType(simulator.vanguard().gridView(),
                    simulator.vanguard().eclState(),
                    simulator.vanguard().cartesianIndexMapper(),
                    simulator.model().dofMapper())
         , simulator_(simulator)
-    { }
+    {}
 
     void init()
     {
@@ -136,8 +137,9 @@ public:
 
     void beginTimeStep()
     {
-        if (!this->doTemp())
+        if (!this->doTemp()) {
             return;
+        }
 
         // We copy the intensive quantities here to make it possible to update them
         const unsigned int numCells = simulator_.model().numTotalDof();
@@ -157,8 +159,9 @@ public:
      */
     void endTimeStep(WellStateType& wellState)
     {
-        if (!this->doTemp())
+        if (!this->doTemp()) {
             return;
+        }
 
         // We copy the intensive quantities here to make it possible to update them
         const unsigned int numCells = simulator_.model().numTotalDof();
@@ -175,7 +178,6 @@ public:
             auto& ws = wellState.well(wellID);
             ws.energy_rate = this->energy_rates_[wellID];
         }
-
     }
 
     /*!
@@ -197,7 +199,6 @@ public:
     { /* not implemented */ }
 
 protected:
-
     void updateStorageCache()
     {
         // we need the storage term at start of the iteration (timeIdx = 1)
@@ -226,15 +227,17 @@ protected:
         }
     }
 
-    void solveAndUpdate() {
+    void solveAndUpdate()
+    {
         const unsigned int numCells = simulator_.model().numTotalDof();
         EnergyVector dx(numCells);
-        bool converged = this->linearSolve_(*this->energyMatrix_, dx, this->energyVector_);
-        if (!converged) {
+        bool conv = this->linearSolve_(*this->energyMatrix_, dx, this->energyVector_);
+        if (!conv) {
             if (simulator_.gridView().comm().rank() == 0) {
                 OpmLog::warning("Temp model: Linear solver did not converge. Temperature values not updated.");
             }
-        } else {
+        }
+        else {
             for (unsigned globI = 0; globI < numCells; ++globI) {
                 this->temperature_[globI] -= std::clamp(dx[globI][0], -this->maxTempChange_, this->maxTempChange_);
                 intQuants_[globI].updateTemperature_(simulator_.problem(), globI, /*timeIdx*/ 0);
@@ -243,7 +246,8 @@ protected:
         }
     }
 
-    bool converged(const int iter) {
+    bool converged(const int iter)
+    {
         const unsigned int numCells = simulator_.model().numTotalDof();
         Scalar maxNorm = 0.0;
         Scalar sumNorm = 0.0;
@@ -268,14 +272,16 @@ protected:
     }
 
     template< class LhsEval>
-    void computeStorageTerm(unsigned globI, LhsEval& storage) {
+    void computeStorageTerm(unsigned globI, LhsEval& storage)
+    {
         const auto& intQuants = intQuants_[globI];
         const auto& poro = decay<LhsEval>(intQuants.porosity());
         // accumulate the internal energy of the fluids
         const auto& fs = intQuants.fluidState();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
+            }
 
             const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
             const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
@@ -285,23 +291,27 @@ protected:
         }
 
         // add the internal energy of the rock
-        Scalar rockFraction = intQuants.rockFraction();
+        const Scalar rockFraction = intQuants.rockFraction();
         const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
         storage += rockFraction*uRock;
         storage*= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
     template < class ResidualNBInfo>
-    void computeFluxTerm(unsigned globI, unsigned globJ, const ResidualNBInfo& res_nbinfo, Evaluation& flux) {
-
+    void computeFluxTerm(unsigned globI, unsigned globJ,
+                         const ResidualNBInfo& res_nbinfo,
+                         Evaluation& flux)
+    {
         const IntensiveQuantities& intQuantsIn = intQuants_[globI];
         const IntensiveQuantities& intQuantsEx = intQuants_[globJ];
         RateVector tmp(0.0); //not used
         RateVector darcyFlux(0.0);
-        LocalResidual::computeFlux(tmp, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, res_nbinfo, simulator_.problem().moduleParams());
+        LocalResidual::computeFlux(tmp, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+                                   res_nbinfo, simulator_.problem().moduleParams());
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
+            }
 
             const unsigned activeCompIdx =
                 FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
@@ -313,7 +323,8 @@ protected:
                 flux += fs.enthalpy(phaseIdx)
                     * fs.density(phaseIdx)
                     * darcyFlux[activeCompIdx];
-            } else {
+            }
+            else {
                 flux += getValue(fs.enthalpy(phaseIdx))
                     * getValue(fs.density(phaseIdx))
                     * getValue(darcyFlux[activeCompIdx]);
@@ -323,7 +334,10 @@ protected:
     }
 
     template < class ResidualNBInfo>
-    void computeHeatFluxTerm(unsigned globI, unsigned globJ, const ResidualNBInfo& res_nbinfo, Evaluation& heatFlux) {
+    void computeHeatFluxTerm(unsigned globI, unsigned globJ,
+                             const ResidualNBInfo& res_nbinfo,
+                             Evaluation& heatFlux)
+    {
         const IntensiveQuantities& intQuantsIn = intQuants_[globI];
         const IntensiveQuantities& intQuantsEx = intQuants_[globJ];
         const Scalar inAlpha = simulator_.problem().thermalHalfTransmissibility(globI, globJ);
@@ -344,7 +358,8 @@ protected:
         heatFlux *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>()*res_nbinfo.faceArea;
     }
 
-    void assembleEquations() {
+    void assembleEquations()
+    {
         this->energyVector_ = 0.0;
         (*this->energyMatrix_) = 0.0;
         Scalar dt = simulator_.timeStepSize();
@@ -396,8 +411,7 @@ protected:
         if (simulator_.gridView().comm().size() > 1) {
             // Set dirichlet conditions for overlapping cells
             // loop over precalculated overlap rows and columns
-            for (const auto row : overlapRows_)
-            {
+            for (const auto row : overlapRows_) {
                 // Zero out row.
                 (*this->energyMatrix_)[row] = 0.0;
 
@@ -418,8 +432,9 @@ protected:
             const auto globI = ws.perf_data.cell_index[i];
             auto fs = intQuants_[globI].fluidState(); //copy to make it possible to change the temp in the injector
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
+                }
 
                 Evaluation rate = well.volumetricSurfaceRateForConnection(globI, phaseIdx);
                 if (rate > 0 && eclWell.isInjector()) {
@@ -458,13 +473,14 @@ protected:
     std::vector<int> interiorRows_;
 };
 
-
 // need for the old linearizer
 template <class TypeTag>
-class TemperatureModel<TypeTag, false> {
+class TemperatureModel<TypeTag, false>
+{
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+
 public:
     TemperatureModel(Simulator&)
     { }
@@ -489,10 +505,10 @@ public:
 
     void init() {}
     void beginTimeStep() {}
-    const Scalar temperature(size_t /*globalIdx*/) const {
+    const Scalar temperature(size_t /*globalIdx*/) const
+    {
         return 273.15; // return 0C to make the compiler happy
     }
-    //Scalar dummy_;
 };
 
 } // namespace Opm

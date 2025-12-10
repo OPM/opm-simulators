@@ -35,7 +35,7 @@
 namespace Opm {
 
 #define INSTANTIATE_TYPE(T)                                                                             \
-    template class GenericTemperatureModel<Dune::CpGrid,                                                     \
+    template class GenericTemperatureModel<Dune::CpGrid,                                                \
                                       Dune::GridView<                                                   \
                                           Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,               \
                                       Dune::MultipleCodimMultipleGeomTypeMapper<                        \
@@ -44,7 +44,7 @@ namespace Opm {
                                       EcfvStencil<T,Dune::GridView<                                     \
                                                         Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>, \
                                                   false,false>,                                         \
-                                      BlackOilFluidSystem<T,BlackOilDefaultFluidSystemIndices>,                \
+                                      BlackOilFluidSystem<T,BlackOilDefaultFluidSystemIndices>,         \
                                       T>;
 
 INSTANTIATE_TYPE(double)
@@ -59,19 +59,19 @@ using GV = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
                                            false>;
 
 template class GenericTemperatureModel<Dune::CpGrid,
-                                  GV,
-                                  Dune::MultipleCodimMultipleGeomTypeMapper<GV>,
-                                  EcfvStencil<double, GV, false, false>,
-                                  BlackOilFluidSystem<double,BlackOilDefaultFluidSystemIndices>,
-                                  double>;
+                                       GV,
+                                       Dune::MultipleCodimMultipleGeomTypeMapper<GV>,
+                                       EcfvStencil<double, GV, false, false>,
+                                       BlackOilFluidSystem<double,BlackOilDefaultFluidSystemIndices>,
+                                       double>;
 
 #if FLOW_INSTANTIATE_FLOAT
 template class GenericTemperatureModel<Dune::CpGrid,
-                                  GV,
-                                  Dune::MultipleCodimMultipleGeomTypeMapper<GV>,
-                                  EcfvStencil<float, GV, false, false>,
-                                  BlackOilFluidSystem<float,BlackOilDefaultFluidSystemIndices>,
-                                  float>;
+                                       GV,
+                                       Dune::MultipleCodimMultipleGeomTypeMapper<GV>,
+                                       EcfvStencil<float, GV, false, false>,
+                                       BlackOilFluidSystem<float,BlackOilDefaultFluidSystemIndices>,
+                                       float>;
 #endif
 
 #endif // HAVE_DUNE_FEM

@@ -32,18 +32,14 @@
 
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
+
 #include <opm/models/blackoil/blackoilmodel.hh>
 
 #include <opm/simulators/linalg/matrixblock.hh>
 
-#include <opm/input/eclipse/EclipseState/Phase.hpp>
-
-#include <array>
 #include <cstddef>
-#include <functional>
-#include <map>
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace Opm {
@@ -52,7 +48,8 @@ class EclipseState;
 class Well;
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
-class GenericTemperatureModel {
+class GenericTemperatureModel
+{
 public:
     using EnergyMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
     using EnergyVector = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
@@ -64,7 +61,8 @@ public:
         return doTemp_;
     }
 
-    const Scalar temperature(size_t globalIdx) const {
+    const Scalar temperature(size_t globalIdx) const
+    {
         return temperature_[globalIdx];
     }
 
@@ -92,7 +90,6 @@ protected:
     std::vector<Scalar> energy_rates_;
     bool doTemp_{false};
     Scalar maxTempChange_{5.0};
-
 };
 
 } // namespace Opm
