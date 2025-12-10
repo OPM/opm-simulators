@@ -1190,6 +1190,9 @@ private:
                 gpuResidualView,
                 gpuModelView,
                 dt,
+                dispersionActive,
+                enableBioeffects,
+                on_full_domain,
                 gpuVolumesView);
             if (boundaryInfo_buffer.size() > 0) {
                 linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+blockSize - 1)/blockSize), blockSize>>>(
@@ -1246,7 +1249,10 @@ private:
                 diagMatAddress_,
                 residual_,
                 model_(),
-                dt);
+                dt,
+                dispersionActive,
+                enableBioeffects,
+                on_full_domain);
 
             linearize_kernel_CPU_boundary<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
                 diagMatAddress_,
@@ -1458,9 +1464,14 @@ private:
         ResidualType& localResidual,
         LocalModelClass& localModel,
         double locDT,
+        bool dispersionActive,
+        bool enableBioeffects,
+        bool onFullDomain,
         const gpuistl::GpuView<double>& localVolumes = gpuistl::GpuView<double>())
     {
         if constexpr (useGPU) {
+            assert(!enableBioeffects && "Bioeffects not yet supported on GPU");
+            assert(!dispersionActive && "Dispersion not yet supported on GPU");
             int constexpr blockSize = 256;
             gpu_parallelize_linearization_kernel<LocalIntensiveQuantities, LocalModelClass, LocalResidualKernel, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, ResidualType><<<((numCells + blockSize - 1) / blockSize), blockSize>>>(
                 numCells,
@@ -1470,20 +1481,27 @@ private:
                 localResidual,
                 localModel,
                 locDT,
+                dispersionActive,
+                enableBioeffects,
+                onFullDomain,
                 localVolumes);
         }
         else {
 #pragma omp parallel for
             for (unsigned ii = 0; ii < numCells; ++ii) {
-            linearize_kernel<false, decltype(problem_()), LocalIntensiveQuantities , LocalModelClass, LocalResidual, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, ResidualType>(
+            linearize_kernel<false, decltype(problem_()), decltype(velocityInfo_), LocalIntensiveQuantities , LocalModelClass, LocalResidual, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, ResidualType>(
                 ii,
                 localDomain,
                 localNeighborInfo,
                 localDiagMatAddress,
                 localResidual,
                 localModel,
+                velocityInfo_,
                 locDT,
-                problem_());
+                problem_(),
+                dispersionActive,
+                enableBioeffects,
+                onFullDomain);
             }
         }
     }
@@ -1498,21 +1516,28 @@ private:
         GpuResidualView GPU_LOCAL_residualView,
         LocalModelClass localModel,
         double locDT,
+        bool dispersionActive,
+        bool enableBioeffects,
+        bool onFullDomain,
         const gpuistl::GpuView<double> GPU_LOCAL_volumes)
     {
         // Get the index of the cell
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
 
         if (ii < numCells) {
-            linearize_kernel<true, int, LocalIntensiveQuantities, LocalModelClass, LocalResidualKernel, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, GpuResidualView>(
+            linearize_kernel<true, int, int, LocalIntensiveQuantities, LocalModelClass, LocalResidualKernel, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, GpuResidualView>(
                 ii,
                 GPU_LOCAL_domain,
                 GPU_LOCAL_neighborInfo,
                 GPU_LOCAL_diagMatAddress,
                 GPU_LOCAL_residualView,
                 localModel,
+                0/*dummy for velocity info*/,
                 locDT,
                 0/*dummy for problem type*/,
+                dispersionActive,
+                enableBioeffects,
+                onFullDomain,
                 GPU_LOCAL_volumes
                 );
         }
@@ -1527,7 +1552,7 @@ private:
     template<typename T, bool useGPU>
     using ConstArgType = std::conditional_t<useGPU, T, const T&>;
 
-    template<bool useGPU, class ProblemType, class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
+    template<bool useGPU, class ProblemType, class VelocityInfoType, class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
     OPM_HOST_DEVICE static void linearize_kernel(
         const unsigned int ii,
         const ConstArgType<DomainType, useGPU> GPU_LOCAL_domain,
@@ -1535,8 +1560,12 @@ private:
         const ConstArgType<DiagPtrType, useGPU> GPU_LOCAL_diagMatAddress,
         ArgType<GpuResidualView, useGPU> GPU_LOCAL_residualView,
         ArgType<LocalModelClass, useGPU> localModel,
+        ArgType<VelocityInfoType, useGPU> localVelocityInfo,
         double locDT,
         const ConstArgType<ProblemType, useGPU> localProblem,
+        bool dispersionActive,
+        bool enableBioeffects,
+        bool on_full_domain,
         const gpuistl::GpuView<double> GPU_LOCAL_volumes = gpuistl::GpuView<double>()
         )
     {
@@ -1546,7 +1575,6 @@ private:
         MatrixBlockType bMat(0.0);
         ADVectorBlockType adres(0.0);
         ADVectorBlockType darcyFlux(0.0);
-        // const LocalIntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
         const LocalIntensiveQuantities& intQuantsIn = localModel.intensiveQuantities(globI, /*timeIdx*/ 0);
 
         // Flux term.
@@ -1571,13 +1599,15 @@ private:
                 }
 
                 // currently not supported on GPU
-                // if (dispersionActive || enableBioeffects) {
-                //     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
-                //         velocityInfo_[globI][loc].velocity[phaseIdx] =
-                //             darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
-                //     }
-                //     loc++;
-                // }
+                if constexpr (!useGPU) {
+                    if (dispersionActive || enableBioeffects) {
+                        for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
+                            localVelocityInfo[globI][loc].velocity[phaseIdx] =
+                                darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+                        }
+                        loc++;
+                    }
+                }
 
                 adres *= nbInfo.res_nbinfo.faceArea;
                 setResAndJacobiGPUCPU(res, bMat, adres);
@@ -1591,16 +1621,23 @@ private:
             }
         }
 
-/* Reference of what is currently missing support in this implementation:
+        // Accumulation term.
+        adres = 0.0;
+        {
+            LocalResidualKernel::template computeStorage<Evaluation>(adres, intQuantsIn);
+        }
+        setResAndJacobiGPUCPU(res, bMat, adres);
+
+        if constexpr (!useGPU) {
             // Either use cached storage term, or compute it on the fly.
-            if (model_().enableStorageCache()) {
+            if (localModel.enableStorageCache()) {
                 // The cached storage for timeIdx 0 (current time) is not
                 // used, but after storage cache is shifted at the end of the
                 // timestep, it will become cached storage for timeIdx 1.
-                model_().updateCachedStorage(globI, 0, res);
-                if (model_().newtonMethod().numIterations() == 0) {
+                localModel.updateCachedStorage(globI, 0, res);
+                if (localModel.newtonMethod().numIterations() == 0) {
                     // Need to update the storage cache.
-                    if (problem_().recycleFirstIterationStorage()) {
+                    if (localProblem.recycleFirstIterationStorage()) {
                         // Assumes nothing have changed in the system which
                         // affects masses calculated from primary variables.
                         if (on_full_domain) {
@@ -1610,36 +1647,27 @@ private:
                             // to the start-of-step state.
                             // Note that a full assembly must be done before local solves
                             // otherwise this will be left un-updated.
-                            model_().updateCachedStorage(globI, 1, res);
+                            localModel.updateCachedStorage(globI, 1, res);
                         }
                     }
                     else {
-                        Dune::FieldVector<Scalar, numEq> tmp;
-                        const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                        LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
-                        model_().updateCachedStorage(globI, 1, tmp);
+                        VectorBlockType tmp;
+                        const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
+                        LocalResidualKernel::template computeStorage<Scalar>(tmp, intQuantOld);
+                        localModel.updateCachedStorage(globI, 1, tmp);
                     }
                 }
-                res -= model_().cachedStorage(globI, 1);
+                res -= localModel.cachedStorage(globI, 1);
             }
             else {
                 OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
-                Dune::FieldVector<Scalar, numEq> tmp;
-                const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
+                VectorBlockType tmp;
+                const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
+                LocalResidualKernel::template computeStorage<Scalar>(tmp, intQuantOld);
                 // assume volume do not change
                 res -= tmp;
             }
-*/
-
-        // Accumulation term.
-        adres = 0.0;
-        {
-            LocalResidualKernel::template computeStorage<Evaluation>(adres, intQuantsIn);
-        }
-        setResAndJacobiGPUCPU(res, bMat, adres);
-
-        {
+        } else {
             VectorBlockType tmp;
             const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
             LocalResidualKernel::template computeStorage<Scalar>(tmp, intQuantOld);
