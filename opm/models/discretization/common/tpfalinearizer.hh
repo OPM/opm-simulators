@@ -1028,7 +1028,8 @@ private:
         // Make sure we have can have the domain on the GPU.
         if constexpr (std::is_same_v<SubDomainType, FullDomain<>>) {
 
-            hipDeviceSynchronize();
+            const bool run_assembly_on_gpu = true;
+
             auto enter_function = std::chrono::high_resolution_clock::now();
             /*
                 One of the things I must be careful with on the GPU is all of the pointers in this class
@@ -1059,354 +1060,206 @@ private:
             const unsigned int numCells = domain.cells.size();
             const bool on_full_domain = (numCells == model_().numTotalDof());
 
-            // gpuJacobian_ = gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(jacobian_->istlMatrix());
+            if (run_assembly_on_gpu) {
+                hipDeviceSynchronize();
+                auto prep_domain_start = std::chrono::high_resolution_clock::now();
+                auto domain_buffer = copy_to_gpu(domain);
+                auto domain_view = make_view(domain_buffer);
+                auto prep_domain_end = std::chrono::high_resolution_clock::now();
+                auto prep_domain_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_domain_end - prep_domain_start);
+                std::cout << "GPU domain prep time: " << prep_domain_duration.count() << " microseconds" << std::endl;
+                
+                auto prep_neighbor_start = std::chrono::high_resolution_clock::now();
+                auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_, *gpuJacobian_, jacobian_->istlMatrix());
+                auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
+                auto prep_neighbor_end = std::chrono::high_resolution_clock::now();
+                auto prep_neighbor_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_neighbor_end - prep_neighbor_start);
+                std::cout << "GPU neighborInfo prep time: " << prep_neighbor_duration.count() << " microseconds" << std::endl;
 
-            // Ensure we can have the domain  on the GPU.
+                using NeighborInfoGPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockGPU>;
 
-            auto prep_domain_start = std::chrono::high_resolution_clock::now();
-            auto domain_buffer = copy_to_gpu(domain);
-            auto domain_view = make_view(domain_buffer);
-            auto prep_domain_end = std::chrono::high_resolution_clock::now();
-            auto prep_domain_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_domain_end - prep_domain_start);
-            std::cout << "GPU domain prep time: " << prep_domain_duration.count() << " microseconds" << std::endl;
-            
-            auto prep_neighbor_start = std::chrono::high_resolution_clock::now();
-            auto neighborInfo_buffer = gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo_, *gpuJacobian_, jacobian_->istlMatrix());
-            auto neighborInfo_view = gpuistl::make_view(neighborInfo_buffer);
-            auto prep_neighbor_end = std::chrono::high_resolution_clock::now();
-            auto prep_neighbor_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_neighbor_end - prep_neighbor_start);
-            std::cout << "GPU neighborInfo prep time: " << prep_neighbor_duration.count() << " microseconds" << std::endl;
+                // Verify that neighborInfo_view is indeed a SparseTable with GpuView
+                static_assert(std::is_same_v<decltype(neighborInfo_view),
+                                            SparseTable<NeighborInfoGPU, gpuistl::GpuView>>);
 
-            using NeighborInfoGPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockGPU>;
+                static_assert(std::is_same_v<decltype(neighborInfo_view.rowStarts()),
+                                            const gpuistl::GpuView<int>&>);
 
-            // Verify that neighborInfo_view is indeed a SparseTable with GpuView
-            static_assert(std::is_same_v<decltype(neighborInfo_view),
-                                        SparseTable<NeighborInfoGPU, gpuistl::GpuView>>);
+                static_assert(std::is_same_v<decltype(neighborInfo_view.dataStorage()),
+                                            const gpuistl::GpuView<NeighborInfoGPU>&>);
 
-            static_assert(std::is_same_v<decltype(neighborInfo_view.rowStarts()),
-                                        const gpuistl::GpuView<int>&>);
+                auto diagMatAddressView = gpuistl::make_view(*gpuBufferDiagMatAddress_);
 
-            static_assert(std::is_same_v<decltype(neighborInfo_view.dataStorage()),
-                                        const gpuistl::GpuView<NeighborInfoGPU>&>);
+                // Take the residual_ and move it to the GPU
+                // This requires going from doubles, to a blocked vector
+                // This is done using a GpuBuffer which contains MiniVectors
 
-            auto diagMatAddressView = gpuistl::make_view(*gpuBufferDiagMatAddress_);
+                auto prep_residual_start = std::chrono::high_resolution_clock::now();
+                auto gpuResidualBuffer = gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual_);
+                auto gpuResidualView = gpuistl::make_view(gpuResidualBuffer);
+                auto prep_residual_end = std::chrono::high_resolution_clock::now();
+                auto prep_residual_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_residual_end - prep_residual_start);
+                std::cout << "GPU residual prep time: " << prep_residual_duration.count() << " microseconds" << std::endl;
 
-            // Take the residual_ and move it to the GPU
-            // This requires going from doubles, to a blocked vector
-            // This is done using a GpuBuffer which contains MiniVectors
+                using CorrectTypeTagView = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>;
+                using GPUBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
 
-            auto prep_residual_start = std::chrono::high_resolution_clock::now();
-            auto gpuResidualBuffer = gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual_);
-            auto gpuResidualView = gpuistl::make_view(gpuResidualBuffer);
-            auto prep_residual_end = std::chrono::high_resolution_clock::now();
-            auto prep_residual_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_residual_end - prep_residual_start);
-            std::cout << "GPU residual prep time: " << prep_residual_duration.count() << " microseconds" << std::endl;
+                using LocalResidualGPU = BlackOilLocalResidualTPFA<CorrectTypeTagView>;
 
-            using CorrectTypeTagView = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>;
-            using GPUBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
+                // test creating a FluidSystem that is suitable for GPU use
+                auto prep_fsys_start = std::chrono::high_resolution_clock::now();
+                auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
+                auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+                auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
+                auto prep_fsys_end = std::chrono::high_resolution_clock::now();
+                auto prep_fsys_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_fsys_end - prep_fsys_start);
+                std::cout << "GPU fluid system prep time: " << prep_fsys_duration.count() << " microseconds" << std::endl;
 
-            using LocalResidualGPU = BlackOilLocalResidualTPFA<CorrectTypeTagView>;
-
-            // test creating a FluidSystem that is suitable for GPU use
-            auto prep_fsys_start = std::chrono::high_resolution_clock::now();
-            auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
-            auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
-            auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
-            auto prep_fsys_end = std::chrono::high_resolution_clock::now();
-            auto prep_fsys_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_fsys_end - prep_fsys_start);
-            std::cout << "GPU fluid system prep time: " << prep_fsys_duration.count() << " microseconds" << std::endl;
-
-            auto prep_volumes_start = std::chrono::high_resolution_clock::now();
-            std::vector<double> volumes(numCells);
-            for (unsigned i = 0; i < numCells; ++i) {
-                volumes[domain.cells[i]] = model_().dofTotalVolume(domain.cells[i]);
-            }
-            auto gpuVolumesBuffer = gpuistl::GpuBuffer<double>(volumes);
-            auto gpuVolumesView = gpuistl::make_view(gpuVolumesBuffer);
-            auto prep_volumes_end = std::chrono::high_resolution_clock::now();
-            auto prep_volumes_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_volumes_end - prep_volumes_start);
-            std::cout << "GPU volumes prep time: " << prep_volumes_duration.count() << " microseconds" << std::endl;
-
-            // We need to have a pointer to the fluidysystem that can be used inside a GPU kernel
-            // Having a pointer to the view is not good enough as the view exists on the host, so
-            // allocat a view on the GPU with a pointer to it via the make_gpu_shared_ptr function
-            auto dynamicGpuFluidSystemPtr = gpuistl::make_gpu_shared_ptr(dynamicGpuFluidSystemView);
-
-
-            using GpuScalarFluidState = typename GPUBOIQ::ScalarFluidState;
-            using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, GpuScalarFluidState>;
-            using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
-            // Copy boundary info to GPU
-            gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(boundaryInfo_, dynamicGpuFluidSystemPtr.get());
-            auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
-
-            auto prep_model_start = std::chrono::high_resolution_clock::now();
-            using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
-            GpuModel gpuModel(model_().allIntensiveQuantities0(), model_().allIntensiveQuantities1(), problem_().moduleParams());
-            auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
-            auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
-            auto prep_model_end = std::chrono::high_resolution_clock::now();
-            auto prep_model_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_model_end - prep_model_start);
-            std::cout << "GPU model prep time: " << prep_model_duration.count() << " microseconds" << std::endl;
-
-
-            // This is terrible, we are probably catching a very large amount of exceptions here, how to support a map on the GPU?
-            // Fetch alpha values that are needed for thermal boundary condition
-            std::vector<Scalar> alpha0(numCells);
-            std::vector<Scalar> alpha1(numCells);
-            std::vector<Scalar> alpha2(numCells);
-            for (int i = 0; i < numCells; ++i) {
-                try {
-                    alpha0[i] = problem_().eclTransmissibilities().thermalHalfTransBoundary(i, 0);
-                } catch (...) {
-                    alpha0[i] = 0.0;
+                auto prep_volumes_start = std::chrono::high_resolution_clock::now();
+                std::vector<double> volumes(numCells);
+                for (unsigned i = 0; i < numCells; ++i) {
+                    volumes[domain.cells[i]] = model_().dofTotalVolume(domain.cells[i]);
                 }
-                try {
-                    alpha1[i] = problem_().eclTransmissibilities().thermalHalfTransBoundary(i, 1);
-                } catch (...) {
-                    alpha1[i] = 0.0;
-                }
-                try {
-                    alpha2[i] = problem_().eclTransmissibilities().thermalHalfTransBoundary(i, 2);
-                } catch (...) {
-                    alpha2[i] = 0.0;
-                }
-            }
-            GpuFlowProblemVerySimple<Scalar> gpuFlowProblemVerySimple(alpha0, alpha1, alpha2);
-            auto gpuFlowProblemVerySimpleBuffer = gpuistl::copy_to_gpu(gpuFlowProblemVerySimple);
-            auto gpuFlowProblemVerySimpleView = gpuistl::make_view(gpuFlowProblemVerySimpleBuffer);
-            using GpuProblem = decltype(gpuFlowProblemVerySimpleView);
+                auto gpuVolumesBuffer = gpuistl::GpuBuffer<double>(volumes);
+                auto gpuVolumesView = gpuistl::make_view(gpuVolumesBuffer);
+                auto prep_volumes_end = std::chrono::high_resolution_clock::now();
+                auto prep_volumes_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_volumes_end - prep_volumes_start);
+                std::cout << "GPU volumes prep time: " << prep_volumes_duration.count() << " microseconds" << std::endl;
 
-            int constexpr blockSize = 256;
+                // We need to have a pointer to the fluidysystem that can be used inside a GPU kernel
+                // Having a pointer to the view is not good enough as the view exists on the host, so
+                // allocat a view on the GPU with a pointer to it via the make_gpu_shared_ptr function
+                auto dynamicGpuFluidSystemPtr = gpuistl::make_gpu_shared_ptr(dynamicGpuFluidSystemView);
 
-            hipDeviceSynchronize();
-            auto start_gpu = std::chrono::high_resolution_clock::now();
-            bool constexpr use_gpu = true;
-            linearize_parallelization_wrapper<use_gpu, GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU>(
-                numCells/*numCells*/,
-                domain_view,
-                neighborInfo_view,
-                diagMatAddressView,
-                gpuResidualView,
-                gpuModelView,
-                dt,
-                dispersionActive,
-                enableBioeffects,
-                on_full_domain,
-                gpuVolumesView);
-            if (boundaryInfo_buffer.size() > 0) {
-                linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+blockSize - 1)/blockSize), blockSize>>>(
+
+                using GpuScalarFluidState = typename GPUBOIQ::ScalarFluidState;
+                using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, GpuScalarFluidState>;
+                using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
+                // Copy boundary info to GPU
+                gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(boundaryInfo_, dynamicGpuFluidSystemPtr.get());
+                auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
+
+                auto prep_model_start = std::chrono::high_resolution_clock::now();
+                using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
+                GpuModel gpuModel(model_().allIntensiveQuantities0(), model_().allIntensiveQuantities1(), problem_().moduleParams());
+                auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, dynamicGpuFluidSystemPtr.get());
+                auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
+                auto prep_model_end = std::chrono::high_resolution_clock::now();
+                auto prep_model_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_model_end - prep_model_start);
+                std::cout << "GPU model prep time: " << prep_model_duration.count() << " microseconds" << std::endl;
+
+
+                // This is terrible, we are probably catching a very large amount of exceptions here, how to support a map on the GPU?
+                // Fetch alpha values that are needed for thermal boundary condition
+                std::vector<Scalar> alpha0(numCells);
+                std::vector<Scalar> alpha1(numCells);
+                std::vector<Scalar> alpha2(numCells);
+                for (int i = 0; i < numCells; ++i) {
+                    try {
+                        alpha0[i] = problem_().eclTransmissibilities().thermalHalfTransBoundary(i, 0);
+                    } catch (...) {
+                        alpha0[i] = 0.0;
+                    }
+                    try {
+                        alpha1[i] = problem_().eclTransmissibilities().thermalHalfTransBoundary(i, 1);
+                    } catch (...) {
+                        alpha1[i] = 0.0;
+                    }
+                    try {
+                        alpha2[i] = problem_().eclTransmissibilities().thermalHalfTransBoundary(i, 2);
+                    } catch (...) {
+                        alpha2[i] = 0.0;
+                    }
+                }
+                GpuFlowProblemVerySimple<Scalar> gpuFlowProblemVerySimple(alpha0, alpha1, alpha2);
+                auto gpuFlowProblemVerySimpleBuffer = gpuistl::copy_to_gpu(gpuFlowProblemVerySimple);
+                auto gpuFlowProblemVerySimpleView = gpuistl::make_view(gpuFlowProblemVerySimpleBuffer);
+                using GpuProblem = decltype(gpuFlowProblemVerySimpleView);
+
+                int constexpr blockSize = 256;
+
+                hipDeviceSynchronize();
+                auto start_gpu = std::chrono::high_resolution_clock::now();
+                bool constexpr use_gpu = true;
+                linearize_parallelization_wrapper<use_gpu, GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU>(
+                    numCells/*numCells*/,
+                    domain_view,
+                    neighborInfo_view,
                     diagMatAddressView,
                     gpuResidualView,
-                    boundaryInfo_view,
                     gpuModelView,
-                    gpuFlowProblemVerySimpleView);
-            }
-
-            hipDeviceSynchronize();
-            auto end_gpu = std::chrono::high_resolution_clock::now();
-            auto gpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu);
-            auto gpu_prep_duration = std::chrono::duration_cast<std::chrono::microseconds>(start_gpu - enter_function);
-            std::cout << "GPU pre time: " << gpu_prep_duration.count() << " microseconds" << std::endl;
-            std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
-            
-            // auto gpu_finalize_start = std::chrono::high_resolution_clock::now();
-            // // Now move the gpu residual into the cpu residual
-            // auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
-            // std::memcpy(residual_.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
-            // {
-            //     auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
-            //     auto& cpuJacobian = jacobian_->istlMatrix();
-                
-            //     // Copy GPU jacobian back to CPU jacobian as a single contiguous operation
-            //     const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
-            //     std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(), 
-            //                totalMatrixSize * sizeof(double));
-            // }
-            // auto gpu_finalize_end = std::chrono::high_resolution_clock::now();
-            // auto gpu_finalize_duration = std::chrono::duration_cast<std::chrono::microseconds>(gpu_finalize_end - gpu_finalize_start);
-            // std::cout << "GPU post time: " << gpu_finalize_duration.count() << " microseconds" << std::endl;
-
-            // To make the comparison fair this has to use the same simplified objects
-
-            int actual_threads = 0;
-
-            #pragma omp parallel
-            {
-                #pragma omp single
-                {
-                    actual_threads = omp_get_num_threads();
+                    dt,
+                    dispersionActive,
+                    enableBioeffects,
+                    on_full_domain,
+                    gpuVolumesView);
+                if (boundaryInfo_buffer.size() > 0) {
+                    linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+blockSize - 1)/blockSize), blockSize>>>(
+                        diagMatAddressView,
+                        gpuResidualView,
+                        boundaryInfo_view,
+                        gpuModelView,
+                        gpuFlowProblemVerySimpleView);
                 }
-            }
 
-            printf("Using %d OpenMP threads for CPU linearization.\n", actual_threads);
+                hipDeviceSynchronize();
+                auto end_gpu = std::chrono::high_resolution_clock::now();
+                auto gpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu);
+                auto gpu_prep_duration = std::chrono::duration_cast<std::chrono::microseconds>(start_gpu - enter_function);
+                std::cout << "GPU pre time: " << gpu_prep_duration.count() << " microseconds" << std::endl;
+                std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
 
-            auto start_cpu = std::chrono::high_resolution_clock::now();
-            linearize_parallelization_wrapper<false, IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
-                numCells/*numCells*/,
-                domain,
-                neighborInfo_,
-                diagMatAddress_,
-                residual_,
-                model_(),
-                dt,
-                dispersionActive,
-                enableBioeffects,
-                on_full_domain);
 
-            linearize_kernel_CPU_boundary<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
-                diagMatAddress_,
-                residual_,
-                boundaryInfo_);
-            auto end_cpu = std::chrono::high_resolution_clock::now();
-            auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
-
-            std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
-
-            // Compare residuals
-            {
-                // Copy residual back from GPU to compare
+                auto gpu_finalize_start = std::chrono::high_resolution_clock::now();
+                // Now move the gpu residual into the cpu residual
                 auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
-                struct ResidualErrorInfo {
-                    double relativeError;
-                    double cpuVal, gpuVal;
-                    unsigned cell, eq;
-                };
-                
-                std::vector<ResidualErrorInfo> errors;
-                
-                for (unsigned i = 0; i < numCells; ++i) {
-                    for (unsigned eq = 0; eq < numEq; ++eq) {
-                        double cpuVal = residual_[i][eq];
-                        double gpuVal = cpuResidualFromGpu[i][eq];
-                        double absError = std::abs(cpuVal - gpuVal);
-                        double relativeError = 0.0;
-                        
-                        // Calculate relative error avoiding division by zero
-                        relativeError = absError / std::abs(cpuVal);
-                        
-                        if (relativeError > 1e-14) {
-                            errors.push_back({relativeError, cpuVal, gpuVal, i, eq});
-                        }
-                    }
-                }
-                
-                // Sort by relative error (descending) and keep top 3
-                std::partial_sort(errors.begin(), 
-                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
-                                errors.end(),
-                                [](const ResidualErrorInfo& a, const ResidualErrorInfo& b) {
-                                    return a.relativeError > b.relativeError;
-                                });
-                
-                // Output the 3 largest relative errors
-                int numToShow = std::min(3, static_cast<int>(errors.size()));
-                if (numToShow != 0) {
-                    printf("Top %d largest relative errors in residual:\n", numToShow);
-                    for (int i = 0; i < numToShow; ++i) {
-                        const auto& err = errors[i];
-                        printf("  %d: cell=%u, eq=%u, CPU=%e, GPU=%e, rel_error=%e\n",
-                            i+1, err.cell, err.eq, err.cpuVal, err.gpuVal, err.relativeError);
-                    }
-                }
-            }
-
-            {
-                // Compare jacobian entries and find 5 largest relative errors
-                auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
-                int gpuJacIdx = 0;
-                auto& cpuJacobian = jacobian_->istlMatrix();
-                
-                struct JacobianErrorInfo {
-                    double relativeError;
-                    double cpuVal, gpuVal;
-                    int rowIdx, colIdx;
-                    int blockRow, blockCol;
-                };
-                
-                std::vector<JacobianErrorInfo> errors;
-                
-                for (auto row = cpuJacobian.begin(); row != cpuJacobian.end(); ++row)
+                std::memcpy(residual_.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
                 {
-                    int rowIdx = row.index();
-                    for (auto col = row->begin(); col != row->end(); ++col)
+                    auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
+                    auto& cpuJacobian = jacobian_->istlMatrix();
+
+                    // Copy GPU jacobian back to CPU jacobian as a single contiguous operation
+                    const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
+                    std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(), 
+                               totalMatrixSize * sizeof(double));
+                }
+                auto gpu_finalize_end = std::chrono::high_resolution_clock::now();
+                auto gpu_finalize_duration = std::chrono::duration_cast<std::chrono::microseconds>(gpu_finalize_end - gpu_finalize_start);
+                std::cout << "GPU post time: " << gpu_finalize_duration.count() << " microseconds" << std::endl;
+            } else {
+                int actual_threads = 0;
+
+                #pragma omp parallel
+                {
+                    #pragma omp single
                     {
-                        int colIdx = col.index();
-                        for (int brow = 0; brow < numEq; ++brow)
-                        {
-                            for (int bcol = 0; bcol < numEq; ++bcol)
-                            {
-                                double cpuVal = (*col)[brow][bcol];
-                                double gpuVal = gpuJacobianNonZeroes[gpuJacIdx++];
-                                double absError = std::abs(cpuVal - gpuVal);
-                                double relativeError = 0.0;
-                                
-                                // Calculate relative error avoiding division by zero
-                                if (std::abs(cpuVal) > 1e-30) {
-                                    relativeError = absError / std::abs(cpuVal);
-                                }
-                                
-                                if (relativeError > 1e-14) {
-                                    errors.push_back({relativeError, cpuVal, gpuVal, rowIdx, colIdx, brow, bcol});
-                                }
-                            }
-                        }
+                        actual_threads = omp_get_num_threads();
                     }
                 }
-                
-                // Sort by relative error (descending) and keep top 3
-                std::partial_sort(errors.begin(), 
-                                errors.begin() + std::min(3, static_cast<int>(errors.size())), 
-                                errors.end(),
-                                [](const JacobianErrorInfo& a, const JacobianErrorInfo& b) {
-                                    return a.relativeError > b.relativeError;
-                                });
-                
-                // Output the 3 largest relative errors with full block information
-                int numToShow = std::min(3, static_cast<int>(errors.size()));
-                if (numToShow != 0) {
-                    printf("Top %d largest relative errors in Jacobian:\n", numToShow);
-                    for (int i = 0; i < numToShow; ++i) {
-                        const auto& err = errors[i];
-                        printf("  %d: Block[%d,%d] element[%d,%d]: CPU=%e, GPU=%e, rel_error=%e\n",
-                            i+1, err.rowIdx, err.colIdx, err.blockRow, err.blockCol, 
-                            err.cpuVal, err.gpuVal, err.relativeError);
-                        
-                        // Print the entire CPU block
-                        auto& cpuBlock = cpuJacobian[err.rowIdx][err.colIdx];
-                        printf("    CPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
-                        for (int br = 0; br < numEq; ++br) {
-                            printf("      ");
-                            for (int bc = 0; bc < numEq; ++bc) {
-                                printf("%12.5e ", cpuBlock[br][bc]);
-                            }
-                            printf("\n");
-                        }
-                        
-                        // Print the entire GPU block
-                        // Find the starting index for this block in gpuJacobianNonZeroes
-                        int blockStartIdx = 0;
-                        for (auto row = cpuJacobian.begin(); row.index() < err.rowIdx; ++row) {
-                            blockStartIdx += row->size() * numEq * numEq;
-                        }
-                        auto row = cpuJacobian.begin();
-                        while (row.index() < err.rowIdx) ++row;
-                        for (auto col = row->begin(); col.index() < err.colIdx; ++col) {
-                            blockStartIdx += numEq * numEq;
-                        }
-                        
-                        printf("    GPU Block[%d,%d]:\n", err.rowIdx, err.colIdx);
-                        for (int br = 0; br < numEq; ++br) {
-                            printf("      ");
-                            for (int bc = 0; bc < numEq; ++bc) {
-                                int idx = blockStartIdx + br * numEq + bc;
-                                printf("%12.5e ", gpuJacobianNonZeroes[idx]);
-                            }
-                            printf("\n");
-                        }
-                        printf("\n");
-                    }
-                }
+
+                printf("Using %d OpenMP threads for CPU linearization.\n", actual_threads);
+
+                auto start_cpu = std::chrono::high_resolution_clock::now();
+                linearize_parallelization_wrapper<false, IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+                    numCells/*numCells*/,
+                    domain,
+                    neighborInfo_,
+                    diagMatAddress_,
+                    residual_,
+                    model_(),
+                    dt,
+                    dispersionActive,
+                    enableBioeffects,
+                    on_full_domain);
+
+                linearize_kernel_CPU_boundary<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+                    diagMatAddress_,
+                    residual_,
+                    boundaryInfo_);
+                auto end_cpu = std::chrono::high_resolution_clock::now();
+                auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
+
+                std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
             }
 
             {
