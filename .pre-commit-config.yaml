@@ -26,7 +26,11 @@
 # - trailing-whitespace: Removes trailing whitespace from lines
 #   (preserves Markdown hard line breaks with --markdown-linebreak-ext=md)
 # - end-of-file-fixer: Ensures files end with exactly one newline
+# - git-clang-format-fix: Applies clang-format to staged C/C++/CUDA files (only the diff)
 #
+# Note:
+# - The git-clang-format-fix hook will re-stage any changes it makes. After it runs, you will need to review the changes and re-run your commit.
+# - The git-clang-format-fix can be disabled by setting SKIP=git-clang-format-fix=1 in your environment, eg. `SKIP=git-clang-format-fix=1 git commit -m "Your commit message"`
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -40,3 +44,30 @@ repos:
       - id: end-of-file-fixer
         types_or: [c, c++, python, shell, yaml, cmake, markdown, text]
         exclude: '^(build/|\.git/)'
+  - repo: local
+    hooks:
+      - id: git-clang-format-fix
+        name: git-clang-format (diff-only, auto-fix)
+        entry: |
+          bash -c '
+            # First check if anything needs formatting
+            if git clang-format --staged --diff --quiet; then
+              # No changes needed
+              exit 0
+            fi
+
+            echo "[git-clang-format] Applying formatting to staged changes..."
+            git clang-format --staged
+            # Re-add anything the formatter touched
+            git add -A
+
+            echo
+            echo "[git-clang-format] Changes have been applied."
+            echo "Please review and re-run your commit."
+            echo
+            # Force user to re-run commit so they see the changes
+            exit 1
+          '
+        language: system
+        types_or: [c++, c, cuda]
+        pass_filenames: false
