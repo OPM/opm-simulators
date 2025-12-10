@@ -346,6 +346,12 @@ public:
         // E.g. if i = x-dir(=0), we want y-dir(=1) and z-dir(=2), hence -1 mod 3 must equal 2 and not -1
         auto modNeg = [](int i) { return ((i % 3) + 3) % 3; };
 
+        // Pre-compute dot product for rotation equation
+        Evaluation dotProd = 0;
+        for (int dirIdx = 0; dirIdx < 3; ++dirIdx) {
+            dotProd += faceNormal[dirIdx] * materialState.rotation(dirIdx);
+        }
+
         // Loop over x-, y- and z-dir (corresponding to dirIdx = 0, 1, 2)
         for (int dirIdx = 0; dirIdx < 3; ++dirIdx) {
             // Direction indices in cross-product
@@ -353,17 +359,20 @@ public:
             unsigned dirIdxPos = modNeg(dirIdx + 1);
 
             // Rotation equation
+            const Scalar faceNormalDir = faceNormal[dirIdx];
             const Scalar faceNormalNeg = faceNormal[dirIdxNeg];
             const Scalar faceNormalPos = faceNormal[dirIdxPos];
 
             const Evaluation& dispNeg = materialState.displacement(dirIdxNeg);
             const Evaluation& dispPos = materialState.displacement(dirIdxPos);
 
+            const Evaluation& rot = materialState.rotation(dirIdx);
+
             bndryTerm[contiRotEqIdx + dirIdx] +=
-                - weightAvg * (faceNormalNeg * dispPos - faceNormalPos * dispNeg);
+                - weightAvg * (faceNormalNeg * dispPos - faceNormalPos * dispNeg)
+                + 0.5 * (normDist / sModulus) * (dotProd * faceNormalDir - rot);
 
             // Solid pressure (directional-dependent) equation
-            const Scalar faceNormalDir = faceNormal[dirIdx];
             const Evaluation& disp = materialState.displacement(dirIdx);
 
             bndryTerm[contiSolidPresEqIdx] +=
