@@ -140,15 +140,29 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
     const auto conc = ws.filtrate_conc;
     const std::size_t np = well_state.numPhases();
 
+    // Compute xflow-factor
+    Scalar xfact = 1.0;
+    Scalar qw_sum = 0.0;
+    Scalar qwpos_sum = 0.0;
+    for (int perf = 0; perf < nperf; ++perf) {
+        const auto crate = connection_rates[perf * np + water_index];
+        qwpos_sum += std::max(Scalar{0.}, crate);
+        qw_sum += crate;
+    }
+    if (qwpos_sum > qw_sum && qwpos_sum > 1.0e-12) {
+        xfact = std::max(Scalar{0.}, qw_sum) / qwpos_sum;
+    }
+
+
     for (int perf = 0; perf < nperf; ++perf) {
         const auto perf_ecl_index = well.perforationData()[perf].ecl_index;
         const auto& connection = connections[perf_ecl_index];
         if (!connection.filterCakeActive())
             continue;
 
-        // not considering the production water
+        // Use xflow-factor to ensure mass balance of injected filtrate
         const Scalar water_rates = std::max(Scalar{0.}, connection_rates[perf * np + water_index]);
-        const Scalar filtrate_rate = water_rates * conc;
+        const Scalar filtrate_rate = water_rates * conc * xfact;
         const Scalar filtrate_particle_volume = filtrate_rate * dt;
         auto& filtrate_data = perf_data.filtrate_data;
         filtrate_data.rates[perf] = filtrate_rate;
