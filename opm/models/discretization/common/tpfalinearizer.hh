@@ -1239,14 +1239,28 @@ private:
             printf("Using %d OpenMP threads for CPU linearization.\n", actual_threads);
 
             auto start_cpu = std::chrono::high_resolution_clock::now();
-            linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+            // for (unsigned i = 0; i < numCells; ++i) {
+            //     linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+            //         i,
+            //         domain,
+            //         neighborInfo_,
+            //         diagMatAddress_,
+            //         residual_,
+            //         dt);
+            // }
+            linearize_parallelization_wrapper<false, IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
                 numCells/*numCells*/,
                 domain,
                 neighborInfo_,
                 diagMatAddress_,
                 residual_,
-                boundaryInfo_,
+                model_(),
                 dt);
+
+            linearize_kernel_CPU_boundary<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+                diagMatAddress_,
+                residual_,
+                boundaryInfo_);
             auto end_cpu = std::chrono::high_resolution_clock::now();
             auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
 
@@ -1745,16 +1759,27 @@ private:
 #endif
     }
 
+/*
+            linearize_kernel_CPU<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+                numCells,
+                domain,
+                neighborInfo_,
+                diagMatAddress_,
+                residual_,
+                boundaryInfo_,
+                dt);
+*/
+// TODO: when doing the parallelization: the CPU version of the kernel should be taking in references while the GPU version takes in copies, dont know how to do that in a single signature
     template<bool useGPU, class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
-    static void linearize_parallelization_wrapper(
+    void linearize_parallelization_wrapper(
         const unsigned int numCells,
-        const DomainType GPU_LOCAL_domain,
-        const NeighborSparseTable GPU_LOCAL_neighborInfo,
-        DiagPtrType GPU_LOCAL_diagMatAddress,
-        GpuResidualView GPU_LOCAL_residualView,
-        LocalModelClass localModel,
+        const DomainType& GPU_LOCAL_domain,
+        const NeighborSparseTable& GPU_LOCAL_neighborInfo,
+        DiagPtrType& GPU_LOCAL_diagMatAddress,
+        GpuResidualView& GPU_LOCAL_residualView,
+        LocalModelClass& localModel,
         double locDT,
-        const gpuistl::GpuView<double> GPU_LOCAL_volumes)
+        const gpuistl::GpuView<double>& GPU_LOCAL_volumes = gpuistl::GpuView<double>())
     {
         if constexpr (useGPU) {
             int constexpr blockSize = 256;
@@ -1769,7 +1794,17 @@ private:
                 GPU_LOCAL_volumes);
         }
         else {
-            assert(false && "CPU parallelization wrapper not yet implemented\n");
+#pragma omp parallel for
+            for (unsigned ii = 0; ii < numCells; ++ii) {
+            linearize_kernel_CPU<LocalIntensiveQuantities , LocalModelClass, LocalResidual, VectorBlockType, MatrixBlockType, ADVectorBlockType>(
+                ii,
+                GPU_LOCAL_domain,
+                GPU_LOCAL_neighborInfo,
+                GPU_LOCAL_diagMatAddress,
+                GPU_LOCAL_residualView,
+                localModel,
+                locDT);
+            }
         }
     }
 
@@ -1924,26 +1959,17 @@ private:
 
     // not static anymore because it depends on the model() function of the object calling the funciton
     // providing model_() as an argument did not work because of some deleted copy ctor, not sure how to handle that.
-    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView, class GpuBoundaryInfoView>
+    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
     void linearize_kernel_CPU(
-        const unsigned int numCells,
+        const unsigned int ii,
         const DomainType& GPU_LOCAL_domain,
         const NeighborSparseTable& GPU_LOCAL_neighborInfo,
         DiagPtrType& GPU_LOCAL_diagMatAddress,
         GpuResidualView& GPU_LOCAL_residualView,
-        const GpuBoundaryInfoView& GPU_LOCAL_boundaryInfo,
+        LocalModelClass& localModel,
         double locDT)
     {
-
         // Get the index of the cell
-#pragma omp parallel for
-        for (int ii = 0; ii < numCells; ++ii) {
-            // Assert that we're running with exactly 16 threads
-            // #ifdef _OPENMP
-            //             assert(omp_get_num_threads() == 16 && "Expected exactly 16 OpenMP threads");
-            // #else
-            //             assert(false && "Expected OpenMP to be enabled with 16 threads");
-            // #endif
             const unsigned globI = GPU_LOCAL_domain.cells[ii];
             const auto& nbInfos = GPU_LOCAL_neighborInfo[globI];
             VectorBlockType res(0.0);
@@ -1951,7 +1977,6 @@ private:
             ADVectorBlockType adres(0.0);
             ADVectorBlockType darcyFlux(0.0);
             const LocalIntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-            // const LocalIntensiveQuantities& intQuantsIn = LocalModelClass{}.intensiveQuantities(globI, /*timeIdx*/ 0);
 
             // Flux term.
             {
@@ -1962,7 +1987,7 @@ private:
                     bMat = 0.0;
                     adres = 0.0;
                     darcyFlux = 0.0;
-                    const LocalIntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+                    const LocalIntensiveQuantities& intQuantsEx = localModel.intensiveQuantities(globJ, /*timeIdx*/ 0);
                     // const LocalIntensiveQuantities& intQuantsEx = LocalModelClass{}.intensiveQuantities(globJ, /*timeIdx*/ 0);
                     // LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
                     //                         nbInfo.res_nbinfo,  problem_().moduleParams());
@@ -1983,7 +2008,7 @@ private:
             }
 
             // Accumulation term.
-            const double volume = model_().dofTotalVolume(globI);
+            const double volume = localModel.dofTotalVolume(globI);
             const Scalar storefac = volume / locDT;//volume / dt;
             adres = 0.0;
             {
@@ -1993,7 +2018,7 @@ private:
 
             {
                 VectorBlockType tmp;
-                const LocalIntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+                const LocalIntensiveQuantities intQuantOld = localModel.intensiveQuantities(globI, 1);
                 LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
                 // assume volume do not change
                 res -= tmp;
@@ -2004,8 +2029,14 @@ private:
             GPU_LOCAL_residualView[globI] += res;
             //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
-        }
+    }
 
+    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class GpuResidualView, class GpuBoundaryInfoView>
+    void linearize_kernel_CPU_boundary(
+        DiagPtrType& GPU_LOCAL_diagMatAddress,
+        GpuResidualView& GPU_LOCAL_residualView,
+        const GpuBoundaryInfoView& GPU_LOCAL_boundaryInfo)
+    {
         // Boundary terms. Only looping over cells with nontrivial bcs.
         for (int ii = 0; ii < GPU_LOCAL_boundaryInfo.size(); ++ii)
         {
