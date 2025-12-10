@@ -150,7 +150,7 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
         qw_sum += crate;
     }
     if (qwpos_sum > qw_sum && qwpos_sum > 1.0e-12) {
-        xfact = qw_sum / qwpos_sum;
+        xfact = std::max(Scalar{0.}, qw_sum) / qwpos_sum;
     }
 
 
