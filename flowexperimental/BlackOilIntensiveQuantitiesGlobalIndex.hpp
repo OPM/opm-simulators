@@ -524,6 +524,22 @@ public:
         throw std::logic_error("permFactor() is not yet implemented for compositional modeling");
     }
 
+    /*!
+     * \brief Returns the fluid system used by this intensive quantities.
+     */
+    OPM_HOST_DEVICE auto& getFluidSystem() const
+    {
+        return fluidState_.fluidSystem();
+    }
+
+    /*!
+     * \brief Returns a pointer to the fluid system used by this intensive quantities.
+     */
+    OPM_HOST_DEVICE auto getFluidSystemPtr() const
+    {
+        return fluidState_.fluidSystemPtr();
+    }
+
 private:
     friend BlackOilSolventIntensiveQuantities<TypeTag, enableSolvent>;
     friend BlackOilExtboIntensiveQuantities<TypeTag, enableExtbo>;

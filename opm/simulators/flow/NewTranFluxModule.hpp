@@ -44,7 +44,8 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/utils/signum.hh>
-#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 
 #include <opm/common/utility/gpuDecorators.hpp>
 
@@ -134,7 +135,7 @@ class NewTranExtensiveQuantities
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
-    using ModuleParams = typename BlackOilLocalResidualTPFA<TypeTag>::ModuleParams;
+    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
 public:
     /*!
      * \brief Return the intrinsic permeability tensor at a face [m^2]
@@ -308,7 +309,7 @@ public:
         }
     }
 
-    template<class EvalType, class ModuleParamsT = ModuleParams>
+    template<class EvalType>
     OPM_HOST_DEVICE static void calculatePhasePressureDiff_(short& upIdx,
                                             short& dnIdx,
                                             EvalType& pressureDifference,
@@ -323,7 +324,7 @@ public:
                                             const unsigned globalIndexEx,
                                             const Scalar distZg,
                                             const Scalar thpres,
-                                            const ModuleParamsT& moduleParams)
+                                            const ModuleParams& moduleParams)
     {
 
         // check shortcut: if the mobility of the phase is zero in the interior as
