@@ -5,6 +5,7 @@
 
 import argparse
 from datetime import datetime, timedelta
+from filelock import FileLock
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 from matplotlib.backends.backend_pdf import PdfPages
@@ -84,16 +85,18 @@ def run_analysis(ref_file_name, sys_file_name, test_name, ref_name, sim_name):
     p.close()
 
     if os.path.exists('max_devs.pkl'):
-        with open('max_devs.pkl', 'rb') as f:
-            max_deviations = pickle.load(f)
+        with FileLock('max_devs.lck'):
+            with open('max_devs.pkl', 'rb') as f:
+                max_deviations = pickle.load(f)
     else:
         max_deviations = {}
 
     max_dev = max(deviation, key = lambda x: deviation[x])
     max_deviations[test_name] = deviation[max_dev]
 
-    with open('max_devs.pkl', 'wb') as f:
-        pickle.dump(max_deviations, f)
+    with FileLock('max_devs.lck'):
+        with open('max_devs.pkl', 'wb') as f:
+            pickle.dump(max_deviations, f)
 
 # Rename files to rank them according to maximum deviations
 def reorder_files():
@@ -117,6 +120,7 @@ parser.add_argument('-o', choices=['plot', 'rename'], help='Operation to do', re
 args = parser.parse_args()
 
 if args.operation == 'plot':
+    print(f"Processing {args.test_name}")
     run_analysis(args.ref_file, args.sim_file, args.test_name, args.ref_name, args.sim_name)
 else:
     reorder_files()
