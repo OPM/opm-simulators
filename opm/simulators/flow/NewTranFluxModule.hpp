@@ -308,7 +308,7 @@ public:
         }
     }
 
-    template<class EvalType, class ModuleParamsT>
+    template<class EvalType, class ModuleParamsT = ModuleParams>
     OPM_HOST_DEVICE static void calculatePhasePressureDiff_(short& upIdx,
                                             short& dnIdx,
                                             EvalType& pressureDifference,
