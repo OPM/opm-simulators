@@ -169,13 +169,7 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Toolbox = MathToolbox<Evaluation>;
-
-    // TODO: figure out a way to do this more cleanly within the typetag system
-// #if HAVE_CUDA
-//     using ConvectiveMixingModuleParamT = ConvectiveMixingModuleParam<Scalar, gpuistl::GpuView>;
-// #else
     using ConvectiveMixingModuleParamT = ConvectiveMixingModuleParam<Scalar>;
-// #endif
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { dimWorld = GridView::dimensionworld };
@@ -195,11 +189,6 @@ public:
         std::size_t numRegions = eclState.runspec().tabdims().getNumPVTTables();
         const auto& control = schedule[episodeIdx].oilvap();
         if (info.active_.empty()) {
-            // TODO: figure out how risky this is (just skipping resize)
-            // I do it because gpuviews should not support resizing
-            // I think this should need to happen on the GPU as we copy these params
-            // at the beginning of the assembly, surely after an episode has been started
-
             info.active_.resize(numRegions);
             info.Xhi_.resize(numRegions);
             info.Psi_.resize(numRegions);
@@ -318,7 +307,7 @@ public:
      * \brief Adds the convective mixing mass flux flux to the flux vector over a flux
      *        integration point.
       */
-    template <class RateVectorT, class ConvectiveMixingModuleParam>
+    template <class RateVectorT = RateVector, class ConvectiveMixingModuleParam = ConvectiveMixingModuleParamT>
     OPM_HOST_DEVICE static void addConvectiveMixingFlux(RateVectorT& flux,
                                         const IntensiveQuantities& intQuantsIn,
                                         const IntensiveQuantities& intQuantsEx,
