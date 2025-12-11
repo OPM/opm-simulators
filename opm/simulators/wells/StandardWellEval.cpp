@@ -49,7 +49,6 @@ StandardWellEval<FluidSystem,Indices>::
 StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif)
     : baseif_(baseif)
     , primary_variables_(baseif_)
-    , F0_(numWellConservationEq)
     , linSys_(baseif_.parallelWellInfo())
     , connections_(baseif)
 {
@@ -67,16 +66,6 @@ extendEval(const Eval& in) const
         out.setDerivative(eqIdx, in.derivative(eqIdx), totalNumEq);
     }
     return out;
-}
-
-template<class FluidSystem, class Indices>
-void
-StandardWellEval<FluidSystem,Indices>::
-computeAccumWell()
-{
-    for (std::size_t eq_idx = 0; eq_idx < F0_.size(); ++eq_idx) {
-        F0_[eq_idx] = this->primary_variables_.surfaceVolumeFraction(eq_idx).value();
-    }
 }
 
 template<class FluidSystem, class Indices>
