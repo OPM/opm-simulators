@@ -32,10 +32,8 @@
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/NlddReporting.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp>
 
-#if HAVE_MPI
-#define RESERVOIR_COUPLING_ENABLED
-#endif
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
 #else

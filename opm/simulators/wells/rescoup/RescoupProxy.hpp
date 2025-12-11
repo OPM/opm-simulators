@@ -20,8 +20,8 @@
 #ifndef OPM_RESCOUP_PROXY_HPP
 #define OPM_RESCOUP_PROXY_HPP
 
-#if HAVE_MPI
-#define RESERVOIR_COUPLING_ENABLED
+#include <opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp>
+#ifdef RESERVOIR_COUPLING_ENABLED
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
@@ -31,7 +31,7 @@
 
 namespace Opm {
 
-#if !HAVE_MPI
+#ifndef RESERVOIR_COUPLING_ENABLED
 // Forward declarations for non-MPI builds
 template <class Scalar> class ReservoirCouplingMaster;
 template <class Scalar> class ReservoirCouplingSlave;
@@ -60,7 +60,7 @@ public:
     Proxy(Proxy&&) noexcept = default;
     Proxy& operator=(Proxy&&) noexcept = default;
 
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
     // === Mode Queries ===
 
     /// @brief Check if reservoir coupling is enabled (master or slave mode)
@@ -110,7 +110,7 @@ private:
     ReservoirCouplingMaster<Scalar>* master_ = nullptr;
     ReservoirCouplingSlave<Scalar>* slave_ = nullptr;
 
-#else // !HAVE_MPI
+#else // !RESERVOIR_COUPLING_ENABLED
 
     // === Mode Queries (always false in non-MPI builds) ===
 
@@ -149,7 +149,7 @@ private:
         throw std::logic_error("ReservoirCoupling::Proxy::slave() called in non-MPI build");
     }
 
-#endif // HAVE_MPI
+#endif // RESERVOIR_COUPLING_ENABLED
 };
 
 } // namespace ReservoirCoupling
