@@ -393,7 +393,6 @@ class TpfaLinearizer
     using VectorBlockGPU = gpuistl::MiniVector<Scalar, numEq>;
     using ADVectorBlockGPU = gpuistl::MiniVector<Evaluation, numEq>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using GpuFluidSystem = GetPropType<TypeTag, Properties::FluidSystemGPU>;
 #endif
 
     static constexpr bool linearizeNonLocalElements =

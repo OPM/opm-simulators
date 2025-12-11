@@ -126,7 +126,6 @@ public:
      */
     OPM_HOST_DEVICE static void initFromState(const EclipseState& eclState)
     {
-        // TODO: remove comment
         // use_mole_fraction_ = eclState.getTableManager().diffMoleFraction();
     }
     #endif
@@ -177,25 +176,6 @@ public:
         if constexpr(enableBioeffects) {
             const auto& effectiveBioDiffCoefficient = extQuants.effectiveBioDiffCoefficient();
             addBioDiffFlux(flux, inIq, exIq, diffusivity, effectiveBioDiffCoefficient);
-        }
-    }
-
-    template<class T>
-    OPM_HOST_DEVICE static void printValue(T v)
-    {
-        if constexpr (std::is_same_v<T, double>) {
-        #if OPM_IS_INSIDE_DEVICE_FUNCTION
-            printf("device: %e\n", v);
-        #else
-            printf("host  : %e\n", v);
-        #endif
-        }
-        else {
-        #if OPM_IS_INSIDE_DEVICE_FUNCTION
-            printf("device: %e %e %e %e\n", v.value(), v.derivative(0), v.derivative(1), v.derivative(2));
-        #else
-            printf("host  : %e %e %e %e\n", v.value(), v.derivative(0), v.derivative(1), v.derivative(2));
-        #endif
         }
     }
 
@@ -346,13 +326,10 @@ private:
         return rhoW * mMGas / (rhoG * mMWater);
     }
 
-    // static bool use_mole_fraction_;
-    constexpr static bool use_mole_fraction_ = false; // false in spe11c
+    // TODO: snakk med atgeirr og finn ut av om jeg kan flytte denne over til boeq istedenfor
+    constexpr static bool use_mole_fraction_ = false;
+    // constexpr static bool use_mole_fraction_ = false; // false in spe11c
 };
-
-// template <typename TypeTag>
-// constexpr bool
-// BlackOilDiffusionModule<TypeTag, true>::use_mole_fraction_ = false;
 
 /*!
  * \ingroup Diffusion

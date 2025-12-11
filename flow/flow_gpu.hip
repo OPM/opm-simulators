@@ -95,16 +95,6 @@ struct EnableVapwat<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
 template<class TypeTag>
 struct GpuFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { using type = SimplifiedGpuFIBlackOilModel<TypeTag>; };
 
-template<class TypeTag>
-struct FluidSystemGPU<TypeTag, TTag::FlowGasWaterEnergyProblemGPU>
-{
-    using type = Opm::BlackOilFluidSystemNonStatic<
-        double,
-        Opm::BlackOilDefaultFluidSystemIndices,
-        Opm::gpuistl::GpuView
-    >;
-};
-
 template<class TypeTag, template<class> class Storage>
 struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyProblemGPUTrue<Storage>>
 {
