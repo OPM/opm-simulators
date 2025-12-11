@@ -458,8 +458,24 @@ namespace Opm
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
 
+        using FSInfo = std::tuple<Scalar,typename std::decay<decltype(std::declval<decltype(std::declval<const Simulator&>().model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type>;
+        EvalWell getWellBoreSurfaceVolume(const Simulator& simulator,
+                                          DeferredLogger& deferred_logger) const;
+
+        // TODO: goes to base class
+        FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
+
         // density of the first perforation, might not be from this rank
         Scalar cachedRefDensity{0};
+
+        static constexpr Scalar wellbore_volume = 0.1 * unit::cubic(unit::feet);
+
+        // the surface volume under surface conditions for different components at the beginning of the time step
+        std::vector<Scalar> fluids_initial_;
+
+        // computing the accumulation term for later use in well mass equations
+        void computeAccumWell(const Simulator& simulator,
+                              DeferredLogger& deferred_logger);
     };
 
 }
