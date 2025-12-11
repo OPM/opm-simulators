@@ -175,8 +175,8 @@ namespace Opm
                                        DeferredLogger& deferred_logger) override;
 
         void calculateExplicitQuantities(const Simulator& simulator,
-                                          const GroupStateHelperType& groupStateHelper,
-                                          DeferredLogger& deferred_logger) override; // should be const?
+                                         const GroupStateHelperType& groupStateHelper,
+                                         DeferredLogger& deferred_logger) override; // should be const?
 
         void updateProductivityIndex(const Simulator& simulator,
                                      const WellProdIndexCalculator<Scalar>& wellPICalc,
