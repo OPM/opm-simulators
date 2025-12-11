@@ -20,8 +20,6 @@
 #ifndef OPM_RESCOUP_PROXY_HPP
 #define OPM_RESCOUP_PROXY_HPP
 
-#include <config.h>
-
 #if HAVE_MPI
 #define RESERVOIR_COUPLING_ENABLED
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
