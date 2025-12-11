@@ -6,15 +6,13 @@
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 
-#if HAVE_MPI
-#define RESERVOIR_COUPLING_ENABLED
-#endif
 #ifdef RESERVOIR_COUPLING_ENABLED
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>

@@ -1379,6 +1379,7 @@ if(MPI_FOUND)
   )
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/flow/rescoup/ReservoirCoupling.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp
@@ -1386,6 +1387,7 @@ if(MPI_FOUND)
     opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.hpp
+    opm/simulators/wells/rescoup/RescoupProxy.hpp
     opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp
     opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp
     )

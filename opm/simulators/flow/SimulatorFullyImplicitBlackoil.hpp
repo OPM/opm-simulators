@@ -23,10 +23,8 @@
 #define OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp>
 
-#if HAVE_MPI
-#define RESERVOIR_COUPLING_ENABLED
-#endif
 #ifdef RESERVOIR_COUPLING_ENABLED
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
