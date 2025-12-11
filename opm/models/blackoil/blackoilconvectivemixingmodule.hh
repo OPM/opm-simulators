@@ -209,7 +209,7 @@ public:
                                  const IntensiveQuantities& intQuantsEx,
                                  const unsigned phaseIdx,
                                  const ConvectiveMixingModuleParam& info) {
-        FluidSystem fsys = intQuantsIn.getFluidSystem();
+        const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
         if (info.active_.size() == 0) {
             return;
@@ -318,7 +318,7 @@ public:
                                         const Scalar faceArea,
                                         const ConvectiveMixingModuleParam& info)
     {
-        FluidSystem fsys = intQuantsIn.getFluidSystem();
+        const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
         if (info.active_.size() == 0) {
             return;
