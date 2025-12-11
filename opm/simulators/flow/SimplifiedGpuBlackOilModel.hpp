@@ -39,7 +39,7 @@
 
 #include <opm/models/parallel/threadmanager.hpp>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
-#include <opm/models/blackoil/moduleparam.hh>
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
@@ -65,7 +65,7 @@ public:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using TypeTagPublic = TypeTag;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using ModuleParams = ModuleParamsType<ConvectiveMixingModuleParam<Scalar, Storage>>;
+    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, Storage>>;
 
     OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(unsigned int nCells)
         : cachedIntensiveQuantities0_(nCells)
@@ -153,7 +153,7 @@ namespace gpuistl {
             cpuIntQuantsWithGpuPtr1.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(ptrFluidSystem));
         }
 
-        using ModuleParams = ModuleParamsType<ConvectiveMixingModuleParam<Scalar, GpuBuffer>>;
+        using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, GpuBuffer>>;
         ModuleParams moduleParams {
             gpuistl::copy_to_gpu(cpuModel.moduleParams_.convectiveMixingModuleParam)
         };
@@ -167,7 +167,7 @@ namespace gpuistl {
     auto make_view_just_find_me(GpuSimplifiedGpuFIBlackOilModel& gpuSimplifiedGpuFIBlackOilModel)
     {
         using Scalar = typename GpuSimplifiedGpuFIBlackOilModel::Scalar;
-        using ModuleParams = ModuleParamsType<ConvectiveMixingModuleParam<Scalar, GpuView>>;
+        using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, GpuView>>;
 
         return SimplifiedGpuFIBlackOilModel<
             typename GpuSimplifiedGpuFIBlackOilModel::TypeTagPublic,

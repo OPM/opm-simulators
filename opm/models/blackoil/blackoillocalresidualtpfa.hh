@@ -46,7 +46,7 @@
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
-#include <opm/models/blackoil/moduleparam.hh>
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
 
 #include <opm/common/utility/gpuDecorators.hpp>
 
@@ -153,7 +153,7 @@ public:
         ConditionalStorage<enableDispersion, double> dispersivity;
     };
 
-    using ModuleParams = ModuleParamsType<ConvectiveMixingModuleParam>;
+    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam>;
 
     /*!
      * \copydoc FvBaseLocalResidual::computeStorage
