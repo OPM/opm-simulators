@@ -62,6 +62,7 @@ namespace Opm
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_conservation_quantities, num_phases, index_of_well, perf_data)
     , StdWellEval(static_cast<const WellInterfaceIndices<FluidSystem,Indices>&>(*this))
     , regularize_(false)
+    , fluids_initial_(num_conservation_quantities)
     {
         assert(this->num_conservation_quantities_ == numWellConservationEq);
     }
@@ -375,7 +376,6 @@ namespace Opm
 
         // try to regularize equation if the well does not converge
         const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
-        const Scalar volume = 0.1 * unit::cubic(unit::feet) * regularization_factor;
 
         auto& ws = well_state.well(this->index_of_well_);
         ws.phase_mixing_rates.fill(0.0);
@@ -455,8 +455,9 @@ namespace Opm
             EvalWell resWell_loc(0.0);
             if (FluidSystem::numActivePhases() > 1) {
                 assert(dt > 0);
-                resWell_loc += (this->primary_variables_.surfaceVolumeFraction(componentIdx) -
-                                this->F0_[componentIdx]) * volume / dt;
+                const auto& wellbore_surface_volume = this->getWellBoreSurfaceVolume(simulator, deferred_logger);
+                resWell_loc += regularization_factor * (this->primary_variables_.surfaceVolumeFraction(componentIdx) * wellbore_surface_volume -
+                                this->fluids_initial_[componentIdx]) / dt;
             }
             resWell_loc -= this->primary_variables_.getQs(componentIdx) * this->well_efficiency_factor_;
             StandardWellAssemble<FluidSystem,Indices>(*this).
@@ -2741,6 +2742,162 @@ namespace Opm
         }
         return max_pressure;
     }
+
+    template <typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
+    getWellBoreSurfaceVolume(const Simulator& simulator,
+                             DeferredLogger& deferred_logger) const
+    {
+        // TODO: we should be able to write a function work both for scalar and EvalWell
+        EvalWell temperature;
+        EvalWell saltConcentration;
+
+        auto info = this->getFirstPerforationFluidStateInfo(simulator);
+
+        temperature.setValue(std::get<0>(info));
+        saltConcentration = this->extendEval(std::get<1>(info));
+
+        const auto& pressure = this->primary_variables_.eval(Bhp);
+
+        std::vector<EvalWell> mix_s(this->numConservationQuantities(), 0.0);
+        for (int componentIdx = 0; componentIdx < this->numConservationQuantities(); ++componentIdx) {
+            mix_s[componentIdx] = this->primary_variables_.surfaceVolumeFraction(componentIdx);
+        }
+        const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        const bool gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        const bool oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+
+        const int waterActiveCompIdx = waterActive ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx) : -1;
+        const int gasActiveCompIdx = gasActive ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx) : -1;
+        const int oilActiveCompIdx = oilActive ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx) : -1;
+
+        const int pvt_region_index = this->pvtRegionIdx();
+
+        std::vector<EvalWell> b (this->numConservationQuantities(), 0.0);
+
+        if (waterActive) {
+            // TODO: rsw = 0 for now, we need to use the real rsw later
+            const EvalWell rsw{0.};
+            b[waterActiveCompIdx] = FluidSystem::waterPvt().inverseFormationVolumeFactor(
+                                                 pvt_region_index, temperature, pressure, rsw, saltConcentration);
+        }
+
+        EvalWell rv {0.};
+        // gas phase
+        if (gasActive) {
+            const EvalWell rvw{0.};
+            const bool oil_exist = oilActive && mix_s[oilActiveCompIdx] > 0.;
+            if (oil_exist) {
+                const EvalWell rvmax = max(
+                        FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index, temperature, pressure),
+                        0.);
+                if (mix_s[gasActiveCompIdx] > 0.) {
+                    rv = std::clamp(mix_s[oilActiveCompIdx] / mix_s[gasActiveCompIdx], EvalWell{0.}, rvmax);
+                }
+                b[gasActiveCompIdx] = FluidSystem::gasPvt().inverseFormationVolumeFactor(
+                                               pvt_region_index, temperature, pressure, rv, rvw);
+            } else {
+                b[gasActiveCompIdx] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(
+                                               pvt_region_index, temperature, pressure);
+            }
+        }
+
+        EvalWell rs {0.};
+        // oil phase
+        if (oilActive) {
+            const bool gas_exist = gasActive && mix_s[gasActiveCompIdx] > 0.;
+            if (gas_exist) {
+                const EvalWell rsmax = max(
+                        FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index, temperature, pressure),
+                        0.);
+                if (mix_s[oilActiveCompIdx] > 0.) {
+                    rs = std::clamp(mix_s[gasActiveCompIdx] / mix_s[oilActiveCompIdx], EvalWell{0.}, rsmax);
+                }
+                b[oilActiveCompIdx] = FluidSystem::oilPvt().inverseFormationVolumeFactor(
+                                               pvt_region_index, temperature, pressure, rs);
+            } else {
+                b[oilActiveCompIdx] = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(
+                                               pvt_region_index, temperature, pressure);
+            }
+        }
+
+        auto mix = mix_s;
+
+        if (oilActive && gasActive) {
+            // adjust the mix_s for oil and gas phases
+            const EvalWell d = 1.0 - rs * rv;
+            if (d <= 0.0) {
+                const std::string str =
+                    fmt::format("Problematic d value {} obtained for well {} during wellbore surface volume calculation "
+                                "with rs {}, rv {} and pressure {}. Continue as if no dissolution (rs = 0) and "
+                                "vaporization (rv = 0) for this connection.",
+                                d, this->name(), rs, rv, pressure);
+                deferred_logger.debug(str);
+            } else {
+                if (rs > 0.0) {
+                    mix[gasActiveCompIdx] = (mix_s[gasActiveCompIdx] - mix_s[oilActiveCompIdx] * rs) / d;
+                }
+                if (rv > 0.0) {
+                    mix[oilActiveCompIdx] = (mix_s[oilActiveCompIdx] - mix_s[gasActiveCompIdx] * rv) / d;
+                }
+            }
+        }
+
+        EvalWell vol_ratio = 0.0;
+        for (int comp_idx = 0; comp_idx < this->numConservationQuantities(); ++comp_idx) {
+            vol_ratio += mix[comp_idx] / b[comp_idx];
+        }
+
+        return wellbore_volume / vol_ratio;
+    }
+
+    // this should go to a base class
+    template<typename TypeTag>
+    typename StandardWell<TypeTag>::FSInfo
+    StandardWell<TypeTag>::
+    getFirstPerforationFluidStateInfo(const Simulator& simulator) const {
+        Scalar fsTemperature = 0.0;
+        using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().
+            intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
+        SaltConcType fsSaltConcentration{};
+
+        // If this process does not contain active perforations, this->well_cells_ is empty.
+        if (this->well_cells_.size() > 0) {
+            // We use the pvt region of first perforated cell, so we look for global index 0
+            // TODO: it should be a member of the WellInterface, initialized properly
+            const int cell_idx = this->well_cells_[0];
+            const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
+
+            fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
+            fsSaltConcentration = fs.saltConcentration();
+        }
+
+        // TODO: using make_pair
+        auto info = std::make_tuple(fsTemperature, fsSaltConcentration);
+
+        // TODO: we need to add the pw_info_, here
+        // The following broadcast call is neccessary to ensure that processes that do *not* contain
+        // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+        // return this->parallel_well_info_.communication().size() == 1
+        //            ? info
+        //            : this->pw_info_.broadcastFirstPerforationValue(info);
+        return info;
+    }
+
+    template <typename TypeTag>
+    void
+    StandardWell<TypeTag>::computeAccumWell(const Simulator& simulator,
+                                            DeferredLogger& deferred_logger)
+    {
+        const Scalar wb_surface_volume = this->getWellBoreSurfaceVolume(simulator, deferred_logger).value();
+        for (std::size_t eq_idx = 0; eq_idx < fluids_initial_.size(); ++eq_idx) {
+            fluids_initial_[eq_idx]
+                = this->primary_variables_.surfaceVolumeFraction(eq_idx).value() * wb_surface_volume;
+        }
+    }
+
 
 } // namespace Opm
 
