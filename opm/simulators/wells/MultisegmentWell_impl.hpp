@@ -1987,6 +1987,9 @@ namespace Opm
                 // from group constraints in assembly.
                 // Otherwise use real group state from groupStateHelper.
                 GroupState<Scalar> empty_group_state;
+                // Note: Cannot use 'const auto&' here because pushGroupState() requires a
+                // non-const reference. GroupStateHelper stores a non-const pointer to GroupState
+                // and is designed to allow modifications through methods like pushGroupState().
                 auto& group_state = solving_with_zero_rate
                     ? empty_group_state
                     : groupStateHelper.groupState();
