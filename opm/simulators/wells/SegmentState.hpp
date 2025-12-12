@@ -22,6 +22,7 @@
 
 #include <cstddef>
 #include <vector>
+#include <string>
 
 namespace Opm {
 class WellSegments;
@@ -104,6 +105,7 @@ public:
     std::vector<Scalar> pressure_drop_hydrostatic;
     std::vector<Scalar> pressure_drop_accel;
 
+    std::string debugInfo() const;
 private:
     std::vector<int>    m_segment_number;
 };
