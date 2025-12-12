@@ -1336,7 +1336,8 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
             // Translate injector type from control to Phase.
-            std::optional<Scalar> group_target;
+            using GroupTarget = typename SingleWellState<Scalar, IndexTraits>::GroupTarget;
+            std::optional<GroupTarget> group_target;
             if (well->isProducer()) {
                 group_target = group_state_helper.getWellGroupTargetProducer(
                     well->name(),
@@ -1946,6 +1947,70 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->closed_offending_wells_ == rhs.closed_offending_wells_
         && this->gen_gaslift_ == rhs.gen_gaslift_;
 }
+
+template <typename Scalar, typename IndexTraits>
+void
+BlackoilWellModelGeneric<Scalar, IndexTraits>::
+updateNONEProductionGroups(DeferredLogger& deferred_logger)
+{
+    auto& group_state = this->groupState();
+    const auto& prod_group_controls = group_state.get_production_controls();
+    if (prod_group_controls.empty()) {
+        return;
+    }
+
+    const auto& well_state = this->wellState();
+    // numbers of the group production controls
+    // one group can have multiple controls, including NONE
+    const std::size_t size_pc = prod_group_controls.size();
+    // Collect groups that currently provide production targets to any well on this rank
+    std::unordered_set<std::string> targeted_production_groups; // TODO: better name
+    targeted_production_groups.reserve(size_pc);
+
+    for (const auto& wname : well_state.wells()) {
+        const auto& ws = well_state.well(wname);
+        if (ws.producer && ws.production_cmode == WellProducerCMode::GRUP) {
+            const auto& group_target = ws.group_target;
+            if (group_target.has_value()) {
+                targeted_production_groups.insert(group_target->group_name);
+            }
+        }
+    }
+
+    // parallel communication to synchronize production groups used on all processes
+    std::vector<std::string> gnames;
+    gnames.reserve(size_pc);
+    for (const auto& gprod : prod_group_controls) {
+        gnames.push_back(gprod.first);
+    }
+
+    std::vector<int> pc_used(size_pc, 0);
+    for (std::size_t i = 0; i < size_pc; ++i) {
+        if (targeted_production_groups.find(gnames[i]) != targeted_production_groups.end()) {
+            pc_used[i] = 1;
+        }
+    }
+
+    // with the following code, we only need to communicate once
+    if (comm_.size() > 1 && size_pc > 0) {
+        comm_.sum(pc_used.data(), static_cast<int>(size_pc));
+    }
+
+    for (std::size_t i = 0; i < size_pc;   ++i) {
+        if (pc_used[i] > 0) {
+            continue;
+        }
+        const auto& gname = gnames[i];
+        if (group_state.production_control(gname) != Group::ProductionCMode::NONE) {
+            if (comm_.rank() == 0) {
+                const std::string msg = fmt::format("Production group {} has no constraints active, setting control mode to NONE", gname);
+                deferred_logger.info(msg);
+            }
+            group_state.production_control(gname, Group::ProductionCMode::NONE);
+        }
+    }
+}
+
 
 template class BlackoilWellModelGeneric<double, BlackOilDefaultFluidSystemIndices>;
 
