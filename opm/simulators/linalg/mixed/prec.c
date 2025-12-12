@@ -29,7 +29,6 @@ void prec_free(prec_t *P)
     bsr_free(P->L);
 
     free(P);
-    P=NULL;
 }
 
 int prec_analyze(bsr_matrix *M, int (*offsets)[3])
