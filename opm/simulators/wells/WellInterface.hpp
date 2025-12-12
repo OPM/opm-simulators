@@ -157,13 +157,13 @@ public:
                       const std::vector<Scalar>& B_avg,
                       const bool changed_to_open_this_step);
 
-    virtual ConvergenceReport getWellConvergence(const Simulator& simulator,
-                                                 const WellStateType& well_state,
+    virtual ConvergenceReport getWellConvergence(const GroupStateHelperType& groupStateHelper,
                                                  const std::vector<Scalar>& B_avg,
                                                  DeferredLogger& deferred_logger,
                                                  const bool relax_tolerance) const = 0;
 
     virtual void solveEqAndUpdateWellState(const Simulator& simulator,
+                                           const GroupStateHelperType& groupStateHelper,
                                            WellStateType& well_state,
                                            DeferredLogger& deferred_logger) = 0;
 
@@ -211,6 +211,7 @@ public:
     /// xw to update Well State
     virtual void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
                                                        const BVector& x,
+                                                       const GroupStateHelperType& groupStateHelper,
                                                        WellStateType& well_state,
                                                        DeferredLogger& deferred_logger) = 0;
 
@@ -240,23 +241,20 @@ public:
                                                    std::vector<Scalar>& well_flux,
                                                    DeferredLogger& deferred_logger) const = 0;
 
-    bool wellUnderZeroRateTarget(const Simulator& simulator,
-                                 const WellStateType& well_state,
+    bool wellUnderZeroRateTarget(const GroupStateHelperType& groupStateHelper,
                                  DeferredLogger& deferred_logger) const;
 
-    bool wellUnderZeroGroupRateTarget(const Simulator& simulator,
-                                      const WellStateType& well_state,
-                                      DeferredLogger& deferred_logger,
-                                      std::optional<bool> group_control = std::nullopt) const;
-
-    bool stoppedOrZeroRateTarget(const Simulator& simulator,
-                                 const WellStateType& well_state,
+    bool stoppedOrZeroRateTarget(const GroupStateHelperType& groupStateHelper,
                                  DeferredLogger& deferred_logger) const;
 
     bool updateWellStateWithTHPTargetProd(const Simulator& simulator,
                                           WellStateType& well_state,
                                           const GroupStateHelperType& groupStateHelper,
                                           DeferredLogger& deferred_logger) const;
+
+    bool wellUnderZeroGroupRateTarget(const GroupStateHelperType& groupStateHelper,
+                                      DeferredLogger& deferred_logger,
+                                      const std::optional<bool> group_control = std::nullopt) const;
 
     enum class IndividualOrGroup { Individual, Group, Both };
     bool updateWellControl(const Simulator& simulator,
@@ -276,12 +274,11 @@ public:
                                                   const bool fixed_status,
                                                   const bool solving_with_zero_rate);
 
-    virtual void updatePrimaryVariables(const Simulator& simulator,
-                                        const WellStateType& well_state,
+    virtual void updatePrimaryVariables(const GroupStateHelperType& groupStateHelper,
                                         DeferredLogger& deferred_logger) = 0;
 
     virtual void calculateExplicitQuantities(const Simulator& simulator,
-                                             const WellStateType& well_state,
+                                             const GroupStateHelperType& groupStateHelper,
                                              DeferredLogger& deferred_logger) = 0; // should be const?
 
     virtual void updateProductivityIndex(const Simulator& simulator,
