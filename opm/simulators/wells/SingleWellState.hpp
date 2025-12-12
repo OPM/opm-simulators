@@ -143,14 +143,6 @@ public:
                     && production_cmode == other.production_cmode
                     && injection_cmode == other.injection_cmode );
         }
-
-        template<class Serializer>
-        void serializeOp(Serializer& serializer) {
-            serializer(group_name);
-            serializer(production_cmode);
-            serializer(injection_cmode);
-            serializer(target_value);
-        }
     };
 
     std::vector<Scalar> well_potentials;
