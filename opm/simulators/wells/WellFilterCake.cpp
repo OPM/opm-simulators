@@ -157,8 +157,6 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
     for (int perf = 0; perf < nperf; ++perf) {
         const auto perf_ecl_index = well.perforationData()[perf].ecl_index;
         const auto& connection = connections[perf_ecl_index];
-        if (!connection.filterCakeActive())
-            continue;
 
         // Use xflow-factor to ensure mass balance of injected filtrate
         auto& filtrate_data = perf_data.filtrate_data;
@@ -183,6 +181,9 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
 
         filtrate_data.rates[perf] = filtrate_rate;
         filtrate_data.total[perf] += filtrate_particle_volume;
+
+        if (!connection.filterCakeActive())
+            continue;
 
         const auto& filter_cake = connection.getFilterCake();
         const Scalar area = connection.getFilterCakeArea();
