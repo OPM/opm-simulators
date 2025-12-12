@@ -2202,9 +2202,11 @@ namespace Opm
         OPM_TIMEFUNCTION();
         WellStateType well_state_copy = well_state;
         const auto& groupStateHelper = simulator.problem().wellModel().groupStateHelper();
+        GroupStateHelperType groupStateHelper_copy = groupStateHelper;
+        auto well_guard = groupStateHelper_copy.pushWellState(well_state_copy);
         const double dt = simulator.timeStepSize();
         const bool converged = this->solveWellWithBhp(
-                simulator, dt, bhp, groupStateHelper, well_state_copy, deferred_logger
+                simulator, dt, bhp, groupStateHelper_copy, well_state_copy, deferred_logger
             );
 
         bool zero_rates;
@@ -2216,9 +2218,9 @@ namespace Opm
         // For zero rates or unconverged bhp the implicit IPR is problematic.
         // Use the old approach for now
         if (zero_rates || !converged) {
-            return  this->computeBhpAtThpLimitProdWithAlq(simulator, groupStateHelper, summary_state, alq_value, deferred_logger, /*iterate_if_no_solution */ false);
+            return  this->computeBhpAtThpLimitProdWithAlq(simulator, groupStateHelper_copy, summary_state, alq_value, deferred_logger, /*iterate_if_no_solution */ false);
         }
-        this->updateIPRImplicit(simulator, groupStateHelper, well_state_copy, deferred_logger);
+        this->updateIPRImplicit(simulator, groupStateHelper_copy, well_state_copy, deferred_logger);
         this->adaptRatesForVFP(rates);
         return WellBhpThpCalculator(*this).estimateStableBhp(well_state_copy, this->well_ecl_, rates, this->getRefDensity(), summary_state, alq_value);
     }
