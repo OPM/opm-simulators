@@ -1041,6 +1041,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/DILU.hpp
   opm/simulators/linalg/domesticoverlapfrombcrsmatrix.hh
   opm/simulators/linalg/elementborderlistfromgrid.hh
+  opm/simulators/linalg/exportSystem.hpp
   opm/simulators/linalg/extractMatrix.hpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
   opm/simulators/linalg/ExtraSmoothers.hpp
