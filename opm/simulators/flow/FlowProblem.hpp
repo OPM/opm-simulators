@@ -241,6 +241,11 @@ public:
             relpermDiagnostics.diagnosis(simulator.vanguard().eclState(),
                                          simulator.vanguard().levelCartesianIndexMapper());
         }
+
+        if (energyModuleType == EnergyModules::SequentialImplicitThermal) {
+            this->enableDriftCompensationTemp_ = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
+        }
+
     }
 
     virtual ~FlowProblem() = default;
@@ -434,14 +439,11 @@ public:
         this->wellModel_.endTimeStep();
         this->aquiferModel_.endTimeStep();
         this->tracerModel_.endTimeStep();
-        if constexpr(energyModuleType == EnergyModules::SequentialImplicitThermal) {
-            this->temperatureModel_.endTimeStep(wellModel_.wellState());
-        }
 
         // Compute flux for output
         this->model().linearizer().updateFlowsInfo();
 
-        if (this->enableDriftCompensation_) {
+        if (this->enableDriftCompensation_ || this->enableDriftCompensationTemp_) {
             OPM_TIMEBLOCK(driftCompansation);
 
             const auto& residual = this->model().linearizer().residual();
@@ -454,6 +456,11 @@ public:
                     this->drift_[sfcdofIdx] *= this->model().dofTotalVolume(sfcdofIdx);
                 }
             }
+        }
+
+        // Drift compensation needs to be updated before calling the temperature equation
+        if constexpr(energyModuleType == EnergyModules::SequentialImplicitThermal) {
+            this->temperatureModel_.endTimeStep(wellModel_.wellState());
         }
     }
 
@@ -1214,6 +1221,11 @@ public:
         serializer(aquiferModel_);
         serializer(tracerModel_);
         serializer(*materialLawManager_);
+    }
+
+    const GlobalEqVector& drift() const
+    {
+        return drift_;
     }
 
 private:
