@@ -343,7 +343,6 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
                                       DeferredLogger& deferred_logger)
 {
     const auto& group_state = groupStateHelper.groupState();
-    const auto& well_state = groupStateHelper.wellState();
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
     if (currentGroupControl == Group::ProductionCMode::FLD ||
         currentGroupControl == Group::ProductionCMode::NONE) {
