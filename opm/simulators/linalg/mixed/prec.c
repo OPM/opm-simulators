@@ -39,14 +39,12 @@ int prec_analyze(bsr_matrix *M, int (*offsets)[3])
         for(int z=M->rowptr[i];z<M->rowptr[i+1];z++)
         {
             int j = M->colidx[z];
-            int match=0;
             for(int m=M->rowptr[j];m<M->rowptr[j+1];m++)
             {
                 int k = M->colidx[m];
                 for(int n=M->rowptr[i];n<M->rowptr[i+1];n++)
                 {
                     int jjj=M->colidx[n];
-                    match += (k==jjj);
                     if(k==jjj)
                     {
                         if(offsets)
