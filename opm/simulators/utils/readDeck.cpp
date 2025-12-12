@@ -159,8 +159,9 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext, errorGuard,
-                 std::move(python), lowActionParsingStrictness,  /*slaveMode=*/false,
-                 keepKeywords, outputInterval, init_state);
+                 std::move(python), lowActionParsingStrictness,
+                 /* slaveMode = */ false, keepKeywords,
+                 outputInterval, init_state);
         }
 
         // Read network pressures from restart
@@ -193,9 +194,11 @@ namespace {
     {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
-                (deck, eclipseState, parseContext,
-                 errorGuard, std::move(python), lowActionParsingStrictness, slaveMode, keepKeywords);
+                (deck, eclipseState, parseContext, errorGuard,
+                 std::move(python), lowActionParsingStrictness,
+                 slaveMode, keepKeywords);
         }
+
         udqState = std::make_unique<Opm::UDQState>
             ((*schedule)[0].udq().params().undefinedValue());
 
