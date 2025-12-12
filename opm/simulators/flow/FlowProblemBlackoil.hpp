@@ -39,7 +39,8 @@
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 
-#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
@@ -148,7 +149,7 @@ private:
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
-    using ModuleParams = typename BlackOilLocalResidualTPFA<TypeTag>::ModuleParams;
+    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
     using HybridNewton = BlackOilHybridNewton<TypeTag>;
 
     using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
