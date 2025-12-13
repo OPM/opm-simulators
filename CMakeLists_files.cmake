@@ -476,6 +476,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
   tests/test_dilu.cpp
+  tests/test_group_higher_constraints.cpp
   tests/test_equil.cpp
   tests/test_extractMatrix.cpp
   tests/test_flexiblesolver.cpp
@@ -669,6 +670,7 @@ list (APPEND TEST_DATA_FILES
   tests/rhs3rep.txt
   tests/options_flexiblesolver.json
   tests/options_flexiblesolver_simple.json
+  tests/GROUP_HIGHER_CONSTRAINTS.DATA
   tests/GLIFT1.DATA
   tests/RC-01_MAST_PRED.DATA
   tests/include/flowl_b_vfp.ecl

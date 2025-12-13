@@ -1,0 +1,230 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Test case for efficiency factor handling in checkGroupConstraintsProd()
+
+-- Group hierarchy:
+--
+--                    FIELD (ORAT = 10000)
+--                      |
+--                    PLAT (GEFAC=0.9, FLD, has GUIDERAT)
+--                    /   \
+--                   /     \
+--   MANI (GEFAC=0.8)       MANI2 (GEFAC=0.7)
+--   ORAT control           FLD control
+--        |                      |
+--     WELL-A                 WELL-B
+--
+-- This setup triggers checkGroupConstraintsProd() for MANI with:
+-- - local_reduction_level at PLAT (because PLAT has guide rate)
+-- - efficiency_factor = 0.9 * 0.8 = 0.72
+
+RUNSPEC
+
+TITLE
+EFFICIENCY_FACTOR_TEST
+
+DIMENS
+   5 5 3 /
+
+OIL
+WATER
+GAS
+DISGAS
+
+METRIC
+
+START
+ 1 'JAN' 2020 /
+
+WELLDIMS
+-- max wells, max cons/well, max groups, max wells/group
+   4 5 5 4 /
+
+TABDIMS
+/
+
+EQLDIMS
+/
+
+UNIFIN
+UNIFOUT
+
+-- =============================================================================
+GRID
+-- =============================================================================
+
+DXV
+5*100.0 /
+
+DYV
+5*100.0 /
+
+DZV
+3*10.0 /
+
+TOPS
+25*2000 /
+
+PORO
+75*0.25 /
+
+PERMX
+75*500 /
+
+COPY
+  PERMX PERMY /
+  PERMX PERMZ /
+/
+
+MULTIPLY
+  PERMZ 0.1 /
+/
+
+-- =============================================================================
+PROPS
+-- =============================================================================
+
+PVTW
+-- ref.pres  Bw      Cw          Vw    Vw.visc
+   250.0    1.02   4.0E-05      0.5    0.0 /
+
+ROCK
+-- ref.pres  compressibility
+   250.0    4.0E-05 /
+
+DENSITY
+-- oil    water   gas
+   850    1014    1.0 /
+
+PVDO
+-- P       Bo      Vo
+  100.0   1.05    2.0
+  250.0   1.02    2.5
+  400.0   1.00    3.0 /
+
+PVDG
+-- P       Bg       Vg
+  100.0   0.010    0.015
+  250.0   0.005    0.020
+  400.0   0.003    0.025 /
+
+SWOF
+-- Sw      Krw      Kro      Pcow
+  0.2     0.0      1.0      0.0
+  0.3     0.05     0.6      0.0
+  0.5     0.15     0.3      0.0
+  0.7     0.35     0.1      0.0
+  0.8     0.5      0.0      0.0 /
+
+SGOF
+-- Sg      Krg      Kro      Pcog
+  0.0     0.0      1.0      0.0
+  0.1     0.02     0.6      0.0
+  0.3     0.10     0.3      0.0
+  0.5     0.25     0.1      0.0
+  0.7     0.5      0.0      0.0 /
+
+-- =============================================================================
+SOLUTION
+-- =============================================================================
+
+EQUIL
+-- datum  pressure  OWC    Pc@OWC  GOC    Pc@GOC  RSVD  RVVD  SOLN
+   2000   250.0     2100   0.0     1900   0.0     1     0     0 /
+
+RSVD
+   1900   100.0
+   2100   100.0 /
+
+-- =============================================================================
+SUMMARY
+-- =============================================================================
+
+WOPR
+/
+WGPR
+/
+WWPR
+/
+WBHP
+/
+GOPR
+/
+FOPR
+FGPR
+FWPR
+
+-- =============================================================================
+SCHEDULE
+-- =============================================================================
+
+GRUPTREE
+ 'PLAT'  'FIELD' /
+ 'MANI'  'PLAT'  /
+ 'MANI2' 'PLAT'  /
+/
+
+-- Well specifications
+WELSPECS
+ 'WELL-A'  'MANI'   3 3 2010 'OIL' /
+ 'WELL-B'  'MANI2'  2 2 2010 'OIL' /
+/
+
+COMPDAT
+ 'WELL-A'  3 3 1 3 'OPEN' 1* 1* 0.2 /
+ 'WELL-B'  2 2 1 3 'OPEN' 1* 1* 0.2 /
+/
+
+-- Group efficiency factors
+GEFAC
+ 'PLAT'  0.9 /
+ 'MANI'  0.8 /
+ 'MANI2' 0.7 /
+/
+
+-- Well efficiency factors
+WEFAC
+ 'WELL-A' 1.0 /
+ 'WELL-B' 1.0 /
+/
+
+-- Group controls
+-- FIELD has overall oil rate target
+GCONPROD
+'FIELD' 'ORAT' 10000 1* 1* 1* 'RATE' /
+/
+
+-- PLAT is under FLD control with guide rate enabled ('YES' and 'FORM')
+-- Having a guide rate on PLAT triggers local_reduction_level at PLAT in checkGroupConstraintsProd()
+GCONPROD
+'PLAT' 'FLD' 1* 1* 1* 1* 'RATE' 'YES' 1* 'FORM' /
+/
+
+-- Guide rate formula (applies to all groups/wells using 'FORM' target)
+GUIDERAT
+-- min.int  type  A    B    C    D    E    F  allow.inc  damp.factor  use.free.gas
+   0        'OIL' 1.0  0.0  1.0  1.0  0.0  0.0  'YES'       1.0          'NO' /
+
+-- MANI has individual ORAT control (this triggers checkGroupConstraintsProd)
+GCONPROD
+'MANI' 'ORAT' 5000 1* 1* 1* 'RATE' /
+/
+
+-- MANI2 has FLD control - this creates a sibling for MANI to share PLAT's allocation via guide rates
+GCONPROD
+'MANI2' 'FLD' 1* 1* 1* 1* 'RATE' /
+/
+
+-- Wells under group control
+WCONPROD
+ 'WELL-A' 'OPEN' 'GRUP' 1* 1* 1* 1* 1* 100.0 /
+ 'WELL-B' 'OPEN' 'GRUP' 1* 1* 1* 1* 1* 100.0 /
+/
+
+TSTEP
+1 /
+
+END
