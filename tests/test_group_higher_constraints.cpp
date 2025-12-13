@@ -40,10 +40,10 @@
  *     WELL-A                 WELL-B
  * \endcode
  *
- * The test exposes a bug where the "addback" calculation at local_reduction_level
- * uses the accumulated efficiency factor (E_MANI * E_PLAT = 0.72) instead of
- * the partial efficiency factor (E_MANI = 0.8). This causes incorrect constraint
- * violation detection when MANI's production should actually be within limits.
+ * The test verifies that the "addback" calculation at local_reduction_level
+ * correctly uses the partial efficiency factor (E_MANI = 0.8) instead of
+ * the accumulated efficiency factor (E_MANI * E_PLAT = 0.72). This ensures
+ * correct constraint violation detection.
  *
  * Key concepts tested:
  * - local_reduction_level: Set at PLAT because it has a guide rate
@@ -355,7 +355,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraints)
     );
 
     // ========================================================================
-    // EXPECTED RESULT (with current buggy implementation)
+    // EXPECTED RESULT (with fixed implementation)
     // ========================================================================
     //
     // The checkGroupConstraintsProd algorithm proceeds as follows:
@@ -379,36 +379,33 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraints)
     //   local_reduction("PLAT") = E_MANI * 10000 = 8000 (MANI has ORAT control)
     //   target = 10000 - 8000 = 2000
     //
-    //   BUG: Addback uses accumulated efficiency (0.72) instead of E_MANI (0.8):
-    //   addback = current_rate * efficiency_factor = 10000 * 0.72 = 7200
-    //   target = 2000 + 7200 = 9200
+    //   Addback uses partial efficiency E_MANI (not accumulated 0.72):
+    //   addback = current_rate * E_MANI = 10000 * 0.8 = 8000
+    //   target = 2000 + 8000 = 10000
     //
-    //   (Correct addback would be: 10000 * 0.8 = 8000, giving target = 10000)
+    //   local_fraction("MANI") = 8000/10800 = 20/27
+    //   target = 10000 * 20/27 = 200000/27
     //
-    //   local_fraction("MANI") = 8000/10800 = 0.740741
-    //   target = 9200 * 0.740741 = 6814.81
-    //
-    // Final calculation (line 413):
+    // Final calculation:
     //   target_rate_available = target / efficiency_factor
-    //                        = (184000/27) / 0.72 = 9465.0205761... SM3/day
+    //                        = (200000/27) / 0.72 = 200000/27 * 25/18 = 5000000/486
+    //                        = 10288.0658... SM3/day
     //
     // Scale factor:
     //   scale = target_rate_available / current_rate_available
-    //         = 9465.0205761... / 10000 = 0.94650205761...
+    //         = (5000000/486) / 10000 = 500/486 = 250/243 = 1.02880658...
     //
-    // Because scale < 1, the buggy implementation incorrectly constrains MANI,
-    // reducing its production even though the correct calculation would give
-    // scale = 1.0288 (no constraint violation).
+    // Because scale > 1, no constraint violation - MANI can produce its full rate.
     //
-    // Exact value: 4600000 / 486 / 10000 = 2300/243 / 5 = 460/243
-    const double expected_scale_with_bug = 460.0 / 486.0;  // 0.9465020576...
-    BOOST_CHECK(constraint_violated);  // Bug causes false constraint violation
-    checkAlgo(scale, expected_scale_with_bug);
+    // Exact value: 250/243
+    const double expected_scale_with_fix = 250.0 / 243.0;  // 1.02880658...
+    BOOST_CHECK(!constraint_violated);  // No constraint violation with fix
+    checkAlgo(scale, expected_scale_with_fix);
 
     // Derived values for verification
     const double current_rate = 10000.0;  // SM3/day
-    const double target_rate_available_with_bug = scale * current_rate;
-    checkAlgo(target_rate_available_with_bug, 4600000.0 / 486.0);  // 9465.0205761...
+    const double target_rate_available_with_fix = scale * current_rate;
+    checkAlgo(target_rate_available_with_fix, 5000000.0 / 486.0);  // 10288.0658...
 }
 
 BOOST_AUTO_TEST_SUITE_END()

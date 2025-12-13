@@ -232,7 +232,9 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
 
             // Add my reduction back at the level where it is included in the local reduction
             if (local_reduction_level == ii) {
-                target += current_rate_available * efficiency_factor;
+                const Scalar addback_efficiency
+                    = this->computeAddbackEfficiency_(chain, local_reduction_level);
+                target += current_rate_available * addback_efficiency;
             }
         }
         target *= local_fraction_lambda(chain[ii + 1]);
@@ -404,7 +406,9 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
             }
             // Add my reduction back at the level where it is included in the local reduction
             if (local_reduction_level == ii) {
-                target += current_rate_available * efficiency_factor;
+                const Scalar addback_efficiency
+                    = this->computeAddbackEfficiency_(chain, local_reduction_level);
+                target += current_rate_available * addback_efficiency;
             }
         }
         target *= local_fraction_lambda(chain[ii + 1]);
@@ -603,7 +607,9 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
             // If we are under individual control we need to add the wells rate back at the level where it is
             // included in the local reduction
             if (local_reduction_level == ii && !this->wellState().isInjectionGrup(name)) {
-                target += current_rate_available * efficiency_factor;
+                const Scalar addback_efficiency
+                    = this->computeAddbackEfficiency_(chain, local_reduction_level);
+                target += current_rate_available * addback_efficiency;
             }
         }
         if (!this->wellState().isInjectionGrup(name)) {
@@ -731,7 +737,9 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
             // If we are under individual control we need to add the wells rate back at the level where it is
             // included in the local reduction
             if (local_reduction_level == ii && !this->wellState().isProductionGrup(name)) {
-                target += current_rate_available * efficiency_factor;
+                const Scalar addback_efficiency
+                    = this->computeAddbackEfficiency_(chain, local_reduction_level);
+                target += current_rate_available * addback_efficiency;
             }
         }
         if (this->wellState().isProductionGrup(name)) {
@@ -1380,6 +1388,34 @@ GroupStateHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
 // ---------------------------------------------------------------------
 // Private methods
 // ---------------------------------------------------------------------
+
+template <typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::computeAddbackEfficiency_(
+    const std::vector<std::string>& chain,
+    const std::size_t local_reduction_level) const
+{
+    // Compute partial efficiency factor from local_reduction_level down to the entity.
+    // Chain is ordered [control_group, ..., local_reduction_level, ..., entity].
+    // We multiply efficiency factors from index (local_reduction_level + 1) to the entity.
+    // Note: The entity at chain[num_ancestors] may be a well or a group.
+    // Both wells (WEFAC) and groups (GEFAC) have efficiency factors that must be included,
+    // since the local_reduction rates include these efficiency factors.
+    const std::size_t num_ancestors = chain.size() - 1;
+    Scalar efficiency = 1.0;
+    for (std::size_t jj = local_reduction_level + 1; jj <= num_ancestors; ++jj) {
+        const std::string& name = chain[jj];
+        if (this->schedule_.hasGroup(name, this->report_step_)) {
+            const auto& grp = this->schedule_.getGroup(name, this->report_step_);
+            efficiency *= grp.getGroupEfficiencyFactor();
+        } else if (this->schedule_.hasWell(name, this->report_step_)) {
+            const auto& well = this->schedule_.getWell(name, this->report_step_);
+            efficiency *= well.getEfficiencyFactor()
+                * this->wellState()[name].efficiency_scaling_factor;
+        }
+    }
+    return efficiency;
+}
 
 template <typename Scalar, typename IndexTraits>
 std::string
