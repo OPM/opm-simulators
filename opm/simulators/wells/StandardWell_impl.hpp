@@ -455,9 +455,9 @@ namespace Opm
             EvalWell resWell_loc(0.0);
             if (FluidSystem::numActivePhases() > 1) {
                 assert(dt > 0);
-                const auto& wellbore_surface_volume = this->getWellBoreSurfaceVolume(simulator, deferred_logger);
-                resWell_loc += regularization_factor * (this->primary_variables_.surfaceVolumeFraction(componentIdx) * wellbore_surface_volume -
-                                this->fluids_initial_[componentIdx]) / dt;
+                const auto wellbore_surface_volume = this->getWellBoreSurfaceVolume(simulator, deferred_logger);
+                resWell_loc += (this->primary_variables_.surfaceVolumeFraction(componentIdx) * wellbore_surface_volume -
+                                this->fluids_initial_[componentIdx]) * regularization_factor / dt;
             }
             resWell_loc -= this->primary_variables_.getQs(componentIdx) * this->well_efficiency_factor_;
             StandardWellAssemble<FluidSystem,Indices>(*this).
@@ -2753,10 +2753,12 @@ namespace Opm
         EvalWell temperature;
         EvalWell saltConcentration;
 
-        auto info = this->getFirstPerforationFluidStateInfo(simulator);
+        {
+            const auto info = this->getFirstPerforationFluidStateInfo(simulator);
 
-        temperature.setValue(std::get<0>(info));
-        saltConcentration = this->extendEval(std::get<1>(info));
+            temperature.setValue(std::get<0>(info));
+            saltConcentration = this->extendEval(std::get<1>(info));
+        }
 
         const auto& pressure = this->primary_variables_.eval(Bhp);
 
@@ -2775,7 +2777,6 @@ namespace Opm
         const int pvt_region_index = this->pvtRegionIdx();
 
         std::vector<EvalWell> b (this->numConservationQuantities(), 0.0);
-
         if (waterActive) {
             // TODO: rsw = 0 for now, we need to use the real rsw later
             const EvalWell rsw{0.};
