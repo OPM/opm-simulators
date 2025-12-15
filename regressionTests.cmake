@@ -6,37 +6,6 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-# Adds several tests cases with similar parameters
-# cases Variable name of list with test cases
-# prefix Prefix to use
-# argn Parameters for cases
-macro(add_multiple_tests cases prefix)
-  foreach(case ${${cases}})
-    string(TOLOWER ${case} test)
-    add_test_compareECLFiles(
-        CASENAME ${prefix}${test}
-        FILENAME ${case}
-        ${ARGN}
-    )
-  endforeach()
-endmacro()
-
-# Adds several tests cases in a numerical range with similar parameters
-# start Start of range
-# end End fof range
-# ftemplate File name template to use
-# prefix Prefix to use
-# argn Parameters for cases
-macro(add_multiple_test_range start end ftemplate prefix)
-    foreach(case RANGE ${start} ${end})
-      add_test_compareECLFiles(
-          CASENAME ${prefix}_${case}
-          FILENAME ${ftemplate}${case}
-          ${ARGN}
-      )
-    endforeach()
-endmacro()
-
 add_test_compareECLFiles(CASENAME spe1flowexp
                          FILENAME SPE1CASE2
                          SIMULATOR flowexp_blackoil
