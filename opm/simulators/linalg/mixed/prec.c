@@ -29,7 +29,6 @@ void prec_free(prec_t *P)
     bsr_free(P->L);
 
     free(P);
-    P=NULL;
 }
 
 int prec_analyze(bsr_matrix *M, int (*offsets)[3])
@@ -40,14 +39,12 @@ int prec_analyze(bsr_matrix *M, int (*offsets)[3])
         for(int z=M->rowptr[i];z<M->rowptr[i+1];z++)
         {
             int j = M->colidx[z];
-            int match=0;
             for(int m=M->rowptr[j];m<M->rowptr[j+1];m++)
             {
                 int k = M->colidx[m];
                 for(int n=M->rowptr[i];n<M->rowptr[i+1];n++)
                 {
                     int jjj=M->colidx[n];
-                    match += (k==jjj);
                     if(k==jjj)
                     {
                         if(offsets)
@@ -467,6 +464,7 @@ void prec_ilu0_factorize(prec_t *P, bsr_matrix *A)
     }
 }
 
+#if 0
 /**
  * @brief In-place matrix-vector multiplication for 3x3 matrices.
  *
@@ -510,6 +508,7 @@ static inline void mat3_vecfms(double *y, const double *A, const double *x)
     }
     for(int k=0;k<3;k++) y[k]-=z[k];
 }
+#endif
 
 void prec_mapply3c(prec_t *restrict P, double *x)
 {
