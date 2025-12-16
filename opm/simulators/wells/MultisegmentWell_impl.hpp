@@ -1990,6 +1990,12 @@ namespace Opm
                     ? empty_group_state
                     : groupStateHelper.groupState();
 
+                // For wells under group control, ensure feasibility before assembling control equation
+                if (this->wellUnderGroupControl(ws)) {
+                    std::vector<Scalar> well_fractions(this->num_conservation_quantities_, 0.0);
+                    this->primary_variables_.fetchWellFractions(well_fractions, Base::B_avg_);
+                    this->ensureGroupControlFeasibility(well_state, well_fractions);
+                }
                 MultisegmentWellAssemble(*this).
                         assembleControlEq(well_state,
                                         group_state,

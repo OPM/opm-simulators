@@ -244,6 +244,9 @@ protected:
                                    Well::InjectionControls& inj_controls,
                                    Well::ProductionControls& prod_controls) const;
 
+    void ensureGroupControlFeasibility(WellState<Scalar, IndexTraits>& well_state,
+                                       const std::vector<Scalar>& well_fractions) const;
+
     void resetDampening() {
         std::fill(this->inj_multiplier_damp_factor_.begin(), this->inj_multiplier_damp_factor_.end(), 1.0);
     }
