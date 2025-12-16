@@ -161,6 +161,8 @@ public:
                                                           const std::vector<Scalar>& resv_coeff,
                                                           DeferredLogger& deferred_logger) const;
 
+    GuideRateModel::Target getGuideRateTargetFromProductionCMode(const Group::ProductionCMode cmode) const;
+
     GuideRate::RateVector getWellRateVector(const std::string& name) const;
 
     std::vector<std::string> groupChainTopBot(const std::string& bottom, const std::string& top) const;
