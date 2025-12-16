@@ -774,7 +774,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
     } else {
         // group has switched control mode, we need to check whether the well can be controlled by this mode
         const auto guide_model_original = this->getGuideRateTargetFromProductionCMode(group_cmode_original);
-        const Scalar guide_rate_original = this->getGuideRate(group.name(), guide_model_original);
+        const Scalar guide_rate_original = this->getGuideRate(name, guide_model_original);
         const Scalar target_original = std::max(Scalar(0.0), guide_rate_original * guide_rate_multiplier / efficiency_factor);
         // If target_current is very small, compared to target_original, we switch original mode, otherwise we keep
         // target_original as backup in case well does is not able to produce under current mode

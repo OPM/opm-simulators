@@ -728,7 +728,7 @@ fetchWellFractions(std::vector<Scalar>& fractions,
         fractions[gas_pos] = 1.0;
     }
     for (int p = 0; p < well_.numPhases(); ++p) {
-        fractions[p] /= scaling[p];
+        fractions[p] *= scaling[p];
         fractions[p] = std::max(fractions[p], Scalar{0.0});
     }
     // re-normalize
