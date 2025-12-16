@@ -149,6 +149,9 @@ public:
     void setValue(const int idx, const Scalar val)
     { value_[idx] = val; }
 
+    //! \brief Get scaled well fractions 
+    void fetchWellFractions(std::vector<Scalar>& fractions, const std::vector<Scalar>& scaling) const;
+
 private:
     //! \brief Initialize evaluations from values.
     void setEvaluationsFromValues();
