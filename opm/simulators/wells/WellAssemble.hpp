@@ -66,6 +66,12 @@ public:
                                DeferredLogger& deferred_logger) const;
 
     template<class EvalWell>
+    void assembleGroupControlEqProdDirect(const WellState<Scalar, IndexTraits>& well_state,
+                                         const std::vector<EvalWell>& rates, // Always 3 canonical rates.
+                                         EvalWell& control_eq,
+                                         DeferredLogger& deferred_logger) const;
+
+    template<class EvalWell>
     void assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
                               const GroupState<Scalar>& group_state,
                               const Schedule& schedule,

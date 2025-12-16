@@ -142,6 +142,11 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
     }
     case Well::ProducerCMode::GRUP: {
         assert(well_.wellEcl().isAvailableForGroupControl());
+        const bool directAssmebly = true;
+        if (directAssmebly) {
+            assembleGroupControlEqProdDirect(well_state, rates, control_eq, deferred_logger);
+            break;
+        }
         const auto& group = schedule.getGroup(well_.wellEcl().groupName(), well_.currentStep());
         // Annoying thing: the rates passed to this function are
         // always of size 3 and in canonical (for PhaseUsage)
@@ -187,6 +192,74 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
                          deferred_logger);
     }
     case Well::ProducerCMode::NONE: {
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         "Well control must be specified for well " + well_.name(),
+                         deferred_logger);
+    }
+    }
+}
+
+template<typename FluidSystem>
+template<class EvalWell>
+void
+WellAssemble<FluidSystem>::
+assembleGroupControlEqProdDirect(const WellState<Scalar, IndexTraits>& well_state,
+                                 const std::vector<EvalWell>& rates, // Always 3 canonical rates.
+                                 EvalWell& control_eq,
+                                 DeferredLogger& deferred_logger) const
+    {
+    const auto current = well_state.well(well_.indexOfWell()).production_cmode;
+    assert(current == Well::ProducerCMode::GRUP);
+    const auto& ws = well_state.well(well_.indexOfWell());
+    assert(ws.group_target.has_value());
+    const auto gmode = ws.group_target->production_cmode;
+    const Scalar target = ws.group_target->target_value;
+
+    switch (gmode) {
+    case Group::ProductionCMode::ORAT: {
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        const EvalWell rate = -rates[FluidSystem::oilPhaseIdx];
+        control_eq = rate - target;
+        break;
+    }
+    case Group::ProductionCMode::WRAT: {
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+        const EvalWell rate = -rates[FluidSystem::waterPhaseIdx];
+        control_eq = rate - target;
+        break;
+    }
+    case Group::ProductionCMode::GRAT: {
+        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+        const EvalWell rate = -rates[FluidSystem::gasPhaseIdx];
+        control_eq = rate - target;
+        break;
+    }
+    case Group::ProductionCMode::LRAT: {
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        EvalWell rate = -rates[FluidSystem::waterPhaseIdx] - rates[FluidSystem::oilPhaseIdx];
+        control_eq = rate - target;
+        break;
+    }
+    case Group::ProductionCMode::RESV: {
+        assert(false && "RESV group control for direct assembly needs to be implemented.");
+    }
+    case Group::ProductionCMode::FLD: {
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         "FLD control does not make sense in direct assembly for well " + well_.name(),
+                         deferred_logger);
+    }
+    case Group::ProductionCMode::CRAT: {
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         "CRAT control not supported, well " + well_.name(),
+                         deferred_logger);
+    }
+    case Group::ProductionCMode::PRBL: {
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         "PRBL control not supported, well " + well_.name(),
+                         deferred_logger);
+    }
+    case Group::ProductionCMode::NONE: {
         OPM_DEFLOG_THROW(std::runtime_error,
                          "Well control must be specified for well " + well_.name(),
                          deferred_logger);
