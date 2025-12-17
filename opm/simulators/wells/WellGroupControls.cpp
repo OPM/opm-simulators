@@ -266,16 +266,18 @@ getGroupProductionControl(const Group& group,
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc(currentGroupControl,
-                                                                   well_state.phaseUsageInfo(),
-                                                                   resv_coeff,
-                                                                   gratTargetFromSales,
-                                                                   group.name(),
-                                                                   group_state,
-                                                                   group.has_gpmaint_control(currentGroupControl));
-
     const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
     if (target_rate) {
+        // Wells group cmode may not be different from the group cmode
+        const Group::ProductionCMode& currentWellGroupControl = target_rate->production_cmode;
+        GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc(currentWellGroupControl,
+                                                                       well_state.phaseUsageInfo(),
+                                                                       resv_coeff,
+                                                                       gratTargetFromSales,
+                                                                       group.name(),
+                                                                       group_state,
+                                                                       group.has_gpmaint_control(currentGroupControl));
+
         const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
         control_eq = current_rate - target_rate->target_value;
     } else {

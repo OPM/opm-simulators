@@ -142,11 +142,13 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
     }
     case Well::ProducerCMode::GRUP: {
         assert(well_.wellEcl().isAvailableForGroupControl());
+        /*
         const bool directAssmebly = true;
-        if (directAssmebly) {
+        if (directAssmebly && well_state.well(well_.indexOfWell()).group_target.has_value()) {
             assembleGroupControlEqProdDirect(well_state, rates, control_eq, deferred_logger);
             break;
         }
+        */
         const auto& group = schedule.getGroup(well_.wellEcl().groupName(), well_.currentStep());
         // Annoying thing: the rates passed to this function are
         // always of size 3 and in canonical (for PhaseUsage)
@@ -199,6 +201,7 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
     }
 }
 
+/*
 template<typename FluidSystem>
 template<class EvalWell>
 void
@@ -266,7 +269,7 @@ assembleGroupControlEqProdDirect(const WellState<Scalar, IndexTraits>& well_stat
     }
     }
 }
-
+*/
 template<typename FluidSystem>
 template<class EvalWell>
 void
