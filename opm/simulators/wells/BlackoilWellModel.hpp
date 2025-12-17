@@ -380,6 +380,24 @@ template<class Scalar> class WellContributions;
             ReservoirCoupling::Proxy<Scalar>& rescoup() { return rescoup_; }
             const ReservoirCoupling::Proxy<Scalar>& rescoup() const { return rescoup_; }
 
+            /// \brief Update guide rates for all wells and groups
+            ///
+            /// Computes guide rates based on well potentials and group hierarchy.
+            /// This is typically called at the beginning of each timestep.
+            ///
+            /// \param report_step_idx Current report step index
+            /// \param sim_time Current simulation time
+            /// \param deferred_logger Logger for deferred messages
+            void updateGuideRates(const int report_step_idx,
+                                  const double sim_time,
+                                  DeferredLogger& deferred_logger)
+            {
+                this->guide_rate_handler_.setLogger(&deferred_logger);
+                this->guide_rate_handler_.updateGuideRates(
+                    report_step_idx, sim_time, this->wellState(), this->groupState()
+                );
+            }
+
             /// @brief Check if this process is a reservoir coupling master
             bool isReservoirCouplingMaster() const { return rescoup_.isMaster(); }
 
