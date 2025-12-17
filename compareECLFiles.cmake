@@ -387,6 +387,42 @@ function(add_test_compareDamarisFiles)
                                     TESTNAME ${PARAM_CASENAME})
 endfunction()
 
+###########################################################################
+
+# Adds several tests cases with similar parameters
+# cases Variable name of list with test cases
+# prefix Prefix to use
+# argn Parameters for cases
+macro(add_multiple_tests cases prefix)
+  foreach(case ${${cases}})
+    string(TOLOWER ${case} test)
+    add_test_compareECLFiles(
+        CASENAME ${prefix}${test}
+        FILENAME ${case}
+        ${ARGN}
+    )
+  endforeach()
+endmacro()
+
+###########################################################################
+
+# Adds several tests cases in a numerical range with similar parameters
+# start Start of range
+# end End fof range
+# ftemplate File name template to use
+# prefix Prefix to use
+# argn Parameters for cases
+macro(add_multiple_test_range start end ftemplate prefix)
+    foreach(case RANGE ${start} ${end})
+      add_test_compareECLFiles(
+          CASENAME ${prefix}_${case}
+          FILENAME ${ftemplate}${case}
+          ${ARGN}
+      )
+    endforeach()
+endmacro()
+
+###########################################################################
 
 if(NOT TARGET test-suite)
   add_custom_target(test-suite)
