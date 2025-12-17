@@ -742,7 +742,8 @@ namespace Opm {
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
-        this->updateNONEProductionGroups(local_deferredLogger);
+        const auto& glo = this->schedule().glo(reportStepIdx);
+        this->updateNONEProductionGroups(glo, local_deferredLogger);
 
         this->commitWGState();
 

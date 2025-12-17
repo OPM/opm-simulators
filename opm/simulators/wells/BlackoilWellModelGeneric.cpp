@@ -1951,7 +1951,7 @@ operator==(const BlackoilWellModelGeneric& rhs) const
 template <typename Scalar, typename IndexTraits>
 void
 BlackoilWellModelGeneric<Scalar, IndexTraits>::
-updateNONEProductionGroups(DeferredLogger& deferred_logger)
+updateNONEProductionGroups(const GasLiftOpt& glo, DeferredLogger& deferred_logger)
 {
     auto& group_state = this->groupState();
     const auto& prod_group_controls = group_state.get_production_controls();
@@ -2006,6 +2006,13 @@ updateNONEProductionGroups(DeferredLogger& deferred_logger)
         }
         const auto& gname = gnames[i];
         if (group_state.production_control(gname) != Group::ProductionCMode::NONE) {
+            // If the production group is specified for gas lift optimization,
+            // the current gas lift optimization implementation relies on the control
+            // mode is not NONE or FLD. As a result, we can not set it to NONE here.
+            // More systematic development might be needed in the future in this area.
+            if (glo.active() && glo.has_group(gname)) {
+                continue;
+            }
             if (comm_.rank() == 0) {
                 const std::string msg = fmt::format("Production group {} has no constraints active, setting control mode to NONE", gname);
                 deferred_logger.info(msg);
