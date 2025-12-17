@@ -21,9 +21,8 @@ declare -a downstreams
 declare -A downstreamRev
 
 # Clone opm-common
-pushd .
 mkdir -p $WORKSPACE/deps/opm-common
-cd $WORKSPACE/deps/opm-common
+pushd $WORKSPACE/deps/opm-common
 git init .
 git remote add origin https://github.com/OPM/opm-common
 git fetch --depth 1 origin ${upstreamRev[opm-common]}:branch_to_build
@@ -33,11 +32,10 @@ popd
 
 source $WORKSPACE/deps/opm-common/jenkins/build-opm-module.sh
 
-# Add a link so scripts can find opm-simulators in a uniform way
-ln -sf $WORKSPACE $WORKSPACE/deps/opm-simulators
-
 parseRevisions
 printHeader opm-simulators
+
+clone_repositories opm-simulators
 
 # Setup opm-data
 source $WORKSPACE/deps/opm-common/jenkins/setup-opm-tests.sh
