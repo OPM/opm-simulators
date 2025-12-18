@@ -240,7 +240,7 @@ struct NonlinearSolverParameters
                                 const int it, bool& oscillate, bool& stagnate) const
         {
             detail::detectOscillations(residualHistory, it, model_->numPhases(),
-                                       this->relaxRelTol(), 2, oscillate, stagnate);
+                                       this->relaxRelTol(), 1, oscillate, stagnate);
         }
 
 
