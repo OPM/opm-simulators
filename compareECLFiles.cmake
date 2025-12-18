@@ -515,6 +515,21 @@ add_test_compareECLFiles(CASENAME norne_init
                          DIR norne
                          DIR_PREFIX /init)
 
+set(_operate_work_tests
+  OPERATE_ENDPOINTS-01
+  OPERATER_ENDPOINTS-01
+)
+
+add_multiple_tests(_operate_work_tests
+  "operate_work_"
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  PREFIX compareECLInitFiles
+  DIR operate
+  DIR_PREFIX /init
+)
+
 # This is not a proper regression test; the test will load a norne case prepared
 # for restart and run one single timestep - of length one day. The results are not
 # verified in any way.
