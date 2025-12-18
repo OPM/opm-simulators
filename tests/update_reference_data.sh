@@ -64,13 +64,36 @@ compareResultFileContents () {
     #
     # so we use this output to infer the result file name.
 
-    cp -a "${reference_dir}/${result_file}" "${TMPDIR}/orig"
-    ref=$(${CONVERT_ECL} "${TMPDIR}/orig/${result_file}" | awk '/converting/{print $NF}')
+    if [ -s "${reference_dir}/${result_file}" ]
+    then
+        cp -a "${reference_dir}/${result_file}" "${TMPDIR}/orig"
+        ref=$(${CONVERT_ECL} "${TMPDIR}/orig/${result_file}" | \
+                  awk '/converting/{print $NF}')
+    else
+        # Reference file does not exist. New file type or new case.
+        ref=/dev/null
+    fi
 
-    cp -a "${simoutput_dir}/${result_file}" "${TMPDIR}/new"
-    new=$(${CONVERT_ECL} "${TMPDIR}/new/${result_file}" | awk '/converting/{print $NF}')
+    if [ -s "${simoutput_dir}/${result_file}" ]
+    then
+        cp -a "${simoutput_dir}/${result_file}" "${TMPDIR}/new"
+        new=$(${CONVERT_ECL} "${TMPDIR}/new/${result_file}" | \
+                  awk '/converting/{print $NF}')
+    else
+        # New simulation file does not exist. Typically when the file
+        # type is removed. Unexpected.
+        new=/dev/null
+    fi
 
-    diff -u "${ref}" "${new}" >> "${WORKSPACE}/data_diff"
+    if [ "${new}" != "${ref}" ]
+    then
+        diff -u "${ref}" "${new}" >> "${WORKSPACE}/data_diff"
+    else
+        # Neither reference nor updated file exists. This really
+        # shouldn't happen.
+        echo "No difference between reference and update for ${result_file}" \
+             >> "${WORKSPACE}/data_diff"
+    fi
 }
 
 # Extract individual test properties of a failed test
