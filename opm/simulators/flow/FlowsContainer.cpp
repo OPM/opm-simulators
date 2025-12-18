@@ -123,7 +123,7 @@ allocate(const std::size_t bufferSize,
     // Flows may need to be allocated even when there is no restart due to BFLOW* summary keywords
     if (blockFlows_ ) {
         const std::array<int, 3> phaseIdxs { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
-        const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
+        const std::array<int, 3> compIdxs { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
 
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
             if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
@@ -146,7 +146,7 @@ allocate(const std::size_t bufferSize,
         enableFlows_ = true;
 
         const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
-        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+        const std::array<int, 3> compIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
         const auto rstName = std::array { "FLOGASN+", "FLOOILN+", "FLOWATN+" };
 
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
@@ -184,7 +184,7 @@ allocate(const std::size_t bufferSize,
         enableFlores_ = true;
 
         const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
-        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+        const std::array<int, 3> compIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
         const auto rstName = std::array{ "FLRGASN+", "FLROILN+", "FLRWATN+" };
 
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
@@ -224,14 +224,14 @@ assignFlores(const unsigned globalDofIdx,
              const Scalar water)
 {
     if (faceId >= 0) {
-        assignToVec<gasCompIdx>(this->flores_, faceId, globalDofIdx, gas);
-        assignToVec<oilCompIdx>(this->flores_, faceId, globalDofIdx, oil);
-        assignToVec<waterCompIdx>(this->flores_, faceId, globalDofIdx, water);
+        assignToVec<gasPhaseIdx>(this->flores_, faceId, globalDofIdx, gas);
+        assignToVec<oilPhaseIdx>(this->flores_, faceId, globalDofIdx, oil);
+        assignToVec<waterPhaseIdx>(this->flores_, faceId, globalDofIdx, water);
     }
     else if (faceId == -2) {
-        assignToNnc<gasCompIdx>(this->floresn_, nncId, gas);
-        assignToNnc<oilCompIdx>(this->floresn_, nncId, oil);
-        assignToNnc<waterCompIdx>(this->floresn_, nncId, water);
+        assignToNnc<gasPhaseIdx>(this->floresn_, nncId, gas);
+        assignToNnc<oilPhaseIdx>(this->floresn_, nncId, oil);
+        assignToNnc<waterPhaseIdx>(this->floresn_, nncId, water);
     }
 }
 
@@ -245,14 +245,14 @@ assignFlows(const unsigned globalDofIdx,
             const Scalar water)
 {
     if (faceId >= 0) {
-        assignToVec<gasCompIdx>(this->flows_, faceId, globalDofIdx, gas);
-        assignToVec<oilCompIdx>(this->flows_, faceId, globalDofIdx, oil);
-        assignToVec<waterCompIdx>(this->flows_, faceId, globalDofIdx, water);
+        assignToVec<gasPhaseIdx>(this->flows_, faceId, globalDofIdx, gas);
+        assignToVec<oilPhaseIdx>(this->flows_, faceId, globalDofIdx, oil);
+        assignToVec<waterPhaseIdx>(this->flows_, faceId, globalDofIdx, water);
     }
     else if (faceId == -2) {
-        assignToNnc<gasCompIdx>(this->flowsn_, nncId, gas);
-        assignToNnc<oilCompIdx>(this->flowsn_, nncId, oil);
-        assignToNnc<waterCompIdx>(this->flowsn_, nncId, water);
+        assignToNnc<gasPhaseIdx>(this->flowsn_, nncId, gas);
+        assignToNnc<oilPhaseIdx>(this->flowsn_, nncId, oil);
+        assignToNnc<waterPhaseIdx>(this->flowsn_, nncId, water);
     }
 }
 
@@ -273,14 +273,14 @@ outputRestart(data::Solution& sol)
     using Dir = FaceDir::DirEnum;
     std::vector<DataEntry<Scalar>> entries;
     if (this->enableFlores_) {
-        addEntry<gasCompIdx>  (entries, "FLRGAS", UnitSystem::measure::rate,                flores_);
-        addEntry<oilCompIdx>  (entries, "FLROIL", UnitSystem::measure::rate,                flores_);
-        addEntry<waterCompIdx>(entries, "FLRWAT", UnitSystem::measure::rate,                flores_);
+        addEntry<gasPhaseIdx>  (entries, "FLRGAS", UnitSystem::measure::rate,                flores_);
+        addEntry<oilPhaseIdx>  (entries, "FLROIL", UnitSystem::measure::rate,                flores_);
+        addEntry<waterPhaseIdx>(entries, "FLRWAT", UnitSystem::measure::rate,                flores_);
     }
     if (this->enableFlows_) {
-        addEntry<gasCompIdx>  (entries, "FLOGAS", UnitSystem::measure::gas_surface_rate,    flows_);
-        addEntry<oilCompIdx>  (entries, "FLOOIL", UnitSystem::measure::liquid_surface_rate, flows_);
-        addEntry<waterCompIdx>(entries, "FLOWAT", UnitSystem::measure::liquid_surface_rate, flows_);
+        addEntry<gasPhaseIdx>  (entries, "FLOGAS", UnitSystem::measure::gas_surface_rate,    flows_);
+        addEntry<oilPhaseIdx>  (entries, "FLOOIL", UnitSystem::measure::liquid_surface_rate, flows_);
+        addEntry<waterPhaseIdx>(entries, "FLOWAT", UnitSystem::measure::liquid_surface_rate, flows_);
     }
 
     std::for_each(entries.begin(), entries.end(),
