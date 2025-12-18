@@ -574,6 +574,15 @@ getResidualMeasureValue(const WellState<Scalar, IndexTraits>& well_state,
     return sum;
 }
 
+template<typename FluidSystem, typename Indices>
+std::string
+MultisegmentWellEval<FluidSystem,Indices>::
+debugInfo() const
+{
+    // only outputing the primary variables for now
+    return primary_variables_.debugInfo();
+}
+
 #include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
 
 INSTANTIATE_TYPE_INDICES(MultisegmentWellEval, double)
