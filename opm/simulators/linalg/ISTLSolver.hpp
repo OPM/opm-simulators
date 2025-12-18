@@ -145,7 +145,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
     /// as a block-structured matrix (one block for all cell variables) for a fixed
     /// number of cell variables np .
     template <class TypeTag>
-    class ISTLSolver : public AbstractISTLSolver<TypeTag>
+    class ISTLSolver : public AbstractISTLSolver<GetPropType<TypeTag, Properties::SparseMatrixAdapter>,
+                                                 GetPropType<TypeTag, Properties::GlobalEqVector>>
     {
     protected:
         using GridView = GetPropType<TypeTag, Properties::GridView>;
@@ -464,7 +465,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         bool checkConvergence(const Dune::InverseOperatorResult& result) const
         {
-            return AbstractISTLSolver<TypeTag>::checkConvergence(result, parameters_[activeSolverNum_]);
+            return AbstractISTLSolver<SparseMatrixAdapter, Vector>::checkConvergence(result, parameters_[activeSolverNum_]);
         }
 
         bool isParallel() const {
