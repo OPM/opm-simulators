@@ -912,26 +912,8 @@ private:
     }
 
 public:
-    void setResAndJacobi(VectorBlock& res, MatrixBlock& bMat, const ADVectorBlock& resid) const
-    {
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            res[eqIdx] = resid[eqIdx].value();
-        }
-
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            for (unsigned pvIdx = 0; pvIdx < numEq; ++pvIdx) {
-                // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of
-                // the residual function 'eqIdx' for the degree of freedom 'dofIdx'
-                // with regard to the focus variable 'pvIdx' of the degree of freedom
-                // 'focusDofIdx'
-                bMat[eqIdx][pvIdx] = resid[eqIdx].derivative(pvIdx);
-            }
-        }
-    }
-
-#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
     template<class VectorBlockType, class MatrixBlockType, class ADVectorBlockType>
-    OPM_HOST_DEVICE static void setResAndJacobiGPUCPU(VectorBlockType& res, MatrixBlockType& bMat, const ADVectorBlockType& resid)
+    OPM_HOST_DEVICE static void setResAndJacobi(VectorBlockType& res, MatrixBlockType& bMat, const ADVectorBlockType& resid)
     {
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             res[eqIdx] = resid[eqIdx].value();
@@ -947,7 +929,6 @@ public:
             }
         }
     }
-#endif
 
     void updateFlowsInfo()
     {
@@ -1462,7 +1443,7 @@ private:
                 }
 
                 adres *= nbInfo.res_nbinfo.faceArea;
-                setResAndJacobiGPUCPU(res, bMat, adres);
+                setResAndJacobi(res, bMat, adres);
                 GPU_LOCAL_residualView[globI] += res;
 
                 //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
@@ -1478,7 +1459,7 @@ private:
         {
             LocalResidualKernel::template computeStorage<Evaluation>(adres, intQuantsIn);
         }
-        setResAndJacobiGPUCPU(res, bMat, adres);
+        setResAndJacobi(res, bMat, adres);
 
         if constexpr (!useGPU) {
             // Either use cached storage term, or compute it on the fly.
@@ -1566,7 +1547,7 @@ private:
                 const LocalIntensiveQuantities& insideIntQuants = localModel.intensiveQuantities(globI, /*timeIdx*/ 0);
                 LocalResidualKernel::computeBoundaryFlux(adres, gpuProblem, GPU_LOCAL_boundaryInfo[ii].bcdata, insideIntQuants, globI);
                 adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
-                setResAndJacobiGPUCPU(res, bMat, adres);
+                setResAndJacobi(res, bMat, adres);
                 // GPU_LOCAL_residualView[globI] += res;
                 auto* residualPtr = &(GPU_LOCAL_residualView.data()[globI]);
                 for (int i = 0; i < numEq; ++i) {
@@ -1604,7 +1585,7 @@ private:
                 const LocalIntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
                 LocalResidual::computeBoundaryFlux(adres, problem_(), GPU_LOCAL_boundaryInfo[ii].bcdata, insideIntQuants, globI);
                 adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
-                setResAndJacobiGPUCPU(res, bMat, adres);
+                setResAndJacobi(res, bMat, adres);
                 GPU_LOCAL_residualView[globI] += res;
                 ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
                 *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
