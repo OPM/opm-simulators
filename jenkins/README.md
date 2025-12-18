@@ -13,20 +13,17 @@ trigger line needs to contain &lt;module-name&gt;=&lt;pull request number&gt;.
 
 To build with downstreams the trigger line needs to contain 'with downstreams'.
 
+**static_analysis.sh**:
+Run static analysis for opm-simulators
+
 **run-spe.sh**:
 This script will execute the SPE1, SPE3 and SPE9 cases, then compare against
 OPM and Eclipse reference results. It is meant to be executed after a build.
-The binary used used is from the build identified by the configuration
+The binary used is from the build identified by the configuration
 environment variable.
 
 **run-norne.sh**:
 This script will execute the Norne case, and generate a document with
 plots of the results. It is meant to be executed after a build.
-The binary used used is from the build identified by the configuration
-environment variable.
-
-**run-polymer.sh**:
-This script will execute the simple2D polymer case, then compare against
-Eclipse reference results. It is meant to be executed after a build.
-The binary used used is from the build identified by the configuration
+The binary used is from the build identified by the configuration
 environment variable.
