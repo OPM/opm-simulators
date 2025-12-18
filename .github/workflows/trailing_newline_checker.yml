@@ -1,0 +1,25 @@
+name: trailing-newline-checker
+
+# Run this workflow on every pull request and push to the master branch.
+# See .githooks/pre-commit for the actual checker and the rationale for this check.
+on:
+  pull_request:
+  push:
+    branches: master
+
+jobs:
+  trailing-newline-checker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run the trailing-newline-checker
+        run: |
+          ./.githooks/pre-commit
