@@ -185,7 +185,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/PreconditionerFactory7.cpp
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
-  opm/simulators/linalg/setupPropertyTreeTPSA.cpp
   opm/simulators/linalg/TPSALinearSolverParameters.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeStepping.cpp
@@ -1126,7 +1125,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/residreductioncriterion.hh
   opm/simulators/linalg/SmallDenseMatrixUtils.hpp
   opm/simulators/linalg/setupPropertyTree.hpp
-  opm/simulators/linalg/setupPropertyTreeTPSA.hpp
   opm/simulators/linalg/superlubackend.hh
   opm/simulators/linalg/TPSALinearSolverParameters.hpp
   opm/simulators/linalg/twolevelmethodcpr.hh
