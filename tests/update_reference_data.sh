@@ -276,17 +276,23 @@ updateDamarisResults () {
     changed_tests+=" ${test_name}"
 }
 
-# Update .INIT and .EGRID files for Norne model as applicable.
+# Generate reference solution updates for cases that don't run a full
+# simulation (e.g., those that use the 'NOSIM' keyword).
 #
-# This is a special case.
-updateNorneInitFiles () {
+# Updates the .EGRID and .INIT files only.
+updateInitFileResults () {
+    local binary=${testProperty["binary"]}
+    local dir_name=${testProperty["dir_name"]}
+    local file_name=${testProperty["file_name"]}
+    local test_name=${testProperty["test_name"]}
+
     if copyToReferenceDir \
-        "${BUILD_DIR}/tests/results/init/flow+norne" \
-        "${OPM_TESTS_ROOT}/norne/opm-simulation-reference/flow" \
-        NORNE_ATW2013 \
-        EGRID INIT
+           "${BUILD_DIR}/tests/results/init/${binary}+${test_name}" \
+           "${OPM_TESTS_ROOT}/${dir_name}/opm-simulation-reference/${binary}" \
+           "${file_name}" \
+           EGRID INIT
     then
-        changed_tests+=" norne_init"
+        changed_tests+=" ${test_name}"
     fi
 }
 
@@ -322,14 +328,14 @@ do
             *compareECLFiles* )
                 updateFullSimulationResults ;;
 
+            *compareECLInitFiles* )
+                updateInitFileResults ;;
+
             *compareDamarisFiles* )
                 updateDamarisResults ;;
         esac
     done < "${logfile}"
 done
-
-# Special case handling of certain particular tests.
-updateNorneInitFiles
 
 if [ -z "${changed_tests}" ]
 then

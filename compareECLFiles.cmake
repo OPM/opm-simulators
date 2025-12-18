@@ -506,12 +506,13 @@ add_test_compareECLFiles(CASENAME norne
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 
-add_test_compareECLFiles(CASENAME norne
+add_test_compareECLFiles(CASENAME norne_init
                          FILENAME NORNE_ATW2013
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          PREFIX compareECLInitFiles
+                         DIR norne
                          DIR_PREFIX /init)
 
 # This is not a proper regression test; the test will load a norne case prepared
