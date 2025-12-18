@@ -41,6 +41,11 @@ namespace Opm {
 
 /*!
 * \brief Primary variables in (linear) elasticity equations
+*
+* Primary variables are:
+* \li Displacement (3D vector)
+* \li Rotation (3D vector) -> variable to express rotations in stress tensor
+* \li Solid pressure (single scalar) -> volumetric change from mechanics
 */
 template <class TypeTag>
 class ElasticityPrimaryVariables

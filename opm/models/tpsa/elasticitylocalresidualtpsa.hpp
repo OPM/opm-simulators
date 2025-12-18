@@ -43,6 +43,25 @@ namespace Opm {
 
 /*!
 * \brief Calculation of (linear) elasticity model terms for the residual
+*
+* The linearized Biot model is solved where it is assumed that solid mechanics are governed by Hooke's law and
+* conservation of linear momentum:
+*
+* \f{eqnarray*}{
+*   \sigma &=& 2\mu\epsilon(u) + \lambda(\nabla\cdot u)I,
+*   -\nabla\cdot(\sigma - \alpha(p_f - p_0)I) &=& f_u,
+* \f}
+*
+* where \f&\sigma\f& is Cauchy stress tensor, \f&u\f& is displacement, \f&\epsilon(\cdot)\f& is thesymmetric gradient,
+* \f&\mu\f& and \f&\lambda\f& are Lame's first (aka shear modulus) and second parameters, \f&\alpha\f& is the
+* Biot-Willis parameter, \f&(p_f-p_0)\f& is fluid pressure difference wrt hydrostatic, and \f&f_u\f& are body forces.
+*
+* The equations are discretized using two-point stress approximation following Boon et al. (2025), Solving Biot
+* poroelasticity by coupling OPM Flow with the two-point stress approximation finite volume method, arXiv:2510.23432v1.
+*
+* The resulting equations contain a volume term where only single-cell variables are used; face terms where variables
+* across cell faces are calculated; boundary terms, similar to face terms, but cell faces are at the boundary; and
+* source terms where coupling and potential body forces are calculated.
 */
 template <class TypeTag>
 class ElasticityLocalResidual
