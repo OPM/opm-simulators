@@ -938,7 +938,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/tpsa/elasticityprimaryvariables.hpp
   opm/models/tpsa/tpsabaseproperties.hpp
   opm/models/tpsa/tpsamodel.hpp
-  opm/models/tpsa/tpsanewtonconvergencewriter.hpp
   opm/models/tpsa/tpsanewtonmethod.hpp
   opm/models/tpsa/tpsanewtonmethodparams.hpp
   opm/models/utils/alignedallocator.hh
