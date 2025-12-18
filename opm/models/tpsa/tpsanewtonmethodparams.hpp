@@ -45,11 +45,8 @@ struct TpsaNewtonTargetIterations { static constexpr int value = 10; };
 template<class Scalar>
 struct TpsaNewtonTolerance { static constexpr Scalar value = 1e-3; };
 
-// Specifies whether the Newton method should print messages or not
-struct TpsaNewtonVerbose { static constexpr bool value = true; };
-
-// Specifies whether the convergence rate and the global residual gets written out to disk for every Newton iteration
-struct TpsaNewtonWriteConvergence { static constexpr bool value = false; };
+// Specifies verbosity of print messages
+struct TpsaNewtonVerbosity { static constexpr int value = 1; };
 
 } // namespace Opm::Parameters
 
@@ -64,7 +61,7 @@ struct TpsaNewtonMethodParams
     static void registerParameters();
     void read();
 
-    bool verbose_;
+    int verbosity_;
     bool writeConvergence_;
     int targetIterations_;
     int minIterations_;
