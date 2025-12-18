@@ -57,7 +57,8 @@ namespace Opm::gpuistl
 *       matrices and vectors internally for computations.
 */
 template <class TypeTag>
-class ISTLSolverGPUISTL : public AbstractISTLSolver<TypeTag>
+class ISTLSolverGPUISTL : public AbstractISTLSolver<GetPropType<TypeTag, Properties::SparseMatrixAdapter>,
+                                                    GetPropType<TypeTag, Properties::GlobalEqVector>>
 {
 public:
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
@@ -332,7 +333,7 @@ public:
 private:
     bool checkConvergence(const Dune::InverseOperatorResult& result) const
     {
-        return AbstractISTLSolver<TypeTag>::checkConvergence(result, m_parameters);
+        return AbstractISTLSolver<SparseMatrixAdapter, Vector>::checkConvergence(result, m_parameters);
     }
 
     // Weights to make approximate pressure equations.

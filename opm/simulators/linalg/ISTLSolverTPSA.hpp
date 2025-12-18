@@ -35,6 +35,7 @@
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
@@ -59,10 +60,11 @@ namespace Opm {
 /*!
 * \brief Class for setting up ISTL linear solvers for TPSA
 *
-* Most of the code is copied from ISTLSolver class
+* Implements AbstractISTLSolver interface for TPSA linear solvers.
 */
 template <class TypeTag>
-class ISTLSolverTPSA
+class ISTLSolverTPSA : public AbstractISTLSolver<GetPropType<TypeTag, Properties::SparseMatrixAdapterTPSA>,
+                                                 GetPropType<TypeTag, Properties::GlobalEqVectorTPSA>>
 {
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -176,14 +178,9 @@ public:
     }
 
     /*!
-    * \brief Prepare matix and rhs vector for linear solve
-    *
-    * \param M System matrix
-    * \param b Right-hand side vector
-    *
-    * \note No setResidual() or setMatrix() functions in this class. Must be handled here!
+    * \copydoc AbstractISTLSolver::prepare
     */
-    void prepare(const Matrix& M, Vector& b)
+    void prepare(const Matrix& M, Vector& b) override
     {
         try {
             initPrepare(M, b);
@@ -196,20 +193,18 @@ public:
     }
 
     /*!
-    * \brief Prepare matix and rhs vector for linear solve
-    *
-    * \param M System matrix
-    * \param b Right-hand side vector
-    *
-    * \note No setResidual() or setMatrix() functions in this class. Must be handled here!
+    * \copydoc AbstractISTLSolver::prepare
     */
-    void prepare(const SparseMatrixAdapter& M, Vector& b)
+    void prepare(const SparseMatrixAdapter& M, Vector& b) override
     {
         prepare(M.istlMatrix(), b);
     }
 
     /*!
     * \brief Prepare linear solver
+    *
+    * Create linear solver using FlexibleSolverInfo struct from ISTLSolver.hpp, or update preconditioner if solver has
+    * been created
     */
     void prepareFlexibleSolver()
     {
@@ -235,12 +230,9 @@ public:
     }
 
     /*!
-    * \brief Solve the linear system and store result in the input Vector x
-    *
-    * \param x Linear system solution will be stored here
-    * \returns Bool indicating convergence
+    * \copydoc AbstractISTLSolver::solve
     */
-    bool solve(Vector& x)
+    bool solve(Vector& x) override
     {
         // Increase solver count
         ++solveCount_;
@@ -270,41 +262,79 @@ public:
     /*!
     * \brief Reset number of solver calls to zero
     */
-    void resetSolveCount() {
+    void resetSolveCount()
+    {
         solveCount_ = 0;
     }
+
+    // ////
+    // Unused AbstractISTLSolver functions
+    // ////
+    /*!
+    * \copydoc AbstractISTLSolver::eraseMatrix
+    */
+    void eraseMatrix() override
+    { }
+
+    /*!
+    * \copydoc AbstractISTLSolver::setActiveSolver
+    */
+    void setActiveSolver(int /*num*/) override
+    { }
+
+    /*!
+    * \copydoc AbstractISTLSolver::numAvailableSolvers
+    */
+    int numAvailableSolvers() const override
+    {
+        return 1;
+    }
+
+    /*!
+    * \copydoc AbstractISTLSolver::setResidual
+    */
+    void setResidual(Vector& b) override
+    { }
+
+    /*!
+    * \copydoc AbstractISTLSolver::setMatrix
+    */
+    void setMatrix(const SparseMatrixAdapter& /*M*/) override
+    { }
 
     // ///
     // Public get functions
     // ///
     /*!
-    * \brief Copy right-hand side vector (rhs_) to incomming vector (b)
-    *
-    * \param b Vector to copy rhs_ to
+    * \copydoc AbstractISTLSolver::getResidual
     */
-    void getResidual(Vector& b) const
+    void getResidual(Vector& b) const override
     {
         b = *rhs_;
     }
 
     /*!
-    * \brief Get number of solver calls
-    *
-    * \returns Number of calls to linear solver
+    * \copydoc AbstractISTLSolver::getSolveCount
     */
-    int getSolveCount() const
+    int getSolveCount() const override
     {
         return solveCount_;
     }
 
     /*!
-    * \brief Get number of linear solver iterations
-    *
-    * \returns Number of iterations
+    * \copydoc AbstractISTLSolver::iterations
     */
-    int iterations () const
+    int iterations() const override
     {
         return iterations_;
+    }
+
+    /*!
+    * \copydoc AbstractISTLSolver::comm
+    */
+    const CommunicationType* comm() const override
+    {
+        return comm_.get();
     }
 
 protected:
@@ -332,22 +362,7 @@ protected:
     */
     bool checkConvergence(const Dune::InverseOperatorResult& result) const
     {
-        // Check relaxed linear solver tolerance
-        if (!result.converged && result.reduction < parameters_.relaxed_linear_solver_reduction_) {
-            std::string msg = fmt::format("Full linear solver tolerance not achieved. The reduction is {} "
-                                            "after {} iterations.");
-            OpmLog::warning(msg);
-            return true;
-        }
-
-        // If we have failed and we don't ignore failures, throw error
-        if (!parameters_.ignoreConvergenceFailure_ && !result.converged) {
-            const std::string msg("Convergence failure for linear solver.");
-            OPM_THROW_NOLOG(NumericalProblem, msg);
-        }
-
-        // Return convergence bool from linear solver result
-        return result.converged;
+        return AbstractISTLSolver<SparseMatrixAdapter, Vector>::checkConvergence(result, parameters_);
     }
 
     // ///
