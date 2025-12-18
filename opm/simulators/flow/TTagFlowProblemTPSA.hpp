@@ -36,7 +36,6 @@
 #include <opm/models/tpsa/elasticityprimaryvariables.hpp>
 #include <opm/models/tpsa/tpsabaseproperties.hpp>
 #include <opm/models/tpsa/tpsamodel.hpp>
-#include <opm/models/tpsa/tpsanewtonconvergencewriter.hpp>
 #include <opm/models/tpsa/tpsanewtonmethod.hpp>
 
 #include <opm/simulators/flow/BlackoilModelTPSA.hpp>
@@ -102,10 +101,6 @@ template<class TypeTag>
 struct NewtonMethodTPSA<TypeTag, TTag::FlowProblemTpsa>
 { using type = TpsaNewtonMethod<TypeTag>; };
 
-template<class TypeTag>
-struct NewtonConvergenceWriterTPSA<TypeTag, TTag::FlowProblemTpsa>
-{ using type = TpsaNewtonConvergenceWriter<TypeTag>; };
-
 // TPSA primary variables
 template<class TypeTag>
 struct PrimaryVariablesTPSA<TypeTag, TTag::FlowProblemTpsa>
@@ -144,11 +139,6 @@ public:
     using type = typename Linear::IstlSparseMatrixAdapter<Block>;
 
 };
-
-// Disable constraints in Newton method
-template<class TypeTag>
-struct EnableConstraintsTPSA<TypeTag, TTag::FlowProblemTpsa>
-{ static constexpr bool value = false; };
 
 // Set linear solver backend
 template<class TypeTag>

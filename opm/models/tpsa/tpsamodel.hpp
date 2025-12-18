@@ -184,9 +184,6 @@ public:
         // Initialize the linearizer
         linearizer_->init(simulator_);
 
-        // Initialize the newton method
-        newtonMethod_.finishInit();
-
         // Resize material state vector
         resizeMaterialState_();
     }

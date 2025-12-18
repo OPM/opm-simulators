@@ -64,11 +64,9 @@ class TpsaNewtonMethod
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVectorTPSA>;
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVectorTPSA>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariablesTPSA>;
-    using Constraints = GetPropType<TypeTag, Properties::Constraints>;
     using EqVector = GetPropType<TypeTag, Properties::EqVectorTPSA>;
     using Linearizer = GetPropType<TypeTag, Properties::LinearizerTPSA>;
     using LinearSolverBackend = GetPropType<TypeTag, Properties::LinearSolverBackendTPSA>;
-    using ConvergenceWriter = GetPropType<TypeTag, Properties::NewtonConvergenceWriterTPSA>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapterTPSA>;
 
     using IstlMatrix = typename SparseMatrixAdapter::IstlMatrix;
@@ -86,7 +84,6 @@ public:
         , lastError_(1e100)
         , numIterations_(0)
         , numLinearizations_(0)
-        , convergenceWriter_()
     {
         // Read runtime/default Newton parameters
         params_.read();
@@ -100,15 +97,6 @@ public:
         LinearSolverBackend::registerParameters();
         TpsaNewtonMethodParams<Scalar>::registerParameters();
     }
-
-    /*!
-    * \brief Finialize the construction of the object.
-    *
-    * At this point, it can be assumed that all objects featured by the simulator have been allocated. (But not that
-    * they have been fully initialized yet.)
-    */
-    void finishInit()
-    { }
 
     /*!
     * \brief Run the Newton method.
@@ -134,7 +122,7 @@ public:
 
         // Tell the implementation that we begin solving
         prePostProcessTimer_.start();
-        begin_(nextSolution);
+        begin_();
         prePostProcessTimer_.stop();
 
         try {
@@ -156,7 +144,6 @@ public:
                 // Do the actual linearization
                 linearizeTimer_.start();
                 linearizeDomain_();
-                linearizeAuxiliaryEquations_();
                 linearizeTimer_.stop();
 
                 // Get residual and Jacobian for convergence check and preparation of linear solver
@@ -177,7 +164,7 @@ public:
                 if (converged()) {
                     // Tell the implementation that we're done with this iteration
                     prePostProcessTimer_.start();
-                    endIteration_(nextSolution, currentSolution);
+                    endIteration_();
                     prePostProcessTimer_.stop();
 
                     break;
@@ -191,7 +178,7 @@ public:
 
                 if (!conv) {
                     solveTimer_.stop();
-                    if (verbose_()) {
+                    if (verbosity_() > 0) {
                         std::cout << "TPSA: Linear solver did not converge!" << std::endl;
                     }
 
@@ -204,19 +191,18 @@ public:
 
                 // Update the current solution with the delta
                 updateTimer_.start();
-                postSolve_(currentSolution, residual, solutionUpdate);
                 update_(nextSolution, currentSolution, solutionUpdate, residual);
                 updateTimer_.stop();
 
                 // End of iteration calculations
                 prePostProcessTimer_.start();
-                endIteration_(nextSolution, currentSolution);
+                endIteration_();
                 prePostProcessTimer_.stop();
             }
         }
         catch (const Dune::Exception& e)
         {
-            if (verbose_()) {
+            if (verbosity_() > 0) {
                 std::cout << "TPSA: Newton method caught exception: \""
                           << e.what() << "\"\n" << std::flush;
             }
@@ -229,7 +215,7 @@ public:
         }
         catch (const NumericalProblem& e)
         {
-            if (verbose_()) {
+            if (verbosity_() > 0) {
                 std::cout << "TPSA: Newton method caught exception: \""
                           << e.what() << "\"\n" << std::flush;
             }
@@ -241,13 +227,8 @@ public:
             return false;
         }
 
-        // Tell the implementation that we're done
-        prePostProcessTimer_.start();
-        end_();
-        prePostProcessTimer_.stop();
-
         // print the timing summary of the time step
-        if (verbose_()) {
+        if (verbosity_() > 0) {
             Scalar elapsedTot =
                 linearizeTimer_.realTimeElapsed() +
                 solveTimer_.realTimeElapsed() +
@@ -274,40 +255,13 @@ public:
         if (!converged()) {
             prePostProcessTimer_.start();
             failed_();
-            std::cout << "TPSA: Newton iterations did not converge!" << std::endl;
+            if (verbosity_() > 0) {
+                std::cout << "TPSA: Newton iterations did not converge!" << std::endl;
+            }
             prePostProcessTimer_.stop();
             return false;
         }
-
-        // if we converged, tell the implementation that we've succeeded
-        prePostProcessTimer_.start();
-        succeeded_();
-        prePostProcessTimer_.stop();
-
         return true;
-    }
-
-    /*!
-    * \brief Set the index of current iteration.
-    *
-    * \param value New iteration index
-    *
-    * Normally this does not need to be called, but if the non-linear solver is implemented externally, it needs to be
-    * set in order for the model to do the Right Thing (TM) while linearizing.
-    */
-    void setIterationIndex(int value)
-    {
-        numIterations_ = value;
-    }
-
-    /*!
-    * \brief Set the current tolerance at which the Newton method considers itself to be converged.
-    *
-    * \param value New tolerance value
-    */
-    void setTolerance(Scalar value)
-    {
-        params_.tolerance_ = value;
     }
 
     /*!
@@ -432,43 +386,31 @@ public:
 
 protected:
     /*!
-    * \brief Returns true if the Newton method ought to be chatty.
+    * \brief Verbosity level of Newton print messages
     *
-    * \returns Bool indicating if the Newton procedure should be verbose
+    * \returns Level indicating verbosity
+    *
+    * Newton procedure verbosity: 0=none, 1=basic, 2=all
     */
-    bool verbose_() const
-    { return params_.verbose_ && (simulator_.gridView().comm().rank() == 0); }
+    int verbosity_() const
+    { return simulator_.gridView().comm().rank() == 0 ? params_.verbosity_ : 0; }
 
     /*!
     * \brief Called before the Newton method is applied to an non-linear system of equations.
-    *
-    * \param nextSolution The initial solution vector
     */
-    void begin_(const SolutionVector& /*nextSolution*/)
+    void begin_()
     {
         numIterations_ = 0;
         numLinearizations_ = 0;
         error_ = 1e100;
-
-        if (params_.writeConvergence_) {
-            convergenceWriter_.beginTimeStep();
-        }
     }
 
     /*!
-    * \brief Indicates the beginning of a Newton iteration.
+    * \brief Calculations at the beginning of a Newton iteration
     */
     void beginIteration_()
     {
-        // start with a clean message stream
-        const auto& comm = simulator_.gridView().comm();
-        bool succeeded = true;
-        succeeded = comm.min(succeeded);
-
-        if (!succeeded) {
-            throw NumericalProblem("TPSA: Pre-processing of the problem failed!");
-        }
-
+        // Reset last Newton error to previous
         lastError_ = error_;
     }
 
@@ -482,15 +424,6 @@ protected:
     }
 
     /*!
-    * \brief Linearize auxillary equations
-    */
-    void linearizeAuxiliaryEquations_()
-    {
-        model().linearizer().linearizeAuxiliaryEquations();
-        model().linearizer().finalize();
-    }
-
-    /*!
     * \brief Compute error before a Newton iteration
     *
     * \param currentSolution Current solution vector
@@ -499,7 +432,6 @@ protected:
     void preSolve_(const SolutionVector& /*currentSolution*/,
                    const GlobalEqVector& currentResidual)
     {
-        const auto& constraintsMap = model().linearizer().constraintsMap();
         lastError_ = error_;
         Scalar newtonMaxError = params_.maxError_;
 
@@ -508,19 +440,6 @@ protected:
         const auto& elemMapper = simulator_.model().elementMapper();
         for (const auto& elem : elements(simulator_.gridView(), Dune::Partitions::interior)) {
             unsigned dofIdx = elemMapper.index(elem);
-
-            // Do not consider auxiliary DOFs for the error
-            if (dofIdx >= model().numGridDof() || model().dofTotalVolume(dofIdx) <= 0.0) {
-                continue;
-            }
-
-            // Also do not consider DOFs which are constraint
-            if (enableConstraints_()) {
-                if (constraintsMap.count(dofIdx) > 0) {
-                    continue;
-                }
-            }
-
             const auto& r = currentResidual[dofIdx];
             for (unsigned eqIdx = 0; eqIdx < r.size(); ++eqIdx) {
                 error_ = max(std::abs(r[eqIdx] * model().eqWeight(dofIdx, eqIdx)), error_);
@@ -539,20 +458,6 @@ protected:
     }
 
     /*!
-    * \brief Update the error of the solution given the previous iteration.
-    *
-    * \param currentSolution The solution at the beginning the current iteration
-    * \param currentResidual The residual (i.e., right-hand-side) of the current iteration's solution.
-    * \param solutionUpdate The difference between the current and the next solution
-    *
-    * For our purposes, the error of a solution is defined as the maximum of the weighted residual of a given solution.
-    */
-    void postSolve_(const SolutionVector& /*currentSolution*/,
-                    const GlobalEqVector& /*currentResidual*/,
-                    GlobalEqVector& /*solutionUpdate*/)
-    { }
-
-    /*!
     * \brief Update the current solution with a delta vector.
     *
     * \param nextSolution The solution vector after the current iteration
@@ -568,12 +473,6 @@ protected:
                  const GlobalEqVector& solutionUpdate,
                  const GlobalEqVector& currentResidual)
     {
-        const auto& constraintsMap = model().linearizer().constraintsMap();
-
-        // first, write out the current solution to make convergence
-        // analysis possible
-        writeConvergence_(currentSolution, solutionUpdate);
-
         // make sure not to swallow non-finite values at this point
         if (!std::isfinite(solutionUpdate.one_norm())) {
             throw NumericalProblem("TPSA: Non-finite update in Newton!");
@@ -581,53 +480,16 @@ protected:
 
         std::size_t numGridDof = model().numGridDof();
         for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
-            if (enableConstraints_()) {
-                if (constraintsMap.count(dofIdx) > 0) {
-                    const auto& constraints = constraintsMap.at(dofIdx);
-                    updateConstraintDof_(dofIdx,
-                                         nextSolution[dofIdx],
-                                         constraints);
-                }
-                else {
-                    updatePrimaryVariables_(dofIdx,
-                                            nextSolution[dofIdx],
-                                            currentSolution[dofIdx],
-                                            solutionUpdate[dofIdx],
-                                            currentResidual[dofIdx]);
-                }
-            }
-            else {
-                updatePrimaryVariables_(dofIdx,
-                                        nextSolution[dofIdx],
-                                        currentSolution[dofIdx],
-                                        solutionUpdate[dofIdx],
-                                        currentResidual[dofIdx]);
-            }
+            updatePrimaryVariables_(dofIdx,
+                                   nextSolution[dofIdx],
+                                   currentSolution[dofIdx],
+                                   solutionUpdate[dofIdx],
+                                   currentResidual[dofIdx]);
         }
-
-        // update the DOFs of the auxiliary equations
-        // std::size_t numDof = model().numTotalDof();
-        // for (std::size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
-        //     nextSolution[dofIdx] = currentSolution[dofIdx];
-        //     nextSolution[dofIdx] -= solutionUpdate[dofIdx];
-        // }
 
         // Update material state
         model().updateMaterialState(/*timeIdx=*/0);
     }
-
-    /*!
-    * \brief Update the primary variables for a degree of freedom which is constraint.
-    *
-    * \param dofIdx Degree-of-freedom index
-    * \param nextValue The solution vector after the current iteration
-    * \param constraints Constraints for solution
-    *
-    */
-    void updateConstraintDof_(unsigned /*dofIdx*/,
-                              PrimaryVariables& /*nextValue*/,
-                              const Constraints& /*constraints*/)
-    { }
 
     /*!
     * \brief Update a single primary variables object.
@@ -648,47 +510,19 @@ protected:
     }
 
     /*!
-    * \brief Write the convergence behaviour of the newton method to disk.
-    *
-    * \param currentSolution The solution vector after the last iteration
-    * \param solutionUpdate The delta vector as calculated by solving the linear system of equations
-    *
-    * This method is called as part of the update proceedure.
-    */
-    void writeConvergence_(const SolutionVector& currentSolution,
-                           const GlobalEqVector& solutionUpdate)
-    {
-        if (params_.writeConvergence_) {
-            convergenceWriter_.beginIteration();
-            convergenceWriter_.writeFields(currentSolution, solutionUpdate);
-            convergenceWriter_.endIteration();
-        }
-    }
-
-    /*!
     * \brief Indicates that one Newton iteration was finished.
-    *
-    * \param nextSolution The solution after the current Newton iteration
-    * \param currentSolution The solution at the beginning of the current Newton iteration
     */
-    void endIteration_(const SolutionVector& /*nextSolution*/,
-                       const SolutionVector& /*currentSolution*/)
+    void endIteration_()
     {
+        // Increase Newton iterations
         ++numIterations_;
 
-        const auto& comm = simulator_.gridView().comm();
-        bool succeeded = true;
-        succeeded = comm.min(succeeded);
-
-        if (!succeeded) {
-            throw NumericalProblem("TPSA: Post-processing of the problem failed!");
+        // Output error info
+        if (verbosity_() > 1) {
+            std::cout << "TPSA: End Newton iteration " << numIterations_ << ""
+                      << " with error = " << error_
+                      << std::endl;
         }
-
-        // if (verbose_()) {
-        //     std::cout << "TPSA: End Newton iteration " << numIterations_ << ""
-        //               << " with error = " << error_
-        //               << std::endl;
-        // }
     }
 
     /*!
@@ -718,38 +552,10 @@ protected:
     }
 
     /*!
-    * \brief Indicates that we're done solving the non-linear system of equations.
-    */
-    void end_()
-    {
-        if (params_.writeConvergence_) {
-            convergenceWriter_.endTimeStep();
-        }
-    }
-
-    /*!
     * \brief Called if the Newton method broke down.
-    *
-    * \note This method is called _after_ end_()
     */
     void failed_()
     { numIterations_ = params_.targetIterations_ * 2; }
-
-    /*!
-    * \brief Called if the Newton method was successful.
-    *
-    * \note This method is called _after_ end_()
-    */
-    void succeeded_()
-    { }
-
-    /*!
-    * \brief Check if constraints are enabled
-    *
-    * \returns Bool indicating if constraints are enabled
-    */
-    static bool enableConstraints_()
-    { return getPropValue<TypeTag, Properties::EnableConstraintsTPSA>(); }
 
     Simulator& simulator_;
     LinearSolverBackend linearSolver_;
@@ -765,8 +571,6 @@ protected:
 
     int numIterations_;
     int numLinearizations_;
-
-    ConvergenceWriter convergenceWriter_;
 };  // class TpsaNewtonMethod
 
 }  // namespace Opm
