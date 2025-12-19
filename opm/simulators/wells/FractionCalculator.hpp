@@ -54,6 +54,8 @@ public:
                     const bool always_include_this);
     Scalar localFraction(const std::string& name,
                          const std::string& always_included_child);
+    std::pair<Scalar, Scalar> localFractionParts(const std::string& name,
+                                                 const std::string& always_included_child);
 
 private:
     std::string parent(const std::string& name);

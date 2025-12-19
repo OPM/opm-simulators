@@ -702,6 +702,52 @@ outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const
     }
 }
 
+template<class FluidSystem, class Indices>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+fetchWellFractions(std::vector<Scalar>& fractions, 
+                   const std::vector<Scalar>& scaling) const
+{
+    fractions.resize(well_.numPhases(), 0.0);
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+        fractions[oil_pos] = 1.0;
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            fractions[water_pos] = value_[0][WFrac];
+            fractions[oil_pos] -= fractions[water_pos];
+        }
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            fractions[gas_pos] = value_[0][GFrac];
+            fractions[oil_pos] -= fractions[gas_pos];
+        }
+    }
+    else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+        fractions[water_pos] = 1.0;
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            fractions[gas_pos] = value_[0][GFrac];
+            fractions[water_pos] -= fractions[gas_pos];
+        }
+    }
+    else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+        fractions[gas_pos] = 1.0;
+    }
+    for (int p = 0; p < well_.numPhases(); ++p) {
+        fractions[p] *= scaling[p];
+        fractions[p] = std::max(fractions[p], Scalar{0.0});
+    }
+    // re-normalize
+    const Scalar sum_fractions = std::accumulate(fractions.begin(), fractions.end(), 0.0);
+    for (auto& frac : fractions) {
+        frac /= sum_fractions;
+    }
+}
+
 #include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
 
 INSTANTIATE_TYPE_INDICES(MultisegmentWellPrimaryVariables, double)
