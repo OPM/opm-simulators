@@ -217,7 +217,7 @@ TUNING
 
 
 GRUPTREE
- 'PROD'    'FIELD' /
+ 'PLAT-A'    'FIELD' /
 
  'M5S'    'PLAT-A'  /
  'M5N'    'PLAT-A'  /
