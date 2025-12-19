@@ -27,8 +27,12 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <cstddef>
 #include <memory>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace Opm {
 
@@ -374,7 +378,7 @@ public:
     /// \param index The index of the completion in Well::getConnections
     void connectionFound(std::size_t index);
 
-    bool checkAllConnectionsFound();
+    std::pair<bool, std::string> checkAllConnectionsFound();
 
 private:
     std::vector<std::size_t> foundConnections_;
