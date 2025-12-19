@@ -10,7 +10,12 @@ upstreamRev[opm-grid]=master
 
 if grep -q "opm-common=" <<< $ghprbCommentBody
 then
-  upstreamRev[opm-common]=pull/`echo $ghprbCommentBody | sed -r 's/.*opm-common=([0-9]+).*/\1/g'`/merge
+    if test -n "$absolute_revisions"
+    then
+        upstreamRev[opm-common]=$(echo $ghprbCommentBody | sed -r 's/.*opm-common=([^ ]+)/\1/g')
+    else
+        upstreamRev[opm-common]=pull/$(echo $ghprbCommentBody | sed -r 's/.*opm-common=([0-9]+).*/\1/g')/merge
+    fi
 fi
 
 # Clone opm-common
