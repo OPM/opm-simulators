@@ -321,6 +321,19 @@ public:
                        DeferredLogger& deferred_logger) const;
 
 private:
+    //! \brief Compute partial efficiency factor for addback calculation.
+    //!
+    //! The addback in constraint checking must use the partial efficiency factor
+    //! (from local_reduction_level down to the entity), not the accumulated efficiency
+    //! (from the entity to the control group). This helper multiplies efficiency
+    //! factors from local_reduction_level+1 to the entity.
+    //!
+    //! \param chain The group chain from control group (top) to entity (bottom)
+    //! \param local_reduction_level The level at which addback is applied
+    //! \return The partial efficiency factor for addback
+    Scalar computeAddbackEfficiency_(const std::vector<std::string>& chain,
+                                     std::size_t local_reduction_level) const;
+
     std::string controlGroup_(const Group& group) const;
 
     GuideRate::RateVector getGuideRateVector_(const std::vector<Scalar>& rates) const;
