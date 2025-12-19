@@ -142,22 +142,24 @@ public:
 
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
 
-    std::optional<Scalar> getWellGroupTargetInjector(const std::string& name,
-                                                     const std::string& parent,
-                                                     const Group& group,
-                                                     const Scalar* rates,
-                                                     const Phase injection_phase,
-                                                     const Scalar efficiency_factor,
-                                                     const std::vector<Scalar>& resv_coeff,
-                                                     DeferredLogger& deferred_logger) const;
+    using GroupTarget = typename SingleWellState<Scalar, IndexTraits>::GroupTarget;
 
-    std::optional<Scalar> getWellGroupTargetProducer(const std::string& name,
-                                                     const std::string& parent,
-                                                     const Group& group,
-                                                     const Scalar* rates,
-                                                     const Scalar efficiency_factor,
-                                                     const std::vector<Scalar>& resv_coeff,
-                                                     DeferredLogger& deferred_logger) const;
+    std::optional<GroupTarget> getWellGroupTargetInjector(const std::string& name,
+                                                          const std::string& parent,
+                                                          const Group& group,
+                                                          const Scalar* rates,
+                                                          const Phase injection_phase,
+                                                          const Scalar efficiency_factor,
+                                                          const std::vector<Scalar>& resv_coeff,
+                                                          DeferredLogger& deferred_logger) const;
+
+    std::optional<GroupTarget> getWellGroupTargetProducer(const std::string& name,
+                                                          const std::string& parent,
+                                                          const Group& group,
+                                                          const Scalar* rates,
+                                                          const Scalar efficiency_factor,
+                                                          const std::vector<Scalar>& resv_coeff,
+                                                          DeferredLogger& deferred_logger) const;
 
     GuideRate::RateVector getWellRateVector(const std::string& name) const;
 
