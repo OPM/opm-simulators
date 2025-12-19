@@ -293,7 +293,7 @@ public:
     /*!
     * \copydoc AbstractISTLSolver::setResidual
     */
-    void setResidual(Vector& b) override
+    void setResidual(Vector& /*b*/) override
     { }
 
     /*!
