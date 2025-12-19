@@ -358,7 +358,7 @@ else
 fi
 if [ -n "$CONVERT_ECL" ]
 then
-  for dep in opm-common opm-grid
+  for dep in opm-common opm-grid opm-simulators
   do
     pushd $WORKSPACE/deps/$dep > /dev/null
     name=`printf "%-14s" $dep`
@@ -366,7 +366,6 @@ then
     echo -e "$name = $rev" >> /tmp/cmsg
     popd > /dev/null
   done
-  echo -e "opm-simulators = `git rev-parse HEAD`" >> /tmp/cmsg
 fi
 
 echo -e "\n### Changed Tests ###\n" >> /tmp/cmsg
