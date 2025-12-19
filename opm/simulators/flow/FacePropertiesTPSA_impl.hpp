@@ -398,6 +398,8 @@ computeDistance_(const DimVector& distVec, const DimVector& faceNormal)
 * \param inside Info describing inside face
 * \param outside Info describing outside face
 * \param faceNormal Face (unit) normal vector
+*
+* \warning Not implemented!
 */
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 template<class Intersection>
@@ -408,12 +410,7 @@ computeCellProperties(const Intersection& intersection,
                       DimVector& faceNormal,
                       /*isCpGrid=*/std::false_type) const
 {
-    // default implementation for DUNE grids
-    const auto& geometry = intersection.geometry();
-    outside.faceCenter = inside.faceCenter = geometry.center();
-
-    // OBS: Have not checked if this points from cell with lower to higher index!
-    faceNormal = intersection.centerUnitOuterNormal();
+    throw std::runtime_error("TPSA not implemented for DUNE grid types other than CpGrid!");
 }
 
 /*!
