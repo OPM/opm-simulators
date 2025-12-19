@@ -1957,6 +1957,14 @@ namespace Opm
                                                well_state);
     }
 
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::addWellOverlapConnectionsToPressureEquations(PressureMatrix& jacobian,
+                                                                        const int cell_number) const
+    {
+        this->linSys_.addOverlapConnectionsToPressureMatrix(jacobian, cell_number, *this);
+    }
+
 
 
     template<typename TypeTag>

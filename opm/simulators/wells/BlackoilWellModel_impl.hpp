@@ -1616,6 +1616,14 @@ namespace Opm {
                                            pressureVarIndex,
                                            use_well_weights,
                                            this->wellState());
+            auto getOverlap = [this](const WellInterfaceGeneric<Scalar, IndexTraits>& well_) -> std::vector<int> {
+                return this->getCellsForConnectionsOnOverlap(this->schedule().back().wells(well_.name()));
+            };
+            auto getInterior = [this](const WellInterfaceGeneric<Scalar, IndexTraits>& well_) -> std::vector<int> {
+                return this->getCellsForConnections(this->schedule().back().wells(well_.name()));
+            };
+            well->initOverlapConnections(getOverlap, getInterior, this->simulator_.vanguard().globalCell());
+            well->addWellOverlapConnectionsToPressureEquations(jacobian, weights.size());
         }
     }
 
@@ -1659,7 +1667,7 @@ namespace Opm {
             int wdof = rdofs + i;
             jacobian.entry(wdof,wdof) = 1.0;// better scaling ?
         }
-        const auto wellconnections = this->getMaxWellConnections();
+        const auto wellconnections = this->getMaxWellConnectionsWithOverlap();
         for (int i = 0; i < nw; ++i) {
             const auto& perfcells = wellconnections[i];
             for (int perfcell : perfcells) {

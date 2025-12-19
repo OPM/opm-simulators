@@ -122,6 +122,11 @@ public:
                                   const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                                   const int seg_pressure_var_ind,
                                   const WellState<Scalar, IndexTraits>& well_state) const;
+    // //! \brief Add overlap connections of wells to CPR pressure matrix. TODO: Unfinished
+    // template<class PressureMatrix>
+    // void addOverlapConnectionsToPressureMatrix(PressureMatrix& jacobian,
+    //                                            const int number_cells,
+    //                                            const WellInterfaceGeneric<Scalar, IndexTraits>& well) const;
 
     //! \brief Sum with off-process contribution.
     void sumDistributed(Parallel::Communication comm);

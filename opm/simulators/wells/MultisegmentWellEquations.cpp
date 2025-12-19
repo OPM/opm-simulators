@@ -436,6 +436,14 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     }
 }
 
+// template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
+// template<class PressureMatrix>
+// void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
+// addOverlapConnectionsToPressureMatrix([[maybe_unused]] PressureMatrix& jacobian,
+//                                       [[maybe_unused]] const int number_cells,
+//                                       [[maybe_unused]] const WellInterfaceGeneric<Scalar, IndexTraits>& well) const
+// {}
+
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
 sumDistributed(Parallel::Communication comm)

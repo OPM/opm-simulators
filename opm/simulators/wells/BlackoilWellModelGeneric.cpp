@@ -1852,6 +1852,52 @@ getCellsForConnections(const Well& well) const
 }
 
 template<typename Scalar, typename IndexTraits>
+std::vector<int> BlackoilWellModelGeneric<Scalar, IndexTraits>::
+getCellsForConnectionsWithOverlap(const Well& well) const
+{
+    std::vector<int> wellCells;
+    // All possible connections of the well
+    const auto& connectionSet = well.getConnections();
+    wellCells.reserve(connectionSet.size());
+
+    for (const auto& connection : connectionSet)
+    {
+        int compressed_idx = well.is_lgr_well()
+            ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
+            : this->compressedIndexForInteriorOrOverlap(connection.global_index());
+
+        if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+            wellCells.push_back(compressed_idx);
+        }
+    }
+
+    return wellCells;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::vector<int> BlackoilWellModelGeneric<Scalar, IndexTraits>::
+getCellsForConnectionsOnOverlap(const Well& well) const
+{
+    std::vector<int> wellCells;
+    // All possible connections of the well
+    const auto& connectionSet = well.getConnections();
+    wellCells.reserve(connectionSet.size());
+
+    for (const auto& connection : connectionSet)
+    {
+        int compressed_idx = well.is_lgr_well()
+            ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
+            : this->compressedIndexForOverlap(connection.global_index());
+
+        if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+            wellCells.push_back(compressed_idx);
+        }
+    }
+
+    return wellCells;
+}
+
+template<typename Scalar, typename IndexTraits>
 std::vector<std::string> BlackoilWellModelGeneric<Scalar, IndexTraits>::
 getWellsForTesting(const int timeStepIdx,
                    const double simulationTime)
@@ -1960,6 +2006,51 @@ getMaxWellConnections() const
         if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
             for (const auto& global_index : possibleFutureConnectionSetIt->second) {
                 const int compressed_idx = compressedIndexForInterior(global_index);
+                if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+                    compressed_well_perforations.push_back(compressed_idx);
+                }
+            }
+        }
+
+        // also include wells with no perforations in case
+        std::sort(compressed_well_perforations.begin(),
+                  compressed_well_perforations.end());
+    }
+
+    return wellConnections;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::vector<std::vector<int>> BlackoilWellModelGeneric<Scalar, IndexTraits>::
+getMaxWellConnectionsWithOverlap() const
+{
+    auto wellConnections = std::vector<std::vector<int>>{};
+
+    auto schedule_wells = this->schedule().wellNames();
+    schedule_wells.erase(std::remove_if(schedule_wells.begin(),
+                                        schedule_wells.end(),
+                                        this->not_on_process_),
+                         schedule_wells.end());
+
+    wellConnections.reserve(schedule_wells.size());
+
+    const auto possibleFutureConnections = schedule().getPossibleFutureConnections();
+
+#if HAVE_MPI
+    // Communicate Map to other processes, since it is only available on rank 0
+    Parallel::MpiSerializer ser(comm_);
+    ser.broadcast(Parallel::RootRank{0}, possibleFutureConnections);
+#endif
+
+    // initialize the additional cell connections introduced by wells.
+    for (const auto& well : schedule_wells) {
+        auto& compressed_well_perforations = wellConnections.emplace_back
+            (this->getCellsForConnectionsWithOverlap(this->schedule().back().wells(well)));
+
+        const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well);
+        if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
+            for (const auto& global_index : possibleFutureConnectionSetIt->second) {
+                const int compressed_idx = compressedIndexForInteriorOrOverlap(global_index);
                 if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
                     compressed_well_perforations.push_back(compressed_idx);
                 }

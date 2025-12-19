@@ -247,6 +247,8 @@ public:
     const WellGroupEvents& reportStepStartEvents() const { return report_step_start_events_; }
 
     std::vector<int> getCellsForConnections(const Well& well) const;
+    std::vector<int> getCellsForConnectionsWithOverlap(const Well& well) const;
+    std::vector<int> getCellsForConnectionsOnOverlap(const Well& well) const;
 
     bool reportStepStarts() const { return report_step_starts_; }
 
@@ -505,8 +507,11 @@ protected:
 
     /// \brief get compressed index for interior cells (-1, otherwise
     virtual int compressedIndexForInterior(int cartesian_cell_idx) const = 0;
+    virtual int compressedIndexForInteriorOrOverlap(int cartesian_cell_idx) const = 0;
+    virtual int compressedIndexForOverlap(int cartesian_cell_idx) const = 0;
 
     std::vector<std::vector<int>> getMaxWellConnections() const;
+    std::vector<std::vector<int>> getMaxWellConnectionsWithOverlap() const;
 
     std::vector<std::string> getWellsForTesting(const int timeStepIdx,
                                                 const double simulationTime);
