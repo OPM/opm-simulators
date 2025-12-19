@@ -72,6 +72,7 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
     OPM_BEGIN_PARALLEL_TRY_CATCH();
     for (auto& well : this->well_model_) {
         well->solveEqAndUpdateWellState(well_model_.simulator(),
+                                        well_model_.groupStateHelper(),
                                         well_state,
                                         deferred_logger);
     }
@@ -185,9 +186,6 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
 
             //TODO: Auto choke combined with RESV control is not supported
             std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
-            Scalar gratTargetFromSales = 0.0;
-            if (group_state.has_grat_sales_target(group.name()))
-                gratTargetFromSales = group_state.grat_sales_target(group.name());
 
             const auto ctrl = group.productionControls(summary_state);
             auto cmode_tmp = ctrl.cmode;
@@ -200,7 +198,7 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                 const Scalar efficiencyFactor = 1.0;
                 const Group& parentGroup = well_model_.schedule().getGroup(group.parent(), reportStepIdx);
                 auto target = WellGroupControls<Scalar, IndexTraits>::
-                    getAutoChokeGroupProductionTargetRate(group.name(),
+                    getAutoChokeGroupProductionTargetRate(group,
                                                           parentGroup,
                                                           well_model_.groupStateHelper(),
                                                           well_model_.schedule(),
@@ -213,15 +211,12 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                 target_tmp = target.first;
                 cmode_tmp = target.second;
             }
-            const auto cmode = cmode_tmp;
             using TargetCalculatorType =  GroupStateHelpers::TargetCalculator<Scalar, IndexTraits>;
-            TargetCalculatorType tcalc(cmode, FluidSystem::phaseUsage(), resv_coeff,
-                                       gratTargetFromSales, nodeName, group_state,
-                                       group.has_gpmaint_control(cmode));
+            TargetCalculatorType tcalc{well_model_.groupStateHelper(), resv_coeff, group};
             if (!fld_none)
             {
                 // Target is set for the autochoke group itself
-                target_tmp = tcalc.groupTarget(ctrl, local_deferredLogger);
+                target_tmp = tcalc.groupTarget(local_deferredLogger);
             }
 
             const Scalar orig_target = target_tmp;

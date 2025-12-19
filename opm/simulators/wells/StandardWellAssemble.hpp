@@ -36,6 +36,7 @@ template<class FluidSystem, class Indices> class StandardWellPrimaryVariables;
 class SummaryState;
 template<class FluidSystem> class WellInterfaceFluidSystem;
 template<typename Scalar, typename IndexTraits> class WellState;
+template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 
 //! \brief Class handling assemble of the equation system for StandardWell.
 template<class FluidSystem, class Indices>
@@ -47,6 +48,7 @@ public:
     using EvalWell = typename PrimaryVariables::EvalWell;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using StandardWellEquationsType = StandardWellEquations<Scalar, IndexTraits, Indices::numEq>;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
     //! \brief Constructor initializes reference to well.
     explicit StandardWellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well)
@@ -54,10 +56,7 @@ public:
     {}
 
     //! \brief Assemble control equation.
-    void assembleControlEq(const WellState<Scalar, IndexTraits>& well_state,
-                           const GroupState<Scalar>& group_state,
-                           const Schedule& schedule,
-                           const SummaryState& summaryState,
+    void assembleControlEq(const GroupStateHelperType& groupStateHelper,
                            const Well::InjectionControls& inj_controls,
                            const Well::ProductionControls& prod_controls,
                            const PrimaryVariables& primary_variables,

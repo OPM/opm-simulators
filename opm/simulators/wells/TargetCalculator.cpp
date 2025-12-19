@@ -28,30 +28,22 @@
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 
 #include <cassert>
 #include <stdexcept>
 
 namespace Opm::GroupStateHelpers
- {
-
+{
 template<typename Scalar, typename IndexTraits>
 TargetCalculator<Scalar, IndexTraits>::
-TargetCalculator(const Group::ProductionCMode cmode,
-                 const PhaseUsageInfo<IndexTraits>& pu,
+TargetCalculator(const Opm::GroupStateHelper<Scalar, IndexTraits>& groupStateHelper,
                  const std::vector<Scalar>& resv_coeff,
-                 const Scalar group_grat_target_from_sales,
-                 const std::string& group_name,
-                 const GroupState<Scalar>& group_state,
-                 const bool use_gpmaint)
-    : cmode_(cmode)
-    , pu_(pu)
-    , resv_coeff_(resv_coeff)
-    , group_grat_target_from_sales_(group_grat_target_from_sales)
-    , group_name_(group_name)
-    , group_state_(group_state)
-    , use_gpmaint_(use_gpmaint)
-
+                 const Group& group)
+    : cmode_{groupStateHelper.groupState().production_control(group.name())}
+    , groupStateHelper_{groupStateHelper}
+    , resv_coeff_{resv_coeff}
+    , group_{group}
 {
 }
 
@@ -59,35 +51,36 @@ template<typename Scalar, typename IndexTraits>
 template <typename RateType>
 RateType TargetCalculator<Scalar, IndexTraits>::calcModeRateFromRates(const RateType* rates) const
 {
-    switch (cmode_) {
+    const auto& pu = this->groupStateHelper_.phaseUsageInfo();
+    switch (this->cmode_) {
     case Group::ProductionCMode::ORAT: {
-        assert(pu_.phaseIsActive(IndexTraits::oilPhaseIdx));
-        const int pos = pu_.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+        assert(pu.phaseIsActive(IndexTraits::oilPhaseIdx));
+        const int pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
         return rates[pos];
     }
     case Group::ProductionCMode::WRAT: {
-        assert(pu_.phaseIsActive(IndexTraits::waterPhaseIdx));
-        const int pos = pu_.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+        assert(pu.phaseIsActive(IndexTraits::waterPhaseIdx));
+        const int pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
         return rates[pos];
     }
     case Group::ProductionCMode::GRAT: {
-        assert(pu_.phaseIsActive(IndexTraits::gasPhaseIdx));
-        const int pos = pu_.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+        assert(pu.phaseIsActive(IndexTraits::gasPhaseIdx));
+        const int pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
         return rates[pos];
     }
     case Group::ProductionCMode::LRAT: {
         // TODO: do need both oil and water activate to use LRAT?
-        assert(pu_.phaseIsActive(IndexTraits::oilPhaseIdx));
-        assert(pu_.phaseIsActive(IndexTraits::waterPhaseIdx));
-        const int opos = pu_.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-        const int wpos = pu_.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+        assert(pu.phaseIsActive(IndexTraits::oilPhaseIdx));
+        assert(pu.phaseIsActive(IndexTraits::waterPhaseIdx));
+        const int opos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+        const int wpos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
         return rates[opos] + rates[wpos];
     }
     case Group::ProductionCMode::RESV: {
-        auto mode_rate = rates[0] * resv_coeff_[0];
-        const int num_phases = pu_.numActivePhases();
+        auto mode_rate = rates[0] * this->resv_coeff_[0];
+        const int num_phases = pu.numActivePhases();
         for (int phase = 1; phase < num_phases; ++phase) {
-            mode_rate += rates[phase] * resv_coeff_[phase];
+            mode_rate += rates[phase] * this->resv_coeff_[phase];
         }
         return mode_rate;
     }
@@ -101,49 +94,16 @@ RateType TargetCalculator<Scalar, IndexTraits>::calcModeRateFromRates(const Rate
 template<typename Scalar, typename IndexTraits>
 Scalar
 TargetCalculator<Scalar, IndexTraits>::
-groupTarget(const std::optional<Group::ProductionControls>& ctrl,
-            DeferredLogger& deferred_logger) const
+groupTarget(DeferredLogger& deferred_logger) const
 {
-    if (!ctrl && !use_gpmaint_) {
-        OPM_DEFLOG_THROW(std::logic_error,
-                         "Production group " + this->group_name_
-                         + "must either have a valid control or use GPMAINT",
-                         deferred_logger);
-    }
-    switch (cmode_) {
-    case Group::ProductionCMode::ORAT:
-        return ctrl->oil_target;
-    case Group::ProductionCMode::WRAT:
-        return ctrl->water_target;
-    case Group::ProductionCMode::GRAT:
-    {
-        // gas target may have been adjusted by GCONSALE
-        if (group_grat_target_from_sales_ > 0)
-            return group_grat_target_from_sales_;
-
-        return ctrl->gas_target;
-    }
-    case Group::ProductionCMode::LRAT:
-        return ctrl->liquid_target;
-    case Group::ProductionCMode::RESV:
-    {
-        if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
-            return this->group_state_.gpmaint_target(this->group_name_);
-
-        return ctrl->resv_target;
-    }
-    default:
-        // Should never be here.
-        assert(false);
-        return 0.0;
-    }
+    return this->groupStateHelper_.getProductionGroupTarget(this->group_, deferred_logger);
 }
 
 template<typename Scalar, typename IndexTraits>
 GuideRateModel::Target
 TargetCalculator<Scalar, IndexTraits>::guideTargetMode() const
 {
-    switch (cmode_) {
+    switch (this->cmode_) {
     case Group::ProductionCMode::ORAT:
         return GuideRateModel::Target::OIL;
     case Group::ProductionCMode::WRAT:
@@ -163,41 +123,31 @@ TargetCalculator<Scalar, IndexTraits>::guideTargetMode() const
 
 template<typename Scalar, typename IndexTraits>
 InjectionTargetCalculator<Scalar, IndexTraits>::
-InjectionTargetCalculator(const Group::InjectionCMode& cmode,
-                          const PhaseUsageInfo<IndexTraits>& pu,
+InjectionTargetCalculator(const GroupStateHelperType& groupStateHelper,
                           const std::vector<Scalar>& resv_coeff,
-                          const std::string& group_name,
-                          const Scalar sales_target,
-                          const GroupState<Scalar>& group_state,
+                          const Group& group,
                           const Phase& injection_phase,
-                          const bool use_gpmaint,
                           DeferredLogger& deferred_logger)
-    : cmode_(cmode)
-    , pu_(pu)
-    , resv_coeff_(resv_coeff)
-    , group_name_(group_name)
-    , sales_target_(sales_target)
-    , group_state_(group_state)
-    , use_gpmaint_(use_gpmaint)
-
+    : groupStateHelper_{groupStateHelper}
+    , resv_coeff_{resv_coeff}
+    , group_{group}
+    , injection_phase_{injection_phase}
+    , cmode_{groupStateHelper.groupState().injection_control(group.name(), injection_phase)}
 {
+    pos_ = this->groupStateHelper_.phaseToActivePhaseIdx(injection_phase);
     // initialize to avoid warning
-    pos_ =  pu_.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
     target_ = GuideRateModel::Target::WAT;
 
     switch (injection_phase) {
     case Phase::WATER: {
-        pos_ =  pu_.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
         target_ = GuideRateModel::Target::WAT;
         break;
     }
     case Phase::OIL: {
-        pos_ =  pu_.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
         target_ = GuideRateModel::Target::OIL;
         break;
     }
     case Phase::GAS: {
-        pos_ =  pu_.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
         target_ = GuideRateModel::Target::GAS;
         break;
     }
@@ -211,70 +161,18 @@ InjectionTargetCalculator(const Group::InjectionCMode& cmode,
 template<typename Scalar, typename IndexTraits>
 Scalar
 InjectionTargetCalculator<Scalar, IndexTraits>::
-groupTarget(const std::optional<Group::InjectionControls>& ctrl,
-            DeferredLogger& deferred_logger) const
+groupTarget(DeferredLogger& deferred_logger) const
 {
-    if (!ctrl && !use_gpmaint_) {
-        OPM_DEFLOG_THROW(std::logic_error,
-                         "Injection group " + this->group_name_
-                         + "must either have a valid control or use GPMAINT",
-                         deferred_logger);
-    }
-    switch (cmode_) {
-    case Group::InjectionCMode::RATE:
-        if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
-            return this->group_state_.gpmaint_target(this->group_name_);
-
-        return ctrl->surface_max_rate;
-    case Group::InjectionCMode::RESV:
-        if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
-            return this->group_state_.gpmaint_target(this->group_name_) / resv_coeff_[pos_];
-
-        return ctrl->resv_max_rate / resv_coeff_[pos_];
-    case Group::InjectionCMode::REIN: {
-        Scalar production_rate = this->group_state_.injection_rein_rates(ctrl->reinj_group)[pos_];
-        return ctrl->target_reinj_fraction * production_rate;
-    }
-    case Group::InjectionCMode::VREP: {
-        // We use the injection_reservoir_rates directly instead of the reduction rates here to account for the
-        // possibility that the group in question has both a VREP control and another injection control for a different phase.
-        const std::vector<Scalar>& group_injection_reservoir_rates = this->group_state_.injection_reservoir_rates(this->group_name_);
-        Scalar voidage_rate = group_state_.injection_vrep_rate(ctrl->voidage_group) * ctrl->target_void_fraction;
-        if (ctrl->phase != Phase::WATER) {
-            const int pos = pu_.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-            voidage_rate -= group_injection_reservoir_rates[pos];
-        }
-        if (ctrl->phase != Phase::OIL) {
-            const int pos = pu_.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-            voidage_rate -= group_injection_reservoir_rates[pos];
-        }
-        if (ctrl->phase != Phase::GAS) {
-            const int pos = pu_.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-            voidage_rate -= group_injection_reservoir_rates[pos];
-        }
-        return voidage_rate / resv_coeff_[pos_];
-    }
-    case Group::InjectionCMode::SALE: {
-        assert(pos_ == pu_.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx) );
-        // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
-        // Gas import and consumption is already included in the REIN rates
-        Scalar inj_rate = group_state_.injection_rein_rates(this->group_name_)[pos_];
-        inj_rate -= sales_target_;
-        return inj_rate;
-    }
-    default:
-        OPM_DEFLOG_THROW(std::logic_error,
-                         "Invalid Group::InjectionCMode in InjectionTargetCalculator",
-                         deferred_logger);
-        return 0.0;
-    }
+    return this->groupStateHelper_.getInjectionGroupTarget(
+        this->group_, this->injection_phase_, this->resv_coeff_, deferred_logger
+    );
 }
 
 template<typename Scalar, typename IndexTraits>
 GuideRateModel::Target
 InjectionTargetCalculator<Scalar, IndexTraits>::guideTargetMode() const
 {
-    return target_;
+    return this->target_;
 }
 
 #define INSTANTIATE_TARGET_CALCULATOR(T,...) \
