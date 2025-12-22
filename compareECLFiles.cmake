@@ -446,7 +446,7 @@ add_test_runSimulator(CASENAME spe1case1_carfin
                       FILENAME SPE1CASE1_CARFIN
                       SIMULATOR flow
                       DIR lgr
-                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
+                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=true --enable-vtk-output=true)
 
 if(MPI_FOUND)
   add_test_runSimulator(CASENAME spe1case1_carfin_parallel
