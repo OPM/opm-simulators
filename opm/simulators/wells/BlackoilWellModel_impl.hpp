@@ -45,14 +45,14 @@
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
-#include <opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp>
-#include <opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
+#include <opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
+#include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
+#include <opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp>
 #endif
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -596,6 +596,34 @@ namespace Opm {
         RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{this->groupStateHelper()};
         slave_group_data_sender.sendSlaveGroupDataToMaster();
     }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    sendMasterGroupTargetsToSlaves()
+    {
+        // This function is called by the master process to send the group targets to the slaves.
+        RescoupTargetCalculator<Scalar, IndexTraits> target_calculator{
+            this->guide_rate_handler_,
+            this->groupStateHelper()
+        };
+        target_calculator.calculateMasterGroupTargetsAndSendToSlaves();
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    receiveGroupTargetsFromMaster(int reportStepIdx)
+    {
+        RescoupReceiveGroupTargets<Scalar, IndexTraits> target_receiver{
+            this->guide_rate_handler_,
+            this->wellState(),
+            this->groupState(),
+            reportStepIdx
+        };
+        target_receiver.receiveGroupTargetsFromMaster();
+    }
+
 #endif // RESERVOIR_COUPLING_ENABLED
 
     template<typename TypeTag>
@@ -653,33 +681,6 @@ namespace Opm {
                 deferred_logger.warning("WELL_TESTING_FAILED", msg);
             }
         }
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    sendMasterGroupTargetsToSlaves()
-    {
-        // This function is called by the master process to send the group targets to the slaves.
-        RescoupTargetCalculator<Scalar, IndexTraits> target_calculator{
-            this->guide_rate_handler_,
-            this->groupStateHelper()
-        };
-        target_calculator.calculateMasterGroupTargetsAndSendToSlaves();
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    receiveGroupTargetsFromMaster(int reportStepIdx)
-    {
-        RescoupReceiveGroupTargets<Scalar, IndexTraits> target_receiver{
-            this->guide_rate_handler_,
-            this->wellState(),
-            this->groupState(),
-            reportStepIdx
-        };
-        target_receiver.receiveGroupTargetsFromMaster();
     }
 
     // called at the end of a report step

@@ -1491,6 +1491,7 @@ GroupStateHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
 // Private methods
 // ---------------------------------------------------------------------
 
+#ifdef RESERVOIR_COUPLING_ENABLED
 template <typename Scalar, typename IndexTraits>
 ReservoirCoupling::Phase
 GroupStateHelper<Scalar, IndexTraits>::
@@ -1517,6 +1518,7 @@ activePhaseIdxToRescoupPhase_(int phase_pos) const
     throw std::logic_error("Invalid phase_pos in activePhaseIdxToRescoupPhase");
     return ReservoirCoupling::Phase::Oil; // just to avoid warning
 }
+#endif
 
 template <typename Scalar, typename IndexTraits>
 Scalar
@@ -1589,10 +1591,10 @@ GroupStateHelper<Scalar, IndexTraits>::getGuideRateVector_(const std::vector<Sca
 
 template <typename Scalar, typename IndexTraits>
 Scalar
-GroupStateHelper<Scalar, IndexTraits>::getReservoirCouplingMasterGroupRate_(const Group& group,
-                                                                            const int phase_pos,
-                                                                            const bool res_rates,
-                                                                            const bool is_injector) const
+GroupStateHelper<Scalar, IndexTraits>::getReservoirCouplingMasterGroupRate_([[maybe_unused]] const Group& group,
+                                                                            [[maybe_unused]] const int phase_pos,
+                                                                            [[maybe_unused]] const bool res_rates,
+                                                                            [[maybe_unused]] const bool is_injector) const
 {
 #ifdef RESERVOIR_COUPLING_ENABLED
     if (this->isReservoirCouplingMaster()) {

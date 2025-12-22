@@ -346,12 +346,14 @@ public:
                        DeferredLogger& deferred_logger) const;
 
 private:
+#ifdef RESERVOIR_COUPLING_ENABLED
     /// @brief Convert active phase index to ReservoirCoupling::Phase enum
     /// @param phase_pos Active phase index (0, 1, or 2 in a 3-phase model)
     /// @return The corresponding ReservoirCoupling::Phase enum value
     /// @note This uses the canonical phase ordering (Oil=0, Gas=1, Water=2)
-
     ReservoirCoupling::Phase activePhaseIdxToRescoupPhase_(int phase_pos) const;
+#endif
+
     //! \brief Compute partial efficiency factor for addback calculation.
     //!
     //! The addback in constraint checking must use the partial efficiency factor
