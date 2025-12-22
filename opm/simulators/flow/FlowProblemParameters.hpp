@@ -36,6 +36,10 @@ namespace Opm::Parameters {
 // the source term of the next time step
 struct EnableDriftCompensation { static constexpr bool value = false; };
 
+// Enable compensation of systematic mass losses in
+// the sequential energy equation
+struct EnableDriftCompensationTemp { static constexpr bool value = true; };
+
 // implicit or explicit pressure in rock compaction
 struct ExplicitRockCompaction { static constexpr bool value = false; };
 

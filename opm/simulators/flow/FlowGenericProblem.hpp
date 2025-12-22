@@ -351,6 +351,7 @@ protected:
     int numPressurePointsEquil_;
 
     bool enableDriftCompensation_;
+    bool enableDriftCompensationTemp_{false};
     bool explicitRockCompaction_;
 
     // To lookup origin cell indices
