@@ -288,6 +288,15 @@ public:
 
     GroupStateHelperType& groupStateHelper() { return group_state_helper_; }
     const GroupStateHelperType& groupStateHelper() const { return group_state_helper_; }
+    std::pair<int, int> getGroupFipnumAndPvtreg() const;
+
+    virtual void calcResvCoeff(const int fipnum,
+                               const int pvtreg,
+                               const std::vector<Scalar>& production_rates,
+                               std::vector<Scalar>& resv_coeff) const = 0;
+    virtual void calcInjResvCoeff(const int fipnum,
+                                  const int pvtreg,
+                                  std::vector<Scalar>& resv_coeff) const = 0;
 
     const VFPProperties<Scalar,IndexTraits>& getVFPProperties() const
     {
@@ -394,13 +403,6 @@ protected:
     void setWsolvent(const Group& group,
                      const int reportStepIdx,
                      Scalar wsolvent);
-    virtual void calcResvCoeff(const int fipnum,
-                               const int pvtreg,
-                               const std::vector<Scalar>& production_rates,
-                               std::vector<Scalar>& resv_coeff) = 0;
-    virtual void calcInjResvCoeff(const int fipnum,
-                                  const int pvtreg,
-                                  std::vector<Scalar>& resv_coeff) = 0;
 
     /// Assign dynamic well status for each well owned by current rank
     ///

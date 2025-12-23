@@ -41,6 +41,9 @@ public:
     using Seconds = ReservoirCoupling::Seconds;
     using Potentials = ReservoirCoupling::Potentials<Scalar>;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
+    using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
+    using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
+
     ReservoirCouplingMaster(
         const Parallel::Communication &comm,
         const Schedule &schedule,
@@ -60,7 +63,6 @@ public:
     char *getArgv(int index) const { return this->argv_[index]; }
     char **getArgv() const { return this->argv_; }
     const Parallel::Communication &getComm() const { return this->comm_; }
-    ReservoirCoupling::Logger& getLogger() { return this->logger_; }
     /// @brief Get the master group names associated with a slave reservoir by index.
     ///
     /// This method retrieves the list of master group names that are associated with a
@@ -82,28 +84,34 @@ public:
     /// @return The canonical index of the master group for the given slave name and master group name.
     std::size_t getMasterGroupCanonicalIdx(
         const std::string &slave_name, const std::string &master_group_name) const;
+    Scalar getMasterGroupInjectionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const;
+    Scalar getMasterGroupProductionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const;
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
          return this->master_group_slave_names_;
     }
+    double getSimulationStartDate() const { return this->schedule_.getStartTime(); }
     double getSlaveActivationDate(int index) const { return this->slave_activation_dates_[index]; }
     const double *getSlaveActivationDates() const { return this->slave_activation_dates_.data(); }
+    MPI_Comm getSlaveComm(int index) const { return this->master_slave_comm_[index]; }
     std::map<std::string, std::vector<std::string>> &getSlaveNameToMasterGroupsMap() {
         return this->slave_name_to_master_groups_map_;
     }
-    double getSimulationStartDate() const { return this->schedule_.getStartTime(); }
-    MPI_Comm getSlaveComm(int index) const { return this->master_slave_comm_[index]; }
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name);
+    int getSlaveIdx(const std::string &slave_name) const;
     const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }
     double getSlaveStartDate(int index) const { return this->slave_start_dates_[index]; }
     const double *getSlaveStartDates() { return this->slave_start_dates_.data(); }
     void initStartOfReportStep(int report_step_idx);
     void initTimeStepping();
     bool isMasterGroup(const std::string &group_name) const;
+    ReservoirCoupling::Logger& logger() { return this->logger_; }
+    ReservoirCoupling::Logger& logger() const { return this->logger_; }
     void maybeActivate(int report_step);
     void maybeReceiveActivationHandshakeFromSlaves(double current_time);
     double maybeChopSubStep(double suggested_timestep, double current_time) const;
     void maybeSpawnSlaveProcesses(int report_step);
     std::size_t numSlaveGroups(unsigned int index);
+    std::size_t numSlaves() const { return this->numSlavesStarted(); }
     std::size_t numSlavesStarted() const;
     void rebuildSlaveIdxToMasterGroupsVector();
     void receiveNextReportDateFromSlaves();
@@ -116,6 +124,19 @@ public:
     void sendNextTimeStepToSlaves(double next_time_step) {
         this->time_stepper_->sendNextTimeStepToSlaves(next_time_step);
     }
+    void sendInjectionTargetsToSlave(
+        std::size_t slave_idx,
+        const std::vector<InjectionGroupTarget>& injection_targets
+    ) const;
+    void sendNumGroupTargetsToSlave(
+        std::size_t slave_idx,
+        std::size_t num_injection_targets,
+        std::size_t num_production_targets
+    ) const;
+    void sendProductionTargetsToSlave(
+        std::size_t slave_idx,
+        const std::vector<ProductionGroupTarget>& production_targets
+    ) const;
     void setDeferredLogger(DeferredLogger *deferred_logger) {
          this->logger_.setDeferredLogger(deferred_logger);
     }
@@ -152,7 +173,7 @@ private:
     // A mapping from a slave name to the master group name order used when slaves send
     //  potentials to the master process.
     std::map<std::string, std::map<std::string, std::size_t>> master_group_name_order_;
-    ReservoirCoupling::Logger logger_;
+    mutable ReservoirCoupling::Logger logger_;
     // Whether the slave has activated. Unfortunatley, we cannot use std::vector<bool> since
     // it is not supported to get a pointer to the underlying array of bools needed
     // with MPI broadcast().

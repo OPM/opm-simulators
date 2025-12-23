@@ -56,9 +56,9 @@ RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper)
 // 1) *Production group potentials*: If both the master group and slave groups are production groups (and
 //   possibly also injection groups), and the master group has GCONPROD item 10 set to "FORM", "POTN", or "0".
 //   In this case, the master group needs the slave group potentials to calculate the guide rates.
-//   NOTE: This could also apply to a parent of the master (and not just the master group
-//    itself). For example, if a parent group of the master have GCONPROD item 10 set to "FORM", but the
-//    master group itself has no guidrate.
+//   This could also apply to a parent of the master group, for example if the master group has a
+//   fixed guide rate, and a parent group of the master group has GCONPROD item 10 set to "FORM". Then the
+//   parent group needs the slave group potentials to calculate the group potential and its guide rate.
 //
 // 2) *Production group surface rates*: If both the master group and slave groups are production
 //   groups (and possibly also injection groups), and the master group has GCONPROD item 10 set to
@@ -97,7 +97,11 @@ RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper)
 // 6) If the master group or any of its parents is a sales gas control group. It will need to know
 //       a) slave group surface gas production rates
 //       b) slave group surface gas injection rates
+//       c) slave group gas reinjection rate
 //   in order to calculate the sales gas targets.
+//
+// 7) If a parent of the master group has RESV control mode, and the master group is available for higher level control,
+//   it will need to know the slave group's reservoir production rates to calculate the master group's target rate.
 //
 // TODO: We could try to send only the necessary data to the master process, but that would require
 //       the master process to first tell the slave group its data requirements at the current
@@ -105,8 +109,8 @@ RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper)
 //       Note also that even if the slave group is e.g. a pure injection group, it still might have
 //       production wells, that contribute to production group at a higher level, the same goes for
 //       the master group. So to be safe, we have to send all injection and production data available
-//       i.e. group potentials, surface production rates, reservoir voidage rates, reinjection rate for
-//       the gas phase, and surface and reservoir injection rates.
+//       i.e. group potentials, reservoir and surface production rates, reservoir voidage rates, reinjection
+//       rate for the gas phase, and surface and reservoir injection rates.
 //
 template <class Scalar, class IndexTraits>
 void
@@ -183,6 +187,49 @@ collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const
     return ProductionRates{production_rates};
 }
 
+template<typename Scalar, typename IndexTraits>
+typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupReservoirProductionRates_(std::size_t group_idx) const
+{
+    auto& rescoup_slave = this->reservoir_coupling_slave_;
+    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
+    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+    const auto& pu = this->phase_usage_;
+
+    // Collect reservoir rates for each phase by summing well reservoir rates
+    // These rates are computed using slave's PVT properties (formation volume factors, etc.)
+    // NOTE: sumWellResRates() only sums wells owned by this rank, so we need to
+    // communicate the rates across all ranks using comm().sum()
+    Scalar oil_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+        oil_rate = this->groupStateHelper_.sumWellResRates(
+            group, pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), /*is_injector=*/false);
+    }
+
+    Scalar gas_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+        gas_rate = this->groupStateHelper_.sumWellResRates(
+            group, pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx), /*is_injector=*/false);
+    }
+
+    Scalar water_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+        water_rate = this->groupStateHelper_.sumWellResRates(
+            group, pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), /*is_injector=*/false);
+    }
+
+    // Sum across all MPI ranks since wells in a group may be owned by different ranks
+    oil_rate = this->comm().sum(oil_rate);
+    gas_rate = this->comm().sum(gas_rate);
+    water_rate = this->comm().sum(water_rate);
+
+    ProductionRates reservoir_rates;
+    reservoir_rates[ReservoirCoupling::Phase::Oil] = oil_rate;
+    reservoir_rates[ReservoirCoupling::Phase::Gas] = gas_rate;
+    reservoir_rates[ReservoirCoupling::Phase::Water] = water_rate;
+    return reservoir_rates;
+}
 
 template<typename Scalar, typename IndexTraits>
 typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::SlaveGroupProductionData
@@ -195,6 +242,9 @@ collectSlaveGroupProductionData_(std::size_t group_idx) const
     // Production rates are used to transform guiderate targets for master production groups
     //   from one phase to another
     production_data.surface_rates = this->collectSlaveGroupSurfaceProductionRates_(group_idx);
+    // Reservoir rates are needed when master's parent group has RESV control mode,
+    // so the conversion uses slave's PVT properties rather than master's
+    production_data.reservoir_rates = this->collectSlaveGroupReservoirProductionRates_(group_idx);
     production_data.voidage_rate = this->collectSlaveGroupVoidageRate_(group_idx);
     production_data.gas_reinjection_rate = this->collectSlaveGroupReinjectionRateForGasPhase_(group_idx);
     return production_data;
