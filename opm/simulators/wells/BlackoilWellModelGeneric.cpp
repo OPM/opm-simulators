@@ -601,8 +601,15 @@ getGroupFipnumAndPvtreg() const
     // Use the pvtRegionIdx from the top cell of the first well.
     // TODO fix this!
     // This is only used for converting RESV rates.
-    // What is the proper approach?
-    // See discussion in: https://github.com/OPM/opm-simulators/issues/2921 for more details.
+    //
+    // Background (from opm-simulators issue #2921):
+    // The fundamental problem is selecting a single PVT region for a group that may
+    // include multiple wells, each potentially perforated in different PVT regions.
+    // WELSPECS items 11 and 13 define well-level region mappings, but there's no
+    // perfect solution for groups spanning multiple regions. The current approach
+    // uses the first perforation cell of the globally first well (by Well::seqIndex())
+    // for consistency across serial and parallel runs (see PR #2926).
+    // See: https://github.com/OPM/opm-simulators/issues/2921
     const int fipnum = 0;
     int pvtreg = well_perf_data_.empty() || well_perf_data_[0].empty()
         ? pvt_region_idx_[0]
