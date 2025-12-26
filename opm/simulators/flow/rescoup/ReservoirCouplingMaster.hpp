@@ -98,6 +98,7 @@ public:
     const double *getSlaveStartDates() { return this->slave_start_dates_.data(); }
     void initStartOfReportStep(int report_step_idx);
     void initTimeStepping();
+    bool isFirstSubstepOfSyncTimestep() const;
     bool isMasterGroup(const std::string &group_name) const;
     void maybeActivate(int report_step);
     void maybeReceiveActivationHandshakeFromSlaves(double current_time);
@@ -119,6 +120,7 @@ public:
     void setDeferredLogger(DeferredLogger *deferred_logger) {
          this->logger_.setDeferredLogger(deferred_logger);
     }
+    void setFirstSubstepOfSyncTimestep(bool value);
     // These are currently only used for unit testing
     void setSlaveActivationDate(int index, double date) { this->slave_activation_dates_[index] = date; }
     void setSlaveNextReportTimeOffset(int index, double offset);

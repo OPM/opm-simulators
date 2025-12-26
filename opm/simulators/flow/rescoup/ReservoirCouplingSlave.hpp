@@ -56,6 +56,7 @@ public:
     const std::map<std::string, std::string>& getSlaveToMasterGroupNameMap() const {
         return slave_to_master_group_map_; }
     void initTimeStepping();
+    bool isFirstSubstepOfSyncTimestep() const;
     void maybeActivate(int report_step);
     std::size_t numSlaveGroups() const { return this->slave_group_order_.size(); }
     double receiveNextTimeStepFromMaster();
@@ -66,6 +67,7 @@ public:
     void setDeferredLogger(DeferredLogger *deferred_logger) {
         this->logger_.setDeferredLogger(deferred_logger);
     }
+    void setFirstSubstepOfSyncTimestep(bool value);
     const std::string& slaveGroupIdxToGroupName(std::size_t group_idx) const {
         return this->slave_group_order_.at(group_idx);
     }

@@ -382,9 +382,10 @@ namespace Opm {
             createWellContainer(reportStepIdx);
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-            // Receive all slave group data early to ensure it's available for any calculations
             if (this->isReservoirCouplingMaster()) {
-                this->receiveSlaveGroupData();
+                if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
+                    this->receiveSlaveGroupData();
+                }
             }
 #endif
 
@@ -473,7 +474,9 @@ namespace Opm {
         );
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingSlave()) {
-            this->sendSlaveGroupDataToMaster();
+            if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
+                this->sendSlaveGroupDataToMaster();
+            }
         }
 #endif
         std::string exc_msg;
