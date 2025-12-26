@@ -149,6 +149,9 @@ private:
         int getNumIterations_(const SimulatorReportSingle& substep_report) const;
         double growthFactor_() const;
         bool ignoreConvergenceFailure_() const;
+        bool isReservoirCouplingMaster_() const;
+        bool isReservoirCouplingSlave_() const;
+        void markFirstSubStepAsFinished_() const;
         void maybeReportSubStep_(SimulatorReportSingle substep_report) const;
         double maybeRestrictTimeStepGrowth_(const double dt,
                                             double dt_estimate,
@@ -167,6 +170,10 @@ private:
         bool solverVerbose_() const;
         const SimulatorTimer& simulatorTimer_() const;
         boost::posix_time::ptime startDateTime_() const;
+#ifdef RESERVOIR_COUPLING_ENABLED
+        ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster_() const;
+        ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave_() const;
+#endif
         double timeStepControlComputeEstimate_(const double dt,
                                                const int iterations,
                                                const AdaptiveSimulatorTimer& substepTimer) const;

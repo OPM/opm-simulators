@@ -68,6 +68,13 @@ public:
     /// @return MPI communicator handle for communication with the master process
     MPI_Comm getSlaveMasterComm() const { return this->slave_.getMasterComm(); }
 
+    /// @brief Check if this is the first substep of within a "sync" timestep.
+    /// @details This flag is used to control reservoir coupling synchronization.
+    ///          Master-slave data exchange should only happen at the start of each "sync" timestep,
+    ///          not on internal substeps or at retries after convergence chops.
+    /// @return true if this is the first substep of a "sync" timestep, false if not
+    bool isFirstSubstepOfSyncTimestep() const { return is_first_substep_of_sync_timestep_; }
+
     /// @brief Get the logger for reservoir coupling operations
     /// @return Reference to the logger object for this coupling session
     ReservoirCoupling::Logger& logger() const { return this->slave_.logger(); }
@@ -95,6 +102,10 @@ public:
     /// @note This is a blocking operation that waits for the master to receive the data
     /// @note Must be called before the master attempts to receive injection data
     void sendInjectionDataToMaster(const std::vector<SlaveGroupInjectionData> &injection_data) const;
+
+    /// @brief Set whether this is the first substep of within a "sync" timestep.
+    /// @param value true at start of sync timestep, false after first runSubStep_() call
+    void setFirstSubstepOfSyncTimestep(bool value) { is_first_substep_of_sync_timestep_ = value; }
 
     /// @brief Get the name of this slave process
     /// @return Reference to the name string for this slave
@@ -129,6 +140,9 @@ private:
 
     /// Reference to the parent ReservoirCouplingSlave object
     ReservoirCouplingSlave<Scalar> &slave_;
+    // Flag to track if this is the first substep of within a "sync" timestep.
+    // Used to control reservoir coupling synchronization.
+    bool is_first_substep_of_sync_timestep_{true};
 };
 } // namespace Opm
 #endif // OPM_RESERVOIR_COUPLING_SLAVE_REPORT_STEP_HPP
