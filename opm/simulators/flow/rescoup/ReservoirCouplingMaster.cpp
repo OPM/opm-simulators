@@ -96,6 +96,15 @@ getMasterGroupCanonicalIdx(
 }
 
 template <class Scalar>
+const ReservoirCoupling::Potentials<Scalar>&
+ReservoirCouplingMaster<Scalar>::
+getSlaveGroupPotentials(const std::string &master_group_name)
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->getSlaveGroupPotentials(master_group_name);
+}
+
+template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
 initTimeStepping()
@@ -114,6 +123,15 @@ initStartOfReportStep(int report_step_idx)
     assert(this->report_step_data_);
     this->report_step_data_->setReportStepIdx(report_step_idx);
     this->logger_.info("Initializing start of report step");
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingMaster<Scalar>::
+isFirstSubstepOfSyncTimestep() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->isFirstSubstepOfSyncTimestep();
 }
 
 template <class Scalar>
@@ -281,12 +299,12 @@ receiveProductionDataFromSlaves()
 }
 
 template <class Scalar>
-const ReservoirCoupling::Potentials<Scalar>&
+void
 ReservoirCouplingMaster<Scalar>::
-getSlaveGroupPotentials(const std::string &master_group_name)
+setFirstSubstepOfSyncTimestep(bool value)
 {
     assert(this->report_step_data_);
-    return this->report_step_data_->getSlaveGroupPotentials(master_group_name);
+    this->report_step_data_->setFirstSubstepOfSyncTimestep(value);
 }
 
 template <class Scalar>
