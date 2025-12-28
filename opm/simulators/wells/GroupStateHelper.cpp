@@ -453,8 +453,7 @@ GroupStateHelper<Scalar, IndexTraits>::
 getInjectionGroupTarget(
     const Group& group,
     const Phase& injection_phase,
-    const std::vector<Scalar>& resv_coeff,
-    DeferredLogger& deferred_logger) const
+    const std::vector<Scalar>& resv_coeff) const
 {
     const auto& pu = this->phaseUsage();
     const int pos = this->phaseToActivePhaseIdx(injection_phase);
@@ -514,7 +513,7 @@ getInjectionGroupTarget(
     default:
         OPM_DEFLOG_THROW(std::logic_error,
                          "Invalid Group::InjectionCMode in getInjectionGroupTarget",
-                         deferred_logger);
+                         this->deferredLogger());
         return 0.0;
     }
 }
