@@ -190,8 +190,7 @@ public:
                                                       const Scalar* rates,
                                                       const Scalar efficiency_factor,
                                                       const std::vector<Scalar>& resv_coeff,
-                                                      const bool check_guide_rate,
-                                                      DeferredLogger& deferred_logger) const;
+                                                      const bool check_guide_rate) const;
 
     const Parallel::Communication& comm() const { return this->comm_; }
 

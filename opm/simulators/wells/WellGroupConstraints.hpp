@@ -80,8 +80,7 @@ private:
                               const GroupStateHelperType& groupStateHelper,
                               const Scalar efficiencyFactor,
                               const RateConvFunc& rateConverter,
-                              const bool check_guide_rate,
-                              DeferredLogger& deferred_logger) const;
+                              const bool check_guide_rate) const;
 
     const WellInterfaceGeneric<Scalar, IndexTraits>& well_; //!< Reference to well interface
 };

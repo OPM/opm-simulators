@@ -264,6 +264,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraints)
 
     Opm::DeferredLogger deferred_logger;
     auto& gsh = well_model.groupStateHelper();
+    auto logger_guard = gsh.setupScopedDeferredLogger(deferred_logger);
 
     // Update the groupControlledWells count based on well control modes
     gsh.updateGroupControlledWells(/*is_production_group=*/true, Opm::Phase::OIL, deferred_logger);
@@ -342,7 +343,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraints)
     const double initial_efficiency = E_MANI;
 
     // Call checkGroupConstraintsProd
-    // Arguments: name, parent, group, rates, efficiency_factor, resv_coeff, check_guide_rate, deferred_logger
+    // Arguments: name, parent, group, rates, efficiency_factor, resv_coeff, check_guide_rate
     auto [constraint_violated, scale] = gsh.checkGroupConstraintsProd(
         "MANI",                    // name (the group/well being checked)
         "PLAT",                    // parent (immediate parent group name)
@@ -350,8 +351,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraints)
         mani_rates.data(),         // rates (MANI's production rates)
         initial_efficiency,        // efficiency_factor (E_MANI, will accumulate E_PLAT)
         resv_coeff,                // resv_coeff
-        /*check_guide_rate=*/true, // check_guide_rate
-        deferred_logger            // deferred_logger
+        /*check_guide_rate=*/true  // check_guide_rate
     );
 
     // ========================================================================
