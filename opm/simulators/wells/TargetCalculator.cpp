@@ -163,9 +163,7 @@ Scalar
 InjectionTargetCalculator<Scalar, IndexTraits>::
 groupTarget(DeferredLogger& deferred_logger) const
 {
-    return this->groupStateHelper_.getInjectionGroupTarget(
-        this->group_, this->injection_phase_, this->resv_coeff_, deferred_logger
-    );
+    return this->groupStateHelper_.getInjectionGroupTarget(this->group_, this->injection_phase_, this->resv_coeff_);
 }
 
 template<typename Scalar, typename IndexTraits>
