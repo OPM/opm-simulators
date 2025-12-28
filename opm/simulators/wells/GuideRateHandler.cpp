@@ -73,15 +73,6 @@ GuideRateHandler<Scalar, IndexTraits>::GuideRateHandler(
 // Public methods for GuideRateHandler sorted alphabetically
 // -----------------------------------------------------------
 
-template<typename Scalar, typename IndexTraits>
-DeferredLogger&
-GuideRateHandler<Scalar, IndexTraits>::
-deferredLogger()
-{
-    assert(this->deferred_logger_ != nullptr);
-    return *this->deferred_logger_;
-}
-
 // This is an alternative to plotting the summary keywords:
 // - GOPGR (group oil production guide rate),
 // - WOPGR (well oil production guide rate),

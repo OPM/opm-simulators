@@ -190,7 +190,7 @@ public:
         rescoup_.setSlave(slave);
     }
 #endif
-    DeferredLogger& deferredLogger();
+    DeferredLogger& deferredLogger() const { return this->well_model_.groupStateHelper().deferredLogger(); }
     /**
      * @brief Dumps guide rate information to the logger in a readable format.
      *
@@ -201,7 +201,6 @@ public:
      */
     void debugDumpGuideRates(const int report_step_idx, const double sim_time);
     const Parallel::Communication& getComm() const { return comm_; }
-    void setLogger(DeferredLogger *deferred_logger) { deferred_logger_ = deferred_logger; }
     const GuideRate& guideRate() { return guide_rate_; }
     const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return well_model_.phaseUsage(); }
     const Schedule& schedule() const { return schedule_; }
@@ -228,7 +227,6 @@ private:
     const SummaryState& summary_state_;
     const Parallel::Communication& comm_;
     GuideRate& guide_rate_;
-    DeferredLogger *deferred_logger_ = nullptr;
     ReservoirCoupling::Proxy<Scalar> rescoup_{};
 };
 
