@@ -80,8 +80,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
                                                                const Phase injection_phase,
                                                                const Scalar efficiency_factor,
                                                                const std::vector<Scalar>& resv_coeff,
-                                                               const bool check_guide_rate,
-                                                               DeferredLogger& deferred_logger) const
+                                                               const bool check_guide_rate) const
 {
     // When called for a well ('name' is a well name), 'parent'
     // will be the name of 'group'. But if we recurse, 'name' and
@@ -111,8 +110,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
                                               injection_phase,
                                               efficiency_factor * group.getGroupEfficiencyFactor(),
                                               resv_coeff,
-                                              check_guide_rate,
-                                              deferred_logger);
+                                              check_guide_rate);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -127,7 +125,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
                                                                              resv_coeff,
                                                                              group,
                                                                              injection_phase,
-                                                                             deferred_logger};
+                                                                             this->deferredLogger()};
 
     GroupStateHelpers::FractionCalculator fcalc {this->schedule_,
                                                  *this,
@@ -198,7 +196,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
         return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
     }
 
-    const Scalar orig_target = tcalc.groupTarget(deferred_logger);
+    const Scalar orig_target = tcalc.groupTarget(this->deferredLogger());
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.

@@ -695,8 +695,7 @@ checkGroupHigherConstraints(const Group& group,
                     phase,
                     group.getGroupEfficiencyFactor(),
                     resv_coeff_inj,
-                    /*check_guide_rate*/true,
-                    deferred_logger
+                    /*check_guide_rate*/true
                 );
                 if (is_changed) {
                     auto& group_log = switched_inj_groups_[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)];
