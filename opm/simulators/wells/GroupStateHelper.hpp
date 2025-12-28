@@ -110,6 +110,61 @@ public:
         GroupState<Scalar>* previous_state_ptr_ {nullptr};
     };
 
+    /// @brief RAII guard for scoped DeferredLogger binding
+    ///
+    /// @details This class ensures that a DeferredLogger pointer is properly set and cleared
+    /// in the GroupStateHelper. It follows the RAII pattern to prevent dangling pointer issues
+    /// when local DeferredLogger objects go out of scope.
+    ///
+    /// Supports move semantics to allow returning from factory functions and use with std::optional.
+    ///
+    /// Lifecycle guarantees:
+    /// - Constructor: Sets the DeferredLogger pointer
+    /// - Destructor: Clears the pointer (only if not moved-from)
+    /// - Move: Transfers ownership; moved-from object becomes inactive
+    class ScopedDeferredLoggerGuard
+    {
+    public:
+        ScopedDeferredLoggerGuard(const GroupStateHelper& group_state_helper, DeferredLogger& deferred_logger)
+            : group_state_helper_(&group_state_helper)
+        {
+            group_state_helper_->deferred_logger_ = &deferred_logger;
+        }
+
+        ~ScopedDeferredLoggerGuard()
+        {
+            if (group_state_helper_) {
+                group_state_helper_->deferred_logger_ = nullptr;
+            }
+        }
+
+        // Delete copy operations
+        ScopedDeferredLoggerGuard(const ScopedDeferredLoggerGuard&) = delete;
+        ScopedDeferredLoggerGuard& operator=(const ScopedDeferredLoggerGuard&) = delete;
+
+        // Enable move operations for std::optional and factory function returns
+        ScopedDeferredLoggerGuard(ScopedDeferredLoggerGuard&& other) noexcept
+            : group_state_helper_(other.group_state_helper_)
+        {
+            other.group_state_helper_ = nullptr;
+        }
+
+        ScopedDeferredLoggerGuard& operator=(ScopedDeferredLoggerGuard&& other) noexcept
+        {
+            if (this != &other) {
+                if (group_state_helper_) {
+                    group_state_helper_->deferred_logger_ = nullptr;
+                }
+                group_state_helper_ = other.group_state_helper_;
+                other.group_state_helper_ = nullptr;
+            }
+            return *this;
+        }
+
+    private:
+        const GroupStateHelper* group_state_helper_{nullptr};
+    };
+
     GroupStateHelper(WellState<Scalar, IndexTraits>& well_state,
                     GroupState<Scalar>& group_state,
                     const Schedule& schedule,
@@ -140,6 +195,14 @@ public:
                                                       DeferredLogger& deferred_logger) const;
 
     const Parallel::Communication& comm() const { return this->comm_; }
+
+    /// @brief Get the deferred logger
+    /// @throws assertion failure if no logger has been set via setupScopedDeferredLogger()
+    DeferredLogger& deferredLogger() const
+    {
+        assert(this->deferred_logger_ != nullptr);
+        return *this->deferred_logger_;
+    }
 
     std::vector<Scalar> getGroupRatesAvailableForHigherLevelControl(const Group& group, const bool is_injector) const;
 
@@ -279,6 +342,13 @@ public:
         report_step_ = report_step;
     }
 
+    /// @brief Create a scoped guard that binds a DeferredLogger to this helper
+    /// @param deferred_logger The logger to bind (must outlive the returned guard)
+    /// @return RAII guard that clears the logger on destruction
+    ScopedDeferredLoggerGuard setupScopedDeferredLogger(DeferredLogger& deferred_logger) const
+    {
+        return ScopedDeferredLoggerGuard(*this, deferred_logger);
+    }
 
     const SummaryState& summaryState() const
     {
@@ -412,6 +482,9 @@ private:
     const Schedule& schedule_;
     const SummaryState& summary_state_;
     const GuideRate& guide_rate_;
+    // NOTE: The deferred logger does not change the object "meaningful" state, so it should be ok to
+    //   make it mutable and store a pointer to it here.
+    mutable DeferredLogger* deferred_logger_ {nullptr};
     // NOTE: The phase usage info seems to be read-only throughout the simulation, so it should be safe
     // to store a reference to it here.
     const PhaseUsageInfo<IndexTraits>& phase_usage_info_;
