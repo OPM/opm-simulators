@@ -73,8 +73,7 @@ private:
                              const Scalar efficiencyFactor,
                              const SummaryState& summaryState,
                              const RateConvFunc& rateConverter,
-                             const bool check_guide_rate,
-                             DeferredLogger& deferred_logger) const;
+                             const bool check_guide_rate) const;
 
     std::pair<bool, Scalar>
     checkGroupConstraintsProd(const Group& group,

@@ -182,8 +182,7 @@ public:
                                                      const Phase injection_phase,
                                                      const Scalar efficiency_factor,
                                                      const std::vector<Scalar>& resv_coeff,
-                                                     const bool check_guide_rate,
-                                                     DeferredLogger& deferred_logger) const;
+                                                     const bool check_guide_rate) const;
 
     std::pair<bool, Scalar> checkGroupConstraintsProd(const std::string& name,
                                                       const std::string& parent,
