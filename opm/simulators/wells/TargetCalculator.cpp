@@ -96,7 +96,7 @@ Scalar
 TargetCalculator<Scalar, IndexTraits>::
 groupTarget(DeferredLogger& deferred_logger) const
 {
-    return this->groupStateHelper_.getProductionGroupTarget(this->group_, deferred_logger);
+    return this->groupStateHelper_.getProductionGroupTarget(this->group_);
 }
 
 template<typename Scalar, typename IndexTraits>

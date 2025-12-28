@@ -210,7 +210,7 @@ public:
                                    const Phase& injection_phase,
                                    const std::vector<Scalar>& resv_coeff) const;
 
-    Scalar getProductionGroupTarget(const Group& group, DeferredLogger& deferred_logger) const;
+    Scalar getProductionGroupTarget(const Group& group) const;
 
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
 

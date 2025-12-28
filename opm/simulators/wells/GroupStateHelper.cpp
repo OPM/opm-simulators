@@ -528,7 +528,7 @@ GroupStateHelper<Scalar, IndexTraits>::getProductionGroupRateVector(const std::s
 template<typename Scalar, typename IndexTraits>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::
-getProductionGroupTarget(const Group& group, DeferredLogger& deferred_logger) const
+getProductionGroupTarget(const Group& group) const
 {
     Group::ProductionCMode cmode = this->groupState().production_control(group.name());
     Group::ProductionControls ctrl = group.productionControls(this->summary_state_);
@@ -562,7 +562,7 @@ getProductionGroupTarget(const Group& group, DeferredLogger& deferred_logger) co
     default:
         OPM_DEFLOG_THROW(std::logic_error,
                          "Invalid Group::ProductionCMode in getProductionGroupTarget",
-                         deferred_logger);
+                         this->deferredLogger());
         return 0.0;
     }
 }
