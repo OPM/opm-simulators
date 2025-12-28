@@ -240,8 +240,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
                                                                 const Scalar* rates,
                                                                 const Scalar efficiency_factor,
                                                                 const std::vector<Scalar>& resv_coeff,
-                                                                const bool check_guide_rate,
-                                                                DeferredLogger& deferred_logger) const
+                                                                const bool check_guide_rate) const
 {
     // When called for a well ('name' is a well name), 'parent'
     // will be the name of 'group'. But if we recurse, 'name' and
@@ -270,8 +269,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
                                                rates,
                                                efficiency_factor * group.getGroupEfficiencyFactor(),
                                                resv_coeff,
-                                               check_guide_rate,
-                                               deferred_logger);
+                                               check_guide_rate);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -309,7 +307,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
         return tcalc.calcModeRateFromRates(group_surface_rates);
     };
 
-    const Scalar orig_target = tcalc.groupTarget(deferred_logger);
+    const Scalar orig_target = tcalc.groupTarget(this->deferredLogger());
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
