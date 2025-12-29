@@ -121,8 +121,7 @@ checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
                       const SummaryState& summaryState,
                       const RateConvFunc& rateConverter,
                       const bool check_guide_rate,
-                      WellStateType& well_state,
-                      DeferredLogger& deferred_logger) const
+                      WellStateType& well_state) const
 {
     const auto& well = well_.wellEcl();
     const int well_index = well_.indexOfWell();

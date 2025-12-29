@@ -63,8 +63,7 @@ public:
                                const SummaryState& summaryState,
                                const RateConvFunc& rateConverter,
                                const bool check_guide_rate,
-                               WellStateType& well_state,
-                               DeferredLogger& deferred_logger) const;
+                               WellStateType& well_state) const;
 
 private:
     std::pair<bool, Scalar>

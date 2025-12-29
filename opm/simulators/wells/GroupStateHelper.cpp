@@ -124,8 +124,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
     GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {*this,
                                                                              resv_coeff,
                                                                              group,
-                                                                             injection_phase,
-                                                                             this->deferredLogger()};
+                                                                             injection_phase};
 
     GroupStateHelpers::FractionCalculator fcalc {this->schedule_,
                                                  *this,
@@ -196,7 +195,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
         return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
     }
 
-    const Scalar orig_target = tcalc.groupTarget(this->deferredLogger());
+    const Scalar orig_target = tcalc.groupTarget();
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
@@ -307,7 +306,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
         return tcalc.calcModeRateFromRates(group_surface_rates);
     };
 
-    const Scalar orig_target = tcalc.groupTarget(this->deferredLogger());
+    const Scalar orig_target = tcalc.groupTarget();
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
@@ -638,8 +637,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
     GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                              resv_coeff,
                                                                              group,
-                                                                             injection_phase,
-                                                                             this->deferredLogger()};
+                                                                             injection_phase};
 
     GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
                                                                       *this,
@@ -660,7 +658,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
         return tcalc.calcModeRateFromRates(group_target_reductions);
     };
 
-    const Scalar orig_target = tcalc.groupTarget(this->deferredLogger());
+    const Scalar orig_target = tcalc.groupTarget();
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
@@ -776,7 +774,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
         return tcalc.calcModeRateFromRates(group_target_reductions);
     };
 
-    const Scalar orig_target = tcalc.groupTarget(this->deferredLogger());
+    const Scalar orig_target = tcalc.groupTarget();
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
@@ -1795,7 +1793,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
                 GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                                resv_coeff,
                                                                                control_group};
-                const auto& control_group_target = tcalc.groupTarget(this->deferredLogger());
+                const auto& control_group_target = tcalc.groupTarget();
 
                 // Calculates the guide rate of the parent group with control.
                 // It is allowed that the guide rate of this group is defaulted. The guide rate will be
