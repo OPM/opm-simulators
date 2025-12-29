@@ -344,6 +344,9 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
             if (!is.neighbor())
                 continue; // intersection is on the domain boundary
 
+            if ( (is.inside().level()>0) || (is.outside().level()>0))
+                continue; // for CpGrid with LGRs, we only care about level zero cells, for now.
+
             // Not 'const' because remapped if 'map' is non-null.
             unsigned c1 = globalElemMapper.index(is.inside());
             unsigned c2 = globalElemMapper.index(is.outside());
@@ -489,6 +492,9 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive,
         for (const auto& is : intersections(globalGridView, elem)) {
             if (!is.neighbor())
                 continue; // intersection is on the domain boundary
+
+            if ( (is.inside().level()>0) || (is.outside().level()>0))
+                continue; // for CpGrid with LGRs, we only care about level zero cells, for now.
 
             // Not 'const' because remapped if 'map' is non-null.
             unsigned c1 = globalElemMapper.index(is.inside());
