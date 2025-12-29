@@ -1305,7 +1305,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
         constexpr std::array<bool, num_configs> is_production_group = {true, false, false, false};
         constexpr std::array<Phase, num_configs> phases = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
         for (int i = 0; i < num_configs; i++) {
-            group_state_helper.updateGroupControlledWells(is_production_group[i], phases[i], deferred_logger);
+            group_state_helper.updateGroupControlledWells(is_production_group[i], phases[i]);
         }
     }
     // the group target reduction rates needs to be update since wells may have switched to/from GRUP control

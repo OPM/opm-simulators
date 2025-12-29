@@ -370,8 +370,7 @@ public:
     /// update the number of wells that are actively under group control for a given group with name given by
     /// group_name its main usage is to detect cases where there is no wells under group control
     int updateGroupControlledWells(const bool is_production_group,
-                                   const Phase injection_phase,
-                                   DeferredLogger& deferred_logger);
+                                   const Phase injection_phase);
 
     void updateGroupProductionRates(const Group& group);
 
@@ -465,8 +464,7 @@ private:
 
     int updateGroupControlledWellsRecursive_(const std::string& group_name,
                                              const bool is_production_group,
-                                             const Phase injection_phase,
-                                             DeferredLogger& deferred_logger);
+                                             const Phase injection_phase);
 
     void updateGroupTargetReductionRecursive_(const Group& group,
                                               const bool is_injector,

@@ -1114,13 +1114,11 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellSurfaceRates(const Group& group,
 template <typename Scalar, typename IndexTraits>
 int
 GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWells(const bool is_production_group,
-                                                                 const Phase injection_phase,
-                                                                 DeferredLogger& deferred_logger)
+                                                                  const Phase injection_phase)
 {
     OPM_TIMEFUNCTION();
     const auto& group_name = "FIELD";
-    return this->updateGroupControlledWellsRecursive_(
-        group_name, is_production_group, injection_phase, deferred_logger);
+    return this->updateGroupControlledWellsRecursive_(group_name, is_production_group, injection_phase);
 }
 
 template <typename Scalar, typename IndexTraits>
@@ -1739,8 +1737,7 @@ int
 GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
     const std::string& group_name,
     const bool is_production_group,
-    const Phase injection_phase,
-    DeferredLogger& deferred_logger)
+    const Phase injection_phase)
 {
     const Group& group = this->schedule_.getGroup(group_name, this->report_step_);
     int num_wells = 0;
@@ -1756,11 +1753,9 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
         }
 
         if (included) {
-            num_wells += this->updateGroupControlledWellsRecursive_(
-                child_group, is_production_group, injection_phase, deferred_logger);
+            num_wells += this->updateGroupControlledWellsRecursive_(child_group, is_production_group, injection_phase);
         } else {
-            this->updateGroupControlledWellsRecursive_(
-                child_group, is_production_group, injection_phase, deferred_logger);
+            this->updateGroupControlledWellsRecursive_(child_group, is_production_group, injection_phase);
         }
     }
     for (const std::string& child_well : group.wells()) {
@@ -1803,7 +1798,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
                 GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                                resv_coeff,
                                                                                control_group};
-                const auto& control_group_target = tcalc.groupTarget(deferred_logger);
+                const auto& control_group_target = tcalc.groupTarget(this->deferredLogger());
 
                 // Calculates the guide rate of the parent group with control.
                 // It is allowed that the guide rate of this group is defaulted. The guide rate will be
