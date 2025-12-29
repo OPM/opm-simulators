@@ -1346,8 +1346,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     group,
                     ws.surface_rates.data(),
                     efficiencyFactor,
-                    resv_coeff,
-                    deferred_logger
+                    resv_coeff
                 );
             } else {
                 const auto& well_controls = well->wellEcl().injectionControls(summaryState_);
