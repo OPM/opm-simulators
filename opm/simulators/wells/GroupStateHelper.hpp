@@ -227,8 +227,7 @@ public:
                                                      const Group& group,
                                                      const Scalar* rates,
                                                      const Scalar efficiency_factor,
-                                                     const std::vector<Scalar>& resv_coeff,
-                                                     DeferredLogger& deferred_logger) const;
+                                                     const std::vector<Scalar>& resv_coeff) const;
 
     GuideRate::RateVector getWellRateVector(const std::string& name) const;
 
