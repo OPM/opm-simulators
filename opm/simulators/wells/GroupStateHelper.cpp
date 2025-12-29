@@ -1372,15 +1372,12 @@ GroupStateHelper<Scalar, IndexTraits>::updateWellRatesFromGroupTargetScale(
 template <typename Scalar, typename IndexTraits>
 std::pair<std::optional<std::string>, Scalar>
 GroupStateHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
-                                                         const Group::ProductionCMode& offended_control,
-                                                         DeferredLogger& deferred_logger) const
+                                                          const Group::ProductionCMode& offended_control) const
 {
     std::pair<std::optional<std::string>, Scalar> offending_well {std::nullopt, 0.0};
     for (const std::string& child_group : group.groups()) {
         const auto& this_group = this->schedule_.getGroup(child_group, this->report_step_);
-        const auto& offending_well_this = this->worstOffendingWell(
-            this_group, offended_control, deferred_logger
-        );
+        const auto& offending_well_this = this->worstOffendingWell(this_group, offended_control);
         if (offending_well_this.second > offending_well.second) {
             offending_well = offending_well_this;
         }
@@ -1430,12 +1427,12 @@ GroupStateHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
             case Group::ProductionCMode::PRBL:
                 OPM_DEFLOG_THROW(std::runtime_error,
                                  "Group " + group.name() + " GroupProductionCMode PRBL not implemented",
-                                 deferred_logger);
+                                 this->deferredLogger());
                 break;
             case Group::ProductionCMode::CRAT:
                 OPM_DEFLOG_THROW(std::runtime_error,
                                  "Group " + group.name() + " GroupProductionCMode CRAT not implemented",
-                                 deferred_logger);
+                                 this->deferredLogger());
                 break;
             }
             const auto preferred_phase
