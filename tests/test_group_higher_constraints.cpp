@@ -267,7 +267,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraints)
     auto logger_guard = gsh.setupScopedDeferredLogger(deferred_logger);
 
     // Update the groupControlledWells count based on well control modes
-    gsh.updateGroupControlledWells(/*is_production_group=*/true, Opm::Phase::OIL, deferred_logger);
+    gsh.updateGroupControlledWells(/*is_production_group=*/true, Opm::Phase::OIL);
 
     gsh.updateGroupTargetReduction(field_group, /*is_injector=*/false);
 
