@@ -216,7 +216,7 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
             if (!fld_none)
             {
                 // Target is set for the autochoke group itself
-                target_tmp = tcalc.groupTarget(local_deferredLogger);
+                target_tmp = tcalc.groupTarget();
             }
 
             const Scalar orig_target = target_tmp;

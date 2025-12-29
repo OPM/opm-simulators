@@ -94,7 +94,7 @@ RateType TargetCalculator<Scalar, IndexTraits>::calcModeRateFromRates(const Rate
 template<typename Scalar, typename IndexTraits>
 Scalar
 TargetCalculator<Scalar, IndexTraits>::
-groupTarget(DeferredLogger& deferred_logger) const
+groupTarget() const
 {
     return this->groupStateHelper_.getProductionGroupTarget(this->group_);
 }
@@ -126,8 +126,7 @@ InjectionTargetCalculator<Scalar, IndexTraits>::
 InjectionTargetCalculator(const GroupStateHelperType& groupStateHelper,
                           const std::vector<Scalar>& resv_coeff,
                           const Group& group,
-                          const Phase& injection_phase,
-                          DeferredLogger& deferred_logger)
+                          const Phase& injection_phase)
     : groupStateHelper_{groupStateHelper}
     , resv_coeff_{resv_coeff}
     , group_{group}
@@ -154,14 +153,14 @@ InjectionTargetCalculator(const GroupStateHelperType& groupStateHelper,
     default:
         OPM_DEFLOG_THROW(std::logic_error,
                          "Invalid injection phase in InjectionTargetCalculator",
-                         deferred_logger);
+                         this->deferredLogger());
     }
 }
 
 template<typename Scalar, typename IndexTraits>
 Scalar
 InjectionTargetCalculator<Scalar, IndexTraits>::
-groupTarget(DeferredLogger& deferred_logger) const
+groupTarget() const
 {
     return this->groupStateHelper_.getInjectionGroupTarget(this->group_, this->injection_phase_, this->resv_coeff_);
 }
