@@ -600,8 +600,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
                                                                  const Scalar* rates,
                                                                  Phase injection_phase,
                                                                  const Scalar efficiency_factor,
-                                                                 const std::vector<Scalar>& resv_coeff,
-                                                                 DeferredLogger& deferred_logger) const
+                                                                 const std::vector<Scalar>& resv_coeff) const
 {
     // This function computes a wells group target.
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
@@ -625,8 +624,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
                                                 rates,
                                                 injection_phase,
                                                 efficiency_factor * group.getGroupEfficiencyFactor(),
-                                                resv_coeff,
-                                                deferred_logger);
+                                                resv_coeff);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -641,7 +639,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
                                                                              resv_coeff,
                                                                              group,
                                                                              injection_phase,
-                                                                             deferred_logger};
+                                                                             this->deferredLogger()};
 
     GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
                                                                       *this,
@@ -662,7 +660,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
         return tcalc.calcModeRateFromRates(group_target_reductions);
     };
 
-    const Scalar orig_target = tcalc.groupTarget(deferred_logger);
+    const Scalar orig_target = tcalc.groupTarget(this->deferredLogger());
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
