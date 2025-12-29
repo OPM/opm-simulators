@@ -406,8 +406,7 @@ public:
     /// Returns the name of the worst offending well and its fraction (i.e. violated_phase / preferred_phase)
     std::pair<std::optional<std::string>, Scalar>
     worstOffendingWell(const Group& group,
-                       const Group::ProductionCMode& offended_control,
-                       DeferredLogger& deferred_logger) const;
+                       const Group::ProductionCMode& offended_control) const;
 
 private:
 #ifdef RESERVOIR_COUPLING_ENABLED
