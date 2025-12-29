@@ -1379,8 +1379,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     ws.surface_rates.data(),
                     injectionPhase,
                     efficiencyFactor,
-                    resv_coeff,
-                    deferred_logger
+                    resv_coeff
                 );
             }
             auto& ws_update = this->wellState().well(well->indexOfWell());

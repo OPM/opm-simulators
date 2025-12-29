@@ -220,8 +220,7 @@ public:
                                                      const Scalar* rates,
                                                      const Phase injection_phase,
                                                      const Scalar efficiency_factor,
-                                                     const std::vector<Scalar>& resv_coeff,
-                                                     DeferredLogger& deferred_logger) const;
+                                                     const std::vector<Scalar>& resv_coeff) const;
 
     std::optional<Scalar> getWellGroupTargetProducer(const std::string& name,
                                                      const std::string& parent,
