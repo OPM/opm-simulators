@@ -125,7 +125,7 @@ public:
         const Parallel::Communication &comm() const { return this->parent_.comm_; }
         DeferredLogger &deferredLogger() { return this->parent_.deferredLogger(); }
         GuideRate &guideRate() { return this->parent_.guide_rate_; }
-        const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_.wellModel().phaseUsage(); }
+        const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_.phaseUsage(); }
         const SummaryState &summaryState() const { return this->parent_.summary_state_; }
         const Schedule &schedule() const { return this->parent_.schedule_; }
         /**
@@ -202,7 +202,10 @@ public:
     void debugDumpGuideRates(const int report_step_idx, const double sim_time);
     const Parallel::Communication& getComm() const { return comm_; }
     void setLogger(DeferredLogger *deferred_logger) { deferred_logger_ = deferred_logger; }
+    const GuideRate& guideRate() { return guide_rate_; }
+    const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return well_model_.phaseUsage(); }
     const Schedule& schedule() const { return schedule_; }
+    const SummaryState& summaryState() const { return summary_state_; }
     /**
      * @brief Updates guide rates for the current simulation step.
      *
@@ -217,6 +220,7 @@ public:
                           GroupState<Scalar>& group_state);
 
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel() const { return well_model_; }
+    BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel() { return well_model_; }
 private:
     void debugDumpGuideRatesRecursive_(const Group& group) const;
     BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model_;

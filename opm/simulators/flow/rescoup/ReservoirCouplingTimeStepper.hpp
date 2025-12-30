@@ -81,7 +81,7 @@ public:
 
     /// @brief Get the logger for reservoir coupling operations
     /// @return Reference to the logger object for this coupling session
-    ReservoirCoupling::Logger& logger() const { return this->master_.getLogger(); }
+    ReservoirCoupling::Logger& logger() const { return this->master_.logger(); }
 
     /// @brief Potentially adjust time step to align with slave report boundaries
     ///

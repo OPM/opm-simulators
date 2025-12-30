@@ -51,7 +51,7 @@ template<typename Scalar, typename IndexTraits>
 template <typename RateType>
 RateType TargetCalculator<Scalar, IndexTraits>::calcModeRateFromRates(const RateType* rates) const
 {
-    const auto& pu = this->groupStateHelper_.phaseUsageInfo();
+    const auto& pu = this->groupStateHelper_.phaseUsage();
     switch (this->cmode_) {
     case Group::ProductionCMode::ORAT: {
         assert(pu.phaseIsActive(IndexTraits::oilPhaseIdx));

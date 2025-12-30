@@ -20,11 +20,11 @@
 #include <config.h>
 
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingErrorMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
-#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -244,7 +244,7 @@ receiveActivationDateFromSlaves_()
                 MPI_STATUS_IGNORE
             );
             if (slave_activation_date < this->master_.getActivationDate()) {
-                OPM_THROW(std::runtime_error, "Slave process activation date is earlier than "
+                RCOUP_LOG_THROW(std::runtime_error, "Slave process activation date is earlier than "
                                               "the master process' activation date");
             }
             this->master_.addSlaveActivationDate(slave_activation_date);
@@ -418,7 +418,7 @@ spawnSlaveProcesses_()
                     this->logger_.info(fmt::format("Error spawning process {}: {}", i, error_string));
                 }
             }
-            OPM_THROW(std::runtime_error, "Failed to spawn slave process");
+            RCOUP_LOG_THROW(std::runtime_error, "Failed to spawn slave process");
         }
         // NOTE: By installing a custom error handler for all slave-master communicators, which
         //   eventually will call MPI_Abort(), there is no need to check the return value of any

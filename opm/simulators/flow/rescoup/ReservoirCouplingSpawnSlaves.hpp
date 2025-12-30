@@ -62,11 +62,13 @@ private:
     void sendMasterGroupNamesToSlaves_();
     void sendSlaveNamesToSlaves_();
     void spawnSlaveProcesses_();
+    ReservoirCoupling::Logger& logger() { return this->logger_; }
+    ReservoirCoupling::Logger& logger() const { return this->logger_; }
 
     ReservoirCouplingMaster<Scalar> &master_;
     const ReservoirCoupling::CouplingInfo &rescoup_;
     const Parallel::Communication &comm_;
-    ReservoirCoupling::Logger logger_;
+    mutable ReservoirCoupling::Logger logger_;
 };
 
 } // namespace Opm
