@@ -171,8 +171,7 @@ getInjectionTargetCalculator(const Group& group)
         this->groupStateHelper(),
         this->resvCoeffsInj(),
         group,
-        this->injectionPhase_(),
-        this->deferredLogger()
+        this->injectionPhase_()
     };
 }
 
@@ -212,17 +211,13 @@ getTargetFromCalculator(const TargetCalculatorType& target_calculator, const Gro
     if (this->targetType() == TargetType::Injection) {
         const auto& control_mode = this->groupState().injection_control(group.name(), this->injectionPhase_());
         return TargetInfo{
-            std::get<InjectionTargetCalculator>(target_calculator).groupTarget(
-                this->deferredLogger()
-            ), control_mode
+            std::get<InjectionTargetCalculator>(target_calculator).groupTarget(), control_mode
         };
     }
     else {
         const auto& control_mode = this->groupState().production_control(group.name());
         return TargetInfo{
-            std::get<TargetCalculator>(target_calculator).groupTarget(
-                this->deferredLogger()
-            ), control_mode
+            std::get<TargetCalculator>(target_calculator).groupTarget(), control_mode
         };
     }
 }
@@ -561,12 +556,10 @@ TopToBottomCalculator::
 getTopLevelTarget_()
 {
     if (this->targetType() == TargetType::Injection) {
-        return std::get<InjectionTargetCalculator>(this->target_calculator_).groupTarget(
-            this->deferredLogger()
-        );
+        return std::get<InjectionTargetCalculator>(this->target_calculator_).groupTarget();
     }
     else {
-        return std::get<TargetCalculator>(this->target_calculator_).groupTarget(this->deferredLogger());
+        return std::get<TargetCalculator>(this->target_calculator_).groupTarget();
     }
 }
 
