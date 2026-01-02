@@ -1610,9 +1610,7 @@ GroupStateHelper<Scalar, IndexTraits>::getSatelliteRate_(const Group& group,
 
 template <typename Scalar, typename IndexTraits>
 bool
-GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(
-    const Group& group,
-    DeferredLogger& deferred_logger) const
+GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Group& group) const
 {
     // Only applies to production auto choke groups
     if (!group.as_choke()) {
@@ -1821,7 +1819,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
         // If the group is underperforming its target, wells are not counted as group-controlled,
         // effectively excluding this group from guide rate distribution at the parent level.
         const bool exclude_for_auto_choke = is_production_group
-            && this->isAutoChokeGroupUnderperforming_(group, deferred_logger);
+            && this->isAutoChokeGroupUnderperforming_(group);
 
         // Below loop is only entered for well groups (i.e. groups with only wells as direct children).
         // For such a group (assuming it is not an auto choke group), if all its wells are under individual control,
