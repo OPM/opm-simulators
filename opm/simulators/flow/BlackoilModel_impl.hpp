@@ -33,6 +33,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
 
@@ -215,6 +216,7 @@ nonlinearIteration(const int iteration,
                    const SimulatorTimerInterface& timer,
                    NonlinearSolverType& nonlinear_solver)
 {
+    OPM_TIMEFUNCTION();
     if (iteration == 0) {
         // For each iteration we store in a vector the norms of the residual of
         // the mass balance for each active phase, the well flux and the well equations.
