@@ -695,8 +695,7 @@ checkGroupHigherConstraints(const Group& group,
                     phase,
                     group.getGroupEfficiencyFactor(),
                     resv_coeff_inj,
-                    /*check_guide_rate*/true,
-                    deferred_logger
+                    /*check_guide_rate*/true
                 );
                 if (is_changed) {
                     auto& group_log = switched_inj_groups_[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)];
@@ -754,8 +753,7 @@ checkGroupHigherConstraints(const Group& group,
                 rates_available.data(),
                 group.getGroupEfficiencyFactor(),
                 resv_coeff,
-                /*check_guide_rate*/true,
-                deferred_logger
+                /*check_guide_rate*/true
             );
             if (is_changed) {
                 const auto group_limit_action = group.productionControls(summaryState_).group_limit_action;
@@ -1307,7 +1305,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
         constexpr std::array<bool, num_configs> is_production_group = {true, false, false, false};
         constexpr std::array<Phase, num_configs> phases = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
         for (int i = 0; i < num_configs; i++) {
-            group_state_helper.updateGroupControlledWells(is_production_group[i], phases[i], deferred_logger);
+            group_state_helper.updateGroupControlledWells(is_production_group[i], phases[i]);
         }
     }
     // the group target reduction rates needs to be update since wells may have switched to/from GRUP control
@@ -1348,8 +1346,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     group,
                     ws.surface_rates.data(),
                     efficiencyFactor,
-                    resv_coeff,
-                    deferred_logger
+                    resv_coeff
                 );
             } else {
                 const auto& well_controls = well->wellEcl().injectionControls(summaryState_);
@@ -1381,8 +1378,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     ws.surface_rates.data(),
                     injectionPhase,
                     efficiencyFactor,
-                    resv_coeff,
-                    deferred_logger
+                    resv_coeff
                 );
             }
             auto& ws_update = this->wellState().well(well->indexOfWell());

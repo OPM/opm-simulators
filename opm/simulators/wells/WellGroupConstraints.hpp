@@ -63,8 +63,7 @@ public:
                                const SummaryState& summaryState,
                                const RateConvFunc& rateConverter,
                                const bool check_guide_rate,
-                               WellStateType& well_state,
-                               DeferredLogger& deferred_logger) const;
+                               WellStateType& well_state) const;
 
 private:
     std::pair<bool, Scalar>
@@ -73,16 +72,14 @@ private:
                              const Scalar efficiencyFactor,
                              const SummaryState& summaryState,
                              const RateConvFunc& rateConverter,
-                             const bool check_guide_rate,
-                             DeferredLogger& deferred_logger) const;
+                             const bool check_guide_rate) const;
 
     std::pair<bool, Scalar>
     checkGroupConstraintsProd(const Group& group,
                               const GroupStateHelperType& groupStateHelper,
                               const Scalar efficiencyFactor,
                               const RateConvFunc& rateConverter,
-                              const bool check_guide_rate,
-                              DeferredLogger& deferred_logger) const;
+                              const bool check_guide_rate) const;
 
     const WellInterfaceGeneric<Scalar, IndexTraits>& well_; //!< Reference to well interface
 };
