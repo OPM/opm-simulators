@@ -131,7 +131,7 @@ calculateGroupTarget()
     }
     assert(this->parentGroupControlAvailable_(group));
     if (!this->hasGuideRate_(group)) {
-        if (this->hasFldOrNoneControl_(group)) {
+        if (this->hasFldOrNoneControl(group)) {
             // Parent control is available, but no guide rate is defined. This is illegal for a master group
             // under FLD or NONE control.
             OPM_DEFLOG_THROW(
@@ -220,6 +220,23 @@ getTargetFromCalculator(const TargetCalculatorType& target_calculator, const Gro
     }
 }
 
+template<class Scalar, class IndexTraits>
+bool
+GroupTargetCalculator<Scalar, IndexTraits>::
+GeneralCalculator::
+hasFldOrNoneControl(const Group& group)
+{
+    // Check if the group (constrained to production or injection) has control FLD or NONE.
+    // For example, a pure injection group will have production control NONE.
+    const auto& name = group.name();
+    if (this->targetType() == TargetType::Injection) {
+        return this->groupState().has_field_or_none_control(name, this->injectionPhase_());
+    }
+    else {
+        return this->groupState().has_field_or_none_control(name);
+    }
+}
+
 
 // -------------------------------------------------------
 // Private methods for the GeneralCalculator class
@@ -233,7 +250,7 @@ GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_factor)
 {
-    if (this->hasFldOrNoneControl_(group)) {
+    if (this->hasFldOrNoneControl(group)) {
         // NOTE: A pure injection group is assumed to have production control NONE and
         //   a pure production group is assumed to have injection control NONE, see
         //   GroupStateHelper.cpp::setCmodeGroup() for details.
@@ -260,7 +277,7 @@ calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_facto
         // This should never happen, since any group that is not an injector should have injection
         // control NONE. And any group that is not a producer should have production control NONE.
         // See GroupStateHelper.cpp::setCmodeGroup() for details.
-        // .. and therefore should be caught by the hasFldOrNoneControl_() check above.
+        // .. and therefore should be caught by the hasFldOrNoneControl() check above.
         OPM_DEFLOG_THROW(
             std::runtime_error,
             fmt::format("Controlling group that is not of the type we are interested in: {}", group.name()),
@@ -292,23 +309,6 @@ getTargetNoGuideRate(const Group& group)
     //   to the slave group. Alternatively, we could also throw an error here for that case
     const auto target_calculator = this->getTargetCalculator(group);
     return this->getTargetFromCalculator(target_calculator, group);
-}
-
-template<class Scalar, class IndexTraits>
-bool
-GroupTargetCalculator<Scalar, IndexTraits>::
-GeneralCalculator::
-hasFldOrNoneControl_(const Group& group)
-{
-    // Check if the group (constrained to production or injection) has control FLD or NONE.
-    // For example, a pure injection group will have production control NONE.
-    const auto& name = group.name();
-    if (this->targetType() == TargetType::Injection) {
-        return this->groupState().has_field_or_none_control(name, this->injectionPhase_());
-    }
-    else {
-        return this->groupState().has_field_or_none_control(name);
-    }
 }
 
 template<class Scalar, class IndexTraits>
@@ -406,7 +406,7 @@ calculateGroupTarget()
                 target -= this->localReduction_(chain[i]);
             }
             // Add my reduction back at the level where it is included in the local reduction
-            if (i == local_reduction_level) {
+            if (this->bottomGroupHasIndividualControl_() && i == local_reduction_level) {
                 const Scalar addback_efficiency
                     = this->computeAddbackEfficiency_(chain, local_reduction_level);
                 target += bottom_group_current_rate_available * addback_efficiency;
@@ -448,6 +448,15 @@ calculateGroupTarget()
 // -------------------------------------------------------
 // Private methods for the TopToBottomCalculator class
 // -------------------------------------------------------
+
+template <class Scalar, class IndexTraits>
+bool
+GroupTargetCalculator<Scalar, IndexTraits>::
+TopToBottomCalculator::
+bottomGroupHasIndividualControl_()
+{
+    return !this->hasFldOrNoneControl_(this->bottom_group_);
+}
 
 template <class Scalar, class IndexTraits>
 Scalar
