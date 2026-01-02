@@ -122,6 +122,7 @@ public:
             const TargetCalculatorType& target_calculator, const Group& group);
         TargetInfo getTargetNoGuideRate(const Group& group);
         const GuideRate& guideRate() const { return this->parent_calculator_.guideRate(); }
+        bool hasFldOrNoneControl(const Group& group);
         Phase injectionPhase_();
         const Group& originalGroup() const { return this->original_group_; }
         const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_calculator_.phaseUsage(); }
@@ -141,7 +142,6 @@ public:
         const GroupStateHelperType& groupStateHelper() const { return this->parent_calculator_.groupStateHelper(); }
     private:
         std::optional<TargetInfo> calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_factor);
-        bool hasFldOrNoneControl_(const Group& group);
         bool hasGuideRate_(const Group& group) const { return this->guideRate().has(group.name()); }
         bool hasGuideRate_(const std::string& name) const { return this->guideRate().has(name); }
         const Group& parentGroup(const Group& group) const {
@@ -193,6 +193,7 @@ public:
         const GroupStateHelperType& groupStateHelper() const { return this->parent_calculator_.groupStateHelper(); }
 
     private:
+        bool bottomGroupHasIndividualControl_();
         Scalar computeAddbackEfficiency_(const std::vector<std::string>& chain,
                                          const std::size_t local_reduction_level) const;
         Scalar getBottomGroupCurrentRateAvailable_() const;
@@ -215,6 +216,9 @@ public:
             return this->parent_calculator_.getTargetNoGuideRate(group);
         }
         Scalar getTopLevelTarget_();
+        bool hasFldOrNoneControl_(const Group& group) {
+            return this->parent_calculator_.hasFldOrNoneControl(group);
+        }
         bool hasFLDControl_(const Group& group) const;
         bool hasGuideRate_(const std::string& name) const { return this->guideRate().has(name); }
         void initForInjector_();

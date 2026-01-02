@@ -1438,7 +1438,9 @@ GroupStateHelper<Scalar, IndexTraits>::applyReductionsAndFractions_(const std::v
 {
     // Compute portion of target corresponding to current_rate_available.
     // The chain is ordered [control_group (top), ..., bottom_group].
-    // num_ancestors excludes the bottom group itself.
+    // num_ancestors excludes the bottom group itself. For the bottom group, the always_included_child argument
+    //   (encapsulated into the local_fraction_lambda) to FractionCalculator::localFraction() is used to calculate
+    // the correct guide rate sum for a group under individual control.
     const std::size_t num_ancestors = chain.size() - 1;
     Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
@@ -1773,54 +1775,77 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
     const bool is_production_group,
     const Phase injection_phase)
 {
+    // NOTE: The number of group controlled wells (GCW) is only relevant for groups that are NOT under
+    //   individual control. However, it is collected for all groups here.
     const Group& group = this->schedule_.getGroup(group_name, this->report_step_);
     int num_wells = 0;
-    for (const std::string& child_group : group.groups()) {
-
-        bool included = false;
-        if (is_production_group) {
-            const auto ctrl = this->groupState().production_control(child_group);
-            included = (ctrl == Group::ProductionCMode::FLD || ctrl == Group::ProductionCMode::NONE);
-        } else {
-            const auto ctrl = this->groupState().injection_control(child_group, injection_phase);
-            included = (ctrl == Group::InjectionCMode::FLD || ctrl == Group::InjectionCMode::NONE);
-        }
-
-        if (included) {
-            num_wells += this->updateGroupControlledWellsRecursive_(child_group, is_production_group, injection_phase);
-        } else {
-            this->updateGroupControlledWellsRecursive_(child_group, is_production_group, injection_phase);
-        }
+    // NOTE: If "group" is a reservoir coupling master group, it should have no child groups or wells.
+    //   As a convention, we will assign GCW = 1 (GCW=Group Controlled Wells). This is consistent with
+    //   the usage of GCW elsewhere in the code: GCW is only checked for GCW>0, the number of wells if
+    //   greater than zero is irrelevant.
+    //   1) for target reductions, GCW is used to check if a group not under individual control and with a guide rate
+    //      set should participate in target reduction, and
+    //   2) for guide rate control, GCW is used to check if a group not under individual control should (or
+    //      under individual control if "always_included_child" in localFraction():FractionCalculator.cpp is true)
+    //      should participate in guide rate control.
+    if (this->isReservoirCouplingMasterGroup(group)) {
+        num_wells = 1;
     }
-    // For production auto choke groups: check if we should exclude all wells from GCW count.
-    // If the group is underperforming its target, wells are not counted as group-controlled,
-    // effectively excluding this group from guide rate distribution at the parent level.
-    const bool exclude_for_auto_choke = is_production_group
-        && this->isAutoChokeGroupUnderperforming_(group);
-
-    for (const std::string& child_well : group.wells()) {
-        bool included = false;
-        const Well& well = this->schedule_.getWell(child_well, this->report_step_);
-
-        if (is_production_group && well.isProducer()) {
-            included = (this->wellState().isProductionGrup(child_well) || group.as_choke());
-
-            // Auto choke groups: exclude all wells if group is underperforming its target
-            if (exclude_for_auto_choke) {
-                included = false;
+    else {
+        // NOTE: A group with sub groups cannot also have direct wells (one level below) under its control.
+        // So a group (either under individual control or not) having all its direct child groups (one level below)
+        // under individual control will have GCW = 0 (GCW=Group Controlled Wells).
+        // I.e. sub groups that are under individual control do not contribute to the group's GCW. (Another way
+        // to phrase it: It will only have GCW=0 if all child groups not under individual control have GCW=0.)
+        for (const std::string& child_group : group.groups()) {
+            bool included = false;
+            if (is_production_group) {
+                const auto ctrl = this->groupState().production_control(child_group);
+                included = (ctrl == Group::ProductionCMode::FLD || ctrl == Group::ProductionCMode::NONE);
+            } else {
+                const auto ctrl = this->groupState().injection_control(child_group, injection_phase);
+                included = (ctrl == Group::InjectionCMode::FLD || ctrl == Group::InjectionCMode::NONE);
             }
-        } else if (!is_production_group && !well.isProducer()) {
-            const auto& well_controls = well.injectionControls(this->summary_state_);
-            auto injectorType = well_controls.injector_type;
-            if ((injection_phase == Phase::WATER && injectorType == InjectorType::WATER)
-                || (injection_phase == Phase::OIL && injectorType == InjectorType::OIL)
-                || (injection_phase == Phase::GAS && injectorType == InjectorType::GAS)) {
-                included = this->wellState().isInjectionGrup(child_well);
+
+            if (included) {
+                num_wells += this->updateGroupControlledWellsRecursive_(
+                    child_group, is_production_group, injection_phase, deferred_logger);
+            } else {
+                this->updateGroupControlledWellsRecursive_(
+                    child_group, is_production_group, injection_phase, deferred_logger);
             }
         }
+        // For production auto choke groups: check if we should exclude all wells from GCW count.
+        // If the group is underperforming its target, wells are not counted as group-controlled,
+        // effectively excluding this group from guide rate distribution at the parent level.
+        const bool exclude_for_auto_choke = is_production_group
+            && this->isAutoChokeGroupUnderperforming_(group);
 
-        if (included) {
-            ++num_wells;
+        // Below loop is only entered for well groups (i.e. groups with only wells as direct children).
+        // For such a group (assuming it is not an auto choke group), if all its wells are under individual control,
+        //   then the group will have GCW = 0 (GCW=Group Controlled Wells). This is true whether the group itself is
+        //   under individual control or not.
+        for (const std::string& child_well : group.wells()) {
+            bool included = false;
+            const Well& well = this->schedule_.getWell(child_well, this->report_step_);
+            if (is_production_group && well.isProducer()) {
+                included = (this->wellState().isProductionGrup(child_well) || group.as_choke());
+                // Auto choke groups: exclude all wells if group is underperforming its target
+                if (exclude_for_auto_choke) {
+                    included = false;
+                }
+            } else if (!is_production_group && !well.isProducer()) {
+                const auto& well_controls = well.injectionControls(this->summary_state_);
+                auto injectorType = well_controls.injector_type;
+                if ((injection_phase == Phase::WATER && injectorType == InjectorType::WATER)
+                    || (injection_phase == Phase::OIL && injectorType == InjectorType::OIL)
+                    || (injection_phase == Phase::GAS && injectorType == InjectorType::GAS)) {
+                    included = this->wellState().isInjectionGrup(child_well);
+                }
+            }
+            if (included) {
+                ++num_wells;
+            }
         }
     }
     if (is_production_group) {
@@ -1860,7 +1885,8 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
                     = this->groupState().injection_control(sub_group.name(), phase);
                 const bool individual_control = (current_group_control != Group::InjectionCMode::FLD
                                                  && current_group_control != Group::InjectionCMode::NONE);
-                const int num_group_controlled_wells
+            // NOTE: A reservoir coupling master group: will have GCW (group controlled wells) set to 1 by convention.
+            const int num_group_controlled_wells
                     = this->groupControlledWells(sub_group.name(),
                                                  /*always_included_child=*/"",
                                                  !is_injector,
@@ -1870,10 +1896,15 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
                         * this->sumWellSurfaceRates(sub_group, phase_pos, is_injector);
                 } else {
                     // Accumulate from this subgroup only if no group guide rate is set for it.
+                    // NOTE: For reservoir coupling master groups that are not under individual control
+                    //   it is required that they have a guide rate set, see GroupTargetCalculator.cpp.
                     if (!this->guide_rate_.has(sub_group.name(), phase)) {
                         group_target_reduction[phase_pos]
                             += sub_group_efficiency * sub_group_target_reduction[phase_pos];
                     }
+                    // else: if [(NOT indivdual control) AND (guide rate is set) AND (GCW > 0)]
+                    //   it means that the current target will be distributed according to guide rate fraction,
+                    //   and then the current (higher level) group target should not be reduced at this level.
                 }
             }
         } else {
@@ -1881,6 +1912,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
                 = this->groupState().production_control(sub_group.name());
             const bool individual_control = (current_group_control != Group::ProductionCMode::FLD
                                              && current_group_control != Group::ProductionCMode::NONE);
+            // NOTE: A reservoir coupling master group: will have GCW (group controlled wells) set to 1 by convention.
             const int num_group_controlled_wells
                 = this->groupControlledWells(sub_group.name(),
                                              /*always_included_child=*/"",
@@ -1893,6 +1925,8 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
                 }
             } else {
                 // The subgroup may participate in group control.
+                // NOTE: Reservoir coupling master groups that are not under individual control
+                //   must have a guide rate set, see GroupTargetCalculator.cpp.
                 if (!this->guide_rate_.has(sub_group.name())) {
                     // Accumulate from this subgroup only if no group guide rate is set for it.
                     for (int phase = 0; phase < np; phase++) {
@@ -1900,6 +1934,9 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
                             += sub_group_efficiency * sub_group_target_reduction[phase];
                     }
                 }
+                // else: if [(NOT indivdual control) AND (guide rate is set) AND (GCW > 0)]
+                //   it means that the current target will be distributed according to guide rate fraction,
+                //   and then the current (higher level) group target should not be reduced at this level.
             }
         }
     }
