@@ -130,54 +130,145 @@ struct GroupConstraintTestFixture : ToleranceAndUnitFixture
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
 
+    void commonSetupForAllTests(
+        bool plat_has_guide_rate,
+        Opm::Group::ProductionCMode mani_control,
+        Opm::Well::ProducerCMode well_a_control,
+        Opm::Well::ProducerCMode well_a2_control)
+    {
+        plat_has_guide_rate_ = plat_has_guide_rate;
+        mani_control_ = mani_control;
+        well_a_control_ = well_a_control;
+        well_a2_control_ = well_a2_control;
+
+        setupSimulator_();
+        setupWellRates_();
+        setupGroupState_();
+        setupGuideRates_();
+        finalizeSetup_();
+    }
+
+    // ========================================================================
+    // Accessors
+    // ========================================================================
+
+    double wellARateMetric() const { return well_a_rate_metric_; }
+    double wellA2RateMetric() const { return well_a2_rate_metric_; }
+    double wellBRateMetric() const { return well_b_rate_metric_; }
+    double wellCRateMetric() const { return well_c_rate_metric_; }
+    double wellARateSI() const { return si_rate(-well_a_rate_metric_); }
+    double wellA2RateSI() const { return si_rate(-well_a2_rate_metric_); }
+    double wellBRateSI() const { return si_rate(-well_b_rate_metric_); }
+    double wellCRateSI() const { return si_rate(-well_c_rate_metric_); }
+    WellModel& wellModel() { return simulator_->problem().wellModel(); }
+    const Opm::Schedule& schedule() const { return simulator_->vanguard().schedule(); }
+    auto& wellState() { return wellModel().wellState(); }
+    auto& groupState() { return wellModel().groupState(); }
+    Opm::GuideRate& guideRate() { return wellModel().guideRate(); }
+    auto& groupStateHelper() { return wellModel().groupStateHelper(); }
+    int reportStepIdx() const { return report_step_idx_; }
+    int oilPhasePos() const { return oil_phase_pos_; }
+    Opm::DeferredLogger& deferredLogger() { return deferred_logger_; }
+
+    const Opm::Group& maniGroup() const { return schedule().getGroup("MANI", report_step_idx_); }
+    const Opm::Group& mani2Group() const { return schedule().getGroup("MANI-2", report_step_idx_); }
+    const Opm::Group& platGroup() const { return schedule().getGroup("PLAT", report_step_idx_); }
+    const Opm::Group& plat2Group() const { return schedule().getGroup("PLAT-2", report_step_idx_); }
+    const Opm::Group& fieldGroup() const { return schedule().getGroup("FIELD", report_step_idx_); }
+
+    //! Efficiency factors from schedule
+    double eMani() const { return maniGroup().getGroupEfficiencyFactor(); }
+    double eMani2() const { return mani2Group().getGroupEfficiencyFactor(); }
+    double ePlat() const { return platGroup().getGroupEfficiencyFactor(); }
+    double ePlat2() const { return plat2Group().getGroupEfficiencyFactor(); }
+
+    //! Get MANI's total rate (SI units, positive for production)
+    double maniTotalRate() const { return -wellARateSI() - wellA2RateSI(); }
+
+    //! Get MANI's total rate (metric, positive for production)
+    double maniTotalRateMetric() const { return wellARateMetric() + wellA2RateMetric(); }
+
+    //! Get MANI-2's total rate (metric, positive for production)
+    double mani2TotalRateMetric() const { return wellBRateMetric(); }
+
+    //! Get PLAT's total rate (metric, positive for production)
+    double platTotalRateMetric() const { return eMani() * maniTotalRateMetric() + eMani2() * mani2TotalRateMetric(); }
+
+    //! Guide rates (from GCONPROD via guideRate object)
+    double maniGuideRateMetric() {
+        const Opm::GuideRate::RateVector zero_rates{0.0, 0.0, 0.0};
+        return guideRate().get("MANI", Opm::GuideRateModel::Target::OIL, zero_rates);
+    }
+    double mani2GuideRateMetric() {
+        const Opm::GuideRate::RateVector zero_rates{0.0, 0.0, 0.0};
+        return guideRate().get("MANI-2", Opm::GuideRateModel::Target::OIL, zero_rates);
+    }
+    double platGuideRateMetric() {
+        const Opm::GuideRate::RateVector zero_rates{0.0, 0.0, 0.0};
+        return guideRate().get("PLAT", Opm::GuideRateModel::Target::OIL, zero_rates);
+    }
+    double plat2GuideRateMetric() {
+        const Opm::GuideRate::RateVector zero_rates{0.0, 0.0, 0.0};
+        return guideRate().get("PLAT-2", Opm::GuideRateModel::Target::OIL, zero_rates);
+    }
+
+    // ========================================================================
+    // Helper methods for common test operations
+    // ========================================================================
+
+    //! Prepare rates array for MANI group (for checkGroupConstraintsProd)
+    std::vector<double> maniRatesArray() const
+    {
+        std::vector<double> rates(num_phases_, 0.0);
+        rates[oil_phase_pos_] = wellARateSI() + wellA2RateSI();  // negative
+        return rates;
+    }
+
+    //! Prepare rates array for WELL-A (for getWellGroupTargetProducer)
+    std::vector<double> wellARatesArray() const
+    {
+        std::vector<double> rates(num_phases_, 0.0);
+        rates[oil_phase_pos_] = wellARateSI();  // negative
+        return rates;
+    }
+
+    //! Get default resv_coeff (all 1.0)
+    std::vector<double> resvCoeff() const
+    {
+        return std::vector<double>(num_phases_, 1.0);
+    }
+private:
     //! Whether PLAT group has a guide rate (affects local_reduction_level)
-    bool plat_has_guide_rate = true;
+    bool plat_has_guide_rate_{true};
 
     //! Control mode for WELL-A (GRUP or ORAT)
-    Opm::Well::ProducerCMode well_a_control = Opm::Well::ProducerCMode::GRUP;
+    Opm::Well::ProducerCMode well_a_control_{Opm::Well::ProducerCMode::GRUP};
 
     //! Control mode for WELL-A2 (GRUP or ORAT)
-    Opm::Well::ProducerCMode well_a2_control = Opm::Well::ProducerCMode::GRUP;
+    Opm::Well::ProducerCMode well_a2_control_{Opm::Well::ProducerCMode::GRUP};
 
     //! Control mode for MANI group (ORAT or FLD)
-    Opm::Group::ProductionCMode mani_control = Opm::Group::ProductionCMode::ORAT;
+    Opm::Group::ProductionCMode mani_control_{Opm::Group::ProductionCMode::ORAT};
 
     // Well rates (SM3/day, metric units for readability)
-    double well_a_rate_metric = 6000.0;
-    double well_a2_rate_metric = 4000.0;
-    double well_b_rate_metric = 2000.0;
-    double well_c_rate_metric = 3000.0;
+    double well_a_rate_metric_{6000.0};
+    double well_a2_rate_metric_{4000.0};
+    double well_b_rate_metric_{2000.0};
+    double well_c_rate_metric_{3000.0};
 
-    // Computed/cached values (available after setup())
     std::unique_ptr<Opm::Simulator<TypeTag>> simulator_;
-    int report_step_idx_ = 0;
-    int num_phases_ = 0;
-    int oil_phase_pos_ = 0;
 
-    // Efficiency factors
-    double E_MANI = 0.0;
-    double E_MANI2 = 0.0;
-    double E_PLAT = 0.0;
-    double E_PLAT2 = 0.0;
-
-    // SI rates (computed from metric rates)
-    double well_a_oil_rate_ = 0.0;
-    double well_a2_oil_rate_ = 0.0;
-    double well_b_oil_rate_ = 0.0;
-    double well_c_oil_rate_ = 0.0;
+    int report_step_idx_{0};
+    int num_phases_{0};
+    int oil_phase_pos_{0};
 
     Opm::DeferredLogger deferred_logger_;
 
-    void setup()
-    {
-        setupSimulator();
-        setupWellRates();
-        setupGroupState();
-        setupGuideRates();
-        finalizeSetup();
-    }
+    // ========================================================================
+    // Private setup methods
+    // ========================================================================
 
-    void setupSimulator()
+    void setupSimulator_()
     {
         const std::string filename = "GROUP_HIGHER_CONSTRAINTS.DATA";
         simulator_ = Opm::initSimulator<TypeTag>(filename.data());
@@ -194,23 +285,10 @@ struct GroupConstraintTestFixture : ToleranceAndUnitFixture
         const auto& pu = wellModel().phaseUsage();
         num_phases_ = pu.numActivePhases();
         oil_phase_pos_ = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-
-        // Get efficiency factors from schedule
-        const auto& schedule = simulator_->vanguard().schedule();
-        E_MANI = schedule.getGroup("MANI", report_step_idx_).getGroupEfficiencyFactor();
-        E_MANI2 = schedule.getGroup("MANI-2", report_step_idx_).getGroupEfficiencyFactor();
-        E_PLAT = schedule.getGroup("PLAT", report_step_idx_).getGroupEfficiencyFactor();
-        E_PLAT2 = schedule.getGroup("PLAT-2", report_step_idx_).getGroupEfficiencyFactor();
     }
 
-    void setupWellRates()
+    void setupWellRates_()
     {
-        // Convert metric rates to SI (negative for production)
-        well_a_oil_rate_ = si_rate(-well_a_rate_metric);
-        well_a2_oil_rate_ = si_rate(-well_a2_rate_metric);
-        well_b_oil_rate_ = si_rate(-well_b_rate_metric);
-        well_c_oil_rate_ = si_rate(-well_c_rate_metric);
-
         auto& ws = wellModel().wellState();
 
         // For simplicity, assume the same well potentials as rates
@@ -221,9 +299,9 @@ struct GroupConstraintTestFixture : ToleranceAndUnitFixture
             auto& well = ws.well(well_idx.value());
             std::fill(well.surface_rates.begin(), well.surface_rates.end(), 0.0);
             std::fill(well.well_potentials.begin(), well.well_potentials.end(), 0.0);
-            well.surface_rates[oil_phase_pos_] = well_a_oil_rate_;
-            well.well_potentials[oil_phase_pos_] = -well_a_oil_rate_;  // positive
-            well.production_cmode = well_a_control;
+            well.surface_rates[oil_phase_pos_] = wellARateSI();
+            well.well_potentials[oil_phase_pos_] = -wellARateSI();  // positive
+            well.production_cmode = well_a_control_;
         }
 
         // Set WELL-A2
@@ -233,9 +311,9 @@ struct GroupConstraintTestFixture : ToleranceAndUnitFixture
             auto& well = ws.well(well_idx.value());
             std::fill(well.surface_rates.begin(), well.surface_rates.end(), 0.0);
             std::fill(well.well_potentials.begin(), well.well_potentials.end(), 0.0);
-            well.surface_rates[oil_phase_pos_] = well_a2_oil_rate_;
-            well.well_potentials[oil_phase_pos_] = -well_a2_oil_rate_;  // positive
-            well.production_cmode = well_a2_control;
+            well.surface_rates[oil_phase_pos_] = wellA2RateSI();
+            well.well_potentials[oil_phase_pos_] = -wellA2RateSI();  // positive
+            well.production_cmode = well_a2_control_;
         }
 
         // Set WELL-B
@@ -245,8 +323,8 @@ struct GroupConstraintTestFixture : ToleranceAndUnitFixture
             auto& well = ws.well(well_idx.value());
             std::fill(well.surface_rates.begin(), well.surface_rates.end(), 0.0);
             std::fill(well.well_potentials.begin(), well.well_potentials.end(), 0.0);
-            well.surface_rates[oil_phase_pos_] = well_b_oil_rate_;
-            well.well_potentials[oil_phase_pos_] = -well_b_oil_rate_;  // positive
+            well.surface_rates[oil_phase_pos_] = wellBRateSI();
+            well.well_potentials[oil_phase_pos_] = -wellBRateSI();  // positive
             well.production_cmode = Opm::Well::ProducerCMode::GRUP;
         }
 
@@ -257,8 +335,8 @@ struct GroupConstraintTestFixture : ToleranceAndUnitFixture
             auto& well = ws.well(well_idx.value());
             std::fill(well.surface_rates.begin(), well.surface_rates.end(), 0.0);
             std::fill(well.well_potentials.begin(), well.well_potentials.end(), 0.0);
-            well.surface_rates[oil_phase_pos_] = well_c_oil_rate_;
-            well.well_potentials[oil_phase_pos_] = -well_c_oil_rate_;  // positive
+            well.surface_rates[oil_phase_pos_] = wellCRateSI();
+            well.well_potentials[oil_phase_pos_] = -wellCRateSI();  // positive
             well.production_cmode = Opm::Well::ProducerCMode::GRUP;
         }
 
@@ -268,7 +346,7 @@ struct GroupConstraintTestFixture : ToleranceAndUnitFixture
         ws.updateGlobalIsGrup(comm, well_status);
     }
 
-    void setupGuideRates()
+    void setupGuideRates_()
     {
         // Use updateGuideRates() to compute guide rates from:
         // - Explicit values in GCONPROD for MANI (8000), MANI-2 (1500), PLAT (9500), PLAT-2 (2550)
@@ -282,12 +360,12 @@ struct GroupConstraintTestFixture : ToleranceAndUnitFixture
 
         // If test requires PLAT to NOT have a guide rate (to test local_reduction_level=0),
         // erase it after updateGuideRates() has set it from GCONPROD
-        if (!plat_has_guide_rate) {
+        if (!plat_has_guide_rate_) {
             guideRate().erase("PLAT");
         }
     }
 
-    void setupGroupState()
+    void setupGroupState_()
     {
         auto& gs = wellModel().groupState();
         auto& gsh = wellModel().groupStateHelper();
@@ -302,81 +380,20 @@ struct GroupConstraintTestFixture : ToleranceAndUnitFixture
         gsh.updateGroupProductionRates(fieldGroup());
 
         // Set group controls
-        gs.production_control("MANI", mani_control);
+        gs.production_control("MANI", mani_control_);
         gs.production_control("MANI-2", Opm::Group::ProductionCMode::FLD);
         gs.production_control("PLAT", Opm::Group::ProductionCMode::FLD);
         gs.production_control("PLAT-2", Opm::Group::ProductionCMode::FLD);
         gs.production_control("FIELD", Opm::Group::ProductionCMode::ORAT);
     }
 
-    void finalizeSetup()
+    void finalizeSetup_()
     {
         auto& gsh = wellModel().groupStateHelper();
         const auto& field_group = schedule().getGroup("FIELD", report_step_idx_);
 
         gsh.updateGroupControlledWells(/*is_production_group=*/true, Opm::Phase::OIL, deferred_logger_);
         gsh.updateGroupTargetReduction(field_group, /*is_injector=*/false);
-    }
-
-    // ========================================================================
-    // Accessors
-    // ========================================================================
-
-    WellModel& wellModel() { return simulator_->problem().wellModel(); }
-    const Opm::Schedule& schedule() const { return simulator_->vanguard().schedule(); }
-    auto& wellState() { return wellModel().wellState(); }
-    auto& groupState() { return wellModel().groupState(); }
-    Opm::GuideRate& guideRate() { return wellModel().guideRate(); }
-    auto& groupStateHelper() { return wellModel().groupStateHelper(); }
-
-    const Opm::Group& maniGroup() const { return schedule().getGroup("MANI", report_step_idx_); }
-    const Opm::Group& mani2Group() const { return schedule().getGroup("MANI-2", report_step_idx_); }
-    const Opm::Group& platGroup() const { return schedule().getGroup("PLAT", report_step_idx_); }
-    const Opm::Group& plat2Group() const { return schedule().getGroup("PLAT-2", report_step_idx_); }
-    const Opm::Group& fieldGroup() const { return schedule().getGroup("FIELD", report_step_idx_); }
-
-    //! Get MANI's total rate (SI units, positive for production)
-    double maniTotalRate() const { return -well_a_oil_rate_ - well_a2_oil_rate_; }
-
-    //! Get MANI's total rate (metric, positive for production)
-    double maniTotalRateMetric() const { return well_a_rate_metric + well_a2_rate_metric; }
-
-    //! Get MANI-2's total rate (metric, positive for production)
-    double mani2TotalRateMetric() const { return well_b_rate_metric; }
-
-    //! Get PLAT's total rate (metric, positive for production)
-    double platTotalRateMetric() const { return E_MANI * maniTotalRateMetric() + E_MANI2 * mani2TotalRateMetric(); }
-
-    //! Guide rates (explicit values from GCONPROD)
-    static constexpr double maniGuideRateMetric() { return 8000.0; }
-    static constexpr double mani2GuideRateMetric() { return 1500.0; }
-    static constexpr double platGuideRateMetric() { return 9500.0; }
-    static constexpr double plat2GuideRateMetric() { return 2550.0; }
-
-    // ========================================================================
-    // Helper methods for common test operations
-    // ========================================================================
-
-    //! Prepare rates array for MANI group (for checkGroupConstraintsProd)
-    std::vector<double> maniRatesArray() const
-    {
-        std::vector<double> rates(num_phases_, 0.0);
-        rates[oil_phase_pos_] = well_a_oil_rate_ + well_a2_oil_rate_;  // negative
-        return rates;
-    }
-
-    //! Prepare rates array for WELL-A (for getWellGroupTargetProducer)
-    std::vector<double> wellARatesArray() const
-    {
-        std::vector<double> rates(num_phases_, 0.0);
-        rates[oil_phase_pos_] = well_a_oil_rate_;  // negative
-        return rates;
-    }
-
-    //! Get default resv_coeff (all 1.0)
-    std::vector<double> resvCoeff() const
-    {
-        return std::vector<double>(num_phases_, 1.0);
     }
 };
 
@@ -387,11 +404,15 @@ BOOST_FIXTURE_TEST_SUITE(GroupHigherConstraintsTests, GroupConstraintTestFixture
 //! \brief Test checkGroupConstraintsProd() for group MANI with a guide rate at PLAT level between MANI and FIELD
 //!
 //! When there's a guide rate at PLAT level between MANI and FIELD, local_reduction_level is 1
-//! and the addback happens at PLAT level.
+//! and the addback happens at PLAT level. This test verifies that an addback efficiency factor of 0.8 is
+//! applied to PLAT (local_reduction_level = 1) and not 0.8 * 0.9 = 0.72. (original version of
+//! checkGroupConstraintsProd() had this bug)
 //! \code
-//!   FIELD (ORAT = 10000, GCW=2)  (GCW = Group Controlled Wells)
-//!   ├── PLAT (E=0.9, GUIDERATE=9500, GCW=1, local_reduction_level=1)
-//!   │   ├── MANI (E=0.8, ORAT, GUIDERATE=8000, GCW=2)
+//!   (GCW = Group Controlled Wells, IDV = Individual control)
+//!
+//!   FIELD (ORAT = 10000, GCW=2)
+//!   ├── PLAT (E=0.9, FLD, GUIDERATE=9500, GCW=1, local_reduction_level=1)
+//!   │   ├── MANI (E=0.8, IDV, ORAT, GUIDERATE=8000, GCW=2)
 //!   │   │   ├── WELL-A (RATE=6000, POT=6000, GRUP)
 //!   │   │   └── WELL-A2 (RATE=4000, POT=4000, GRUP)
 //!   │   └── MANI-2 (E=0.75, FLD, GUIDERATE=1500, GCW=1)
@@ -401,7 +422,11 @@ BOOST_FIXTURE_TEST_SUITE(GroupHigherConstraintsTests, GroupConstraintTestFixture
 //! \endcode
 BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
 {
-    setup();
+    // Configuration: Guide rate for PLAT (local_reduction_level = 1)
+    commonSetupForAllTests(/*plat_has_guide_rate=*/true,
+        /*mani_control=*/Opm::Group::ProductionCMode::ORAT,
+        /*well_a_control=*/Opm::Well::ProducerCMode::GRUP,
+        /*well_a2_control=*/Opm::Well::ProducerCMode::GRUP);
 
     // Verify the test setup
     auto& gsh = groupStateHelper();
@@ -409,24 +434,24 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
     auto& gs = groupState();
 
     // Verify efficiency factors from schedule
-    checkClose(E_MANI, 0.8);
-    checkClose(E_MANI2, 0.75);
-    checkClose(E_PLAT, 0.9);
-    checkClose(E_PLAT2, 0.85);
-    const double accumulated_eff = E_MANI * E_PLAT;
+    checkClose(eMani(), 0.8);
+    checkClose(eMani2(), 0.75);
+    checkClose(ePlat(), 0.9);
+    checkClose(ePlat2(), 0.85);
+    const double accumulated_eff = eMani() * ePlat();
     checkClose(accumulated_eff, 0.72);
 
     // Verify well rates in WellState
-    checkRate(metric_rate(ws.well("WELL-A").surface_rates[oil_phase_pos_]), -6000.0);
-    checkRate(metric_rate(ws.well("WELL-A2").surface_rates[oil_phase_pos_]), -4000.0);
-    checkRate(metric_rate(ws.well("WELL-B").surface_rates[oil_phase_pos_]), -2000.0);
-    checkRate(metric_rate(ws.well("WELL-C").surface_rates[oil_phase_pos_]), -3000.0);
+    checkRate(metric_rate(ws.well("WELL-A").surface_rates[oilPhasePos()]), -wellARateMetric()); // -6000.0
+    checkRate(metric_rate(ws.well("WELL-A2").surface_rates[oilPhasePos()]), -wellA2RateMetric()); // -4000.0
+    checkRate(metric_rate(ws.well("WELL-B").surface_rates[oilPhasePos()]), -wellBRateMetric()); // -2000.0
+    checkRate(metric_rate(ws.well("WELL-C").surface_rates[oilPhasePos()]), -wellCRateMetric()); // -3000.0
 
     // Verify well potentials (stored in SI, convert to metric for comparison)
-    checkRate(metric_rate(ws.well("WELL-A").well_potentials[oil_phase_pos_]), 6000.0);
-    checkRate(metric_rate(ws.well("WELL-A2").well_potentials[oil_phase_pos_]), 4000.0);
-    checkRate(metric_rate(ws.well("WELL-B").well_potentials[oil_phase_pos_]), 2000.0);
-    checkRate(metric_rate(ws.well("WELL-C").well_potentials[oil_phase_pos_]), 3000.0);
+    checkRate(metric_rate(ws.well("WELL-A").well_potentials[oilPhasePos()]), wellARateMetric()); // 6000.0
+    checkRate(metric_rate(ws.well("WELL-A2").well_potentials[oilPhasePos()]), wellA2RateMetric()); // 4000.0
+    checkRate(metric_rate(ws.well("WELL-B").well_potentials[oilPhasePos()]), wellBRateMetric()); // 2000.0
+    checkRate(metric_rate(ws.well("WELL-C").well_potentials[oilPhasePos()]), wellCRateMetric()); // 3000.0
 
     // Verify wells are marked as under group control
     BOOST_CHECK(ws.isProductionGrup("WELL-A"));
@@ -458,7 +483,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
     //   2. Have groupControlledWells > 0
     {
         using FCalc = Opm::GroupStateHelpers::FractionCalculator<double, IndexTraits>;
-        FCalc fcalc{schedule(), gsh, gsh.summaryState(), report_step_idx_,
+        FCalc fcalc{schedule(), gsh, gsh.summaryState(), reportStepIdx(),
                     &guideRate(), Opm::GuideRateModel::Target::OIL,
                     /*is_producer=*/true, /*injection_phase=*/Opm::Phase::OIL};
 
@@ -473,8 +498,8 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
         //   WELL-A2 fraction = 4000 / (6000 + 4000) = 0.4
         const double well_a_frac = localFraction("WELL-A");
         const double well_a2_frac = localFraction("WELL-A2");
-        checkClose(well_a_frac, well_a_rate_metric / (well_a_rate_metric + well_a2_rate_metric)); // 0.6
-        checkClose(well_a2_frac, well_a2_rate_metric / (well_a_rate_metric + well_a2_rate_metric)); // 0.4
+        checkClose(well_a_frac, wellARateMetric() / (wellARateMetric() + wellA2RateMetric())); // 0.6
+        checkClose(well_a2_frac, wellA2RateMetric() / (wellARateMetric() + wellA2RateMetric())); // 0.4
         checkClose(well_a_frac + well_a2_frac, 1.0);
 
         // WELL-B fraction within MANI-2 (only well):
@@ -525,13 +550,14 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
     }
     // Test sumWellSurfaceRates for each group
     {
-        const double sum_mani = gsh.sumWellSurfaceRates(maniGroup(), oil_phase_pos_, /*injector=*/false);
-        const double sum_mani2 = gsh.sumWellSurfaceRates(mani2Group(), oil_phase_pos_, /*injector=*/false);
-        const double sum_plat2 = gsh.sumWellSurfaceRates(plat2Group(), oil_phase_pos_, /*injector=*/false);
-        const double sum_plat = gsh.sumWellSurfaceRates(platGroup(), oil_phase_pos_, /*injector=*/false);
-        checkRate(metric_rate(sum_mani), 10000.0);  // WELL-A + WELL-A2 = 6000.0 + 4000.0 = 10000.0
-        checkRate(metric_rate(sum_mani2), 2000.0);  // WELL-B = 2000.0
-        checkRate(metric_rate(sum_plat2), 3000.0);  // WELL-C = 3000.0
+        const double sum_mani = gsh.sumWellSurfaceRates(maniGroup(), oilPhasePos(), /*injector=*/false);
+        const double sum_mani2 = gsh.sumWellSurfaceRates(mani2Group(), oilPhasePos(), /*injector=*/false);
+        const double sum_plat2 = gsh.sumWellSurfaceRates(plat2Group(), oilPhasePos(), /*injector=*/false);
+        const double sum_plat = gsh.sumWellSurfaceRates(platGroup(), oilPhasePos(), /*injector=*/false);
+        // WELL-A + WELL-A2 = 6000.0 + 4000.0 = 10000.0
+        checkRate(metric_rate(sum_mani), wellARateMetric() + wellA2RateMetric()); // 10000.0
+        checkRate(metric_rate(sum_mani2), wellBRateMetric());  // WELL-B = 2000.0
+        checkRate(metric_rate(sum_plat2), wellCRateMetric());  // WELL-C = 3000.0
         checkRate(metric_rate(sum_plat), platTotalRateMetric());  // E_MANI*10000 + E_MANI2*2000 = 9500.0
     }
     // Test FIELD's ORAT target
@@ -571,22 +597,22 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
     //       reduction is NOT accumulated to FIELD.
     {
         const auto& field_red = gs.production_reduction_rates("FIELD");
-        checkRate(metric_rate(field_red[oil_phase_pos_]), 0.0); // 0 because PLAT has guide rate and group-controlled wells
+        checkRate(metric_rate(field_red[oilPhasePos()]), 0.0); // 0 because PLAT has guide rate and group-controlled wells
         const auto& plat_red = gs.production_reduction_rates("PLAT");
-        checkRate(metric_rate(plat_red[oil_phase_pos_]), E_MANI * maniTotalRateMetric()); // 8000.0
+        checkRate(metric_rate(plat_red[oilPhasePos()]), eMani() * maniTotalRateMetric()); // 8000.0
         const auto& plat2_red = gs.production_reduction_rates("PLAT-2");
-        checkRate(metric_rate(plat2_red[oil_phase_pos_]), 0.0);
+        checkRate(metric_rate(plat2_red[oilPhasePos()]), 0.0);
         const auto& mani_red = gs.production_reduction_rates("MANI");
-        checkRate(metric_rate(mani_red[oil_phase_pos_]), 0.0); // 0.0 since both WELL-A and WELL-A2 are under group control
+        checkRate(metric_rate(mani_red[oilPhasePos()]), 0.0); // 0.0 since both WELL-A and WELL-A2 are under group control
         const auto& mani2_red = gs.production_reduction_rates("MANI-2");
-        checkRate(metric_rate(mani2_red[oil_phase_pos_]), 0.0); // 0.0 since WELL-B is under group control
+        checkRate(metric_rate(mani2_red[oilPhasePos()]), 0.0); // 0.0 since WELL-B is under group control
     }
 
 
     // Call checkGroupConstraintsProd
     auto mani_rates = maniRatesArray();
     auto resv_coeff = resvCoeff();
-    const double initial_efficiency = E_MANI;
+    const double initial_efficiency = eMani();
 
     auto [constraint_violated, scale] = gsh.checkGroupConstraintsProd(
         "MANI",
@@ -596,7 +622,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
         initial_efficiency,
         resv_coeff,
         /*check_guide_rate=*/true,
-        deferred_logger_
+        deferredLogger()
     );
 
     // ========================================================================
@@ -610,27 +636,25 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
     //   - efficiency_factor = E_MANI * E_PLAT = 0.8 * 0.9 = 0.72
     //   - current_rate_available = 10000 SM3/day (MANI's production)
     //   - orig_target = 10000 SM3/day (FIELD's ORAT)
-    //   - local_reduction_level = 1 (PLAT has guide rate AND num_gr_ctrl > 0)
+    //   - local_reduction_level = 1 (PLAT is under FLD control AND has guide rate AND num_gr_ctrl > 0)
     //
     // Loop iteration ii=0 (FIELD):
-    //   - Reduction condition: local_reduction_level(1) >= ii(0) → TRUE, reduction applied
-    //   - reduction_fn("FIELD") = 0 (FIELD has no local reduction, see line 552)
+    //   - reduction_fn("FIELD") = 0 (FIELD has no local reduction)
     //   - target = 10000 - 0 = 10000
     //   - No addback (ii != local_reduction_level)
-    //   - PLAT fraction at FIELD = 9500 / (9500 + 2550) = 9500/12050 ≈ 0.788
+    //   - PLAT fraction at FIELD = 9500 / (9500 + 2550) ≈ 0.788
     //   - target = 10000 * 0.788 ≈ 7884.65
     //
     // Loop iteration ii=1 (PLAT):
-    //   - Reduction condition: local_reduction_level(1) >= ii(1) → TRUE, reduction applied
+    //   - Reduction condition: local_reduction_level==1, ii==1, reduction applied
     //   - reduction_fn("PLAT") = E_MANI * 10000 = 8000 SM3/day (MANI has ORAT control)
     //   - target = 7884.65 - 8000 ≈ -115.35
     //
-    //   - Addback (ii == local_reduction_level):
+    //   - Addback (ii == local_reduction_level==1):
     //   - addback_efficiency = E_MANI = 0.8
     //   - target += current_rate * 0.8 = -115.35 + 10000 * 0.8 = -115.35 + 8000 ≈ 7884.65
     //
-    //   - MANI fraction at PLAT = 8000 / (8000 + 1500) = 8000/9500 ≈ 0.842
-    //     (MANI has ORAT control but still gets a fraction; MANI-2 has FLD)
+    //   - MANI fraction at PLAT = 8000 / (8000 + 1500) ≈ 0.842
     //   - target = 7884.65 * 0.842 ≈ 6640.07
     //
     // Final calculation:
@@ -663,7 +687,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
 //! \code
 //!   FIELD (ORAT = 10000, local_reduction_level=0)
 //!   ├── PLAT (E=0.9, FLD, NO GUIDERATE, GCW=1)
-//!   │   ├── MANI (E=0.8, ORAT, GUIDERATE=8000, GCW=2)
+//!   │   ├── MANI (E=0.8, IDV, ORAT, GUIDERATE=8000, GCW=2)
 //!   │   │   ├── WELL-A (RATE=6000, POT=6000, GRUP)
 //!   │   │   └── WELL-A2 (RATE=4000, POT=4000, GRUP)
 //!   │   └── MANI-2 (E=0.75, FLD, GUIDERATE=1500, GCW=1)
@@ -673,35 +697,34 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
 //! \endcode
 BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsProdWithoutGuideRate)
 {
-    // ========================================================================
     // Configuration: No guide rate for PLAT (local_reduction_level = 0)
-    // ========================================================================
-    plat_has_guide_rate = false;  // KEY DIFFERENCE from test TestGroupHigherConstraintsWithGuideRate
-    // well_a_control = GRUP;     // default
-    // mani_control = ORAT;       // default
-
-    setup();
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/false,
+        /*mani_control       =*/Opm::Group::ProductionCMode::ORAT,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::GRUP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::GRUP
+    );
 
     auto& gsh = groupStateHelper();
     auto& gs = groupState();
 
-    // Verify PLAT has no guide rate (erased in setupGuideRates)
+    // Verify PLAT has no guide rate
     BOOST_CHECK(!guideRate().has("PLAT"));
 
     // Verify reduction rates
     // Without guide rate at PLAT, MANI's reduction bubbles up to FIELD
-    // BUT: PLAT still has group-controlled wells via MANI-2 (FLD control)
-    // So PLAT goes to else branch in updateGroupTargetReductionRecursive_
-    // Since PLAT has no guide rate, MANI's reduction propagates to FIELD
+    // But PLAT still has group-controlled wells via MANI-2 (FLD control)
+    // -> So PLAT goes to else branch in updateGroupTargetReductionRecursive_()
+    // -> Since PLAT has no guide rate, MANI's reduction propagates to FIELD
     const auto& field_red = gs.production_reduction_rates("FIELD");
     // FIELD reduction = E_PLAT * E_MANI * 10000 (MANI has individual control)
-    const double expected_field_reduction = E_PLAT * E_MANI * maniTotalRateMetric();
-    checkRate(metric_rate(field_red[oil_phase_pos_]), expected_field_reduction);
+    const double expected_field_reduction = ePlat() * eMani() * maniTotalRateMetric();
+    checkRate(metric_rate(field_red[oilPhasePos()]), expected_field_reduction);
 
-    // Call checkGroupConstraintsProd
+    // Call checkGroupConstraintsProd()
     auto mani_rates = maniRatesArray();
     auto resv_coeff = resvCoeff();
-    const double initial_efficiency = E_MANI;
+    const double initial_efficiency = eMani();
 
     auto [constraint_violated, scale] = gsh.checkGroupConstraintsProd(
         "MANI",
@@ -710,8 +733,8 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsProdWithoutGuideRate)
         mani_rates.data(),
         initial_efficiency,
         resv_coeff,
-        /*check_guide_rate=*/false,  // No guide rate to check
-        deferred_logger_
+        /*check_guide_rate=*/false,
+        deferredLogger()
     );
 
     // With local_reduction_level = 0 (no guide rate at PLAT):
@@ -726,8 +749,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsProdWithoutGuideRate)
     //   - PLAT fraction: Without guide rate, PLAT uses production-based fraction
     //     PLAT production = 9500, PLAT-2 production = 2550 (via E_PLAT2 * 3000)
     //
-    // With the new hierarchy (MANI-2 sibling), the algorithm produces scale = 0.9009
-    // and constraint_violated = true.
+    // The algorithm produces scale = 0.9009 and constraint_violated = true.
     //
     // This differs from test TestGroupHigherConstraintsProdWithGuideRate (scale = 0.922) because:
     // - Without PLAT guide rate, the fraction calculation changes
@@ -757,13 +779,11 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsProdWithoutGuideRate)
 //! \endcode
 BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerIndividualControl)
 {
-    // ========================================================================
-    // Configuration: WELL-A under individual ORAT control
-    // ========================================================================
-    well_a_control = Opm::Well::ProducerCMode::ORAT;  // Individual control
-    mani_control = Opm::Group::ProductionCMode::FLD;  // MANI follows parent
-
-    setup();
+    // Configuration: WELL-A under individual ORAT control, MANI follows parent
+    commonSetupForAllTests(/*plat_has_guide_rate=*/true,
+        /*mani_control=*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control=*/Opm::Well::ProducerCMode::ORAT,
+        /*well_a2_control=*/Opm::Well::ProducerCMode::GRUP);
 
     auto& gsh = groupStateHelper();
     auto& ws = wellState();
@@ -774,7 +794,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerIndividualControl)
     BOOST_CHECK(ws.isProductionGrup("WELL-C"));
 
     // Get well efficiency factor (default 1.0)
-    const auto& well_a_ecl = schedule().getWell("WELL-A", report_step_idx_);
+    const auto& well_a_ecl = schedule().getWell("WELL-A", reportStepIdx());
     const double well_a_eff = well_a_ecl.getEfficiencyFactor();
     checkClose(well_a_eff, 1.0);
 
@@ -789,7 +809,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerIndividualControl)
         well_a_rates.data(),
         well_a_eff,
         resv_coeff,
-        deferred_logger_
+        deferredLogger()
     );
 
     BOOST_REQUIRE(target_opt.has_value());
@@ -805,9 +825,9 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerIndividualControl)
     // Addback for WELL-A = 6000 * E_WELL = 6000 (at local_reduction_level=2)
     // Net effect: reduction - addback = 0 (they cancel out!)
     //
-    // WELL-A fraction in MANI = 6000 / (6000 + 4000) = 6/10 = 0.6
-    // PLAT fraction at FIELD = 9500 / (9500 + 2550) = 9500/12050
-    // MANI fraction at PLAT = 8000 / (8000 + 1500) = 8000/9500
+    // WELL-A fraction in MANI = 6000 / (6000 + 4000) = 0.6
+    // PLAT fraction at FIELD = 9500 / (9500 + 2550) ≈ 0.788
+    // MANI fraction at PLAT = 8000 / (8000 + 1500) ≈ 0.842
     //   (MANI has FLD control in this test, so it competes with MANI-2)
     //
     // Since reduction and addback cancel out, the result is just:
@@ -829,7 +849,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerIndividualControl)
 //! at the MANI level because the well is under GRUP control.
 //! \code
 //!   FIELD (ORAT = 10000)
-//!   ├── PLAT (E=0.9, GUIDERATE=9500, GCW=1)
+//!   ├── PLAT (E=0.9, FLD, GUIDERATE=9500, GCW=1)
 //!   │   ├── MANI (E=0.8, FLD, GUIDERATE=8000, GCW=2)
 //!   │   │   ├── WELL-A (RATE=6000, POT=6000, GRUP)
 //!   │   │   └── WELL-A2 (RATE=4000, POT=4000, GRUP)
@@ -840,11 +860,13 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerIndividualControl)
 //! \endcode
 BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerGrupControl)
 {
-    // plat_has_guide_rate = true;            // default
-    // well_a_control = GRUP;                 // default
-    mani_control = Opm::Group::ProductionCMode::FLD;  // MANI follows parent
-
-    setup();
+    // Configuration: All wells under GRUP control, MANI follows parent
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::GRUP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::GRUP
+    );
 
     auto& gsh = groupStateHelper();
     auto& ws = wellState();
@@ -855,7 +877,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerGrupControl)
     BOOST_CHECK(ws.isProductionGrup("WELL-C"));
 
     // Get well efficiency factor (default 1.0)
-    const auto& well_a_ecl = schedule().getWell("WELL-A", report_step_idx_);
+    const auto& well_a_ecl = schedule().getWell("WELL-A", reportStepIdx());
     const double well_a_eff = well_a_ecl.getEfficiencyFactor();
     checkClose(well_a_eff, 1.0);
 
@@ -870,7 +892,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerGrupControl)
         well_a_rates.data(),
         well_a_eff,
         resv_coeff,
-        deferred_logger_
+        deferredLogger()
     );
 
     BOOST_REQUIRE(target_opt.has_value());
@@ -883,13 +905,13 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerGrupControl)
     // - The fraction used is for the well within its group
     //
     // With MANI under FLD control, MANI-2 as sibling (also FLD):
-    // - MANI fraction at PLAT = MANI_guide / (MANI_guide + MANI2_guide) = 8000/9500
-    // - PLAT fraction at FIELD = 9500 / (9500 + 2550) = 9500/12050
-    // - WELL-A fraction in MANI = 6000 / (6000 + 4000) = 6/10 = 0.6
+    // - MANI fraction at PLAT = MANI_guide / (MANI_guide + MANI2_guide) = 8000/9500 ≈ 0.842
+    // - PLAT fraction at FIELD = 9500 / (9500 + 2550) ≈ 0.788
+    // - WELL-A fraction in MANI = 6000 / (6000 + 4000) = 0.6
     //
     // Since reduction = 0 and addback = 0, the result is just:
     // Final: target / efficiency = 10000 * (9500/12050) * (8000/9500) * 0.6 / 0.72
-    //      = 10000 * 8000 / 12050 * 0.6 / 0.72 = 5532.50
+    //      = 10000 * 8000 / 12050 * 0.6 / 0.72 ≈ 5532.50
     //
     // NOTE: This produces the same result as test TestWellGroupTargetProducerIndividualControl because:
     // - TestWellGroupTargetProducerIndividualControl: reduction = 6000, addback = 6000 → net effect = 0
@@ -912,7 +934,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerGrupControl)
 //! TestWellGroupTargetProducerGrupControl.
 //! \code
 //!   FIELD (ORAT = 10000)
-//!   ├── PLAT (E=0.9, GUIDERATE=9500, GCW=1)
+//!   ├── PLAT (E=0.9, FLD, GUIDERATE=9500, GCW=1)
 //!   │   ├── MANI (E=0.8, FLD, GUIDERATE=8000, GCW=2)
 //!   │   │   ├── WELL-A (RATE=6000, POT=6000, GRUP)
 //!   │   │   └── WELL-A2 (RATE=4000, POT=4000, ORAT)
@@ -923,14 +945,11 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerGrupControl)
 //! \endcode
 BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerWithSiblingIndividualControl)
 {
-    // ========================================================================
     // Configuration: WELL-A under GRUP, WELL-A2 under individual ORAT control
-    // ========================================================================
-    // well_a_control = GRUP;                 // default - WELL-A under group control
-    well_a2_control = Opm::Well::ProducerCMode::ORAT;  // WELL-A2 under individual control
-    mani_control = Opm::Group::ProductionCMode::FLD;   // MANI follows parent
-
-    setup();
+    commonSetupForAllTests(/*plat_has_guide_rate=*/true,
+        /*mani_control=*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control=*/Opm::Well::ProducerCMode::GRUP,
+        /*well_a2_control=*/Opm::Well::ProducerCMode::ORAT);
 
     auto& gsh = groupStateHelper();
     auto& ws = wellState();
@@ -941,7 +960,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerWithSiblingIndividualControl)
     BOOST_CHECK(ws.isProductionGrup("WELL-C"));
 
     // Get well efficiency factor (default 1.0)
-    const auto& well_a_ecl = schedule().getWell("WELL-A", report_step_idx_);
+    const auto& well_a_ecl = schedule().getWell("WELL-A", reportStepIdx());
     const double well_a_eff = well_a_ecl.getEfficiencyFactor();
     checkClose(well_a_eff, 1.0);
 
@@ -956,17 +975,17 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerWithSiblingIndividualControl)
         well_a_rates.data(),
         well_a_eff,
         resv_coeff,
-        deferred_logger_
+        deferredLogger()
     );
 
     BOOST_REQUIRE(target_opt.has_value());
     const double target = target_opt.value();
 
-    // For getWellGroupTargetProducer with WELL-A under GRUP but WELL-A2 under individual:
+    // For getWellGroupTargetProducer() with WELL-A under GRUP but WELL-A2 under individual:
     // - Chain: [FIELD, PLAT, MANI, WELL-A]
     // - efficiency_factor = E_WELL * E_MANI * E_PLAT = 1.0 * 0.8 * 0.9 = 0.72
     // - local_reduction_level = 2 (MANI has guide rate AND GCW=1)
-    // - should_addback = false (WELL-A IS under GRUP)
+    // - should_addback = false (WELL-A is under GRUP)
     //
     // Reduction at MANI = E_WELL * 4000 = 4000 (only WELL-A2 is individual, E_WELL=1.0)
     // Addback for WELL-A = 0 (WELL-A is under GRUP, no addback)
@@ -983,7 +1002,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerWithSiblingIndividualControl)
     // ii=1 (PLAT):  reduction = 0, target = 7884.65 * 0.842 = 6640.07
     // ii=2 (MANI):  reduction = 4000 (WELL-A2 under ORAT)
     //               target = 6640.07 - 4000 = 2640.07
-    //               NO addback (WELL-A is under GRUP)
+    //               No addback (WELL-A is under GRUP)
     //               target *= 1.0 (WELL-A is always_included_child)
     //
     // Final: target / efficiency = 2640.07 / 0.72 = 3666.76 ≈ 3665.28
@@ -992,15 +1011,11 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerWithSiblingIndividualControl)
     // and TestWellGroupTargetProducerGrupControl (5532.50) because:
     // - Reduction at MANI = 4000 (WELL-A2's rate)
     // - Addback = 0 (WELL-A is under GRUP)
-    // - Net effect = -4000 (target reduced!)
+    // - Net effect = -4000 (target reduced)
     //
     // Expected value derived from actual algorithm output:
     const double expected_target_metric = 3665.2835408022129;
     checkAlgo(metric_rate(target), expected_target_metric);
-
-    // Verify this is different from the other tests (5532.50)
-    const double other_tests_result = 5532.50;
-    BOOST_CHECK(expected_target_metric < other_tests_result);  // Reduction caused lower target
 }
 
 BOOST_AUTO_TEST_SUITE_END()
