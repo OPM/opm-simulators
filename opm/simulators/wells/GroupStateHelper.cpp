@@ -154,17 +154,6 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
     const auto chain = this->groupChainTopBot(name, group.name());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
-    // we need to find out the level where the current well is applied to the local reduction
-    std::size_t local_reduction_level = 0;
-    for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-        const int num_gr_ctrl = this->groupControlledWells(chain[ii],
-                                                           /*always_included_child=*/"",
-                                                           /*is_production_group=*/false,
-                                                           injection_phase);
-        if (this->guide_rate_.has(chain[ii], injection_phase) && num_gr_ctrl > 0) {
-            local_reduction_level = ii;
-        }
-    }
 
     // check whether guide rate is violated
     if (check_guide_rate) {
@@ -198,33 +187,21 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
     }
 
     const Scalar orig_target = tcalc.groupTarget();
-    // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
-    // Then ...
-    // TODO finish explanation.
-    const Scalar current_rate_available
-        = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
+    const Scalar current_rate_available = tcalc.calcModeRateFromRates(rates);
+    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
+        chain, /*is_production_group=*/false, injection_phase);
 
-    // Compute portion of target corresponding to current_rate_available
-    Scalar target = orig_target;
-    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
-        if ((ii == 0) || this->guide_rate_.has(chain[ii], injection_phase)) {
-            // Apply local reductions only at the control level
-            // (top) and for levels where we have a specified
-            // group guide rate.
-            if (local_reduction_level >= ii) {
-                target -= local_reduction_lambda(chain[ii]);
-            }
+    const Scalar target = this->applyReductionsAndFractions_(chain,
+                                                             orig_target,
+                                                             current_rate_available,
+                                                             local_reduction_level,
+                                                             /*is_production_group=*/false,
+                                                             injection_phase,
+                                                             local_reduction_lambda,
+                                                             local_fraction_lambda,
+                                                             /*do_addback=*/true);
 
-            // Add my reduction back at the level where it is included in the local reduction
-            if (local_reduction_level == ii) {
-                const Scalar addback_efficiency
-                    = this->computeAddbackEfficiency_(chain, local_reduction_level);
-                target += current_rate_available * addback_efficiency;
-            }
-        }
-        target *= local_fraction_lambda(chain[ii + 1]);
-    }
-    // Avoid negative target rates comming from too large local reductions.
+    // Avoid negative target rates coming from too large local reductions.
     const Scalar target_rate_available = std::max(Scalar(1e-12), target / efficiency_factor);
     Scalar scale = 1.0;
     if (current_rate_available > 1e-12)
@@ -351,38 +328,20 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
         return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
     }
 
-    // we need to find out the level where the current well is applied to the local reduction
-    std::size_t local_reduction_level = 0;
-    for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-        const int num_gr_ctrl = this->groupControlledWells(chain[ii],
-                                                           /*always_included_child=*/"",
-                                                           /*is_production_group=*/true,
-                                                           /*injection_phase=*/Phase::OIL/*not used*/);
-        if (this->guide_rate_.has(chain[ii]) && num_gr_ctrl > 0) {
-            local_reduction_level = ii;
-        }
-    }
+    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
+        chain, /*is_production_group=*/true, /*injection_phase=*/Phase::OIL);
 
-    // Compute portion of target corresponding to current_rate_available
-    Scalar target = orig_target;
-    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
-        if ((ii == 0) || this->guide_rate_.has(chain[ii])) {
-            // Apply local reductions only at the control level
-            // (top) and for levels where we have a specified
-            // group guide rate.
-            if (local_reduction_level >= ii) {
-                target -= local_reduction_lambda(chain[ii]);
-            }
-            // Add my reduction back at the level where it is included in the local reduction
-            if (local_reduction_level == ii) {
-                const Scalar addback_efficiency
-                    = this->computeAddbackEfficiency_(chain, local_reduction_level);
-                target += current_rate_available * addback_efficiency;
-            }
-        }
-        target *= local_fraction_lambda(chain[ii + 1]);
-    }
-    // Avoid negative target rates comming from too large local reductions.
+    const Scalar target = this->applyReductionsAndFractions_(chain,
+                                                             orig_target,
+                                                             current_rate_available,
+                                                             local_reduction_level,
+                                                             /*is_production_group=*/true,
+                                                             /*injection_phase=*/Phase::OIL,
+                                                             local_reduction_lambda,
+                                                             local_fraction_lambda,
+                                                             /*do_addback=*/true);
+
+    // Avoid negative target rates coming from too large local reductions.
     const Scalar target_rate_available = std::max(Scalar(1e-12), target / efficiency_factor);
 
     Scalar scale = 1.0;
@@ -650,63 +609,41 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
                                                                       /*is_producer=*/false,
                                                                       injection_phase};
 
-    auto local_fraction_lambda = [&](const std::string& child, const std::string& always_incluced_name) {
-        return fcalc.localFraction(child, always_incluced_name);
-    };
-
     auto local_reduction_lambda = [&](const std::string& group_name) {
         const std::vector<Scalar>& group_target_reductions
             = this->groupState().injection_reduction_rates(group_name);
         return tcalc.calcModeRateFromRates(group_target_reductions);
     };
 
+    // For wells under individual control (not GRUP), include the well name as always_included_child.
+    // For wells under GRUP control, use the child group itself as always_included_child.
+    const bool is_grup_control = this->wellState().isInjectionGrup(name);
+    auto local_fraction_lambda = [&](const std::string& child) {
+        const std::string& always_included = is_grup_control ? child : name;
+        return fcalc.localFraction(child, always_included);
+    };
+
     const Scalar orig_target = tcalc.groupTarget();
-    // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
-    // Then ...
-    // TODO finish explanation.
-    const Scalar current_rate_available
-        = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
+    const Scalar current_rate_available = tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
-    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const std::size_t num_ancestors = chain.size() - 1;
-    // we need to find out the level where the local reduction is applied
-    std::size_t local_reduction_level = 0;
-    for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-        const int num_gr_ctrl = this->groupControlledWells(chain[ii],
-                                                           /*always_included_child=*/"",
-                                                           /*is_production_group=*/false,
-                                                           injection_phase);
-        if (this->guide_rate_.has(chain[ii], injection_phase) && num_gr_ctrl > 0) {
-            local_reduction_level = ii;
-        }
-    }
 
-    // Compute portion of target corresponding to current_rate_available
-    Scalar target = orig_target;
-    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
-        if ((ii == 0) || this->guide_rate_.has(chain[ii], injection_phase)) {
-            // Apply local reductions only at the control level
-            // (top) and for levels where we have a specified
-            // group guide rate.
-            if (local_reduction_level >= ii) {
-                target -= local_reduction_lambda(chain[ii]);
-            }
+    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
+        chain, /*is_production_group=*/false, injection_phase);
 
-            // If we are under individual control we need to add the wells rate back at the level where it is
-            // included in the local reduction
-            if (local_reduction_level == ii && !this->wellState().isInjectionGrup(name)) {
-                const Scalar addback_efficiency
-                    = this->computeAddbackEfficiency_(chain, local_reduction_level);
-                target += current_rate_available * addback_efficiency;
-            }
-        }
-        if (!this->wellState().isInjectionGrup(name)) {
-            target *= local_fraction_lambda(chain[ii + 1], name);
-        } else {
-            target *= local_fraction_lambda(chain[ii + 1], chain[ii + 1]);
-        }
-    }
-    // Avoid negative target rates comming from too large local reductions.
+    // Add-back is only performed when the well is under individual control (not GRUP)
+    const bool do_addback = !is_grup_control;
+
+    const Scalar target = this->applyReductionsAndFractions_(chain,
+                                                             orig_target,
+                                                             current_rate_available,
+                                                             local_reduction_level,
+                                                             /*is_production_group=*/false,
+                                                             injection_phase,
+                                                             local_reduction_lambda,
+                                                             local_fraction_lambda,
+                                                             do_addback);
+
+    // Avoid negative target rates coming from too large local reductions.
     return std::max(Scalar(0.0), target / efficiency_factor);
 }
 
@@ -766,9 +703,6 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
                                                                       tcalc.guideTargetMode(),
                                                                       /*is_producer=*/true,
                                                                       /*injection_phase=*/Phase::OIL};
-    auto local_fraction_lambda = [&](const std::string& child, const std::string& always_incluced_name) {
-        return fcalc.localFraction(child, always_incluced_name);
-    };
 
     auto local_reduction_lambda = [&](const std::string& group_name) {
         const std::vector<Scalar>& group_target_reductions
@@ -776,50 +710,35 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
         return tcalc.calcModeRateFromRates(group_target_reductions);
     };
 
+    // For wells under individual control (not GRUP), include the well name as always_included_child.
+    // For wells under GRUP control, use the child group itself as always_included_child.
+    const bool is_grup_control = this->wellState().isProductionGrup(name);
+    auto local_fraction_lambda = [&](const std::string& child) {
+        const std::string& always_included = is_grup_control ? child : name;
+        return fcalc.localFraction(child, always_included);
+    };
+
     const Scalar orig_target = tcalc.groupTarget();
-    // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
-    // Then ...
-    // TODO finish explanation.
-    const Scalar current_rate_available
-        = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
+    // Switch sign since 'rates' are negative for producers.
+    const Scalar current_rate_available = -tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
-    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const std::size_t num_ancestors = chain.size() - 1;
-    // we need to find out the level where the local reduction is applied
-    std::size_t local_reduction_level = 0;
-    for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-        const int num_gr_ctrl = this->groupControlledWells(chain[ii],
-                                                           /*always_included_child=*/"",
-                                                           /*is_production_group=*/true,
-                                                           /*injection_phase=*/Phase::OIL);
-        if (this->guide_rate_.has(chain[ii]) && num_gr_ctrl > 0) {
-            local_reduction_level = ii;
-        }
-    }
-    // Compute portion of target corresponding to current_rate_available
-    Scalar target = orig_target;
-    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
-        if ((ii == 0) || this->guide_rate_.has(chain[ii])) {
-            // Apply local reductions only at the control level
-            // (top) and for levels where we have a specified
-            // group guide rate.
-            if (local_reduction_level >= ii) {
-                target -= local_reduction_lambda(chain[ii]);
-            }
-            // If we are under individual control we need to add the wells rate back at the level where it is
-            // included in the local reduction
-            if (local_reduction_level == ii && !this->wellState().isProductionGrup(name)) {
-                const Scalar addback_efficiency
-                    = this->computeAddbackEfficiency_(chain, local_reduction_level);
-                target += current_rate_available * addback_efficiency;
-            }
-        }
-        if (this->wellState().isProductionGrup(name)) {
-            target *= local_fraction_lambda(chain[ii + 1], chain[ii + 1]);
-        } else {
-            target *= local_fraction_lambda(chain[ii + 1], name);
-        }
-    }
+
+    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
+        chain, /*is_production_group=*/true, /*injection_phase=*/Phase::OIL);
+
+    // Add-back is only performed when the well is under individual control (not GRUP)
+    const bool do_addback = !is_grup_control;
+
+    const Scalar target = this->applyReductionsAndFractions_(chain,
+                                                             orig_target,
+                                                             current_rate_available,
+                                                             local_reduction_level,
+                                                             /*is_production_group=*/true,
+                                                             /*injection_phase=*/Phase::OIL,
+                                                             local_reduction_lambda,
+                                                             local_fraction_lambda,
+                                                             do_addback);
+
     // Avoid negative target rates coming from too large local reductions.
     return std::max(Scalar(0.0), target / efficiency_factor);
 }
@@ -1507,10 +1426,52 @@ activePhaseIdxToRescoupPhase_(int phase_pos) const
 #endif
 
 template <typename Scalar, typename IndexTraits>
+template <typename ReductionLambda, typename FractionLambda>
 Scalar
-GroupStateHelper<Scalar, IndexTraits>::computeAddbackEfficiency_(
-    const std::vector<std::string>& chain,
-    const std::size_t local_reduction_level) const
+GroupStateHelper<Scalar, IndexTraits>::applyReductionsAndFractions_(const std::vector<std::string>& chain,
+                                                                    const Scalar orig_target,
+                                                                    const Scalar current_rate_available,
+                                                                    const std::size_t local_reduction_level,
+                                                                    const bool is_production_group,
+                                                                    const Phase injection_phase,
+                                                                    ReductionLambda&& local_reduction_lambda,
+                                                                    FractionLambda&& local_fraction_lambda,
+                                                                    const bool do_addback) const
+{
+    // Compute portion of target corresponding to current_rate_available.
+    // The chain is ordered [control_group (top), ..., bottom_group].
+    // num_ancestors excludes the bottom group itself.
+    const std::size_t num_ancestors = chain.size() - 1;
+    Scalar target = orig_target;
+    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
+        // Check if this level has a guide rate (or is the top level)
+        const bool has_guide_rate = is_production_group
+            ? this->guide_rate_.has(chain[ii])
+            : this->guide_rate_.has(chain[ii], injection_phase);
+        if ((ii == 0) || has_guide_rate) {
+            // Apply local reductions only at the control level (top)
+            // and for levels where we have a specified group guide rate.
+            if (local_reduction_level >= ii) {
+                target -= local_reduction_lambda(chain[ii]);
+            }
+            // Add the bottom group's rate back at the level where it is included
+            // in the local reduction (if add-back is requested).
+            if (do_addback && local_reduction_level == ii) {
+                const Scalar addback_efficiency
+                    = this->computeAddbackEfficiency_(chain, local_reduction_level);
+                target += current_rate_available * addback_efficiency;
+            }
+        }
+        // Apply guide rate fraction to get portion for next level
+        target *= local_fraction_lambda(chain[ii + 1]);
+    }
+    return target;
+}
+
+template <typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::computeAddbackEfficiency_(const std::vector<std::string>& chain,
+                                                                 const std::size_t local_reduction_level) const
 {
     // Compute partial efficiency factor from local_reduction_level down to the entity.
     // Chain is ordered [control_group, ..., local_reduction_level, ..., entity].
@@ -1573,6 +1534,32 @@ GroupStateHelper<Scalar, IndexTraits>::getGuideRateVector_(const std::vector<Sca
     }
 
     return {oilRate, gasRate, waterRate};
+}
+
+template <typename Scalar, typename IndexTraits>
+std::size_t
+GroupStateHelper<Scalar, IndexTraits>::getLocalReductionLevel_(const std::vector<std::string>& chain,
+                                                               const bool is_production_group,
+                                                               const Phase injection_phase) const
+{
+    // The local reduction level is the deepest level in the chain (starting from level 1)
+    // where a group has both a guide rate and group-controlled wells (GCW > 0).
+    // Level 0 is the top controlling group, so we start from level 1.
+    const std::size_t num_ancestors = chain.size() - 1;
+    std::size_t local_reduction_level = 0;
+    for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
+        const int num_gr_ctrl = this->groupControlledWells(chain[ii],
+                                                           /*always_included_child=*/"",
+                                                           is_production_group,
+                                                           injection_phase);
+        const bool has_guide_rate = is_production_group
+            ? this->guide_rate_.has(chain[ii])
+            : this->guide_rate_.has(chain[ii], injection_phase);
+        if (has_guide_rate && num_gr_ctrl > 0) {
+            local_reduction_level = ii;
+        }
+    }
+    return local_reduction_level;
 }
 
 template <typename Scalar, typename IndexTraits>
