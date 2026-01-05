@@ -222,25 +222,28 @@ function(add_test_compare_parallel_simulation)
     set(MPI_PROCS 4)
   endif()
 
-  set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${PARAM_SIMULATOR}+${PARAM_CASENAME})
-  set(TEST_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
+  if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL MPI_PROCS)
+    # Local computer system has at least ${MPI_PROCS} CPUs. Register test.
+    set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+    set(TEST_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
 
-  set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
-                  -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
-                  -f ${PARAM_FILENAME}
-                  -a ${PARAM_ABS_TOL}
-                  -t ${PARAM_REL_TOL}
-                  -c ${COMPARE_ECL_COMMAND}
-                  -n ${MPI_PROCS})
+    set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                    -r ${RESULT_PATH}
+                    -b ${PROJECT_BINARY_DIR}/bin
+                    -f ${PARAM_FILENAME}
+                    -a ${PARAM_ABS_TOL}
+                    -t ${PARAM_REL_TOL}
+                    -c ${COMPARE_ECL_COMMAND}
+                    -n ${MPI_PROCS})
 
-  # Add test that runs flow_mpi and outputs the results to file
-  opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX} NO_COMPILE
-               EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${DRIVER_ARGS}
-               TEST_ARGS ${TEST_ARGS})
-  set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
-                       PROPERTIES PROCESSORS ${MPI_PROCS})
+    # Add test that runs flow_mpi and outputs the results to file
+    opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX} NO_COMPILE
+                 EXE_NAME ${PARAM_SIMULATOR}
+                 DRIVER_ARGS ${DRIVER_ARGS}
+                 TEST_ARGS ${TEST_ARGS})
+    set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
+                         PROPERTIES PROCESSORS ${MPI_PROCS})
+  endif()
 endfunction()
 
 
@@ -275,23 +278,26 @@ function(add_test_compare_parallel_restarted_simulation)
     set(MPI_PROCS 4)
   endif()
 
-  set(RESULT_PATH ${BASE_RESULT_PATH}/parallelRestart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
-  set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
-                  -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
-                  -f ${PARAM_FILENAME}
-                  -a ${PARAM_ABS_TOL}
-                  -t ${PARAM_REL_TOL}
-                  -c ${COMPARE_ECL_COMMAND}
-                  -s ${PARAM_RESTART_STEP}
-                  -d ${RST_DECK_COMMAND}
-                  -n ${MPI_PROCS})
+  if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL MPI_PROCS)
+    # Local computer system has at least ${MPI_PROCS} CPUs. Register test.
+    set(RESULT_PATH ${BASE_RESULT_PATH}/parallelRestart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+    set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                    -r ${RESULT_PATH}
+                    -b ${PROJECT_BINARY_DIR}/bin
+                    -f ${PARAM_FILENAME}
+                    -a ${PARAM_ABS_TOL}
+                    -t ${PARAM_REL_TOL}
+                    -c ${COMPARE_ECL_COMMAND}
+                    -s ${PARAM_RESTART_STEP}
+                    -d ${RST_DECK_COMMAND}
+                    -n ${MPI_PROCS})
 
-  opm_add_test(${TEST_NAME} NO_COMPILE
-               EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${DRIVER_ARGS}
-               TEST_ARGS ${PARAM_TEST_ARGS})
-  set_tests_properties(${TEST_NAME} PROPERTIES PROCESSORS ${MPI_PROCS})
+    opm_add_test(${TEST_NAME} NO_COMPILE
+                 EXE_NAME ${PARAM_SIMULATOR}
+                 DRIVER_ARGS ${DRIVER_ARGS}
+                 TEST_ARGS ${PARAM_TEST_ARGS})
+    set_tests_properties(${TEST_NAME} PROPERTIES PROCESSORS ${MPI_PROCS})
+  endif()
 endfunction()
 
 
