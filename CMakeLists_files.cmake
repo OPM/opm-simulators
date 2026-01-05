@@ -476,6 +476,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
   tests/test_dilu.cpp
+  tests/test_group_higher_constraints.cpp
   tests/test_equil.cpp
   tests/test_extractMatrix.cpp
   tests/test_flexiblesolver.cpp
@@ -669,6 +670,7 @@ list (APPEND TEST_DATA_FILES
   tests/rhs3rep.txt
   tests/options_flexiblesolver.json
   tests/options_flexiblesolver_simple.json
+  tests/GROUP_HIGHER_CONSTRAINTS.DATA
   tests/GLIFT1.DATA
   tests/RC-01_MAST_PRED.DATA
   tests/include/flowl_b_vfp.ecl
@@ -1375,12 +1377,16 @@ if(MPI_FOUND)
     opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.cpp
     opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.cpp
     opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.cpp
+    opm/simulators/wells/GroupTargetCalculator.cpp
+    opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.cpp
     opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.cpp
     opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.cpp
+    opm/simulators/wells/rescoup/RescoupTargetCalculator.cpp
   )
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/flow/rescoup/ReservoirCoupling.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp
+    opm/simulators/flow/rescoup/ReservoirCouplingErrorMacros.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp
@@ -1388,9 +1394,12 @@ if(MPI_FOUND)
     opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.hpp
+    opm/simulators/wells/GroupTargetCalculator.hpp
     opm/simulators/wells/rescoup/RescoupProxy.hpp
     opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp
+    opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp
     opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp
+    opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp
     )
   list (APPEND TEST_SOURCE_FILES
     tests/rescoup/test_chopstep.cpp

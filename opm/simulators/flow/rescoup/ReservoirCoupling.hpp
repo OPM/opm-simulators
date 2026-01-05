@@ -20,6 +20,7 @@
 #ifndef OPM_RESERVOIR_COUPLING_HPP
 #define OPM_RESERVOIR_COUPLING_HPP
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 
 #include <dune/common/parallel/mpitraits.hh>
@@ -28,6 +29,7 @@
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 namespace Opm {
@@ -37,6 +39,8 @@ class Logger {
 public:
     Logger() = default;
     void clearDeferredLogger() { deferred_logger_ = nullptr; }
+    DeferredLogger& deferredLogger() { return *deferred_logger_; }
+    DeferredLogger& deferredLogger() const { return *deferred_logger_; }
     bool haveDeferredLogger() const { return deferred_logger_ != nullptr; }
     void info(const std::string &msg) const;
     void setDeferredLogger(DeferredLogger *deferred_logger) { deferred_logger_ = deferred_logger; }
@@ -119,10 +123,12 @@ private:
 };
 
 enum class MessageTag : int {
-    MasterGroupInfo,
+    InjectionGroupTargets,
     MasterGroupNames,
     MasterGroupNamesSize,
     MasterStartOfReportStep,
+    NumSlaveGroupTargets,
+    ProductionGroupTargets,
     SlaveActivationDate,
     SlaveActivationHandshake,
     SlaveInjectionData,
@@ -187,8 +193,9 @@ struct SlaveGroupProductionData {
     // Production rates are used by the master group in guiderate calculations
     // when converting the guide rate target to the phase of the master group.
     ProductionRates<Scalar> surface_rates;  // Surface production rates by phase
-    // NOTE: Currently, the master does not need the individual phase reservoir rates,
-    //       we only send the total voidage replacement rate.
+    // Individual phase reservoir production rates - needed when master's parent group
+    // has RESV control mode, so the conversion uses slave's PVT properties
+    ProductionRates<Scalar> reservoir_rates;  // Reservoir production rates by phase
     Scalar voidage_rate{0.0};               // Reservoir voidage replacement rate
     Scalar gas_reinjection_rate{0.0};       // Reinjection (surface) rate for the gas phase
 };
@@ -200,9 +207,30 @@ struct SlaveGroupInjectionData {
     InjectionRates<Scalar> reservoir_rates;  // Reservoir injection rates by phase
 };
 
+template <class Scalar>
+struct InjectionGroupTarget {
+    // To save memory and avoid varying size of the struct when serializing
+    // and deserializing the group name, we use an index instead of the full name.
+    std::size_t group_name_idx;   // Index of group name in the master group names vector
+    Scalar target;                // Target rate for the group
+    Group::InjectionCMode cmode;  // Control mode for the group
+    Phase phase;                  // Phase the target applies to
+};
+
+template <class Scalar>
+struct ProductionGroupTarget {
+    // To save memory and avoid varying size of the struct when serializing
+    // and deserializing the group name, we use an index instead of the full name.
+    std::size_t group_name_idx;   // Index of group name in the master group names vector
+    Scalar target;                // Target rate for the group
+    Group::ProductionCMode cmode;  // Control mode for the group
+};
 
 // Helper functions
-void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg);
+Phase convertPhaseToReservoirCouplingPhase(::Opm::Phase phase);
+void customErrorHandler_(MPI_Comm* comm, int* err, const std::string &msg);
+void customErrorHandlerSlave_(MPI_Comm* comm, int* err, ...);
+void customErrorHandlerMaster_(MPI_Comm* comm, int* err, ...);
 void setErrhandler(MPI_Comm comm, bool is_master);
 std::pair<std::vector<char>, std::size_t> serializeStrings(const std::vector<std::string>& data);
 

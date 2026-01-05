@@ -49,8 +49,10 @@
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
+#include <opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
+#include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
+#include <opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp>
 #endif
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -474,6 +476,7 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingSlave()) {
             this->sendSlaveGroupDataToMaster();
+            this->receiveGroupTargetsFromMaster(reportStepIdx);
         }
 #endif
         std::string exc_msg;
@@ -511,9 +514,9 @@ namespace Opm {
                 if (event || dyn_status_change) {
                     try {
                         well->scaleSegmentRatesAndPressure(this->wellState());
-                        well->calculateExplicitQuantities(simulator_, this->wellState(), local_deferredLogger);
+                        well->calculateExplicitQuantities(simulator_, this->groupStateHelper(), local_deferredLogger);
                         well->updateWellStateWithTarget(simulator_, this->groupStateHelper(), this->wellState(), local_deferredLogger);
-                        well->updatePrimaryVariables(simulator_, this->wellState(), local_deferredLogger);
+                        well->updatePrimaryVariables(this->groupStateHelper(), local_deferredLogger);
                         well->solveWellEquation(
                             simulator_, this->groupStateHelper(), this->wellState(), local_deferredLogger
                         );
@@ -526,6 +529,12 @@ namespace Opm {
         }
         // Catch clauses for all errors setting exc_type and exc_msg
         OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isReservoirCouplingMaster()) {
+            this->sendMasterGroupTargetsToSlaves();
+        }
+#endif
 
         if (exc_type != ExceptionType::NONE) {
             const std::string msg = "Compute initial well solution for new wells failed. Continue with zero initial rates";
@@ -554,12 +563,12 @@ namespace Opm {
     setupRescoupScopedLogger(DeferredLogger& local_logger) {
         if (this->isReservoirCouplingMaster()) {
             return ReservoirCoupling::ScopedLoggerGuard{
-                this->reservoirCouplingMaster().getLogger(),
+                this->reservoirCouplingMaster().logger(),
                 &local_logger
             };
         } else if (this->isReservoirCouplingSlave()) {
             return ReservoirCoupling::ScopedLoggerGuard{
-                this->reservoirCouplingSlave().getLogger(),
+                this->reservoirCouplingSlave().logger(),
                 &local_logger
             };
         }
@@ -587,6 +596,34 @@ namespace Opm {
         RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{this->groupStateHelper()};
         slave_group_data_sender.sendSlaveGroupDataToMaster();
     }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    sendMasterGroupTargetsToSlaves()
+    {
+        // This function is called by the master process to send the group targets to the slaves.
+        RescoupTargetCalculator<Scalar, IndexTraits> target_calculator{
+            this->guide_rate_handler_,
+            this->groupStateHelper()
+        };
+        target_calculator.calculateMasterGroupTargetsAndSendToSlaves();
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    receiveGroupTargetsFromMaster(int reportStepIdx)
+    {
+        RescoupReceiveGroupTargets<Scalar, IndexTraits> target_receiver{
+            this->guide_rate_handler_,
+            this->wellState(),
+            this->groupState(),
+            reportStepIdx
+        };
+        target_receiver.receiveGroupTargetsFromMaster();
+    }
+
 #endif // RESERVOIR_COUPLING_ENABLED
 
     template<typename TypeTag>
@@ -645,10 +682,6 @@ namespace Opm {
             }
         }
     }
-
-
-
-
 
     // called at the end of a report step
     template<typename TypeTag>
@@ -1529,7 +1562,7 @@ namespace Opm {
                     x_local_[i] = x[cells[i]];
                 }
                 well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
-                                                            this->wellState(), local_deferredLogger);
+                                                            this->groupStateHelper(), this->wellState(), local_deferredLogger);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
@@ -1564,7 +1597,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             if (well->isOperableAndSolvable() || well->wellIsStopped()) {
                 local_report += well->getWellConvergence(
-                        simulator_, this->wellState(), B_avg, local_deferredLogger,
+                        this->groupStateHelper(), B_avg, local_deferredLogger,
                         iterationIdx > param_.strict_outer_iter_wells_);
             } else {
                 ConvergenceReport report;
@@ -1610,7 +1643,7 @@ namespace Opm {
     {
         // TODO: checking isOperableAndSolvable() ?
         for (auto& well : well_container_) {
-            well->calculateExplicitQuantities(simulator_, this->wellState(), deferred_logger);
+            well->calculateExplicitQuantities(simulator_, this->groupStateHelper(), deferred_logger);
         }
     }
 
@@ -1796,9 +1829,7 @@ namespace Opm {
                                        this->groupStateHelper(),
                                        local_deferredLogger);
             const bool under_zero_target =
-                well->wellUnderZeroGroupRateTarget(this->simulator_,
-                                                   this->wellState(),
-                                                   local_deferredLogger);
+                well->wellUnderZeroGroupRateTarget(this->groupStateHelper(), local_deferredLogger);
             well->updateWellTestState(this->wellState().well(wname),
                                       simulationTime,
                                       /*writeMessageToOPMLog=*/ true,
@@ -1976,7 +2007,7 @@ namespace Opm {
                 well->updateWellStateWithTarget(
                     simulator_, this->groupStateHelper(), this->wellState(), deferred_logger
                 );
-                well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
+                well->updatePrimaryVariables(this->groupStateHelper(), deferred_logger);
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
                 events.clearEvent(WellState<Scalar, IndexTraits>::event_mask);
@@ -2062,7 +2093,7 @@ namespace Opm {
     updatePrimaryVariables(DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
+            well->updatePrimaryVariables(this->groupStateHelper(), deferred_logger);
         }
     }
 
@@ -2144,7 +2175,7 @@ namespace Opm {
     calcResvCoeff(const int fipnum,
                   const int pvtreg,
                   const std::vector<Scalar>& production_rates,
-                  std::vector<Scalar>& resv_coeff)
+                  std::vector<Scalar>& resv_coeff) const
     {
         rateConverter_->calcCoeff(fipnum, pvtreg, production_rates, resv_coeff);
     }
@@ -2154,7 +2185,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     calcInjResvCoeff(const int fipnum,
                      const int pvtreg,
-                     std::vector<Scalar>& resv_coeff)
+                     std::vector<Scalar>& resv_coeff) const
     {
         rateConverter_->calcInjCoeff(fipnum, pvtreg, resv_coeff);
     }

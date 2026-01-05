@@ -32,6 +32,7 @@
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellGroupControls.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -53,10 +54,7 @@ template<typename FluidSystem>
 template<class EvalWell>
 void
 WellAssemble<FluidSystem>::
-assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
-                      const GroupState<Scalar>& group_state,
-                      const Schedule& schedule,
-                      const SummaryState& summaryState,
+assembleControlEqProd(const GroupStateHelperType& groupStateHelper,
                       const Well::ProductionControls& controls,
                       const EvalWell& bhp,
                       const std::vector<EvalWell>& rates, // Always 3 canonical rates.
@@ -64,6 +62,8 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
                       EvalWell& control_eq,
                       DeferredLogger& deferred_logger) const
 {
+    const auto& well_state = groupStateHelper.wellState();
+    const auto& group_state = groupStateHelper.groupState();
     const auto current = well_state.well(well_.indexOfWell()).production_cmode;
     const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor() *
                                     well_state[well_.name()].efficiency_scaling_factor;
@@ -149,7 +149,7 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
             break;
         }
         */
-        const auto& group = schedule.getGroup(well_.wellEcl().groupName(), well_.currentStep());
+        const auto& group = groupStateHelper.schedule().getGroup(well_.wellEcl().groupName(), well_.currentStep());
         // Annoying thing: the rates passed to this function are
         // always of size 3 and in canonical (for PhaseUsage)
         // order. This is what is needed for VFP calculations if
@@ -176,10 +176,7 @@ assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
         };
 
         WellGroupControls(well_).getGroupProductionControl(group,
-                                                           well_state,
-                                                           group_state,
-                                                           schedule,
-                                                           summaryState,
+                                                           groupStateHelper,
                                                            bhp,
                                                            active_rates,
                                                            rCoeff,
@@ -274,10 +271,7 @@ template<typename FluidSystem>
 template<class EvalWell>
 void
 WellAssemble<FluidSystem>::
-assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
-                     const GroupState<Scalar>& group_state,
-                     const Schedule& schedule,
-                     const SummaryState& summaryState,
+assembleControlEqInj(const GroupStateHelperType& groupStateHelper,
                      const Well::InjectionControls& controls,
                      const EvalWell& bhp,
                      const EvalWell& injection_rate,
@@ -285,6 +279,8 @@ assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
                      EvalWell& control_eq,
                      DeferredLogger& deferred_logger) const
 {
+    const auto& well_state = groupStateHelper.wellState();
+    const auto& group_state = groupStateHelper.groupState();
     auto current = well_state.well(well_.indexOfWell()).injection_cmode;
     const InjectorType injectorType = controls.injector_type;
     const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor() *
@@ -336,7 +332,7 @@ assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
     }
     case Well::InjectorCMode::GRUP: {
         assert(well_.wellEcl().isAvailableForGroupControl());
-        const auto& group = schedule.getGroup(well_.wellEcl().groupName(), well_.currentStep());
+        const auto& group = groupStateHelper.schedule().getGroup(well_.wellEcl().groupName(), well_.currentStep());
         auto rCoeff = [this, &group_state](const RegionId id, const int region,
                                            const std::optional<std::string>& prod_gname,
                                            std::vector<Scalar>& coeff)
@@ -349,10 +345,10 @@ assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
             }
         };
         WellGroupControls(well_).getGroupInjectionControl(group,
-                                                          well_state,
-                                                          group_state,
-                                                          schedule,
-                                                          summaryState,
+                                                          groupStateHelper.wellState(),
+                                                          groupStateHelper.groupState(),
+                                                          groupStateHelper.schedule(),
+                                                          groupStateHelper.summaryState(),
                                                           injectorType,
                                                           bhp,
                                                           injection_rate,
@@ -370,10 +366,7 @@ assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
 
 #define INSTANTIATE_METHODS(A,...)                                        \
 template void WellAssemble<A>::                                           \
-assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar, BlackOilDefaultFluidSystemIndices>&,  \
-                                   const GroupState<typename A::Scalar>&, \
-                                   const Schedule&,                       \
-                                   const SummaryState&,                   \
+assembleControlEqProd<__VA_ARGS__>(const GroupStateHelper<typename A::Scalar, typename A::IndexTraitsType>&, \
                                    const Well::ProductionControls&,       \
                                    const __VA_ARGS__&,                    \
                                    const std::vector<__VA_ARGS__>&,       \
@@ -381,10 +374,7 @@ assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar, BlackOilD
                                    __VA_ARGS__&,                          \
                                    DeferredLogger&) const;                \
 template void WellAssemble<A>::                                           \
-assembleControlEqInj<__VA_ARGS__>(const WellState<typename A::Scalar, BlackOilDefaultFluidSystemIndices>&,   \
-                                  const GroupState<typename A::Scalar>&,  \
-                                  const Schedule&,                        \
-                                  const SummaryState&,                    \
+assembleControlEqInj<__VA_ARGS__>(const GroupStateHelper<typename A::Scalar, typename A::IndexTraitsType>&,   \
                                   const Well::InjectionControls&,         \
                                   const __VA_ARGS__&,                     \
                                   const __VA_ARGS__&,                     \

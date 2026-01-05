@@ -261,14 +261,14 @@ getGroupGuideRatesProduction_(
     const auto& name = group.name();
     if (wm_guide_rate.has(name)) {  // Check if group has production guiderates
         using Value = data::GuideRateValue::Item;
-        static const std::array<std::tuple<Value, std::string_view>, 4> value_types = {{
+        static const std::array<std::tuple<Value, std::string_view>, 4> items = {{
             {Value::Oil, "oil"},
             {Value::Gas, "gas"},
             {Value::Water, "water"},
             {Value::ResV, "resv"}
         }};
         const auto& guide_rate_value = group_guide_rate.production;
-        for (const auto& [value_type, phase_str] : value_types) {
+        for (const auto& [value_type, phase_str] : items) {
             if (guide_rate_value.has(value_type)) {
                 msg_items.push_back(
                     fmt::format(
@@ -359,13 +359,13 @@ printWellGuideRates_(const Well& well, int level)
     const auto& guide_rate_value = gr_itr->second;
     std::vector<std::string> msg_items;
     using Value = data::GuideRateValue::Item;
-    static const std::array<std::tuple<Value, std::string_view>, 3> value_types = {{
+    static const std::array<std::tuple<Value, std::string_view>, 3> items = {{
         {Value::Oil, "oil"},
         {Value::Gas, "gas"},
         {Value::Water, "water"}
     }};
     const std::string well_type = well.isInjector() ? "Inj" : "Prod";
-    for (const auto& [value_type, phase_str] : value_types) {
+    for (const auto& [value_type, phase_str] : items) {
         if (guide_rate_value.has(value_type)) {
             msg_items.push_back(
                 fmt::format(

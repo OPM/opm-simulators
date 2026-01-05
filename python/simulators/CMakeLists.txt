@@ -69,6 +69,12 @@ add_custom_target(python_simulator_modules
   COMMENT "Building all Python simulator modules (BlackOil, GasWater, etc.)"
 )
 
+# Create a convenience target to build everything needed for Python tests
+add_custom_target(python_tests
+  DEPENDS python_simulator_modules copy_python
+  COMMENT "Building Python test dependencies (modules and test files)"
+)
+
 find_file(PYTHON_INSTALL_PY install.py
   PATHS ${opm-common_DIR} ${opm-common_PYTHON_COMMON_DIR}
   PATH_SUFFIXES python NO_DEFAULT_PATH REQUIRED)
@@ -140,6 +146,12 @@ if(OPM_ENABLE_PYTHON_TESTS)
   if(MPI_FOUND)
     list(APPEND cases mpi)
   endif()
+
+  # Create a fixture test that builds Python modules before running Python tests
+  add_test(NAME python_modules_build
+      COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target python_tests)
+  set_tests_properties(python_modules_build PROPERTIES FIXTURES_SETUP python_modules_fixture)
+
   # NOTE: See comment in test_basic.py for the reason why we are
   #   splitting the python tests into multiple add_test() tests instead
   #   of having a single "python -m unittest" test call that will run all
@@ -150,6 +162,8 @@ if(OPM_ENABLE_PYTHON_TESTS)
         COMMAND ${CMAKE_COMMAND}
         -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
         -m unittest test/test_${case_name}.py)
+    set_tests_properties(python_${case_name} PROPERTIES
+        FIXTURES_REQUIRED python_modules_fixture)
   endforeach()
 endif()
 

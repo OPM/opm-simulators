@@ -116,7 +116,8 @@ BlackoilWellModelGeneric(Schedule& schedule,
                           this->schedule(),
                           summaryState,
                           guideRate_,
-                          pu)
+                          pu,
+                          comm)
     , genNetwork_(network)
 {
 
@@ -591,25 +592,29 @@ checkGconsaleLimits(const Group& group,
         deferred_logger.info(ss);
 }
 
-template<typename Scalar, typename IndexTraits>
-bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
-checkGroupHigherConstraints(const Group& group,
-                            DeferredLogger& deferred_logger,
-                            const int reportStepIdx,
-                            const int max_number_of_group_switch,
-                            const bool update_group_switching_log)
+template<class Scalar, typename IndexTraits>
+std::pair<int, int>
+BlackoilWellModelGeneric<Scalar, IndexTraits>::
+getGroupFipnumAndPvtreg() const
 {
     // Set up coefficients for RESV <-> surface rate conversion.
     // Use the pvtRegionIdx from the top cell of the first well.
     // TODO fix this!
     // This is only used for converting RESV rates.
-    // What is the proper approach?
+    //
+    // Background (from opm-simulators issue #2921):
+    // The fundamental problem is selecting a single PVT region for a group that may
+    // include multiple wells, each potentially perforated in different PVT regions.
+    // WELSPECS items 11 and 13 define well-level region mappings, but there's no
+    // perfect solution for groups spanning multiple regions. The current approach
+    // uses the first perforation cell of the globally first well (by Well::seqIndex())
+    // for consistency across serial and parallel runs (see PR #2926).
+    // See: https://github.com/OPM/opm-simulators/issues/2921
     const int fipnum = 0;
     int pvtreg = well_perf_data_.empty() || well_perf_data_[0].empty()
         ? pvt_region_idx_[0]
         : pvt_region_idx_[well_perf_data_[0][0].cell_index];
 
-    bool changed = false;
     if ( comm_.size() > 1)
     {
         // Just like in the sequential case the pvtregion is determined
@@ -624,8 +629,20 @@ checkGroupHigherConstraints(const Group& group,
                                   [](const auto& p1, const auto& p2){ return p1.second < p2.second;})
             ->first;
     }
+    return std::make_pair(fipnum, pvtreg);
+}
 
-    std::vector<Scalar> rates(this->numPhases(), 0.0);
+template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
+checkGroupHigherConstraints(const Group& group,
+                            DeferredLogger& deferred_logger,
+                            const int reportStepIdx,
+                            const int max_number_of_group_switch,
+                            const bool update_group_switching_log)
+{
+
+    bool changed = false;
+    auto [fipnum, pvtreg] = this->getGroupFipnumAndPvtreg();
 
     bool isField = group.name() == "FIELD";
     if (!isField && group.isInjectionGroup()) {
@@ -635,15 +652,8 @@ checkGroupHigherConstraints(const Group& group,
 
         // checkGroupConstraintsInj considers 'available' rates (e.g., group rates minus reduction rates).
         // So when checking constraints, current groups rate must also be subtracted it's reduction rate
-        const std::vector<Scalar> reduction_rates = this->groupState().injection_reduction_rates(group.name());
-
-        for (int phasePos = 0; phasePos < this->numPhases(); ++phasePos) {
-            const Scalar local_current_rate = this->groupStateHelper().sumWellSurfaceRates(
-                group, phasePos, /*is_injector=*/true
-            );
-            // Sum over all processes
-            rates[phasePos] = comm_.sum(local_current_rate) - reduction_rates[phasePos];
-        }
+        std::vector<Scalar> rates_available =
+            this->groupStateHelper().getGroupRatesAvailableForHigherLevelControl(group, /*is_injector=*/true);
         const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
         for (Phase phase : all) {
             const auto currentControl = this->groupState().injection_control(group.name(), phase);
@@ -681,7 +691,7 @@ checkGroupHigherConstraints(const Group& group,
                     group.name(),
                     group.parent(),
                     parentGroup,
-                    rates.data(),
+                    rates_available.data(),
                     phase,
                     group.getGroupEfficiencyFactor(),
                     resv_coeff_inj,
@@ -707,10 +717,6 @@ checkGroupHigherConstraints(const Group& group,
     }
 
     if (!isField && group.isProductionGroup()) {
-        // Obtain rates for group.
-        // checkGroupConstraintsProd considers 'available' rates (e.g., group rates minus reduction rates).
-        // So when checking constraints, current groups rate must also be subtracted it's reduction rate
-        const std::vector<Scalar> reduction_rates = this->groupState().production_reduction_rates(group.name());
         const Group::ProductionCMode currentControl = this->groupState().production_control(group.name());
         if (auto groupPos = switched_prod_groups_.find(group.name()); groupPos != switched_prod_groups_.end()) {
             auto& ctrls = groupPos->second;
@@ -731,13 +737,11 @@ checkGroupHigherConstraints(const Group& group,
                 return false;
             }
         }
-        for (int phasePos = 0; phasePos < this->numPhases(); ++phasePos) {
-            const Scalar local_current_rate = this->groupStateHelper().sumWellSurfaceRates(
-                group, phasePos, /*is_injector=*/false
-            );
-            // Sum over all processes
-            rates[phasePos] = -comm_.sum(local_current_rate) - reduction_rates[phasePos];
-        }
+        // Obtain rates for group.
+        // checkGroupConstraintsProd considers 'available' rates (e.g., group rates minus reduction rates).
+        // So when checking constraints, current groups rate must also be subtracted it's reduction rate
+        std::vector<Scalar> rates_available =
+            this->groupStateHelper().getGroupRatesAvailableForHigherLevelControl(group, /*is_injector=*/false);
         std::vector<Scalar> resv_coeff(this->numPhases(), 0.0);
         calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
         // Check higher up only if under individual (not FLD) control.
@@ -747,7 +751,7 @@ checkGroupHigherConstraints(const Group& group,
                 group.name(),
                 group.parent(),
                 parentGroup,
-                rates.data(),
+                rates_available.data(),
                 group.getGroupEfficiencyFactor(),
                 resv_coeff,
                 /*check_guide_rate*/true,

@@ -60,6 +60,10 @@ public:
     /// @param groupStateHelper Reference to the GroupStateHelper for accessing group state and schedule
     RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper);
 
+    /// @brief Get the communication object
+    /// @return Reference to the communication object for MPI communication
+    const Parallel::Communication& comm() const { return this->groupStateHelper_.comm(); }
+
     /// @brief Collect and send group data to the master process
     ///
     /// This method orchestrates the collection of both production and injection data
@@ -101,6 +105,13 @@ private:
     /// @param group_idx Index of the slave group
     /// @return ProductionRates structure containing oil, gas, and water surface rates
     ProductionRates collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const;
+
+    /// @brief Collect reservoir production rates for a specific slave group
+    /// @param group_idx Index of the slave group
+    /// @return ProductionRates structure containing oil, gas, and water reservoir rates
+    /// @note These rates are needed when the master's parent group has RESV control mode,
+    ///       so the conversion uses slave's PVT properties rather than master's
+    ProductionRates collectSlaveGroupReservoirProductionRates_(std::size_t group_idx) const;
 
     /// @brief Collect the voidage rate for a specific slave group
     /// @param group_idx Index of the slave group

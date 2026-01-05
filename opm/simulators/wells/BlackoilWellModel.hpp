@@ -418,6 +418,9 @@ template<class Scalar> class WellContributions;
             /// \brief Receive comprehensive slave group data from slaves
             void receiveSlaveGroupData();
 
+            void receiveGroupTargetsFromMaster(const int reportStepIdx);
+            void sendMasterGroupTargetsToSlaves();
+
             /// \brief Setup RAII guard for reservoir coupling logger
             ///
             /// Creates a scoped logger guard that automatically clears the logger
@@ -428,7 +431,6 @@ template<class Scalar> class WellContributions;
             ///         or std::nullopt if not active
             std::optional<ReservoirCoupling::ScopedLoggerGuard>
                 setupRescoupScopedLogger(DeferredLogger& local_logger);
-
 #endif
 
             bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
@@ -571,11 +573,11 @@ template<class Scalar> class WellContributions;
             void calcResvCoeff(const int fipnum,
                                const int pvtreg,
                                const std::vector<Scalar>& production_rates,
-                               std::vector<Scalar>& resv_coeff) override;
+                               std::vector<Scalar>& resv_coeff) const override;
 
             void calcInjResvCoeff(const int fipnum,
                                   const int pvtreg,
-                                  std::vector<Scalar>& resv_coeff) override;
+                                  std::vector<Scalar>& resv_coeff) const override;
 
             void computeWellTemperature();
 

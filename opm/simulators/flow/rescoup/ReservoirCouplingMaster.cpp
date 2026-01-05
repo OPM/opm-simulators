@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingErrorMacros.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp>
@@ -70,7 +71,7 @@ ReservoirCouplingMaster<Scalar>::
 getMasterGroupNamesForSlave(std::size_t slave_idx) const
 {
     if (slave_idx >= this->slave_idx_to_master_groups_.size()) {
-        OPM_THROW(
+        RCOUP_LOG_THROW(
             std::runtime_error,
             fmt::format(
                 "Slave index {} out of bounds. Valid range is [0, {})",
@@ -93,6 +94,53 @@ getMasterGroupCanonicalIdx(
     //       for a given slave name. This is the order in which the slave will communicate
     //       slave group data for its slave groups.
     return this->master_group_name_order_.at(slave_name).at(master_group_name);
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingMaster<Scalar>::
+getMasterGroupInjectionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const
+{
+    if (res_rates) {
+        return this->report_step_data_->getMasterGroupInjectionReservoirRate(group_name, phase);
+    }
+    else {
+        return this->report_step_data_->getMasterGroupInjectionSurfaceRate(group_name, phase);
+    }
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingMaster<Scalar>::
+getMasterGroupProductionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const
+{
+    if (res_rates) {
+        return this->report_step_data_->getMasterGroupProductionReservoirRate(group_name, phase);
+    }
+    else {
+        return this->report_step_data_->getMasterGroupProductionSurfaceRate(group_name, phase);
+    }
+}
+
+template <class Scalar>
+const ReservoirCoupling::Potentials<Scalar>&
+ReservoirCouplingMaster<Scalar>::
+getSlaveGroupPotentials(const std::string &master_group_name)
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->getSlaveGroupPotentials(master_group_name);
+}
+
+template <class Scalar>
+int
+ReservoirCouplingMaster<Scalar>::
+getSlaveIdx(const std::string &slave_name) const
+{
+    auto it = std::find(this->slave_names_.begin(), this->slave_names_.end(), slave_name);
+    if (it != this->slave_names_.end()) {
+        return std::distance(this->slave_names_.begin(), it);
+    }
+    RCOUP_LOG_THROW(std::runtime_error, "Slave name not found: " + slave_name);
 }
 
 template <class Scalar>
@@ -281,21 +329,43 @@ receiveProductionDataFromSlaves()
 }
 
 template <class Scalar>
-const ReservoirCoupling::Potentials<Scalar>&
-ReservoirCouplingMaster<Scalar>::
-getSlaveGroupPotentials(const std::string &master_group_name)
-{
-    assert(this->report_step_data_);
-    return this->report_step_data_->getSlaveGroupPotentials(master_group_name);
-}
-
-template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
 resizeNextReportDates(int size)
 {
     assert(this->time_stepper_);
     this->time_stepper_->resizeNextReportDates(size);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendInjectionTargetsToSlave(std::size_t slave_idx,
+                            const std::vector<InjectionGroupTarget>& injection_targets) const
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->sendInjectionTargetsToSlave(slave_idx, injection_targets);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendNumGroupTargetsToSlave(std::size_t slave_idx,
+                           std::size_t num_injection_targets,
+                           std::size_t num_production_targets) const
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->sendNumGroupTargetsToSlave(slave_idx, num_injection_targets, num_production_targets);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendProductionTargetsToSlave(std::size_t slave_idx,
+                             const std::vector<ProductionGroupTarget>& production_targets) const
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->sendProductionTargetsToSlave(slave_idx, production_targets);
 }
 
 template <class Scalar>
@@ -341,7 +411,7 @@ getMasterActivationDate_() const
     }
     // NOTE: Consistency between SLAVES and GRUPMAST keywords has already been checked in
     //       init() in SimulatorFullyImplicitBlackoil.hpp
-    OPM_THROW(std::runtime_error, "Reservoir coupling: Failed to find master activation time: "
+    RCOUP_LOG_THROW(std::runtime_error, "Reservoir coupling: Failed to find master activation time: "
               "No SLAVES keyword found in schedule");
 }
 

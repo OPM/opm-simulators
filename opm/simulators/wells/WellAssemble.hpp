@@ -39,6 +39,7 @@ class Schedule;
 class SummaryState;
 template<typename FluidSystem> class WellInterfaceFluidSystem;
 template<typename Scalar, typename IndexTraits> class WellState;
+template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 struct WellInjectionControls;
 struct WellProductionControls;
 
@@ -49,15 +50,13 @@ class WellAssemble {
     static constexpr int Gas = FluidSystem::gasPhaseIdx;
     using Scalar = typename FluidSystem::Scalar;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
 public:
     explicit WellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well);
 
     template<class EvalWell>
-    void assembleControlEqProd(const WellState<Scalar, IndexTraits>& well_state,
-                               const GroupState<Scalar>& group_state,
-                               const Schedule& schedule,
-                               const SummaryState& summaryState,
+    void assembleControlEqProd(const GroupStateHelperType& groupStateHelper,
                                const WellProductionControls& controls,
                                const EvalWell& bhp,
                                const std::vector<EvalWell>& rates, // Always 3 canonical rates.
@@ -72,10 +71,7 @@ public:
                                          DeferredLogger& deferred_logger) const;
     */
     template<class EvalWell>
-    void assembleControlEqInj(const WellState<Scalar, IndexTraits>& well_state,
-                              const GroupState<Scalar>& group_state,
-                              const Schedule& schedule,
-                              const SummaryState& summaryState,
+    void assembleControlEqInj(const GroupStateHelperType& groupStateHelper,
                               const WellInjectionControls& controls,
                               const EvalWell& bhp,
                               const EvalWell& injection_rate,
