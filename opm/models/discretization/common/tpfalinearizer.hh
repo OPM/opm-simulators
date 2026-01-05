@@ -380,6 +380,8 @@ class TpfaLinearizer
 
     using Vector = GlobalEqVector;
 
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
     enum { dimWorld = GridView::dimensionworld };
@@ -392,7 +394,6 @@ class TpfaLinearizer
     using MatrixBlockGPU = gpuistl::MiniMatrix<Scalar, numEq>;
     using VectorBlockGPU = gpuistl::MiniVector<Scalar, numEq>;
     using ADVectorBlockGPU = gpuistl::MiniVector<Evaluation, numEq>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 #endif
 
     static constexpr bool linearizeNonLocalElements =
@@ -803,8 +804,10 @@ private:
             }
         }
 
+#if HAVE_CUDA
         gpuJacobian_.reset(new gpuistl::GpuSparseMatrixWrapper<double>(gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(jacobian_->istlMatrix())));
         gpuBufferDiagMatAddress_.reset(new gpuistl::GpuBuffer<double*>(gpuistl::detail::getDiagPtrs(*gpuJacobian_)));
+#endif
 
         // Create dummy full domain.
         fullDomain_.cells.resize(numCells);
@@ -818,7 +821,9 @@ private:
         // zero all matrix entries
         jacobian_->clear();
 
+#if HAVE_CUDA
         gpuJacobian_->resetMatrix();
+#endif
     }
 
     // Initialize the flows, flores, and velocity sparse tables
