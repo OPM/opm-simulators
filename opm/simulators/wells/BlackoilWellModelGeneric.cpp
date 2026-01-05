@@ -1333,13 +1333,11 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             const auto& group = this->schedule().getGroup(well->wellEcl().groupName(), well->currentStep());
             std::vector<Scalar> resv_coeff(this->numPhases(), 0.0);
             const int fipnum = 0;
-            int pvtreg = well->pvtRegionIdx();
+            const int pvtreg = well->pvtRegionIdx();
             calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
-            // Translate injector type from control to Phase.
-            using GroupTarget = typename SingleWellState<Scalar, IndexTraits>::GroupTarget;
-            std::optional<GroupTarget> group_target;
+            auto& group_target = this->wellState().well(well->indexOfWell()).group_target;
             if (well->isProducer()) {
                 group_target = group_state_helper.getWellGroupTargetProducer(
                     well->name(),
@@ -1382,8 +1380,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     resv_coeff
                 );
             }
-            auto& ws_update = this->wellState().well(well->indexOfWell());
-            ws_update.group_target = group_target;
         }
     }
 }
@@ -1996,7 +1992,7 @@ updateNONEProductionGroups(const GasLiftOpt& glo, DeferredLogger& deferred_logge
     }
 
     // parallel communication to synchronize production groups used on all processes
-    if (comm_.size() > 1 && num_gpc > 0) {
+    if (comm_.size() > 1) {
         comm_.sum(production_control_used.data(), static_cast<int>(num_gpc));
     }
 
