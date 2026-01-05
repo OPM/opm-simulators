@@ -195,10 +195,12 @@ public:
     const Parallel::Communication& comm() const { return this->comm_; }
 
     /// @brief Get the deferred logger
-    /// @throws assertion failure if no logger has been set via setupScopedDeferredLogger()
+    /// @throws std::logic_error if no logger has been set via setupScopedDeferredLogger()
     DeferredLogger& deferredLogger() const
     {
-        assert(this->deferred_logger_ != nullptr);
+        if (this->deferred_logger_ == nullptr) {
+            throw std::logic_error("DeferredLogger not set. Call setupScopedDeferredLogger() first.");
+        }
         return *this->deferred_logger_;
     }
 
