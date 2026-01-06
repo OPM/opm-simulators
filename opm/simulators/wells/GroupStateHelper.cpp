@@ -836,43 +836,41 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
             }
         }
     }
-    // last step: get denominator and numerator of fraction for further investigation
+    // last step: get denominator and numerator of fraction in case cmode is not feasible
     assert(chain[num_ancestors] == name);
     const auto fraction_parts = fcalc.localFractionParts(name, name);
-    const Scalar guide_rate_current = fraction_parts.first;
-    const Scalar guide_rate_multiplier = target / fraction_parts.second;
-    Scalar target_current = std::max(Scalar(0.0), guide_rate_current * guide_rate_multiplier / efficiency_factor);
-    // The well target for current mode is current_guide_rate * guide_rate_multiplier
-    // If current guide rate is ~zero due to group mode switching, the multiplier is 
-    // used to set the target for the original mode (using original mode guide rate)
-    // In this setting well [name] is likely not contributing to the group rate of the
-    // current mode since its guide rate is ~zero. However, all wells will still produce 
-    // in proportion to their original mode guide rates (although approximately due to 
-    // the explicit scaling of guide rates). 
-
-    // Fetch original group control mode (the one entered in the schedule)
-    // TODO: modes FLD and NONE are currently not handled, in this case mode should be
-    // inherited from a higher level group 
+    const Scalar last_fraction = fraction_parts.first / fraction_parts.second;
+    // well target for group's current mode
+    Scalar target_current_mode = std::max(Scalar(0.0), last_fraction * target);
     const auto group_cmode_original = group.productionProperties().cmode;
-    if (group_cmode_current == group_cmode_original || 
-        group_cmode_original == Group::ProductionCMode::NONE ||
-        group_cmode_original == Group::ProductionCMode::FLD) {
-        // If current mode is the same as original mode, just return current = original
-        return GroupTarget::productionGroupTarget(group.name(), group_cmode_current, target_current, 
-                                                  group_cmode_current, target_current);
+    if (group_cmode_current == group_cmode_original) {
+        // Current mode is the same as original mode, just return current = original
+        return GroupTarget::productionGroupTarget(group.name(), group_cmode_current, target_current_mode/efficiency_factor, 
+                                                  group_cmode_current, target_current_mode/efficiency_factor);
     } else {
-        // group has switched control mode, we need to check whether the well can be controlled by this mode
+        // Group has switched control mode, we need to check whether the well can be controlled by current mode
+        // and also compute the target for the original mode that can be used as fallback in case subsequent 
+        // control equations become infeasible.
+        // From denominator and numerator of last fraction we have:
+        //      target_current_mode = guide_rate_current * guide_rate_multiplier
+        // where guide_rate_current = numerator and guide_rate_multiplier = target / denominator
+        // With the same formula we can approximate the corresponding target for the original group mode
+        // (translation is not exact due to explicit scaling of guide rates). Note that in the case when
+        // guide_rate_current is zero, the well does not contribute to the group rate of the current mode 
+        // at all, but the current approach then guarantees that all wells will produce in proportion to
+        // the guide rates of original group mode (up to explicit scaling). 
+        const Scalar guide_rate_multiplier = target / fraction_parts.second;
         const auto guide_model_original = this->getGuideRateTargetFromProductionCMode(group_cmode_original);
         const Scalar guide_rate_original = this->getGuideRate(name, guide_model_original);
-        const Scalar target_original = std::max(Scalar(0.0), guide_rate_original * guide_rate_multiplier / efficiency_factor);
-        // If target_current is very small, compared to target_original, we switch original mode, otherwise we keep
-        // target_original as backup in case well does is not able to produce under current mode
-        if (target_current < 1e-5 * target_original) {
-            target_current = target_original;
+        const Scalar target_original_mode = std::max(Scalar(0.0), guide_rate_original * guide_rate_multiplier);
+        // Somewhat ad-hoc threshold for approximate zero guide rate
+        if (target_current_mode < 1e-7 * orig_target) {
+            // switch to safer cmode
+            target_current_mode = target_original_mode;
             group_cmode_current = group_cmode_original;
         }
-        return GroupTarget::productionGroupTarget(group.name(), group_cmode_current, target_current, 
-                                                  group_cmode_original, target_original);
+        return GroupTarget::productionGroupTarget(group.name(), group_cmode_current, target_current_mode/efficiency_factor, 
+                                                  group_cmode_original, target_original_mode/efficiency_factor);
     }
 }
 

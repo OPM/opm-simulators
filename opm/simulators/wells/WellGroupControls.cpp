@@ -253,13 +253,10 @@ getGroupProductionControl(const Group& group,
     std::vector<Scalar> resv_coeff(well_.phaseUsage().numActivePhases(), 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
-    // gconsale may adjust the grat target.
-    // the adjusted rates is send to the targetCalculator
-
-    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{groupStateHelper, resv_coeff, group};
-    
     const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
     if (target_rate) {
+        // target rate cmode may have been set different from the group cmode to avoid non-feasible control
+        GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{groupStateHelper, resv_coeff, group, target_rate->production_cmode};
         const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
         control_eq = current_rate - target_rate->target_value;
     } else {

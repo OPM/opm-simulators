@@ -39,8 +39,9 @@ template<typename Scalar, typename IndexTraits>
 TargetCalculator<Scalar, IndexTraits>::
 TargetCalculator(const Opm::GroupStateHelper<Scalar, IndexTraits>& groupStateHelper,
                  const std::vector<Scalar>& resv_coeff,
-                 const Group& group)
-    : cmode_{groupStateHelper.groupState().production_control(group.name())}
+                 const Group& group,
+                 const std::optional<Group::ProductionCMode>& cmode)
+    : cmode_{cmode.value_or(groupStateHelper.groupState().production_control(group.name()))}
     , groupStateHelper_{groupStateHelper}
     , resv_coeff_{resv_coeff}
     , group_{group}
