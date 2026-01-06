@@ -201,7 +201,7 @@ updateNewton(const BVectorWell& dwells,
             // value_[seg][WQTotal] = old_primary_variables[seg][WQTotal] - relaxation_factor * dwells[seg][WQTotal];
             auto dx = relaxation_factor * dwells[seg][WQTotal];
             const Scalar sign = dx > 0.? 1. : -1.;
-            dx = sign * std::min(Scalar(1.), std::abs(dx));
+            dx = sign * std::max(std::min(1., std::abs(dx)), 0.4 * std::abs(dx));
             value_[seg][WQTotal] = old_primary_variables[seg][WQTotal] - dx;
 
 
