@@ -117,7 +117,8 @@ BlackoilWellModelGeneric(Schedule& schedule,
                           summaryState,
                           guideRate_,
                           pu,
-                          comm)
+                          comm,
+                          terminal_output_)
     , genNetwork_(network)
 {
 

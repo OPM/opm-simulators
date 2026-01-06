@@ -336,12 +336,12 @@ namespace Opm {
 
         this->updateAverageFormationFactor();
 
-        DeferredLogger local_deferredLogger;
+        auto logger_guard = this->groupStateHelper().pushLogger();
+        auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
 #ifdef RESERVOIR_COUPLING_ENABLED
         auto rescoup_logger_guard = this->setupRescoupScopedLogger(local_deferredLogger);
 #endif
-        auto group_state_helper_logger_guard = this->groupStateHelper().setupScopedDeferredLogger(local_deferredLogger);
 
         this->switched_prod_groups_.clear();
         this->switched_inj_groups_.clear();
@@ -1168,9 +1168,9 @@ namespace Opm {
              const double dt)
     {
         OPM_TIMEFUNCTION();
-        DeferredLogger local_deferredLogger;
+        auto logger_guard = this->groupStateHelper().pushLogger();
+        auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
-        auto group_state_helper_logger_guard = this->groupStateHelper().setupScopedDeferredLogger(local_deferredLogger);
         if constexpr (BlackoilWellModelGasLift<TypeTag>::glift_debug) {
             if (gaslift_.terminalOutput()) {
                 const std::string msg =

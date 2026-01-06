@@ -44,7 +44,8 @@ GroupStateHelper<Scalar, IndexTraits>::GroupStateHelper(WellState<Scalar, IndexT
                                                       const SummaryState& summary_state,
                                                       const GuideRate& guide_rate,
                                                       const PhaseUsageInfo<IndexTraits>& phase_usage_info,
-                                                      const Parallel::Communication& comm)
+                                                      const Parallel::Communication& comm,
+                                                      bool terminal_output)
     : well_state_ {&well_state}
     , group_state_ {&group_state}
     , schedule_ {schedule}
@@ -52,6 +53,7 @@ GroupStateHelper<Scalar, IndexTraits>::GroupStateHelper(WellState<Scalar, IndexT
     , guide_rate_ {guide_rate}
     , phase_usage_info_ {phase_usage_info}
     , comm_ {comm}
+    , terminal_output_ {terminal_output}
 {
 }
 

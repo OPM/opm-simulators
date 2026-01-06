@@ -31,6 +31,7 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/gatherDeferredLogger.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -110,59 +111,66 @@ public:
         GroupState<Scalar>* previous_state_ptr_ {nullptr};
     };
 
-    /// @brief RAII guard for scoped DeferredLogger binding
+    /// @brief RAII guard that owns a DeferredLogger and auto-gathers on destruction
     ///
-    /// @details This class ensures that a DeferredLogger pointer is properly set and cleared
-    /// in the GroupStateHelper. It follows the RAII pattern to prevent dangling pointer issues
-    /// when local DeferredLogger objects go out of scope.
+    /// @details This class provides a complete lifecycle for deferred logging in parallel
+    /// simulations. It owns a DeferredLogger instance and automatically handles:
+    /// - Pushing the logger onto the stack (saving the previous logger)
+    /// - On destruction: gathering messages across MPI ranks, logging on rank 0
+    ///   (if terminal_output enabled), and restoring the previous logger
     ///
-    /// Supports move semantics to allow returning from factory functions and use with std::optional.
-    ///
-    /// Lifecycle guarantees:
-    /// - Constructor: Sets the DeferredLogger pointer
-    /// - Destructor: Clears the pointer (only if not moved-from)
-    /// - Move: Transfers ownership; moved-from object becomes inactive
-    class ScopedDeferredLoggerGuard
+    /// Usage:
+    ///   auto guard = groupStateHelper.pushLogger();
+    ///   // Use groupStateHelper.deferredLogger() to log messages
+    ///   // On scope exit: gather, log (if terminal), restore previous logger
+    class ScopedLoggerGuard
     {
     public:
-        ScopedDeferredLoggerGuard(const GroupStateHelper& group_state_helper, DeferredLogger& deferred_logger)
-            : group_state_helper_(&group_state_helper)
+        ScopedLoggerGuard(const GroupStateHelper& helper)
+            : helper_(&helper)
+            , previous_(helper.deferred_logger_)
         {
-            group_state_helper_->deferred_logger_ = &deferred_logger;
+            helper_->deferred_logger_ = &logger_;
         }
 
-        ~ScopedDeferredLoggerGuard()
+        ~ScopedLoggerGuard()
         {
-            if (group_state_helper_) {
-                group_state_helper_->deferred_logger_ = nullptr;
-            }
-        }
+            if (helper_) {
+                // 1. Gather messages across MPI ranks
+                DeferredLogger global = gatherDeferredLogger(logger_, helper_->comm());
 
-        // Delete copy operations
-        ScopedDeferredLoggerGuard(const ScopedDeferredLoggerGuard&) = delete;
-        ScopedDeferredLoggerGuard& operator=(const ScopedDeferredLoggerGuard&) = delete;
-
-        // Enable move operations for std::optional and factory function returns
-        ScopedDeferredLoggerGuard(ScopedDeferredLoggerGuard&& other) noexcept
-            : group_state_helper_(other.group_state_helper_)
-        {
-            other.group_state_helper_ = nullptr;
-        }
-
-        ScopedDeferredLoggerGuard& operator=(ScopedDeferredLoggerGuard&& other) noexcept
-        {
-            if (this != &other) {
-                if (group_state_helper_) {
-                    group_state_helper_->deferred_logger_ = nullptr;
+                // 2. Log on rank 0 (if terminal_output enabled)
+                if (helper_->terminalOutput()) {
+                    global.logMessages();
                 }
-                group_state_helper_ = other.group_state_helper_;
-                other.group_state_helper_ = nullptr;
+
+                // 3. Restore previous logger
+                helper_->deferred_logger_ = previous_;
             }
-            return *this;
+        }
+
+        // Delete copy operations and move assignment
+        ScopedLoggerGuard(const ScopedLoggerGuard&) = delete;
+        ScopedLoggerGuard& operator=(const ScopedLoggerGuard&) = delete;
+        ScopedLoggerGuard& operator=(ScopedLoggerGuard&&) = delete;
+
+        // Enable move constructor for factory function returns
+        ScopedLoggerGuard(ScopedLoggerGuard&& other) noexcept
+            : helper_(other.helper_)
+            , logger_(std::move(other.logger_))
+            , previous_(other.previous_)
+        {
+            // Update the helper's pointer to our moved logger
+            if (helper_) {
+                helper_->deferred_logger_ = &logger_;
+            }
+            other.helper_ = nullptr;
         }
 
     private:
-        const GroupStateHelper* group_state_helper_{nullptr};
+        const GroupStateHelper* helper_{nullptr};
+        DeferredLogger logger_;            // Owned logger
+        DeferredLogger* previous_{nullptr}; // For restore
     };
 
     GroupStateHelper(WellState<Scalar, IndexTraits>& well_state,
@@ -171,7 +179,8 @@ public:
                     const SummaryState& summary_state,
                     const GuideRate& guide_rate,
                     const PhaseUsageInfo<IndexTraits>& phase_usage_info,
-                    const Parallel::Communication& comm);
+                    const Parallel::Communication& comm,
+                    bool terminal_output);
 
     void accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor) const;
 
@@ -195,11 +204,11 @@ public:
     const Parallel::Communication& comm() const { return this->comm_; }
 
     /// @brief Get the deferred logger
-    /// @throws std::logic_error if no logger has been set via setupScopedDeferredLogger()
+    /// @throws std::logic_error if no logger has been set via pushLogger()
     DeferredLogger& deferredLogger() const
     {
         if (this->deferred_logger_ == nullptr) {
-            throw std::logic_error("DeferredLogger not set. Call setupScopedDeferredLogger() first.");
+            throw std::logic_error("DeferredLogger not set. Call pushLogger() first.");
         }
         return *this->deferred_logger_;
     }
@@ -278,6 +287,20 @@ public:
         return GroupStateGuard(*this, group_state);
     }
 
+    /// @brief Push a new logger onto the stack with auto-gather on destruction
+    ///
+    /// @details Creates a new DeferredLogger and pushes it onto the logger stack.
+    /// When the returned guard goes out of scope:
+    /// 1. Messages are gathered across MPI ranks via gatherDeferredLogger()
+    /// 2. Messages are logged on rank 0 (if terminal_output is enabled)
+    /// 3. The previous logger is restored
+    ///
+    /// @return RAII guard that owns the logger and handles cleanup
+    ScopedLoggerGuard pushLogger() const
+    {
+        return ScopedLoggerGuard(*this);
+    }
+
     WellStateGuard pushWellState(WellState<Scalar, IndexTraits>& well_state)
     {
         return WellStateGuard(*this, well_state);
@@ -339,14 +362,6 @@ public:
         report_step_ = report_step;
     }
 
-    /// @brief Create a scoped guard that binds a DeferredLogger to this helper
-    /// @param deferred_logger The logger to bind (must outlive the returned guard)
-    /// @return RAII guard that clears the logger on destruction
-    ScopedDeferredLoggerGuard setupScopedDeferredLogger(DeferredLogger& deferred_logger) const
-    {
-        return ScopedDeferredLoggerGuard(*this, deferred_logger);
-    }
-
     const SummaryState& summaryState() const
     {
         return this->summary_state_;
@@ -363,6 +378,11 @@ public:
                              const int phase_pos,
                              const bool injector,
                              const bool network = false) const;
+
+    bool terminalOutput() const
+    {
+         return this->terminal_output_;
+    }
 
     template <class RegionalValues>
     void updateGpMaintTargetForGroups(const Group& group,
@@ -483,6 +503,7 @@ private:
     // to store a reference to it here.
     const PhaseUsageInfo<IndexTraits>& phase_usage_info_;
     const Parallel::Communication& comm_;
+    bool terminal_output_ {false};
     int report_step_ {0};
     ReservoirCoupling::Proxy<Scalar> rescoup_{};
 };
