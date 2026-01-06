@@ -53,6 +53,9 @@ void registerFlowProblemParameters()
     Parameters::Register<Parameters::EnableDriftCompensation>
         ("Enable partial compensation of systematic mass losses via "
          "the source term of the next time step");
+    Parameters::Register<Parameters::EnableDriftCompensationTemp>
+        ("Enable compensation of systematic mass losses "
+         "in the energy equation (only TEMP option)");
     Parameters::Register<Parameters::OutputMode>
         ("Specify which messages are going to be printed. "
          "Valid values are: none, log, all (default)");

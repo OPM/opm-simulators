@@ -36,6 +36,7 @@
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/GenericTemperatureModel.hpp>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
+#include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -217,13 +218,20 @@ protected:
     {
         const int max_iter = 20;
         const int min_iter = 1;
+        bool is_converged = false;
         // solve using Newton
         for (int iter = 0; iter < max_iter; ++iter) {
             assembleEquations();
             if (iter >= min_iter && converged(iter)) {
+                is_converged = true;
                 break;
             }
             solveAndUpdate();
+        }
+        if (!is_converged) {
+            const auto msg = fmt::format("Temperature model (TEMP): Newton did not converge after {} iterations. \n"
+                                         "The Simulator will continue to the next step with an unconverged solution.",max_iter);
+            OpmLog::debug(msg);
         }
     }
 
@@ -248,24 +256,51 @@ protected:
 
     bool converged(const int iter)
     {
-        const unsigned int numCells = simulator_.model().numTotalDof();
+        Scalar dt = simulator_.timeStepSize();
         Scalar maxNorm = 0.0;
         Scalar sumNorm = 0.0;
+        const auto tolerance_cnv_energy_strict = Parameters::Get<Parameters::ToleranceCnvEnergy<Scalar>>();
         const auto& elemMapper = simulator_.model().elementMapper();
+        const IsNumericalAquiferCell isNumericalAquiferCell(simulator_.gridView().grid());
+        Scalar sum_pv = 0.0;
+        Scalar sum_pv_not_converged = 0.0;
         for (const auto& elem : elements(simulator_.gridView(), Dune::Partitions::interior)) {
             unsigned globI = elemMapper.index(elem);
-            maxNorm = max(maxNorm, std::abs(this->energyVector_[globI]));
-            sumNorm += std::abs(this->energyVector_[globI]);
+            const auto pvValue =  simulator_.problem().referencePorosity(globI, /*timeIdx=*/0)
+            *  simulator_.model().dofTotalVolume(globI);
+
+            const Scalar scaled_norm = dt * std::abs(this->energyVector_[globI])/ pvValue;
+            maxNorm = max(maxNorm, scaled_norm);
+            sumNorm += scaled_norm;
+            if (!isNumericalAquiferCell(elem)) {
+                if (scaled_norm > tolerance_cnv_energy_strict) {
+                    sum_pv_not_converged += pvValue;
+                }
+                sum_pv += pvValue;
+            }
         }
         maxNorm = simulator_.gridView().comm().max(maxNorm);
         sumNorm = simulator_.gridView().comm().sum(sumNorm);
-        const int globalNumCells = simulator_.gridView().comm().sum(numCells);
-        sumNorm /= globalNumCells;
-        const auto tolerance_cnv_energy = Parameters::Get<Parameters::ToleranceCnvEnergy<Scalar>>();
-        const auto tolerance_energy_balance = Parameters::Get<Parameters::ToleranceEnergyBalance<Scalar>>();
-        if (maxNorm < tolerance_cnv_energy || sumNorm < tolerance_energy_balance) {
-            const auto msg = fmt::format("Temperature model (TEMP): Newton converged after {} iterations", iter);
-            OpmLog::debug(msg);
+        sum_pv = simulator_.gridView().comm().sum(sum_pv);
+        sumNorm /= sum_pv;
+
+        // Use relaxed tolerance if the fraction of unconverged cells porevolume is less than relaxed_max_pv_fraction
+        sum_pv_not_converged = simulator_.gridView().comm().sum(sum_pv_not_converged);
+        Scalar relaxed_max_pv_fraction = Parameters::Get<Parameters::RelaxedMaxPvFraction<Scalar>>();
+        const bool relax = (sum_pv_not_converged / sum_pv) <  relaxed_max_pv_fraction;
+        const auto tolerance_energy_balance = relax? Parameters::Get<Parameters::ToleranceEnergyBalanceRelaxed<Scalar>>():
+                                            Parameters::Get<Parameters::ToleranceEnergyBalance<Scalar>>();
+        const bool tolerance_cnv_energy = relax? Parameters::Get<Parameters::ToleranceCnvEnergyRelaxed<Scalar>>():
+                                            tolerance_cnv_energy_strict;
+
+        const auto msg = fmt::format("Temperature model (TEMP): Newton iter {}: "
+                                     "CNV(E): {:.1e}, EB: {:.1e}",
+                                     iter, maxNorm, sumNorm);
+        OpmLog::debug(msg);
+        if (maxNorm < tolerance_cnv_energy && sumNorm < tolerance_energy_balance) {
+            const auto msg2 = fmt::format("Temperature model (TEMP): Newton converged after {} iterations"
+                                         , iter);
+            OpmLog::debug(msg2);
             return true;
         }
         return false;
@@ -406,6 +441,22 @@ protected:
         const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
         for (const auto& wellPtr : wellPtrs) {
             this->assembleEquationWell(*wellPtr);
+        }
+
+        const auto& problem = simulator_.problem();
+
+        bool enableDriftCompensation = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
+        if (enableDriftCompensation) {
+            for (unsigned globalDofIdx = 0; globalDofIdx < numCells; ++globalDofIdx) {
+                auto dofDriftRate = problem.drift()[globalDofIdx]/dt;
+                const auto& fs = intQuants_[globalDofIdx].fluidState();
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                   const unsigned activeCompIdx =
+                        FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                   auto drift_hrate = dofDriftRate[activeCompIdx]*getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) /  getValue(fs.invB(phaseIdx));
+                   this->energyVector_[globalDofIdx] -= drift_hrate*getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+                }
+            }
         }
 
         if (simulator_.gridView().comm().size() > 1) {

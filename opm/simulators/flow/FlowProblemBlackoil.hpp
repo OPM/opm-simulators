@@ -410,7 +410,7 @@ public:
         // compute and set eq weights based on initial b values
         this->computeAndSetEqWeights_();
 
-        if (this->enableDriftCompensation_) {
+        if (this->enableDriftCompensation_ || this->enableDriftCompensationTemp_) {
             this->drift_.resize(this->model().numGridDof());
             this->drift_ = 0.0;
         }
