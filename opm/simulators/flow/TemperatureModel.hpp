@@ -408,6 +408,22 @@ protected:
             this->assembleEquationWell(*wellPtr);
         }
 
+        const auto& problem = simulator_.problem();
+
+        bool enableDriftCompensation = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
+        if (enableDriftCompensation) {
+            for (unsigned globalDofIdx = 0; globalDofIdx < numCells; ++globalDofIdx) {
+                auto dofDriftRate = problem.drift()[globalDofIdx]/dt;
+                const auto& fs = intQuants_[globalDofIdx].fluidState();
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                   const unsigned activeCompIdx =
+                        FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                   auto drift_hrate = dofDriftRate[activeCompIdx]*getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) /  getValue(fs.invB(phaseIdx));
+                   this->energyVector_[globalDofIdx] -= drift_hrate*getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+                }
+            }
+        }
+
         if (simulator_.gridView().comm().size() > 1) {
             // Set dirichlet conditions for overlapping cells
             // loop over precalculated overlap rows and columns
