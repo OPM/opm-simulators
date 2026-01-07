@@ -20,8 +20,11 @@
 #define OPM_SYSTEMPRECONDITIONERFACTORY_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/system/MultiComm.hpp>
+#include <opm/simulators/linalg/system/SystemPreconditioner.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/system/SystemTypes.hpp>
+
+#include <opm/common/ErrorMacros.hpp>
 
 #include <dune/istl/operators.hh>
 #include <dune/istl/paamg/pinfo.hh>
@@ -43,48 +46,225 @@ using SystemParOp = Dune::OverlappingSchwarzOperator<SystemMatrix<Scalar>, Syste
                                                       SystemVector<Scalar>, SystemComm>;
 #endif
 
+// Full specialisations of StandardPreconditioners for the coupled system
+// operators.  Partial specialisations would be ambiguous with the generic
+// serial factory (!is_gpu_operator_v guard), so full specialisations are
+// used; detail:: helpers factor out the shared logic.
 
-template <>
-struct StandardPreconditioners<SystemSeqOp<double>, Dune::Amg::SequentialInformation, void>
-{
-    static void add();
-};
+namespace detail {
 
-#if FLOW_INSTANTIATE_FLOAT
-template <>
-struct StandardPreconditioners<SystemSeqOp<float>, Dune::Amg::SequentialInformation, void>
+template<typename Scalar>
+void addSystemCprSeq()
 {
-    static void add();
-};
+    using O = SystemSeqOp<Scalar>;
+    using F = PreconditionerFactory<O, Dune::Amg::SequentialInformation>;
+    using V = SystemVector<Scalar>;
+    using P = PropertyTree;
+
+    F::addCreator("system_cpr",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex) {
+                      std::function<ResVector<Scalar>()> resWeightCalc;
+                      if (sysWeightCalc) {
+                          resWeightCalc = [sysWeightCalc]() {
+                              return sysWeightCalc()[Dune::Indices::_0];
+                          };
+                      }
+                      return std::make_shared<SystemPreconditioner<Scalar, SeqResOperator<Scalar>>>(
+                          op.getmat(), resWeightCalc, pressureIndex, prm);
+                  });
+}
+
+// CPRW variant (WithWellCoupling=true): the internal reservoir solver runs on a
+// WellModelMatrixAdapter so it can use the "cprw" preconditioner type.
+template<typename Scalar>
+void addSystemCprwSeq()
+{
+    using O = SystemSeqOp<Scalar>;
+    using F = PreconditionerFactory<O, Dune::Amg::SequentialInformation>;
+    using V = SystemVector<Scalar>;
+    using P = PropertyTree;
+
+    F::addCreator("system_cprw",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex) {
+                      std::function<ResVector<Scalar>()> resWeightCalc;
+                      if (sysWeightCalc) {
+                          resWeightCalc = [sysWeightCalc]() {
+                              return sysWeightCalc()[Dune::Indices::_0];
+                          };
+                      }
+                      return std::make_shared<
+                          SystemPreconditioner<Scalar, SeqResOperator<Scalar>,
+                                               Dune::Amg::SequentialInformation, true>>(
+                          op.getmat(), resWeightCalc, pressureIndex, prm);
+                  });
+}
+
+#if HAVE_MPI
+// Register a sequential (non-MPI) version of the system_cpr preconditioner
+// for the parallel operator.  This allows each MPI rank to apply a local,
+// communication-free CPR preconditioner inside the overlapping Schwarz
+// framework.  It is a lightweight alternative to the fully parallel
+// preconditioner registered by addSystemCprPar().
+template<typename Scalar>
+void addSystemCprParSeq()
+{
+    using O = SystemParOp<Scalar>;
+    using F = PreconditionerFactory<O, Dune::Amg::SequentialInformation>;
+    using V = SystemVector<Scalar>;
+    using P = PropertyTree;
+
+    F::addCreator("system_cpr",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex) {
+                      std::function<ResVector<Scalar>()> resWeightCalc;
+                      if (sysWeightCalc) {
+                          resWeightCalc = [sysWeightCalc]() {
+                              return sysWeightCalc()[Dune::Indices::_0];
+                          };
+                      }
+                      return std::make_shared<SystemPreconditioner<Scalar, SeqResOperator<Scalar>>>(
+                          op.getmat(), resWeightCalc, pressureIndex, prm);
+                  });
+}
+
+// Sequential (communication-free) CPRW for the parallel operator: each MPI rank
+// applies a local CPRW preconditioner inside the overlapping Schwarz framework.
+// Mirrors addSystemCprParSeq(), with WithWellCoupling=true.
+template<typename Scalar>
+void addSystemCprwParSeq()
+{
+    using O = SystemParOp<Scalar>;
+    using F = PreconditionerFactory<O, Dune::Amg::SequentialInformation>;
+    using V = SystemVector<Scalar>;
+    using P = PropertyTree;
+
+    F::addCreator("system_cprw",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex) {
+                      std::function<ResVector<Scalar>()> resWeightCalc;
+                      if (sysWeightCalc) {
+                          resWeightCalc = [sysWeightCalc]() {
+                              return sysWeightCalc()[Dune::Indices::_0];
+                          };
+                      }
+                      return std::make_shared<
+                          SystemPreconditioner<Scalar, SeqResOperator<Scalar>,
+                                               Dune::Amg::SequentialInformation, true>>(
+                          op.getmat(), resWeightCalc, pressureIndex, prm);
+                  });
+}
+
+template<typename Scalar>
+void addSystemCprPar()
+{
+    using O = SystemParOp<Scalar>;
+    using F = PreconditionerFactory<O, SystemComm>;
+    using V = SystemVector<Scalar>;
+    using P = PropertyTree;
+
+    F::addCreator("system_cpr",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex,
+                     const SystemComm& comm) {
+                      std::function<ResVector<Scalar>()> resWeightCalc;
+                      if (sysWeightCalc) {
+                          resWeightCalc = [sysWeightCalc]() {
+                              return sysWeightCalc()[Dune::Indices::_0];
+                          };
+                      }
+                      const auto& resComm = comm[Dune::Indices::_0];
+                      return std::make_shared<SystemPreconditioner<Scalar, ParResOperator<Scalar>, ParResComm>>(
+                          op.getmat(), resWeightCalc, pressureIndex, prm, resComm);
+                  });
+}
+
+// Fully parallel CPRW: the internal reservoir solver runs on a
+// WellModelGhostLastMatrixAdapter so it can use the parallel "cprw"
+// preconditioner type.  Mirrors addSystemCprPar(), with WithWellCoupling=true.
+template<typename Scalar>
+void addSystemCprwPar()
+{
+    using O = SystemParOp<Scalar>;
+    using F = PreconditionerFactory<O, SystemComm>;
+    using V = SystemVector<Scalar>;
+    using P = PropertyTree;
+
+    F::addCreator("system_cprw",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex,
+                     const SystemComm& comm) {
+                      std::function<ResVector<Scalar>()> resWeightCalc;
+                      if (sysWeightCalc) {
+                          resWeightCalc = [sysWeightCalc]() {
+                              return sysWeightCalc()[Dune::Indices::_0];
+                          };
+                      }
+                      const auto& resComm = comm[Dune::Indices::_0];
+                      return std::make_shared<
+                          SystemPreconditioner<Scalar, ParResOperator<Scalar>, ParResComm, true>>(
+                          op.getmat(), resWeightCalc, pressureIndex, prm, resComm);
+                  });
+}
 #endif
+
+} // namespace detail
+
+template <>
+struct StandardPreconditioners<SystemSeqOp<double>, Dune::Amg::SequentialInformation, void> {
+    static void add() {
+        detail::addSystemCprSeq<double>();
+        detail::addSystemCprwSeq<double>();
+    }
+};
+
+template <>
+struct StandardPreconditioners<SystemSeqOp<float>, Dune::Amg::SequentialInformation, void> {
+    static void add() {
+        detail::addSystemCprSeq<float>();
+        detail::addSystemCprwSeq<float>();
+    }
+};
 
 #if HAVE_MPI
 template <>
-struct StandardPreconditioners<SystemParOp<double>, Dune::Amg::SequentialInformation, void>
-{
-    static void add();
+struct StandardPreconditioners<SystemParOp<double>, Dune::Amg::SequentialInformation, void> {
+    static void add() {
+        detail::addSystemCprParSeq<double>();
+        detail::addSystemCprwParSeq<double>();
+    }
 };
 
 template <>
-struct StandardPreconditioners<SystemParOp<double>, SystemComm, void>
-{
-    static void add();
-};
-
-#if FLOW_INSTANTIATE_FLOAT
-template <>
-struct StandardPreconditioners<SystemParOp<float>, Dune::Amg::SequentialInformation, void>
-{
-    static void add();
+struct StandardPreconditioners<SystemParOp<float>, Dune::Amg::SequentialInformation, void> {
+    static void add() {
+        detail::addSystemCprParSeq<float>();
+        detail::addSystemCprwParSeq<float>();
+    }
 };
 
 template <>
-struct StandardPreconditioners<SystemParOp<float>, SystemComm, void>
-{
-    static void add();
+struct StandardPreconditioners<SystemParOp<double>, SystemComm, void> {
+    static void add() {
+        detail::addSystemCprPar<double>();
+        detail::addSystemCprwPar<double>();
+    }
 };
 
-#endif
+template <>
+struct StandardPreconditioners<SystemParOp<float>, SystemComm, void> {
+    static void add() {
+        detail::addSystemCprPar<float>();
+        detail::addSystemCprwPar<float>();
+    }
+};
 #endif
 
 } // namespace Opm
