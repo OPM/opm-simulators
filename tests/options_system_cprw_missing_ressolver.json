@@ -1,0 +1,26 @@
+{
+    "maxiter": "20",
+    "tol": "0.005",
+    "verbosity": "0",
+    "solver": "bicgstab",
+    "preconditioner": {
+        "type": "system_cprw",
+        "reservoir_smoother": {
+            "maxiter": "1",
+            "tol": "0.005",
+            "verbosity": "0",
+            "solver": "preconditioner2inverseoperator",
+            "preconditioner": {
+                "type": "paroverilu0",
+                "relaxation": "1"
+            }
+        },
+        "well_solver": {
+            "maxiter": "1",
+            "tol": "0.005",
+            "verbosity": "0",
+            "solver": "umfpack"
+        }
+    }
+}
+

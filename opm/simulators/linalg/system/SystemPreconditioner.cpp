@@ -32,6 +32,7 @@
 #if HAVE_MPI
 #define INSTANTIATE_SYSTEM_PF_PAR(T)                                                                  \
     template class Opm::SystemPreconditioner<T, Opm::ParResOperator<T>, Opm::ParResComm>;            \
+    template class Opm::SystemPreconditioner<T, Opm::ParResOperator<T>, Opm::ParResComm, true>;      \
     template class Dune::FlexibleSolver<Opm::SystemParOp<T>>;                                        \
     template Dune::FlexibleSolver<Opm::SystemParOp<T>>::FlexibleSolver(                               \
         Opm::SystemParOp<T>& op,                                                                     \

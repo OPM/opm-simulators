@@ -685,6 +685,10 @@ list (APPEND TEST_DATA_FILES
   tests/options_system_cpr_missing_smoother.json
   tests/options_system_cpr_missing_well.json
   tests/options_system_cpr_res_precond_not_cpr.json
+  tests/options_system_cprw_missing_well.json
+  tests/options_system_cprw_missing_ressolver.json
+  tests/options_system_cprw_missing_smoother.json
+  tests/options_system_cprw_res_precond_not_cprw.json
   tests/GCONSUMP.DATA
   tests/GCONSUMP_COMPLEX.DATA
   tests/GROUP_HIGHER_CONSTRAINTS.DATA
@@ -1117,6 +1121,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/ISTLSolverRuntimeOptionProxy.hpp
   opm/simulators/linalg/Preconditioner2InverseOperator.hpp
   opm/simulators/linalg/system/MultiComm.hpp
+  opm/simulators/linalg/system/SystemMatrixWellOperator.hpp
   opm/simulators/linalg/system/SystemPreconditioner.hpp
   opm/simulators/linalg/system/SystemPreconditionerFactory.hpp
   opm/simulators/linalg/system/SystemTypes.hpp
