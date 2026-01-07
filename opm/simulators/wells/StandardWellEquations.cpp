@@ -33,6 +33,7 @@
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <algorithm>
@@ -327,10 +328,17 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             nperf += 1;
         }
     }
+
+    // average the cell_weights across the ranks
+    const auto& comm = well.parallelWellInfo().communication();
+    if (comm.size()>1) {
+        nperf = comm.sum(nperf);
+        cell_weights = comm.sum(cell_weights);
+    }
     if (nperf != 0)
         cell_weights /= nperf;
     else {
-        // duneC_.size==0, which can happen e.g. if a well has no active perforations on this rank.
+        // duneC_.size==0, which can happen if a well has no active perforations on any rank.
         // Add positive weight to diagonal to regularize Jacobian (other row entries are 0).
         // Row's variable has no observable effect, since there are no perforations.
         cell_weights = 1.;
@@ -409,6 +417,65 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
 }
 
 template<typename Scalar, typename IndexTraits, int numEq>
+template<class PressureMatrix>
+void StandardWellEquations<Scalar, IndexTraits, numEq>::
+addOverlapConnectionsToPressureMatrix(PressureMatrix& jacobian,
+                                      const int number_cells,
+                                      const WellInterfaceGeneric<Scalar, IndexTraits>& well) const
+{
+#if HAVE_MPI
+    const auto& comm = well.parallelWellInfo().communication();
+    if (comm.size() == 1)
+        return;
+
+    // ownedOverlapConnections and missingOverlapConnections determine the communication pattern
+    // for passing the overlap values (send and receive respectively).
+    const auto& ownedOverlapConnections = well.getOwnedOverlap();
+    const auto& missingOverlapConnections = well.getMissingOverlap();
+    const int commSM1 = comm.size() - 1;
+    const int welldof_ind = number_cells + well.indexOfWell();
+
+    // asynchronously send overlap connection values
+    std::vector<MPI_Request> request(commSM1);
+    std::vector<std::vector<Scalar>> sendJacobianValues(commSM1);
+    for (int i = 0; i < commSM1; ++i) {
+        int rankI = i + static_cast<int>(i >= comm.rank());
+        int jacSize = ownedOverlapConnections[rankI].size();
+        sendJacobianValues[i].reserve(jacSize);
+        for (const auto& col : ownedOverlapConnections[rankI]) {
+            sendJacobianValues[i].push_back(jacobian[welldof_ind][col]);
+        }
+        static_assert(std::is_same<Scalar, double>::value);
+        int tag = 23 + comm.size() * comm.rank() + rankI; // random tag
+        // this might communicate vectors of size 0
+        MPI_Isend(sendJacobianValues[i].data(), jacSize, MPI_DOUBLE, rankI, tag, comm, &request[i]);
+    }
+
+    // synchronously receive overlap connection values
+    std::vector<std::vector<Scalar>> recvJacobianValues(commSM1);
+    for (int i = 0; i < commSM1; ++i) {
+        int rankI = i + static_cast<int>(i >= comm.rank());
+        int jacSize = missingOverlapConnections[rankI].size();
+        recvJacobianValues[i].resize(jacSize);
+        static_assert(std::is_same<Scalar, double>::value);
+        int tag = 23 + comm.size() * rankI + comm.rank(); // matching random tag
+        MPI_Recv(recvJacobianValues[i].data(), jacSize, MPI_DOUBLE, rankI, tag, comm, MPI_STATUS_IGNORE);
+    }
+
+    MPI_Waitall(request.size(), request.data(), MPI_STATUS_IGNORE);
+
+    // fill overlap connections of the well in the jacobian
+    for (int i = 0; i < commSM1; ++i) {
+        int rankI = i + static_cast<int>(i >= comm.rank());
+        for (std::size_t j = 0; j < recvJacobianValues[i].size(); ++j) {
+            assert(jacobian[welldof_ind][missingOverlapConnections[rankI][j]] == 0);
+            jacobian[welldof_ind][missingOverlapConnections[rankI][j]] = recvJacobianValues[i][j];
+        }
+    }
+#endif // HAVE_MPI
+}
+
+template<typename Scalar, typename IndexTraits, int numEq>
 void StandardWellEquations<Scalar, IndexTraits, numEq>::
 sumDistributed(Parallel::Communication comm)
 {
@@ -427,7 +494,11 @@ sumDistributed(Parallel::Communication comm)
                                  const bool,                                          \
                                  const WellInterfaceGeneric<T,BlackOilDefaultFluidSystemIndices>&,                      \
                                  const int,                                           \
-                                 const WellState<T,BlackOilDefaultFluidSystemIndices>&) const;
+                                 const WellState<T,BlackOilDefaultFluidSystemIndices>&) const;                          \
+    template void StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>::                                        \
+        addOverlapConnectionsToPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,  \
+                                 const int,                                           \
+                                 const WellInterfaceGeneric<T,BlackOilDefaultFluidSystemIndices>&) const;
 
 #define INSTANTIATE_TYPE(T) \
     INSTANTIATE(T,1)        \
