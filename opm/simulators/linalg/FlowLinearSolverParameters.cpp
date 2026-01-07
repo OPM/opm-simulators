@@ -87,6 +87,7 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
             linsolver_ = "cpr_trueimpes";
         }
     }
+
 }
 
 void FlowLinearSolverParameters::registerParameters()
@@ -133,7 +134,7 @@ void FlowLinearSolverParameters::registerParameters()
     Parameters::Register<Parameters::ScaleLinearSystem>
         ("Scale linear system according to equation scale and primary variable types");
     Parameters::Register<Parameters::LinearSolver>
-        ("Configuration of solver. Valid options are: cprw (default), "
+        ("Configuration of solver. Valid options are: cprw (default), system_cpr (CPU-only), "
          "ilu0, dilu, cpr (an alias for cprw), cpr_quasiimpes, "
          "cpr_trueimpes, cpr_trueimpesanalytic, amg or hybrid (experimental). "
          "Alternatively, you can request a configuration to be read from a "

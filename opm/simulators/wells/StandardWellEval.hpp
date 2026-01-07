@@ -26,6 +26,8 @@
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 
+#include <opm/grid/utility/SparseTable.hpp>
+
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <vector>
@@ -44,8 +46,10 @@ template<typename FluidSystem, typename Indices> class WellState;
 template<class FluidSystem, class Indices>
 class StandardWellEval
 {
-protected:
+public:
     using Scalar = typename FluidSystem::Scalar;
+
+protected:
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices>;
     using StdWellConnections = StandardWellConnections<FluidSystem,Indices>;
@@ -58,7 +62,6 @@ protected:
     static constexpr int WFrac = PrimaryVariables::WFrac;
     static constexpr int GFrac = PrimaryVariables::GFrac;
     static constexpr int SFrac = PrimaryVariables::SFrac;
-
 public:
     using EvalWell = typename PrimaryVariables::EvalWell;
     using Eval = DenseAd::Evaluation<Scalar, Indices::numDerivatives>;
@@ -68,6 +71,17 @@ public:
     const StandardWellEquations<Scalar, IndexTraits, Indices::numEq>& linSys() const
     { return linSys_; }
 
+    static constexpr int numResDofs = Indices::numEq;
+    static constexpr int numWellDofs = numResDofs + 1;// NB will fail for for thermal for now
+    using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+    using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+    using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
+    using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+
+    void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                std::vector<CMatrix>& c_matrices,
+                std::vector<DMatrix>& d_matrices,
+                Opm::SparseTable<int>& wcells) const;
 protected:
     explicit StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif);
 
