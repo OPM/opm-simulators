@@ -126,7 +126,7 @@ public:
     class ScopedLoggerGuard
     {
     public:
-        ScopedLoggerGuard(const GroupStateHelper& helper)
+        explicit ScopedLoggerGuard(const GroupStateHelper& helper)
             : helper_(&helper)
             , previous_(helper.deferred_logger_)
         {
