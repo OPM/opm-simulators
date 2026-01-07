@@ -165,6 +165,7 @@ public:
                 helper_->deferred_logger_ = &logger_;
             }
             other.helper_ = nullptr;
+            other.previous_ = nullptr;
         }
 
     private:
