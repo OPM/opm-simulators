@@ -46,10 +46,18 @@ template<typename FluidSystem, typename Indices>
 class MultisegmentWellEval : public MultisegmentWellGeneric<typename FluidSystem::Scalar,
                                                             typename FluidSystem::IndexTraitsType>
 {
-protected:
+public:
     using Scalar = typename FluidSystem::Scalar;
-    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    static constexpr int numResDofs = Indices::numEq;
     using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
+    static constexpr int numWellDofs = PrimaryVariables::numWellEq;//numResDofs + 1;//NB will fail for for thermal for now
+    using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+    using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+    using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;    
+protected:
+    //using Scalar = typename FluidSystem::Scalar;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    //using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
     static constexpr int numWellEq = PrimaryVariables::numWellEq;
     static constexpr int SPres = PrimaryVariables::SPres;
     static constexpr int WQTotal = PrimaryVariables::WQTotal;
@@ -70,7 +78,11 @@ public:
     //! \brief Returns a const reference to equation system.
     const Equations& linSys() const
     { return linSys_; }
-
+    
+    void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                std::vector<CMatrix>& c_matrices,
+                std::vector<DMatrix>& d_matrices,
+                std::vector<std::vector<int>>& wcells) const;
 protected:
     MultisegmentWellEval(WellInterfaceIndices<FluidSystem, Indices>& baseif, const ParallelWellInfo<Scalar>& parallel_well_info);
 

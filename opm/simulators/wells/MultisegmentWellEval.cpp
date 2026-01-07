@@ -75,6 +75,69 @@ initMatrixAndVectors(const ParallelWellInfo<Scalar>& parallel_well_info)
     primary_variables_.resize(this->numberOfSegments());
 }
 
+
+template<typename BlockType,typename BlockTypeTransposed>
+Dune::BCRSMatrix<BlockTypeTransposed> transposeMatrix(const Dune::BCRSMatrix<BlockType>& A)
+{
+    const size_t rows = A.N();
+    const size_t cols = A.M();
+    
+    // Count non-zeros per column (becomes row in transpose)
+    std::vector<size_t> nnz_per_col(cols, 0);
+    std::vector<std::vector<int>> rowind(cols);
+    for (size_t i = 0; i < rows; ++i) {
+        for (auto it = A[i].begin(); it != A[i].end(); ++it) {
+            nnz_per_col[it.index()]++;
+            rowind[it.index()].push_back(i);
+        }
+    }
+    
+    // Create transposed matrix
+    Dune::BCRSMatrix<BlockTypeTransposed> AT(cols, rows, A.nonzeroes()/* nnz */, 
+                                   Dune::BCRSMatrix<BlockTypeTransposed>::row_wise);
+    
+    for (auto row = AT.createbegin(); row != AT.createend(); ++row) {
+        //row.setsize(nnz_per_col[row.index()]);
+        for(int col_idx : rowind[row.index()]){
+            row.insert(col_idx);   
+        }
+    }
+    
+    // Fill in the entries
+    //std::vector<size_t> col_counters(cols, 0);
+    for (size_t i = 0; i < rows; ++i) {
+        for (auto it = A[i].begin(); it != A[i].end(); ++it) {
+            size_t j = it.index();
+            //AT[j][col_counters[j]++] = it->transpose(); // transpose the block
+            AT[j][i] = it->transposed(); // transpose the block
+        }
+    }
+    
+    return AT;
+}
+
+template<class FluidSystem, class Indices>
+void
+MultisegmentWellEval<FluidSystem,Indices>::
+addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                std::vector<CMatrix>& c_matrices,
+                std::vector<DMatrix>& d_matrices,
+                std::vector<std::vector<int>>& wcells) const
+{
+    throw std::runtime_error("MultisegmentWellEval::addBCDMatrix not implemented yet.");
+    b_matrices.push_back(linSys_.duneB_);
+    using BlockTypeTransposed = typename CMatrix::block_type;
+    //using BlockType = OffDiagMatrixBlockWellType;
+    using BlockType = Dune::FieldMatrix<Scalar,PrimaryVariables::numWellEq,Indices::numEq>;
+    //CMatrix duneC = linSys_.duneC_;
+    CMatrix duneC = transposeMatrix<BlockType,BlockTypeTransposed>(linSys_.duneC_);
+    //NB need to fill duneC for duneC_ as transpose
+    c_matrices.push_back(duneC);
+    d_matrices.push_back(linSys_.duneD_);
+    wcells.push_back(linSys_.cells_);
+    //residual.push_back(linSys_.residual());
+    // Implementation of addBCDMatrix for StandardWellEval
+}
 template<typename FluidSystem, typename Indices>
 ConvergenceReport
 MultisegmentWellEval<FluidSystem,Indices>::
