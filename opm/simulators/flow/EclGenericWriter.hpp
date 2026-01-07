@@ -36,6 +36,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -144,7 +145,7 @@ protected:
                      const std::map<std::string, double>&                 miscSummaryData,
                      const std::map<std::string, std::vector<double>>&    regionData,
                      const Inplace&                                       inplace,
-                     const std::optional<Inplace>&                        initialInPlace,
+                     const Inplace*                                       initialInPlace,
                      const InterRegFlowMap&                               interRegFlows,
                      SummaryState&                                        summaryState,
                      UDQState&                                            udqState);

@@ -247,9 +247,11 @@ public:
         return extraBlockData_;
     }
 
-    const std::optional<Inplace>& initialInplace() const
+    const Inplace* initialInplace() const
     {
-        return this->initialInplace_;
+        return this->initialInplace_.has_value()
+            ? &*this->initialInplace_
+            : nullptr;
     }
 
     bool localDataValid() const{

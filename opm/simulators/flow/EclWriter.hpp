@@ -377,13 +377,16 @@ public:
             fip.output(FIPConfig::OutputField::RESV))
         {
             OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
-            boost::posix_time::ptime start_time =
-                boost::posix_time::from_time_t(simulator_.vanguard().schedule().getStartTime());
+
+            const auto start_time = boost::posix_time::
+                from_time_t(simulator_.vanguard().schedule().getStartTime());
 
             if (this->collectOnIORank_.isIORank()) {
-                inplace_ = outputModule_->initialInplace().value();
-                outputModule_->outputFipAndResvLog(inplace_, 0, 0.0, start_time,
-                                                  false, simulator_.gridView().comm());
+                this->inplace_ = *this->outputModule_->initialInplace();
+
+                this->outputModule_->
+                    outputFipAndResvLog(this->inplace_, 0, 0.0, start_time,
+                                        false, simulator_.gridView().comm());
             }
         }
 
@@ -705,8 +708,8 @@ public:
         this->outputModule_->calc_initial_inplace(this->simulator_.gridView().comm());
 
         if (this->collectOnIORank_.isIORank()) {
-            if (this->outputModule_->initialInplace().has_value()) {
-                this->inplace_ = this->outputModule_->initialInplace().value();
+            if (const auto* iip = this->outputModule_->initialInplace(); iip != nullptr) {
+                this->inplace_ = *iip;
             }
         }
     }

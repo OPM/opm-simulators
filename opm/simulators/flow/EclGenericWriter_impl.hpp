@@ -668,7 +668,7 @@ evalSummary(const int                                            reportStepNum,
             const std::map<std::string, double>&                 miscSummaryData,
             const std::map<std::string, std::vector<double>>&    regionData,
             const Inplace&                                       inplace,
-            const std::optional<Inplace>&                        initialInPlace,
+            const Inplace*                                       initialInPlace,
             const InterRegFlowMap&                               interRegFlows,
             SummaryState&                                        summaryState,
             UDQState&                                            udqState)
@@ -692,19 +692,24 @@ evalSummary(const int                                            reportStepNum,
             ? this->collectOnIORank_.globalAquiferData()
             : localAquiferData;
 
-        summary.eval(summaryState,
-                     reportStepNum,
-                     curTime,
-                     wellData,
-                     wbpData,
-                     groupAndNetworkData,
-                     miscSummaryData,
-                     initialInPlace,
-                     inplace,
-                     regionData,
-                     blockData,
-                     aquiferData,
-                     getInterRegFlowsAsMap(interRegFlows));
+        const auto interreg_flows = getInterRegFlowsAsMap(interRegFlows);
+
+        const auto values = out::Summary::DynamicSimulatorState {
+            /* well_solution           = */ &wellData,
+            /* wbp                     = */ &wbpData,
+            /* group_and_nwrk_solution = */ &groupAndNetworkData,
+            /* single_values           = */ &miscSummaryData,
+            /* region_values           = */ &regionData,
+            /* block_values            = */ &blockData,
+            /* aquifer_values          = */ &aquiferData,
+            /* interreg_flows          = */ &interreg_flows,
+            /* inplace                 = */ {
+                /* current = */ &inplace,
+                /* initial = */ initialInPlace
+            }
+        };
+
+        summary.eval(reportStepNum, curTime, values, summaryState);
 
         // Off-by-one-fun: The reportStepNum argument corresponds to the
         // report step these results will be written to, whereas the
