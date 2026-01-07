@@ -115,6 +115,11 @@ template<class Scalar> class WellContributions;
             using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
+            static constexpr int numResDofs = Indices::numEq;
+            static constexpr int numWellDofs = numResDofs + 1;//NB will fail for for thermal for now
+            using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+            using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+            using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
@@ -283,6 +288,10 @@ template<class Scalar> class WellContributions;
                                     DeferredLogger& deferred_logger,
                                     const int reportStepIdx,
                                     const int iterationIdx);
+            void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                                            std::vector<CMatrix>& c_matrices,
+                                            std::vector<DMatrix>& d_matrices,
+                                            std::vector<std::vector<int>>& wcells) const;
 
             const WellInterface<TypeTag>& getWell(const std::string& well_name) const;
 

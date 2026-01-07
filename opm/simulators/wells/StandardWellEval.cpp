@@ -80,6 +80,89 @@ computeAccumWell()
 }
 
 template<class FluidSystem, class Indices>
+void
+StandardWellEval<FluidSystem,Indices>::
+addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                std::vector<CMatrix>& c_matrices,
+                std::vector<DMatrix>& d_matrices,
+                std::vector<std::vector<int>>& wcells) const
+{
+    // Implementation of addBCDMatrix for StandardWellEval
+       throw std::runtime_error("MultisegmentWellEval::addBCDMatrix not implemented yet.");
+    
+    BMatrix duneB;
+    CMatrix duneC;
+    DMatrix duneD;
+    duneD.setSize(1, 1, 1);
+    duneB.setSize(1, linSys_.duneB_.M(), linSys_.duneB_.M());
+    duneC.setSize(linSys_.duneB_.M(), 1, 1);
+    const int numPerfs = linSys_.duneB_.M();
+    for (auto row = duneD.createbegin(),
+              end = duneD.createend(); row != end; ++row) {
+        // Add nonzeros for diagonal
+        row.insert(row.index());
+    }
+      // the block size is run-time determined now
+    {
+        auto& dest = duneD[0][0];
+        const auto& src = linSys_.duneD_[0][0];
+        assert(dest.M() == src.M());
+        assert(dest.N() == src.N());
+
+        for (size_t i = 0; i < dest.N(); ++i) {
+            for (size_t j = 0; j < dest.M(); ++j) {
+                dest[i][j] = src[i][j];
+            }
+        }
+    }
+
+    for (auto row = duneB.createbegin(),
+              end = duneB.createend(); row != end; ++row) {
+        for (int perf = 0 ; perf < numPerfs; ++perf) {
+            row.insert(perf);
+        }
+    }
+
+    for (size_t i = 0 ; i < linSys_.duneB_.M(); ++i) {
+        // the block size is run-time determined now
+        //duneB[0][perf].resize(numWellEq, numEq);
+        const auto& src = linSys_.duneB_[0][i];
+        auto& dest = duneB[0][i];
+        assert(dest.M() == src.M());
+        assert(dest.N() == src.N());
+        for( size_t j = 0; j < src.N(); ++j) {
+            for (size_t k = 0; k < src.M(); ++k) {
+                dest[j][k] =   src[j][k];
+            }
+        }
+    }
+
+         // make the C^T matrix
+    for (auto row = duneC.createbegin(),
+              end = duneC.createend(); row != end; ++row) {
+             row.insert(0);//only one well dofs
+    }
+
+
+    for (size_t perf = 0; perf < numPerfs; ++perf) {
+        auto& dest = duneC[perf][0];
+        const auto& src = linSys_.duneC_[0][perf];
+        assert(dest.N() == src.M());
+        assert(dest.M() == src.N());
+        for(size_t i = 0; i < src.M(); ++i) {
+            for (size_t j = 0; j < src.N(); ++j) {
+                dest[j][i] = src[i][j];
+            }
+        }
+    }
+    //NB need to fill duneC for duneC_ as transpose
+    b_matrices.push_back(duneB);
+    c_matrices.push_back(duneC);
+    d_matrices.push_back(duneD);
+    wcells.push_back(linSys_.cells_);
+}
+
+template<class FluidSystem, class Indices>
 ConvergenceReport
 StandardWellEval<FluidSystem,Indices>::
 getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,

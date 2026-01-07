@@ -1465,6 +1465,18 @@ namespace Opm {
 
     template<typename TypeTag>
     void
+    BlackoilWellModel<TypeTag>::addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                                            std::vector<CMatrix>& c_matrices,
+                                            std::vector<DMatrix>& d_matrices,
+                                            std::vector<std::vector<int>>& wcells) const
+    {
+        for ( const auto& well: well_container_ ) {
+            well->addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells);
+        }
+    }
+
+    template<typename TypeTag>
+    void
     BlackoilWellModel<TypeTag>::
     addWellPressureEquations(PressureMatrix& jacobian,
                              const BVector& weights,
