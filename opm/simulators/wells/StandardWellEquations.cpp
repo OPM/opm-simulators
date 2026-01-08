@@ -20,6 +20,7 @@
 */
 
 #include <config.h>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
@@ -428,6 +429,16 @@ addOverlapConnectionsToPressureMatrix([[maybe_unused]] PressureMatrix& jacobian,
     if (comm.size() == 1)
         return;
 
+    MPI_Datatype mpiTypeScalar;
+    if constexpr (std::is_same<Scalar, double>::value)
+        mpiTypeScalar = MPI_DOUBLE;
+    else if constexpr (std::is_same<Scalar, float>::value)
+        mpiTypeScalar = MPI_FLOAT;
+    else if constexpr (std::is_same<Scalar, long double>::value)
+        mpiTypeScalar = MPI_LONG_DOUBLE;
+    else
+        OPM_THROW(std::logic_error, "Type of Scalar is incompatible with MPI types for floats of different lengths.");
+
     // ownedOverlapConnections and missingOverlapConnections determine the communication pattern
     // for passing the overlap values (send and receive respectively).
     const auto& ownedOverlapConnections = well.getOwnedOverlap();
@@ -445,10 +456,9 @@ addOverlapConnectionsToPressureMatrix([[maybe_unused]] PressureMatrix& jacobian,
         for (const auto& col : ownedOverlapConnections[rankI]) {
             sendJacobianValues[i].push_back(jacobian[welldof_ind][col]);
         }
-        static_assert(std::is_same<Scalar, double>::value);
         int tag = 23 + comm.size() * comm.rank() + rankI; // random tag
         // this might communicate vectors of size 0
-        MPI_Isend(sendJacobianValues[i].data(), jacSize, MPI_DOUBLE, rankI, tag, comm, &request[i]);
+        MPI_Isend(sendJacobianValues[i].data(), jacSize, mpiTypeScalar, rankI, tag, comm, &request[i]);
     }
 
     // synchronously receive overlap connection values
@@ -457,9 +467,8 @@ addOverlapConnectionsToPressureMatrix([[maybe_unused]] PressureMatrix& jacobian,
         int rankI = i + static_cast<int>(i >= comm.rank());
         int jacSize = missingOverlapConnections[rankI].size();
         recvJacobianValues[i].resize(jacSize);
-        static_assert(std::is_same<Scalar, double>::value);
         int tag = 23 + comm.size() * rankI + comm.rank(); // matching random tag
-        MPI_Recv(recvJacobianValues[i].data(), jacSize, MPI_DOUBLE, rankI, tag, comm, MPI_STATUS_IGNORE);
+        MPI_Recv(recvJacobianValues[i].data(), jacSize, mpiTypeScalar, rankI, tag, comm, MPI_STATUS_IGNORE);
     }
 
     MPI_Waitall(request.size(), request.data(), MPI_STATUS_IGNORE);
