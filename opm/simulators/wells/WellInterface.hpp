@@ -365,11 +365,6 @@ public:
                                    const GroupStateHelperType& groupStateHelper,
                                    WellStateType& well_state) = 0;
 
-
-                                            const bool fixed_control = false,
-                                            const bool fixed_status = false) = 0;
-
-
     virtual void addBCDMatrix(std::vector<BMatrix>& b_matrices,
         std::vector<CMatrix>& c_matrices,
         std::vector<DMatrix>& d_matrices,
