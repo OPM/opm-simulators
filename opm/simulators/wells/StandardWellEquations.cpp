@@ -419,9 +419,9 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
 template<typename Scalar, typename IndexTraits, int numEq>
 template<class PressureMatrix>
 void StandardWellEquations<Scalar, IndexTraits, numEq>::
-addOverlapConnectionsToPressureMatrix(PressureMatrix& jacobian,
-                                      const int number_cells,
-                                      const WellInterfaceGeneric<Scalar, IndexTraits>& well) const
+addOverlapConnectionsToPressureMatrix([[maybe_unused]] PressureMatrix& jacobian,
+                                      [[maybe_unused]] const int number_cells,
+                                      [[maybe_unused]] const WellInterfaceGeneric<Scalar, IndexTraits>& well) const
 {
 #if HAVE_MPI
     const auto& comm = well.parallelWellInfo().communication();

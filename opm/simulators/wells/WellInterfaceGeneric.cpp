@@ -748,7 +748,7 @@ initOverlapConnections (const std::function<std::vector<int>(const WellInterface
     std::vector<int> nrConnections(comm.size(), 0);
     nrConnections[comm.rank()] = overlapConnections[comm.rank()].size();
     comm.sum(nrConnections.data(), nrConnections.size());
-    assert(nrConnections[comm.rank()] == overlapConnections[comm.rank()].size());
+    assert(nrConnections[comm.rank()] == (int)overlapConnections[comm.rank()].size());
     for (int i = 0; i < comm.size(); ++i) {
         overlapConnections[i].resize(nrConnections[i], 0);
         connOwners[i].resize(nrConnections[i], -1);
