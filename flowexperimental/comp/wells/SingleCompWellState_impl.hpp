@@ -73,18 +73,18 @@ update_injector_targets(const Well& well,
                         const SummaryState& st)
 {
     const auto& inj_controls = well.injectionControls(st);
+    const auto& injection_properties = well.getInjectionProperties();
+    const auto& inj_composition = injection_properties.gasInjComposition();
+#ifndef NDEBUG
+    assert(this->total_molar_fractions.size() == inj_composition.size());
     const bool cmode_is_undefined = (inj_controls.cmode == Well::InjectorCMode::CMODE_UNDEFINED);
     assert(!cmode_is_undefined && "control types should be specified");
-    const auto& injection_properties = well.getInjectionProperties();
-    {
-        const auto injection_type = injection_properties.injectorType;
-        const bool is_gas_injecting = (injection_type == InjectorType::GAS);
-        assert(is_gas_injecting && "Only gas injection is supported for now");
-    }
+    const auto injection_type = injection_properties.injectorType;
+    const bool is_gas_injecting = (injection_type == InjectorType::GAS);
+    assert(is_gas_injecting && "Only gas injection is supported for now");
+#endif
     this->bhp = inj_controls.bhp_limit;
     this->injection_cmode = inj_controls.cmode;
-    const auto& inj_composition = injection_properties.gasInjComposition();
-    assert(this->total_molar_fractions.size() == inj_composition.size());
     // TODO: this might not be correct when crossing flow is involved
     this->total_molar_fractions = inj_composition;
 
@@ -120,9 +120,10 @@ update_producer_targets(const Well& well,
                         const SummaryState& st)
 {
     const auto& prod_controls = well.productionControls(st);
-
+#ifndef NDEBUG
     const auto cmode_is_undefined = (prod_controls.cmode == Well::ProducerCMode::CMODE_UNDEFINED);
     assert(!cmode_is_undefined && "control types should be specified");
+#endif
 
     this->total_molar_fractions = cell_mole_fractions[this->connection_data.ecl_index[0]];
 
