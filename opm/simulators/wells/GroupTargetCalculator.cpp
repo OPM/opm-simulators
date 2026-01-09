@@ -147,7 +147,7 @@ calculateGroupTarget()
         return this->getTargetNoGuideRate(group);
     }
     const auto efficiency_factor = group.getGroupEfficiencyFactor();
-    auto target = this->calculateGroupTargetRecursive_(group, efficiency_factor);
+    auto target = this->calculateGroupTargetRecursive_(this->parentGroup(group), efficiency_factor);
     if (target) {
         // TODO: We could probably switch the group to FLD control mode now. However, this call is coming
         //    from beginTimeStep() in BlackoilWellModel_impl.hpp, but the regular higher constraints
