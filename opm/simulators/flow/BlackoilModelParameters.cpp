@@ -49,6 +49,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     tolerance_cnv_relaxed_ = std::max(tolerance_cnv_, Parameters::Get<Parameters::ToleranceCnvRelaxed<Scalar>>());
     tolerance_cnv_energy_ = Parameters::Get<Parameters::ToleranceCnvEnergy<Scalar>>();
     tolerance_cnv_energy_relaxed_ = std::max(tolerance_cnv_energy_, Parameters::Get<Parameters::ToleranceCnvEnergyRelaxed<Scalar>>());
+    tolerance_max_dp_ = Parameters::Get<Parameters::ToleranceMaxDp<Scalar>>();
+    tolerance_max_ds_ = Parameters::Get<Parameters::ToleranceMaxDs<Scalar>>();
     tolerance_wells_ = Parameters::Get<Parameters::ToleranceWells<Scalar>>();
     tolerance_well_control_ = Parameters::Get<Parameters::ToleranceWellControl<Scalar>>();
     max_welleq_iter_ = Parameters::Get<Parameters::MaxWelleqIter>();
@@ -159,6 +161,14 @@ void BlackoilModelParameters<Scalar>::registerParameters()
     Parameters::Register<Parameters::ToleranceCnvEnergyRelaxed<Scalar>>
         ("Relaxed local energy convergence tolerance that applies for iterations "
          "after the iterations with the strict tolerance");
+    Parameters::Register<Parameters::ToleranceMaxDp<Scalar>>
+        ("Tolerance for max pressure change during a Newton iteration. "
+         "A value greater than 0.0 allows for convergence according to "
+         "relaxed local convergence tolerance");
+    Parameters::Register<Parameters::ToleranceMaxDs<Scalar>>
+        ("Tolerance for max saturation change during a Newton iteration. "
+         "A value greater than 0.0 allows for convergence according to "
+         "relaxed local convergence tolerance.");
     Parameters::Register<Parameters::ToleranceWells<Scalar>>
         ("Well convergence tolerance");
     Parameters::Register<Parameters::ToleranceWellControl<Scalar>>

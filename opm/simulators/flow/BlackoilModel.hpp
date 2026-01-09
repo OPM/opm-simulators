@@ -75,6 +75,8 @@ public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using ModelParameters = BlackoilModelParameters<Scalar>;
 
+    static constexpr bool enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
+
     static constexpr int numEq = Indices::numEq;
     static constexpr int contiSolventEqIdx = Indices::contiSolventEqIdx;
     static constexpr int contiZfracEqIdx = Indices::contiZfracEqIdx;
@@ -182,6 +184,11 @@ public:
     /// Apply an update to the primary variables.
     void updateSolution(const BVector& dx);
 
+    /// Get solution update vector as a PrimaryVarible
+    void prepareStoringSolutionUpdate();
+    void storeSolutionUpdate(const BVector& dx);
+    std::pair<Scalar, Scalar> getMaxSolutionUpdate(const std::vector<unsigned>& ixCells);
+
     /// Return true if output to cout is wanted.
     bool terminalOutputEnabled() const
     { return terminal_output_; }
@@ -206,7 +213,10 @@ public:
     /// \brief Compute pore-volume/cell count split among "converged",
     /// "relaxed converged", "unconverged" cells based on CNV point
     /// measures.
-    std::pair<std::vector<double>, std::vector<int>>
+    std::tuple<
+    std::pair<std::vector<double>, std::vector<int>>,
+    std::vector<unsigned>
+    >
     characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt);
 
     /// \brief Compute the number of Newtons required by each cell in order to
@@ -218,6 +228,7 @@ public:
                             const int iteration);
 
     void updateTUNING(const Tuning& tuning);
+    void updateTUNINGDP(const TuningDp& tuning_dp);
 
     ConvergenceReport
     getReservoirConvergence(const double reportTime,
@@ -343,6 +354,8 @@ protected:
     std::vector<std::vector<Scalar>> residual_norms_history_;
     Scalar current_relaxation_;
     BVector dx_old_;
+
+    SolutionVector solUpd_;
 
     std::vector<StepReport> convergence_reports_;
     ComponentName compNames_{};

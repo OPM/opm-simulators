@@ -56,7 +56,7 @@ template<class Scalar>
 struct ToleranceMbRelaxed { static constexpr Scalar value = 1e-6; };
 
 //TODO change to a simpler number with fewer digits
-//converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water 
+//converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water
 template<class Scalar>
 struct ToleranceEnergyBalance { static constexpr Scalar value = 1e-7*41.82; };
 
@@ -74,6 +74,12 @@ struct ToleranceCnvEnergy { static constexpr Scalar value = 1e-2*41.82; };
 
 template<class Scalar>
 struct ToleranceCnvEnergyRelaxed { static constexpr Scalar value = 1.0*41.82; };
+
+template<class Scalar>
+struct ToleranceMaxDp { static constexpr Scalar value = 0.0; };
+
+template<class Scalar>
+struct ToleranceMaxDs { static constexpr Scalar value = 0.0; };
 
 template<class Scalar>
 struct ToleranceWells { static constexpr Scalar value = 1e-4; };
@@ -212,6 +218,10 @@ public:
     Scalar tolerance_cnv_energy_;
     /// Relaxed local energy convergence tolerance (can be used when iter >= min_strict_cnv_iter_ && cnvViolatedPV < relaxed_max_pv_fraction_).
     Scalar tolerance_cnv_energy_relaxed_;
+    /// Max pressure change during a Newton iteration (TUNINGDP item = TRGDDP)
+    Scalar tolerance_max_dp_;
+    /// Max saturation change during a Newton iteration (TUNINGDP item = TRGDDS)
+    Scalar tolerance_max_ds_;
     /// Well convergence tolerance.
     Scalar tolerance_wells_;
     /// Tolerance for the well control equations
