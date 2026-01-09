@@ -467,15 +467,6 @@ public:
         }
     }
 
-    /*!
-     * \brief Called by the simulator after each time integration.
-     */
-    void endTimeStep() override
-    {
-        FlowProblemType::endTimeStep();
-        this->endStepApplyAction();
-    }
-
     void endStepApplyAction()
     {
         // After the solution is updated, the values in output module needs
