@@ -110,6 +110,8 @@ public:
         );
         std::optional<TargetInfo> calculateGroupTarget();
         DeferredLogger& deferredLogger() { return this->parent_calculator_.deferredLogger(); }
+        // Const overload: allows logging from const methods.
+        DeferredLogger& deferredLogger() const { return this->parent_calculator_.deferredLogger(); }
         int fipnum() const { return this->parent_calculator_.fipnum(); }
         const GConSale& gconsale() const {
             return this->schedule()[this->reportStepIdx()].gconsale();
@@ -122,8 +124,15 @@ public:
             const TargetCalculatorType& target_calculator, const Group& group);
         TargetInfo getTargetNoGuideRate(const Group& group);
         const GuideRate& guideRate() const { return this->parent_calculator_.guideRate(); }
+        bool hasGuideRate(const Group& group) const { return this->hasGuideRate(group.name()); }
+        bool hasGuideRate(const std::string& name) const {
+            if (this->targetType() == TargetType::Injection) {
+                return this->guideRate().has(name, this->injectionPhase_());
+            }
+            return this->guideRate().has(name);
+        }
         bool hasFldOrNoneControl(const Group& group);
-        Phase injectionPhase_();
+        Phase injectionPhase_() const;
         const Group& originalGroup() const { return this->original_group_; }
         const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_calculator_.phaseUsage(); }
         int pvtreg() const { return this->parent_calculator_.pvtreg(); }
@@ -142,8 +151,6 @@ public:
         const GroupStateHelperType& groupStateHelper() const { return this->parent_calculator_.groupStateHelper(); }
     private:
         std::optional<TargetInfo> calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_factor);
-        bool hasGuideRate_(const Group& group) const { return this->guideRate().has(group.name()); }
-        bool hasGuideRate_(const std::string& name) const { return this->guideRate().has(name); }
         const Group& parentGroup(const Group& group) const {
             return this->schedule().getGroup(group.parent(), this->reportStepIdx());
         }
@@ -180,6 +187,8 @@ public:
 
         std::optional<TargetInfo> calculateGroupTarget();
         DeferredLogger& deferredLogger() { return this->parent_calculator_.deferredLogger(); }
+        // Const overload: allows logging from const methods (logical constness for external logger).
+        DeferredLogger& deferredLogger() const { return this->parent_calculator_.deferredLogger(); }
         const GroupState<Scalar>& groupState() const { return this->parent_calculator_.groupState(); }
         const GuideRate& guideRate() const { return this->parent_calculator_.guideRate(); }
         TargetType targetType() const { return this->parent_calculator_.targetType(); }
@@ -220,7 +229,9 @@ public:
             return this->parent_calculator_.hasFldOrNoneControl(group);
         }
         bool hasFLDControl_(const Group& group) const;
-        bool hasGuideRate_(const std::string& name) const { return this->guideRate().has(name); }
+        bool hasGuideRate_(const std::string& name) const {
+            return this->parent_calculator_.hasGuideRate(name);
+        }
         void initForInjector_();
         void initForProducer_();
         Phase injectionPhase_() const { return this->parent_calculator_.injectionPhase_(); }
@@ -250,6 +261,8 @@ public:
         const GroupStateHelperType& group_state_helper
     );
     DeferredLogger& deferredLogger() { return this->group_state_helper_.deferredLogger(); }
+    // Const overload: allows logging from const methods.
+    DeferredLogger& deferredLogger() const { return this->group_state_helper_.deferredLogger(); }
     int fipnum() const { return this->fipnum_; }
     /** Compute injection target for group in the given injection phase. */
     std::optional<InjectionTargetInfo> groupInjectionTarget(

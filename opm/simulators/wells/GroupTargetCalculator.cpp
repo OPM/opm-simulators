@@ -130,7 +130,7 @@ calculateGroupTarget()
         return this->getTargetNoGuideRate(group);
     }
     assert(this->parentGroupControlAvailable_(group));
-    if (!this->hasGuideRate_(group)) {
+    if (!this->hasGuideRate(group)) {
         if (this->hasFldOrNoneControl(group)) {
             // Parent control is available, but no guide rate is defined. This is illegal for a master group
             // under FLD or NONE control.
@@ -328,7 +328,7 @@ template<class Scalar, class IndexTraits>
 Phase
 GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
-injectionPhase_()
+injectionPhase_() const
 {
     if (this->injection_phase_.has_value()) {
         switch (this->injection_phase_.value()) {
@@ -339,8 +339,8 @@ injectionPhase_()
             case ReservoirCoupling::Phase::Gas:
                 return Phase::GAS;
             default:
-               OPM_DEFLOG_THROW(std::runtime_error, "Invalid injection phase", this->deferredLogger());
-               return Phase::WATER; // Unreachable, but satisfies compiler
+                OPM_DEFLOG_THROW(std::runtime_error, "Invalid injection phase", this->deferredLogger());
+                return Phase::WATER; // Unreachable, but satisfies compiler
         }
     }
     else {
