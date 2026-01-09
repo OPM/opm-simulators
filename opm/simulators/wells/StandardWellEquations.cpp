@@ -430,11 +430,11 @@ addOverlapConnectionsToPressureMatrix([[maybe_unused]] PressureMatrix& jacobian,
         return;
 
     MPI_Datatype mpiTypeScalar;
-    if constexpr (std::is_same<Scalar, double>::value)
+    if constexpr (std::is_same_v<Scalar, double>)
         mpiTypeScalar = MPI_DOUBLE;
-    else if constexpr (std::is_same<Scalar, float>::value)
+    else if constexpr (std::is_same_v<Scalar, float>)
         mpiTypeScalar = MPI_FLOAT;
-    else if constexpr (std::is_same<Scalar, long double>::value)
+    else if constexpr (std::is_same_v<Scalar, long double>)
         mpiTypeScalar = MPI_LONG_DOUBLE;
     else
         OPM_THROW(std::logic_error, "Type of Scalar is incompatible with MPI types for floats of different lengths.");
@@ -446,25 +446,36 @@ addOverlapConnectionsToPressureMatrix([[maybe_unused]] PressureMatrix& jacobian,
     const int commSM1 = comm.size() - 1;
     const int welldof_ind = number_cells + well.indexOfWell();
 
-    // asynchronously send overlap connection values
-    std::vector<MPI_Request> request(commSM1);
-    std::vector<std::vector<Scalar>> sendJacobianValues(commSM1);
+    // check which ranks need to communicate
+    std::vector<int> sendToRanks, receiveFromRanks;
+    sendToRanks.reserve(commSM1);
+    receiveFromRanks.reserve(commSM1);
     for (int i = 0; i < commSM1; ++i) {
         int rankI = i + static_cast<int>(i >= comm.rank());
+        if (ownedOverlapConnections[rankI].size() > 0)
+            sendToRanks.push_back(rankI);
+        if (missingOverlapConnections[rankI].size() > 0)
+            receiveFromRanks.push_back(rankI);
+    }
+
+    // asynchronously send overlap connection values
+    std::vector<MPI_Request> request(sendToRanks.size());
+    std::vector<std::vector<Scalar>> sendJacobianValues(sendToRanks.size());
+    for (std::size_t i = 0; i < sendToRanks.size(); ++i) {
+        int rankI = sendToRanks[i];
         int jacSize = ownedOverlapConnections[rankI].size();
         sendJacobianValues[i].reserve(jacSize);
         for (const auto& col : ownedOverlapConnections[rankI]) {
             sendJacobianValues[i].push_back(jacobian[welldof_ind][col]);
         }
         int tag = 23 + comm.size() * comm.rank() + rankI; // random tag
-        // this might communicate vectors of size 0
         MPI_Isend(sendJacobianValues[i].data(), jacSize, mpiTypeScalar, rankI, tag, comm, &request[i]);
     }
 
     // synchronously receive overlap connection values
-    std::vector<std::vector<Scalar>> recvJacobianValues(commSM1);
-    for (int i = 0; i < commSM1; ++i) {
-        int rankI = i + static_cast<int>(i >= comm.rank());
+    std::vector<std::vector<Scalar>> recvJacobianValues(receiveFromRanks.size());
+    for (std::size_t i = 0; i < receiveFromRanks.size(); ++i) {
+        int rankI = receiveFromRanks[i];
         int jacSize = missingOverlapConnections[rankI].size();
         recvJacobianValues[i].resize(jacSize);
         int tag = 23 + comm.size() * rankI + comm.rank(); // matching random tag
@@ -474,8 +485,8 @@ addOverlapConnectionsToPressureMatrix([[maybe_unused]] PressureMatrix& jacobian,
     MPI_Waitall(request.size(), request.data(), MPI_STATUS_IGNORE);
 
     // fill overlap connections of the well in the jacobian
-    for (int i = 0; i < commSM1; ++i) {
-        int rankI = i + static_cast<int>(i >= comm.rank());
+    for (std::size_t i = 0; i < receiveFromRanks.size(); ++i) {
+        int rankI = receiveFromRanks[i];
         for (std::size_t j = 0; j < recvJacobianValues[i].size(); ++j) {
             assert(jacobian[welldof_ind][missingOverlapConnections[rankI][j]] == 0);
             jacobian[welldof_ind][missingOverlapConnections[rankI][j]] = recvJacobianValues[i][j];
