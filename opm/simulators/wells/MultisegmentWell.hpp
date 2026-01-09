@@ -76,6 +76,7 @@ namespace Opm {
         using BMatrix = typename Base::BMatrix;
         using CMatrix = typename Base::CMatrix;
         using DMatrix = typename Base::DMatrix;
+        using WVector = typename Base::WVector;
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo<Scalar>& pw_info,
                          const int time_step,
@@ -169,7 +170,8 @@ namespace Opm {
         void addBCDMatrix(std::vector<BMatrix>& b_matrices,
                 std::vector<CMatrix>& c_matrices,
                 std::vector<DMatrix>& d_matrices,
-                std::vector<std::vector<int>>& wcells) const override{ MSWEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells);}
+                std::vector<std::vector<int>>& wcells,
+                std::vector<WVector>& residual) const override{ MSWEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells,residual);}
     protected:
         // regularize msw equation
         bool regularize_;

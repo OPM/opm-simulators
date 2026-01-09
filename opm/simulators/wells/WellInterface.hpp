@@ -103,6 +103,7 @@ public:
     using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
     using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
     using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
+    using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
 
 
     using WellStateType = WellState<Scalar, IndexTraits>;
@@ -368,7 +369,8 @@ public:
     virtual void addBCDMatrix(std::vector<BMatrix>& b_matrices,
         std::vector<CMatrix>& c_matrices,
         std::vector<DMatrix>& d_matrices,
-        std::vector<std::vector<int>>& wcells) const = 0;
+        std::vector<std::vector<int>>& wcells,
+        std::vector<WVector>& residual) const = 0;
 
 protected:
     // simulation parameters

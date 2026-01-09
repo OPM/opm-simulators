@@ -122,9 +122,10 @@ MultisegmentWellEval<FluidSystem,Indices>::
 addBCDMatrix(std::vector<BMatrix>& b_matrices,
                 std::vector<CMatrix>& c_matrices,
                 std::vector<DMatrix>& d_matrices,
-                std::vector<std::vector<int>>& wcells) const
+                std::vector<std::vector<int>>& wcells,
+                std::vector<WVector>& residual) const
 {
-    throw std::runtime_error("MultisegmentWellEval::addBCDMatrix not implemented yet.");
+    residual.push_back(linSys_.residual());
     b_matrices.push_back(linSys_.duneB_);
     using BlockTypeTransposed = typename CMatrix::block_type;
     //using BlockType = OffDiagMatrixBlockWellType;

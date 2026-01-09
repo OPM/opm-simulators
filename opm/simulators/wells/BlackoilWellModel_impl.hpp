@@ -1468,10 +1468,11 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::addBCDMatrix(std::vector<BMatrix>& b_matrices,
                                             std::vector<CMatrix>& c_matrices,
                                             std::vector<DMatrix>& d_matrices,
-                                            std::vector<std::vector<int>>& wcells) const
+                                            std::vector<std::vector<int>>& wcells,
+                                            std::vector<WVector>& residual) const
     {
         for ( const auto& well: well_container_ ) {
-            well->addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells);
+            well->addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells, residual);
         }
     }
 
