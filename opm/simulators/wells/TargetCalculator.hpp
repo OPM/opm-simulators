@@ -98,7 +98,7 @@ private:
     const GroupStateHelperType& groupStateHelper_;
     const std::vector<Scalar>& resv_coeff_;
     const Group& group_;
-    const Phase& injection_phase_;
+    const Phase injection_phase_;
     Group::InjectionCMode cmode_;
     int pos_;
     GuideRateModel::Target target_;
