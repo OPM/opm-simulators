@@ -106,6 +106,31 @@ localFraction(const std::string& name,
 }
 
 template<typename Scalar, typename IndexTraits>
+std::pair<Scalar, Scalar>
+FractionCalculator<Scalar, IndexTraits>::
+localFractionParts(const std::string& name,
+                   const std::string& always_included_child)
+{
+    bool always_use_potentials = false;
+    Scalar my_guide_rate = guideRate(name, always_included_child, always_use_potentials);
+
+    const Group& parent_group = schedule_.getGroup(parent(name), report_step_);
+    Scalar total_guide_rate = guideRateSum(parent_group, always_included_child, always_use_potentials).first;
+
+    if (total_guide_rate == 0 ) {
+        // if the total guide rate is zero (for instance due to netv = 0) we use the potentials
+        // to distribute the group rate
+        always_use_potentials = true;
+        my_guide_rate = guideRate(name, always_included_child, always_use_potentials);
+        total_guide_rate = guideRateSum(parent_group, always_included_child, always_use_potentials).first;
+        if (my_guide_rate == 0) {
+            return {1.0, 1.0};
+        }
+    }
+    return {my_guide_rate, total_guide_rate};
+}
+
+template<typename Scalar, typename IndexTraits>
 std::string FractionCalculator<Scalar, IndexTraits>::
 parent(const std::string& name)
 {

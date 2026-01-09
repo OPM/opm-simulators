@@ -476,6 +476,12 @@ namespace Opm
             auto& group_state = solving_with_zero_rate
                 ? empty_group_state
                 : groupStateHelper.groupState();
+            // For wells under group control, ensure feasibility before assembling control equation
+            if (this->wellUnderGroupControl(ws)) {
+                std::vector<Scalar> well_fractions(this->num_conservation_quantities_, 0.0);
+                this->primary_variables_.fetchWellFractions(well_fractions, Base::B_avg_);
+                this->ensureGroupControlFeasibility(well_state, well_fractions);
+            }
             GroupStateHelperType groupStateHelper_copy = groupStateHelper;
             auto group_guard = groupStateHelper_copy.pushGroupState(group_state);
             StandardWellAssemble<FluidSystem,Indices>(*this).

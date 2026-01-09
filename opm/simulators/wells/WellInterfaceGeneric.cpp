@@ -954,6 +954,56 @@ onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
     }
 }
 
+template<typename Scalar, typename IndexTraits>
+void WellInterfaceGeneric<Scalar, IndexTraits>::ensureGroupControlFeasibility(WellState<Scalar, IndexTraits>& well_state,
+                                                                              const std::vector<Scalar>& well_fractions) const
+    {
+    auto& ws = well_state.well(this->index_of_well_);
+    //const bool isGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
+    if (!wellUnderGroupControl(ws) || this->isInjector() || !ws.group_target.has_value())
+    {
+        return;
+    }
+    auto& group_target = ws.group_target.value();
+    if (group_target.production_cmode == group_target.production_cmode_original)
+    {
+        return;
+    }
+    // We only need to check modes that can result in small fractions
+    // i.e. ORAT, WRAT, GRAT, LRAT
+    const auto cmode = group_target.production_cmode;
+    const bool do_check = (cmode == Group::ProductionCMode::ORAT ||
+                           cmode == Group::ProductionCMode::WRAT ||
+                           cmode == Group::ProductionCMode::GRAT ||
+                           cmode == Group::ProductionCMode::LRAT);
+    if (!do_check) {
+        return;
+    }
+    // check whether fraction of production_cmode is too small, if so, switch to original control mode
+    Scalar cmode_frac = 0.0;
+    const auto& pu = this->phaseUsage();
+    if (cmode == Group::ProductionCMode::ORAT || cmode == Group::ProductionCMode::LRAT) {
+        const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+        cmode_frac += well_fractions[oil_pos];
+    }
+    if (cmode == Group::ProductionCMode::WRAT || cmode == Group::ProductionCMode::LRAT) {
+        const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+        cmode_frac += well_fractions[water_pos];
+    }
+    if (cmode == Group::ProductionCMode::GRAT) {
+        const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+        cmode_frac += well_fractions[gas_pos];
+    }
+    // divide by sum just in case our fractions are not normalized
+    cmode_frac /= std::accumulate(well_fractions.begin(), well_fractions.end(), 0.0);
+    // Somewhat arbitrary threshold for small fraction
+    const Scalar tol = 1e-5;
+    if (cmode_frac < tol) {
+        // switch back to original control mode
+        group_target.production_cmode = group_target.production_cmode_original;
+        group_target.target_value = group_target.target_value_cmode_original;
+    }
+}
 
 template class WellInterfaceGeneric<double, BlackOilDefaultFluidSystemIndices>;
 

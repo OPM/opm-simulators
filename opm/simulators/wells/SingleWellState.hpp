@@ -23,8 +23,9 @@
 #include <functional>
 #include <vector>
 
-#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 #include <opm/input/eclipse/Schedule/Events.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
 #include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 
@@ -118,6 +119,47 @@ public:
       vaporized_water = 3
     };
 
+    struct GroupTarget {
+        std::string group_name;
+        Group::ProductionCMode production_cmode {Group::ProductionCMode::NONE};
+        Group::InjectionCMode  injection_cmode  {Group::InjectionCMode::NONE};
+        Scalar target_value;
+        Group::ProductionCMode production_cmode_original {Group::ProductionCMode::NONE};
+        Scalar target_value_cmode_original;
+
+        static GroupTarget injectionGroupTarget(const std::string& gname,
+                                                Group::InjectionCMode cmode,
+                                                Scalar value) {
+            return {gname, Group::ProductionCMode::NONE, cmode, value, Group::ProductionCMode::NONE, 0.0};
+        }
+
+        static GroupTarget productionGroupTarget(const std::string& gname,
+                                                 Group::ProductionCMode cmode,
+                                                 Scalar value,
+                                                 Group::ProductionCMode cmode_original,
+                                                 Scalar value_cmode_original) {
+            return {gname, cmode, Group::InjectionCMode::NONE, value, cmode_original, value_cmode_original};
+        }
+
+        bool operator==(const GroupTarget& other) const {
+            return   ( group_name == other.group_name
+                    && target_value == other.target_value
+                    && production_cmode == other.production_cmode
+                    && injection_cmode == other.injection_cmode 
+                    && production_cmode_original == other.production_cmode_original
+                    && target_value_cmode_original == other.target_value_cmode_original);
+        }
+        template<class Serializer>
+        void serializeOp(Serializer& serializer) {
+            serializer(group_name);
+            serializer(production_cmode);
+            serializer(injection_cmode);
+            serializer(target_value);
+            serializer(production_cmode_original);
+            serializer(target_value_cmode_original);
+        }
+    };
+
     std::vector<Scalar> well_potentials;
     std::vector<Scalar> productivity_index;
     std::vector<Scalar> implicit_ipr_a;
@@ -127,7 +169,7 @@ public:
     std::vector<Scalar> prev_surface_rates;
     PerfData<Scalar> perf_data;
     bool trivial_group_target;
-    std::optional<Scalar> group_target;
+    std::optional<GroupTarget> group_target;
     SegmentState<Scalar> segments;
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
