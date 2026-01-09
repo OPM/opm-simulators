@@ -788,7 +788,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerIndividualControl)
     // Since reduction and addback cancel out, the result is just:
     // Final: target / efficiency = 10000 * (9500/12050) * (8000/9500) * 0.6 / 0.72
     //      = 10000 * 8000 / 12050 * 0.6 / 0.72 = 5532.50
-    const double target = target_opt.value();
+    const double target = target_opt->target_value;
     const double plat_fraction = platGuideRateMetric() / (platGuideRateMetric() + plat2GuideRateMetric());
     const double mani_fraction = maniGuideRateMetric() / (maniGuideRateMetric() + mani2GuideRateMetric());
     const double well_a_fraction = 6.0 / 10.0;
@@ -850,7 +850,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerGrupControl)
     );
 
     BOOST_REQUIRE(target_opt.has_value());
-    const double target = target_opt.value();
+    const double target = target_opt->target_value;
 
     // For a well under GRUP control:
     // - local_reduction_level = 2 (MANI has guide rate AND GCW=2)
@@ -932,7 +932,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerWithSiblingIndividualControl)
     );
 
     BOOST_REQUIRE(target_opt.has_value());
-    const double target = target_opt.value();
+    const double target = target_opt->target_value;
 
     // For getWellGroupTargetProducer() with WELL-A under GRUP but WELL-A2 under individual:
     // - Chain: [FIELD, PLAT, MANI, WELL-A]
