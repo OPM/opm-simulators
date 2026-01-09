@@ -155,11 +155,6 @@ public:
                                                    const SimulatorTimerInterface& timer,
                                                    NonlinearSolverType& nonlinear_solver);
 
-    /// Called once after each time step.
-    /// In this class, this function does nothing.
-    /// \param[in] timer                  simulation timer
-    SimulatorReportSingle afterStep(const SimulatorTimerInterface&);
-
     /// Assemble the residual and Jacobian of the nonlinear system.
     SimulatorReportSingle assembleReservoir(const SimulatorTimerInterface& /* timer */,
                                             const int iterationIdx);

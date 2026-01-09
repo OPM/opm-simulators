@@ -27,6 +27,7 @@
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #endif
 
+#include <dune/common/timer.hh>
 #include <dune/istl/istlexception.hh>
 
 #include <opm/common/Exceptions.hpp>
@@ -786,17 +787,21 @@ run()
             detail::logTimer(this->substep_timer_);
         }
 
-        const auto substep_report = runSubStep_();
-
-        //Pass substep to eclwriter for summary output
-        problem.setSubStepReport(substep_report);
-        auto& full_report = adaptive_time_stepping_.report();
-        full_report += substep_report;
-        problem.setSimulationReport(full_report);
-
-        report += substep_report;
+        auto substep_report = runSubStep_();
 
         if (substep_report.converged || checkContinueOnUnconvergedSolution_(dt)) {
+            Dune::Timer perfTimer;
+            perfTimer.start();
+            // Pass substep to eclwriter for summary output
+            problem.setSubStepReport(substep_report);
+            auto& full_report = adaptive_time_stepping_.report();
+            full_report += substep_report;
+            problem.setSimulationReport(full_report);
+            problem.endTimeStep();
+            substep_report.pre_post_time += perfTimer.stop();
+
+            report += substep_report;
+
             ++this->substep_timer_;   // advance by current dt
 
             const int iterations = getNumIterations_(substep_report);
@@ -823,6 +828,7 @@ run()
             this->substep_timer_.setLastStepFailed(false);
         }
         else { // in case of no convergence or time step tolerance test failure
+            report += substep_report;
             this->substep_timer_.setLastStepFailed(true);
             checkTimeStepMaxRestartLimit_(restarts);
 

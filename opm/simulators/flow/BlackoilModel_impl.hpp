@@ -341,19 +341,6 @@ nonlinearIterationNewton(const int iteration,
 template <class TypeTag>
 SimulatorReportSingle
 BlackoilModel<TypeTag>::
-afterStep(const SimulatorTimerInterface&)
-{
-    SimulatorReportSingle report;
-    Dune::Timer perfTimer;
-    perfTimer.start();
-    simulator_.problem().endTimeStep();
-    report.pre_post_time += perfTimer.stop();
-    return report;
-}
-
-template <class TypeTag>
-SimulatorReportSingle
-BlackoilModel<TypeTag>::
 assembleReservoir(const SimulatorTimerInterface& /* timer */,
                   const int iterationIdx)
 {
