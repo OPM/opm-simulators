@@ -126,6 +126,13 @@ calculateGroupTarget()
     //   correspond to a master group. In the future we might want to port the logic to include
     //   e.g. checkGroupConstraintsProd() and checkGroupConstraintsInj() in GroupStateHelper.cpp.
     const auto& group = this->original_group_;  // The bottom group we want to calculate the target for.
+    // For injection, check if the group has injection control defined for this phase.
+    // If not, there is no target to calculate.
+    if (this->targetType() == TargetType::Injection) {
+        if (!group.hasInjectionControl(this->injectionPhase_())) {
+            return std::nullopt;
+        }
+    }
     if (group.is_field() || !this->parentGroupControlAvailable_(group)) {
         return this->getTargetNoGuideRate(group);
     }
