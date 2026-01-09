@@ -85,18 +85,23 @@ StandardWellEval<FluidSystem,Indices>::
 addBCDMatrix(std::vector<BMatrix>& b_matrices,
                 std::vector<CMatrix>& c_matrices,
                 std::vector<DMatrix>& d_matrices,
-                std::vector<std::vector<int>>& wcells) const
+                std::vector<std::vector<int>>& wcells,
+                std::vector<WVector>& residual) const
 {
     // Implementation of addBCDMatrix for StandardWellEval
-       throw std::runtime_error("MultisegmentWellEval::addBCDMatrix not implemented yet.");
-    
+    WVector res(1);
+    for(int i=0; i< primary_variables_.numWellEq(); ++i) {
+        res[0][i] = linSys_.residual()[0][i];
+    }
+    residual.push_back(res);
     BMatrix duneB;
     CMatrix duneC;
     DMatrix duneD;
     duneD.setSize(1, 1, 1);
-    duneB.setSize(1, linSys_.duneB_.M(), linSys_.duneB_.M());
-    duneC.setSize(linSys_.duneB_.M(), 1, 1);
-    const int numPerfs = linSys_.duneB_.M();
+    assert(linSys_.duneB_.N() == 1);
+    duneB.setSize(linSys_.duneB_.N(), linSys_.duneB_.M(), linSys_.duneB_.M());
+    duneC.setSize(linSys_.duneB_.M(), linSys_.duneB_.N(), 1);
+    const size_t numPerfs = linSys_.duneB_.M();
     for (auto row = duneD.createbegin(),
               end = duneD.createend(); row != end; ++row) {
         // Add nonzeros for diagonal
@@ -118,7 +123,7 @@ addBCDMatrix(std::vector<BMatrix>& b_matrices,
 
     for (auto row = duneB.createbegin(),
               end = duneB.createend(); row != end; ++row) {
-        for (int perf = 0 ; perf < numPerfs; ++perf) {
+        for (size_t perf = 0 ; perf < numPerfs; ++perf) {
             row.insert(perf);
         }
     }
@@ -149,17 +154,20 @@ addBCDMatrix(std::vector<BMatrix>& b_matrices,
         const auto& src = linSys_.duneC_[0][perf];
         assert(dest.N() == src.M());
         assert(dest.M() == src.N());
-        for(size_t i = 0; i < src.M(); ++i) {
-            for (size_t j = 0; j < src.N(); ++j) {
+        for(size_t i = 0; i < src.N(); ++i) {
+            for (size_t j = 0; j < src.M(); ++j) {
                 dest[j][i] = src[i][j];
             }
         }
     }
     //NB need to fill duneC for duneC_ as transpose
-    b_matrices.push_back(duneB);
-    c_matrices.push_back(duneC);
-    d_matrices.push_back(duneD);
     wcells.push_back(linSys_.cells_);
+    
+    d_matrices.push_back(duneD);
+
+    c_matrices.push_back(duneC);
+    b_matrices.push_back(duneB);
+ 
 }
 
 template<class FluidSystem, class Indices>
