@@ -543,6 +543,7 @@ report(const int* globalCellIdxMap,
         const auto& well_potentials = ws.well_potentials;
         const auto& wpi = ws.productivity_index;
         const auto& wv = ws.surface_rates;
+        const auto frac_rate = ws.frac_rate;
         const auto& wname = this->name(well_index);
 
         auto dummyWell = data::Well{};
@@ -561,6 +562,7 @@ report(const int* globalCellIdxMap,
         if (pu.phaseIsActive(waterPhaseIdx)) {
             const int phase_pos = pu.canonicalToActivePhaseIdx(waterPhaseIdx);
             well.rates.set(rt::wat, wv[phase_pos]);
+            well.rates.set(rt::wat_frac, frac_rate);
             well.rates.set(rt::reservoir_water, reservoir_rates[phase_pos]);
             well.rates.set(rt::productivity_index_water, wpi[phase_pos]);
             well.rates.set(rt::well_potential_water, well_potentials[phase_pos]);
@@ -672,6 +674,7 @@ reportConnections(std::vector<data::Connection>& connections,
 
     if (! ws.producer) {
         this->reportConnectionFilterCake(well_index, connections);
+        this->reportConnectionFracture(well_index, connections);
     }
 
     if (! perf_data.connFracStatistics.empty()) {
@@ -1275,6 +1278,40 @@ reportConnectionFilterCake(const std::size_t well_index,
         filtrate.perm = filtrate_data.perm[i];
         filtrate.radius = filtrate_data.radius[i];
         filtrate.area_of_flow = filtrate_data.area_of_flow[i];
+        filtrate.flow_factor = filtrate_data.flow_factor[i];
+        filtrate.fracture_rate = filtrate_data.fracture_rate[i];
+    }
+}
+
+
+template<typename Scalar, typename IndexTraits>
+void WellState<Scalar, IndexTraits>::
+reportConnectionFracture(const std::size_t well_index,
+                         std::vector<data::Connection>& connections) const
+{
+    const auto& perf_data = this->well(well_index).perf_data;
+    const auto num_perf_well = perf_data.size();
+
+    const auto& data = perf_data.fracture_data;
+
+    for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
+        auto& fracture = connections[i].fracture;
+
+        fracture.area = data.area[i];
+        fracture.flux = data.flux[i];
+        fracture.height = data.height[i];
+        fracture.length = data.length[i];
+        fracture.WI = data.WI[i];
+        fracture.volume = data.volume[i];
+        fracture.filter_volume = data.filter_volume[i];
+        fracture.avg_width = data.avg_width[i];
+        fracture.avg_filter_width = data.avg_filter_width[i];
+        fracture.inj_pressure = data.inj_pressure[i];
+        fracture.inj_bhp = data.inj_bhp[i];
+        fracture.inj_wellrate = data.inj_wellrate[i];
+
+        connections[i].rates.set(data::Rates::opt::wat_frac,
+                                 data.water_rate[i]);
     }
 }
 
