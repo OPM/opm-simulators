@@ -73,6 +73,6 @@ if(HDF5_FOUND)
                                                  ABS_TOL 2e-2
                                                  REL_TOL 1e-5
                                                  RESTART_STEP 94
-                                                 TEST_ARGS --tolerance-mb=1e-7
+                                                 TEST_ARGS --tolerance-mb=1e-7 --linear-solver=ilu0
                                                  MPI_PROCS 4)
 endif()
