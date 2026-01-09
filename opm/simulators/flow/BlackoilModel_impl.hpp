@@ -609,7 +609,7 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
         const auto& value = solUpd_[ix];
         for (std::size_t pvIdx = 0; pvIdx < value.size(); ++pvIdx) {
             if (pvIdx == Indices::pressureSwitchIdx) {
-                dPMax = std::max(dPMax, value[pvIdx]);
+                dPMax = std::max(dPMax, std::abs(value[pvIdx]));
             }
             else if ( (pvIdx == Indices::waterSwitchIdx
                        && value.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
@@ -619,7 +619,7 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
                           && value.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss)
                       || (enableBrine && enableSaltPrecipitation && pvIdx == Indices::saltConcentrationIdx
                           && value.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) ) {
-                dSMax = std::max(dSMax, value[pvIdx]);
+                dSMax = std::max(dSMax, std::abs(value[pvIdx]));
             }
         }
     }
