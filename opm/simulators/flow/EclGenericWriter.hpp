@@ -47,7 +47,9 @@ class EclipseIO;
 class EclipseState;
 class InterRegFlowMap;
 class Inplace;
+template <class Grid> class LevelCartesianIndexMapper;
 struct NNCdata;
+struct NNCdataLevels;
 class Schedule;
 class SummaryConfig;
 class SummaryState;
@@ -165,11 +167,29 @@ protected:
     SimulatorReportSingle sub_step_report_;
     SimulatorReport simulation_report_;
     mutable std::vector<NNCdata> outputNnc_;
+    mutable std::vector<NNCdataLevels> outputNnc_;
     mutable std::unique_ptr<data::Solution> outputTrans_;
 
 private:
     void computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
     std::vector<NNCdata> exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
+
+    /// Returns true if the given Cartesian cell index belongs to a numerical aquifer.
+    /// If no numerical aquifer exists, always returns false.
+    bool isNumAquCell_(const std::size_t cartIdx) const;
+    /// Returns true if either of the two connected cells belongs to a numerical aquifer.
+    bool isNumAquConn_(const std::size_t cartIdx1, const std::size_t cartIdx2) const;
+
+    /// For CpGrid NNC intersections across different level grids, determine the
+    /// LGR (level grid) names and level Cartesian cell indices of the inside and outside cells.
+    /// Results are written to the provided (name, index) pairs. No action is
+    /// taken for non-CpGrid grid types since refinement is not supported yet.
+    template <typename Intersection>
+    void nncDiffLevelsData_(const Intersection& is,
+                            const std::map<std::string,int>& lgrNameToLevel,
+                            const Opm::LevelCartesianIndexMapper<Grid>& levelCartMapp,
+                            std::pair<std::string, std::size_t>& levelCellIn,
+                            std::pair<std::string, std::size_t>& levelCellOut) const;
 };
 
 } // namespace Opm
