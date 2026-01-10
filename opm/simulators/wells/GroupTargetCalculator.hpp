@@ -224,6 +224,7 @@ public:
         TargetInfo getTargetNoGuideRate_(const Group& group) const {
             return this->parent_calculator_.getTargetNoGuideRate(group);
         }
+        ControlMode getToplevelControlMode_() const;
         Scalar getTopLevelTarget_();
         bool hasFldOrNoneControl_(const Group& group) {
             return this->parent_calculator_.hasFldOrNoneControl(group);
@@ -250,7 +251,6 @@ public:
         // Since FractionCalculator does not have a default constructor, we use std::optional
         // to conditionally initialize it based on whether we are dealing with an injector or producer.
         std::optional<FractionCalculator> fraction_calculator_;
-        ControlMode toplevel_control_mode_;
     };
 
     /**
