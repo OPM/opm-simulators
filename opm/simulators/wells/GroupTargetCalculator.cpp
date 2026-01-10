@@ -428,6 +428,7 @@ calculateGroupTarget()
     // target rate for the top group.
     const Scalar full_target = target / this->chain_efficiency_factor_;
     if (bottom_group_current_rate_available > TARGET_RATE_TOLERANCE) {  // > 1e-12
+        const auto toplevel_control_mode = this->getToplevelControlMode_();
         if ((bottom_group_current_rate_available > full_target)) {
             // The bottom group is producing too much according to the top level group target,
             // so we need to scale down the target rate.
@@ -437,15 +438,15 @@ calculateGroupTarget()
                 const Scalar slave_resv_rate = this->getSlaveGroupReservoirRate_(this->bottom_group_);
                 // Scale the slave's reservoir rate by the same factor we would scale surface rates
                 const Scalar scale = full_target / bottom_group_current_rate_available;
-                return TargetInfo{scale * slave_resv_rate, this->toplevel_control_mode_};
+                return TargetInfo{scale * slave_resv_rate, toplevel_control_mode};
             }
             else {
-                return TargetInfo{full_target, this->toplevel_control_mode_};
+                return TargetInfo{full_target, toplevel_control_mode};
             }
         }
         else if (this->hasFLDControl_(this->bottom_group_)) {
             // The bottom group is under FLD control, so we return the top level target as is.
-            return TargetInfo{full_target, this->toplevel_control_mode_};
+            return TargetInfo{full_target, toplevel_control_mode};
         }
     }
     // Return the bottom group's target rate as is.
@@ -561,6 +562,20 @@ getLocalReductionLevel_(const std::vector<std::string>& chain)
         }
     }
     return local_reduction_level;
+}
+
+template<class Scalar, class IndexTraits>
+typename GroupTargetCalculator<Scalar, IndexTraits>::ControlMode
+GroupTargetCalculator<Scalar, IndexTraits>::
+TopToBottomCalculator::
+getToplevelControlMode_() const
+{
+    if (this->targetType() == TargetType::Injection) {
+        return this->groupState().injection_control(this->top_group_.name(), this->injectionPhase_());
+    }
+    else {
+        return this->groupState().production_control(this->top_group_.name());
+    }
 }
 
 template<class Scalar, class IndexTraits>
