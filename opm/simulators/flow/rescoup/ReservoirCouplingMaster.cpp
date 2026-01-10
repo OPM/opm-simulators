@@ -167,6 +167,15 @@ initStartOfReportStep(int report_step_idx)
 template <class Scalar>
 bool
 ReservoirCouplingMaster<Scalar>::
+isFirstSubstepOfSyncTimestep() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->isFirstSubstepOfSyncTimestep();
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingMaster<Scalar>::
 isMasterGroup(const std::string &group_name) const
 {
     return this->master_group_slave_names_.find(group_name) !=
@@ -326,6 +335,15 @@ receiveProductionDataFromSlaves()
 {
     assert(this->report_step_data_);
     this->report_step_data_->receiveProductionDataFromSlaves();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+setFirstSubstepOfSyncTimestep(bool value)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->setFirstSubstepOfSyncTimestep(value);
 }
 
 template <class Scalar>

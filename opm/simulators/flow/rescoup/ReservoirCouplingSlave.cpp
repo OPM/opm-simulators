@@ -70,6 +70,15 @@ initTimeStepping()
     this->report_step_data_ = std::make_unique<ReservoirCouplingSlaveReportStep<Scalar>>(*this);
 }
 
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
+isFirstSubstepOfSyncTimestep() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->isFirstSubstepOfSyncTimestep();
+}
+
 // NOTE: It is not legal for a slave to activate before the master has activated. This problem
 //       will be caught by the master when it receives the slave activation date. See:
 //       ReservoirCouplingSpawnSlaves::receiveActivationDateFromSlaves_()
@@ -192,6 +201,15 @@ sendProductionDataToMaster(
 {
     assert(this->report_step_data_);
     this->report_step_data_->sendProductionDataToMaster(production_data);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+setFirstSubstepOfSyncTimestep(bool value)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->setFirstSubstepOfSyncTimestep(value);
 }
 
 // ------------------
