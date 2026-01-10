@@ -612,6 +612,9 @@ GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForInjector_()
 {
+    auto calc = this->getInjectionTargetCalculator_(this->top_group_);
+    this->target_calculator_.template emplace<InjectionTargetCalculator>(
+        std::get<InjectionTargetCalculator>(calc));
     auto guide_target_mode =
         std::get<InjectionTargetCalculator>(this->target_calculator_).guideTargetMode();
     this->fraction_calculator_.emplace(
