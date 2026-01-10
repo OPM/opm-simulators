@@ -392,7 +392,7 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
-    const Scalar orig_target = tcalc.groupTarget(deferred_logger);
+    const Scalar orig_target = tcalc.groupTarget();
     const auto chain = groupStateHelper.groupChainTopBot(bottom_group.name(), group.name());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;

@@ -44,7 +44,8 @@ GroupStateHelper<Scalar, IndexTraits>::GroupStateHelper(WellState<Scalar, IndexT
                                                       const SummaryState& summary_state,
                                                       const GuideRate& guide_rate,
                                                       const PhaseUsageInfo<IndexTraits>& phase_usage_info,
-                                                      const Parallel::Communication& comm)
+                                                      const Parallel::Communication& comm,
+                                                      bool terminal_output)
     : well_state_ {&well_state}
     , group_state_ {&group_state}
     , schedule_ {schedule}
@@ -52,6 +53,7 @@ GroupStateHelper<Scalar, IndexTraits>::GroupStateHelper(WellState<Scalar, IndexT
     , guide_rate_ {guide_rate}
     , phase_usage_info_ {phase_usage_info}
     , comm_ {comm}
+    , terminal_output_ {terminal_output}
 {
 }
 
@@ -80,8 +82,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
                                                                const Phase injection_phase,
                                                                const Scalar efficiency_factor,
                                                                const std::vector<Scalar>& resv_coeff,
-                                                               const bool check_guide_rate,
-                                                               DeferredLogger& deferred_logger) const
+                                                               const bool check_guide_rate) const
 {
     // When called for a well ('name' is a well name), 'parent'
     // will be the name of 'group'. But if we recurse, 'name' and
@@ -111,8 +112,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
                                               injection_phase,
                                               efficiency_factor * group.getGroupEfficiencyFactor(),
                                               resv_coeff,
-                                              check_guide_rate,
-                                              deferred_logger);
+                                              check_guide_rate);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -126,8 +126,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
     GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {*this,
                                                                              resv_coeff,
                                                                              group,
-                                                                             injection_phase,
-                                                                             deferred_logger};
+                                                                             injection_phase};
 
     GroupStateHelpers::FractionCalculator fcalc {this->schedule_,
                                                  *this,
@@ -198,7 +197,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
         return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
     }
 
-    const Scalar orig_target = tcalc.groupTarget(deferred_logger);
+    const Scalar orig_target = tcalc.groupTarget();
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
@@ -242,8 +241,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
                                                                 const Scalar* rates,
                                                                 const Scalar efficiency_factor,
                                                                 const std::vector<Scalar>& resv_coeff,
-                                                                const bool check_guide_rate,
-                                                                DeferredLogger& deferred_logger) const
+                                                                const bool check_guide_rate) const
 {
     // When called for a well ('name' is a well name), 'parent'
     // will be the name of 'group'. But if we recurse, 'name' and
@@ -272,8 +270,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
                                                rates,
                                                efficiency_factor * group.getGroupEfficiencyFactor(),
                                                resv_coeff,
-                                               check_guide_rate,
-                                               deferred_logger);
+                                               check_guide_rate);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -311,7 +308,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
         return tcalc.calcModeRateFromRates(group_surface_rates);
     };
 
-    const Scalar orig_target = tcalc.groupTarget(deferred_logger);
+    const Scalar orig_target = tcalc.groupTarget();
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
@@ -457,8 +454,7 @@ GroupStateHelper<Scalar, IndexTraits>::
 getInjectionGroupTarget(
     const Group& group,
     const Phase& injection_phase,
-    const std::vector<Scalar>& resv_coeff,
-    DeferredLogger& deferred_logger) const
+    const std::vector<Scalar>& resv_coeff) const
 {
     const auto& pu = this->phaseUsage();
     const int pos = this->phaseToActivePhaseIdx(injection_phase);
@@ -518,7 +514,7 @@ getInjectionGroupTarget(
     default:
         OPM_DEFLOG_THROW(std::logic_error,
                          "Invalid Group::InjectionCMode in getInjectionGroupTarget",
-                         deferred_logger);
+                         this->deferredLogger());
         return 0.0;
     }
 }
@@ -533,7 +529,7 @@ GroupStateHelper<Scalar, IndexTraits>::getProductionGroupRateVector(const std::s
 template<typename Scalar, typename IndexTraits>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::
-getProductionGroupTarget(const Group& group, DeferredLogger& deferred_logger) const
+getProductionGroupTarget(const Group& group) const
 {
     Group::ProductionCMode cmode = this->groupState().production_control(group.name());
     Group::ProductionControls ctrl = group.productionControls(this->summary_state_);
@@ -567,7 +563,7 @@ getProductionGroupTarget(const Group& group, DeferredLogger& deferred_logger) co
     default:
         OPM_DEFLOG_THROW(std::logic_error,
                          "Invalid Group::ProductionCMode in getProductionGroupTarget",
-                         deferred_logger);
+                         this->deferredLogger());
         return 0.0;
     }
 }
@@ -605,8 +601,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
                                                                  const Scalar* rates,
                                                                  Phase injection_phase,
                                                                  const Scalar efficiency_factor,
-                                                                 const std::vector<Scalar>& resv_coeff,
-                                                                 DeferredLogger& deferred_logger) const
+                                                                 const std::vector<Scalar>& resv_coeff) const
 {
     // This function computes a wells group target.
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
@@ -630,8 +625,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
                                                 rates,
                                                 injection_phase,
                                                 efficiency_factor * group.getGroupEfficiencyFactor(),
-                                                resv_coeff,
-                                                deferred_logger);
+                                                resv_coeff);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -645,8 +639,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
     GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                              resv_coeff,
                                                                              group,
-                                                                             injection_phase,
-                                                                             deferred_logger};
+                                                                             injection_phase};
 
     GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
                                                                       *this,
@@ -667,7 +660,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
         return tcalc.calcModeRateFromRates(group_target_reductions);
     };
 
-    const Scalar orig_target = tcalc.groupTarget(deferred_logger);
+    const Scalar orig_target = tcalc.groupTarget();
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
@@ -724,8 +717,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
                                                                  const Group& group,
                                                                  const Scalar* rates,
                                                                  const Scalar efficiency_factor,
-                                                                 const std::vector<Scalar>& resv_coeff,
-                                                                 DeferredLogger& deferred_logger) const
+                                                                 const std::vector<Scalar>& resv_coeff) const
 {
     // This function computes a wells group target.
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
@@ -750,8 +742,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
                                                 parent_group,
                                                 rates,
                                                 efficiency_factor * group.getGroupEfficiencyFactor(),
-                                                resv_coeff,
-                                                deferred_logger);
+                                                resv_coeff);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -785,7 +776,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
         return tcalc.calcModeRateFromRates(group_target_reductions);
     };
 
-    const Scalar orig_target = tcalc.groupTarget(deferred_logger);
+    const Scalar orig_target = tcalc.groupTarget();
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
@@ -1123,13 +1114,11 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellSurfaceRates(const Group& group,
 template <typename Scalar, typename IndexTraits>
 int
 GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWells(const bool is_production_group,
-                                                                 const Phase injection_phase,
-                                                                 DeferredLogger& deferred_logger)
+                                                                  const Phase injection_phase)
 {
     OPM_TIMEFUNCTION();
     const auto& group_name = "FIELD";
-    return this->updateGroupControlledWellsRecursive_(
-        group_name, is_production_group, injection_phase, deferred_logger);
+    return this->updateGroupControlledWellsRecursive_(group_name, is_production_group, injection_phase);
 }
 
 template <typename Scalar, typename IndexTraits>
@@ -1383,15 +1372,12 @@ GroupStateHelper<Scalar, IndexTraits>::updateWellRatesFromGroupTargetScale(
 template <typename Scalar, typename IndexTraits>
 std::pair<std::optional<std::string>, Scalar>
 GroupStateHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
-                                                         const Group::ProductionCMode& offended_control,
-                                                         DeferredLogger& deferred_logger) const
+                                                          const Group::ProductionCMode& offended_control) const
 {
     std::pair<std::optional<std::string>, Scalar> offending_well {std::nullopt, 0.0};
     for (const std::string& child_group : group.groups()) {
         const auto& this_group = this->schedule_.getGroup(child_group, this->report_step_);
-        const auto& offending_well_this = this->worstOffendingWell(
-            this_group, offended_control, deferred_logger
-        );
+        const auto& offending_well_this = this->worstOffendingWell(this_group, offended_control);
         if (offending_well_this.second > offending_well.second) {
             offending_well = offending_well_this;
         }
@@ -1441,12 +1427,12 @@ GroupStateHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
             case Group::ProductionCMode::PRBL:
                 OPM_DEFLOG_THROW(std::runtime_error,
                                  "Group " + group.name() + " GroupProductionCMode PRBL not implemented",
-                                 deferred_logger);
+                                 this->deferredLogger());
                 break;
             case Group::ProductionCMode::CRAT:
                 OPM_DEFLOG_THROW(std::runtime_error,
                                  "Group " + group.name() + " GroupProductionCMode CRAT not implemented",
-                                 deferred_logger);
+                                 this->deferredLogger());
                 break;
             }
             const auto preferred_phase
@@ -1748,8 +1734,7 @@ int
 GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
     const std::string& group_name,
     const bool is_production_group,
-    const Phase injection_phase,
-    DeferredLogger& deferred_logger)
+    const Phase injection_phase)
 {
     const Group& group = this->schedule_.getGroup(group_name, this->report_step_);
     int num_wells = 0;
@@ -1765,11 +1750,9 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
         }
 
         if (included) {
-            num_wells += this->updateGroupControlledWellsRecursive_(
-                child_group, is_production_group, injection_phase, deferred_logger);
+            num_wells += this->updateGroupControlledWellsRecursive_(child_group, is_production_group, injection_phase);
         } else {
-            this->updateGroupControlledWellsRecursive_(
-                child_group, is_production_group, injection_phase, deferred_logger);
+            this->updateGroupControlledWellsRecursive_(child_group, is_production_group, injection_phase);
         }
     }
     for (const std::string& child_well : group.wells()) {
@@ -1812,7 +1795,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
                 GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                                resv_coeff,
                                                                                control_group};
-                const auto& control_group_target = tcalc.groupTarget(deferred_logger);
+                const auto& control_group_target = tcalc.groupTarget();
 
                 // Calculates the guide rate of the parent group with control.
                 // It is allowed that the guide rate of this group is defaulted. The guide rate will be

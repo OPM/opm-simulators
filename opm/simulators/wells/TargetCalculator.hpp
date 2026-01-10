@@ -59,9 +59,14 @@ public:
     template <typename RateType>
     RateType calcModeRateFromRates(const RateType* rates) const;
 
-    Scalar groupTarget(DeferredLogger& deferred_logger) const;
+    Scalar groupTarget() const;
 
     GuideRateModel::Target guideTargetMode() const;
+
+    DeferredLogger& deferredLogger() const
+    {
+        return this->groupStateHelper_.deferredLogger();
+    }
 
 private:
     Group::ProductionCMode cmode_;
@@ -81,8 +86,7 @@ public:
     InjectionTargetCalculator(const GroupStateHelperType& groupStateHelper,
                               const std::vector<Scalar>& resv_coeff,
                               const Group& group,
-                              const Phase& injection_phase,
-                              DeferredLogger& deferred_logger);
+                              const Phase& injection_phase);
 
     template <typename RateVec>
     auto calcModeRateFromRates(const RateVec& rates) const
@@ -90,9 +94,14 @@ public:
         return rates[pos_];
     }
 
-    Scalar groupTarget(DeferredLogger& deferred_logger) const;
+    Scalar groupTarget() const;
 
     GuideRateModel::Target guideTargetMode() const;
+
+    DeferredLogger& deferredLogger() const
+    {
+        return this->groupStateHelper_.deferredLogger();
+    }
 
 private:
     const GroupStateHelperType& groupStateHelper_;

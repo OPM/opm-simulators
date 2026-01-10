@@ -356,7 +356,7 @@ private:
         //   MANI fraction at PLAT = 8000 / 9500 ≈ 0.842
         //   PLAT fraction at FIELD = 9500 / 12050 ≈ 0.788
         const double sim_time = 0.0;
-        wellModel().updateGuideRates(report_step_idx_, sim_time, deferred_logger_);
+        wellModel().updateGuideRates(report_step_idx_, sim_time);
 
         // If test requires PLAT to NOT have a guide rate (to test local_reduction_level=0),
         // erase it after updateGuideRates() has set it from GCONPROD
@@ -392,7 +392,7 @@ private:
         auto& gsh = wellModel().groupStateHelper();
         const auto& field_group = schedule().getGroup("FIELD", report_step_idx_);
 
-        gsh.updateGroupControlledWells(/*is_production_group=*/true, Opm::Phase::OIL, deferred_logger_);
+        gsh.updateGroupControlledWells(/*is_production_group=*/true, Opm::Phase::OIL);
         gsh.updateGroupTargetReduction(field_group, /*is_injector=*/false);
     }
 };
@@ -621,8 +621,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsWithGuideRate)
         mani_rates.data(),
         initial_efficiency,
         resv_coeff,
-        /*check_guide_rate=*/true,
-        deferredLogger()
+        /*check_guide_rate=*/true
     );
 
     // ========================================================================
@@ -733,8 +732,7 @@ BOOST_AUTO_TEST_CASE(TestGroupHigherConstraintsProdWithoutGuideRate)
         mani_rates.data(),
         initial_efficiency,
         resv_coeff,
-        /*check_guide_rate=*/false,
-        deferredLogger()
+        /*check_guide_rate=*/false
     );
 
     // With local_reduction_level = 0 (no guide rate at PLAT):
@@ -808,8 +806,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerIndividualControl)
         maniGroup(),
         well_a_rates.data(),
         well_a_eff,
-        resv_coeff,
-        deferredLogger()
+        resv_coeff
     );
 
     BOOST_REQUIRE(target_opt.has_value());
@@ -891,8 +888,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerGrupControl)
         maniGroup(),
         well_a_rates.data(),
         well_a_eff,
-        resv_coeff,
-        deferredLogger()
+        resv_coeff
     );
 
     BOOST_REQUIRE(target_opt.has_value());
@@ -974,8 +970,7 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerWithSiblingIndividualControl)
         maniGroup(),
         well_a_rates.data(),
         well_a_eff,
-        resv_coeff,
-        deferredLogger()
+        resv_coeff
     );
 
     BOOST_REQUIRE(target_opt.has_value());

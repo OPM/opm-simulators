@@ -31,6 +31,7 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/gatherDeferredLogger.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -110,13 +111,77 @@ public:
         GroupState<Scalar>* previous_state_ptr_ {nullptr};
     };
 
+    /// @brief RAII guard that owns a DeferredLogger and auto-gathers on destruction
+    ///
+    /// @details This class provides a complete lifecycle for deferred logging in parallel
+    /// simulations. It owns a DeferredLogger instance and automatically handles:
+    /// - Pushing the logger onto the stack (saving the previous logger)
+    /// - On destruction: gathering messages across MPI ranks, logging on rank 0
+    ///   (if terminal_output enabled), and restoring the previous logger
+    ///
+    /// Usage:
+    ///   auto guard = groupStateHelper.pushLogger();
+    ///   // Use groupStateHelper.deferredLogger() to log messages
+    ///   // On scope exit: gather, log (if terminal), restore previous logger
+    class ScopedLoggerGuard
+    {
+    public:
+        explicit ScopedLoggerGuard(const GroupStateHelper& helper)
+            : helper_(&helper)
+            , previous_(helper.deferred_logger_)
+        {
+            helper_->deferred_logger_ = &logger_;
+        }
+
+        ~ScopedLoggerGuard()
+        {
+            if (helper_) {
+                // 1. Gather messages across MPI ranks
+                DeferredLogger global = gatherDeferredLogger(logger_, helper_->comm());
+
+                // 2. Log on rank 0 (if terminal_output enabled)
+                if (helper_->terminalOutput()) {
+                    global.logMessages();
+                }
+
+                // 3. Restore previous logger
+                helper_->deferred_logger_ = previous_;
+            }
+        }
+
+        // Delete copy operations and move assignment
+        ScopedLoggerGuard(const ScopedLoggerGuard&) = delete;
+        ScopedLoggerGuard& operator=(const ScopedLoggerGuard&) = delete;
+        ScopedLoggerGuard& operator=(ScopedLoggerGuard&&) = delete;
+
+        // Enable move constructor for factory function returns
+        ScopedLoggerGuard(ScopedLoggerGuard&& other) noexcept
+            : helper_(other.helper_)
+            , logger_(std::move(other.logger_))
+            , previous_(other.previous_)
+        {
+            // Update the helper's pointer to our moved logger
+            if (helper_) {
+                helper_->deferred_logger_ = &logger_;
+            }
+            other.helper_ = nullptr;
+            other.previous_ = nullptr;
+        }
+
+    private:
+        const GroupStateHelper* helper_{nullptr};
+        DeferredLogger logger_;            // Owned logger
+        DeferredLogger* previous_{nullptr}; // For restore
+    };
+
     GroupStateHelper(WellState<Scalar, IndexTraits>& well_state,
                     GroupState<Scalar>& group_state,
                     const Schedule& schedule,
                     const SummaryState& summary_state,
                     const GuideRate& guide_rate,
                     const PhaseUsageInfo<IndexTraits>& phase_usage_info,
-                    const Parallel::Communication& comm);
+                    const Parallel::Communication& comm,
+                    bool terminal_output);
 
     void accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor) const;
 
@@ -127,8 +192,7 @@ public:
                                                      const Phase injection_phase,
                                                      const Scalar efficiency_factor,
                                                      const std::vector<Scalar>& resv_coeff,
-                                                     const bool check_guide_rate,
-                                                     DeferredLogger& deferred_logger) const;
+                                                     const bool check_guide_rate) const;
 
     std::pair<bool, Scalar> checkGroupConstraintsProd(const std::string& name,
                                                       const std::string& parent,
@@ -136,10 +200,19 @@ public:
                                                       const Scalar* rates,
                                                       const Scalar efficiency_factor,
                                                       const std::vector<Scalar>& resv_coeff,
-                                                      const bool check_guide_rate,
-                                                      DeferredLogger& deferred_logger) const;
+                                                      const bool check_guide_rate) const;
 
     const Parallel::Communication& comm() const { return this->comm_; }
+
+    /// @brief Get the deferred logger
+    /// @throws std::logic_error if no logger has been set via pushLogger()
+    DeferredLogger& deferredLogger() const
+    {
+        if (this->deferred_logger_ == nullptr) {
+            throw std::logic_error("DeferredLogger not set. Call pushLogger() first.");
+        }
+        return *this->deferred_logger_;
+    }
 
     std::vector<Scalar> getGroupRatesAvailableForHigherLevelControl(const Group& group, const bool is_injector) const;
 
@@ -147,10 +220,9 @@ public:
 
     Scalar getInjectionGroupTarget(const Group& group,
                                    const Phase& injection_phase,
-                                   const std::vector<Scalar>& resv_coeff,
-                                   DeferredLogger& deferred_logger) const;
+                                   const std::vector<Scalar>& resv_coeff) const;
 
-    Scalar getProductionGroupTarget(const Group& group, DeferredLogger& deferred_logger) const;
+    Scalar getProductionGroupTarget(const Group& group) const;
 
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
 
@@ -160,16 +232,14 @@ public:
                                                      const Scalar* rates,
                                                      const Phase injection_phase,
                                                      const Scalar efficiency_factor,
-                                                     const std::vector<Scalar>& resv_coeff,
-                                                     DeferredLogger& deferred_logger) const;
+                                                     const std::vector<Scalar>& resv_coeff) const;
 
     std::optional<Scalar> getWellGroupTargetProducer(const std::string& name,
                                                      const std::string& parent,
                                                      const Group& group,
                                                      const Scalar* rates,
                                                      const Scalar efficiency_factor,
-                                                     const std::vector<Scalar>& resv_coeff,
-                                                     DeferredLogger& deferred_logger) const;
+                                                     const std::vector<Scalar>& resv_coeff) const;
 
     GuideRate::RateVector getWellRateVector(const std::string& name) const;
 
@@ -216,6 +286,20 @@ public:
     GroupStateGuard pushGroupState(GroupState<Scalar>& group_state)
     {
         return GroupStateGuard(*this, group_state);
+    }
+
+    /// @brief Push a new logger onto the stack with auto-gather on destruction
+    ///
+    /// @details Creates a new DeferredLogger and pushes it onto the logger stack.
+    /// When the returned guard goes out of scope:
+    /// 1. Messages are gathered across MPI ranks via gatherDeferredLogger()
+    /// 2. Messages are logged on rank 0 (if terminal_output is enabled)
+    /// 3. The previous logger is restored
+    ///
+    /// @return RAII guard that owns the logger and handles cleanup
+    ScopedLoggerGuard pushLogger() const
+    {
+        return ScopedLoggerGuard(*this);
     }
 
     WellStateGuard pushWellState(WellState<Scalar, IndexTraits>& well_state)
@@ -279,7 +363,6 @@ public:
         report_step_ = report_step;
     }
 
-
     const SummaryState& summaryState() const
     {
         return this->summary_state_;
@@ -297,6 +380,11 @@ public:
                              const bool injector,
                              const bool network = false) const;
 
+    bool terminalOutput() const
+    {
+         return this->terminal_output_;
+    }
+
     template <class RegionalValues>
     void updateGpMaintTargetForGroups(const Group& group,
                                       const RegionalValues& regional_values,
@@ -305,8 +393,7 @@ public:
     /// update the number of wells that are actively under group control for a given group with name given by
     /// group_name its main usage is to detect cases where there is no wells under group control
     int updateGroupControlledWells(const bool is_production_group,
-                                   const Phase injection_phase,
-                                   DeferredLogger& deferred_logger);
+                                   const Phase injection_phase);
 
     void updateGroupProductionRates(const Group& group);
 
@@ -342,8 +429,7 @@ public:
     /// Returns the name of the worst offending well and its fraction (i.e. violated_phase / preferred_phase)
     std::pair<std::optional<std::string>, Scalar>
     worstOffendingWell(const Group& group,
-                       const Group::ProductionCMode& offended_control,
-                       DeferredLogger& deferred_logger) const;
+                       const Group::ProductionCMode& offended_control) const;
 
 private:
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -400,8 +486,7 @@ private:
 
     int updateGroupControlledWellsRecursive_(const std::string& group_name,
                                              const bool is_production_group,
-                                             const Phase injection_phase,
-                                             DeferredLogger& deferred_logger);
+                                             const Phase injection_phase);
 
     void updateGroupTargetReductionRecursive_(const Group& group,
                                               const bool is_injector,
@@ -412,10 +497,14 @@ private:
     const Schedule& schedule_;
     const SummaryState& summary_state_;
     const GuideRate& guide_rate_;
+    // NOTE: The deferred logger does not change the object "meaningful" state, so it should be ok to
+    //   make it mutable and store a pointer to it here.
+    mutable DeferredLogger* deferred_logger_ {nullptr};
     // NOTE: The phase usage info seems to be read-only throughout the simulation, so it should be safe
     // to store a reference to it here.
     const PhaseUsageInfo<IndexTraits>& phase_usage_info_;
     const Parallel::Communication& comm_;
+    bool terminal_output_ {false};
     int report_step_ {0};
     ReservoirCoupling::Proxy<Scalar> rescoup_{};
 };

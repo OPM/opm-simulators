@@ -336,11 +336,13 @@ namespace Opm {
 
         this->updateAverageFormationFactor();
 
-        DeferredLogger local_deferredLogger;
+        auto logger_guard = this->groupStateHelper().pushLogger();
+        auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
 #ifdef RESERVOIR_COUPLING_ENABLED
         auto rescoup_logger_guard = this->setupRescoupScopedLogger(local_deferredLogger);
 #endif
+
         this->switched_prod_groups_.clear();
         this->switched_inj_groups_.clear();
 
@@ -468,7 +470,6 @@ namespace Opm {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
-        this->guide_rate_handler_.setLogger(&local_deferredLogger);
         //update guide rates
         this->guide_rate_handler_.updateGuideRates(
             reportStepIdx, simulationTime, this->wellState(), this->groupState()
@@ -722,7 +723,8 @@ namespace Opm {
         this->report_step_starts_ = false;
         const int reportStepIdx = simulator_.episodeIndex();
 
-        DeferredLogger local_deferredLogger;
+        auto logger_guard = this->groupStateHelper().pushLogger();
+        auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
         for (const auto& well : well_container_) {
             if (getPropValue<TypeTag, Properties::EnablePolymerMW>() && well->isInjector()) {
                 well->updateWaterThroughput(dt, this->wellState());
@@ -776,12 +778,6 @@ namespace Opm {
         this->calculateProductivityIndexValues(local_deferredLogger);
 
         this->commitWGState();
-
-        const Opm::Parallel::Communication& comm = grid().comm();
-        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
-        if (this->terminal_output_) {
-            global_deferredLogger.logMessages();
-        }
 
         //reporting output temperatures
         this->computeWellTemperature();
@@ -873,7 +869,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     createWellContainer(const int report_step)
     {
-        DeferredLogger local_deferredLogger;
+        auto logger_guard = this->groupStateHelper().pushLogger();
+        auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
         const int nw = this->numLocalWells();
 
@@ -1062,14 +1059,6 @@ namespace Opm {
             }
         }
 
-        // Collect log messages and print.
-
-        const Opm::Parallel::Communication& comm = grid().comm();
-        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
-        if (this->terminal_output_) {
-            global_deferredLogger.logMessages();
-        }
-
         this->well_container_generic_.clear();
         for (auto& w : well_container_) {
             this->well_container_generic_.push_back(w.get());
@@ -1167,9 +1156,9 @@ namespace Opm {
              const double dt)
     {
         OPM_TIMEFUNCTION();
-        DeferredLogger local_deferredLogger;
+        auto logger_guard = this->groupStateHelper().pushLogger();
+        auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
-        this->guide_rate_handler_.setLogger(&local_deferredLogger);
         if constexpr (BlackoilWellModelGasLift<TypeTag>::glift_debug) {
             if (gaslift_.terminalOutput()) {
                 const std::string msg =
@@ -1589,8 +1578,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     getWellConvergence(const std::vector<Scalar>& B_avg, bool checkWellGroupControlsAndNetwork) const
     {
-
-        DeferredLogger local_deferredLogger;
+        auto logger_guard = this->groupStateHelper().pushLogger();
+        auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
         // Get global (from all processes) convergence report.
         ConvergenceReport local_report;
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
@@ -1608,7 +1597,6 @@ namespace Opm {
         }
 
         const Opm::Parallel::Communication comm = grid().comm();
-        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
         ConvergenceReport report = gatherConvergenceReport(local_report, comm);
 
         if (checkWellGroupControlsAndNetwork) {
@@ -1618,8 +1606,6 @@ namespace Opm {
         }
 
         if (this->terminal_output_) {
-            global_deferredLogger.logMessages();
-
             // Log debug messages for NaN or too large residuals.
             for (const auto& f : report.wellFailures()) {
                 if (f.severity() == ConvergenceReport::Severity::NotANumber) {
@@ -1820,7 +1806,8 @@ namespace Opm {
     updateWellTestState(const double simulationTime, WellTestState& wellTestState)
     {
         OPM_TIMEFUNCTION();
-        DeferredLogger local_deferredLogger;
+        auto logger_guard = this->groupStateHelper().pushLogger();
+        auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
         for (const auto& well : well_container_) {
             const auto& wname = well->name();
             const auto wasClosed = wellTestState.well_is_closed(wname);
@@ -1882,14 +1869,6 @@ namespace Opm {
                                 "shut");
                 local_deferredLogger.info(msg);
             }
-        }
-
-        const Opm::Parallel::Communication comm = grid().comm();
-        DeferredLogger global_deferredLogger =
-            gatherDeferredLogger(local_deferredLogger, comm);
-
-        if (this->terminal_output_) {
-            global_deferredLogger.logMessages();
         }
     }
 

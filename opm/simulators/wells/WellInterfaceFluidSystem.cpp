@@ -183,8 +183,7 @@ checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const bool check_guide_rate,
-                      WellStateType& well_state,
-                      DeferredLogger& deferred_logger) const
+                      WellStateType& well_state) const
 {
     const auto& group_state = groupStateHelper.groupState();
 
@@ -206,7 +205,7 @@ checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
 
     return WellGroupConstraints(*this).checkGroupConstraints(groupStateHelper,
                                                              schedule, summaryState,
-                                                             rCoeff, check_guide_rate, well_state, deferred_logger);
+                                                             rCoeff, check_guide_rate, well_state);
 }
 
 template<typename FluidSystem>
@@ -224,7 +223,7 @@ checkConstraints(const GroupStateHelperType& groupStateHelper,
         return true;
     } else {
         return checkGroupConstraints(groupStateHelper, schedule,
-                                     summaryState, true, well_state, deferred_logger);
+                                     summaryState, true, well_state);
     }
 }
 
