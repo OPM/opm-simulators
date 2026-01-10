@@ -387,12 +387,9 @@ template<class Scalar> class WellContributions;
             ///
             /// \param report_step_idx Current report step index
             /// \param sim_time Current simulation time
-            /// \param deferred_logger Logger for deferred messages
             void updateGuideRates(const int report_step_idx,
-                                  const double sim_time,
-                                  DeferredLogger& deferred_logger)
+                                  const double sim_time)
             {
-                this->guide_rate_handler_.setLogger(&deferred_logger);
                 this->guide_rate_handler_.updateGuideRates(
                     report_step_idx, sim_time, this->wellState(), this->groupState()
                 );
