@@ -521,7 +521,8 @@ updateSolution(const BVector& dx)
 {
     OPM_TIMEBLOCK(updateSolution);
     // Prepare to store solution update for convergence check
-    if (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0) {
+    if (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0
+        || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_) {
         prepareStoringSolutionUpdate();
     }
 
@@ -542,7 +543,8 @@ updateSolution(const BVector& dx)
     }
 
     // Store solution update
-    if (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0) {
+    if (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0
+        || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_) {
         storeSolutionUpdate(dx);
     }
 }
@@ -592,8 +594,10 @@ storeSolutionUpdate(const BVector& dx)
 }
 
 template <class TypeTag>
-std::pair<typename BlackoilModel<TypeTag>::Scalar,
-          typename BlackoilModel<TypeTag>::Scalar>
+std::tuple<typename BlackoilModel<TypeTag>::Scalar,
+           typename BlackoilModel<TypeTag>::Scalar,
+           typename BlackoilModel<TypeTag>::Scalar,
+           typename BlackoilModel<TypeTag>::Scalar>
 BlackoilModel<TypeTag>::
 getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
 {
@@ -603,6 +607,8 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
     // Init output
     Scalar dPMax = 0.0;
     Scalar dSMax = 0.0;
+    Scalar dRsMax = 0.0;
+    Scalar dRvMax = 0.0;
 
     // Loop over solution update, get the correct variables and calculate max.
     for (const auto& ix : ixCells) {
@@ -621,14 +627,24 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
                           && value.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) ) {
                 dSMax = std::max(dSMax, std::abs(value[pvIdx]));
             }
+            else if (pvIdx == Indices::compositionSwitchIdx
+                     && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+                dRsMax = std::max(dRsMax, std::abs(value[pvIdx]));
+            }
+            else if (pvIdx == Indices::compositionSwitchIdx
+                     && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
+                dRvMax = std::max(dRvMax, std::abs(value[pvIdx]));
+            }
         }
     }
 
     // Communicate max values
     dPMax = this->grid_.comm().max(dPMax);
     dSMax = this->grid_.comm().max(dSMax);
+    dRsMax = this->grid_.comm().max(dRsMax);
+    dRvMax = this->grid_.comm().max(dRvMax);
 
-    return {dPMax, dSMax};
+    return { dPMax, dSMax, dRsMax, dRvMax };
 }
 
 template <class TypeTag>
@@ -810,8 +826,10 @@ characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
         splitPV[ix] += static_cast<double>(pvValue);
         ++cellCntPV[ix];
 
-        // For (later) dP and dS check, we need cell indices of [1] violations
-        if ((this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0) && ix == 1) {
+        // For dP and dS check, we need cell indices of [1] violations
+        if ( ix == 1 &&
+             (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0
+              || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_ > 0.0 ) ) {
             ixCells.push_back(cell_idx);
         }
     }
@@ -843,9 +861,11 @@ void
 BlackoilModel<TypeTag>::
 updateTUNINGDP(const TuningDp& tuning_dp)
 {
-    // Note: If TUNINGDP is _not_ set, these should be 0.0
+    // NOTE: If TUNINGDP item is _not_ set it should be 0.0
     this->param_.tolerance_max_dp_ = tuning_dp.TRGDDP;
     this->param_.tolerance_max_ds_ = tuning_dp.TRGDDS;
+    this->param_.tolerance_max_drs_ = tuning_dp.TRGDDRS;
+    this->param_.tolerance_max_drv_ = tuning_dp.TRGDDRV;
 }
 
 template <class TypeTag>
@@ -926,34 +946,35 @@ getReservoirConvergence(const double reportTime,
             this->param_.relaxed_max_pv_fraction_ * eligible;
     }();
 
-    // If tolerances for dP and/or dS are met, we use
-    // relaxed cnv tolerances
+    // If tolerances for solution changes are met, we use the
+    // relaxed cnv tolerance. Note that all tolerances > 0.0
+    // must be met to enable use of relaxed cnv tolerance.
     Scalar dPMax = 0.0;
     Scalar dSMax = 0.0;
+    Scalar dRsMax = 0.0;
+    Scalar dRvMax = 0.0;
     bool use_dp_tol = iteration > 0 &&
         this->param_.tolerance_max_dp_ > 0.0;
     bool use_ds_tol = iteration > 0 &&
         this->param_.tolerance_max_ds_ > 0.0;
-    bool relax_dp_ds_cnv = false;
-    if (use_dp_tol || use_ds_tol) {
-        std::tie(dPMax, dSMax) = getMaxSolutionUpdate(ixCells);
-        if (use_dp_tol && !use_ds_tol) {
-            relax_dp_ds_cnv = dPMax < this->param_.tolerance_max_dp_;
-        }
-        else if (!use_dp_tol && use_ds_tol) {
-            relax_dp_ds_cnv = dSMax < this->param_.tolerance_max_ds_;
-        }
-        else {
-            relax_dp_ds_cnv = dPMax < this->param_.tolerance_max_dp_
-                && dSMax < this->param_.tolerance_max_ds_;
-        }
+    bool use_drs_tol = iteration > 0 &&
+        this->param_.tolerance_max_drs_ > 0.0;
+    bool use_drv_tol = iteration > 0 &&
+        this->param_.tolerance_max_drv_ > 0.0;
+    bool relax_dsol_cnv = false;
+    if (!ixCells.empty() && (use_dp_tol || use_ds_tol || use_drs_tol || use_drv_tol)) {
+        std::tie(dPMax, dSMax, dRsMax, dRvMax) = getMaxSolutionUpdate(ixCells);
+        relax_dsol_cnv = (!use_dp_tol || (dPMax > 0.0 && dPMax < this->param_.tolerance_max_dp_)) &&
+                         (!use_ds_tol || (dSMax > 0.0 && dSMax < this->param_.tolerance_max_ds_)) &&
+                         (!use_drs_tol || (dRsMax > 0.0 && dRsMax < this->param_.tolerance_max_drs_)) &&
+                         (!use_drv_tol || (dRvMax > 0.0 && dRvMax < this->param_.tolerance_max_drv_));
     }
 
     // Determine if relaxed CNV tolerances should be used
     const bool use_relaxed_cnv = relax_final_iteration_cnv
         || relax_pv_fraction_cnv
         || relax_iter_cnv
-        || relax_dp_ds_cnv;
+        || relax_dsol_cnv;
 
     if ((use_relaxed_cnv || use_relaxed_mb) &&
         this->terminal_output_)
@@ -968,20 +989,21 @@ getReservoirConvergence(const double reportTime,
         else if (relax_pv_fraction_cnv) {
             message = "Sum of pore volumes below tolerance, ";
         }
-        else if (relax_dp_ds_cnv) {
-            if (use_dp_tol && !use_ds_tol) {
-                message = fmt::format("Max pressure change is below tolerance ({:.2e}<{:.2e}), ",
-                                      dPMax, this->param_.tolerance_max_dp_);
+        else if (relax_dsol_cnv) {
+            message = "Max. solution change below tolerance ( ";
+            if (use_dp_tol && dPMax < this->param_.tolerance_max_dp_ ) {
+                message += fmt::format("DP={:.2e}<{:.2e} ", dPMax, this->param_.tolerance_max_dp_);
             }
-            else if (!use_dp_tol && use_ds_tol) {
-                message = fmt::format("Max saturation change is below tolerance ({:.2e}<{:.2e}), ",
-                                      dSMax, this->param_.tolerance_max_ds_);
+            if (use_ds_tol && dSMax < this->param_.tolerance_max_ds_ ) {
+                message += fmt::format("DS={:.2e}<{:.2e} ", dSMax, this->param_.tolerance_max_ds_);
             }
-            else {
-                message = fmt::format("Both pressure and saturation changes are below tolerances ({:.2e}<{:.2e} "
-                                      "and {:.2e}<{:.2e}), ",
-                                      dPMax, this->param_.tolerance_max_dp_, dSMax, this->param_.tolerance_max_ds_);
+            if (use_drs_tol && dRsMax < this->param_.tolerance_max_drs_ ) {
+                message += fmt::format("DRS={:.2e}<{:.2e} ", dRsMax, this->param_.tolerance_max_drs_);
             }
+            if (use_drv_tol && dRvMax < this->param_.tolerance_max_drv_ ) {
+                message += fmt::format("DRV={:.2e}<{:.2e} ", dRvMax, this->param_.tolerance_max_drv_);
+            }
+            message += "), ";
         }
         message += "try to continue with relaxed tolerances:";
 
@@ -1077,6 +1099,8 @@ getReservoirConvergence(const double reportTime,
 
             msg += "    DP     ";
             msg += "    DS     ";
+            msg += "    DRS    ";
+            msg += "    DRV    ";
 
             OpmLog::debug(msg);
         }
@@ -1097,11 +1121,14 @@ getReservoirConvergence(const double reportTime,
         if (iteration == 0) {
             ss << std::string(5, ' ') << "-" << std::string(5, ' ');
             ss << std::string(5, ' ') << "-" << std::string(5, ' ');
+            ss << std::string(5, ' ') << "-" << std::string(5, ' ');
+            ss << std::string(5, ' ') << "-" << std::string(5, ' ');
         }
-
         else {
             ss << std::setw(11) << dPMax;
             ss << std::setw(11) << dSMax;
+            ss << std::setw(11) << dRsMax;
+            ss << std::setw(11) << dRvMax;
         }
 
         ss.precision(oprec);

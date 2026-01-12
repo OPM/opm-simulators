@@ -357,15 +357,19 @@ public:
 
     void updateTUNINGDP(const TuningDp& tuning_dp)
     {
-        // NOTE: If TUNINGDP is _not_ set, these are 0.0
+        // NOTE: If TUNINGDP item is _not_ set it should be 0.0
         modelParam_.tolerance_max_dp_ = tuning_dp.TRGDDP;
         modelParam_.tolerance_max_ds_ = tuning_dp.TRGDDS;
+        modelParam_.tolerance_max_drs_ = tuning_dp.TRGDDRS;
+        modelParam_.tolerance_max_drv_ = tuning_dp.TRGDDRV;
 
         // Terminal warnings
         if (terminalOutput_) {
             // TUNINGDP values
-            OpmLog::debug(fmt::format("TUNINGDP values: TRGDDP: {:.2e}, TRGDDS: {:.2e}",
-                                      tuning_dp.TRGDDP, tuning_dp.TRGDDS));
+            OpmLog::debug(
+                fmt::format("TUNINGDP values: TRGDDP: {:.2e}, TRGDDS: {:.2e}, TRGDDRS: {:.2e}, TRGDDRV: {:.2e}",
+                            tuning_dp.TRGDDP, tuning_dp.TRGDDS, tuning_dp.TRGDDRS, tuning_dp.TRGDDRV)
+            );
 
             // Warnings unsupported items
             if (tuning_dp.TRGLCV_has_value) {

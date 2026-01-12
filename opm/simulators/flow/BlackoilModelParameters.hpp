@@ -82,6 +82,12 @@ template<class Scalar>
 struct ToleranceMaxDs { static constexpr Scalar value = 0.0; };
 
 template<class Scalar>
+struct ToleranceMaxDrs { static constexpr Scalar value = 0.0; };
+
+template<class Scalar>
+struct ToleranceMaxDrv { static constexpr Scalar value = 0.0; };
+
+template<class Scalar>
 struct ToleranceWells { static constexpr Scalar value = 1e-4; };
 
 template<class Scalar>
@@ -222,6 +228,10 @@ public:
     Scalar tolerance_max_dp_;
     /// Max saturation change during a Newton iteration (TUNINGDP item = TRGDDS)
     Scalar tolerance_max_ds_;
+    /// Max RS change during a Newton iteration (TUNINGDP item = TRGDDRS)
+    Scalar tolerance_max_drs_;
+    /// Max RV change during a Newton iteration (TUNINGDP item = TRGDDRV)
+    Scalar tolerance_max_drv_;
     /// Well convergence tolerance.
     Scalar tolerance_wells_;
     /// Tolerance for the well control equations

@@ -187,7 +187,8 @@ public:
     /// Get solution update vector as a PrimaryVarible
     void prepareStoringSolutionUpdate();
     void storeSolutionUpdate(const BVector& dx);
-    std::pair<Scalar, Scalar> getMaxSolutionUpdate(const std::vector<unsigned>& ixCells);
+    std::tuple<Scalar, Scalar, Scalar, Scalar>
+    getMaxSolutionUpdate(const std::vector<unsigned>& ixCells);
 
     /// Return true if output to cout is wanted.
     bool terminalOutputEnabled() const
