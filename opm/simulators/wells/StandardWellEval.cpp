@@ -100,7 +100,7 @@ addBCDMatrix(std::vector<BMatrix>& b_matrices,
     duneD.setSize(1, 1, 1);
     assert(linSys_.duneB_.N() == 1);
     duneB.setSize(linSys_.duneB_.N(), linSys_.duneB_.M(), linSys_.duneB_.M());
-    duneC.setSize(linSys_.duneB_.M(), linSys_.duneB_.N(), 1);
+    duneC.setSize(linSys_.duneC_.M(), linSys_.duneC_.N(), linSys_.duneC_.M());
     const size_t numPerfs = linSys_.duneB_.M();
     for (auto row = duneD.createbegin(),
               end = duneD.createend(); row != end; ++row) {
