@@ -165,20 +165,20 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "after the iterations with the strict tolerance");
     Parameters::Register<Parameters::ToleranceMaxDp<Scalar>>
         ("Tolerance for max pressure change during a Newton iteration. "
-         "A value greater than 0.0 allows for convergence according to "
-         "relaxed local convergence tolerance");
+         "A value greater than 0.0 allows for convergence regardless "
+         "of residual tolerances. Use with care!");
     Parameters::Register<Parameters::ToleranceMaxDs<Scalar>>
         ("Tolerance for max saturation change during a Newton iteration. "
-         "A value greater than 0.0 allows for convergence according to "
-         "relaxed local convergence tolerance.");
+         "A value greater than 0.0 allows for convergence regardless "
+         "of residual tolerances. Use with care!");
     Parameters::Register<Parameters::ToleranceMaxDrs<Scalar>>
         ("Tolerance for max RS change during a Newton iteration. "
-         "A value greater than 0.0 allows for convergence according to "
-         "relaxed local convergence tolerance.");
+         "A value greater than 0.0 allows for convergence regardless "
+         "of residual tolerances. Use with care!");
     Parameters::Register<Parameters::ToleranceMaxDrv<Scalar>>
         ("Tolerance for max RV change during a Newton iteration. "
-         "A value greater than 0.0 allows for convergence according to "
-         "relaxed local convergence tolerance.");
+         "A value greater than 0.0 allows for convergence regardless "
+         "of residual tolerances. Use with care!");
     Parameters::Register<Parameters::ToleranceWells<Scalar>>
         ("Well convergence tolerance");
     Parameters::Register<Parameters::ToleranceWellControl<Scalar>>

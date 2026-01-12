@@ -976,6 +976,10 @@ getReservoirConvergence(const double reportTime,
         || relax_iter_cnv
         || relax_dsol_cnv;
 
+    // Ensure that CNV convergence criteria is met when max.
+    // solution change tolerances have been fulfilled
+    Scalar tolerance_cnv_relaxed = relax_dsol_cnv ? 1e20 : param_.tolerance_cnv_relaxed_;
+
     if ((use_relaxed_cnv || use_relaxed_mb) &&
         this->terminal_output_)
     {
@@ -1012,13 +1016,13 @@ getReservoirConvergence(const double reportTime,
         }
 
         if (use_relaxed_cnv) {
-            message += fmt::format(" CNV: {:.1e}", param_.tolerance_cnv_relaxed_);
+            message += fmt::format(" CNV: {:.1e}", tolerance_cnv_relaxed);
         }
 
         OpmLog::debug(message);
     }
 
-    const auto tol_cnv = use_relaxed_cnv ? param_.tolerance_cnv_relaxed_ : param_.tolerance_cnv_;
+    const auto tol_cnv = use_relaxed_cnv ? tolerance_cnv_relaxed : param_.tolerance_cnv_;
     const auto tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
     const auto tol_cnv_energy = use_relaxed_cnv ? param_.tolerance_cnv_energy_relaxed_ : param_.tolerance_cnv_energy_;
     const auto tol_eb = use_relaxed_mb ? param_.tolerance_energy_balance_relaxed_ : param_.tolerance_energy_balance_;
