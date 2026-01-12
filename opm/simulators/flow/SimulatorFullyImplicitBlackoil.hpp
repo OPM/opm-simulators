@@ -471,7 +471,7 @@ public:
                     result = max_next_tstep > 0;
                 }
 
-                if (enableTUNING && events.hasEvent(ScheduleEvents::TUNINGDP_CHANGE)) {
+                if (events.hasEvent(ScheduleEvents::TUNINGDP_CHANGE)) {
                     // Unset the event to not trigger it again on the next sub step
                     schedule.clear_event(ScheduleEvents::TUNINGDP_CHANGE, reportStep);
 
