@@ -986,7 +986,8 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
             return this->getSatelliteRate_(group, phase_pos, res_rates, is_injector);
         }
         if (this->isReservoirCouplingMasterGroup(group)) {
-            return this->getReservoirCouplingMasterGroupRate_(group, phase_pos, res_rates, is_injector);
+            return this->getReservoirCouplingMasterGroupRate_(
+                group, phase_pos, res_rates, is_injector, network);
         }
     }
     Scalar rate = 0.0;
@@ -1608,10 +1609,12 @@ GroupStateHelper<Scalar, IndexTraits>::getLocalReductionLevel_(const std::vector
 
 template <typename Scalar, typename IndexTraits>
 Scalar
-GroupStateHelper<Scalar, IndexTraits>::getReservoirCouplingMasterGroupRate_([[maybe_unused]] const Group& group,
-                                                                            [[maybe_unused]] const int phase_pos,
-                                                                            [[maybe_unused]] const bool res_rates,
-                                                                            [[maybe_unused]] const bool is_injector) const
+GroupStateHelper<Scalar, IndexTraits>::
+getReservoirCouplingMasterGroupRate_([[maybe_unused]] const Group& group,
+                                     [[maybe_unused]] const int phase_pos,
+                                     [[maybe_unused]] const bool res_rates,
+                                     [[maybe_unused]] const bool is_injector,
+                                     [[maybe_unused]] const bool network) const
 {
 #ifdef RESERVOIR_COUPLING_ENABLED
     if (this->isReservoirCouplingMaster()) {
@@ -1620,7 +1623,8 @@ GroupStateHelper<Scalar, IndexTraits>::getReservoirCouplingMasterGroupRate_([[ma
             return this->reservoirCouplingMaster().getMasterGroupInjectionRate(group.name(), rescoup_phase, res_rates);
         }
         else {
-            return this->reservoirCouplingMaster().getMasterGroupProductionRate(group.name(), rescoup_phase, res_rates);
+            return this->reservoirCouplingMaster().getMasterGroupProductionRate(
+                group.name(), rescoup_phase, res_rates, network);
         }
     }
     else {
