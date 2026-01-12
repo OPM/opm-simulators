@@ -827,7 +827,7 @@ characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
         ++cellCntPV[ix];
 
         // For dP and dS check, we need cell indices of [1] violations
-        if ( ix == 1 &&
+        if ( ix > 0 &&
              (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0
               || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_ > 0.0 ) ) {
             ixCells.push_back(cell_idx);
