@@ -118,6 +118,18 @@ public:
     /// @return Production surface rate for the specified phase
     Scalar getMasterGroupProductionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
 
+    /// @brief Get the network production surface rate for a master group
+    ///
+    /// This returns the production rate computed with network=true, meaning efficiency
+    /// factors are 1.0 for groups/wells where GEFAC/WEFAC item 3 = "NO". This is used
+    /// for network leaf node rate calculations.
+    ///
+    /// @param group_name Name of the master group
+    /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
+    /// @return Network production surface rate for the specified phase
+    Scalar getMasterGroupNetworkProductionSurfaceRate(
+        const std::string &group_name, ReservoirCoupling::Phase phase) const;
+
     /// @brief Get the production reservoir rate for a master group
     ///
     /// This returns the production rate at reservoir conditions, computed using the
@@ -217,9 +229,10 @@ private:
     /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
     /// @param reservoir_rates If true, return reservoir rates; if false, return surface rates
     /// @param is_injection If true, return injection rates; if false, return production rates
+    /// @param network If true, return network rates (where GEFAC/WEFAC item 3 = "NO" is ignored)
     /// @return The requested rate for the specified phase
     Scalar getMasterGroupRate_(const std::string &group_name, ReservoirCoupling::Phase phase,
-                               bool reservoir_rates, bool is_injection) const;
+                               bool reservoir_rates, bool is_injection, bool network = false) const;
 
     /// Reference to the parent ReservoirCouplingMaster object
     ReservoirCouplingMaster<Scalar> &master_;
