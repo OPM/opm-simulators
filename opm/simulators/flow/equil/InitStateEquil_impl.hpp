@@ -197,8 +197,7 @@ std::pair<Scalar,Scalar> cellZMinMax(const Element& element)
 }
 
 template<class Scalar>
-void computeBlockDip(const Scalar& cellThickness,
-                                   const CellCornerData<Scalar>& cellCorners,
+void computeBlockDip(const CellCornerData<Scalar>& cellCorners,
                                   Scalar& dipAngle, Scalar& dipAzimuth)
 {
     const auto& Xc = cellCorners.X;
@@ -2250,7 +2249,7 @@ equilibrateTiltedFaultBlockSimple(const CellRange& cells,
 
         // Calculate dip parameters from corner point geometry
         Scalar dipAngle, dipAzimuth;
-        Details::computeBlockDip(cellThickness, cellCorners_[cell], dipAngle, dipAzimuth);
+        Details::computeBlockDip(cellCorners_[cell], dipAngle, dipAzimuth);
 
         // Reference point for TVD calculations
                 std::array<Scalar, 3> referencePoint = {
@@ -2266,8 +2265,8 @@ equilibrateTiltedFaultBlockSimple(const CellRange& cells,
         std::vector<std::pair<Scalar, Scalar>> levels;
 
         // Subdivide upper and lower halves separately
-        for (int half = 0; half < 2; ++half) {
-            Scalar halfStart = (half == 0) ? zmin : zmin + halfThickness;
+        for (int side = 0; side < 2; ++side) {
+            Scalar halfStart = (side == 0) ? zmin : zmin + halfThickness;
 
             for (int i = 0; i < numLevelsPerHalf; ++i) {
                 // Calculate depth at the center of this subdivision
@@ -2357,7 +2356,7 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
             size_t j = (i + 1) % pts.size();
             area += pts[i][0] * pts[j][1] - pts[j][0] * pts[i][1];
         }
-        return std::abs(area) * 0.5;
+        return std::abs(area) * Scalar(0.5);
     };
 
     // Compute horizontal cross-section at given depth
@@ -2370,7 +2369,7 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
             std::vector<std::array<Scalar, 3>> corners(numCorners);
             for (int i = 0; i < numCorners; ++i) {
                 const auto& corner = geometry.corner(i);
-                corners[i] = {corner[0], corner[1], corner[2]};
+                corners[i] = {static_cast<Scalar>(corner[0]), static_cast<Scalar>(corner[1]), static_cast<Scalar>(corner[2])};
             }
 
             // Find all intersections between horizontal plane and cell edges
@@ -2451,7 +2450,7 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
 
         // Calculate dip parameters from corner point geometry
         Scalar dipAngle, dipAzimuth;
-        Details::computeBlockDip(cellThickness, this->cellCorners_[cell], dipAngle, dipAzimuth);
+        Details::computeBlockDip(this->cellCorners_[cell], dipAngle, dipAzimuth);
 
         // Reference point for TVD calculations
         std::array<Scalar, 3> referencePoint = {
@@ -2467,8 +2466,8 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
         std::vector<std::pair<Scalar, Scalar>> levels;
 
         // Subdivide upper and lower halves separately
-        for (int half = 0; half < 2; ++half) {
-            Scalar halfStart = (half == 0) ? zmin : zmin + halfThickness;
+        for (int side = 0; side < 2; ++side) {
+            Scalar halfStart = (side == 0) ? zmin : zmin + halfThickness;
 
             for (int i = 0; i < numLevelsPerHalf; ++i) {
                 // Calculate depth at the center of this subdivision
@@ -2496,8 +2495,8 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
         if (!hasValidAreas) {
             // Fallback to dip-based weighting as used in equilibrateTiltedFaultBlockSimple
             levels.clear();
-            for (int half = 0; half < 2; ++half) {
-                Scalar halfStart = (half == 0) ? zmin : zmin + halfThickness;
+            for (int side = 0; side < 2; ++side) {
+                Scalar halfStart = (side == 0) ? zmin : zmin + halfThickness;
                 for (int i = 0; i < numLevelsPerHalf; ++i) {
                     Scalar depth = halfStart + (i + 0.5) * (halfThickness / numLevelsPerHalf);
                     Scalar weight = (halfThickness / numLevelsPerHalf);
