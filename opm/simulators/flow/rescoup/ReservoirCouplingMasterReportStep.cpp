@@ -84,6 +84,18 @@ getMasterGroupProductionSurfaceRate(const std::string &group_name, ReservoirCoup
 template <class Scalar>
 Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
+getMasterGroupNetworkProductionSurfaceRate(
+    const std::string &group_name, ReservoirCoupling::Phase phase
+) const
+{
+    return this->getMasterGroupRate_(
+        group_name, phase, /*reservoir_rates=*/false, /*is_injection=*/false, /*network=*/true
+    );
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingMasterReportStep<Scalar>::
 getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const
 {
     return this->getMasterGroupRate_(group_name, phase, /*reservoir_rates=*/true, /*is_injection=*/false);
@@ -319,7 +331,7 @@ template <class Scalar>
 Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
 getMasterGroupRate_(const std::string &group_name, ReservoirCoupling::Phase phase,
-                    bool reservoir_rates, bool is_injection) const
+                    bool reservoir_rates, bool is_injection, bool network) const
 {
     auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
     if (it != this->getMasterGroupToSlaveNameMap().end()) {
@@ -332,10 +344,16 @@ getMasterGroupRate_(const std::string &group_name, ReservoirCoupling::Phase phas
             return rates[phase];
         }
         else {
-            const auto& rates = reservoir_rates
-                ? this->slave_group_production_data_.at(slave_name)[group_idx].reservoir_rates
-                : this->slave_group_production_data_.at(slave_name)[group_idx].surface_rates;
-            return rates[phase];
+            const auto& prod_data = this->slave_group_production_data_.at(slave_name)[group_idx];
+            if (reservoir_rates) {
+                return prod_data.reservoir_rates[phase];
+            }
+            else if (network) {
+                return prod_data.network_surface_rates[phase];
+            }
+            else {
+                return prod_data.surface_rates[phase];
+            }
         }
     }
     else {
