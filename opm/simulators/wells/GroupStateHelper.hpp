@@ -154,7 +154,8 @@ public:
         ScopedLoggerGuard& operator=(const ScopedLoggerGuard&) = delete;
         ScopedLoggerGuard& operator=(ScopedLoggerGuard&&) = delete;
 
-        // Enable move constructor for factory function returns
+        // Move constructor required for pushLogger() return-by-value (must be
+        // available even if elided by RVO)
         ScopedLoggerGuard(ScopedLoggerGuard&& other) noexcept
             : helper_(other.helper_)
             , logger_(std::move(other.logger_))
