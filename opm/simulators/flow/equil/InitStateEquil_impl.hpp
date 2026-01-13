@@ -53,6 +53,7 @@
 #include <cassert>
 #include <cstddef>
 #include <limits>
+#include <cmath>
 #include <stdexcept>
 
 namespace Opm {
