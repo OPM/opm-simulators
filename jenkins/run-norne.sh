@@ -13,5 +13,5 @@ else
   $WORKSPACE/$configuration/build-opm-simulators/bin/flow --output-dir=flow NORNE_ATW2013.DATA
 fi
 test $? -eq 0 || exit 1
-./plotwells.sh $WORKSPACE/$configuration/install/bin "ECL.2014.2 opm-simulation-reference/flow_legacy" norne-wells
-./plotwells.sh $WORKSPACE/$configuration/install/bin "opm-simulation-reference/flow_legacy" norne-wells-noecl
+./plotwells.sh $WORKSPACE/$configuration/install/bin "ECL.2014.2 opm-simulation-reference/flow_legacy" norne-wells ${procs}
+./plotwells.sh $WORKSPACE/$configuration/install/bin "opm-simulation-reference/flow_legacy" norne-wells-noecl ${procs}
