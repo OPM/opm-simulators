@@ -33,8 +33,7 @@ template<class Scalar, class IndexTraits>
 GroupTargetCalculator<Scalar, IndexTraits>::
 GroupTargetCalculator(
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
-    const GroupStateHelperType& group_state_helper,
-    DeferredLogger& deferred_logger
+    const GroupStateHelperType& group_state_helper
 ) :
     well_model_{well_model},
     group_state_helper_{group_state_helper},
@@ -45,7 +44,6 @@ GroupTargetCalculator(
     phase_usage_{group_state_helper.phaseUsage()},
     guide_rate_{group_state_helper.guideRate()},
     report_step_idx_{group_state_helper.reportStepIdx()},
-    deferred_logger_{deferred_logger},
     resv_coeffs_inj_(group_state_helper.phaseUsage().numPhases, 0.0)
 {
     std::tie(this->fipnum_, this->pvtreg_) = this->well_model_.getGroupFipnumAndPvtreg();

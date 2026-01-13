@@ -155,8 +155,7 @@ computeBhpAtThpLimit_(Scalar alq, Scalar current_bhp, bool debug_output) const
         this->well_state_,
         current_bhp,
         this->summary_state_,
-        alq,
-        this->deferred_logger_);
+        alq);
     if (bhp_at_thp_limit) {
         if (*bhp_at_thp_limit < this->controls_.bhp_limit) {
             if (debug_output && this->debug) {

@@ -64,7 +64,7 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
 
     const bool changed_well_group =
         well_model_.updateWellControlsAndNetwork(true, dt, deferred_logger);
-    well_model_.assembleWellEqWithoutIteration(dt, deferred_logger);
+    well_model_.assembleWellEqWithoutIteration(dt);
     const bool converged =
         well_model_.getWellConvergence(well_model_.B_avg(), true).converged() &&
         !changed_well_group;
@@ -73,8 +73,7 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
     for (auto& well : this->well_model_) {
         well->solveEqAndUpdateWellState(well_model_.simulator(),
                                         well_model_.groupStateHelper(),
-                                        well_state,
-                                        deferred_logger);
+                                        well_state);
     }
     OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModelNetwork::doPreStepRebalance() failed: ",
                                 well_model_.simulator().vanguard().grid().comm());
@@ -144,8 +143,7 @@ update(const bool mandatory_network_balance,
                     well->prepareWellBeforeAssembling(well_model_.simulator(),
                                                       dt,
                                                       well_model_.groupStateHelper(),
-                                                      well_model_.wellState(),
-                                                      deferred_logger);
+                                                      well_model_.wellState());
                 }
             }
             well_model_.updateAndCommunicateGroupData(episodeIdx,
@@ -201,13 +199,8 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                     getAutoChokeGroupProductionTargetRate(group,
                                                           parentGroup,
                                                           well_model_.groupStateHelper(),
-                                                          well_model_.schedule(),
-                                                          summary_state,
                                                           resv_coeff,
-                                                          efficiencyFactor,
-                                                          reportStepIdx,
-                                                          &well_model_.guideRate(),
-                                                          local_deferredLogger);
+                                                          efficiencyFactor);
                 target_tmp = target.first;
                 cmode_tmp = target.second;
             }
@@ -238,7 +231,6 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                                                          prod_controls,
                                                          well_model_.groupStateHelper(),
                                                          well_state,
-                                                         local_deferredLogger,
                                                          /*fixed_control=*/false,
                                                          /*fixed_status=*/false,
                                                          /*solving_with_zero_rate=*/false);
@@ -356,8 +348,7 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                     well->prepareWellBeforeAssembling(well_model_.simulator(),
                                                       dt,
                                                       well_model_.groupStateHelper(),
-                                                      well_model_.wellState(),
-                                                      local_deferredLogger);
+                                                      well_model_.wellState());
                 }
             }
 

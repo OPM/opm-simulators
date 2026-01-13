@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(G1)
         well_model.beginReportStep(report_step_idx);
         well_model.beginTimeStep();
         Opm::DeferredLogger deferred_logger;
-        well_model.calculateExplicitQuantities(deferred_logger);
+        well_model.calculateExplicitQuantities();
         well_model.prepareTimeStep(deferred_logger);
         well_model.updateWellControls(deferred_logger);
         const Opm::WellInterface<TypeTag>* well_ptr = &well_model.getWell("B-1H");
@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE(G2)
         well_model.beginReportStep(report_step_idx);
         well_model.beginTimeStep();
         Opm::DeferredLogger deferred_logger;
-        well_model.calculateExplicitQuantities(deferred_logger);
+        well_model.calculateExplicitQuantities();
         const auto& schedule = simulator->vanguard().schedule();
         auto wells_ecl = schedule.getWells(report_step_idx);
         GLiftEclWells ecl_well_map;

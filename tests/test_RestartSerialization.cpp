@@ -348,8 +348,7 @@ public:
     void computePotentials(const std::size_t,
                            const WellState<double, IndexTraits>&,
                            std::string&,
-                           ExceptionType::ExcEnum&,
-                           DeferredLogger&) override
+                           ExceptionType::ExcEnum&) override
     {}
 
     void createWellContainer(const int) override

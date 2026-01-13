@@ -515,11 +515,11 @@ namespace Opm {
                 if (event || dyn_status_change) {
                     try {
                         well->scaleSegmentRatesAndPressure(this->wellState());
-                        well->calculateExplicitQuantities(simulator_, this->groupStateHelper(), local_deferredLogger);
-                        well->updateWellStateWithTarget(simulator_, this->groupStateHelper(), this->wellState(), local_deferredLogger);
-                        well->updatePrimaryVariables(this->groupStateHelper(), local_deferredLogger);
+                        well->calculateExplicitQuantities(simulator_, this->groupStateHelper());
+                        well->updateWellStateWithTarget(simulator_, this->groupStateHelper(), this->wellState());
+                        well->updatePrimaryVariables(this->groupStateHelper());
                         well->solveWellEquation(
-                            simulator_, this->groupStateHelper(), this->wellState(), local_deferredLogger
+                            simulator_, this->groupStateHelper(), this->wellState()
                         );
                     } catch (const std::exception& e) {
                         const std::string msg = "Compute initial well solution for new well " + well->name() + " failed. Continue with zero initial rates";
@@ -675,8 +675,7 @@ namespace Opm {
                                   this->wellState(),
                                   this->wellTestState(),
                                   ecl_well_map,
-                                  this->well_open_times_,
-                                  deferred_logger);
+                                  this->well_open_times_);
             } catch (const std::exception& e) {
                 const std::string msg = fmt::format("Exception during testing of well: {}. The well will not open.\n Exception message: {}", wellEcl.name(), e.what());
                 deferred_logger.warning("WELL_TESTING_FAILED", msg);
@@ -1187,7 +1186,7 @@ namespace Opm {
             // before.
             OPM_BEGIN_PARALLEL_TRY_CATCH();
             {
-                calculateExplicitQuantities(local_deferredLogger);
+                calculateExplicitQuantities();
                 prepareTimeStep(local_deferredLogger);
             }
             OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
@@ -1203,7 +1202,7 @@ namespace Opm {
             return;
         }
 
-        assembleWellEqWithoutIteration(dt, local_deferredLogger);
+        assembleWellEqWithoutIteration(dt);
         // Pre-compute cell rates to we don't have to do this for every cell during linearization...
         updateCellRates();
 
@@ -1315,7 +1314,7 @@ namespace Opm {
                                                           this->groupState(),
                                                           local_deferredLogger);
             }
-            prepareWellsBeforeAssembling(dt, local_deferredLogger);
+            prepareWellsBeforeAssembling(dt);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
                                        "updateWellControlsAndNetworkIteration() failed: ",
@@ -1342,11 +1341,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assembleWellEq(const double dt, DeferredLogger& deferred_logger)
+    assembleWellEq(const double dt)
     {
         OPM_TIMEFUNCTION();
         for (auto& well : well_container_) {
-            well->assembleWellEq(simulator_, dt, this->groupStateHelper(), deferred_logger);
+            well->assembleWellEq(simulator_, dt, this->groupStateHelper(), this->wellState());
         }
     }
 
@@ -1354,12 +1353,12 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger)
+    prepareWellsBeforeAssembling(const double dt)
     {
         OPM_TIMEFUNCTION();
         for (auto& well : well_container_) {
             well->prepareWellBeforeAssembling(
-                simulator_, dt, this->groupStateHelper(), this->wellState(), deferred_logger
+                simulator_, dt, this->groupStateHelper(), this->wellState()
             );
         }
     }
@@ -1368,16 +1367,16 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assembleWellEqWithoutIteration(const double dt, DeferredLogger& deferred_logger)
+    assembleWellEqWithoutIteration(const double dt)
     {
         OPM_TIMEFUNCTION();
+        auto& deferred_logger = this->groupStateHelper().deferredLogger();
         // We make sure that all processes throw in case there is an exception
         // on one of them (WetGasPvt::saturationPressure might throw if not converged)
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         for (auto& well: well_container_) {
             well->assembleWellEqWithoutIteration(simulator_, this->groupStateHelper(), dt, this->wellState(),
-                                                 deferred_logger,
                                                  /*solving_with_zero_rate=*/false);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(deferred_logger, "BlackoilWellModel::assembleWellEqWithoutIteration failed: ",
@@ -1540,7 +1539,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x)
     {
-        DeferredLogger local_deferredLogger;
+        auto loggerGuard = this->groupStateHelper().pushLogger();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             for (const auto& well : well_container_) {
@@ -1551,12 +1550,11 @@ namespace Opm {
                     x_local_[i] = x[cells[i]];
                 }
                 well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
-                                                            this->groupStateHelper(), this->wellState(), local_deferredLogger);
+                                                            this->groupStateHelper(), this->wellState());
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
-                                       "recoverWellSolutionAndUpdateWellState() failed: ",
-                                       this->terminal_output_, simulator_.vanguard().grid().comm());
+        OPM_END_PARALLEL_TRY_CATCH("recoverWellSolutionAndUpdateWellState() failed: ",
+                                   simulator_.vanguard().grid().comm());
     }
 
 
@@ -1583,10 +1581,9 @@ namespace Opm {
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         for (const auto& well : well_container_) {
             auto logger_guard = this->groupStateHelper().pushLogger();
-            auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
             if (well->isOperableAndSolvable() || well->wellIsStopped()) {
                 local_report += well->getWellConvergence(
-                        this->groupStateHelper(), B_avg, local_deferredLogger,
+                        this->groupStateHelper(), B_avg,
                         iterationIdx > param_.strict_outer_iter_wells_);
             } else {
                 ConvergenceReport report;
@@ -1625,11 +1622,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    calculateExplicitQuantities(DeferredLogger& deferred_logger) const
+    calculateExplicitQuantities() const
     {
         // TODO: checking isOperableAndSolvable() ?
         for (auto& well : well_container_) {
-            well->calculateExplicitQuantities(simulator_, this->groupStateHelper(), deferred_logger);
+            well->calculateExplicitQuantities(simulator_, this->groupStateHelper());
         }
     }
 
@@ -1668,7 +1665,7 @@ namespace Opm {
                     for (const auto& well : well_container_) {
                         const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
                         const bool changed_well = well->updateWellControl(
-                            simulator_, mode, this->groupStateHelper(), this->wellState(), deferred_logger
+                            simulator_, mode, this->groupStateHelper(), this->wellState()
                         );
                         if (changed_well) {
                             changed_well_to_group = changed_well || changed_well_to_group;
@@ -1693,7 +1690,7 @@ namespace Opm {
                     for (const auto& well : well_container_) {
                         const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
                         const bool changed_well = well->updateWellControl(
-                            simulator_, mode, this->groupStateHelper(), this->wellState(), deferred_logger
+                            simulator_, mode, this->groupStateHelper(), this->wellState()
                         );
                         if (changed_well) {
                             changed_well_individual = changed_well || changed_well_individual;
@@ -1742,7 +1739,7 @@ namespace Opm {
                 ws.injection_cmode == Well::InjectorCMode::GRUP)
             {
                 well->updateWellStateWithTarget(
-                    simulator_, this->groupStateHelper(), this->wellState(), deferred_logger
+                    simulator_, this->groupStateHelper(), this->wellState()
                 );
             }
         }
@@ -1813,10 +1810,9 @@ namespace Opm {
             const auto wasClosed = wellTestState.well_is_closed(wname);
             well->checkWellOperability(simulator_,
                                        this->wellState(),
-                                       this->groupStateHelper(),
-                                       local_deferredLogger);
+                                       this->groupStateHelper());
             const bool under_zero_target =
-                well->wellUnderZeroGroupRateTarget(this->groupStateHelper(), local_deferredLogger);
+                well->wellUnderZeroGroupRateTarget(this->groupStateHelper());
             well->updateWellTestState(this->wellState().well(wname),
                                       simulationTime,
                                       /*writeMessageToOPMLog=*/ true,
@@ -1878,8 +1874,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::computePotentials(const std::size_t widx,
                                                   const WellState<Scalar, IndexTraits>& well_state_copy,
                                                   std::string& exc_msg,
-                                                  ExceptionType::ExcEnum& exc_type,
-                                                  DeferredLogger& deferred_logger)
+                                                  ExceptionType::ExcEnum& exc_type)
     {
         OPM_TIMEFUNCTION();
         const int np = this->numPhases();
@@ -1888,7 +1883,7 @@ namespace Opm {
         std::string cur_exc_msg;
         auto cur_exc_type = ExceptionType::NONE;
         try {
-            well->computeWellPotentials(simulator_, well_state_copy, this->groupStateHelper(), potentials, deferred_logger);
+            well->computeWellPotentials(simulator_, well_state_copy, this->groupStateHelper(), potentials);
         }
         // catch all possible exception and store type and message.
         OPM_PARALLEL_CATCH_CLAUSE(cur_exc_type, cur_exc_msg);
@@ -1984,9 +1979,9 @@ namespace Opm {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState<Scalar, IndexTraits>::event_mask)) {
                 well->updateWellStateWithTarget(
-                    simulator_, this->groupStateHelper(), this->wellState(), deferred_logger
+                    simulator_, this->groupStateHelper(), this->wellState()
                 );
-                well->updatePrimaryVariables(this->groupStateHelper(), deferred_logger);
+                well->updatePrimaryVariables(this->groupStateHelper());
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
                 events.clearEvent(WellState<Scalar, IndexTraits>::event_mask);
@@ -1999,7 +1994,7 @@ namespace Opm {
             if (param_.solve_welleq_initially_ && well->isOperableAndSolvable()) {
                 try {
                     well->solveWellEquation(
-                        simulator_, this->groupStateHelper(), this->wellState(), deferred_logger
+                        simulator_, this->groupStateHelper(), this->wellState()
                     );
                 } catch (const std::exception& e) {
                     const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the previous rates";
@@ -2010,7 +2005,7 @@ namespace Opm {
             // operability, so reset before main iterations begin
             well->resetWellOperability();
         }
-        updatePrimaryVariables(deferred_logger);
+        updatePrimaryVariables();
 
         // Actually do the pre-step network rebalance, using the updated well states and initial solutions
         if (do_prestep_network_rebalance) {
@@ -2069,10 +2064,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updatePrimaryVariables(DeferredLogger& deferred_logger)
+    updatePrimaryVariables()
     {
         for (const auto& well : well_container_) {
-            well->updatePrimaryVariables(this->groupStateHelper(), deferred_logger);
+            well->updatePrimaryVariables(this->groupStateHelper());
         }
     }
 

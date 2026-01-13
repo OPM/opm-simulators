@@ -1557,7 +1557,7 @@ updateWellPotentials(const int reportStepIdx,
         const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates;
         if (compute_potential)
         {
-            this->computePotentials(widx, well_state_copy, exc_msg, exc_type, deferred_logger);
+            this->computePotentials(widx, well_state_copy, exc_msg, exc_type);
         }
         ++widx;
     }

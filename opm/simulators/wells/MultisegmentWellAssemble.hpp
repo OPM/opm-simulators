@@ -71,8 +71,7 @@ public:
                            const Scalar rho,
                            const PrimaryVariables& primary_variables,
                            Equations& eqns,
-                           const bool stopped_or_zero_target,
-                           DeferredLogger& deferred_logger) const;
+                           const bool stopped_or_zero_target) const;
 
     //! \brief Assemble piece of the acceleration term
     void assembleAccelerationTerm(const int seg_target,

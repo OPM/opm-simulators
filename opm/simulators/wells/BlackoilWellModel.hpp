@@ -268,7 +268,7 @@ template<class Scalar> class WellContributions;
             // twice at the beginning of the time step
             /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
             /// at the beginning of the time step and no derivatives are included in these quantities
-            void calculateExplicitQuantities(DeferredLogger& deferred_logger) const;
+            void calculateExplicitQuantities() const;
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
@@ -453,7 +453,7 @@ template<class Scalar> class WellContributions;
                                               DeferredLogger& local_deferredLogger);
 
             // TODO: finding a better naming
-            void assembleWellEqWithoutIteration(const double dt, DeferredLogger& deferred_logger);
+            void assembleWellEqWithoutIteration(const double dt);
 
             const std::vector<Scalar>& B_avg() const
             { return B_avg_; }
@@ -550,15 +550,14 @@ template<class Scalar> class WellContributions;
             void endReportStep();
 
             // setting the well_solutions_ based on well_state.
-            void updatePrimaryVariables(DeferredLogger& deferred_logger);
+            void updatePrimaryVariables();
 
             void updateAverageFormationFactor();
 
             void computePotentials(const std::size_t widx,
                                    const WellState<Scalar, IndexTraits>& well_state_copy,
                                    std::string& exc_msg,
-                                   ExceptionType::ExcEnum& exc_type,
-                                   DeferredLogger& deferred_logger) override;
+                                   ExceptionType::ExcEnum& exc_type) override;
 
             const std::vector<Scalar>& wellPerfEfficiencyFactors() const;
 
@@ -572,9 +571,9 @@ template<class Scalar> class WellContributions;
 
             int reportStepIndex() const;
 
-            void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
+            void assembleWellEq(const double dt);
 
-            void prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger);
+            void prepareWellsBeforeAssembling(const double dt);
 
             void extractLegacyCellPvtRegionIndex_();
 

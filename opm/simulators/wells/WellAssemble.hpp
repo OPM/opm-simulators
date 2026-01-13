@@ -61,8 +61,7 @@ public:
                                const EvalWell& bhp,
                                const std::vector<EvalWell>& rates, // Always 3 canonical rates.
                                const std::function<EvalWell()>& bhp_from_thp,
-                               EvalWell& control_eq,
-                               DeferredLogger& deferred_logger) const;
+                               EvalWell& control_eq) const;
 
     template<class EvalWell>
     void assembleControlEqInj(const GroupStateHelperType& groupStateHelper,
@@ -70,8 +69,7 @@ public:
                               const EvalWell& bhp,
                               const EvalWell& injection_rate,
                               const std::function<EvalWell()>& bhp_from_thp,
-                              EvalWell& control_eq,
-                              DeferredLogger& deferred_logger) const;
+                              EvalWell& control_eq) const;
 
 private:
     const WellInterfaceFluidSystem<FluidSystem>& well_;

@@ -47,8 +47,8 @@ assemble(const int /*iterationIdx*/,
     // iterationIdx is 0).
 
     DeferredLogger local_deferredLogger;
-    this->updateWellControls(local_deferredLogger, domain);
-    this->assembleWellEq(dt, domain, local_deferredLogger);
+    this->updateWellControls(domain);
+    this->assembleWellEq(dt, domain);
 
     // Update cellRates_ with current contributions from wells in this domain for reservoir linearization
     wellModel_.updateCellRatesForDomain(domain.index, this->well_domain());
@@ -58,8 +58,7 @@ template<typename TypeTag>
 void
 BlackoilWellModelNldd<TypeTag>::
 assembleWellEq(const double dt,
-               const Domain& domain,
-               DeferredLogger& deferred_logger)
+               const Domain& domain)
 {
     OPM_TIMEBLOCK(assembleWellEq);
     for (const auto& well : wellModel_.localNonshutWells()) {
@@ -67,8 +66,7 @@ assembleWellEq(const double dt,
             well->assembleWellEq(wellModel_.simulator(),
                                  dt,
                                  wellModel_.groupStateHelper(),
-                                 wellModel_.wellState(),
-                                 deferred_logger);
+                                 wellModel_.wellState());
         }
     }
 }
@@ -107,7 +105,8 @@ recoverWellSolutionAndUpdateWellState(const BVector& x,
     // Note: no point in trying to do a parallel gathering
     // try/catch here, as this function is not called in
     // parallel but for each individual domain of each rank.
-    DeferredLogger local_deferredLogger;
+    // The ScopedLoggerGuard handles logging on destruction.
+    auto loggerGuard = wellModel_.groupStateHelper().pushLogger();
     for (const auto& well : wellModel_.localNonshutWells()) {
         if (this->well_domain().at(well->name()) == domainIdx) {
             const auto& cells = well->cells();
@@ -119,14 +118,8 @@ recoverWellSolutionAndUpdateWellState(const BVector& x,
             well->recoverWellSolutionAndUpdateWellState(wellModel_.simulator(),
                                                         x_local_,
                                                         wellModel_.groupStateHelper(),
-                                                        wellModel_.wellState(),
-                                                        local_deferredLogger);
+                                                        wellModel_.wellState());
         }
-    }
-    // TODO: avoid losing the logging information that could
-    // be stored in the local_deferredlogger in a parallel case.
-    if (wellModel_.terminalOutput()) {
-        local_deferredLogger.logMessages();
     }
 }
 
@@ -146,7 +139,6 @@ getWellConvergence(const Domain& domain,
             if (well->isOperableAndSolvable() || well->wellIsStopped()) {
                 report += well->getWellConvergence(wellModel_.groupStateHelper(),
                                                    B_avg,
-                                                   local_deferredLogger,
                                                    relax_tolerance);
             } else {
                 ConvergenceReport xreport;
@@ -178,8 +170,7 @@ getWellConvergence(const Domain& domain,
 template<typename TypeTag>
 void
 BlackoilWellModelNldd<TypeTag>::
-updateWellControls(DeferredLogger& deferred_logger,
-                   const Domain& domain)
+updateWellControls(const Domain& domain)
 {
     OPM_TIMEBLOCK(updateWellControls);
     if (!wellModel_.wellsActive()) {
@@ -196,8 +187,7 @@ updateWellControls(DeferredLogger& deferred_logger,
             well->updateWellControl(wellModel_.simulator(),
                                     mode,
                                     wellModel_.groupStateHelper(),
-                                    wellModel_.wellState(),
-                                    deferred_logger);
+                                    wellModel_.wellState());
         }
     }
 }

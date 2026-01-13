@@ -110,8 +110,7 @@ calculateMasterGroupTargetsAndSendToSlaves()
     if (comm.rank() == 0) {
         GroupTargetCalculator calculator{
             this->well_model_,
-            this->group_state_helper_,
-            this->deferred_logger_
+            this->group_state_helper_
         };
         auto num_slaves = rescoup_master.numSlaves();
         for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {

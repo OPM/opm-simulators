@@ -458,8 +458,7 @@ protected:
     virtual void computePotentials(const std::size_t widx,
                                    const WellState<Scalar, IndexTraits>& well_state_copy,
                                    std::string& exc_msg,
-                                   ExceptionType::ExcEnum& exc_type,
-                                   DeferredLogger& deferred_logger) = 0;
+                                   ExceptionType::ExcEnum& exc_type) = 0;
 
     // Calculating well potentials for each well
     void updateWellPotentials(const int reportStepIdx,
