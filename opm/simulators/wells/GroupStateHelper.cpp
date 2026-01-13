@@ -487,15 +487,15 @@ getInjectionGroupTarget(
         const std::vector<Scalar>& group_injection_reservoir_rates =
                                 this->groupState().injection_reservoir_rates(group.name());
         Scalar voidage_rate = this->groupState().injection_vrep_rate(ctrl.voidage_group) * ctrl.target_void_fraction;
-        if (ctrl.phase != Phase::WATER) {
+        if (ctrl.phase != Phase::WATER && pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
             const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
             voidage_rate -= group_injection_reservoir_rates[water_pos];
         }
-        if (ctrl.phase != Phase::OIL) {
+        if (ctrl.phase != Phase::OIL && pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
             const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
             voidage_rate -= group_injection_reservoir_rates[oil_pos];
         }
-        if (ctrl.phase != Phase::GAS) {
+        if (ctrl.phase != Phase::GAS && pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
             const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
             voidage_rate -= group_injection_reservoir_rates[gas_pos];
         }
