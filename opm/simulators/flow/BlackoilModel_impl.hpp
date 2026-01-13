@@ -962,7 +962,7 @@ getReservoirConvergence(const double reportTime,
     bool use_drv_tol = iteration > 0 &&
         this->param_.tolerance_max_drv_ > 0.0;
     bool relax_dsol_cnv = false;
-    if (!ixCells.empty() && (use_dp_tol || use_ds_tol || use_drs_tol || use_drv_tol)) {
+    if (use_dp_tol || use_ds_tol || use_drs_tol || use_drv_tol) {
         std::tie(dPMax, dSMax, dRsMax, dRvMax) = getMaxSolutionUpdate(ixCells);
         relax_dsol_cnv = (!use_dp_tol || (dPMax > 0.0 && dPMax < this->param_.tolerance_max_dp_)) &&
                          (!use_ds_tol || (dSMax > 0.0 && dSMax < this->param_.tolerance_max_ds_)) &&
