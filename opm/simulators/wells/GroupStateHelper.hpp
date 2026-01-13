@@ -170,6 +170,7 @@ public:
         }
 
     private:
+        // Pointer (not reference) to allow nulling in move constructor
         const GroupStateHelper* helper_{nullptr};
         DeferredLogger logger_;            // Owned logger
         DeferredLogger* previous_{nullptr}; // For restore
