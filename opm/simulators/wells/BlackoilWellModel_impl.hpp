@@ -1578,12 +1578,12 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     getWellConvergence(const std::vector<Scalar>& B_avg, bool checkWellGroupControlsAndNetwork) const
     {
-        auto logger_guard = this->groupStateHelper().pushLogger();
-        auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
         // Get global (from all processes) convergence report.
         ConvergenceReport local_report;
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         for (const auto& well : well_container_) {
+            auto logger_guard = this->groupStateHelper().pushLogger();
+            auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
             if (well->isOperableAndSolvable() || well->wellIsStopped()) {
                 local_report += well->getWellConvergence(
                         this->groupStateHelper(), B_avg, local_deferredLogger,
