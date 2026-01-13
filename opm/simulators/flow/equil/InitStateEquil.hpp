@@ -58,6 +58,19 @@ class NumericalAquifers;
  */
 namespace EQUIL {
 
+template<class Scalar> struct CellCornerData {
+    std::array<Scalar, 8> X;
+    std::array<Scalar, 8> Y;
+    std::array<Scalar, 8> Z;
+    CellCornerData() = default;
+
+    CellCornerData(const std::array<Scalar, 8>& x,
+                   const std::array<Scalar, 8>& y,
+                   const std::array<Scalar, 8>& z)
+        : X(x), Y(y), Z(z)
+    {}
+};
+
 template<class Scalar> class EquilReg;
 namespace Miscibility { template<class Scalar> class RsFunction; }
 
@@ -738,6 +751,7 @@ private:
     void calcPressSatRsRv(const RMap& reg,
                           const std::vector<EquilRecord>& rec,
                           MaterialLawManager& materialLawManager,
+                          const GridView& gridView,
                           const Comm& comm,
                           const Scalar grav);
 
@@ -758,6 +772,18 @@ private:
                                const PressTable&       ptable,
                                PhaseSat&               psat);
 
+     template<class CellRange, class PressTable, class PhaseSat>
+     void equilibrateTiltedFaultBlock(const CellRange& cells, 
+                            const EquilReg<Scalar>& eqreg,
+                            const GridView& gridView, const int numLevels,
+                            const PressTable& ptable, PhaseSat& psat);
+
+     template<class CellRange, class PressTable, class PhaseSat>
+     void equilibrateTiltedFaultBlockSimple(const CellRange& cells,
+                           const EquilReg<Scalar>& eqreg,
+                           const GridView& gridView, const int numLevels,
+                           const PressTable& ptable, PhaseSat& psat);
+
     std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rvFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rvwFunc_;
@@ -777,8 +803,10 @@ private:
     const CartesianIndexMapper& cartesianIndexMapper_;
     Vec swatInit_;
     Vec cellCenterDepth_;
+    std::vector<std::pair<Scalar,Scalar>> cellCenterXY_;
     std::vector<std::pair<Scalar,Scalar>> cellZSpan_;
     std::vector<std::pair<Scalar,Scalar>> cellZMinMax_;
+    std::vector<CellCornerData<Scalar>> cellCorners_;
     int num_pressure_points_;
 };
 

@@ -363,7 +363,7 @@ partiallySupported()
          {
             "EQUIL",
             {
-               {9,{true, [](int x) { return x >= -20 && x <= 0; }, "EQUIL(EQLOPT3): only values less than or equal to zero are supported (default is -5)"}}, // OIP_INIT
+               {9,{true, [](int x) { return x >= -20 && x <= 20; }, "EQUIL(EQLOPT3): only values between -20 and 20 are allowed (default is -5)"}}, // OIP_INIT
                {10,{false, allow_values<int> {}, "EQUIL(EQLOPT4): compositional option not used, should be defaulted"}}, // EQLOPT4
                {11,{false, allow_values<int> {}, "EQUIL(EQLOPT5): compositional option not used, should be defaulted"}}, // EQLOPT5
             },
