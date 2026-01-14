@@ -197,7 +197,8 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
         std::size_t numRocktabTables = rock_config.num_rock_tables();
 
         if (overburdTables.size() != numRocktabTables)
-            throw std::runtime_error(std::to_string(numRocktabTables) +" OVERBURD tables is expected, but " + std::to_string(overburdTables.size()) +" is provided");
+            throw std::runtime_error(fmt::format("{} OVERBURD tables is expected, but {} is provided",
+                                     numRocktabTables, overburdTables.size()));
 
         std::vector<Tabulated1DFunction<Scalar>> overburdenTables(numRocktabTables);
         for (std::size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
@@ -267,12 +268,14 @@ readRockCompactionParameters_()
         maxWaterSaturation_.resize(numElem, 0.0);
 
         if (rock2dTables.size() != numRocktabTables)
-            throw std::runtime_error("Water compation option is selected in ROCKCOMP." + std::to_string(numRocktabTables)
-                                     +" ROCK2D tables is expected, but " + std::to_string(rock2dTables.size()) +" is provided");
+            throw std::runtime_error(fmt::format("Water compation option is selected in ROCKCOMP."
+                                                 " {} ROCK2D tables is expected, but {} is provided",
+                                                 numRocktabTables, rock2dTables.size()));
 
         if (rockwnodTables.size() != numRocktabTables)
-            throw std::runtime_error("Water compation option is selected in ROCKCOMP." + std::to_string(numRocktabTables)
-                                     +" ROCKWNOD tables is expected, but " + std::to_string(rockwnodTables.size()) +" is provided");
+            throw std::runtime_error(fmt::format("Water compation option is selected in ROCKCOMP."
+                                                 " {} ROCKWNOD tables is expected, but {} is provided",
+                                                 numRocktabTables, rockwnodTables.size()));
         //TODO check size match
         rockCompPoroMultWc_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
         for (std::size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
@@ -362,11 +365,11 @@ updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regi
         return;
 
     std::function<void(T, int)> valueCheck = [num_regions,name](T fieldPropValue, [[maybe_unused]] int fieldPropIdx) {
-        if ( fieldPropValue > (int)num_regions) {
-            throw std::runtime_error("Values larger than maximum number of regions "
-                                     + std::to_string(num_regions) + " provided in " + name);
+        if (fieldPropValue > static_cast<int>(num_regions)) {
+            throw std::runtime_error(fmt::format("Values larger than maximum number of regions {} provided in {}",
+                                                 num_regions, name));
         }
-        if ( fieldPropValue <= 0) {
+        if (fieldPropValue <= 0) {
             throw std::runtime_error("zero or negative values provided for region array: " + name);
         }
     };
@@ -465,7 +468,8 @@ beginTimeStep_(bool enableExperiments,
     if (enableExperiments && gridView_.comm().rank() == 0 && episodeIdx >= 0) {
         std::ostringstream ss;
         boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-        boost::posix_time::ptime date = boost::posix_time::from_time_t(startTime) + boost::posix_time::milliseconds(static_cast<long long>(time / prefix::milli));
+        boost::posix_time::ptime date = boost::posix_time::from_time_t(startTime) +
+                                        boost::posix_time::milliseconds(static_cast<long long>(time / prefix::milli));
         ss.imbue(std::locale(std::locale::classic(), facet));
         ss <<"\nTime step " << timeStepIndex << ", stepsize "
                << unit::convert::to(timeStepSize, unit::day) << " days,"
