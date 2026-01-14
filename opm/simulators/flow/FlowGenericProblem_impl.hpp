@@ -369,7 +369,7 @@ updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regi
             throw std::runtime_error(fmt::format("Values larger than maximum number of regions {} provided in {}",
                                                  num_regions, name));
         }
-        if ( fieldPropValue <= 0) {
+        if (fieldPropValue <= 0) {
             throw std::runtime_error("zero or negative values provided for region array: " + name);
         }
     };
@@ -468,7 +468,8 @@ beginTimeStep_(bool enableExperiments,
     if (enableExperiments && gridView_.comm().rank() == 0 && episodeIdx >= 0) {
         std::ostringstream ss;
         boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-        boost::posix_time::ptime date = boost::posix_time::from_time_t(startTime) + boost::posix_time::milliseconds(static_cast<long long>(time / prefix::milli));
+        boost::posix_time::ptime date = boost::posix_time::from_time_t(startTime) +
+                                        boost::posix_time::milliseconds(static_cast<long long>(time / prefix::milli));
         ss.imbue(std::locale(std::locale::classic(), facet));
         ss <<"\nTime step " << timeStepIndex << ", stepsize "
                << unit::convert::to(timeStepSize, unit::day) << " days,"
