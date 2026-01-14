@@ -501,12 +501,14 @@ public:
                 events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
             auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, tuningUpdater);
             report_ += stepReport;
-            //Pass simulation report to eclwriter for summary output
-            simulator_.problem().setSimulationReport(report_);
         } else {
             // solve for complete report step
             auto stepReport = solver_->step(timer, nullptr);
             report_ += stepReport;
+            // Pass simulation report to eclwriter for summary output
+            simulator_.problem().setSubStepReport(stepReport);
+            simulator_.problem().setSimulationReport(report_);
+            simulator_.problem().endTimeStep();
             if (terminalOutput_) {
                 std::ostringstream ss;
                 stepReport.reportStep(ss);

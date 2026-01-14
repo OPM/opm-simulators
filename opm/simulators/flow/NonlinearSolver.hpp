@@ -185,8 +185,6 @@ struct NonlinearSolverParameters
                 OPM_THROW_NOLOG(TimeSteppingBreakdown, msg);
             }
 
-            // Do model-specific post-step actions.
-            report += model_->afterStep(timer);
             report.converged = true;
             return report;
         }
