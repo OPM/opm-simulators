@@ -90,7 +90,8 @@ BOOST_AUTO_TEST_CASE(G1)
     for (int report_step_idx = 0; report_step_idx < 4; report_step_idx++ ) {
         well_model.beginReportStep(report_step_idx);
         well_model.beginTimeStep();
-        Opm::DeferredLogger deferred_logger;
+        auto logger_guard = well_model.groupStateHelper().pushLogger();
+        auto& deferred_logger = well_model.groupStateHelper().deferredLogger();
         well_model.calculateExplicitQuantities();
         well_model.prepareTimeStep(deferred_logger);
         well_model.updateWellControls(deferred_logger);
@@ -248,7 +249,8 @@ BOOST_AUTO_TEST_CASE(G2)
         simulator->setEpisodeIndex(report_step_idx);
         well_model.beginReportStep(report_step_idx);
         well_model.beginTimeStep();
-        Opm::DeferredLogger deferred_logger;
+        auto logger_guard = well_model.groupStateHelper().pushLogger();
+        auto& deferred_logger = well_model.groupStateHelper().deferredLogger();
         well_model.calculateExplicitQuantities();
         const auto& schedule = simulator->vanguard().schedule();
         auto wells_ecl = schedule.getWells(report_step_idx);
