@@ -1579,19 +1579,21 @@ namespace Opm {
         // Get global (from all processes) convergence report.
         ConvergenceReport local_report;
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
-        for (const auto& well : well_container_) {
+        {
             auto logger_guard = this->groupStateHelper().pushLogger();
-            if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                local_report += well->getWellConvergence(
-                        this->groupStateHelper(), B_avg,
-                        iterationIdx > param_.strict_outer_iter_wells_);
-            } else {
-                ConvergenceReport report;
-                using CR = ConvergenceReport;
-                report.setWellFailed({CR::WellFailure::Type::Unsolvable, CR::Severity::Normal, -1, well->name()});
-                local_report += report;
+            for (const auto& well : well_container_) {
+                if (well->isOperableAndSolvable() || well->wellIsStopped()) {
+                    local_report += well->getWellConvergence(
+                            this->groupStateHelper(), B_avg,
+                            iterationIdx > param_.strict_outer_iter_wells_);
+                } else {
+                    ConvergenceReport report;
+                    using CR = ConvergenceReport;
+                    report.setWellFailed({CR::WellFailure::Type::Unsolvable, CR::Severity::Normal, -1, well->name()});
+                    local_report += report;
+                }
             }
-        }
+        } // logger_guard goes out of scope here, before the OpmLog::debug() calls below
 
         const Opm::Parallel::Communication comm = grid().comm();
         ConvergenceReport report = gatherConvergenceReport(local_report, comm);
