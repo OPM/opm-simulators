@@ -105,8 +105,8 @@ recoverWellSolutionAndUpdateWellState(const BVector& x,
     // Note: no point in trying to do a parallel gathering
     // try/catch here, as this function is not called in
     // parallel but for each individual domain of each rank.
-    // The ScopedLoggerGuard handles logging on destruction.
-    auto loggerGuard = wellModel_.groupStateHelper().pushLogger();
+    // Use do_mpi_gather=false to avoid MPI collective operations.
+    auto loggerGuard = wellModel_.groupStateHelper().pushLogger(/*do_mpi_gather=*/false);
     for (const auto& well : wellModel_.localNonshutWells()) {
         if (this->well_domain().at(well->name()) == domainIdx) {
             const auto& cells = well->cells();

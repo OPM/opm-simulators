@@ -126,9 +126,15 @@ public:
     class ScopedLoggerGuard
     {
     public:
-        explicit ScopedLoggerGuard(const GroupStateHelper& helper)
+        /// @brief Constructor for scoped logger guard
+        /// @param helper Reference to the GroupStateHelper
+        /// @param do_mpi_gather If true, gather messages across MPI ranks on destruction.
+        ///        Set to false when called from contexts where MPI synchronization is not
+        ///        possible (e.g., NLDD domain-local operations).
+        explicit ScopedLoggerGuard(const GroupStateHelper& helper, bool do_mpi_gather = true)
             : helper_(&helper)
             , previous_(helper.deferred_logger_)
+            , do_mpi_gather_(do_mpi_gather)
         {
             helper_->deferred_logger_ = &logger_;
         }
@@ -136,12 +142,19 @@ public:
         ~ScopedLoggerGuard()
         {
             if (helper_) {
-                // 1. Gather messages across MPI ranks
-                DeferredLogger global = gatherDeferredLogger(logger_, helper_->comm());
+                if (do_mpi_gather_) {
+                    // 1. Gather messages across MPI ranks
+                    DeferredLogger global = gatherDeferredLogger(logger_, helper_->comm());
 
-                // 2. Log on rank 0 (if terminal_output enabled)
-                if (helper_->terminalOutput()) {
-                    global.logMessages();
+                    // 2. Log on rank 0 (if terminal_output enabled)
+                    if (helper_->terminalOutput()) {
+                        global.logMessages();
+                    }
+                } else {
+                    // Just log locally without MPI gather
+                    if (helper_->terminalOutput()) {
+                        logger_.logMessages();
+                    }
                 }
 
                 // 3. Restore previous logger
@@ -160,6 +173,7 @@ public:
             : helper_(other.helper_)
             , logger_(std::move(other.logger_))
             , previous_(other.previous_)
+            , do_mpi_gather_(other.do_mpi_gather_)
         {
             // Update the helper's pointer to our moved logger
             if (helper_) {
@@ -174,6 +188,7 @@ public:
         const GroupStateHelper* helper_{nullptr};
         DeferredLogger logger_;            // Owned logger
         DeferredLogger* previous_{nullptr}; // For restore
+        bool do_mpi_gather_{true};         // Whether to gather messages across MPI ranks
     };
 
     GroupStateHelper(WellState<Scalar, IndexTraits>& well_state,
@@ -290,18 +305,22 @@ public:
         return GroupStateGuard(*this, group_state);
     }
 
-    /// @brief Push a new logger onto the stack with auto-gather on destruction
+    /// @brief Push a new logger onto the stack with auto-cleanup on destruction
     ///
     /// @details Creates a new DeferredLogger and pushes it onto the logger stack.
     /// When the returned guard goes out of scope:
-    /// 1. Messages are gathered across MPI ranks via gatherDeferredLogger()
-    /// 2. Messages are logged on rank 0 (if terminal_output is enabled)
+    /// 1. If do_mpi_gather is true: Messages are gathered across MPI ranks via gatherDeferredLogger()
+    ///    and logged on rank 0 (if terminal_output is enabled)
+    /// 2. If do_mpi_gather is false: Messages are logged locally without MPI gather
     /// 3. The previous logger is restored
     ///
+    /// @param do_mpi_gather If true (default), gather messages across MPI ranks on destruction.
+    ///        Set to false when called from contexts where MPI synchronization is not
+    ///        possible (e.g., NLDD domain-local operations called at different times on different ranks).
     /// @return RAII guard that owns the logger and handles cleanup
-    ScopedLoggerGuard pushLogger() const
+    ScopedLoggerGuard pushLogger(bool do_mpi_gather = true) const
     {
-        return ScopedLoggerGuard(*this);
+        return ScopedLoggerGuard(*this, do_mpi_gather);
     }
 
     WellStateGuard pushWellState(WellState<Scalar, IndexTraits>& well_state)
