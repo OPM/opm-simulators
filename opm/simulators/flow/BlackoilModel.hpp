@@ -110,6 +110,19 @@ public:
 
     using ComponentName = ::Opm::ComponentName<FluidSystem,Indices>;
 
+    // Helper structs
+    struct CnvPvSplitData {
+        std::pair<std::vector<double>, std::vector<int>> cnvPvSplit;
+        std::vector<unsigned> ixCells;
+    };
+
+    struct MaxSolutionUpdateData {
+        Scalar dPMax = 0.0;
+        Scalar dSMax = 0.0;
+        Scalar dRsMax = 0.0;
+        Scalar dRvMax = 0.0;
+    };
+
     // ---------  Public methods  ---------
 
     /// Construct the model. It will retain references to the
@@ -184,11 +197,10 @@ public:
     /// Apply an update to the primary variables.
     void updateSolution(const BVector& dx);
 
-    /// Get solution update vector as a PrimaryVarible
+    /// Get solution update vector as a PrimaryVariable
     void prepareStoringSolutionUpdate();
     void storeSolutionUpdate(const BVector& dx);
-    std::tuple<Scalar, Scalar, Scalar, Scalar>
-    getMaxSolutionUpdate(const std::vector<unsigned>& ixCells);
+    MaxSolutionUpdateData getMaxSolutionUpdate(const std::vector<unsigned>& ixCells);
 
     /// Return true if output to cout is wanted.
     bool terminalOutputEnabled() const
@@ -213,12 +225,9 @@ public:
 
     /// \brief Compute pore-volume/cell count split among "converged",
     /// "relaxed converged", "unconverged" cells based on CNV point
-    /// measures.
-    std::tuple<
-    std::pair<std::vector<double>, std::vector<int>>,
-    std::vector<unsigned>
-    >
-    characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt);
+    /// measures. Also returns list of cells where CNV is greater than
+    /// its strict tolerance
+    CnvPvSplitData characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt);
 
     /// \brief Compute the number of Newtons required by each cell in order to
     /// satisfy the solution change convergence criteria at the last time step.

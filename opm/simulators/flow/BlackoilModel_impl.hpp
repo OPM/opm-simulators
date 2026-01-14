@@ -566,9 +566,7 @@ prepareStoringSolutionUpdate()
         solUpd_[globalElemIdx] = simulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
         // Ensure each element is zero
-        for (auto& elem : solUpd_[globalElemIdx]) {
-            elem = 0.0;
-        }
+        std::fill(solUpd_[globalElemIdx].begin(), solUpd_[globalElemIdx].end(), 0.0);
     }
 }
 
@@ -583,21 +581,16 @@ storeSolutionUpdate(const BVector& dx)
         // Get cell vectors
         unsigned globalElemIdx = elemMapper.index(elem);
         auto& value = solUpd_[globalElemIdx];
-        auto& update = dx[globalElemIdx];
+        const auto& update = dx[globalElemIdx];
         assert(value.size() == update.size());
 
         // Transfer update from dx to solution update container (SolutionVector type)
-        for (std::size_t i = 0; i < value.size(); ++i) {
-            value[i] = update[i];
-        }
+        std::copy(update.begin(), update.end(), value.begin());
     }
 }
 
 template <class TypeTag>
-std::tuple<typename BlackoilModel<TypeTag>::Scalar,
-           typename BlackoilModel<TypeTag>::Scalar,
-           typename BlackoilModel<TypeTag>::Scalar,
-           typename BlackoilModel<TypeTag>::Scalar>
+typename BlackoilModel<TypeTag>::MaxSolutionUpdateData
 BlackoilModel<TypeTag>::
 getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
 {
@@ -613,7 +606,7 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
     // Loop over solution update, get the correct variables and calculate max.
     for (const auto& ix : ixCells) {
         const auto& value = solUpd_[ix];
-        for (std::size_t pvIdx = 0; pvIdx < value.size(); ++pvIdx) {
+        for (int pvIdx = 0; pvIdx < value.size(); ++pvIdx) {
             if (pvIdx == Indices::pressureSwitchIdx) {
                 dPMax = std::max(dPMax, std::abs(value[pvIdx]));
             }
@@ -760,10 +753,7 @@ localConvergenceData(std::vector<Scalar>& R_sum,
 }
 
 template <class TypeTag>
-std::tuple<
-std::pair<std::vector<double>, std::vector<int>>,
-std::vector<unsigned>
->
+typename BlackoilModel<TypeTag>::CnvPvSplitData
 BlackoilModel<TypeTag>::
 characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
 {
@@ -899,8 +889,9 @@ getReservoirConvergence(const double reportTime,
                                    numAquiferPvSumLocal,
                                    R_sum, maxCoeff, B_avg);
 
-    auto [cnvPvSplit, ixCells] = this->characteriseCnvPvSplit(B_avg, dt);
-    report.setCnvPoreVolSplit(cnvPvSplit, pvSum - numAquiferPvSum);
+    auto cnvSplitData = this->characteriseCnvPvSplit(B_avg, dt);
+    report.setCnvPoreVolSplit(cnvSplitData.cnvPvSplit,
+                              pvSum - numAquiferPvSum);
 
     // For each iteration, we need to determine whether to use the
     // relaxed tolerances.  To disable the usage of relaxed
@@ -949,25 +940,20 @@ getReservoirConvergence(const double reportTime,
     // If tolerances for solution changes are met, we use the
     // relaxed cnv tolerance. Note that all tolerances > 0.0
     // must be met to enable use of relaxed cnv tolerance.
-    Scalar dPMax = 0.0;
-    Scalar dSMax = 0.0;
-    Scalar dRsMax = 0.0;
-    Scalar dRvMax = 0.0;
-    bool use_dp_tol = iteration > 0 &&
-        this->param_.tolerance_max_dp_ > 0.0;
-    bool use_ds_tol = iteration > 0 &&
-        this->param_.tolerance_max_ds_ > 0.0;
-    bool use_drs_tol = iteration > 0 &&
-        this->param_.tolerance_max_drs_ > 0.0;
-    bool use_drv_tol = iteration > 0 &&
-        this->param_.tolerance_max_drv_ > 0.0;
+    MaxSolutionUpdateData maxSolUpd;
+    const bool use_dp_tol = this->param_.tolerance_max_dp_ > 0.0;
+    const bool use_ds_tol = this->param_.tolerance_max_ds_ > 0.0;
+    const bool use_drs_tol = this->param_.tolerance_max_drs_ > 0.0;
+    const bool use_drv_tol = this->param_.tolerance_max_drv_ > 0.0;
+    const bool use_dsol_tol = use_dp_tol || use_ds_tol || use_drs_tol || use_drv_tol;
     bool relax_dsol_cnv = false;
-    if (use_dp_tol || use_ds_tol || use_drs_tol || use_drv_tol) {
-        std::tie(dPMax, dSMax, dRsMax, dRvMax) = getMaxSolutionUpdate(ixCells);
-        relax_dsol_cnv = (!use_dp_tol || (dPMax > 0.0 && dPMax < this->param_.tolerance_max_dp_)) &&
-                         (!use_ds_tol || (dSMax > 0.0 && dSMax < this->param_.tolerance_max_ds_)) &&
-                         (!use_drs_tol || (dRsMax > 0.0 && dRsMax < this->param_.tolerance_max_drs_)) &&
-                         (!use_drv_tol || (dRvMax > 0.0 && dRvMax < this->param_.tolerance_max_drv_));
+    if (iteration > 0 && use_dsol_tol) {
+        maxSolUpd = getMaxSolutionUpdate(cnvSplitData.ixCells);
+        relax_dsol_cnv =
+            (!use_dp_tol || (maxSolUpd.dPMax > 0.0 && maxSolUpd.dPMax < this->param_.tolerance_max_dp_)) &&
+            (!use_ds_tol || (maxSolUpd.dSMax > 0.0 && maxSolUpd.dSMax < this->param_.tolerance_max_ds_)) &&
+            (!use_drs_tol || (maxSolUpd.dRsMax > 0.0 && maxSolUpd.dRsMax < this->param_.tolerance_max_drs_)) &&
+            (!use_drv_tol || (maxSolUpd.dRvMax > 0.0 && maxSolUpd.dRvMax < this->param_.tolerance_max_drv_));
     }
 
     // Determine if relaxed CNV tolerances should be used
@@ -984,30 +970,30 @@ getReservoirConvergence(const double reportTime,
         this->terminal_output_)
     {
         std::string message;
-        if (relax_final_iteration_mb || relax_final_iteration_cnv) {
+        if (relax_dsol_cnv) {
+            message = "Max. solution change below tolerance ( ";
+            if (use_dp_tol && maxSolUpd.dPMax < this->param_.tolerance_max_dp_ ) {
+                message += fmt::format("DP={:.2e}<{:.2e} ", maxSolUpd.dPMax, this->param_.tolerance_max_dp_);
+            }
+            if (use_ds_tol && maxSolUpd.dSMax < this->param_.tolerance_max_ds_ ) {
+                message += fmt::format("DS={:.2e}<{:.2e} ", maxSolUpd.dSMax, this->param_.tolerance_max_ds_);
+            }
+            if (use_drs_tol && maxSolUpd.dRsMax < this->param_.tolerance_max_drs_ ) {
+                message += fmt::format("DRS={:.2e}<{:.2e} ", maxSolUpd.dRsMax, this->param_.tolerance_max_drs_);
+            }
+            if (use_drv_tol && maxSolUpd.dRvMax < this->param_.tolerance_max_drv_ ) {
+                message += fmt::format("DRV={:.2e}<{:.2e} ", maxSolUpd.dRvMax, this->param_.tolerance_max_drv_);
+            }
+            message += "), ";
+        }
+        else if (relax_final_iteration_cnv || relax_final_iteration_mb) {
             message = "Number of newton iterations reached its maximum, ";
         }
         else if (relax_iter_cnv || relax_iter_mb) {
             message = "Number of newton iterations using strict tolerances have been reached,  ";
         }
         else if (relax_pv_fraction_cnv) {
-            message = "Sum of pore volumes below tolerance, ";
-        }
-        else if (relax_dsol_cnv) {
-            message = "Max. solution change below tolerance ( ";
-            if (use_dp_tol && dPMax < this->param_.tolerance_max_dp_ ) {
-                message += fmt::format("DP={:.2e}<{:.2e} ", dPMax, this->param_.tolerance_max_dp_);
-            }
-            if (use_ds_tol && dSMax < this->param_.tolerance_max_ds_ ) {
-                message += fmt::format("DS={:.2e}<{:.2e} ", dSMax, this->param_.tolerance_max_ds_);
-            }
-            if (use_drs_tol && dRsMax < this->param_.tolerance_max_drs_ ) {
-                message += fmt::format("DRS={:.2e}<{:.2e} ", dRsMax, this->param_.tolerance_max_drs_);
-            }
-            if (use_drv_tol && dRvMax < this->param_.tolerance_max_drv_ ) {
-                message += fmt::format("DRV={:.2e}<{:.2e} ", dRvMax, this->param_.tolerance_max_drv_);
-            }
-            message += "), ";
+            message = "Fraction of pore volumes violating strict tolerances small, ";
         }
         message += "try to continue with relaxed tolerances:";
 
@@ -1101,10 +1087,12 @@ getReservoirConvergence(const double reportTime,
                 msg += ") ";
             }
 
-            msg += "    DP     ";
-            msg += "    DS     ";
-            msg += "    DRS    ";
-            msg += "    DRV    ";
+            if (use_dsol_tol) {
+                msg += use_dp_tol ? "    DP     " : "";
+                msg += use_ds_tol ? "    DS     " : "";
+                msg += use_drs_tol ? "    DRS    " : "";
+                msg += use_drv_tol ? "    DRV    " : "";
+            }
 
             OpmLog::debug(msg);
         }
@@ -1122,17 +1110,23 @@ getReservoirConvergence(const double reportTime,
             ss << std::setw(11) << CNV[compIdx];
         }
 
-        if (iteration == 0) {
-            ss << std::string(5, ' ') << "-" << std::string(5, ' ');
-            ss << std::string(5, ' ') << "-" << std::string(5, ' ');
-            ss << std::string(5, ' ') << "-" << std::string(5, ' ');
-            ss << std::string(5, ' ') << "-" << std::string(5, ' ');
-        }
-        else {
-            ss << std::setw(11) << dPMax;
-            ss << std::setw(11) << dSMax;
-            ss << std::setw(11) << dRsMax;
-            ss << std::setw(11) << dRvMax;
+        if (use_dsol_tol) {
+            auto print_dsol =
+            [&] (bool use_tol, Scalar dsol) {
+                if (!use_tol) {
+                    return;
+                }
+                if (iteration == 0 || dsol <= 0.0) {
+                    ss << std::string(5, ' ') << "-" << std::string(5, ' ');
+                }
+                else {
+                    ss << std::setw(11) << dsol;
+                }
+            };
+            print_dsol(use_dp_tol, maxSolUpd.dPMax);
+            print_dsol(use_ds_tol, maxSolUpd.dSMax);
+            print_dsol(use_drs_tol, maxSolUpd.dRsMax);
+            print_dsol(use_drv_tol, maxSolUpd.dRvMax);
         }
 
         ss.precision(oprec);
