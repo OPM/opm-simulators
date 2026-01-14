@@ -365,7 +365,7 @@ updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regi
         return;
 
     std::function<void(T, int)> valueCheck = [num_regions,name](T fieldPropValue, [[maybe_unused]] int fieldPropIdx) {
-        if ( fieldPropValue > (int)num_regions) {
+        if (fieldPropValue > static_cast<int>(num_regions)) {
             throw std::runtime_error(fmt::format("Values larger than maximum number of regions {} provided in {}",
                                                  num_regions, name));
         }
