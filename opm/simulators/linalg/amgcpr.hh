@@ -637,11 +637,17 @@ namespace Dune
         Block diagonal;
         for(ColIter col=row->begin(); col!=row->end(); ++col) {
           if(row.index()==col.index()) {
-            diagonal = *col;
-            hasDiagonal = false;
+            if (*col != zero) {
+              diagonal = *col;
+              hasDiagonal = true;
+            } else {
+                break;
+            }
           }else{
-            if(*col!=zero)
+            if (*col != zero) {
               isDirichlet = false;
+              break;
+            }
           }
         }
         if(isDirichlet && hasDiagonal)
