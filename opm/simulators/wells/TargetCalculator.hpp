@@ -48,7 +48,8 @@ public:
 
     TargetCalculator(const GroupStateHelperType& groupStateHelper,
                      const std::vector<Scalar>& resv_coeff,
-                     const Group& group);
+                     const Group& group,
+                     const std::optional<Group::ProductionCMode>& cmode = std::nullopt);
 
     template <typename RateType>
     RateType calcModeRateFromRates(const std::vector<RateType>& rates) const
