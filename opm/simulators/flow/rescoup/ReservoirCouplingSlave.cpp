@@ -80,6 +80,13 @@ isFirstSubstepOfSyncTimestep() const
     return this->report_step_data_->isFirstSubstepOfSyncTimestep();
 }
 
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
+isSlaveGroup(const std::string& group_name) const {
+    return this->slave_to_master_group_map_.find(group_name) != this->slave_to_master_group_map_.end();
+}
+
 // NOTE: It is not legal for a slave to activate before the master has activated. This problem
 //       will be caught by the master when it receives the slave activation date. See:
 //       ReservoirCouplingSpawnSlaves::receiveActivationDateFromSlaves_()
