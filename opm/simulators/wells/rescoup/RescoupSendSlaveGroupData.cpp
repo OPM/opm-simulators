@@ -89,7 +89,8 @@ RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper)
 //     rate to calculate the group target for the phase under group control. NOTE: Also applies to
 //     parents of the master group.
 //
-// 5) If the master group or any of its parents is a pressure maintenance group. It may need
+// 5) If a parent of the master group is a pressure maintenance group (GPMAINT not supported for the
+//   master group itself), it may need to know the following slave group data:
 //   a) slave group reservoir voidage production rate (GPMAINT item 2 = PROD)
 //   b) slave group reservoir injection rates (GPMAINT item 2 = OINJ, WINJ, or GINJ)
 //   c) slave group surface injection reates (GPMAINT item 2 = OINS, WINS, or GINS)
