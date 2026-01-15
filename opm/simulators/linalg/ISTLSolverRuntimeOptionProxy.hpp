@@ -29,6 +29,8 @@
 #include <opm/simulators/linalg/gpuistl/ISTLSolverGPUISTL.hpp>
 #endif
 
+#include <fmt/format.h>
+
 namespace Opm
 {
 
