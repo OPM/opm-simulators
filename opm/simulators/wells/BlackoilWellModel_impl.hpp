@@ -198,8 +198,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     beginReportStep(const int timeStepIdx)
     {
-        DeferredLogger local_deferredLogger{};
-
         this->groupStateHelper().setReportStep(timeStepIdx);
         this->report_step_starts_ = true;
         this->report_step_start_events_ = this->schedule()[timeStepIdx].wellgroup_events();
@@ -231,9 +229,7 @@ namespace Opm {
                     (sched_state.vfpinj(), sched_state.vfpprod(), this->wellState());
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
-                                       "beginReportStep() failed: ",
-                                       this->terminal_output_, comm)
+        OPM_END_PARALLEL_TRY_CATCH("beginReportStep() failed: ", comm)
 
         // Store the current well and group states in order to recover in
         // the case of failed iterations
@@ -296,8 +292,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     initializeGroupStructure(const int reportStepIdx)
     {
-        DeferredLogger local_deferredLogger{};
-
         const auto& comm = this->simulator_.vanguard().grid().comm();
 
         OPM_BEGIN_PARALLEL_TRY_CATCH()
@@ -317,9 +311,7 @@ namespace Opm {
                 );
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
-                                       "Failed to initialize group structure: ",
-                                       this->terminal_output_, comm)
+        OPM_END_PARALLEL_TRY_CATCH("Failed to initialize group structure: ", comm)
     }
 
 

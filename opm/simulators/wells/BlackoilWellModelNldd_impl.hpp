@@ -46,7 +46,6 @@ assemble(const int /*iterationIdx*/,
     // well model, so we do not need to do it here (when
     // iterationIdx is 0).
 
-    DeferredLogger local_deferredLogger;
     this->updateWellControls(domain);
     this->assembleWellEq(dt, domain);
 
