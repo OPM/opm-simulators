@@ -248,7 +248,8 @@ namespace Opm {
     initializeLocalWellStructure(const int  reportStepIdx,
                                  const bool enableWellPIScaling)
     {
-        DeferredLogger local_deferredLogger{};
+        auto logger_guard = this->groupStateHelper().pushLogger();
+        auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
         const auto& comm = this->simulator_.vanguard().grid().comm();
 
