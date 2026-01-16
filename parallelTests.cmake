@@ -293,6 +293,15 @@ add_test_compare_parallel_simulation(CASENAME 6_uda_model5_stdw
   TEST_ARGS --enable-tuning=true
 )
 
+add_test_compare_parallel_simulation(CASENAME GSATPROD6
+  FILENAME GSATPROD6
+  SIMULATOR flow
+  ABS_TOL ${abs_tol_parallel}
+  REL_TOL ${rel_tol_parallel}
+  DIR satellite
+  TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7
+)
+
 foreach(templ_case RANGE 1 6)
   add_test_compare_parallel_simulation(CASENAME actionx_well_templ_0${templ_case}
     FILENAME ACTIONX_WELL_TEMPL-0${templ_case}
