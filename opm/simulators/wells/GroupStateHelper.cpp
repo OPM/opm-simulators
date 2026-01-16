@@ -1639,7 +1639,7 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
     GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                    resv_coeff,
                                                                    control_group};
-    const auto& control_group_target = tcalc.groupTarget(deferred_logger);
+    const auto& control_group_target = tcalc.groupTarget();
     const auto& control_group_guide_rate
         = this->getGuideRate(control_group_name, tcalc.guideTargetMode());
 
@@ -1809,10 +1809,10 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
 
             if (included) {
                 num_wells += this->updateGroupControlledWellsRecursive_(
-                    child_group, is_production_group, injection_phase, deferred_logger);
+                    child_group, is_production_group, injection_phase);
             } else {
                 this->updateGroupControlledWellsRecursive_(
-                    child_group, is_production_group, injection_phase, deferred_logger);
+                    child_group, is_production_group, injection_phase);
             }
         }
         // For production auto choke groups: check if we should exclude all wells from GCW count.
