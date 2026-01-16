@@ -491,8 +491,7 @@ private:
     /// Check if a production auto choke group is underperforming its target rate.
     /// Returns true if the group's current rate is below its allocated target,
     /// which means wells should be excluded from the GCW count.
-    bool isAutoChokeGroupUnderperforming_(const Group& group,
-        DeferredLogger& deferred_logger) const;
+    bool isAutoChokeGroupUnderperforming_(const Group& group) const;
 
 /// check if well/group bottom is a sub well/group of the group top
     bool isInGroupChainTopBot_(const std::string& bottom, const std::string& top) const;
