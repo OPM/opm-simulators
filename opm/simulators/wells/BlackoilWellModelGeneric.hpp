@@ -305,10 +305,9 @@ public:
 
     void updateAndCommunicateGroupData(const int reportStepIdx,
                                        const int iterationIdx,
-                                       const Scalar tol_nupcol,
-                                       // we only want to update the wellgroup target
-                                       // after the groups have found their controls
-                                       const bool update_wellgrouptarget);
+                                       const Scalar tol_nupcol);
+
+    void updateWellGroupTargets();
 
     const EclipseState& eclState() const
     { return eclState_; }

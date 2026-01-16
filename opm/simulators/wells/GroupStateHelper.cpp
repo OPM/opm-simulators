@@ -1060,12 +1060,30 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupProductionRates(const Group& g
 
 template <typename Scalar, typename IndexTraits>
 void
-GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReduction(const Group& group,
-                                                                 const bool is_injector)
+GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReduction()
+{
+    this->updateGroupTargetReductionProducer();
+    this->updateGroupTargetReductionInjector();
+}
+
+template <typename Scalar, typename IndexTraits>
+void
+GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionInjector()
 {
     OPM_TIMEFUNCTION();
+    const Group& group = this->schedule_.getGroup("FIELD", this->report_step_);
     std::vector<Scalar> group_target_reduction(this->numPhases(), 0.0);
-    this->updateGroupTargetReductionRecursive_(group, is_injector, group_target_reduction);
+    this->updateGroupTargetReductionRecursive_(group, /*is_injector=*/true, group_target_reduction);
+}
+
+template <typename Scalar, typename IndexTraits>
+void
+GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionProducer()
+{
+    OPM_TIMEFUNCTION();
+    const Group& group = this->schedule_.getGroup("FIELD", this->report_step_);
+    std::vector<Scalar> group_target_reduction(this->numPhases(), 0.0);
+    this->updateGroupTargetReductionRecursive_(group, /*is_injector=*/false, group_target_reduction);
 }
 
 template <typename Scalar, typename IndexTraits>
