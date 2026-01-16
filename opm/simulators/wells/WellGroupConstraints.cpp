@@ -42,8 +42,7 @@ checkGroupConstraintsInj(const Group& group,
                          const Scalar efficiencyFactor,
                          const SummaryState& summaryState,
                          const RateConvFunc& rateConverter,
-                         const bool check_guide_rate,
-                         DeferredLogger& deferred_logger) const
+                         const bool check_guide_rate) const
 {
     const auto& well_state = groupStateHelper.wellState();
 
@@ -85,8 +84,7 @@ checkGroupConstraintsInj(const Group& group,
         injectionPhase,
         efficiencyFactor,
         resv_coeff,
-        check_guide_rate,
-        deferred_logger
+        check_guide_rate
     );
 }
 
@@ -97,8 +95,7 @@ checkGroupConstraintsProd(const Group& group,
                           const GroupStateHelperType& groupStateHelper,
                           const Scalar efficiencyFactor,
                           const RateConvFunc& rateConverter,
-                          const bool check_guide_rate,
-                          DeferredLogger& deferred_logger) const
+                          const bool check_guide_rate) const
 {
     const auto& well_state = groupStateHelper.wellState();
 
@@ -113,8 +110,7 @@ checkGroupConstraintsProd(const Group& group,
         ws.surface_rates.data(),
         efficiencyFactor,
         resv_coeff,
-        check_guide_rate,
-        deferred_logger
+        check_guide_rate
     );
 }
 
@@ -125,8 +121,7 @@ checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
                       const SummaryState& summaryState,
                       const RateConvFunc& rateConverter,
                       const bool check_guide_rate,
-                      WellStateType& well_state,
-                      DeferredLogger& deferred_logger) const
+                      WellStateType& well_state) const
 {
     const auto& well = well_.wellEcl();
     const int well_index = well_.indexOfWell();
@@ -149,8 +144,7 @@ checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
                 this->checkGroupConstraintsInj(group, groupStateHelper, efficiencyFactor,
                                                summaryState,
                                                rateConverter,
-                                               check_guide_rate,
-                                               deferred_logger);
+                                               check_guide_rate);
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
             if (group_constraint.first) {
@@ -181,8 +175,7 @@ checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
                 this->checkGroupConstraintsProd(group, groupStateHelper,
                                                 efficiencyFactor,
                                                 rateConverter,
-                                                check_guide_rate,
-                                                deferred_logger);
+                                                check_guide_rate);
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
             if (group_constraint.first) {

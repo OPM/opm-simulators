@@ -95,30 +95,25 @@ protected:
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const bool check_guide_rate,
-                               WellStateType& well_state,
-                               DeferredLogger& deferred_logger) const;
+                               WellStateType& well_state) const;
 
     bool checkConstraints(const GroupStateHelperType& groupStateHelper,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
-                          WellStateType& well_state,
-                          DeferredLogger& deferred_logger) const;
+                          WellStateType& well_state) const;
 
     std::optional<Scalar>
     getGroupInjectionTargetRate(const Group& group,
                                 const GroupStateHelperType& groupStateHelper,
                                 const InjectorType& injectorType,
-                                Scalar efficiencyFactor,
-                                DeferredLogger& deferred_logger) const;
+                                Scalar efficiencyFactor) const;
 
     Scalar
     getGroupProductionTargetRate(const Group& group,
                                  const GroupStateHelperType& groupStateHelper,
-                                 Scalar efficiencyFactor,
-                                 DeferredLogger& deferred_logger) const;
+                                 Scalar efficiencyFactor) const;
 
-    bool zeroGroupRateTarget(const GroupStateHelperType& groupStateHelper,
-                             DeferredLogger& deferred_logger) const;
+    bool zeroGroupRateTarget(const GroupStateHelperType& groupStateHelper) const;
 
     // For the conversion between the surface volume rate and reservoir voidage rate
     const RateConverterType& rateConverter_;

@@ -243,10 +243,9 @@ public:
      */
     GroupTargetCalculator(
         const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
-        const GroupStateHelperType& group_state_helper,
-        DeferredLogger& deferred_logger
+        const GroupStateHelperType& group_state_helper
     );
-    DeferredLogger& deferredLogger() { return this->deferred_logger_; }
+    DeferredLogger& deferredLogger() { return this->group_state_helper_.deferredLogger(); }
     int fipnum() const { return this->fipnum_; }
     /** Compute injection target for group in the given injection phase. */
     std::optional<InjectionTargetInfo> groupInjectionTarget(
@@ -276,7 +275,6 @@ private:
     const GuideRate& guide_rate_;
     int report_step_idx_;
     std::vector<Scalar> resv_coeff_;
-    DeferredLogger& deferred_logger_;
     int fipnum_; // FIP region for the groups
     int pvtreg_; // PVT region for the groups
     std::vector<Scalar> resv_coeffs_inj_;

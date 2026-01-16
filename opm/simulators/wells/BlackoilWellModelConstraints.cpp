@@ -416,7 +416,7 @@ actionOnBrokenConstraints(const Group& group,
     }
     case Group::ExceedAction::WELL: {
         std::tie(worst_offending_well, std::ignore) =
-            groupStateHelper().worstOffendingWell(group, newControl, deferred_logger);
+            groupStateHelper().worstOffendingWell(group, newControl);
         break;
     }
     case Group::ExceedAction::PLUG: {

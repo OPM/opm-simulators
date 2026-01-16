@@ -62,8 +62,7 @@ public:
                            const PrimaryVariables& primary_variables,
                            const Scalar rho,
                            StandardWellEquationsType& eqns,
-                           const bool stopped_or_zero_target,
-                           DeferredLogger& deferred_logger) const;
+                           const bool stopped_or_zero_target) const;
 
     //! \brief Assemble injectivity equation.
     void assembleInjectivityEq(const EvalWell& eq_pskin,

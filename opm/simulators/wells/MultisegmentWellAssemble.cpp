@@ -89,9 +89,9 @@ assembleControlEq(const GroupStateHelperType& groupStateHelper,
                   const Scalar rho,
                   const PrimaryVariables& primary_variables,
                   Equations& eqns1,
-                  const bool stopped_or_zero_target,
-                  DeferredLogger& deferred_logger) const
+                  const bool stopped_or_zero_target) const
 {
+    auto& deferred_logger = groupStateHelper.deferredLogger();
     const auto& well_state = groupStateHelper.wellState();
     const auto& summary_state = groupStateHelper.summaryState();
     /*
@@ -165,8 +165,7 @@ assembleControlEq(const GroupStateHelperType& groupStateHelper,
                                                                    primary_variables.getBhp(),
                                                                    injection_rate,
                                                                    bhp_from_thp,
-                                                                   control_eq,
-                                                                   deferred_logger);
+                                                                   control_eq);
     } else {
         // Find rates.
         const auto rates = getRates();
@@ -185,8 +184,7 @@ assembleControlEq(const GroupStateHelperType& groupStateHelper,
                                                                      primary_variables.getBhp(),
                                                                      rates,
                                                                      bhp_from_thp,
-                                                                     control_eq,
-                                                                     deferred_logger);
+                                                                     control_eq);
     }
 
     MultisegmentWellEquationAccess<Scalar, IndexTraits, numWellEq,Indices::numEq> eqns(eqns1);

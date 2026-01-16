@@ -183,8 +183,7 @@ checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const bool check_guide_rate,
-                      WellStateType& well_state,
-                      DeferredLogger& deferred_logger) const
+                      WellStateType& well_state) const
 {
     const auto& group_state = groupStateHelper.groupState();
 
@@ -206,7 +205,7 @@ checkGroupConstraints(const GroupStateHelperType& groupStateHelper,
 
     return WellGroupConstraints(*this).checkGroupConstraints(groupStateHelper,
                                                              schedule, summaryState,
-                                                             rCoeff, check_guide_rate, well_state, deferred_logger);
+                                                             rCoeff, check_guide_rate, well_state);
 }
 
 template<typename FluidSystem>
@@ -215,16 +214,16 @@ WellInterfaceFluidSystem<FluidSystem>::
 checkConstraints(const GroupStateHelperType& groupStateHelper,
                  const Schedule& schedule,
                  const SummaryState& summaryState,
-                 WellStateType& well_state,
-                 DeferredLogger& deferred_logger) const
+                 WellStateType& well_state) const
 {
+    auto& deferred_logger = groupStateHelper.deferredLogger();
     const bool ind_broken = checkIndividualConstraints(well_state.well(this->index_of_well_),
                                                        summaryState, deferred_logger);
     if (ind_broken) {
         return true;
     } else {
         return checkGroupConstraints(groupStateHelper, schedule,
-                                     summaryState, true, well_state, deferred_logger);
+                                     summaryState, true, well_state);
     }
 }
 
@@ -234,8 +233,7 @@ WellInterfaceFluidSystem<FluidSystem>::
 getGroupInjectionTargetRate(const Group& group,
                             const GroupStateHelperType& groupStateHelper,
                             const InjectorType& injectorType,
-                            Scalar efficiencyFactor,
-                            DeferredLogger& deferred_logger) const
+                            Scalar efficiencyFactor) const
 {
     const auto& group_state = groupStateHelper.groupState();
     auto rCoeff = [this, &group_state](const RegionId id, const int region,
@@ -253,8 +251,7 @@ getGroupInjectionTargetRate(const Group& group,
                                                                 groupStateHelper,
                                                                 injectorType,
                                                                 rCoeff,
-                                                                efficiencyFactor,
-                                                                deferred_logger);
+                                                                efficiencyFactor);
 }
 
 template<typename FluidSystem>
@@ -262,8 +259,7 @@ typename FluidSystem::Scalar
 WellInterfaceFluidSystem<FluidSystem>::
 getGroupProductionTargetRate(const Group& group,
                              const GroupStateHelperType& groupStateHelper,
-                             Scalar efficiencyFactor,
-                             DeferredLogger& deferred_logger) const
+                             Scalar efficiencyFactor) const
 {
     const auto& group_state = groupStateHelper.groupState();
     auto rCoeff = [this, &group_state](const RegionId id, const int region,
@@ -280,15 +276,13 @@ getGroupProductionTargetRate(const Group& group,
     return WellGroupControls(*this).getGroupProductionTargetRate(group,
                                                                  groupStateHelper,
                                                                  rCoeff,
-                                                                 efficiencyFactor,
-                                                                 deferred_logger);
+                                                                 efficiencyFactor);
 }
 
 template<typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-zeroGroupRateTarget(const GroupStateHelperType& groupStateHelper,
-                    DeferredLogger& deferred_logger) const
+zeroGroupRateTarget(const GroupStateHelperType& groupStateHelper) const
 {
     const auto& well_state = groupStateHelper.wellState();
     const auto& well = this->well_ecl_;
@@ -302,7 +296,7 @@ zeroGroupRateTarget(const GroupStateHelperType& groupStateHelper,
             this->getGroupInjectionTargetRate(group,
                                               groupStateHelper,
                                               controls.injector_type,
-                                              efficiencyFactor, deferred_logger);
+                                              efficiencyFactor);
         if (target.has_value()) {
             return target.value() == 0.0;
         } else {
@@ -312,8 +306,7 @@ zeroGroupRateTarget(const GroupStateHelperType& groupStateHelper,
         // Check producer under group control
         const Scalar scale =
             this->getGroupProductionTargetRate(group, groupStateHelper,
-                                               efficiencyFactor,
-                                               deferred_logger);
+                                               efficiencyFactor);
         return scale == 0.0;
     }
 }
