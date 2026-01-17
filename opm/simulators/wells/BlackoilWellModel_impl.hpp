@@ -389,8 +389,7 @@ namespace Opm {
             // to make sure we get the correct mapping.
             this->updateAndCommunicateGroupData(reportStepIdx,
                                     simulator_.model().newtonMethod().numIterations(),
-                                    param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false,
-                                    local_deferredLogger);
+                                    param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false);
 
             // Wells are active if they are active wells on at least one process.
             const Grid& grid = simulator_.vanguard().grid();
@@ -490,8 +489,7 @@ namespace Opm {
         this->updateAndCommunicateGroupData(reportStepIdx,
                                     simulator_.model().newtonMethod().numIterations(),
                                     param_.nupcol_group_rate_tolerance_,
-                                    /*update_wellgrouptarget*/ true,
-                                    local_deferredLogger);
+                                    /*update_wellgrouptarget*/ true);
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -1280,7 +1278,7 @@ namespace Opm {
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const int reportStepIdx = simulator_.episodeIndex();
         this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx,
-            param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ true, local_deferredLogger);
+            param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ true);
         // We need to call updateWellControls before we update the network as
         // network updates are only done on thp controlled wells.
         // Note that well controls are allowed to change during updateNetwork
@@ -1672,7 +1670,7 @@ namespace Opm {
 
             changed_well_to_group = comm.sum(static_cast<int>(changed_well_to_group));
             if (changed_well_to_group) {
-                updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
+                updateAndCommunicate(episodeIdx, iterationIdx);
                 changed_well_group = true;
             }
 
@@ -1697,7 +1695,7 @@ namespace Opm {
 
             changed_well_individual = comm.sum(static_cast<int>(changed_well_individual));
             if (changed_well_individual) {
-                updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
+                updateAndCommunicate(episodeIdx, iterationIdx);
                 changed_well_group = true;
             }
             iter++;
@@ -1714,14 +1712,12 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     updateAndCommunicate(const int reportStepIdx,
-                         const int iterationIdx,
-                         DeferredLogger& deferred_logger)
+                         const int iterationIdx)
     {
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             iterationIdx,
                                             param_.nupcol_group_rate_tolerance_,
-                                            /*update_wellgrouptarget*/ true,
-                                            deferred_logger);
+                                            /*update_wellgrouptarget*/ true);
 
         // updateWellStateWithTarget might throw for multisegment wells hence we
         // have a parallel try catch here to thrown on all processes.
@@ -1743,8 +1739,7 @@ namespace Opm {
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             iterationIdx,
                                             param_.nupcol_group_rate_tolerance_,
-                                            /*update_wellgrouptarget*/ true,
-                                            deferred_logger);
+                                            /*update_wellgrouptarget*/ true);
     }
 
     template<typename TypeTag>
@@ -1764,7 +1759,7 @@ namespace Opm {
         const bool changed_hc = this->checkGroupHigherConstraints(group, deferred_logger, reportStepIdx, max_number_of_group_switches, update_group_switching_log);
         if (changed_hc) {
             changed = true;
-            updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
+            updateAndCommunicate(reportStepIdx, iterationIdx);
         }
 
         bool changed_individual =
@@ -1782,7 +1777,7 @@ namespace Opm {
 
         if (changed_individual) {
             changed = true;
-            updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
+            updateAndCommunicate(reportStepIdx, iterationIdx);
         }
         // call recursively down the group hierarchy
         for (const std::string& groupName : group.groups()) {

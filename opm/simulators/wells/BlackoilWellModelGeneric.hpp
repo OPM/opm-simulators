@@ -308,8 +308,7 @@ public:
                                        const Scalar tol_nupcol,
                                        // we only want to update the wellgroup target
                                        // after the groups have found their controls
-                                       const bool update_wellgrouptarget,
-                                       DeferredLogger& deferred_logger);
+                                       const bool update_wellgrouptarget);
 
     const EclipseState& eclState() const
     { return eclState_; }
