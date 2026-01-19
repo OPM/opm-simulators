@@ -1049,7 +1049,10 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
             continue;
 
         const auto& ws = this->wellState().well(well_index.value());
-        if (ws.status == Opm::Well::Status::SHUT)
+        // In addition to exclude the shut wells we also exclude stopped wells (with rate 0)
+        // as they sometimes introduce noise into the group controls if they
+        // struggle to converge
+        if (ws.status != Opm::Well::Status::OPEN)
             continue;
 
         const Scalar factor = well_ecl.getEfficiencyFactor(network)
