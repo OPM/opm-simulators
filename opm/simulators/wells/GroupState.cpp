@@ -529,42 +529,38 @@ update_gconsump(const Schedule& schedule, const int report_step, const SummarySt
     const auto& gconsump = sched_state.gconsump();
     auto gcr_recursive =
         [this, &sched_state, &gconsump, &summary_state](auto self,
-                                                        const std::string& group_name,
-                                                        std::pair<Scalar, Scalar>& rates,
-                                                        const double parent_gefac = 1.0) -> bool
+                                                        const std::string& group_name) -> std::pair<Scalar, Scalar>
         {
-            // If group already has been computed, update parent rates and return true
-            const auto it = this->m_gconsump_rates.find(group_name);
-            if (it != this->m_gconsump_rates.end()) {
-                rates.first += static_cast<Scalar>(it->second.first * parent_gefac);
-                rates.second += static_cast<Scalar>(it->second.second * parent_gefac);
-                return true;
-            }
+            std::pair<Scalar, Scalar> group_rates{0.0, 0.0};
 
-            // Accumulate from sub-groups and keep track of any updates in 'has_values'
-            bool has_values = false;
+            // Accumulate from child groups (with child efficiency factors applied)
             if (sched_state.groups.has(group_name)) {
-                for (const auto& child_gname : sched_state.groups(group_name).groups()) {
-                    const auto gefac = sched_state.groups(child_gname).getGroupEfficiencyFactor();
-                    has_values = self(self, child_gname, rates, gefac) || has_values;
+                const auto& group = sched_state.groups(group_name);
+                for (const auto& child_gname : group.groups()) {
+                    const auto& child_group = sched_state.groups(child_gname);
+                    const auto child_gefac = child_group.getGroupEfficiencyFactor();
+
+                    // Get child's accumulated rates and apply child's efficiency factor
+                    const auto child_rates = self(self, child_gname);
+                    group_rates.first += static_cast<Scalar>(child_rates.first * child_gefac);
+                    group_rates.second += static_cast<Scalar>(child_rates.second * child_gefac);
                 }
             }
 
-            // Add consumption/import rates at current level
+            // Add this group's own GCONSUMP rates (WITHOUT own efficiency factor)
             if (gconsump.has(group_name)) {
                 const auto& group_gc = gconsump.get(group_name, summary_state);
-                rates.first += static_cast<Scalar>(group_gc.consumption_rate);
-                rates.second += static_cast<Scalar>(group_gc.import_rate);
-                has_values = true;
+                group_rates.first += static_cast<Scalar>(group_gc.consumption_rate);
+                group_rates.second += static_cast<Scalar>(group_gc.import_rate);
             }
 
-            // Update map if values are set
-            if (has_values) this->m_gconsump_rates.insert_or_assign(group_name, rates);
-            return has_values;
+            // Store the accumulated rates for this group
+            this->m_gconsump_rates.insert_or_assign(group_name, group_rates);
+            return group_rates;
         };
 
-    auto rates = std::pair { Scalar{0}, Scalar{0} };
-    gcr_recursive(gcr_recursive, "FIELD", rates);
+    // Start recursion from FIELD group
+    gcr_recursive(gcr_recursive, "FIELD");
 }
 
 template<class Scalar>

@@ -49,6 +49,7 @@
 
 #define BOOST_TEST_MODULE GroupHigherConstraints
 #include "SimulatorFixture.hpp"
+#include "ToleranceAndUnitFixture.hpp"
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
@@ -75,50 +76,7 @@ BOOST_GLOBAL_FIXTURE(SimulatorFixture);
 
 namespace {
 
-//! \brief Test fixture with unit conversion helpers and tolerance checks
-struct ToleranceAndUnitFixture
-{
-    //! Relative tolerance for exact mathematical relationships
-    static constexpr double tight_tol = 1e-12;
-
-    //! Relative tolerance for rate values with minor numerical differences
-    static constexpr double rate_tol = 1e-8;
-
-    //! Relative tolerance for algorithm results (e.g., scale factors)
-    static constexpr double algo_tol = 1e-3;
-
-    //! Convert SI rate (m³/s) to metric rate (SM3/day)
-    static double metric_rate(double si_rate)
-    {
-        using namespace Opm::unit;
-        return convert::to(si_rate, cubic(meter) / day);
-    }
-
-    //! Convert metric rate (SM3/day) to SI rate (m³/s)
-    static double si_rate(double metric_rate)
-    {
-        using namespace Opm::unit;
-        return convert::from(metric_rate, cubic(meter) / day);
-    }
-
-    //! Check that two values are close within tight tolerance (for exact relationships)
-    static void checkClose(double actual, double expected)
-    {
-        BOOST_CHECK_CLOSE(actual, expected, tight_tol);
-    }
-
-    //! Check that two rate values are close
-    static void checkRate(double actual, double expected)
-    {
-        BOOST_CHECK_CLOSE(actual, expected, rate_tol);
-    }
-
-    //! Check that two algorithm results are close (looser tolerance)
-    static void checkAlgo(double actual, double expected)
-    {
-        BOOST_CHECK_CLOSE(actual, expected, algo_tol);
-    }
-};
+// Using shared ToleranceAndUnitFixture from ToleranceAndUnitFixture.hpp
 
 //! \brief Test fixture for group constraint tests to avoid code duplication
 //!
