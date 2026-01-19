@@ -361,6 +361,11 @@ computePressures(const Network::ExtNetwork& network,
                     }
                 }
                 alq = comm.sum(alq);
+                // only add once for parallel runs (i.e. add after communication)
+                if (group.hasSatelliteProduction()) {
+                    const auto& gsat_prod = well_model_.schedule()[reportStepIdx].gsatprod().get(node, well_model_.summaryState());
+                    alq += gsat_prod.rate[GSatProd::GSatProdGroupProp::Rate::GLift];
+                }
                 node_inflows[node][IndexTraits::gasPhaseIdx] += alq;
             }
         }

@@ -1101,6 +1101,14 @@ add_test_compareECLFiles(CASENAME gsatprod
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR satellite)
+
+add_test_compareECLFiles(CASENAME gsatprod6
+                         FILENAME GSATPROD6
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR satellite)
+
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(CASENAME spe12_polyhedralgrid
                            FILENAME SPE1CASE2

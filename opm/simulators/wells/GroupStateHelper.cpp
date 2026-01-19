@@ -1161,11 +1161,9 @@ GroupStateHelper<Scalar, IndexTraits>::updateNetworkLeafNodeProductionRates()
             if (this->schedule_[this->report_step_].groups.has(
                     group_name)) { // Allow empty leaf nodes that are not groups
                 const auto& group = this->schedule_[this->report_step_].groups.get(group_name);
-                if (group.numWells() > 0) {
-                    for (int phase = 0; phase < np; ++phase) {
-                        network_rates[phase] = this->sumWellPhaseRates(
-                            /*res_rates=*/false, group, phase, /*injector=*/false, /*network=*/true);
-                    }
+                for (int phase = 0; phase < np; ++phase) {
+                    network_rates[phase] = this->sumWellPhaseRates(
+                        /*res_rates=*/false, group, phase, /*injector=*/false, /*network=*/true);
                 }
             }
             this->groupState().update_network_leaf_node_production_rates(group_name, network_rates);

@@ -68,19 +68,6 @@ namespace {
             );
         }
 
-        const auto& gaslift = record.getItem<Kw::LIFT_GAS_SUPPLY_RATE>().get<Opm::UDAValue>(0);
-        if (gaslift.is_defined()) {
-            const auto& gaslift_val = gaslift.is<double>() ? fmt::format("{}", gaslift.get<double>()) : gaslift.get<std::string>();
-            errors.emplace_back(Opm::KeywordValidation::ValidationError {
-                true,
-                keyword.location(),
-                0,  // not relevant
-                6,
-                gaslift_val,
-                std::string{"Gaslift rate is not supported and should be defaulted (1*)"}}
-            );
-        }
-
         const auto& calrate = record.getItem<Kw::MEAN_CALORIFIC_VALUE>().get<Opm::UDAValue>(0);
         if (calrate.is_defined()) {
             const auto& calrate_val = calrate.is<double>() ? fmt::format("{}", calrate.get<double>()) : calrate.get<std::string>();
