@@ -461,12 +461,12 @@ private:
     ReservoirCoupling::Phase activePhaseIdxToRescoupPhase_(int phase_pos) const;
 #endif
 
-    //! \brief Apply reductions, add-back, and fractions to calculate target from higher-level group.
+    //! \brief Calculate group target by applying local rate adjustments and guide rate fractions through group hierarchy.
     //!
     //! This method encapsulates the core algorithm for calculating the portion of a top-level
     //! group target that should be assigned to a bottom group (well or sub-group). The algorithm:
     //! 1. Iterates through the group chain from top to bottom
-    //! 2. At each level with a guide rate (or at the top level), subtracts local reductions
+    //! 2. At each level with a guide rate (or at the top level), subtracts local reductions (the amount of rate that is not available for the group to control)
     //! 3. At the local_reduction_level, adds back the bottom group's rate (if do_addback is true)
     //! 4. Multiplies by the guide rate fraction for each level
     //!
