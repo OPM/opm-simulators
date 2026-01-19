@@ -135,6 +135,13 @@ public:
     /// @return Reference to the potentials data for the specified group
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name) const;
 
+    /// @brief Check if this is the first substep within a "sync" timestep.
+    /// @details This flag is used to control reservoir coupling synchronization.
+    ///          Master-slave data exchange should only happen at the start of each "sync" timestep,
+    ///          not on internal substeps or at retries after convergence chops.
+    /// @return true if this is the first substep of a "sync" timestep, false if not
+    bool isFirstSubstepOfSyncTimestep() const { return is_first_substep_of_sync_timestep_; }
+
     /// @brief Get the number of slave groups for a specific slave process
     /// @param index Index of the slave process
     /// @return Number of groups managed by the specified slave
@@ -183,6 +190,10 @@ public:
         std::size_t slave_idx, const std::vector<ProductionGroupTarget>& production_targets
     ) const;
 
+    /// @brief Set whether this is the first substep within a "sync" timestep.
+    /// @param value true at start of sync timestep, false after first runSubStep_() call
+    void setFirstSubstepOfSyncTimestep(bool value) { is_first_substep_of_sync_timestep_ = value; }
+
     /// @brief Set the current report step index
     /// @param report_step_idx The report step index to set
     ///
@@ -221,6 +232,10 @@ private:
 
     /// Injection data for each slave group (map key: master group name)
     std::map<std::string, std::vector<SlaveGroupInjectionData>> slave_group_injection_data_;
+
+    /// Flag to track if this is the first substep within a "sync" timestep.
+    /// Used to control reservoir coupling synchronization.
+    bool is_first_substep_of_sync_timestep_{true};
 };
 } // namespace Opm
 #endif // OPM_RESERVOIR_COUPLING_MASTER_REPORT_STEP_HPP

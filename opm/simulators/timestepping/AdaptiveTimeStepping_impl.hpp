@@ -671,6 +671,10 @@ runStepReservoirCouplingMaster_()
         const bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
             current_time + current_step_length, step_end_time
         );
+        // Mark this as the first substep of the "sync" timestep. This flag controls
+        // whether master-slave data exchange should occur in beginTimeStep() in the well model.
+        // It will be cleared after the first runSubStep_() call.
+        reservoirCouplingMaster_().setFirstSubstepOfSyncTimestep(true);
         SubStepIteration<Solver> substepIteration{*this, substep_timer, current_step_length, final_step};
         const auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
@@ -719,6 +723,10 @@ runStepReservoirCouplingSlave_()
         const bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
             current_time + timestep, step_end_time
         );
+        // Mark this as the first substep of the "sync" timestep. This flag controls
+        // whether master-slave data exchange should occur in beginTimeStep() in the well model.
+        // It will be cleared after the first runSubStep_() call.
+        reservoirCouplingSlave_().setFirstSubstepOfSyncTimestep(true);
         SubStepIteration<Solver> substepIteration{*this, substep_timer, timestep, final_step};
         const auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
@@ -788,6 +796,7 @@ run()
         }
 
         auto substep_report = runSubStep_();
+        markFirstSubStepAsFinished_();  // Needed for reservoir coupling
 
         if (substep_report.converged || checkContinueOnUnconvergedSolution_(dt)) {
             Dune::Timer perfTimer;
@@ -1059,6 +1068,44 @@ ignoreConvergenceFailure_() const
 
 template<class TypeTag>
 template<class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+isReservoirCouplingMaster_() const
+{
+    return this->substepper_.isReservoirCouplingMaster_();
+}
+
+template<class TypeTag>
+template<class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+isReservoirCouplingSlave_() const
+{
+    return this->substepper_.isReservoirCouplingSlave_();
+}
+
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+markFirstSubStepAsFinished_() const
+{
+#ifdef RESERVOIR_COUPLING_ENABLED
+    // Clear the first-substep flag after the first runSubStep_() call.
+    // This ensures that master-slave synchronization only happens once per sync timestep,
+    // not on retry attempts after convergence-driven timestep chops.
+    if (isReservoirCouplingMaster_()) {
+        reservoirCouplingMaster_().setFirstSubstepOfSyncTimestep(false);
+    }
+    else if (isReservoirCouplingSlave_()) {
+        reservoirCouplingSlave_().setFirstSubstepOfSyncTimestep(false);
+    }
+#endif
+    return;
+}
+
+template<class TypeTag>
+template<class Solver>
 double
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
 maxGrowth_() const
@@ -1143,6 +1190,26 @@ minTimeStep_() const
 {
     return this->adaptive_time_stepping_.min_time_step_;
 }
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+template<class TypeTag>
+template<class Solver>
+ReservoirCouplingMaster<typename AdaptiveTimeStepping<TypeTag>::Scalar>&
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+reservoirCouplingMaster_() const
+{
+    return this->substepper_.reservoirCouplingMaster_();
+}
+
+template<class TypeTag>
+template<class Solver>
+ReservoirCouplingSlave<typename AdaptiveTimeStepping<TypeTag>::Scalar>&
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+reservoirCouplingSlave_() const
+{
+    return this->substepper_.reservoirCouplingSlave_();
+}
+#endif
 
 template<class TypeTag>
 template<class Solver>
