@@ -461,6 +461,38 @@ private:
     ReservoirCoupling::Phase activePhaseIdxToRescoupPhase_(int phase_pos) const;
 #endif
 
+    //! \brief Calculate group target by applying local rate adjustments and guide rate fractions through group hierarchy.
+    //!
+    //! This method encapsulates the core algorithm for calculating the portion of a top-level
+    //! group target that should be assigned to a bottom group (well or sub-group). The algorithm:
+    //! 1. Iterates through the group chain from top to bottom
+    //! 2. At each level with a guide rate (or at the top level), subtracts local reductions (the amount of rate that is not available for the group to control)
+    //! 3. At the local_reduction_level, adds back the bottom group's rate (if do_addback is true)
+    //! 4. Multiplies by the guide rate fraction for each level
+    //!
+    //! \tparam ReductionLambda Callable type: (const std::string& group_name) -> Scalar
+    //! \tparam FractionLambda Callable type: (const std::string& child) -> Scalar
+    //! \param chain Group chain from control group (top) to bottom group
+    //! \param orig_target Original target from top-level controlling group
+    //! \param current_rate_available Current rate of the bottom group (for add-back)
+    //! \param local_reduction_level Level where local reduction/add-back is applied
+    //! \param is_production_group True for production, false for injection
+    //! \param injection_phase Phase for injection groups (ignored for production)
+    //! \param local_reduction_lambda Functor to get local reduction for a group
+    //! \param local_fraction_lambda Functor to get local fraction for a child group
+    //! \param do_addback Whether to perform add-back at local_reduction_level
+    //! \return Target after applying reductions and fractions (before efficiency factor division)
+    template<typename ReductionLambda, typename FractionLambda>
+    Scalar applyReductionsAndFractions_(const std::vector<std::string>& chain,
+                                        Scalar orig_target,
+                                        Scalar current_rate_available,
+                                        std::size_t local_reduction_level,
+                                        bool is_production_group,
+                                        Phase injection_phase,
+                                        ReductionLambda&& local_reduction_lambda,
+                                        FractionLambda&& local_fraction_lambda,
+                                        bool do_addback) const;
+
     //! \brief Compute partial efficiency factor for addback calculation.
     //!
     //! The addback in constraint checking must use the partial efficiency factor
@@ -477,6 +509,20 @@ private:
     std::string controlGroup_(const Group& group) const;
 
     GuideRate::RateVector getGuideRateVector_(const std::vector<Scalar>& rates) const;
+
+    //! \brief Find the local reduction level in a group chain.
+    //!
+    //! The local reduction level is the deepest level in the chain (starting from level 1)
+    //! where a group has both a guide rate and group-controlled wells (GCW > 0).
+    //! This level determines where reductions are applied and add-back occurs.
+    //!
+    //! \param chain Group chain from control group (top) to bottom group
+    //! \param is_production_group True for production, false for injection
+    //! \param injection_phase Phase for injection groups (ignored for production)
+    //! \return The local reduction level (0 if no intermediate group qualifies)
+    std::size_t getLocalReductionLevel_(const std::vector<std::string>& chain,
+                                        bool is_production_group,
+                                        Phase injection_phase) const;
 
     Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
                                                 const int phase_pos,
