@@ -672,7 +672,7 @@ runStepReservoirCouplingMaster_()
             current_time + current_step_length, step_end_time
         );
         // Mark this as the first substep of the "sync" timestep. This flag controls
-        // whether master-slave data exchange should occur in beginTimeStep() in the well model..
+        // whether master-slave data exchange should occur in beginTimeStep() in the well model.
         // It will be cleared after the first runSubStep_() call.
         reservoirCouplingMaster_().setFirstSubstepOfSyncTimestep(true);
         SubStepIteration<Solver> substepIteration{*this, substep_timer, current_step_length, final_step};
@@ -724,7 +724,7 @@ runStepReservoirCouplingSlave_()
             current_time + timestep, step_end_time
         );
         // Mark this as the first substep of the "sync" timestep. This flag controls
-        // whether master-slave data exchange should occur in beginTimeStep() in the well model..
+        // whether master-slave data exchange should occur in beginTimeStep() in the well model.
         // It will be cleared after the first runSubStep_() call.
         reservoirCouplingSlave_().setFirstSubstepOfSyncTimestep(true);
         SubStepIteration<Solver> substepIteration{*this, substep_timer, timestep, final_step};
