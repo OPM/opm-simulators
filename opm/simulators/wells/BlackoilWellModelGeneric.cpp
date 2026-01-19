@@ -1217,8 +1217,7 @@ void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 updateAndCommunicateGroupData(const int reportStepIdx,
                               const int iterationIdx,
                               const Scalar tol_nupcol,
-                              const bool update_wellgrouptarget,
-                              DeferredLogger& deferred_logger)
+                              const bool update_wellgrouptarget)
 {
     OPM_TIMEFUNCTION();
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
@@ -1293,7 +1292,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                 const std::string msg = fmt::format("Group prodution relative change {} larger than tolerance {} "
                                                         "at iteration {}. Update {} for Group {} even if iteration is larger than {} given by NUPCOL." ,
                                                         rel_change, tol_nupcol, iterationIdx, control_str, gr_name, nupcol);
-                                deferred_logger.debug(msg);
+                                group_state_helper.deferredLogger().debug(msg);
                             }
                         }
                     }
