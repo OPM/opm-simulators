@@ -2217,7 +2217,7 @@ namespace Opm
         if (bhpAtLimit)
             return bhpAtLimit;
 
-       auto fratesIter = [this, &simulator, &groupStateHelper, &deferred_logger](const Scalar bhp) {
+       auto fratesIter = [this, &simulator, &groupStateHelper](const Scalar bhp) {
            // Solver the well iterations to see if we are
            // able to get a solution with an update
            // solution
