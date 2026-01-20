@@ -79,12 +79,13 @@ fi
 # the contents of ${REASON}).  Empty ${REASON} ultimately starts an
 # interactive commit.
 changed_tests=`echo $changed_tests | xargs`
-echo -e "Automatic Reference Data Update for ${REASON:-(Unknown)}\n" > /tmp/cmsg
+MSGFILE=$WORKSPACE/deps/cmsg
+echo -e "Automatic Reference Data Update for ${REASON:-(Unknown)}\n" > $MSGFILE
 if [ -z "$REASON" ]
 then
-  echo -e "Reason: fill in this\n" >> /tmp/cmsg
+  echo -e "Reason: fill in this\n" >> $MSGFILE
 else
-  echo -e "Reason: $REASON\n" >> /tmp/cmsg
+  echo -e "Reason: $REASON\n" >> $MSGFILE
 fi
 if [ -n "$CONVERT_ECL" ]
 then
@@ -93,13 +94,13 @@ then
     pushd $WORKSPACE/deps/$dep > /dev/null
     name=`printf "%-14s" $dep`
     rev=`git rev-parse HEAD`
-    echo -e "$name = $rev" >> /tmp/cmsg
+    echo -e "$name = $rev" >> $MSGFILE
     popd > /dev/null
   done
 fi
 
-echo -e "\n### Changed Tests ###\n" >> /tmp/cmsg
-printf "  * %s\n" ${changed_tests} >> /tmp/cmsg
+echo -e "\n### Changed Tests ###\n" >> $MSGFILE
+printf "  * %s\n" ${changed_tests} >> $MSGFILE
 
 # ---------------------------------------------------------------------------
 
@@ -124,9 +125,9 @@ fi
 # 4) Commit reference solution update.
 if [ -z "$REASON" ]
 then
-  git commit -a -t /tmp/cmsg
+  git commit -a -t $MSGFILE
 else
-  git commit -a -F /tmp/cmsg
+  git commit -a -F $MSGFILE
 fi
 
 # ===========================================================================
