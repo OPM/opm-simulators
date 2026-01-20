@@ -1809,10 +1809,10 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
 
             if (included) {
                 num_wells += this->updateGroupControlledWellsRecursive_(
-                    child_group, is_production_group, injection_phase, deferred_logger);
+                    child_group, is_production_group, injection_phase);
             } else {
                 this->updateGroupControlledWellsRecursive_(
-                    child_group, is_production_group, injection_phase, deferred_logger);
+                    child_group, is_production_group, injection_phase);
             }
         }
         // For production auto choke groups: check if we should exclude all wells from GCW count.
