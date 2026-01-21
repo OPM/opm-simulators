@@ -29,7 +29,7 @@ namespace Dune
         Dune::writeMatrixMarket(vector[i],os);
       });
     };      
-}
+
 namespace MatrixMarketImpl
 {
 
