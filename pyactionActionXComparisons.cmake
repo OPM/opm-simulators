@@ -257,6 +257,17 @@ if(MPI_FOUND)
                                    IGNORE_EXTRA_KW BOTH
                                    MPI_PROCS 4)
 
+  add_test_compareSeparateECLFiles(CASENAME pyaction_include_insert_kw_4_procx
+                                   DIR1 pyaction
+                                   FILENAME1 PYACTION_INCLUDE_INSERT_KW
+                                   DIR2 actionx
+                                   FILENAME2 ACTIONX_INCLUDE
+                                   SIMULATOR flow
+                                   ABS_TOL ${abs_tol}
+                                   REL_TOL ${rel_tol}
+                                   IGNORE_EXTRA_KW BOTH
+                                   MPI_PROCS 4)
+
   add_test_compareSeparateECLFiles(CASENAME pyaction_multx+_insert_kw_4_procs
                                    DIR1 pyaction
                                    FILENAME1 PYACTION_MULTX+_INSERT_KW
