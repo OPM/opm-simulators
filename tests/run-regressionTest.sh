@@ -45,6 +45,19 @@ TEST_ARGS="$@"
 
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
+
+# Check if simulator binary exists
+if [ ! -x "${BINPATH}/${EXE_NAME}" ]; then
+    echo "ERROR: Simulator binary not found: ${BINPATH}/${EXE_NAME}"
+    echo ""
+    echo "To build this binary, run one of:"
+    echo "  ninja ${EXE_NAME}"
+    echo "  make ${EXE_NAME}"
+    echo ""
+    echo "Or build all targets with: ninja / make"
+    exit 1
+fi
+
 ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} ${TEST_ARGS} --output-dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 cd ..
