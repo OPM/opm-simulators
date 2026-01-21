@@ -43,8 +43,6 @@ check_for_avx2()
 
 # dependencies
 set (opm-simulators_DEPS
-  # Compile with C99 support if available
-  "C99"
   # Various runtime library enhancements
   "Boost 1.44.0
     COMPONENTS date_time unit_test_framework REQUIRED ${_Boost_CONFIG_MODE}"
