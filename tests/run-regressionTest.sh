@@ -53,6 +53,7 @@ if [ ! -x "${BINPATH}/${EXE_NAME}" ]; then
     echo "To build this binary, run one of:"
     echo "  ninja ${EXE_NAME}"
     echo "  make ${EXE_NAME}"
+    echo "  cmake --build . --target ${EXE_NAME}"
     echo ""
     echo "Or build all targets with: ninja / make"
     exit 1
