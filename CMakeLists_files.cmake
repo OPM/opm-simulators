@@ -37,7 +37,6 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
     # and include the correct path which is in the build/binary dir
     string(REPLACE ".cu" ".hip" HIP_SOURCE_FILE ${FILE})
     set (hip_file_path "${PROJECT_BINARY_DIR}/${DIR}/gpuistl_hip/${HIP_SOURCE_FILE}")
-    file(RELATIVE_PATH relpath ${PROJECT_SOURCE_DIR} ${hip_file_path})
 
     # add a custom command that will hipify
     add_custom_command(
@@ -56,7 +55,13 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
     )
 
     # set_source_files_properties(${relpath} PROPERTIES LANGUAGE HIP)
-    list(APPEND ${LIST} ${relpath})
+    if("${LIST}" STREQUAL "PUBLIC_HEADER_FILES")
+      file(RELATIVE_PATH relpath ${PROJECT_BINARY_DIR} ${hip_file_path})
+      list(APPEND GENERATED_HEADER_FILES ${relpath})
+    else()
+      file(RELATIVE_PATH relpath ${PROJECT_SOURCE_DIR} ${hip_file_path})
+      list(APPEND ${LIST} ${relpath})
+    endif()
     list(APPEND ${LIST}_HIPIFIED ${hip_file_path})
   endif()
 endmacro()
