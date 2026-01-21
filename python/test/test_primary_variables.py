@@ -24,7 +24,7 @@ class TestBasic(unittest.TestCase):
     # IMPORTANT:This test must be run first since it calls MPI_Init()
     def test_01_blackoil(self):
         with pushd(self.data_dir_bo):
-            sim = create_black_oil_simulator(filename="SPE1CASE1.DATA")
+            sim = create_black_oil_simulator(args=["--output-dir=01_primary"], filename="SPE1CASE1.DATA")
             sim.setup_mpi(True, False)
             sim.step_init()
             sim.step()
@@ -53,7 +53,7 @@ class TestBasic(unittest.TestCase):
 
     def test_02_onephase(self):
         with pushd(self.data_dir_op):
-            sim = create_onephase_simulator("SPE1CASE1_WATER.DATA")
+            sim = create_onephase_simulator(args=["--output-dir=02_primary"], filename="SPE1CASE1_WATER.DATA")
             sim.setup_mpi(False, False)
             sim.step_init()
             sim.step()
@@ -78,7 +78,7 @@ class TestBasic(unittest.TestCase):
     # IMPORTANT: This test must be run last since it calls MPI_Finalize()
     def test_99_gaswater(self):
         with pushd(self.data_dir_gw):
-            sim = create_gas_water_simulator(filename="SPE1CASE2_GASWATER.DATA")
+            sim = create_gas_water_simulator(args=["--output-dir=99_primary"], filename="SPE1CASE2_GASWATER.DATA")
             sim.setup_mpi(False, True)
             sim.step_init()
             sim.step()
