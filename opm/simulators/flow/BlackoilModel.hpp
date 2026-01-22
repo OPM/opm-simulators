@@ -123,6 +123,13 @@ public:
         Scalar dRvMax = 0.0;
     };
 
+    // Output debug flags for which tolerances used
+    enum class DebugFlags {
+        STRICT = 0,
+        RELAXED = 1,
+        TUNINGDP = 2
+    };
+
     // ---------  Public methods  ---------
 
     /// Construct the model. It will retain references to the

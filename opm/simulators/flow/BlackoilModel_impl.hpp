@@ -966,48 +966,6 @@ getReservoirConvergence(const double reportTime,
     // solution change tolerances have been fulfilled
     Scalar tolerance_cnv_relaxed = relax_dsol_cnv ? 1e20 : param_.tolerance_cnv_relaxed_;
 
-    if ((use_relaxed_cnv || use_relaxed_mb) &&
-        this->terminal_output_)
-    {
-        std::string message;
-        if (relax_dsol_cnv) {
-            message = "Max. solution change below tolerance ( ";
-            if (use_dp_tol && maxSolUpd.dPMax < this->param_.tolerance_max_dp_ ) {
-                message += fmt::format("DP={:.2e}<{:.2e} ", maxSolUpd.dPMax, this->param_.tolerance_max_dp_);
-            }
-            if (use_ds_tol && maxSolUpd.dSMax < this->param_.tolerance_max_ds_ ) {
-                message += fmt::format("DS={:.2e}<{:.2e} ", maxSolUpd.dSMax, this->param_.tolerance_max_ds_);
-            }
-            if (use_drs_tol && maxSolUpd.dRsMax < this->param_.tolerance_max_drs_ ) {
-                message += fmt::format("DRS={:.2e}<{:.2e} ", maxSolUpd.dRsMax, this->param_.tolerance_max_drs_);
-            }
-            if (use_drv_tol && maxSolUpd.dRvMax < this->param_.tolerance_max_drv_ ) {
-                message += fmt::format("DRV={:.2e}<{:.2e} ", maxSolUpd.dRvMax, this->param_.tolerance_max_drv_);
-            }
-            message += "), ";
-        }
-        else if (relax_final_iteration_cnv || relax_final_iteration_mb) {
-            message = "Number of newton iterations reached its maximum, ";
-        }
-        else if (relax_iter_cnv || relax_iter_mb) {
-            message = "Number of newton iterations using strict tolerances have been reached,  ";
-        }
-        else if (relax_pv_fraction_cnv) {
-            message = "Fraction of pore volumes violating strict tolerances small, ";
-        }
-        message += "try to continue with relaxed tolerances:";
-
-        if (use_relaxed_mb) {
-            message += fmt::format("  MB: {:.1e}", param_.tolerance_mb_relaxed_);
-        }
-
-        if (use_relaxed_cnv) {
-            message += fmt::format(" CNV: {:.1e}", tolerance_cnv_relaxed);
-        }
-
-        OpmLog::debug(message);
-    }
-
     const auto tol_cnv = use_relaxed_cnv ? tolerance_cnv_relaxed : param_.tolerance_cnv_;
     const auto tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
     const auto tol_cnv_energy = use_relaxed_cnv ? param_.tolerance_cnv_energy_relaxed_ : param_.tolerance_cnv_energy_;
@@ -1094,6 +1052,9 @@ getReservoirConvergence(const double reportTime,
                 msg += use_drv_tol ? "    DRV    " : "";
             }
 
+            msg += " MBFLAG";
+            msg += " CNVFLAG";
+
             OpmLog::debug(msg);
         }
 
@@ -1128,6 +1089,12 @@ getReservoirConvergence(const double reportTime,
             print_dsol(use_drs_tol, maxSolUpd.dRsMax);
             print_dsol(use_drv_tol, maxSolUpd.dRvMax);
         }
+
+        int mb_flag = use_relaxed_mb ? static_cast<int>(DebugFlags::RELAXED) : static_cast<int>(DebugFlags::STRICT);
+        int cnv_flag = relax_dsol_cnv ? static_cast<int>(DebugFlags::TUNINGDP) :
+            (use_relaxed_cnv ? static_cast<int>(DebugFlags::RELAXED) : static_cast<int>(DebugFlags::STRICT));
+        ss << std::setw(7) << mb_flag;
+        ss << std::setw(8) << cnv_flag;
 
         ss.precision(oprec);
         ss.flags(oflags);
