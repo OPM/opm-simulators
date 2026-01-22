@@ -1608,6 +1608,58 @@ GroupStateHelper<Scalar, IndexTraits>::getSatelliteRate_(const Group& group,
 
 template <typename Scalar, typename IndexTraits>
 bool
+GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Group& group) const
+{
+    // Only applies to production auto choke groups
+    if (!group.as_choke()) {
+        return false;
+    }
+
+    // Auto choke groups inherit control from an ancestor (cmode == FLD or NONE)
+    const auto ctrl = this->groupState().production_control(group.name());
+    if (ctrl != Group::ProductionCMode::FLD && ctrl != Group::ProductionCMode::NONE) {
+        return false;
+    }
+
+    // Check if guide rate is set for this group
+    const auto& group_guide_rate = group.productionControls(this->summary_state_).guide_rate;
+    if (group_guide_rate <= 0) {
+        return false;
+    }
+
+    // Find the ancestor group that has actual control
+    const auto& control_group_name = this->controlGroup_(group);
+    const auto& control_group = this->schedule_.getGroup(control_group_name, this->report_step_);
+
+    // Calculate target rate for this auto choke group
+    const auto num_phases = this->numPhases();
+    std::vector<Scalar> resv_coeff(num_phases, 1.0);
+    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
+                                                                   resv_coeff,
+                                                                   control_group};
+    const auto& control_group_target = tcalc.groupTarget();
+    const auto& control_group_guide_rate
+        = this->getGuideRate(control_group_name, tcalc.guideTargetMode());
+
+    if (control_group_guide_rate <= 0) {
+        return false;
+    }
+
+    const Scalar target_rate = control_group_target * group_guide_rate / control_group_guide_rate;
+
+    // Calculate current rate for this group
+    std::vector<Scalar> rates(num_phases, 0.0);
+    for (int phase_pos = 0; phase_pos < num_phases; ++phase_pos) {
+        rates[phase_pos] = this->sumWellSurfaceRates(group, phase_pos, /*injector=*/false);
+    }
+    const Scalar current_rate = tcalc.calcModeRateFromRates(rates);
+
+    // If underperforming, wells should be excluded from GCW count
+    return current_rate < target_rate;
+}
+
+template <typename Scalar, typename IndexTraits>
+bool
 GroupStateHelper<Scalar, IndexTraits>::isInGroupChainTopBot_(const std::string& bottom,
                                                             const std::string& top) const
 {
@@ -1740,11 +1792,23 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
             this->updateGroupControlledWellsRecursive_(child_group, is_production_group, injection_phase);
         }
     }
+    // For production auto choke groups: check if we should exclude all wells from GCW count.
+    // If the group is underperforming its target, wells are not counted as group-controlled,
+    // effectively excluding this group from guide rate distribution at the parent level.
+    const bool exclude_for_auto_choke = is_production_group
+        && this->isAutoChokeGroupUnderperforming_(group);
+
     for (const std::string& child_well : group.wells()) {
         bool included = false;
         const Well& well = this->schedule_.getWell(child_well, this->report_step_);
+
         if (is_production_group && well.isProducer()) {
             included = (this->wellState().isProductionGrup(child_well) || group.as_choke());
+
+            // Auto choke groups: exclude all wells if group is underperforming its target
+            if (exclude_for_auto_choke) {
+                included = false;
+            }
         } else if (!is_production_group && !well.isProducer()) {
             const auto& well_controls = well.injectionControls(this->summary_state_);
             auto injectorType = well_controls.injector_type;
@@ -1752,51 +1816,6 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
                 || (injection_phase == Phase::OIL && injectorType == InjectorType::OIL)
                 || (injection_phase == Phase::GAS && injectorType == InjectorType::GAS)) {
                 included = this->wellState().isInjectionGrup(child_well);
-            }
-        }
-        const auto ctrl1 = this->groupState().production_control(group.name());
-        if (group.as_choke()
-            && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))) {
-            // The auto choke group has not own group control but inherits control from an ancestor group.
-            // Number of wells should be calculated as zero when wells of auto choke group do not deliver
-            // target. This behaviour is then similar to no-autochoke group with wells not on GRUP control.
-            // The rates of these wells are summed up. The parent group target is reduced with this rate.
-            // This reduced target becomes the target of the other child group of this parent.
-            const auto num_phases = this->numPhases();
-            std::vector<Scalar> rates(num_phases, 0.0);
-            for (int phase_pos = 0; phase_pos < num_phases; ++phase_pos) {
-                rates[phase_pos] = this->sumWellSurfaceRates(group, phase_pos, /*injector=*/false);
-            }
-
-            // Get the ancestor of the auto choke group that has group control (cmode != FLD, NONE)
-            const auto& control_group_name = this->controlGroup_(group);
-            const auto& control_group = this->schedule_.getGroup(control_group_name, this->report_step_);
-
-            const auto& group_guide_rate = group.productionControls(this->summary_state_).guide_rate;
-
-            if (group_guide_rate > 0) {
-                // Guide rate is not default for the auto choke group
-                std::vector<Scalar> resv_coeff(num_phases, 1.0);
-                GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
-                                                                               resv_coeff,
-                                                                               control_group};
-                const auto& control_group_target = tcalc.groupTarget();
-
-                // Calculates the guide rate of the parent group with control.
-                // It is allowed that the guide rate of this group is defaulted. The guide rate will be
-                // derived from the children groups
-                const auto& control_group_guide_rate
-                    = this->getGuideRate(control_group_name, tcalc.guideTargetMode());
-
-                if (control_group_guide_rate > 0) {
-                    // Target rate for the auto choke group
-                    const Scalar target_rate
-                        = control_group_target * group_guide_rate / control_group_guide_rate;
-                    const Scalar current_rate = tcalc.calcModeRateFromRates(rates);
-
-                    if (current_rate < target_rate)
-                        included = false;
-                }
             }
         }
 
