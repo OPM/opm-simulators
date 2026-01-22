@@ -933,8 +933,9 @@ getReservoirConvergence(const double reportTime,
 
         // [1]: tol < cnv <= relaxed
         // [2]: relaxed < cnv
-        return static_cast<Scalar>(cnvPvSplit[1] + cnvPvSplit[2]) <
-            this->param_.relaxed_max_pv_fraction_ * eligible;
+        Scalar cnvPvSum = static_cast<Scalar>(cnvPvSplit[1] + cnvPvSplit[2]);
+        return cnvPvSum < this->param_.relaxed_max_pv_fraction_ * eligible &&
+            cnvPvSum > 0.0;
     }();
 
     // If tolerances for solution changes are met, we use the
