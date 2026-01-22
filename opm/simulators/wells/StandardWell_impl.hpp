@@ -1437,7 +1437,8 @@ namespace Opm
     {
         updatePrimaryVariables(groupStateHelper);
         computeWellConnectionPressures(simulator, groupStateHelper);
-        this->computeAccumWell();
+        auto& deferred_logger = groupStateHelper.deferredLogger();
+        this->computeAccumWell(simulator, deferred_logger);
     }
 
 
@@ -1594,7 +1595,7 @@ namespace Opm
                     = sign * ws.well_potentials[phase];
         }
         well_copy.updatePrimaryVariables(groupStateHelper_copy);
-        well_copy.computeAccumWell();
+        well_copy.computeAccumWell(simulator, deferred_logger);
 
         const double dt = simulator.timeStepSize();
         const bool converged = well_copy.iterateWellEqWithControl(
