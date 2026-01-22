@@ -484,11 +484,11 @@ opm_add_test(test_tuning_tsinit_nextstep
 # compile units.
 opm_add_test(lens_immiscible_ecfv_ad_mcu
              SOURCES
-              examples/lens_immiscible_ecfv_ad_cu1.cpp
-              examples/lens_immiscible_ecfv_ad_cu2.cpp
-              examples/lens_immiscible_ecfv_ad_main.cpp
+             examples/lens_immiscible_ecfv_ad_cu1.cpp
+             examples/lens_immiscible_ecfv_ad_cu2.cpp
+             examples/lens_immiscible_ecfv_ad_main.cpp
              LIBRARIES
-              opmsimulators opmcommon
+             opmsimulators
              ONLY_COMPILE)
 
 if(QuadMath_FOUND)
