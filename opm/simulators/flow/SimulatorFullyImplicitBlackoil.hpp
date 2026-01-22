@@ -365,12 +365,6 @@ public:
 
         // Terminal warnings
         if (terminalOutput_) {
-            // TUNINGDP values
-            OpmLog::debug(
-                fmt::format("TUNINGDP values: TRGDDP: {:.2e}, TRGDDS: {:.2e}, TRGDDRS: {:.2e}, TRGDDRV: {:.2e}",
-                            tuning_dp.TRGDDP, tuning_dp.TRGDDS, tuning_dp.TRGDDRS, tuning_dp.TRGDDRV)
-            );
-
             // Warnings unsupported items
             if (tuning_dp.TRGLCV_has_value) {
                 OpmLog::warning("TUNINGDP item 1 (TRGLCV) is not supported.");

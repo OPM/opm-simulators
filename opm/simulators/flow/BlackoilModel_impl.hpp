@@ -522,7 +522,7 @@ updateSolution(const BVector& dx)
     OPM_TIMEBLOCK(updateSolution);
     // Prepare to store solution update for convergence check
     if (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0
-        || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_) {
+        || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_ > 0.0) {
         prepareStoringSolutionUpdate();
     }
 
@@ -544,7 +544,7 @@ updateSolution(const BVector& dx)
 
     // Store solution update
     if (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0
-        || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_) {
+        || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_  > 0.0) {
         storeSolutionUpdate(dx);
     }
 }
