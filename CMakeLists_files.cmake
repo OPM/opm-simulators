@@ -485,6 +485,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_equil.cpp
   tests/test_extractMatrix.cpp
   tests/test_flexiblesolver.cpp
+  tests/test_gconsump.cpp
   tests/test_glift1.cpp
   tests/test_graphcoloring.cpp
   tests/test_GroupState.cpp
@@ -675,6 +676,8 @@ list (APPEND TEST_DATA_FILES
   tests/rhs3rep.txt
   tests/options_flexiblesolver.json
   tests/options_flexiblesolver_simple.json
+  tests/GCONSUMP.DATA
+  tests/GCONSUMP_COMPLEX.DATA
   tests/GROUP_HIGHER_CONSTRAINTS.DATA
   tests/GLIFT1.DATA
   tests/RC-01_MAST_PRED.DATA
