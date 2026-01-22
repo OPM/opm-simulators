@@ -2166,7 +2166,7 @@ namespace Opm
         if (!iterate_if_no_solution)
             return std::nullopt;
 
-       auto fratesIter = [this, &simulator, &groupStateHelper, &deferred_logger](const Scalar bhp) {
+       auto fratesIter = [this, &simulator, &groupStateHelper](const Scalar bhp) {
            // Solver the well iterations to see if we are
            // able to get a solution with an update
            // solution
