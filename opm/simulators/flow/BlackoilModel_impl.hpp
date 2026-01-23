@@ -593,7 +593,7 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
     // Loop over solution update, get the correct variables and calculate max.
     for (const auto& ix : ixCells) {
         const auto& value = solUpd_[ix];
-        for (int pvIdx = 0; pvIdx < value.size(); ++pvIdx) {
+        for (int pvIdx = 0; pvIdx < static_cast<int>(value.size()); ++pvIdx) {
             if (pvIdx == Indices::pressureSwitchIdx) {
                 dPMax = std::max(dPMax, std::abs(value[pvIdx]));
             }
