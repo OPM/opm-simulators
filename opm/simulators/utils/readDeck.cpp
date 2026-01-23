@@ -262,9 +262,9 @@ namespace {
     {
         const auto& final_state = schedule.back();
         const auto& rescoup = final_state.rescoup();
-        if (rescoup.slaveCount() > 0 && rescoup.masterGroupCount() == 0) {
-            inconsistentScheduleError("SLAVES keyword without GRUPMAST keyword");
-        }
+        // Note: SLAVES without GRUPMAST is valid for history mode reservoir coupling.
+        // In history mode, the master only synchronizes time-stepping and does not
+        // perform rate allocation, so GRUPMAST is not required.
         if (rescoup.slaveCount() == 0 && rescoup.masterGroupCount() > 0) {
             inconsistentScheduleError("GRUPMAST keyword without SLAVES keyword");
         }

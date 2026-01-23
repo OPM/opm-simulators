@@ -214,8 +214,10 @@ maybeSpawnSlaveProcesses(int report_step)
     }
     const auto& rescoup = this->schedule_[report_step].rescoup();
     auto slave_count = rescoup.slaveCount();
-    auto master_group_count = rescoup.masterGroupCount();
-    if (slave_count > 0 && master_group_count > 0) {
+    // Spawn slaves when SLAVES keyword is present.
+    // - Prediction mode: SLAVES + GRUPMAST (master allocates rates)
+    // - History mode: SLAVES only (master synchronizes time-stepping)
+    if (slave_count > 0) {
         ReservoirCouplingSpawnSlaves<Scalar> spawn_slaves{*this, rescoup};
         spawn_slaves.spawn();
     }

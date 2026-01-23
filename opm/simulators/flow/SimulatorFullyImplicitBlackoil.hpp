@@ -201,18 +201,14 @@ public:
             auto rescoup = this->schedule()[report_step].rescoup();
             auto slave_count = rescoup.slaveCount();
             auto master_group_count = rescoup.masterGroupCount();
-            // - GRUPMAST and SLAVES keywords need to be specified at the same report step
-            // - They can only occur once in the schedule
-            if (slave_count > 0 && master_group_count > 0) {
+            // Master mode is enabled when SLAVES keyword is present.
+            // - Prediction mode: SLAVES + GRUPMAST (master allocates rates)
+            // - History mode: SLAVES only (master synchronizes time-stepping)
+            if (slave_count > 0) {
                 return true;
             }
-            else if (slave_count > 0 && master_group_count == 0) {
-                throw ReservoirCouplingError(
-                    "Inconsistent reservoir coupling master schedule: "
-                    "Slave count is greater than 0 but master group count is 0"
-                );
-            }
-            else if (slave_count == 0 && master_group_count > 0) {
+            else if (master_group_count > 0) {
+                // GRUPMAST without SLAVES is invalid
                 throw ReservoirCouplingError(
                     "Inconsistent reservoir coupling master schedule: "
                     "Master group count is greater than 0 but slave count is 0"
