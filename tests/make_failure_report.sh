@@ -21,20 +21,20 @@ do
   then
     failed_test=`echo $failed_test | sed -e 's/.*://g' -e 's/\+/./g'`
     # Extract test properties
-    binary=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="SIMULATOR" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
-    dir_name=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="DIRNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
-    file_name=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="FILENAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
-    test_name=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="TESTNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
-    JOBLIST+="-r $OPM_TESTS_ROOT/$dir_name/opm-simulation-reference/$binary/$file_name -s $RESULT_DIR/tests/results/$binary+$test_name/$file_name -c $test_name -o plot\\n"
+    binary=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" -v prop="SIMULATOR" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    dir_name=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" -v prop="DIRNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    file_name=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" -v prop="FILENAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    test_name=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" -v prop="TESTNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    JOBLIST+="-r $OPM_TESTS_ROOT/${dir_name}/opm-simulation-reference/${binary}/${file_name} -s $RESULT_DIR/tests/results/$binary+$test_name/$file_name -c $test_name -o plot\\n"
   elif grep -q -E "compareSeparateECLFiles" <<< $failed_test
   then
     failed_test=`echo $failed_test | sed -e 's/.*://g' -e 's/\+/./g'`
     # Extract test properties
-    binary=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="SIMULATOR" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
-    dir_name=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="DIRNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
-    file_name1=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="FILENAME1" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
-    file_name2=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="FILENAME2" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
-    test_name=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="TESTNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    binary=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" -v prop="SIMULATOR" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    dir_name=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" -v prop="DIRNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    file_name1=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" -v prop="FILENAME1" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    file_name2=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" -v prop="FILENAME2" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    test_name=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" -v prop="TESTNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
     JOBLIST+="-r $RESULT_DIR/tests/results/$binary+$test_name/$file_name1 -s $RESULT_DIR/tests/results/$binary+$test_name/$file_name2 -c $test_name -o plot -t $file_name1 -u $file_name2\\n"
   fi
 done
