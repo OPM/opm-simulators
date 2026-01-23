@@ -121,6 +121,7 @@ public:
         Scalar dSMax = 0.0;
         Scalar dRsMax = 0.0;
         Scalar dRvMax = 0.0;
+        Scalar dTempMax = 0.0;
     };
 
     // Output debug flags for which tolerances used
@@ -203,6 +204,11 @@ public:
     void prepareStoringSolutionUpdate();
     void storeSolutionUpdate(const BVector& dx);
     MaxSolutionUpdateData getMaxSolutionUpdate(const std::vector<unsigned>& ixCells);
+    bool tuningDpActive() {
+        return (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0
+        || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_  > 0.0
+        || (has_energy_ && this->param_.tolerance_max_dtemp_  > 0.0));
+    }
 
     /// Return true if output to cout is wanted.
     bool terminalOutputEnabled() const

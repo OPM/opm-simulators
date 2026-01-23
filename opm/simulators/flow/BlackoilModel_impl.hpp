@@ -508,8 +508,7 @@ updateSolution(const BVector& dx)
 {
     OPM_TIMEBLOCK(updateSolution);
     // Prepare to store solution update for convergence check
-    if (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0
-        || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_ > 0.0) {
+    if (tuningDpActive()) {
         prepareStoringSolutionUpdate();
     }
 
@@ -530,8 +529,7 @@ updateSolution(const BVector& dx)
     }
 
     // Store solution update
-    if (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0
-        || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_  > 0.0) {
+    if (tuningDpActive()) {
         storeSolutionUpdate(dx);
     }
 }
@@ -589,6 +587,7 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
     Scalar dSMax = 0.0;
     Scalar dRsMax = 0.0;
     Scalar dRvMax = 0.0;
+    Scalar dTempMax = 0.0;
 
     // Loop over solution update, get the correct variables and calculate max.
     for (const auto& ix : ixCells) {
@@ -615,6 +614,9 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
                      && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
                 dRvMax = std::max(dRvMax, std::abs(value[pvIdx]));
             }
+            else if (pvIdx == Indices::temperatureIdx) {
+                dTempMax = std::max(dTempMax, std::abs(value[pvIdx]));
+            }
         }
     }
 
@@ -623,8 +625,9 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
     dSMax = this->grid_.comm().max(dSMax);
     dRsMax = this->grid_.comm().max(dRsMax);
     dRvMax = this->grid_.comm().max(dRvMax);
+    dTempMax = this->grid_.comm().max(dTempMax);
 
-    return { dPMax, dSMax, dRsMax, dRvMax };
+    return { dPMax, dSMax, dRsMax, dRvMax, dTempMax };
 }
 
 template <class TypeTag>
@@ -805,8 +808,7 @@ characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
 
         // For dP and dS check, we need cell indices of [1] violations
         if ( ix > 0 &&
-             (this->param_.tolerance_max_dp_ > 0.0 || this->param_.tolerance_max_ds_ > 0.0
-              || this->param_.tolerance_max_drs_ > 0.0 || this->param_.tolerance_max_drv_ > 0.0 ) ) {
+             tuningDpActive()) {
             ixCells.push_back(cell_idx);
         }
     }
@@ -843,6 +845,7 @@ updateTUNINGDP(const TuningDp& tuning_dp)
     this->param_.tolerance_max_ds_ = tuning_dp.TRGDDS;
     this->param_.tolerance_max_drs_ = tuning_dp.TRGDDRS;
     this->param_.tolerance_max_drv_ = tuning_dp.TRGDDRV;
+    this->param_.tolerance_max_dtemp_ = tuning_dp.TRGDDT;
 }
 
 template <class TypeTag>
@@ -933,7 +936,9 @@ getReservoirConvergence(const double reportTime,
     const bool use_ds_tol = this->param_.tolerance_max_ds_ > 0.0;
     const bool use_drs_tol = this->param_.tolerance_max_drs_ > 0.0;
     const bool use_drv_tol = this->param_.tolerance_max_drv_ > 0.0;
-    const bool use_dsol_tol = use_dp_tol || use_ds_tol || use_drs_tol || use_drv_tol;
+    const bool use_dtemp_tol = (has_energy_ && this->param_.tolerance_max_dtemp_ > 0.0);
+
+    const bool use_dsol_tol = use_dp_tol || use_ds_tol || use_drs_tol || use_drv_tol || use_dtemp_tol;
     bool relax_dsol_cnv = false;
     if (iteration > 0 && use_dsol_tol) {
         maxSolUpd = getMaxSolutionUpdate(cnvSplitData.ixCells);
@@ -941,7 +946,8 @@ getReservoirConvergence(const double reportTime,
             (!use_dp_tol || (maxSolUpd.dPMax > 0.0 && maxSolUpd.dPMax < this->param_.tolerance_max_dp_)) &&
             (!use_ds_tol || (maxSolUpd.dSMax > 0.0 && maxSolUpd.dSMax < this->param_.tolerance_max_ds_)) &&
             (!use_drs_tol || (maxSolUpd.dRsMax > 0.0 && maxSolUpd.dRsMax < this->param_.tolerance_max_drs_)) &&
-            (!use_drv_tol || (maxSolUpd.dRvMax > 0.0 && maxSolUpd.dRvMax < this->param_.tolerance_max_drv_));
+            (!use_drv_tol || (maxSolUpd.dRvMax > 0.0 && maxSolUpd.dRvMax < this->param_.tolerance_max_drv_)) &&
+            (!use_dtemp_tol || (maxSolUpd.dTempMax > 0.0 && maxSolUpd.dTempMax < this->param_.tolerance_max_dtemp_));
     }
 
     // Determine if relaxed CNV tolerances should be used
@@ -953,10 +959,11 @@ getReservoirConvergence(const double reportTime,
     // Ensure that CNV convergence criteria is met when max.
     // solution change tolerances have been fulfilled
     Scalar tolerance_cnv_relaxed = relax_dsol_cnv ? 1e20 : param_.tolerance_cnv_relaxed_;
+    Scalar tolerance_cnv_energy_relaxed = relax_dsol_cnv ? 1e20 : param_.tolerance_cnv_energy_relaxed_;
 
     const auto tol_cnv = use_relaxed_cnv ? tolerance_cnv_relaxed : param_.tolerance_cnv_;
     const auto tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
-    const auto tol_cnv_energy = use_relaxed_cnv ? param_.tolerance_cnv_energy_relaxed_ : param_.tolerance_cnv_energy_;
+    const auto tol_cnv_energy = use_relaxed_cnv ? tolerance_cnv_energy_relaxed : param_.tolerance_cnv_energy_;
     const auto tol_eb = use_relaxed_mb ? param_.tolerance_energy_balance_relaxed_ : param_.tolerance_energy_balance_;
 
     // Finish computation
@@ -1038,6 +1045,7 @@ getReservoirConvergence(const double reportTime,
                 msg += use_ds_tol ? "    DS     " : "";
                 msg += use_drs_tol ? "    DRS    " : "";
                 msg += use_drv_tol ? "    DRV    " : "";
+                msg += use_dtemp_tol ? "    DT    " : "";
             }
 
             msg += " MBFLAG";
@@ -1076,6 +1084,7 @@ getReservoirConvergence(const double reportTime,
             print_dsol(use_ds_tol, maxSolUpd.dSMax);
             print_dsol(use_drs_tol, maxSolUpd.dRsMax);
             print_dsol(use_drv_tol, maxSolUpd.dRvMax);
+            print_dsol(use_dtemp_tol, maxSolUpd.dTempMax);
         }
 
         int mb_flag = use_relaxed_mb ? static_cast<int>(DebugFlags::RELAXED) : static_cast<int>(DebugFlags::STRICT);
