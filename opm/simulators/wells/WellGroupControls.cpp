@@ -190,7 +190,12 @@ getGroupInjectionTargetRate(const Group& group,
         return std::nullopt;
     }
 
-    return groupStateHelper.wellState().well(well_.indexOfWell()).group_target->target_value;
+    const auto& group_target = groupStateHelper.wellState().well(well_.indexOfWell()).group_target;
+    if (!group_target.has_value()) {
+        return std::nullopt;
+    }
+
+    return group_target->target_value;
 }
 
 template<typename Scalar, typename IndexTraits>
