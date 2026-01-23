@@ -384,8 +384,6 @@ namespace Opm {
         void updateIPR(const Simulator& ebos_simulator,
                        DeferredLogger& deferred_logger) const override;
 
-        FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
-
         // this function can potentially be shared between multisegment wells and standard wells
         // TODO: this function largely overlaps with calculatePhaseProperties(), some refactoring/unification should be done
         template <typename ValueType = EvalWell>

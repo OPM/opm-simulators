@@ -101,6 +101,7 @@ public:
     using WellStateType = WellState<Scalar, IndexTraits>;
     using SingleWellStateType = SingleWellState<Scalar, IndexTraits>;
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
+    using FSInfo = std::tuple<Scalar, Scalar>;
 
     using RateConverterType =
     typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;
@@ -516,6 +517,8 @@ protected:
     Scalar computeConnectionDFactor(const int perf,
                                     const IntensiveQuantities& intQuants,
                                     const SingleWellStateType& ws) const;
+
+   FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
 };
 
 } // namespace Opm
