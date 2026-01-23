@@ -2854,40 +2854,6 @@ namespace Opm
         return wellbore_volume / vol_ratio;
     }
 
-    // this should go to a base class
-    template<typename TypeTag>
-    typename StandardWell<TypeTag>::FSInfo
-    StandardWell<TypeTag>::
-    getFirstPerforationFluidStateInfo(const Simulator& simulator) const {
-        Scalar fsTemperature = 0.0;
-        using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().
-            intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
-        SaltConcType fsSaltConcentration{};
-
-        // If this process does not contain active perforations, this->well_cells_ is empty.
-        if (this->well_cells_.size() > 0) {
-            // We use the pvt region of first perforated cell, so we look for global index 0
-            // TODO: it should be a member of the WellInterface, initialized properly
-            const int cell_idx = this->well_cells_[0];
-            const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
-            const auto& fs = intQuants.fluidState();
-
-            fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
-            fsSaltConcentration = fs.saltConcentration();
-        }
-
-        // TODO: using make_pair
-        auto info = std::make_tuple(fsTemperature, fsSaltConcentration);
-
-        // TODO: we need to add the pw_info_, here
-        // The following broadcast call is neccessary to ensure that processes that do *not* contain
-        // the first perforation get the correct temperature, saltConcentration and pvt_region_index
-        // return this->parallel_well_info_.communication().size() == 1
-        //            ? info
-        //            : this->pw_info_.broadcastFirstPerforationValue(info);
-        return info;
-    }
-
     template <typename TypeTag>
     void
     StandardWell<TypeTag>::computeAccumWell(const Simulator& simulator,
