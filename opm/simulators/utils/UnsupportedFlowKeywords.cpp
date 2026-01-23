@@ -631,7 +631,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"TRNHD", {true, std::nullopt}},
         {"TRPLPORO", {true, std::nullopt}},
         {"TRROCK", {true, std::nullopt}},
-        {"TUNINGDP", {false, std::nullopt}},
         {"TUNINGH", {false, std::nullopt}},
         {"TUNINGL", {false, std::nullopt}},
         {"TUNINGS", {false, std::nullopt}},

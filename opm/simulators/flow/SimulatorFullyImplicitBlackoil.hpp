@@ -355,6 +355,26 @@ public:
         }
     }
 
+    void updateTUNINGDP(const TuningDp& tuning_dp)
+    {
+        // NOTE: If TUNINGDP item is _not_ set it should be 0.0
+        modelParam_.tolerance_max_dp_ = tuning_dp.TRGDDP;
+        modelParam_.tolerance_max_ds_ = tuning_dp.TRGDDS;
+        modelParam_.tolerance_max_drs_ = tuning_dp.TRGDDRS;
+        modelParam_.tolerance_max_drv_ = tuning_dp.TRGDDRV;
+
+        // Terminal warnings
+        if (terminalOutput_) {
+            // Warnings unsupported items
+            if (tuning_dp.TRGLCV_has_value) {
+                OpmLog::warning("TUNINGDP item 1 (TRGLCV) is not supported.");
+            }
+            if (tuning_dp.XXXLCV_has_value) {
+                OpmLog::warning("TUNINGDP item 2 (XXXLCV) is not supported.");
+            }
+        }
+    }
+
     bool runStep(SimulatorTimer& timer)
     {
         if (schedule().exitStatus().has_value()) {
@@ -447,6 +467,19 @@ public:
                         this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
                     }
                     result = max_next_tstep > 0;
+                }
+
+                if (events.hasEvent(ScheduleEvents::TUNINGDP_CHANGE)) {
+                    // Unset the event to not trigger it again on the next sub step
+                    schedule.clear_event(ScheduleEvents::TUNINGDP_CHANGE, reportStep);
+
+                    // Update TUNINGDP parameters
+                    // NOTE: Need to update both solver (model) and simulator since solver is re-created each report
+                    // step.
+                    const auto& sched_state = schedule[reportStep];
+                    const auto& tuning_dp = sched_state.tuning_dp();
+                    solver_->model().updateTUNINGDP(tuning_dp);
+                    this->updateTUNINGDP(tuning_dp);
                 }
 
                 const auto& wcycle = schedule[reportStep].wcycle.get();
