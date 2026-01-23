@@ -88,19 +88,19 @@ extractTestProperties () {
 
     failed_test=$(echo "$1" | sed -e 's/.*://' -e 's/\+/./g')
 
-    testProperty["binary"]=$(awk -v search="set_tests_properties\\\(${failed_test}\$" \
+    testProperty["binary"]=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" \
                              -v prop="SIMULATOR" -f "${dir}/getprop.awk" \
                              "${BUILD_DIR}/CTestTestfile.cmake")
 
-    testProperty["dir_name"]=$(awk -v search="set_tests_properties\\\(${failed_test}\$" \
+    testProperty["dir_name"]=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" \
                                -v prop="DIRNAME" -f "${dir}/getprop.awk" \
                                "${BUILD_DIR}/CTestTestfile.cmake")
 
-    testProperty["file_name"]=$(awk -v search="set_tests_properties\\\(${failed_test}\$" \
+    testProperty["file_name"]=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" \
                                 -v prop="FILENAME" -f "${dir}/getprop.awk" \
                                 "${BUILD_DIR}/CTestTestfile.cmake")
 
-    testProperty["test_name"]=$(awk -v search="set_tests_properties\\\(${failed_test}\$" \
+    testProperty["test_name"]=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" \
                                 -v prop="TESTNAME" -f "${dir}/getprop.awk" \
                                 "${BUILD_DIR}/CTestTestfile.cmake")
 }
