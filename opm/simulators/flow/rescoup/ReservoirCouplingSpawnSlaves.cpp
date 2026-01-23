@@ -64,16 +64,19 @@ void
 ReservoirCouplingSpawnSlaves<Scalar>::
 spawn()
 {
-    // spawn the slave processes and get the simulation start date from the slaves,
-    // and finally send the master group names to the slaves
+    // Spawn slave processes and exchange initial data.
+    // Communication order is important - slaves need master group names
+    // before they can determine their activation date (for history mode detection).
     this->spawnSlaveProcesses_();
-    this->receiveActivationDateFromSlaves_();
     this->receiveSimulationStartDateFromSlaves_();
     this->sendSlaveNamesToSlaves_();
+    // These methods handle empty masterGroups gracefully (history mode)
     this->createMasterGroupNameOrder_();
     this->createMasterGroupToSlaveNameMap_();
     this->createSlaveNameToMasterGroupsMap_();
     this->sendMasterGroupNamesToSlaves_();
+    // Activation date received last - slaves can now check numMasterGroups()
+    this->receiveActivationDateFromSlaves_();
     this->logger_.info("Reservoir coupling slave processes was spawned successfully");
 }
 
@@ -217,8 +220,8 @@ getMasterGroupNamesForSlave_(std::size_t slave_idx) const
         const auto& slave_group_name = master_groups[group_name].slaveGroupName();
         data.push_back(slave_group_name);
     }
+    // NOTE: data.size() can be 0 for history mode (no GRUPMAST, hence no master groups)
     assert(data.size() % 2 == 0);
-    assert(data.size() > 0);
     return ReservoirCoupling::serializeStrings(data);
 }
 
@@ -315,6 +318,7 @@ sendMasterGroupNamesToSlaves_()
             static_assert(std::is_same_v<decltype(size), std::size_t>, "size must be of type std::size_t");
             auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
             // NOTE: See comment about error handling at the top of this file.
+            // Always send size (can be 0 for history matching mode)
             MPI_Send(
                 &size,
                 /*count=*/1,
@@ -323,16 +327,20 @@ sendMasterGroupNamesToSlaves_()
                 /*tag=*/static_cast<int>(MessageTag::MasterGroupNamesSize),
                 this->master_.getSlaveComm(slave_idx)
             );
-            MPI_Send(
-                group_names.data(),
-                /*count=*/size,
-                /*datatype=*/MPI_CHAR,
-                /*dest_rank=*/0,
-                /*tag=*/static_cast<int>(MessageTag::MasterGroupNames),
-                this->master_.getSlaveComm(slave_idx)
-            );
+            // Only send group names if there are any
+            if (size > 0) {
+                MPI_Send(
+                    group_names.data(),
+                    /*count=*/size,
+                    /*datatype=*/MPI_CHAR,
+                    /*dest_rank=*/0,
+                    /*tag=*/static_cast<int>(MessageTag::MasterGroupNames),
+                    this->master_.getSlaveComm(slave_idx)
+                );
+            }
             this->logger_.info(fmt::format(
-                "Sent master group names to slave process rank 0 with name: {}", slave_name)
+                "Sent master group names to slave process rank 0 with name: {} (size: {})",
+                slave_name, size)
             );
         }
    }

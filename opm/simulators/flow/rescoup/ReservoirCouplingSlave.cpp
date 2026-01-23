@@ -87,10 +87,18 @@ void
 ReservoirCouplingSlave<Scalar>::
 maybeActivate(int report_step) {
     if (!this->activated()) {
-        const auto& rescoup = this->schedule_[report_step].rescoup();
-        if (rescoup.grupSlavCount() > 0) {
+        bool do_activate = false;
+        if (this->historyMatchingMode_()) {
+            do_activate = true;
+        }
+        else {
+            const auto& rescoup = this->schedule_[report_step].rescoup();
+            if (rescoup.grupSlavCount() > 0) {
+                do_activate = true;
+            }
+        }
+        if (do_activate) {
             this->activated_ = true;
-            // Send a handshake to the master process to indicate that the slave has activated
             this->sendActivationHandshakeToMasterProcess_();
         }
     }
@@ -151,10 +159,13 @@ template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
 sendAndReceiveInitialData() {
-    this->sendActivationDateToMasterProcess_();
+    // Communication order must match master's spawn() method.
+    // We receive master group names before sending activation date so that
+    // we can detect history matching mode (no master groups) and use start_date as activation.
     this->sendSimulationStartDateToMasterProcess_();
     this->receiveSlaveNameFromMasterProcess_();
     this->receiveMasterGroupNamesFromMasterProcess_();
+    this->sendActivationDateToMasterProcess_();
 }
 
 template <class Scalar>
@@ -253,19 +264,26 @@ checkGrupSlavGroupNames_()
 }
 
 template <class Scalar>
-double
+std::pair<double, bool>
 ReservoirCouplingSlave<Scalar>::
-getGrupSlavActivationDate_() const
+getGrupSlavActivationDateAndCheckHistoryMatchingMode_() const
 {
     double start_date = this->schedule_.getStartTime();
     for (std::size_t report_step = 0; report_step < this->schedule_.size(); ++report_step) {
         auto rescoup = this->schedule_[report_step].rescoup();
         if (rescoup.grupSlavCount() > 0) {
-            return start_date + this->schedule_.seconds(report_step);
+            return {start_date + this->schedule_.seconds(report_step), false};
         }
+    }
+    if (this->numMasterGroups_() == 0) {
+        // History matching mode: No GRUPSLAV found, activate at simulation start
+        this->logger_.warning("Reservoir coupling: No GRUPSLAV keyword found in schedule. "
+        "Assuming slave activation at simulation start (history matching mode).");
+        return {start_date, true};
     }
     RCOUP_LOG_THROW(std::runtime_error, "Reservoir coupling: Failed to find slave activation time: "
               "No GRUPSLAV keyword found in schedule");
+    return {0.0, false};  // Should never happen
 }
 
 template <class Scalar>
@@ -286,26 +304,33 @@ receiveMasterGroupNamesFromMasterProcess_() {
             this->slave_master_comm_,
             MPI_STATUS_IGNORE
         );
-        this->logger_.info("Received master group names size from master process rank 0");
-        group_names.resize(size);
-        MPI_Recv(
-            group_names.data(),
-            /*count=*/size,
-            /*datatype=*/MPI_CHAR,
-            /*source_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::MasterGroupNames),
-            this->slave_master_comm_,
-            MPI_STATUS_IGNORE
-        );
-        this->logger_.info("Received master group names from master process rank 0");
+        this->logger_.info(fmt::format(
+            "Received master group names size from master process rank 0: {}", size));
+        // size can be 0 for history matching mode (no GRUPMAST on master)
+        if (size > 0) {
+            group_names.resize(size);
+            MPI_Recv(
+                group_names.data(),
+                /*count=*/size,
+                /*datatype=*/MPI_CHAR,
+                /*source_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::MasterGroupNames),
+                this->slave_master_comm_,
+                MPI_STATUS_IGNORE
+            );
+            this->logger_.info("Received master group names from master process rank 0");
+        }
     }
     this->comm_.broadcast(&size, /*count=*/1, /*emitter_rank=*/0);
-    if (this->comm_.rank() != 0) {
-        group_names.resize(size);
+    if (size > 0) {
+        if (this->comm_.rank() != 0) {
+            group_names.resize(size);
+        }
+        this->comm_.broadcast(group_names.data(), /*count=*/size, /*emitter_rank=*/0);
+        this->saveMasterGroupNamesAsMapAndEstablishOrder_(group_names);
+        this->checkGrupSlavGroupNames_();
     }
-    this->comm_.broadcast(group_names.data(), /*count=*/size, /*emitter_rank=*/0);
-    this->saveMasterGroupNamesAsMapAndEstablishOrder_(group_names);
-    this->checkGrupSlavGroupNames_();
+    // If size == 0, master_group_names_ maps remain empty (history matching mode)
 }
 
 template <class Scalar>
@@ -376,11 +401,12 @@ saveMasterGroupNamesAsMapAndEstablishOrder_(const std::vector<char>& group_names
 template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
-sendActivationDateToMasterProcess_() const
+sendActivationDateToMasterProcess_()
 {
+    auto [activation_date, history_matching_mode] = this->getGrupSlavActivationDateAndCheckHistoryMatchingMode_();
+    this->history_matching_mode_ = history_matching_mode;
     if (this->comm_.rank() == 0) {
         // NOTE: The master process will use this date to check that no slave starts before the master
-        double activation_date = this->getGrupSlavActivationDate_();
         // NOTE: See comment about error handling at the top of this file.
         MPI_Send(
             &activation_date,
