@@ -100,6 +100,7 @@ public:
     using WellStateType = WellState<Scalar, IndexTraits>;
     using SingleWellStateType = SingleWellState<Scalar, IndexTraits>;
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
+    using FSInfo = std::tuple<Scalar,typename std::decay<decltype(std::declval<decltype(std::declval<const Simulator&>().model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type>;
 
     using RateConverterType =
     typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;
@@ -489,6 +490,8 @@ protected:
     Scalar computeConnectionDFactor(const int perf,
                                     const IntensiveQuantities& intQuants,
                                     const SingleWellStateType& ws) const;
+
+   FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
 };
 
 } // namespace Opm
