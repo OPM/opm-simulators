@@ -67,11 +67,11 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const Pa
 template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
-initMatrixAndVectors()
+initMatrixAndVectors(const ParallelWellInfo<Scalar>& pw_info)
 {
     linSys_.init(baseif_.numLocalPerfs(),
                  baseif_.cells(), segments_.inlets(),
-                 segments_.perforations());
+                 segments_.perforations(), pw_info);
     primary_variables_.resize(this->numberOfSegments());
 }
 

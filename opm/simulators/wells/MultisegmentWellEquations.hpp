@@ -80,7 +80,8 @@ public:
     void init(const int numPerfs,
               const std::vector<int>& cells,
               const std::vector<std::vector<int>>& segment_inlets,
-              const std::vector<std::vector<int>>& segment_perforations);
+              const std::vector<std::vector<int>>& segment_perforations,
+              const ParallelWellInfo<Scalar>& pw_info);
 
     //! \brief Set all coefficients to 0.
     void clear();
@@ -152,8 +153,6 @@ public:
 
     // Store the global index of well perforated cells
     std::vector<int> cells_;
-
-    const ParallelWellInfo<Scalar>& pw_info_;
 
     // Wrapper for the parallel application of B for distributed wells
     mswellhelpers::ParallellMSWellB<OffDiagMatWell> parallelB_;

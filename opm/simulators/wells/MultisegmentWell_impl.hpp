@@ -136,7 +136,7 @@ namespace Opm
 
         // \Note: we do not update the depth here. And it looks like for now, we only have the option to use
         // specified perforation depth
-        this->initMatrixAndVectors();
+        this->initMatrixAndVectors(this->parallel_well_info_);
 
         // calculate the depth difference between the perforations and the perforated grid block
         for (int local_perf_index = 0; local_perf_index < this->number_of_local_perforations_; ++local_perf_index) {
