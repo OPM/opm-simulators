@@ -2757,7 +2757,10 @@ namespace Opm
         {
             const auto info = this->getFirstPerforationFluidStateInfo(simulator);
 
-            temperature.setValue(info.first);
+            // TODO: The dyanmic Evaluation needs to be fixed to support the sitaution
+            // scalar operating with EvalWell that the number of derivatives are not determined
+            const int totalNumEq = this->primary_variables_.numWellEq() + Indices::numEq;
+            temperature = EvalWell(totalNumEq, info.first);
             saltConcentration = this->extendEval(info.second);
         }
 
