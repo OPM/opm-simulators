@@ -2328,7 +2328,6 @@ namespace Opm
         // If this process does not contain active perforations, this->well_cells_ is empty.
         if (this->well_cells_.size() > 0) {
             // We use the pvt region of first perforated cell, so we look for global index 0
-            // TODO: it should be a member of the WellInterface, initialized properly
             const int cell_idx = this->well_cells_[0];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
@@ -2337,7 +2336,7 @@ namespace Opm
             fsSaltConcentration = fs.saltConcentration();
         }
 
-        auto info = std::make_tuple(fsTemperature, fsSaltConcentration);
+        auto info = std::make_pair(fsTemperature, fsSaltConcentration);
 
         // The following broadcast call is neccessary to ensure that processes that do *not* contain
         // the first perforation get the correct temperature, saltConcentration and pvt_region_index

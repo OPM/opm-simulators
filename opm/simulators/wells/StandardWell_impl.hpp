@@ -2757,8 +2757,8 @@ namespace Opm
         {
             const auto info = this->getFirstPerforationFluidStateInfo(simulator);
 
-            temperature.setValue(std::get<0>(info));
-            saltConcentration = this->extendEval(std::get<1>(info));
+            temperature.setValue(info.first);
+            saltConcentration = this->extendEval(info.second);
         }
 
         const auto& pressure = this->primary_variables_.eval(Bhp);
