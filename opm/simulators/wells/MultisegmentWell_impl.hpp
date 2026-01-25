@@ -1153,8 +1153,8 @@ namespace Opm
         // TODO: later to investigate how to handle the pvt region
 
         auto info = this->getFirstPerforationFluidStateInfo(simulator);
-        temperature.setValue(std::get<0>(info));
-        saltConcentration = this->extendEval(std::get<1>(info));
+        temperature.setValue(info.first);
+        saltConcentration = this->extendEval(info.second);
 
         this->segments_.computeFluidProperties(temperature,
                                                saltConcentration,
@@ -2102,8 +2102,8 @@ namespace Opm
         EvalWell saltConcentration;
 
         auto info = this->getFirstPerforationFluidStateInfo(simulator);
-        temperature.setValue(std::get<0>(info));
-        saltConcentration = this->extendEval(std::get<1>(info));
+        temperature.setValue(info.first);
+        saltConcentration = this->extendEval(info.second);
 
         return this->segments_.getSurfaceVolume(temperature,
                                                 saltConcentration,
