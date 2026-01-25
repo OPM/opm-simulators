@@ -2788,7 +2788,10 @@ namespace Opm
         {
             const auto info = this->getFirstPerfCellConditions(simulator);
 
-            temperature.setValue(info.temperature);
+            // TODO: The dyanmic Evaluation needs to be fixed to support the sitaution
+            // scalar operating with EvalWell that the number of derivatives are not determined
+            const int totalNumEq = this->primary_variables_.numWellEq() + Indices::numEq;
+            temperature = EvalWell(totalNumEq, info.temperature);
             saltConcentration = this->extendEval(info.saltConcentration);
         }
 
