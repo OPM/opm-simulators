@@ -63,6 +63,7 @@ namespace Opm {
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <limits>
+#include <utility>
 #include <vector>
 
 namespace Opm
@@ -101,7 +102,7 @@ public:
     using WellStateType = WellState<Scalar, IndexTraits>;
     using SingleWellStateType = SingleWellState<Scalar, IndexTraits>;
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
-    using FSInfo = std::tuple<Scalar, Scalar>;
+    using FSInfo = std::pair<Scalar, Scalar>;
 
     using RateConverterType =
     typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;
