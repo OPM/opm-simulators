@@ -1161,8 +1161,8 @@ namespace Opm
         // TODO: later to investigate how to handle the pvt region
 
         auto info = this->getFirstPerforationFluidStateInfo(simulator);
-        const Scalar firstPerfTemperature = std::get<0>(info);
-        const Scalar firstPerfSaltConcentration = std::get<1>(info);
+        const Scalar firstPerfTemperature = info.first;
+        const Scalar firstPerfSaltConcentration = info.second;
 
         this->segments_.computeFluidProperties(firstPerfTemperature,
                                                firstPerfSaltConcentration,
@@ -2189,8 +2189,8 @@ namespace Opm
                             const FSInfo& info,
                             DeferredLogger& deferred_logger) const
     {
-        const Scalar firstPerfTemperature = std::get<0>(info);
-        const Scalar firstPerfSaltConcentration = std::get<1>(info);
+        const Scalar firstPerfTemperature = info.first;
+        const Scalar firstPerfSaltConcentration = info.second;
 
         return this->segments_.getSurfaceVolume(firstPerfTemperature,
                                                 firstPerfSaltConcentration,
