@@ -120,7 +120,14 @@ receiveInjectionDataFromSlaves()
     this->logger().info("Receiving injection data from slave processes");
     for (unsigned int i = 0; i < num_slaves; i++) {
         auto num_slave_groups = this->numSlaveGroups(i);
-        assert( num_slave_groups > 0 );
+        if (num_slave_groups == 0) {
+            // History mode: no slave groups defined, skip data exchange
+            this->logger().info(fmt::format(
+                "Slave {} has no slave groups (history mode), skipping injection data exchange",
+                this->slaveName(i)
+            ));
+            continue;
+        }
         std::vector<SlaveGroupInjectionData> injection_data(num_slave_groups);
         if (this->comm().rank() == 0) {
             if (this->slaveIsActivated(i)) {
@@ -169,7 +176,14 @@ receiveProductionDataFromSlaves()
     this->logger().info("Receiving production data from slave processes");
     for (unsigned int i = 0; i < num_slaves; i++) {
         auto num_slave_groups = this->numSlaveGroups(i);
-        assert( num_slave_groups > 0 );
+        if (num_slave_groups == 0) {
+            // History mode: no slave groups defined, skip data exchange
+            this->logger().info(fmt::format(
+                "Slave {} has no slave groups (history mode), skipping production data exchange",
+                this->slaveName(i)
+            ));
+            continue;
+        }
         std::vector<SlaveGroupProductionData> production_data(num_slave_groups);
         if (this->comm().rank() == 0) {
             if (this->slaveIsActivated(i)) {

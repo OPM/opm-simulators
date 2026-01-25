@@ -299,6 +299,10 @@ sendSlaveGroupProductionDataToMaster_() const
 {
     auto& rescoup_slave = this->reservoir_coupling_slave_;
     auto num_slave_groups = rescoup_slave.numSlaveGroups();
+    if (num_slave_groups == 0) {
+        // History mode: no slave groups defined, nothing to send
+        return;
+    }
     std::vector<SlaveGroupProductionData> production_data;
     for (std::size_t group_idx = 0; group_idx < num_slave_groups; ++group_idx) {
         // NOTE: We have to send production data even if the slave group is not a production group,
@@ -315,6 +319,10 @@ sendSlaveGroupInjectionDataToMaster_() const
 {
     auto& rescoup_slave = this->reservoir_coupling_slave_;
     auto num_slave_groups = rescoup_slave.numSlaveGroups();
+    if (num_slave_groups == 0) {
+        // History mode: no slave groups defined, nothing to send
+        return;
+    }
     std::vector<SlaveGroupInjectionData> injection_data;
     for (std::size_t group_idx = 0; group_idx < num_slave_groups; ++group_idx) {
         // NOTE: We would like to only send injection data only if the master group is an injector,
