@@ -72,9 +72,9 @@ public:
     { return linSys_; }
 
 protected:
-    MultisegmentWellEval(WellInterfaceIndices<FluidSystem, Indices>& baseif, const ParallelWellInfo<Scalar>& pw_info);
+    MultisegmentWellEval(WellInterfaceIndices<FluidSystem, Indices>& baseif, const ParallelWellInfo<Scalar>& parallel_well_info);
 
-    void initMatrixAndVectors(const ParallelWellInfo<Scalar>& pw_info);
+    void initMatrixAndVectors(const ParallelWellInfo<Scalar>& parallel_well_info);
 
     void assembleDefaultPressureEq(const int seg,
                                    WellState<Scalar, IndexTraits>& well_state,
