@@ -156,7 +156,9 @@ private:
         for (unsigned i = 0; i < this->thpresDefault_.size(); ++i)
             this->thpresDefault_[i] = gridView.comm().max(this->thpresDefault_[i]);
 
-        this->logPressures();
+        if (gridView.comm().rank() == 0) {
+            this->logPressures();
+        }
     }
 
     const Simulator& simulator_;
