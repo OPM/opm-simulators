@@ -120,9 +120,7 @@ public:
         TargetCalculatorType getInjectionTargetCalculator(const Group& group);
         TargetCalculatorType getProductionTargetCalculator(const Group& group) const;
         TargetCalculatorType getTargetCalculator(const Group& group);
-        TargetInfo getTargetFromCalculator(
-            const TargetCalculatorType& target_calculator, const Group& group);
-        TargetInfo getTargetNoGuideRate(const Group& group);
+        TargetInfo getGroupTargetNoGuideRate(const Group& group);
         const GuideRate& guideRate() const { return this->parent_calculator_.guideRate(); }
         bool hasGuideRate(const Group& group) const { return this->hasGuideRate(group.name()); }
         bool hasGuideRate(const std::string& name) const {
@@ -221,8 +219,8 @@ public:
         /// @param group The master group to get the corresponding slave group reservoir rate for
         /// @return Total reservoir rate, or throws an error if not a RC master group
         Scalar getSlaveGroupReservoirRate_(const Group& master_group);
-        TargetInfo getTargetNoGuideRate_(const Group& group) const {
-            return this->parent_calculator_.getTargetNoGuideRate(group);
+        TargetInfo getGroupTargetNoGuideRate_(const Group& group) const {
+            return this->parent_calculator_.getGroupTargetNoGuideRate(group);
         }
         ControlMode getToplevelControlMode_() const;
         Scalar getTopLevelTarget_();

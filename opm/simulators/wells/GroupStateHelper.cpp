@@ -527,6 +527,48 @@ getProductionGroupTarget(const Group& group) const
     }
 }
 
+template<typename Scalar, typename IndexTraits>
+GuideRateModel::Target
+GroupStateHelper<Scalar, IndexTraits>::
+getProductionGuideTargetMode(const Group& group) const
+{
+    const auto cmode = this->groupState().production_control(group.name());
+    switch (cmode) {
+    case Group::ProductionCMode::ORAT:
+        return GuideRateModel::Target::OIL;
+    case Group::ProductionCMode::WRAT:
+        return GuideRateModel::Target::WAT;
+    case Group::ProductionCMode::GRAT:
+        return GuideRateModel::Target::GAS;
+    case Group::ProductionCMode::LRAT:
+        return GuideRateModel::Target::LIQ;
+    case Group::ProductionCMode::RESV:
+        return GuideRateModel::Target::RES;
+    default:
+        return GuideRateModel::Target::NONE;
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+GuideRateModel::Target
+GroupStateHelper<Scalar, IndexTraits>::
+getInjectionGuideTargetMode(Phase injection_phase) const
+{
+    switch (injection_phase) {
+    case Phase::WATER:
+        return GuideRateModel::Target::WAT;
+    case Phase::OIL:
+        return GuideRateModel::Target::OIL;
+    case Phase::GAS:
+        return GuideRateModel::Target::GAS;
+    default:
+        OPM_DEFLOG_THROW(std::logic_error,
+                         "Invalid injection phase in getInjectionGuideTargetMode",
+                         this->deferredLogger());
+        return GuideRateModel::Target::NONE;
+    }
+}
+
 template <typename Scalar, typename IndexTraits>
 std::vector<Scalar>
 GroupStateHelper<Scalar, IndexTraits>::

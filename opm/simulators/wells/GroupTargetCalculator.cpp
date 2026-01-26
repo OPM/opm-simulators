@@ -134,7 +134,7 @@ calculateGroupTarget()
         }
     }
     if (group.is_field() || !this->parentGroupControlAvailable_(group)) {
-        return this->getTargetNoGuideRate(group);
+        return this->getGroupTargetNoGuideRate(group);
     }
     assert(this->parentGroupControlAvailable_(group));
     if (!this->hasGuideRate(group)) {
@@ -151,7 +151,7 @@ calculateGroupTarget()
         //   - parent control available,
         //   - but no guide rate
         // this could be considered an error, but we can also fall back to use its own target.
-        return this->getTargetNoGuideRate(group);
+        return this->getGroupTargetNoGuideRate(group);
     }
     const auto efficiency_factor = group.getGroupEfficiencyFactor();
     auto target = this->calculateGroupTargetRecursive_(this->parentGroup(group), efficiency_factor);
@@ -163,7 +163,7 @@ calculateGroupTarget()
         return target;
     }
     // If a higher level target was not found or not violated, use the group's own target.
-    return this->getTargetNoGuideRate(group);
+    return this->getGroupTargetNoGuideRate(group);
 }
 
 template<class Scalar, class IndexTraits>
@@ -211,18 +211,27 @@ template<class Scalar, class IndexTraits>
 typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo
 GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
-getTargetFromCalculator(const TargetCalculatorType& target_calculator, const Group& group)
+getGroupTargetNoGuideRate(const Group& group)
 {
+    // Efficiency factor is not applied here, since it only applies to child rates, not to the group's
+    // own target.
+    // NOTE: If a master group is under individual control and has a RESV rate target, it should be
+    //   transferred into a RESV target for the slave group. But it is not obvious how to transform it
+    //   since the master and slave groups in general have different PVT properties.
+    // TODO: For now we assume the RESV rate target is in slave reservoir units, and just send it as is
+    //   to the slave group. Alternatively, we could also throw an error here for that case
     if (this->targetType() == TargetType::Injection) {
         const auto& control_mode = this->groupState().injection_control(group.name(), this->injectionPhase_());
         return TargetInfo{
-            std::get<InjectionTargetCalculator>(target_calculator).groupTarget(), control_mode
+            this->groupStateHelper().getInjectionGroupTarget(group, this->injectionPhase_(), this->resvCoeffsInj()),
+            control_mode
         };
     }
     else {
         const auto& control_mode = this->groupState().production_control(group.name());
         return TargetInfo{
-            std::get<TargetCalculator>(target_calculator).groupTarget(), control_mode
+            this->groupStateHelper().getProductionGroupTarget(group),
+            control_mode
         };
     }
 }
@@ -299,23 +308,6 @@ calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_facto
     const auto& bottom_group = this->original_group_;
     TopToBottomCalculator top_bottom_calc{*this, top_group, bottom_group, efficiency_factor};
     return top_bottom_calc.calculateGroupTarget();
-}
-
-template<class Scalar, class IndexTraits>
-typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo
-GroupTargetCalculator<Scalar, IndexTraits>::
-GeneralCalculator::
-getTargetNoGuideRate(const Group& group)
-{
-    // Efficiency factor is not applied here, since it only applies to child rates, not to the group's
-    // own target.
-    // NOTE: If a master group is under individual control and has a RESV rate target, it should be
-    //   transferred into a RESV target for the slave group. But it is not obvious how to transform it
-    //   since the master and slave groups in general have different PVT properties.
-    // TODO: For now we assume the RESV rate target is in slave reservoir units, and just send it as is
-    //   to the slave group. Alternatively, we could also throw an error here for that case
-    const auto target_calculator = this->getTargetCalculator(group);
-    return this->getTargetFromCalculator(target_calculator, group);
 }
 
 template<class Scalar, class IndexTraits>
@@ -450,7 +442,7 @@ calculateGroupTarget()
         }
     }
     // Return the bottom group's target rate as is.
-    return this->getTargetNoGuideRate_(this->bottom_group_);
+    return this->getGroupTargetNoGuideRate_(this->bottom_group_);
 }
 
 // -------------------------------------------------------
@@ -612,11 +604,13 @@ GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForInjector_()
 {
-    auto calc = this->getInjectionTargetCalculator_(this->top_group_);
     this->target_calculator_.template emplace<InjectionTargetCalculator>(
-        std::get<InjectionTargetCalculator>(calc));
-    auto guide_target_mode =
-        std::get<InjectionTargetCalculator>(this->target_calculator_).guideTargetMode();
+        this->groupStateHelper(),
+        this->resvCoeffsInj(),
+        this->top_group_,
+        this->injectionPhase_()
+    );
+    const auto guide_target_mode = this->groupStateHelper().getInjectionGuideTargetMode(this->injectionPhase_());
     this->fraction_calculator_.emplace(
         this->schedule(),
         this->groupStateHelper(),
@@ -635,11 +629,13 @@ GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForProducer_()
 {
-    auto calc = this->getProductionTargetCalculator_(this->top_group_);
-    this->target_calculator_.template emplace<TargetCalculator>(std::get<TargetCalculator>(calc));
-    auto guide_target_mode =
-        std::get<TargetCalculator>(this->target_calculator_).guideTargetMode();
-    auto dummy_phase = Phase::OIL; // Dummy phase, not used for producers.
+    this->target_calculator_.template emplace<TargetCalculator>(
+        this->groupStateHelper(),
+        this->resvCoeffsProd(),
+        this->top_group_
+    );
+    const auto guide_target_mode = this->groupStateHelper().getProductionGuideTargetMode(this->top_group_);
+    const auto dummy_phase = Phase::OIL; // Dummy phase, not used for producers.
     this->fraction_calculator_.emplace(
         this->schedule(),
         this->groupStateHelper(),
