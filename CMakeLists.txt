@@ -502,7 +502,7 @@ if(QuadMath_FOUND)
                  SOURCES
                  examples/${tapp}.cpp
                  ONLY_COMPILE)
-    target_link_libraries(${tapp}_quad QuadMath::QuadMath)
+    target_link_libraries(${tapp}_quad PRIVATE QuadMath::QuadMath)
     target_compile_definitions(${tapp}_quad PRIVATE HAVE_QUAD=1)
   endforeach()
 endif()
@@ -578,7 +578,7 @@ if (CONVERT_CUDA_TO_HIP)
 endif()
 
 if(TARGET fmt::fmt)
-  target_link_libraries(MainDispatchDynamic fmt::fmt)
+  target_link_libraries(MainDispatchDynamic PRIVATE fmt::fmt)
 endif()
 
 if(TARGET opmcommon)
@@ -586,7 +586,7 @@ if(TARGET opmcommon)
 endif()
 
 if(USE_TRACY_PROFILER AND Tracy_FOUND)
-  target_link_libraries(MainDispatchDynamic Tracy::TracyClient)
+  target_link_libraries(MainDispatchDynamic PRIVATE Tracy::TracyClient)
 endif()
 
 # Strictly we only depend on the update-version target,
@@ -608,13 +608,13 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   add_library(flow_lib${OBJ} OBJECT flow/flow_${OBJ}.cpp)
   list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
   if(TARGET fmt::fmt)
-    target_link_libraries(flow_lib${OBJ} fmt::fmt)
+    target_link_libraries(flow_lib${OBJ} PRIVATE fmt::fmt)
   endif()
   if(TARGET opmcommon)
       add_dependencies(flow_lib${OBJ} opmcommon)
   endif()
   if(USE_TRACY_PROFILER AND Tracy_FOUND)
-    target_link_libraries(flow_lib${OBJ} Tracy::TracyClient)
+    target_link_libraries(flow_lib${OBJ} PRIVATE Tracy::TracyClient)
   endif()
 
   # We only wait for the hipification process if we are compiling HIP.
@@ -770,7 +770,7 @@ if(CUDA_FOUND)
     )
 
     foreach(tgt test_gpu_safe_call test_cuda_check_last_error test_GpuVector test_is_gpu_pointer)
-      target_link_libraries(${tgt} CUDA::cudart)
+      target_link_libraries(${tgt} PRIVATE CUDA::cudart)
     endforeach()
   endif()
   if(USE_GPU_BRIDGE)
