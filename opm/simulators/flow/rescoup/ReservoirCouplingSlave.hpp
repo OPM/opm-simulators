@@ -80,11 +80,13 @@ public:
 
 private:
     void checkGrupSlavGroupNames_();
-    double getGrupSlavActivationDate_() const;
+    std::pair<double, bool> getGrupSlavActivationDateAndCheckHistoryMatchingMode_() const;
+    bool historyMatchingMode_() const { return this->history_matching_mode_; }
+    std::size_t numMasterGroups_() const { return this->slave_to_master_group_map_.size(); }
     void receiveMasterGroupNamesFromMasterProcess_();
     void receiveSlaveNameFromMasterProcess_();
     void saveMasterGroupNamesAsMapAndEstablishOrder_(const std::vector<char>& group_names);
-    void sendActivationDateToMasterProcess_() const;
+    void sendActivationDateToMasterProcess_();
     void sendActivationHandshakeToMasterProcess_() const;
     void sendSimulationStartDateToMasterProcess_() const;
 
@@ -95,6 +97,8 @@ private:
     MPI_Comm slave_master_comm_{MPI_COMM_NULL};
     std::map<std::string, std::string> slave_to_master_group_map_;
     bool activated_{false};
+    // True if no GRUPMAST keyword in the master schedule and no GRUPSLAV keyword in the slave schedule
+    bool history_matching_mode_{false};
     std::string slave_name_;  // This is the slave name as defined in the master process
     mutable ReservoirCoupling::Logger logger_;
     // Order of the slave groups. A mapping from slave group index to slave group name.

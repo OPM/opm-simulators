@@ -122,6 +122,14 @@ void Logger::info(const std::string &msg) const {
     }
 }
 
+void Logger::warning(const std::string &msg) const {
+    if (haveDeferredLogger()) {
+        this->deferred_logger_->warning(msg);
+    } else {
+        OpmLog::warning(msg);
+    }
+}
+
 // Seconds class alphabetically
 // ----------------------------
 
