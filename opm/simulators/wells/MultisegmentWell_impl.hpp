@@ -136,14 +136,14 @@ namespace Opm
 
         // \Note: we do not update the depth here. And it looks like for now, we only have the option to use
         // specified perforation depth
-        this->initMatrixAndVectors();
+        this->initMatrixAndVectors(this->parallel_well_info_);
 
         // calculate the depth difference between the perforations and the perforated grid block
         for (int local_perf_index = 0; local_perf_index < this->number_of_local_perforations_; ++local_perf_index) {
             // This variable loops over the number_of_local_perforations_ of *this* process, hence it is *local*.
             const int cell_idx = this->well_cells_[local_perf_index];
             // Here we need to access the perf_depth_ at the global perforation index though!
-            this->cell_perforation_depth_diffs_[local_perf_index] = depth_arg[cell_idx] - this->perf_depth_[this->pw_info_.localPerfToActivePerf(local_perf_index)];
+            this->cell_perforation_depth_diffs_[local_perf_index] = depth_arg[cell_idx] - this->perf_depth_[this->parallel_well_info_.localPerfToActivePerf(local_perf_index)];
         }
     }
 
@@ -372,7 +372,7 @@ namespace Opm
         const auto& segment_pressure = segments_copy.pressure;
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.activePerfToLocalPerf(perf);
+                const int local_perf_index = this->parallel_well_info_.activePerfToLocalPerf(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 const int cell_idx = this->well_cells_[local_perf_index];
@@ -931,7 +931,7 @@ namespace Opm
                     PerforationRates<Scalar>& perf_rates,
                     DeferredLogger& deferred_logger) const
     {
-        const int local_perf_index = this->pw_info_.activePerfToLocalPerf(perf);
+        const int local_perf_index = this->parallel_well_info_.activePerfToLocalPerf(perf);
         if (local_perf_index < 0) // then the perforation is not on this process
             return;
 
@@ -1314,7 +1314,7 @@ namespace Opm
                                                  seg_dp);
             seg_dp[seg] = dp;
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.activePerfToLocalPerf(perf);
+                const int local_perf_index = this->parallel_well_info_.activePerfToLocalPerf(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 std::vector<Scalar> mob(this->num_conservation_quantities_, 0.0);
@@ -1872,7 +1872,7 @@ namespace Opm
             auto& perf_rates = perf_data.phase_rates;
             auto& perf_press_state = perf_data.pressure;
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.activePerfToLocalPerf(perf);
+                const int local_perf_index = this->parallel_well_info_.activePerfToLocalPerf(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 const int cell_idx = this->well_cells_[local_perf_index];
@@ -2035,7 +2035,7 @@ namespace Opm
         for (int seg = 0; seg < nseg; ++seg) {
             const EvalWell segment_pressure = this->primary_variables_.getSegmentPressure(seg);
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.activePerfToLocalPerf(perf);
+                const int local_perf_index = this->parallel_well_info_.activePerfToLocalPerf(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
 
@@ -2249,7 +2249,7 @@ namespace Opm
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.activePerfToLocalPerf(perf);
+                const int local_perf_index = this->parallel_well_info_.activePerfToLocalPerf(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
 
@@ -2282,7 +2282,7 @@ namespace Opm
             // calculating the perforation rate for each perforation that belongs to this segment
             const Scalar seg_pressure = getValue(this->primary_variables_.getSegmentPressure(seg));
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.activePerfToLocalPerf(perf);
+                const int local_perf_index = this->parallel_well_info_.activePerfToLocalPerf(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
 
@@ -2373,7 +2373,7 @@ namespace Opm
 
         // The following broadcast call is neccessary to ensure that processes that do *not* contain
         // the first perforation get the correct temperature, saltConcentration and pvt_region_index
-        return this->parallel_well_info_.communication().size() == 1 ? info : this->pw_info_.broadcastFirstPerforationValue(info);
+        return this->parallel_well_info_.communication().size() == 1 ? info : this->parallel_well_info_.broadcastFirstPerforationValue(info);
     }
 
 } // namespace Opm

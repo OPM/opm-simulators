@@ -53,13 +53,12 @@ namespace Opm
 
 template<typename FluidSystem, typename Indices>
 MultisegmentWellEval<FluidSystem,Indices>::
-MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const ParallelWellInfo<Scalar>& pw_info)
+MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const ParallelWellInfo<Scalar>& parallel_well_info)
     :  MultisegmentWellGeneric<Scalar, IndexTraits>(baseif)
-    , pw_info_(pw_info)
     , baseif_(baseif)
-    , linSys_(*this, pw_info)
+    , linSys_(*this, parallel_well_info)
     , primary_variables_(baseif)
-    , segments_(this->numberOfSegments(), pw_info, baseif)
+    , segments_(this->numberOfSegments(), parallel_well_info, baseif)
     , cell_perforation_depth_diffs_(baseif_.numLocalPerfs(), 0.0)
     , cell_perforation_pressure_diffs_(baseif_.numLocalPerfs(), 0.0)
 {
@@ -68,11 +67,11 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const Pa
 template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
-initMatrixAndVectors()
+initMatrixAndVectors(const ParallelWellInfo<Scalar>& parallel_well_info)
 {
     linSys_.init(baseif_.numLocalPerfs(),
                  baseif_.cells(), segments_.inlets(),
-                 segments_.perforations());
+                 segments_.perforations(), parallel_well_info);
     primary_variables_.resize(this->numberOfSegments());
 }
 

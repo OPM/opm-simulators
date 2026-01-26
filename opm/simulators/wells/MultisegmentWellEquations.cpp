@@ -51,10 +51,9 @@ namespace Opm {
 
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
 MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
-MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar, IndexTraits>& well, const ParallelWellInfo<Scalar>& pw_info)
+MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar, IndexTraits>& well, const ParallelWellInfo<Scalar>& parallel_well_info)
     : well_(well)
-    , pw_info_(pw_info)
-    , parallelB_(duneB_, pw_info)
+    , parallelB_(duneB_, parallel_well_info)
 {
 }
 
@@ -63,7 +62,8 @@ void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
 init(const int numPerfs,
      const std::vector<int>& cells,
      const std::vector<std::vector<int>>& segment_inlets,
-     const std::vector<std::vector<int>>& perforations)
+     const std::vector<std::vector<int>>& perforations,
+     const ParallelWellInfo<Scalar>& parallel_well_info)
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
     duneC_.setBuildMode(OffDiagMatWell::row_wise);
@@ -112,7 +112,7 @@ init(const int numPerfs,
               end = duneC_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            const int local_perf_index = pw_info_.activePerfToLocalPerf(perf);
+            const int local_perf_index = parallel_well_info.activePerfToLocalPerf(perf);
             if (local_perf_index < 0) // then the perforation is not on this process
                 continue;
             row.insert(local_perf_index);
@@ -124,7 +124,7 @@ init(const int numPerfs,
               end = duneB_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            const int local_perf_index = pw_info_.activePerfToLocalPerf(perf);
+            const int local_perf_index = parallel_well_info.activePerfToLocalPerf(perf);
             if (local_perf_index < 0) // then the perforation is not on this process
                 continue;
             row.insert(local_perf_index);

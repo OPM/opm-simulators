@@ -70,12 +70,11 @@ public:
     //! \brief Returns a const reference to equation system.
     const Equations& linSys() const
     { return linSys_; }
-    const ParallelWellInfo<Scalar>& pw_info_;
 
 protected:
-    MultisegmentWellEval(WellInterfaceIndices<FluidSystem, Indices>& baseif, const ParallelWellInfo<Scalar>& pw_info);
+    MultisegmentWellEval(WellInterfaceIndices<FluidSystem, Indices>& baseif, const ParallelWellInfo<Scalar>& parallel_well_info);
 
-    void initMatrixAndVectors();
+    void initMatrixAndVectors(const ParallelWellInfo<Scalar>& parallel_well_info);
 
     void assembleDefaultPressureEq(const int seg,
                                    WellState<Scalar, IndexTraits>& well_state,
