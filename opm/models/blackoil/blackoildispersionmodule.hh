@@ -523,16 +523,6 @@ public:
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
-            // no dispersion in water for blackoil models unless water can contain dissolved gas
-            if (!FluidSystem::enableDissolvedGasInWater() && FluidSystem::waterPhaseIdx == phaseIdx) {
-                continue;
-            }
-            // adding dispersion in the gas phase leads to
-            // convergence issues and unphysical results.
-            // we disable dispersion in the gas phase for now
-            if (FluidSystem::gasPhaseIdx == phaseIdx) {
-                continue;
-            }
             // use the arithmetic average for the effective
             // velocity coefficients at the face's integration point.
             normVelocityAvg[phaseIdx] =
