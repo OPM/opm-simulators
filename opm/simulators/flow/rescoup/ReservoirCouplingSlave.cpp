@@ -48,7 +48,8 @@ ReservoirCouplingSlave(
 ) :
     comm_{comm},
     schedule_{schedule},
-    timer_{timer}
+    timer_{timer},
+    logger_{comm}
 {
     this->slave_master_comm_ = MPI_COMM_NULL;
     MPI_Comm_get_parent(&this->slave_master_comm_);

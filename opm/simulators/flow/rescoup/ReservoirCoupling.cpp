@@ -116,17 +116,23 @@ void setErrhandler(MPI_Comm comm, bool is_master)
 
 void Logger::info(const std::string &msg) const {
     if (haveDeferredLogger()) {
+        // DeferredLogger: All ranks log - messages will be gathered later
         this->deferred_logger_->info(msg);
     } else {
-        OpmLog::info(msg);
+        if (comm_.rank() == 0) {
+            OpmLog::info(msg);
+        }
     }
 }
 
 void Logger::warning(const std::string &msg) const {
     if (haveDeferredLogger()) {
+        // DeferredLogger: All ranks log - messages will be gathered later
         this->deferred_logger_->warning(msg);
     } else {
-        OpmLog::warning(msg);
+        if (comm_.rank() == 0) {
+            OpmLog::warning(msg);
+        }
     }
 }
 
