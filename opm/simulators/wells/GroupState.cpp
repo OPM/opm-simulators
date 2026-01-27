@@ -97,6 +97,7 @@ void GroupState<Scalar>::update_production_rates(const std::string& gname,
         throw std::logic_error("Wrong number of phases");
 
     this->m_production_rates[gname] = rates;
+    this->mark_modified(Modification::PRODUCTION_RATES);
 }
 
 template<class Scalar>
@@ -107,6 +108,7 @@ void GroupState<Scalar>::update_network_leaf_node_production_rates(const std::st
         throw std::logic_error("Wrong number of phases");
 
     this->m_network_leaf_node_production_rates[gname] = rates;
+    this->mark_modified(Modification::NETWORK_RATES);
 }
 
 template<class Scalar>
@@ -177,6 +179,7 @@ update_production_reduction_rates(const std::string& gname,
         throw std::logic_error("Wrong number of phases");
 
     this->prod_red_rates[gname] = rates;
+    this->mark_modified(Modification::PROD_REDUCTION_RATES);
 }
 
 template<class Scalar>
@@ -209,6 +212,7 @@ update_injection_reduction_rates(const std::string& gname,
         throw std::logic_error("Wrong number of phases");
 
     this->inj_red_rates[gname] = rates;
+    this->mark_modified(Modification::INJ_REDUCTION_RATES);
 }
 
 template<class Scalar>
@@ -240,6 +244,7 @@ update_injection_surface_rates(const std::string& gname,
         throw std::logic_error("Wrong number of phases");
 
     this->inj_surface_rates[gname] = rates;
+    this->mark_modified(Modification::INJ_SURFACE_RATES);
 }
 
 template<class Scalar>
@@ -273,6 +278,7 @@ update_injection_reservoir_rates(const std::string& gname,
         throw std::logic_error("Wrong number of phases");
 
     this->inj_resv_rates[gname] = rates;
+    this->mark_modified(Modification::INJ_RESV_RATES);
 }
 
 template<class Scalar>
@@ -297,6 +303,7 @@ update_injection_rein_rates(const std::string& gname,
         throw std::logic_error("Wrong number of phases");
 
     this->inj_rein_rates[gname] = rates;
+    this->mark_modified(Modification::INJ_REIN_RATES);
 }
 
 template<class Scalar>
@@ -318,6 +325,7 @@ void GroupState<Scalar>::
 update_injection_vrep_rate(const std::string& gname, Scalar rate)
 {
     this->inj_vrep_rate[gname] = rate;
+    this->mark_modified(Modification::INJ_VREP_RATE);
 }
 
 template<class Scalar>
