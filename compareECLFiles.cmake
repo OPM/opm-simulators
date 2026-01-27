@@ -76,8 +76,8 @@ function(add_test_compareECLFiles)
                   -f ${PARAM_FILENAME}
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
-                  -c ${COMPARE_ECL_COMMAND}
-                  -d ${RST_DECK_COMMAND})
+                  -c $<TARGET_FILE:compareECL>
+                  -d $<TARGET_FILE:rst_deck>)
   if(PARAM_RESTART_STEP)
     list(APPEND DRIVER_ARGS -s ${PARAM_RESTART_STEP})
   endif()
@@ -131,7 +131,7 @@ function(add_test_compareSeparateECLFiles)
                   -b ${PROJECT_BINARY_DIR}/bin
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
-                  -c ${COMPARE_ECL_COMMAND}
+                  -c $<TARGET_FILE:compareECL>
                   -n ${MPI_PROCS})
   if(PARAM_IGNORE_EXTRA_KW)
     list(APPEND DRIVER_ARGS -y ${PARAM_IGNORE_EXTRA_KW})
@@ -185,8 +185,8 @@ function(add_test_compare_restarted_simulation)
                            -f ${PARAM_FILENAME}
                            -a ${PARAM_ABS_TOL}
                            -t ${PARAM_REL_TOL}
-                           -c ${COMPARE_ECL_COMMAND}
-                           -d ${RST_DECK_COMMAND}
+                           -c $<TARGET_FILE:compareECL>
+                           -d $<TARGET_FILE:rst_deck>
                            -s ${PARAM_RESTART_STEP}
                TEST_ARGS ${PARAM_TEST_ARGS})
 endfunction()
@@ -233,7 +233,7 @@ function(add_test_compare_parallel_simulation)
                     -f ${PARAM_FILENAME}
                     -a ${PARAM_ABS_TOL}
                     -t ${PARAM_REL_TOL}
-                    -c ${COMPARE_ECL_COMMAND}
+                    -c $<TARGET_FILE:compareECL>
                     -n ${MPI_PROCS})
 
     # Add test that runs flow_mpi and outputs the results to file
@@ -287,9 +287,9 @@ function(add_test_compare_parallel_restarted_simulation)
                     -f ${PARAM_FILENAME}
                     -a ${PARAM_ABS_TOL}
                     -t ${PARAM_REL_TOL}
-                    -c ${COMPARE_ECL_COMMAND}
+                    -c $<TARGET_FILE:compareECL>
                     -s ${PARAM_RESTART_STEP}
-                    -d ${RST_DECK_COMMAND}
+                    -d $<TARGET_FILE:rst_deck>
                     -n ${MPI_PROCS})
 
     opm_add_test(${TEST_NAME} NO_COMPILE
@@ -333,7 +333,7 @@ function(add_test_split_comm)
                   -f ${PARAM_FILENAME}
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
-                  -c ${COMPARE_ECL_COMMAND}
+                  -c $<TARGET_FILE:compareECL>
                   -n ${MPI_PROCS})
 
   opm_add_test(compareParallelSplitComm_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
