@@ -1333,12 +1333,11 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             const auto& group = this->schedule().getGroup(well->wellEcl().groupName(), well->currentStep());
             std::vector<Scalar> resv_coeff(this->numPhases(), 0.0);
             const int fipnum = 0;
-            int pvtreg = well->pvtRegionIdx();
+            const int pvtreg = well->pvtRegionIdx();
             calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
-            // Translate injector type from control to Phase.
-            std::optional<Scalar> group_target;
+            auto& group_target = this->wellState().well(well->indexOfWell()).group_target;
             if (well->isProducer()) {
                 group_target = group_state_helper.getWellGroupTargetProducer(
                     well->name(),
@@ -1381,8 +1380,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     resv_coeff
                 );
             }
-            auto& ws_update = this->wellState().well(well->indexOfWell());
-            ws_update.group_target = group_target;
         }
     }
 }
@@ -1946,6 +1943,81 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->closed_offending_wells_ == rhs.closed_offending_wells_
         && this->gen_gaslift_ == rhs.gen_gaslift_;
 }
+
+template <typename Scalar, typename IndexTraits>
+void
+BlackoilWellModelGeneric<Scalar, IndexTraits>::
+updateNONEProductionGroups(const GasLiftOpt& glo, DeferredLogger& deferred_logger)
+{
+    auto& group_state = this->groupState();
+    const auto& prod_group_controls = group_state.get_production_controls();
+    if (prod_group_controls.empty()) {
+        return;
+    }
+
+    const auto& well_state = this->wellState();
+    // numbers of the group production controls, including NONE mode
+    const std::size_t num_gpc = prod_group_controls.size();
+    // collect groups that currently provide production targets to any well on this rank
+    std::unordered_set<std::string> targeted_production_groups;
+    targeted_production_groups.reserve(num_gpc);
+
+    for (std::size_t w = 0; w < well_state.size(); ++w) {
+        const auto& ws = well_state.well(w);
+        if (ws.producer && ws.production_cmode == WellProducerCMode::GRUP) {
+            const auto& group_target = ws.group_target;
+            if (group_target.has_value()) {
+                targeted_production_groups.insert(group_target->group_name);
+            } else {
+                const std::string msg = fmt::format("Well {} is on GRUP control but has no group target assigned.", ws.name);
+                deferred_logger.debug(msg);
+            }
+        }
+    }
+
+    // parallel communication to synchronize production groups used on all processes
+    // all the group names in prod_group_controls
+    std::vector<std::string> gnames;
+    gnames.reserve(num_gpc);
+    // the group control is enforcing constraints for at least one well on this rank
+    // then it will be globally communicated across all the processes
+    std::vector<int> production_control_used;
+    production_control_used.reserve(num_gpc);
+
+    for (const auto& kv : prod_group_controls) {
+        const auto& name = kv.first;
+        gnames.emplace_back(name);
+        const bool is_used = targeted_production_groups.find(name) != targeted_production_groups.end();
+        production_control_used.emplace_back(is_used ? 1 : 0);
+    }
+
+    // parallel communication to synchronize production groups used on all processes
+    if (comm_.size() > 1) {
+        comm_.sum(production_control_used.data(), static_cast<int>(num_gpc));
+    }
+
+    for (std::size_t i = 0; i < num_gpc;   ++i) {
+        if (production_control_used[i] > 0) {
+            continue;
+        }
+        const auto& gname = gnames[i];
+        if (group_state.production_control(gname) != Group::ProductionCMode::NONE) {
+            // If the production group is specified for gas lift optimization,
+            // the current gas lift optimization implementation relies on the control
+            // mode is not NONE or FLD. As a result, we can not set it to NONE here.
+            // More systematic development might be needed in the future in this area.
+            if (glo.active() && glo.has_group(gname)) {
+                continue;
+            }
+            if (comm_.rank() == 0) {
+                const std::string msg = fmt::format("Production group {} has no constraints active, setting control mode to NONE", gname);
+                deferred_logger.info(msg);
+            }
+            group_state.production_control(gname, Group::ProductionCMode::NONE);
+        }
+    }
+}
+
 
 template class BlackoilWellModelGeneric<double, BlackOilDefaultFluidSystemIndices>;
 
