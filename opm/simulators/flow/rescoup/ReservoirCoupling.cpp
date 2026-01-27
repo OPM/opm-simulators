@@ -119,6 +119,10 @@ void Logger::info(const std::string &msg) const {
         // DeferredLogger: All ranks log - messages will be gathered later
         this->deferred_logger_->info(msg);
     } else {
+        // OpmLog fallback: Only rank 0 logs to avoid logging fallout files.
+        // NOTE: DeferredLogger being null is the expected normal state - it's only
+        // temporarily set during beginTimeStep() via ScopedLoggerGuard. Messages logged
+        // here are identical on all ranks, so rank-0-only logging preserves all information.
         if (comm_.rank() == 0) {
             OpmLog::info(msg);
         }
@@ -130,6 +134,7 @@ void Logger::warning(const std::string &msg) const {
         // DeferredLogger: All ranks log - messages will be gathered later
         this->deferred_logger_->warning(msg);
     } else {
+        // OpmLog fallback: Only rank 0 logs (see comment in info() above)
         if (comm_.rank() == 0) {
             OpmLog::warning(msg);
         }
