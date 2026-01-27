@@ -235,7 +235,8 @@ namespace Opm {
         // the case of failed iterations
         this->commitWGState();
 
-        this->wellStructureChangedDynamically_ = false;
+        //NB should check if anything is changed for now recreate all wells
+        this->wellStructureChangedDynamically_ = true;
     }
 
 
@@ -360,7 +361,7 @@ namespace Opm {
             // structure change.  That way we don't end up here in
             // subsequent calls to beginTimeStep() unless there's a new
             // dynamic change to the well structure during a report step.
-            this->wellStructureChangedDynamically_ = false;
+            //this->wellStructureChangedDynamically_ = false;
         }
 
         this->resetWGState();
@@ -869,8 +870,10 @@ namespace Opm {
         auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
         const int nw = this->numLocalWells();
-
-        well_container_.clear();
+        if(this->wellStructureChangedDynamically_ == true){
+            well_container_.clear();
+            this->wellStructureChangedDynamically_ = false;
+        }
 
         if (nw > 0) {
             well_container_.reserve(nw);
