@@ -550,8 +550,9 @@ private:
             BVector x(nc);
             detailTimer.reset();
             detailTimer.start();
+            double setup_time = 0.0;
             try {
-                this->solveJacobianSystemDomain(domain, x);
+                this->solveJacobianSystemDomain(domain, x, setup_time);
             }
             catch (const NumericalProblem& e) {
                 // Local linear solve failed - treat as domain-level failure, not global timestep cut.
@@ -560,8 +561,8 @@ private:
                     domain.index, rank_, e.what()));
                 // record statistics and return early
                 local_report.linear_solve_time += detailTimer.stop();
-                local_report.linear_solve_setup_time += model_.linearSolveSetupTime();
-                local_report.total_linear_iterations = model_.linearIterationsLastSolve();
+                local_report.linear_solve_setup_time += setup_time;
+                local_report.total_linear_iterations = domain_linsolvers_[domain.index].iterations();
                 modelSimulator.problem().endIteration();
                 local_report.converged = false;
                 local_report.total_newton_iterations = iter;
@@ -573,8 +574,8 @@ private:
                 x *= damping_factor;
             }
             local_report.linear_solve_time += detailTimer.stop();
-            local_report.linear_solve_setup_time += model_.linearSolveSetupTime();
-            local_report.total_linear_iterations = model_.linearIterationsLastSolve();
+            local_report.linear_solve_setup_time += setup_time;
+            local_report.total_linear_iterations = domain_linsolvers_[domain.index].iterations();
 
             // Update local solution. // TODO: x is still full size, should we optimize it?
             detailTimer.reset();
@@ -652,7 +653,7 @@ private:
     }
 
     //! \brief Solve the linearized system for a domain.
-    void solveJacobianSystemDomain(const Domain& domain, BVector& global_x)
+    void solveJacobianSystemDomain(const Domain& domain, BVector& global_x, double& setup_time)
     {
         const auto& modelSimulator = model_.simulator();
 
@@ -677,7 +678,7 @@ private:
         auto& linsolver = domain_linsolvers_[domain.index];
 
         linsolver.prepare(jac, res);
-        model_.linearSolveSetupTime() = perfTimer.stop();
+        setup_time = perfTimer.stop();
         linsolver.setResidual(res);
         linsolver.solve(x);
 
