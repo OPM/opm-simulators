@@ -233,7 +233,7 @@ updateFullSimulationResults () {
         changed_tests+=" ${test_name}"
     fi
 
-    if [ -d "${configuration}/build-opm-simulators/tests/results/${binary}+${test_name}/restart" ]
+    if [ -d "${BUILD_DIR}/tests/results/${binary}+${test_name}/restart" ]
     then
         updateRestartResults "${binary}" "${dir_name}" "${file_name}" "${test_name}"
     fi
