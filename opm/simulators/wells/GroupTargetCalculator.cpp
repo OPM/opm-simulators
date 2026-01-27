@@ -126,11 +126,18 @@ calculateGroupTarget()
     //   correspond to a master group. In the future we might want to port the logic to include
     //   e.g. checkGroupConstraintsProd() and checkGroupConstraintsInj() in GroupStateHelper.cpp.
     const auto& group = this->original_group_;  // The bottom group we want to calculate the target for.
+    // For injection, check if the group has injection control defined for this phase.
+    // If not, there is no target to calculate.
+    if (this->targetType() == TargetType::Injection) {
+        if (!group.hasInjectionControl(this->injectionPhase_())) {
+            return std::nullopt;
+        }
+    }
     if (group.is_field() || !this->parentGroupControlAvailable_(group)) {
-        return this->getTargetNoGuideRate(group);
+        return this->getGroupTargetNoGuideRate(group);
     }
     assert(this->parentGroupControlAvailable_(group));
-    if (!this->hasGuideRate_(group)) {
+    if (!this->hasGuideRate(group)) {
         if (this->hasFldOrNoneControl(group)) {
             // Parent control is available, but no guide rate is defined. This is illegal for a master group
             // under FLD or NONE control.
@@ -144,10 +151,10 @@ calculateGroupTarget()
         //   - parent control available,
         //   - but no guide rate
         // this could be considered an error, but we can also fall back to use its own target.
-        return this->getTargetNoGuideRate(group);
+        return this->getGroupTargetNoGuideRate(group);
     }
     const auto efficiency_factor = group.getGroupEfficiencyFactor();
-    auto target = this->calculateGroupTargetRecursive_(group, efficiency_factor);
+    auto target = this->calculateGroupTargetRecursive_(this->parentGroup(group), efficiency_factor);
     if (target) {
         // TODO: We could probably switch the group to FLD control mode now. However, this call is coming
         //    from beginTimeStep() in BlackoilWellModel_impl.hpp, but the regular higher constraints
@@ -156,7 +163,7 @@ calculateGroupTarget()
         return target;
     }
     // If a higher level target was not found or not violated, use the group's own target.
-    return this->getTargetNoGuideRate(group);
+    return this->getGroupTargetNoGuideRate(group);
 }
 
 template<class Scalar, class IndexTraits>
@@ -204,18 +211,27 @@ template<class Scalar, class IndexTraits>
 typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo
 GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
-getTargetFromCalculator(const TargetCalculatorType& target_calculator, const Group& group)
+getGroupTargetNoGuideRate(const Group& group)
 {
+    // Efficiency factor is not applied here, since it only applies to child rates, not to the group's
+    // own target.
+    // NOTE: If a master group is under individual control and has a RESV rate target, it should be
+    //   transferred into a RESV target for the slave group. But it is not obvious how to transform it
+    //   since the master and slave groups in general have different PVT properties.
+    // TODO: For now we assume the RESV rate target is in slave reservoir units, and just send it as is
+    //   to the slave group. Alternatively, we could also throw an error here for that case
     if (this->targetType() == TargetType::Injection) {
         const auto& control_mode = this->groupState().injection_control(group.name(), this->injectionPhase_());
         return TargetInfo{
-            std::get<InjectionTargetCalculator>(target_calculator).groupTarget(), control_mode
+            this->groupStateHelper().getInjectionGroupTarget(group, this->injectionPhase_(), this->resvCoeffsInj()),
+            control_mode
         };
     }
     else {
         const auto& control_mode = this->groupState().production_control(group.name());
         return TargetInfo{
-            std::get<TargetCalculator>(target_calculator).groupTarget(), control_mode
+            this->groupStateHelper().getProductionGroupTarget(group),
+            control_mode
         };
     }
 }
@@ -295,23 +311,6 @@ calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_facto
 }
 
 template<class Scalar, class IndexTraits>
-typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo
-GroupTargetCalculator<Scalar, IndexTraits>::
-GeneralCalculator::
-getTargetNoGuideRate(const Group& group)
-{
-    // Efficiency factor is not applied here, since it only applies to child rates, not to the group's
-    // own target.
-    // NOTE: If a master group is under individual control and has a RESV rate target, it should be
-    //   transferred into a RESV target for the slave group. But it is not obvious how to transform it
-    //   since the master and slave groups in general have different PVT properties.
-    // TODO: For now we assume the RESV rate target is in slave reservoir units, and just send it as is
-    //   to the slave group. Alternatively, we could also throw an error here for that case
-    const auto target_calculator = this->getTargetCalculator(group);
-    return this->getTargetFromCalculator(target_calculator, group);
-}
-
-template<class Scalar, class IndexTraits>
 bool
 GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
@@ -328,7 +327,7 @@ template<class Scalar, class IndexTraits>
 Phase
 GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
-injectionPhase_()
+injectionPhase_() const
 {
     if (this->injection_phase_.has_value()) {
         switch (this->injection_phase_.value()) {
@@ -339,8 +338,8 @@ injectionPhase_()
             case ReservoirCoupling::Phase::Gas:
                 return Phase::GAS;
             default:
-               OPM_DEFLOG_THROW(std::runtime_error, "Invalid injection phase", this->deferredLogger());
-               return Phase::WATER; // Unreachable, but satisfies compiler
+                OPM_DEFLOG_THROW(std::runtime_error, "Invalid injection phase", this->deferredLogger());
+                return Phase::WATER; // Unreachable, but satisfies compiler
         }
     }
     else {
@@ -421,6 +420,7 @@ calculateGroupTarget()
     // target rate for the top group.
     const Scalar full_target = target / this->chain_efficiency_factor_;
     if (bottom_group_current_rate_available > TARGET_RATE_TOLERANCE) {  // > 1e-12
+        const auto toplevel_control_mode = this->getToplevelControlMode_();
         if ((bottom_group_current_rate_available > full_target)) {
             // The bottom group is producing too much according to the top level group target,
             // so we need to scale down the target rate.
@@ -430,19 +430,19 @@ calculateGroupTarget()
                 const Scalar slave_resv_rate = this->getSlaveGroupReservoirRate_(this->bottom_group_);
                 // Scale the slave's reservoir rate by the same factor we would scale surface rates
                 const Scalar scale = full_target / bottom_group_current_rate_available;
-                return TargetInfo{scale * slave_resv_rate, this->toplevel_control_mode_};
+                return TargetInfo{scale * slave_resv_rate, toplevel_control_mode};
             }
             else {
-                return TargetInfo{full_target, this->toplevel_control_mode_};
+                return TargetInfo{full_target, toplevel_control_mode};
             }
         }
         else if (this->hasFLDControl_(this->bottom_group_)) {
             // The bottom group is under FLD control, so we return the top level target as is.
-            return TargetInfo{full_target, this->toplevel_control_mode_};
+            return TargetInfo{full_target, toplevel_control_mode};
         }
     }
     // Return the bottom group's target rate as is.
-    return this->getTargetNoGuideRate_(this->bottom_group_);
+    return this->getGroupTargetNoGuideRate_(this->bottom_group_);
 }
 
 // -------------------------------------------------------
@@ -557,6 +557,20 @@ getLocalReductionLevel_(const std::vector<std::string>& chain)
 }
 
 template<class Scalar, class IndexTraits>
+typename GroupTargetCalculator<Scalar, IndexTraits>::ControlMode
+GroupTargetCalculator<Scalar, IndexTraits>::
+TopToBottomCalculator::
+getToplevelControlMode_() const
+{
+    if (this->targetType() == TargetType::Injection) {
+        return this->groupState().injection_control(this->top_group_.name(), this->injectionPhase_());
+    }
+    else {
+        return this->groupState().production_control(this->top_group_.name());
+    }
+}
+
+template<class Scalar, class IndexTraits>
 Scalar
 GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
@@ -590,8 +604,13 @@ GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForInjector_()
 {
-    auto guide_target_mode =
-        std::get<InjectionTargetCalculator>(this->target_calculator_).guideTargetMode();
+    this->target_calculator_.template emplace<InjectionTargetCalculator>(
+        this->groupStateHelper(),
+        this->resvCoeffsInj(),
+        this->top_group_,
+        this->injectionPhase_()
+    );
+    const auto guide_target_mode = this->groupStateHelper().getInjectionGuideTargetMode(this->injectionPhase_());
     this->fraction_calculator_.emplace(
         this->schedule(),
         this->groupStateHelper(),
@@ -610,11 +629,13 @@ GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForProducer_()
 {
-    auto calc = this->getProductionTargetCalculator_(this->top_group_);
-    this->target_calculator_.template emplace<TargetCalculator>(std::get<TargetCalculator>(calc));
-    auto guide_target_mode =
-        std::get<TargetCalculator>(this->target_calculator_).guideTargetMode();
-    auto dummy_phase = Phase::OIL; // Dummy phase, not used for producers.
+    this->target_calculator_.template emplace<TargetCalculator>(
+        this->groupStateHelper(),
+        this->resvCoeffsProd(),
+        this->top_group_
+    );
+    const auto guide_target_mode = this->groupStateHelper().getProductionGuideTargetMode(this->top_group_);
+    const auto dummy_phase = Phase::OIL; // Dummy phase, not used for producers.
     this->fraction_calculator_.emplace(
         this->schedule(),
         this->groupStateHelper(),

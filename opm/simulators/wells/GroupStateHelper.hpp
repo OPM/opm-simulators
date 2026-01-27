@@ -239,7 +239,17 @@ public:
                                    const Phase& injection_phase,
                                    const std::vector<Scalar>& resv_coeff) const;
 
+    /// @brief Get the guide rate target mode for an injection phase
+    /// @param injection_phase The injection phase (WATER, OIL, or GAS)
+    /// @return The corresponding GuideRateModel::Target for the injection phase
+    GuideRateModel::Target getInjectionGuideTargetMode(Phase injection_phase) const;
+
     Scalar getProductionGroupTarget(const Group& group) const;
+
+    /// @brief Get the guide rate target mode for a production group
+    /// @param group The production group
+    /// @return The GuideRateModel::Target based on the group's production control mode
+    GuideRateModel::Target getProductionGuideTargetMode(const Group& group) const;
 
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
 
