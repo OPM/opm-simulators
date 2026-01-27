@@ -148,8 +148,7 @@ update(const bool mandatory_network_balance,
             }
             well_model_.updateAndCommunicateGroupData(episodeIdx,
                                                       iterationIdx,
-                                                      well_model_.param().nupcol_group_rate_tolerance_,
-                                                      /*update_wellgrouptarget*/ true);
+                                                      well_model_.param().nupcol_group_rate_tolerance_);
         }
         more_network_update = more_network_sub_update || well_group_thp_updated;
     }

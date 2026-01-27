@@ -390,7 +390,7 @@ namespace Opm {
             // to make sure we get the correct mapping.
             this->updateAndCommunicateGroupData(reportStepIdx,
                                     simulator_.model().newtonMethod().numIterations(),
-                                    param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false);
+                                    param_.nupcol_group_rate_tolerance_);
 
             // Wells are active if they are active wells on at least one process.
             const Grid& grid = simulator_.vanguard().grid();
@@ -489,10 +489,26 @@ namespace Opm {
                                                           dt);
         }
 
-        this->updateAndCommunicateGroupData(reportStepIdx,
-                                    simulator_.model().newtonMethod().numIterations(),
-                                    param_.nupcol_group_rate_tolerance_,
-                                    /*update_wellgrouptarget*/ true);
+        // Update group target reductions after guide rates have been updated.
+        // Also update production rates which are used by calcResvCoeff() in updateWellGroupTargets().
+        // Production rates may have been modified by initializeProducerWellState() above.
+        const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
+        this->groupStateHelper().updateGroupTargetReduction();
+        {
+            // Update nupcol well state with current (converged) well rates before using it.
+            this->updateNupcolWGState();
+            // Use nupcol well state for production rates (matches full updateAndCommunicateGroupData)
+            auto guard = this->groupStateHelper().pushWellState(this->nupcolWellState());
+            this->groupStateHelper().updateGroupProductionRates(fieldGroup);
+        }
+        // Update well rates - needed for correct group_target calculation in updateWellGroupTargets()
+        // Well rates may have been modified by initializeProducerWellState() above.
+        this->groupStateHelper().updateWellRates(fieldGroup, this->nupcolWellState(), this->wellState());
+        this->wellState().communicateGroupRates(simulator_.vanguard().grid().comm());
+        this->groupState().communicate_rates(simulator_.vanguard().grid().comm());
+
+        this->updateWellGroupTargets();
+
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -1281,7 +1297,8 @@ namespace Opm {
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const int reportStepIdx = simulator_.episodeIndex();
         this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx,
-            param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ true);
+                                            param_.nupcol_group_rate_tolerance_);
+        this->updateWellGroupTargets();
         // We need to call updateWellControls before we update the network as
         // network updates are only done on thp controlled wells.
         // Note that well controls are allowed to change during updateNetwork
@@ -1719,8 +1736,8 @@ namespace Opm {
     {
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             iterationIdx,
-                                            param_.nupcol_group_rate_tolerance_,
-                                            /*update_wellgrouptarget*/ true);
+                                            param_.nupcol_group_rate_tolerance_);
+        this->updateWellGroupTargets();
 
         // updateWellStateWithTarget might throw for multisegment wells hence we
         // have a parallel try catch here to thrown on all processes.
@@ -1741,8 +1758,8 @@ namespace Opm {
                                    simulator_.gridView().comm())
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             iterationIdx,
-                                            param_.nupcol_group_rate_tolerance_,
-                                            /*update_wellgrouptarget*/ true);
+                                            param_.nupcol_group_rate_tolerance_);
+        this->updateWellGroupTargets();
     }
 
     template<typename TypeTag>

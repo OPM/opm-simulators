@@ -348,10 +348,9 @@ private:
     void finalizeSetup_()
     {
         auto& gsh = wellModel().groupStateHelper();
-        const auto& field_group = schedule().getGroup("FIELD", report_step_idx_);
 
         gsh.updateGroupControlledWells(/*is_production_group=*/true, Opm::Phase::OIL);
-        gsh.updateGroupTargetReduction(field_group, /*is_injector=*/false);
+        gsh.updateGroupTargetReductionProducer();
     }
 };
 

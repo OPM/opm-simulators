@@ -1216,8 +1216,7 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 updateAndCommunicateGroupData(const int reportStepIdx,
                               const int iterationIdx,
-                              const Scalar tol_nupcol,
-                              const bool update_wellgrouptarget)
+                              const Scalar tol_nupcol)
 {
     OPM_TIMEFUNCTION();
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
@@ -1310,8 +1309,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     }
     // the group target reduction rates needs to be update since wells may have switched to/from GRUP control
     // The group target reduction does not honor NUPCOL.
-    group_state_helper.updateGroupTargetReduction(fieldGroup, /*is_injector=*/false);
-    group_state_helper.updateGroupTargetReduction(fieldGroup, /*is_injector=*/true);
+    group_state_helper.updateGroupTargetReduction();
     {
         // Temporarily use the nupcol well state for all helper functions
         // At the end of this scope, the well state will be restored to its original value
@@ -1326,64 +1324,69 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     group_state_helper.updateWellRates(fieldGroup, this->nupcolWellState(), this->wellState());
     this->wellState().communicateGroupRates(comm_);
     this->groupState().communicate_rates(comm_);
+}
 
-    if (update_wellgrouptarget) {
-        for (const auto& well : well_container_generic_) {
-            const auto& ws = this->wellState().well(well->indexOfWell());
-            const auto& group = this->schedule().getGroup(well->wellEcl().groupName(), well->currentStep());
-            std::vector<Scalar> resv_coeff(this->numPhases(), 0.0);
-            const int fipnum = 0;
-            int pvtreg = well->pvtRegionIdx();
-            calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
-            const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
-                                    ws.efficiency_scaling_factor;
-            // Translate injector type from control to Phase.
-            std::optional<Scalar> group_target;
-            if (well->isProducer()) {
-                group_target = group_state_helper.getWellGroupTargetProducer(
-                    well->name(),
-                    well->wellEcl().groupName(),
-                    group,
-                    ws.surface_rates.data(),
-                    efficiencyFactor,
-                    resv_coeff
-                );
-            } else {
-                const auto& well_controls = well->wellEcl().injectionControls(summaryState_);
-                auto injectorType = well_controls.injector_type;
-                Phase injectionPhase;
-                switch (injectorType) {
-                case InjectorType::WATER:
-                {
-                    injectionPhase = Phase::WATER;
-                    break;
-                }
-                case InjectorType::OIL:
-                {
-                    injectionPhase = Phase::OIL;
-                    break;
-                }
-                case InjectorType::GAS:
-                {
-                    injectionPhase = Phase::GAS;
-                    break;
-                }
-                default:
-                    throw std::logic_error("MULTI-phase injection is not supported, but was requested for well " + well->name());
-                }
-                group_target = group_state_helper.getWellGroupTargetInjector(
-                    well->name(),
-                    well->wellEcl().groupName(),
-                    group,
-                    ws.surface_rates.data(),
-                    injectionPhase,
-                    efficiencyFactor,
-                    resv_coeff
-                );
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+updateWellGroupTargets()
+{
+    OPM_TIMEFUNCTION();
+    GroupStateHelperType& group_state_helper = this->groupStateHelper();
+    for (const auto& well : well_container_generic_) {
+        const auto& ws = this->wellState().well(well->indexOfWell());
+        const auto& group = this->schedule().getGroup(well->wellEcl().groupName(), well->currentStep());
+        std::vector<Scalar> resv_coeff(this->numPhases(), 0.0);
+        const int fipnum = 0;
+        int pvtreg = well->pvtRegionIdx();
+        calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
+        const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
+                                ws.efficiency_scaling_factor;
+        // Translate injector type from control to Phase.
+        std::optional<Scalar> group_target;
+        if (well->isProducer()) {
+            group_target = group_state_helper.getWellGroupTargetProducer(
+                well->name(),
+                well->wellEcl().groupName(),
+                group,
+                ws.surface_rates.data(),
+                efficiencyFactor,
+                resv_coeff
+            );
+        } else {
+            const auto& well_controls = well->wellEcl().injectionControls(summaryState_);
+            auto injectorType = well_controls.injector_type;
+            Phase injectionPhase;
+            switch (injectorType) {
+            case InjectorType::WATER:
+            {
+                injectionPhase = Phase::WATER;
+                break;
             }
-            auto& ws_update = this->wellState().well(well->indexOfWell());
-            ws_update.group_target = group_target;
+            case InjectorType::OIL:
+            {
+                injectionPhase = Phase::OIL;
+                break;
+            }
+            case InjectorType::GAS:
+            {
+                injectionPhase = Phase::GAS;
+                break;
+            }
+            default:
+                throw std::logic_error("MULTI-phase injection is not supported, but was requested for well " + well->name());
+            }
+            group_target = group_state_helper.getWellGroupTargetInjector(
+                well->name(),
+                well->wellEcl().groupName(),
+                group,
+                ws.surface_rates.data(),
+                injectionPhase,
+                efficiencyFactor,
+                resv_coeff
+            );
         }
+        auto& ws_update = this->wellState().well(well->indexOfWell());
+        ws_update.group_target = group_target;
     }
 }
 
