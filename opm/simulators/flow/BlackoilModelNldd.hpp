@@ -25,6 +25,9 @@
 #define OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
 
 #include <dune/common/timer.hh>
+#include <dune/istl/istlexception.hh>
+
+#include <opm/common/Exceptions.hpp>
 
 #include <opm/grid/common/SubGridPart.hpp>
 
@@ -51,6 +54,7 @@
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <opm/simulators/utils/ComponentName.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelNldd.hpp>
 
@@ -270,6 +274,8 @@ public:
         // -----------   Solve each domain separately   -----------
         DeferredLogger logger;
         std::vector<SimulatorReportSingle> domain_reports(domains_.size());
+
+        OPM_BEGIN_PARALLEL_TRY_CATCH()
         for (const int domain_index : domain_order) {
             const auto& domain = domains_[domain_index];
             SimulatorReportSingle local_report;
@@ -286,22 +292,16 @@ public:
                 domain_reports[domain.index] = local_report;
                 continue;
             }
-            try {
-                switch (model_.param().local_solve_approach_) {
-                case DomainSolveApproach::Jacobi:
-                    solveDomainJacobi(solution, locally_solved, local_report, logger,
-                                      iteration, timer, domain);
-                    break;
-                default:
-                case DomainSolveApproach::GaussSeidel:
-                    solveDomainGaussSeidel(solution, locally_solved, local_report, logger,
-                                           iteration, timer, domain);
-                    break;
-                }
-            }
-            catch (...) {
-                // Something went wrong during local solves.
-                local_report.converged = false;
+            switch (model_.param().local_solve_approach_) {
+            case DomainSolveApproach::Jacobi:
+                solveDomainJacobi(solution, locally_solved, local_report, logger,
+                                  iteration, timer, domain);
+                break;
+            default:
+            case DomainSolveApproach::GaussSeidel:
+                solveDomainGaussSeidel(solution, locally_solved, local_report, logger,
+                                       iteration, timer, domain);
+                break;
             }
             // This should have updated the global matrix to be
             // dR_i/du_j evaluated at new local solutions for
@@ -313,6 +313,8 @@ public:
             local_report.solver_time += detailTimer.stop();
             domain_reports[domain.index] = local_report;
         }
+        OPM_END_PARALLEL_TRY_CATCH("Unexpected exception in local domain solve: ", model_.simulator().vanguard().grid().comm());
+
         detailTimer.reset();
         detailTimer.start();
         // Communicate and log all messages.
@@ -548,14 +550,32 @@ private:
             BVector x(nc);
             detailTimer.reset();
             detailTimer.start();
-            this->solveJacobianSystemDomain(domain, x);
+            double setup_time = 0.0;
+            try {
+                this->solveJacobianSystemDomain(domain, x, setup_time);
+            }
+            catch (const NumericalProblem& e) {
+                // Local linear solve failed - treat as domain-level failure, not global timestep cut.
+                logger.debug(fmt::format(
+                    "Local linear solver failed in domain {} on rank {}: {}",
+                    domain.index, rank_, e.what()));
+                // record statistics and return early
+                local_report.linear_solve_time += detailTimer.stop();
+                local_report.linear_solve_setup_time += setup_time;
+                local_report.total_linear_iterations = domain_linsolvers_[domain.index].iterations();
+                modelSimulator.problem().endIteration();
+                local_report.converged = false;
+                local_report.total_newton_iterations = iter;
+                local_report.total_linearizations += iter;
+                return convreport;
+            }
             model_.wellModel().postSolveDomain(x, domain);
             if (damping_factor != 1.0) {
                 x *= damping_factor;
             }
             local_report.linear_solve_time += detailTimer.stop();
-            local_report.linear_solve_setup_time += model_.linearSolveSetupTime();
-            local_report.total_linear_iterations = model_.linearIterationsLastSolve();
+            local_report.linear_solve_setup_time += setup_time;
+            local_report.total_linear_iterations = domain_linsolvers_[domain.index].iterations();
 
             // Update local solution. // TODO: x is still full size, should we optimize it?
             detailTimer.reset();
@@ -633,7 +653,7 @@ private:
     }
 
     //! \brief Solve the linearized system for a domain.
-    void solveJacobianSystemDomain(const Domain& domain, BVector& global_x)
+    void solveJacobianSystemDomain(const Domain& domain, BVector& global_x, double& setup_time)
     {
         const auto& modelSimulator = model_.simulator();
 
@@ -658,7 +678,7 @@ private:
         auto& linsolver = domain_linsolvers_[domain.index];
 
         linsolver.prepare(jac, res);
-        model_.linearSolveSetupTime() = perfTimer.stop();
+        setup_time = perfTimer.stop();
         linsolver.setResidual(res);
         linsolver.solve(x);
 

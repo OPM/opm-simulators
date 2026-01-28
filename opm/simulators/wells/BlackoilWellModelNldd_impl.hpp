@@ -46,6 +46,9 @@ assemble(const int /*iterationIdx*/,
     // well model, so we do not need to do it here (when
     // iterationIdx is 0).
 
+    // Use do_mpi_gather=false to avoid MPI collective operations in domain solves.
+    auto loggerGuard = wellModel_.groupStateHelper().pushLogger(/*do_mpi_gather=*/false);
+
     this->updateWellControls(domain);
     this->assembleWellEq(dt, domain);
 
@@ -133,21 +136,26 @@ getWellConvergence(const Domain& domain,
     const bool relax_tolerance = iterationIdx > wellModel_.numStrictIterations();
 
     ConvergenceReport report;
-    for (const auto& well : wellModel_.localNonshutWells()) {
-        if ((this->well_domain().at(well->name()) == domain.index)) {
-            if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                report += well->getWellConvergence(wellModel_.groupStateHelper(),
-                                                   B_avg,
-                                                   relax_tolerance);
-            } else {
-                ConvergenceReport xreport;
-                using CR = ConvergenceReport;
-                xreport.setWellFailed({CR::WellFailure::Type::Unsolvable,
-                                       CR::Severity::Normal, -1, well->name()});
-                report += xreport;
+    {
+        // Use do_mpi_gather=false to avoid MPI collective operations in domain solves.
+        auto loggerGuard = wellModel_.groupStateHelper().pushLogger(/*do_mpi_gather=*/false);
+
+        for (const auto& well : wellModel_.localNonshutWells()) {
+            if ((this->well_domain().at(well->name()) == domain.index)) {
+                if (well->isOperableAndSolvable() || well->wellIsStopped()) {
+                    report += well->getWellConvergence(wellModel_.groupStateHelper(),
+                                                       B_avg,
+                                                       relax_tolerance);
+                } else {
+                    ConvergenceReport xreport;
+                    using CR = ConvergenceReport;
+                    xreport.setWellFailed({CR::WellFailure::Type::Unsolvable,
+                                           CR::Severity::Normal, -1, well->name()});
+                    report += xreport;
+                }
             }
         }
-    }
+    } // loggerGuard goes out of scope here, before the OpmLog::debug() calls below
 
     // Log debug messages for NaN or too large residuals.
     if (wellModel_.terminalOutput()) {
