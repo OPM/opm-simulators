@@ -567,6 +567,7 @@ add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
 set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
+use_warnings(MainDispatchDynamic)
 set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # We only wait for the hipification process if we are compiling HIP.
@@ -606,6 +607,7 @@ set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   add_library(flow_lib${OBJ} OBJECT flow/flow_${OBJ}.cpp)
+  use_warnings(flow_lib${OBJ})
   list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
   if(TARGET fmt::fmt)
     target_link_libraries(flow_lib${OBJ} PRIVATE fmt::fmt)
