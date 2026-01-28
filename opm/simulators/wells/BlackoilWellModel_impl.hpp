@@ -527,7 +527,9 @@ namespace Opm {
 
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingMaster()) {
-            this->sendMasterGroupTargetsToSlaves();
+            if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
+                this->sendMasterGroupTargetsToSlaves();
+            }
         }
 #endif
 
