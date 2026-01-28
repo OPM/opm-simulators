@@ -335,6 +335,22 @@ public:
         return connectionRates_;
     }
 
+    // get the transmissibility multiplier for specific perforation
+    template<class Value, class Callback>
+    void getTransMult(Value& trans_mult,
+                      const Simulator& simulator,
+                      const int cell_idx,
+                      Callback&& extendEval) const;
+
+    // get the well transmissibility for specific perforation
+    template<class Value>
+    void getTw(std::vector<Value>&         wi,
+               const int                   perf,
+               const IntensiveQuantities&  intQuants,
+               const Value&                trans_mult,
+               const SingleWellStateType&  ws,
+               const bool                  with_fracture = true) const;
+
     void updateConnectionDFactor(const Simulator& simulator,
                                  SingleWellStateType& ws) const;
 
@@ -451,28 +467,32 @@ protected:
 
     Eval getPerfCellPressure(const FluidState& fs) const;
 
-    // get the transmissibility multiplier for specific perforation
-    template<class Value, class Callback>
-    void getTransMult(Value& trans_mult,
-                      const Simulator& simulator,
-                      const int cell_idx,
-                      Callback& extendEval) const;
-
-    // get the well transmissibility for specific perforation
-    template<class Value>
-    void getTw(std::vector<Value>&         wi,
-               const int                   perf,
-               const IntensiveQuantities&  intQuants,
-               const Value&                trans_mult,
-               const SingleWellStateType&  ws) const;
-
     // get the mobility for specific perforation
     template<class Value, class Callback>
     void getMobility(const Simulator& simulator,
                      const int local_perf_index,
                      std::vector<Value>& mob,
-                     Callback& extendEval,
+                     Callback&& extendEval,
                      [[maybe_unused]] DeferredLogger& deferred_logger) const;
+
+    /// Include filter cake effects into connection transmissibility factor
+    ///
+    /// \tparam Value Element type of CTF.
+    ///
+    /// \param[in] perf Connection for which to calculate filter cake
+    /// effects.  Linear connection index in the range 0..#open connections
+    /// on the current rank.
+    ///
+    /// \param[in] perf_pressure Connection pressure.
+    ///
+    /// \param[in,out] Tw Connection transmissibility factors.  One element
+    /// for each conserved quantity.  Filter cake effects will be added as
+    /// applicable.
+    template <typename Value>
+    void includeFiltercakeEffects(const int           perf,
+                                  const double        perf_pressure,
+                                  const bool          with_fracture,
+                                  std::vector<Value>& Tw) const;
 
     void computeConnLevelProdInd(const FluidState& fs,
                                  const std::function<Scalar(const Scalar)>& connPICalc,
