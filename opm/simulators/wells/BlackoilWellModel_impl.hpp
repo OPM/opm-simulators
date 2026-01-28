@@ -1238,8 +1238,8 @@ namespace Opm {
                 if (this->network_.shouldBalance(episodeIdx, iterationIdx + 1)) {
                     if (this->terminal_output_) {
                         const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update, \n"
-                            "and try again after the next Newton iteration (imbalance = {:.2e} bar, ctrl_change = {})",
-                            max_iteration, network_imbalance*1.0e-5, well_group_control_changed);
+                            "and try again after the next Newton iteration (imbalance = {:.2e} bar)",
+                            max_iteration, network_imbalance*1.0e-5);
                         local_deferredLogger.debug(msg);
                     }
                     // To avoid stopping the newton iterations too early, before the network is converged,
@@ -1248,8 +1248,8 @@ namespace Opm {
                 } else {
                     if (this->terminal_output_) {
                         const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update. \n"
-                            "The simulator will continue with unconverged network results (imbalance = {:.2e} bar, ctrl_change = {})",
-                            max_iteration, network_imbalance*1.0e-5, well_group_control_changed);
+                            "The simulator will continue with unconverged network results (imbalance = {:.2e} bar)",
+                            max_iteration, network_imbalance*1.0e-5);
                         local_deferredLogger.info(msg);
                     }
                 }
@@ -1331,7 +1331,7 @@ namespace Opm {
         // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
         // the inner iterations are did not converge
         const bool more_network_update = this->network_.shouldBalance(reportStepIdx, iterationIdx) &&
-                    (more_inner_network_update || well_group_control_changed || alq_updated);
+                    (more_inner_network_update || alq_updated);
         return {well_group_control_changed, more_network_update, network_imbalance};
     }
 
