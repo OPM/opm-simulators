@@ -63,7 +63,7 @@ template<class Scalar>
 void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
                         const int it, const int numPhases, const Scalar relaxRelTol,
                         const int minimumOscillatingPhases,
-                        bool& oscillate, bool& stagnate);
+                        bool& oscillate, bool& diverging);
 
 /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
 /// Implemention for Dune block vectors.
@@ -235,10 +235,10 @@ struct NonlinearSolverParameters
 
         /// Detect oscillation or stagnation in a given residual history.
         void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
-                                const int it, bool& oscillate, bool& stagnate) const
+                                const int it, bool& oscillate, bool& diverging) const
         {
             detail::detectOscillations(residualHistory, it, model_->numPhases(),
-                                       this->relaxRelTol(), 1, oscillate, stagnate);
+                                       this->relaxRelTol(), 1, oscillate, diverging);
         }
 
 
