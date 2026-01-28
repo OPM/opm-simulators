@@ -299,6 +299,26 @@ extractOutputTransAndNNC(const std::function<unsigned int(unsigned int)>& map)
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void
 EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
+allocateLevelTrans_(const std::array<int,3>& levelCartDims,
+                   data::Solution& levelTrans) const
+{
+    auto createLevelCellData = [&levelCartDims]() {
+        return Opm::data::CellData{
+            Opm::UnitSystem::measure::transmissibility,
+            std::vector<double>(levelCartDims[0] * levelCartDims[1] * levelCartDims[2], 0.0),
+            Opm::data::TargetType::INIT
+        };
+    };
+
+    levelTrans.clear();
+    levelTrans.emplace("TRANX", createLevelCellData());
+    levelTrans.emplace("TRANY", createLevelCellData());
+    levelTrans.emplace("TRANZ", createLevelCellData());
+}
+
+template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
+void
+EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
               const std::function<unsigned int(unsigned int)>& map) const
 {
@@ -328,28 +348,14 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
 
         // To store transmissibility between cells sharing an intersection,
         // both cells belonging to the same level grid.
-        std::vector<Opm::data::Solution> outputTrans_refinedLevelGrids{};
-        outputTrans_refinedLevelGrids.resize(this->equilGrid_->maxLevel()+1); // excluding level zero, for now.
+        std::vector<Opm::data::Solution> outputTrans_levelGrids{};
+        outputTrans_levelGrids.resize(this->equilGrid_->maxLevel()+1); // excluding level zero, for now.
 
         const Opm::LevelCartesianIndexMapper<Grid> levelCartMapp(*(this->equilGrid_));
         const auto levelCartToLevelCompressed = Opm::Lgr::levelCartesianToLevelCompressedMaps(*(this->equilGrid_), levelCartMapp);
 
         for (int level = 0; level <= this->equilGrid_->maxLevel(); ++level) {
-
-            const auto& levelCartDims = levelCartMapp.cartesianDimensions(level);
-
-            auto createLevelCellData = [&levelCartDims]() {
-                return Opm::data::CellData{
-                    Opm::UnitSystem::measure::transmissibility,
-                    std::vector<double>(levelCartDims[0] * levelCartDims[1] * levelCartDims[2], 0.0),
-                    Opm::data::TargetType::INIT
-                };
-            };
-
-            outputTrans_refinedLevelGrids[level].clear();
-            outputTrans_refinedLevelGrids[level].emplace("TRANX", createLevelCellData());
-            outputTrans_refinedLevelGrids[level].emplace("TRANY", createLevelCellData());
-            outputTrans_refinedLevelGrids[level].emplace("TRANZ", createLevelCellData());
+            allocateLevelTrans_(levelCartMapp.cartesianDimensions(level), outputTrans_levelGrids[level]);
         }
 
         for (const auto& elem : elements(globalGridView)) {
@@ -380,9 +386,9 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
 
                 const auto& levelCartDims = levelCartMapp.cartesianDimensions(level);
 
-                auto& levelTranx = outputTrans_refinedLevelGrids[level].at("TRANX");
-                auto& levelTrany = outputTrans_refinedLevelGrids[level].at("TRANY");
-                auto& levelTranz = outputTrans_refinedLevelGrids[level].at("TRANZ");
+                auto& levelTranx = outputTrans_levelGrids[level].at("TRANX");
+                auto& levelTrany = outputTrans_levelGrids[level].at("TRANY");
+                auto& levelTranz = outputTrans_levelGrids[level].at("TRANZ");
 
                 if (maxLevelCartIdx - minLevelCartIdx == 1 && levelCartDims[0] > 1 ) {
                     levelTranx.template data<double>()[minLevelCartIdx] = globalTrans().transmissibility(c1, c2);
@@ -404,23 +410,11 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
             }
         }
         // Overwrite outputTrans_ for CpGrid with LGRs
-        outputTrans_ = std::make_unique<data::Solution>(outputTrans_refinedLevelGrids[0]);
+        outputTrans_ = std::make_unique<data::Solution>(outputTrans_levelGrids[0]);
     } // end if-Gird==CpGrid
     else { // Grid types other than CpGrid
-
-        auto createCellData = [&cartDims]() {
-            return data::CellData{
-                UnitSystem::measure::transmissibility,
-                std::vector<double>(cartDims[0] * cartDims[1] * cartDims[2], 0.0),
-                data::TargetType::INIT
-            };
-        };
-
-        outputTrans_->clear();
-        outputTrans_->emplace("TRANX", createCellData());
-        outputTrans_->emplace("TRANY", createCellData());
-        outputTrans_->emplace("TRANZ", createCellData());
-
+        allocateLevelTrans_(cartDims, *outputTrans_);
+         
         auto& tranx = this->outputTrans_->at("TRANX");
         auto& trany = this->outputTrans_->at("TRANY");
         auto& tranz = this->outputTrans_->at("TRANZ");

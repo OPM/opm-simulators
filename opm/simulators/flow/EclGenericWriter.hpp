@@ -170,6 +170,8 @@ protected:
 private:
     void computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
     std::vector<NNCdata> exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
+
+    void allocateLevelTrans_(const std::array<int,3>& levelCartDims, data::Solution& levelTrans) const;
 };
 
 } // namespace Opm
