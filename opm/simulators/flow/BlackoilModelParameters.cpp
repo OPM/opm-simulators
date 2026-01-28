@@ -53,6 +53,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     tolerance_max_ds_ = Parameters::Get<Parameters::ToleranceMaxDs<Scalar>>();
     tolerance_max_drs_ = Parameters::Get<Parameters::ToleranceMaxDrs<Scalar>>();
     tolerance_max_drv_ = Parameters::Get<Parameters::ToleranceMaxDrv<Scalar>>();
+    tolerance_max_dtemp_ = Parameters::Get<Parameters::ToleranceMaxDtemp<Scalar>>();
     tolerance_wells_ = Parameters::Get<Parameters::ToleranceWells<Scalar>>();
     tolerance_well_control_ = Parameters::Get<Parameters::ToleranceWellControl<Scalar>>();
     max_welleq_iter_ = Parameters::Get<Parameters::MaxWelleqIter>();
@@ -177,6 +178,10 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "of residual tolerances. Use with care!");
     Parameters::Register<Parameters::ToleranceMaxDrv<Scalar>>
         ("Tolerance for max RV change during a Newton iteration. "
+         "A value greater than 0.0 allows for convergence regardless "
+         "of residual tolerances. Use with care!");
+    Parameters::Register<Parameters::ToleranceMaxDtemp<Scalar>>
+        ("Tolerance for max temperature change during a Newton iteration. "
          "A value greater than 0.0 allows for convergence regardless "
          "of residual tolerances. Use with care!");
     Parameters::Register<Parameters::ToleranceWells<Scalar>>
