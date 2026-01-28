@@ -221,19 +221,19 @@ EclGenericWriter(const Schedule& schedule,
                  const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
                  bool enableAsyncOutput,
                  bool enableEsmry )
-    : collectOnIORank_(grid,
-                       equilGrid,
-                       gridView,
-                       cartMapper,
-                       equilCartMapper,
-                       summaryConfig.fip_regions_interreg_flow())
-    , grid_           (grid)
-    , gridView_       (gridView)
-    , schedule_       (schedule)
-    , eclState_       (eclState)
-    , cartMapper_     (cartMapper)
-    , equilCartMapper_(equilCartMapper)
-    , equilGrid_      (equilGrid)
+: collectOnIORank_(grid,
+                   equilGrid,
+                   gridView,
+                   cartMapper,
+                   equilCartMapper,
+                   summaryConfig.fip_regions_interreg_flow())
+, grid_           (grid)
+, gridView_       (gridView)
+, schedule_       (schedule)
+, eclState_       (eclState)
+, cartMapper_     (cartMapper)
+, equilCartMapper_(equilCartMapper)
+, equilGrid_      (equilGrid)
 {
     if (this->collectOnIORank_.isIORank()) {
         this->eclIO_ = std::make_unique<EclipseIO>
@@ -309,23 +309,6 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
     const auto& cartMapper = *equilCartMapper_;
     const auto& cartDims = cartMapper.cartesianDimensions();
 
-    auto createCellData = [&cartDims]() {
-        return data::CellData{
-                UnitSystem::measure::transmissibility,
-                std::vector<double>(cartDims[0] * cartDims[1] * cartDims[2], 0.0),
-                data::TargetType::INIT
-        };
-    };
-
-    outputTrans_->clear();
-    outputTrans_->emplace("TRANX", createCellData());
-    outputTrans_->emplace("TRANY", createCellData());
-    outputTrans_->emplace("TRANZ", createCellData());
-
-    auto& tranx = this->outputTrans_->at("TRANX");
-    auto& trany = this->outputTrans_->at("TRANY");
-    auto& tranz = this->outputTrans_->at("TRANZ");
-
     using GlobalGridView = typename EquilGrid::LeafGridView;
     using GlobElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView>;
     const GlobalGridView& globalGridView = this->equilGrid_->leafGridView();
@@ -339,57 +322,163 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
         return std::binary_search(numAquCell.begin(), numAquCell.end(), cellIdx);
     };
 
-    for (const auto& elem : elements(globalGridView)) {
-        for (const auto& is : intersections(globalGridView, elem)) {
-            if (!is.neighbor())
-                continue; // intersection is on the domain boundary
 
-            if ( (is.inside().level()>0) || (is.outside().level()>0))
-                continue; // for CpGrid with LGRs, we only care about level zero cells, for now.
+    // For CpGrid with LGRs, store "TRAN*" per each refined level grid
+    if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
 
-            // Not 'const' because remapped if 'map' is non-null.
-            unsigned c1 = globalElemMapper.index(is.inside());
-            unsigned c2 = globalElemMapper.index(is.outside());
+        // To store transmissibility between cells sharing an intersection,
+        // both cells belonging to the same level grid.
+        std::vector<Opm::data::Solution> outputTrans_refinedLevelGrids{};
+        outputTrans_refinedLevelGrids.resize(this->equilGrid_->maxLevel()+1); // excluding level zero, for now.
 
-            if (c1 > c2)
-                continue; // we only need to handle each connection once, thank you.
+        const Opm::LevelCartesianIndexMapper<Grid> levelCartMapp(*(this->equilGrid_));
+        const auto levelCartToLevelCompressed = Opm::Lgr::levelCartesianToLevelCompressedMaps(*(this->equilGrid_), levelCartMapp);
 
-            // Ordering of compressed and uncompressed index should be the same
-            const int cartIdx1 = cartMapper.cartesianIndex( c1 );
-            const int cartIdx2 = cartMapper.cartesianIndex( c2 );
+        for (int level = 0; level <= this->equilGrid_->maxLevel(); ++level) {
 
-            if (isNumAquCell(cartIdx1) || isNumAquCell(cartIdx2)) {
-                // Connections involving numerical aquifers are always NNCs
-                // for the purpose of file output.  This holds even for
-                // connections between cells like (I,J,K) and (I+1,J,K)
-                // which are nominally neighbours in the Cartesian grid.
-                continue;
+            const auto& levelCartDims = levelCartMapp.cartesianDimensions(level);
+
+            auto createLevelCellData = [&levelCartDims]() {
+                return Opm::data::CellData{
+                    Opm::UnitSystem::measure::transmissibility,
+                    std::vector<double>(levelCartDims[0] * levelCartDims[1] * levelCartDims[2], 0.0),
+                    Opm::data::TargetType::INIT
+                };
+            };
+
+            outputTrans_refinedLevelGrids[level].clear();
+            outputTrans_refinedLevelGrids[level].emplace("TRANX", createLevelCellData());
+            outputTrans_refinedLevelGrids[level].emplace("TRANY", createLevelCellData());
+            outputTrans_refinedLevelGrids[level].emplace("TRANZ", createLevelCellData());
+        }
+
+        for (const auto& elem : elements(globalGridView)) {
+            for (const auto& is : intersections(globalGridView, elem)) {
+                if (!is.neighbor())
+                    continue; // intersection is on the domain boundary
+
+                if ( is.inside().level() != is.outside().level() )
+                    continue;
+
+                // Not 'const' because remapped if 'map' is non-null.
+                unsigned c1 = globalElemMapper.index(is.inside());
+                unsigned c2 = globalElemMapper.index(is.outside());
+
+                if (c1 > c2)
+                    continue; // we only need to handle each connection once, thank you.
+
+                int level = is.inside().level();
+
+                const auto levelIdxIn = is.inside().getLevelElem().index();
+                const auto levelIdxOut = is.outside().getLevelElem().index();
+
+                const int levelCartIdxIn = levelCartMapp.cartesianIndex( levelIdxIn, level);
+                const int levelCartIdxOut = levelCartMapp.cartesianIndex( levelIdxOut, level);
+
+                const auto minLevelCartIdx = std::min(levelCartIdxIn, levelCartIdxOut);
+                const auto maxLevelCartIdx = std::max(levelCartIdxIn, levelCartIdxOut);
+
+                const auto& levelCartDims = levelCartMapp.cartesianDimensions(level);
+
+                auto& levelTranx = outputTrans_refinedLevelGrids[level].at("TRANX");
+                auto& levelTrany = outputTrans_refinedLevelGrids[level].at("TRANY");
+                auto& levelTranz = outputTrans_refinedLevelGrids[level].at("TRANZ");
+
+                if (maxLevelCartIdx - minLevelCartIdx == 1 && levelCartDims[0] > 1 ) {
+                    levelTranx.template data<double>()[minLevelCartIdx] = globalTrans().transmissibility(c1, c2);
+                    continue; // skip other if clauses as they are false, last one needs some computation
+                }
+
+                if (maxLevelCartIdx - minLevelCartIdx == levelCartDims[0] && levelCartDims[1] > 1) {
+                    levelTrany.template data<double>()[minLevelCartIdx] = globalTrans().transmissibility(c1, c2);
+                    continue; // skipt next if clause as it needs some computation
+                }
+
+                if ( maxLevelCartIdx - minLevelCartIdx == levelCartDims[0]*levelCartDims[1] ||
+                     directVerticalNeighbors(levelCartDims,
+                                             levelCartToLevelCompressed[level],
+                                             minLevelCartIdx,
+                                             maxLevelCartIdx)) {
+                    levelTranz.template data<double>()[minLevelCartIdx] = globalTrans().transmissibility(c1, c2);
+                }
             }
+        }
+        // Overwrite outputTrans_ for CpGrid with LGRs
+        outputTrans_ = std::make_unique<data::Solution>(outputTrans_refinedLevelGrids[0]);
+    } // end if-Gird==CpGrid
+    else { // Grid types other than CpGrid
 
-            // Ordering of compressed and uncompressed index should be the same
-            assert(cartIdx1 <= cartIdx2);
-            int gc1 = std::min(cartIdx1, cartIdx2);
-            int gc2 = std::max(cartIdx1, cartIdx2);
+        auto createCellData = [&cartDims]() {
+            return data::CellData{
+                UnitSystem::measure::transmissibility,
+                std::vector<double>(cartDims[0] * cartDims[1] * cartDims[2], 0.0),
+                data::TargetType::INIT
+            };
+        };
 
-            // Re-ordering in case of non-empty mapping between equilGrid to grid
-            if (map) {
-                c1 = map(c1); // equilGridToGrid map
-                c2 = map(c2);
+        outputTrans_->clear();
+        outputTrans_->emplace("TRANX", createCellData());
+        outputTrans_->emplace("TRANY", createCellData());
+        outputTrans_->emplace("TRANZ", createCellData());
+
+        auto& tranx = this->outputTrans_->at("TRANX");
+        auto& trany = this->outputTrans_->at("TRANY");
+        auto& tranz = this->outputTrans_->at("TRANZ");
+
+        for (const auto& elem : elements(globalGridView)) {
+            for (const auto& is : intersections(globalGridView, elem)) {
+                if (!is.neighbor())
+                    continue; // intersection is on the domain boundary
+
+                if ( is.inside().level() != is.outside().level() )
+                    continue; // This will be considered in NNC (refinement only supported for CpGrid for now)
+
+                // Not 'const' because remapped if 'map' is non-null.
+                unsigned c1 = globalElemMapper.index(is.inside());
+                unsigned c2 = globalElemMapper.index(is.outside());
+
+                if (c1 > c2)
+                    continue; // we only need to handle each connection once, thank you.
+
+                // intersection between cells from level zero grid ("GLOBAL")
+
+                // Ordering of compressed and uncompressed index should be the same
+                const int cartIdx1 = cartMapper.cartesianIndex( c1 );
+                const int cartIdx2 = cartMapper.cartesianIndex( c2 );
+
+                if (isNumAquCell(cartIdx1) || isNumAquCell(cartIdx2)) {
+                    // Connections involving numerical aquifers are always NNCs
+                    // for the purpose of file output.  This holds even for
+                    // connections between cells like (I,J,K) and (I+1,J,K)
+                    // which are nominally neighbours in the Cartesian grid.
+                    continue;
+                }
+
+                // Ordering of compressed and uncompressed index should be the same
+                assert(cartIdx1 <= cartIdx2);
+                int gc1 = std::min(cartIdx1, cartIdx2);
+                int gc2 = std::max(cartIdx1, cartIdx2);
+
+                // Re-ordering in case of non-empty mapping between equilGrid to grid
+                if (map) {
+                    c1 = map(c1); // equilGridToGrid map
+                    c2 = map(c2);
+                }
+
+                if (gc2 - gc1 == 1 && cartDims[0] > 1 ) {
+                    tranx.template data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
+                    continue; // skip other if clauses as they are false, last one needs some computation
+                }
+
+                if (gc2 - gc1 == cartDims[0] && cartDims[1] > 1) {
+                    trany.template data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
+                    continue; // skipt next if clause as it needs some computation
+                }
+
+                if ( gc2 - gc1 == cartDims[0]*cartDims[1] ||
+                     directVerticalNeighbors(cartDims, cartesianToActive, gc1, gc2))
+                    tranz.template data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
             }
-
-            if (gc2 - gc1 == 1 && cartDims[0] > 1 ) {
-                tranx.template data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
-                continue; // skip other if clauses as they are false, last one needs some computation
-            }
-
-            if (gc2 - gc1 == cartDims[0] && cartDims[1] > 1) {
-                trany.template data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
-                continue; // skipt next if clause as it needs some computation
-            }
-
-            if ( gc2 - gc1 == cartDims[0]*cartDims[1] ||
-                 directVerticalNeighbors(cartDims, cartesianToActive, gc1, gc2))
-                tranz.template data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
         }
     }
 }
