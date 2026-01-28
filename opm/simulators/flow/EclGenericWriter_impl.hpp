@@ -317,6 +317,71 @@ allocateLevelTrans_(const std::array<int,3>& levelCartDims,
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
+template<typename LeafGridView, typename LeafElementMapper>
+void
+EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
+assignLevelTRANs_(const LeafGridView& globalGridView,
+                  const LeafElementMapper& globalElemMapper,
+                  std::vector<data::Solution>& outputTrans_levelGrids) const
+{
+    const Opm::LevelCartesianIndexMapper<Grid> levelCartMapp(*(this->equilGrid_));
+    const auto levelCartToLevelCompressed = Opm::Lgr::levelCartesianToLevelCompressedMaps(*(this->equilGrid_), levelCartMapp);
+
+    for (int level = 0; level <= this->equilGrid_->maxLevel(); ++level) {
+        allocateLevelTrans_(levelCartMapp.cartesianDimensions(level), outputTrans_levelGrids[level]);
+    }
+
+    
+    for (const auto& elem : elements(globalGridView)) {
+        for (const auto& is : intersections(globalGridView, elem)) {
+            if (!is.neighbor())
+                continue; // intersection is on the domain boundary
+
+            if ( is.inside().level() != is.outside().level() )
+                continue;
+
+            // Not 'const' because remapped if 'map' is non-null.
+            unsigned c1 = globalElemMapper.index(is.inside());
+            unsigned c2 = globalElemMapper.index(is.outside());
+
+            if (c1 > c2)
+                continue; // we only need to handle each connection once, thank you.
+
+            int level = is.inside().level();
+
+            const auto levelIdxIn = is.inside().getLevelElem().index();
+            const auto levelIdxOut = is.outside().getLevelElem().index();
+
+            const int levelCartIdxIn = levelCartMapp.cartesianIndex( levelIdxIn, level);
+            const int levelCartIdxOut = levelCartMapp.cartesianIndex( levelIdxOut, level);
+
+            const auto minLevelCartIdx = std::min(levelCartIdxIn, levelCartIdxOut);
+            const auto maxLevelCartIdx = std::max(levelCartIdxIn, levelCartIdxOut);
+
+            const auto& levelCartDims = levelCartMapp.cartesianDimensions(level);
+
+            if (maxLevelCartIdx - minLevelCartIdx == 1 && levelCartDims[0] > 1 ) {
+                outputTrans_levelGrids[level].at("TRANX").template data<double>()[minLevelCartIdx] = globalTrans().transmissibility(c1, c2);
+                continue; // skip other if clauses as they are false, last one needs some computation
+            }
+
+            if (maxLevelCartIdx - minLevelCartIdx == levelCartDims[0] && levelCartDims[1] > 1) {
+                outputTrans_levelGrids[level].at("TRANY").template data<double>()[minLevelCartIdx] = globalTrans().transmissibility(c1, c2);
+                continue; // skipt next if clause as it needs some computation
+            }
+
+            if ( maxLevelCartIdx - minLevelCartIdx == levelCartDims[0]*levelCartDims[1] ||
+                 directVerticalNeighbors(levelCartDims,
+                                         levelCartToLevelCompressed[level],
+                                         minLevelCartIdx,
+                                         maxLevelCartIdx)) {
+                outputTrans_levelGrids[level].at("TRANZ").template data<double>()[minLevelCartIdx] = globalTrans().transmissibility(c1, c2);
+            }
+        }
+    }
+}
+
+template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void
 EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
@@ -325,9 +390,6 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
     if (!outputTrans_) {
         outputTrans_ = std::make_unique<data::Solution>();
     }
-
-    const auto& cartMapper = *equilCartMapper_;
-    const auto& cartDims = cartMapper.cartesianDimensions();
 
     using GlobalGridView = typename EquilGrid::LeafGridView;
     using GlobElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView>;
@@ -342,77 +404,22 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
         return std::binary_search(numAquCell.begin(), numAquCell.end(), cellIdx);
     };
 
-
     // For CpGrid with LGRs, store "TRAN*" per each refined level grid
     if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
-
         // To store transmissibility between cells sharing an intersection,
         // both cells belonging to the same level grid.
         std::vector<Opm::data::Solution> outputTrans_levelGrids{};
         outputTrans_levelGrids.resize(this->equilGrid_->maxLevel()+1); // excluding level zero, for now.
 
-        const Opm::LevelCartesianIndexMapper<Grid> levelCartMapp(*(this->equilGrid_));
-        const auto levelCartToLevelCompressed = Opm::Lgr::levelCartesianToLevelCompressedMaps(*(this->equilGrid_), levelCartMapp);
-
-        for (int level = 0; level <= this->equilGrid_->maxLevel(); ++level) {
-            allocateLevelTrans_(levelCartMapp.cartesianDimensions(level), outputTrans_levelGrids[level]);
-        }
-
-        for (const auto& elem : elements(globalGridView)) {
-            for (const auto& is : intersections(globalGridView, elem)) {
-                if (!is.neighbor())
-                    continue; // intersection is on the domain boundary
-
-                if ( is.inside().level() != is.outside().level() )
-                    continue;
-
-                // Not 'const' because remapped if 'map' is non-null.
-                unsigned c1 = globalElemMapper.index(is.inside());
-                unsigned c2 = globalElemMapper.index(is.outside());
-
-                if (c1 > c2)
-                    continue; // we only need to handle each connection once, thank you.
-
-                int level = is.inside().level();
-
-                const auto levelIdxIn = is.inside().getLevelElem().index();
-                const auto levelIdxOut = is.outside().getLevelElem().index();
-
-                const int levelCartIdxIn = levelCartMapp.cartesianIndex( levelIdxIn, level);
-                const int levelCartIdxOut = levelCartMapp.cartesianIndex( levelIdxOut, level);
-
-                const auto minLevelCartIdx = std::min(levelCartIdxIn, levelCartIdxOut);
-                const auto maxLevelCartIdx = std::max(levelCartIdxIn, levelCartIdxOut);
-
-                const auto& levelCartDims = levelCartMapp.cartesianDimensions(level);
-
-                auto& levelTranx = outputTrans_levelGrids[level].at("TRANX");
-                auto& levelTrany = outputTrans_levelGrids[level].at("TRANY");
-                auto& levelTranz = outputTrans_levelGrids[level].at("TRANZ");
-
-                if (maxLevelCartIdx - minLevelCartIdx == 1 && levelCartDims[0] > 1 ) {
-                    levelTranx.template data<double>()[minLevelCartIdx] = globalTrans().transmissibility(c1, c2);
-                    continue; // skip other if clauses as they are false, last one needs some computation
-                }
-
-                if (maxLevelCartIdx - minLevelCartIdx == levelCartDims[0] && levelCartDims[1] > 1) {
-                    levelTrany.template data<double>()[minLevelCartIdx] = globalTrans().transmissibility(c1, c2);
-                    continue; // skipt next if clause as it needs some computation
-                }
-
-                if ( maxLevelCartIdx - minLevelCartIdx == levelCartDims[0]*levelCartDims[1] ||
-                     directVerticalNeighbors(levelCartDims,
-                                             levelCartToLevelCompressed[level],
-                                             minLevelCartIdx,
-                                             maxLevelCartIdx)) {
-                    levelTranz.template data<double>()[minLevelCartIdx] = globalTrans().transmissibility(c1, c2);
-                }
-            }
-        }
+        assignLevelTRANs_(globalGridView, globalElemMapper, outputTrans_levelGrids);
+        
         // Overwrite outputTrans_ for CpGrid with LGRs
         outputTrans_ = std::make_unique<data::Solution>(outputTrans_levelGrids[0]);
     } // end if-Gird==CpGrid
     else { // Grid types other than CpGrid
+        const auto& cartMapper = *equilCartMapper_;
+        const auto& cartDims = cartMapper.cartesianDimensions();
+    
         allocateLevelTrans_(cartDims, *outputTrans_);
          
         auto& tranx = this->outputTrans_->at("TRANX");
@@ -433,8 +440,6 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
 
                 if (c1 > c2)
                     continue; // we only need to handle each connection once, thank you.
-
-                // intersection between cells from level zero grid ("GLOBAL")
 
                 // Ordering of compressed and uncompressed index should be the same
                 const int cartIdx1 = cartMapper.cartesianIndex( c1 );
