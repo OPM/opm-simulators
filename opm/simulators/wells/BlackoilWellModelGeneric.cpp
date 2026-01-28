@@ -1206,7 +1206,7 @@ groupAndNetworkData(const int reportStepIdx) const
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 updateAndCommunicateGroupData(const int reportStepIdx,
-                              const int iterationIdx,
+                              const NewtonIterationContext& iterCtx,
                               const Scalar tol_nupcol,
                               const bool update_wellgrouptarget)
 {
@@ -1215,7 +1215,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     const int nupcol = schedule()[reportStepIdx].nupcol();
 
     // Update accumulated group consumption/import rates for current report step
-    if(iterationIdx == 0) {
+    if (iterCtx.isFirstGlobalIteration()) {
         this->groupState().update_gconsump(schedule(), reportStepIdx, this->summaryState_);
     }
 
@@ -1232,7 +1232,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     this->wellState().updateGlobalIsGrup(comm_, well_status);
 
     GroupStateHelperType &group_state_helper = this->groupStateHelper();
-    if (iterationIdx < nupcol) {
+    if (iterCtx.withinNupcol(nupcol)) {
         OPM_TIMEBLOCK(updateNupcol);
         this->updateNupcolWGState();
     } else {
@@ -1282,7 +1282,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                 const std::string control_str = is_vrep? "VREP" : "REIN";
                                 const std::string msg = fmt::format("Group prodution relative change {} larger than tolerance {} "
                                                         "at iteration {}. Update {} for Group {} even if iteration is larger than {} given by NUPCOL." ,
-                                                        rel_change, tol_nupcol, iterationIdx, control_str, gr_name, nupcol);
+                                                        rel_change, tol_nupcol, iterCtx.iteration(), control_str, gr_name, nupcol);
                                 group_state_helper.deferredLogger().debug(msg);
                             }
                         }

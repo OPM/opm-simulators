@@ -122,7 +122,6 @@ public:
         , endIterMsgStream_(std::ostringstream::out)
         , error_(1e100)
         , lastError_(1e100)
-        , numIterations_(0)
         , linearSolver_(simulator)
         , comm_(Dune::MPIHelper::getCommunicator())
         , convergenceWriter_(asImp_())
@@ -178,23 +177,6 @@ public:
      */
     const Model& model() const
     { return simulator_.model(); }
-
-    /*!
-     * \brief Returns the number of iterations done since the Newton method
-     *        was invoked.
-     */
-    int numIterations() const
-    { return numIterations_; }
-
-    /*!
-     * \brief Set the index of current iteration.
-     *
-     * Normally this does not need to be called, but if the non-linear solver is
-     * implemented externally, it needs to be set in order for the model to do the Right
-     * Thing (TM) while linearizing.
-     */
-    void setIterationIndex(int value)
-    { numIterations_ = value; }
 
     /*!
      * \brief Return the current tolerance at which the Newton method considers itself to
@@ -449,14 +431,16 @@ public:
         // conservative when increasing it. the rationale is
         // that we want to avoid failing in the next time
         // integration which would be quite expensive
-        if (numIterations_ > params_.targetIterations_) {
-            Scalar percent = Scalar(numIterations_ - params_.targetIterations_) / params_.targetIterations_;
+        const int nit = problem().iterationContext().iteration();
+        if (lastSolveFailed_ || nit > params_.targetIterations_) {
+            const int overshoot = lastSolveFailed_ ? params_.targetIterations_ : nit - params_.targetIterations_;
+            Scalar percent = Scalar(overshoot) / params_.targetIterations_;
             Scalar nextDt = std::max(problem().minTimeStepSize(),
                                      oldDt / (Scalar{1.0} + percent));
             return nextDt;
         }
 
-        Scalar percent = Scalar(params_.targetIterations_ - numIterations_) / params_.targetIterations_;
+        Scalar percent = Scalar(params_.targetIterations_ - nit) / params_.targetIterations_;
         Scalar nextDt = std::max(problem().minTimeStepSize(),
                                  oldDt*(Scalar{1.0} + percent / Scalar{1.2}));
         return nextDt;
@@ -515,7 +499,9 @@ protected:
      */
     void begin_(const SolutionVector&)
     {
-        numIterations_ = 0;
+        lastSolveFailed_ = false;
+
+        problem().resetIterationForNewTimestep();
 
         if (params_.writeConvergence_) {
             convergenceWriter_.beginTimeStep();
@@ -755,7 +741,7 @@ protected:
     void endIteration_(const SolutionVector&,
                        const SolutionVector&)
     {
-        ++numIterations_;
+        problem().advanceIteration();
 
         const auto& comm = simulator_.gridView().comm();
         bool succeeded = true;
@@ -777,7 +763,7 @@ protected:
         }
 
         if (asImp_().verbose_()) {
-            std::cout << "Newton iteration " << numIterations_ << ""
+            std::cout << "Newton iteration " << problem().iterationContext().iteration() << ""
                       << " error: " << error_
                       << endIterMsg().str() << "\n" << std::flush;
         }
@@ -788,7 +774,7 @@ protected:
      */
     bool proceed_() const
     {
-        if (asImp_().numIterations() < 1) {
+        if (problem().iterationContext().iteration() < 1) {
             return true; // we always do at least one full iteration
         }
         else if (asImp_().converged()) {
@@ -796,7 +782,7 @@ protected:
             // do more iterations
             return false;
         }
-        else if (asImp_().numIterations() >= params_.maxIterations_) {
+        else if (problem().iterationContext().iteration() >= params_.maxIterations_) {
             // we have exceeded the allowed number of steps.  If the
             // error was reduced by a factor of at least 4,
             // in the last iterations we proceed even if we are above
@@ -824,7 +810,7 @@ protected:
      * This method is called _after_ end_()
      */
     void failed_()
-    { numIterations_ = params_.targetIterations_ * 2; }
+    { lastSolveFailed_ = true; }
 
     /*!
      * \brief Called if the Newton method was successful.
@@ -850,9 +836,8 @@ protected:
     Scalar lastError_;
     NewtonMethodParams<Scalar> params_;
 
-    // actual number of iterations done so far
-    int numIterations_;
-
+    // Flags that the last solve failed, triggering a timestep reduction.
+    bool lastSolveFailed_ = false;
     // the linear solver
     LinearSolverBackend linearSolver_;
 

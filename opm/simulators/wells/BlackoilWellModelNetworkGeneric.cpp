@@ -105,7 +105,7 @@ needPreStepRebalance(const int report_step) const
 
 template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
-shouldBalance(const int reportStepIdx, const int iterationIdx) const
+shouldBalance(const int reportStepIdx, const NewtonIterationContext& iterCtx) const
 {
     // if network is not active, we do not need to balance the network
     const auto& network = well_model_.schedule()[reportStepIdx].network();
@@ -115,10 +115,10 @@ shouldBalance(const int reportStepIdx, const int iterationIdx) const
 
     const auto& balance = well_model_.schedule()[reportStepIdx].network_balance();
     if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {
-        return iterationIdx == 0;
+        return iterCtx.isFirstGlobalIteration();
     } else if (balance.mode() == Network::Balance::CalcMode::NUPCOL) {
         const int nupcol = well_model_.schedule()[reportStepIdx].nupcol();
-        return iterationIdx < nupcol;
+        return iterCtx.withinNupcol(nupcol);
     } else {
         // We do not support any other rebalancing modes,
         // i.e. TimeInterval based rebalancing is not available.

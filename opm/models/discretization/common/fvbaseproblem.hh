@@ -34,6 +34,8 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/discretization/common/restrictprolong.hh>
 
+#include <opm/simulators/flow/NewtonIterationContext.hpp>
+
 #include <opm/models/io/vtkmultiwriter.hh>
 #include <opm/models/io/restart.hpp>
 
@@ -816,8 +818,46 @@ public:
     VtkMultiWriter& defaultVtkWriter() const
     { return *defaultVtkWriter_; }
 
+    /*!
+     * \brief Returns the iteration context for iteration-dependent decisions.
+     */
+    const NewtonIterationContext& iterationContext() const
+    { return iterationContext_; }
+
+    /*!
+     * \brief Reset the iteration context for a new timestep.
+     */
+    void resetIterationForNewTimestep()
+    { iterationContext_.resetForNewTimestep(); }
+
+    /*!
+     * \brief Advance the iteration counter.
+     */
+    void advanceIteration()
+    { iterationContext_.advanceIteration(); }
+
+    /*!
+     * \brief Mark timestep initialization as complete.
+     */
+    void markTimestepInitialized()
+    { iterationContext_.markTimestepInitialized(); }
+
+private:
+    // LocalContextGuard needs mutable access to save/restore the context
+    // during NLDD domain-local solves.
+    template<class P> friend class LocalContextGuard;
+
+    /*!
+     * \brief Mutable access to the iteration context for LocalContextGuard.
+     */
+    NewtonIterationContext& mutableIterationContext()
+    { return iterationContext_; }
+
+public:
+
 protected:
     Scalar nextTimeStepSize_;
+    NewtonIterationContext iterationContext_;
 
     bool enableVtkOutput_() const
     { return Parameters::Get<Parameters::EnableVtkOutput>(); }

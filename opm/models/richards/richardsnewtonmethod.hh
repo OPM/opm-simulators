@@ -90,7 +90,7 @@ protected:
         nextValue -= update;
 
         // do not clamp anything after 4 iterations
-        if (this->numIterations_ > 4) {
+        if (this->problem().iterationContext().iteration() > 4) {
             return;
         }
 

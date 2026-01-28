@@ -232,15 +232,15 @@ beginIteration()
         elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
     }
 
-    assemble(simulator_.model().newtonMethod().numIterations(), simulator_.timeStepSize());
+    assemble(simulator_.timeStepSize());
 }
 
 template <typename TypeTag>
 void
 CompWellModel<TypeTag>::
-assemble(const int iterationIdx,
-         const double dt)
+assemble(const double dt)
 {
+    const int iterationIdx = simulator_.problem().iterationContext().iteration();
 
     if (iterationIdx == 0) {
         this->calculateExplicitQuantities();

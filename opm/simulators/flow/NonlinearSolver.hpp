@@ -135,10 +135,6 @@ struct NonlinearSolverParameters
             // Do model-specific once-per-step calculations.
             report += model_->prepareStep(timer);
 
-            int iteration = 0;
-
-            // Let the model do one nonlinear iteration.
-
             // Set up for main solver loop.
             bool converged = false;
 
@@ -148,13 +144,12 @@ struct NonlinearSolverParameters
                     // Do the nonlinear step. If we are in a converged state, the
                     // model will usually do an early return without an expensive
                     // solve, unless the newton_min_iter_ count has not been reached yet.
-                    auto iterReport = model_->nonlinearIteration(iteration, timer, *this);
+                    auto iterReport = model_->nonlinearIteration(timer, *this);
                     iterReport.global_time = timer.simulationTimeElapsed();
                     report += iterReport;
                     report.converged = iterReport.converged;
 
                     converged = report.converged;
-                    iteration += 1;
                 }
                 catch (...) {
                     // if an iteration fails during a time step, all previous iterations
@@ -164,8 +159,8 @@ struct NonlinearSolverParameters
                     throw;
                 }
             }
-            while ( (!converged && (iteration <= this->model().param().newton_max_iter_)) ||
-                    (iteration <= this->model().param().newton_min_iter_));
+            while ( (!converged && (model_->simulator().problem().iterationContext().iteration() <= this->model().param().newton_max_iter_)) ||
+                    (model_->simulator().problem().iterationContext().iteration() <= this->model().param().newton_min_iter_));
 
             if (!converged) {
                 failureReport_ = report;

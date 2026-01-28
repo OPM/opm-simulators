@@ -249,7 +249,8 @@ private:
         simulator_->setEpisodeLength(0.0);
         simulator_->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
         simulator_->setTimeStepSize(Opm::unit::day);
-        simulator_->model().newtonMethod().setIterationIndex(0);
+        // Reset iteration context so code using problem().iterationContext() sees first iteration
+        simulator_->problem().resetIterationForNewTimestep();
 
         wellModel().beginReportStep(report_step_idx_);
 

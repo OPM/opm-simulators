@@ -161,8 +161,7 @@ private:
      void initWellConnectionData();
      void initWellState();
 
-     void assemble(const int iterationIdx,
-                   const double dt);
+     void assemble(const double dt);
 
      void calculateExplicitQuantities();
 };

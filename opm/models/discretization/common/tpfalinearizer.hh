@@ -996,7 +996,7 @@ private:
                 // but the starting state may not be identical to the start-of-step state.
                 // Note that a full assembly must be done before local solves
                 // otherwise this will be left un-updated.
-                if (model_().newtonMethod().numIterations() == 0 && !isNlddLocalSolve) {
+                if (problem_().iterationContext().isFirstGlobalIteration() && !isNlddLocalSolve) {
                     // Need to update the storage cache.
                     if (problem_().recycleFirstIterationStorage()) {
                         // Assumes nothing have changed in the system which

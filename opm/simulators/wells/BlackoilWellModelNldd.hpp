@@ -102,8 +102,7 @@ public:
 
     // prototype for assemble function for ASPIN solveLocal()
     // will try to merge back to assemble() when done prototyping
-    void assemble(const int iterationIdx,
-                  const double dt,
+    void assemble(const double dt,
                   const Domain& domain);
 
     void updateWellControls(const Domain& domain);

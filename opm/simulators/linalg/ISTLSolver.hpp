@@ -533,8 +533,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
             if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 1) {
                 // Recreate solver on the first iteration of every timestep.
-                const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-                return newton_iteration == 0;
+                return this->simulator_.problem().iterationContext().isFirstGlobalIteration();
             }
             if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 2) {
                 // Recreate solver if the last solve used more than 10 iterations.

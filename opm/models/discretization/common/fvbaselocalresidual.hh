@@ -542,7 +542,7 @@ protected:
             if (elemCtx.enableStorageCache()) {
                 const auto& model = elemCtx.model();
                 const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                if (model.newtonMethod().numIterations() == 0 &&
+                if (elemCtx.problem().iterationContext().isFirstGlobalIteration() &&
                     !elemCtx.haveStashedIntensiveQuantities())
                 {
                     if (!elemCtx.problem().recycleFirstIterationStorage()) {

@@ -101,13 +101,14 @@ prepareStep(const SimulatorTimerInterface& timer)
         simulator_.model().advanceTimeLevel();
     }
 
-    // Set the timestep size, episode index, and non-linear iteration index
-    // for the model explicitly. The model needs to know the report step/episode index
-    // because of timing dependent data despite the fact that flow uses its
-    // own time stepper. (The length of the episode does not matter, though.)
+    // Set the timestep size and episode index for the model explicitly.
+    // The model needs to know the report step/episode index because of
+    // timing dependent data despite the fact that flow uses its own time stepper.
+    // (The length of the episode does not matter, though.)
     simulator_.setTime(timer.simulationTimeElapsed());
     simulator_.setTimeStepSize(timer.currentStepLength());
-    simulator_.model().newtonMethod().setIterationIndex(0);
+
+    simulator_.problem().resetIterationForNewTimestep();
 
     simulator_.problem().beginTimeStep();
 
@@ -153,7 +154,6 @@ template <class TypeTag>
 void
 BlackoilModel<TypeTag>::
 initialLinearization(SimulatorReportSingle& report,
-                     const int iteration,
                      const int minIter,
                      const int maxIter,
                      const SimulatorTimerInterface& timer)
@@ -167,8 +167,11 @@ initialLinearization(SimulatorReportSingle& report,
 
     // -----------   Assemble   -----------
     try {
-        report += assembleReservoir(timer, iteration);
+        report += assembleReservoir(timer);
         report.assemble_time += perfTimer.stop();
+        // Mark timestep initialized after assembleReservoir(), because the well model's
+        // assemble() also uses needsTimestepInit() to trigger prepareTimeStep().
+        simulator_.problem().markTimestepInitialized();
     }
     catch (...) {
         report.assemble_time += perfTimer.stop();
@@ -182,8 +185,9 @@ initialLinearization(SimulatorReportSingle& report,
     perfTimer.start();
     // the step is not considered converged until at least minIter iterations is done
     {
-        auto convrep = getConvergence(timer, iteration, maxIter, residual_norms);
-        report.converged = convrep.converged() && iteration >= minIter;
+        auto convrep = getConvergence(timer, maxIter, residual_norms);
+        report.converged = convrep.converged() &&
+                           simulator_.problem().iterationContext().iteration() >= minIter;
         ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
         convergence_reports_.back().report.push_back(std::move(convrep));
 
@@ -211,13 +215,13 @@ template <class TypeTag>
 template <class NonlinearSolverType>
 SimulatorReportSingle
 BlackoilModel<TypeTag>::
-nonlinearIteration(const int iteration,
-                   const SimulatorTimerInterface& timer,
+nonlinearIteration(const SimulatorTimerInterface& timer,
                    NonlinearSolverType& nonlinear_solver)
 {
-    if (iteration == 0) {
-        // For each iteration we store in a vector the norms of the residual of
-        // the mass balance for each active phase, the well flux and the well equations.
+    // Model-level timestep initialization (once per timestep).
+    // markTimestepInitialized() is called later in initialLinearization(),
+    // after assembleReservoir() has triggered the well model's prepareTimeStep().
+    if (simulator_.problem().iterationContext().needsTimestepInit()) {
         residual_norms_history_.clear();
         conv_monitor_.reset();
         current_relaxation_ = 1.0;
@@ -229,19 +233,16 @@ nonlinearIteration(const int iteration,
     SimulatorReportSingle result;
     if (this->param_.nonlinear_solver_ != "nldd")
     {
-        result = this->nonlinearIterationNewton(iteration,
-                                                timer,
-                                                nonlinear_solver);
+        result = this->nonlinearIterationNewton(timer, nonlinear_solver);
     }
     else {
-        result = this->nlddSolver_->nonlinearIterationNldd(iteration,
-                                                           timer,
-                                                           nonlinear_solver);
+        result = this->nlddSolver_->nonlinearIterationNldd(timer, nonlinear_solver);
     }
 
     auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
     rst_conv.update(simulator_.model().linearizer().residual());
 
+    simulator_.problem().advanceIteration();
     return result;
 }
 
@@ -249,8 +250,7 @@ template <class TypeTag>
 template <class NonlinearSolverType>
 SimulatorReportSingle
 BlackoilModel<TypeTag>::
-nonlinearIterationNewton(const int iteration,
-                         const SimulatorTimerInterface& timer,
+nonlinearIterationNewton(const SimulatorTimerInterface& timer,
                          NonlinearSolverType& nonlinear_solver)
 {
     // -----------   Set up reports and timer   -----------
@@ -258,7 +258,6 @@ nonlinearIterationNewton(const int iteration,
     Dune::Timer perfTimer;
 
     this->initialLinearization(report,
-                               iteration,
                                this->param_.newton_min_iter_,
                                this->param_.newton_max_iter_,
                                timer);
@@ -341,11 +340,9 @@ nonlinearIterationNewton(const int iteration,
 template <class TypeTag>
 SimulatorReportSingle
 BlackoilModel<TypeTag>::
-assembleReservoir(const SimulatorTimerInterface& /* timer */,
-                  const int iterationIdx)
+assembleReservoir(const SimulatorTimerInterface& /* timer */)
 {
     // -------- Mass balance equations --------
-    simulator_.model().newtonMethod().setIterationIndex(iterationIdx);
     simulator_.problem().beginIteration();
     simulator_.model().linearizer().linearizeDomain();
     simulator_.problem().endIteration();
@@ -850,13 +847,14 @@ ConvergenceReport
 BlackoilModel<TypeTag>::
 getReservoirConvergence(const double reportTime,
                         const double dt,
-                        const int iteration,
                         const int maxIter,
                         std::vector<Scalar>& B_avg,
                         std::vector<Scalar>& residual_norms)
 {
     OPM_TIMEBLOCK(getReservoirConvergence);
     using Vector = std::vector<Scalar>;
+
+    const auto& iterCtx = simulator_.problem().iterationContext();
 
     ConvergenceReport report{reportTime};
 
@@ -888,11 +886,10 @@ getReservoirConvergence(const double reportTime,
     // iterations.  For positive values we use the relaxed tolerance
     // after the given number of iterations
     const bool relax_final_iteration_mb =
-        this->param_.min_strict_mb_iter_ < 0 && iteration == maxIter;
+        this->param_.min_strict_mb_iter_ < 0 && iterCtx.iteration() == maxIter;
 
-    const bool relax_iter_mb =
-        this->param_.min_strict_mb_iter_ >= 0 &&
-        iteration >= this->param_.min_strict_mb_iter_;
+    const bool relax_iter_mb = this->param_.min_strict_mb_iter_ >= 0 &&
+                               iterCtx.shouldRelax(this->param_.min_strict_mb_iter_);
 
     const bool use_relaxed_mb = relax_final_iteration_mb
         || relax_iter_mb;
@@ -904,11 +901,10 @@ getReservoirConvergence(const double reportTime,
     // pore-volume less than relaxed_max_pv_fraction_.  Default
     // value of relaxed_max_pv_fraction_ is 0.03
     const bool relax_final_iteration_cnv =
-        this->param_.min_strict_cnv_iter_ < 0 && iteration == maxIter;
+        this->param_.min_strict_cnv_iter_ < 0 && iterCtx.iteration() == maxIter;
 
-    const bool relax_iter_cnv =
-        this->param_.min_strict_cnv_iter_ >= 0 &&
-        iteration >= this->param_.min_strict_cnv_iter_;
+    const bool relax_iter_cnv = this->param_.min_strict_cnv_iter_ >= 0 &&
+                                iterCtx.shouldRelax(this->param_.min_strict_cnv_iter_);
 
     // Note trailing parentheses here, just before the final
     // semicolon.  This is an immediately invoked function
@@ -935,7 +931,7 @@ getReservoirConvergence(const double reportTime,
     const bool use_drv_tol = this->param_.tolerance_max_drv_ > 0.0;
     const bool use_dsol_tol = use_dp_tol || use_ds_tol || use_drs_tol || use_drv_tol;
     bool relax_dsol_cnv = false;
-    if (iteration > 0 && use_dsol_tol) {
+    if (!iterCtx.isFirstGlobalIteration() && use_dsol_tol) {
         maxSolUpd = getMaxSolutionUpdate(cnvSplitData.ixCells);
         relax_dsol_cnv =
             (!use_dp_tol || (maxSolUpd.dPMax > 0.0 && maxSolUpd.dPMax < this->param_.tolerance_max_dp_)) &&
@@ -1014,12 +1010,12 @@ getReservoirConvergence(const double reportTime,
     }
 
     // Compute the Newton convergence per cell.
-    this->convergencePerCell(B_avg, dt, tol_cnv, tol_cnv_energy, iteration);
+    this->convergencePerCell(B_avg, dt, tol_cnv, tol_cnv_energy);
 
     // Output of residuals.
     if (this->terminal_output_) {
         // Only rank 0 does print to std::cout
-        if (iteration == 0) {
+        if (iterCtx.isFirstGlobalIteration()) {
             std::string msg = "Iter";
             for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                 msg += "    MB(";
@@ -1050,7 +1046,7 @@ getReservoirConvergence(const double reportTime,
         const std::streamsize oprec = ss.precision(3);
         const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
 
-        ss << std::setw(4) << iteration;
+        ss << std::setw(4) << iterCtx.iteration();
         for (int compIdx = 0; compIdx < numComp; ++compIdx) {
             ss << std::setw(11) << mass_balance_residual[compIdx];
         }
@@ -1065,7 +1061,7 @@ getReservoirConvergence(const double reportTime,
                 if (!use_tol) {
                     return;
                 }
-                if (iteration == 0 || dsol <= 0.0) {
+                if (iterCtx.isFirstGlobalIteration() || dsol <= 0.0) {
                     ss << std::string(5, ' ') << "-" << std::string(5, ' ');
                 }
                 else {
@@ -1099,15 +1095,14 @@ BlackoilModel<TypeTag>::
 convergencePerCell(const std::vector<Scalar>& B_avg,
                    const double dt,
                    const double tol_cnv,
-                   const double tol_cnv_energy,
-                   const int iteration)
+                   const double tol_cnv_energy)
 {
     auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
     if (!rst_conv.hasConv()) {
         return;
     }
 
-    if (iteration == 0) {
+    if (simulator_.problem().iterationContext().isFirstGlobalIteration()) {
         rst_conv.prepareConv();
     }
 
@@ -1144,7 +1139,6 @@ template <class TypeTag>
 ConvergenceReport
 BlackoilModel<TypeTag>::
 getConvergence(const SimulatorTimerInterface& timer,
-               const int iteration,
                const int maxIter,
                std::vector<Scalar>& residual_norms)
 {
@@ -1153,14 +1147,14 @@ getConvergence(const SimulatorTimerInterface& timer,
     std::vector<Scalar> B_avg(numEq, 0.0);
     auto report = getReservoirConvergence(timer.simulationTimeElapsed(),
                                           timer.currentStepLength(),
-                                          iteration, maxIter, B_avg, residual_norms);
+                                          maxIter, B_avg, residual_norms);
     {
         OPM_TIMEBLOCK(getWellConvergence);
         report += wellModel().getWellConvergence(B_avg,
                                                  /*checkWellGroupControlsAndNetwork*/report.converged());
     }
 
-    conv_monitor_.checkPenaltyCard(report, iteration);
+    conv_monitor_.checkPenaltyCard(report, simulator_.problem().iterationContext().iteration());
 
     return report;
 }

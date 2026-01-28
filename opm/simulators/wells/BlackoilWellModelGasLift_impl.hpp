@@ -86,12 +86,13 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
         //  them to the GasLiftGroupInfo constructor.
         GLiftEclWells ecl_well_map;
         initGliftEclWellMap(well_container, ecl_well_map);
+        const auto& iterCtx = simulator.problem().iterationContext();
         GasLiftGroupInfo group_info {
             ecl_well_map,
             simulator.vanguard().schedule(),
             simulator.vanguard().summaryState(),
             simulator.episodeIndex(),
-            simulator.model().newtonMethod().numIterations(),
+            iterCtx,
             deferred_logger,
             wellState,
             groupState,
@@ -280,7 +281,8 @@ gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag>* well,
                                                               sync_groups,
                                                               simulator.vanguard().gridView().comm(),
                                                               this->glift_debug);
-    auto state = glift->runOptimize(simulator.model().newtonMethod().numIterations());
+    const auto& iterCtx = simulator.problem().iterationContext();
+    auto state = glift->runOptimize(iterCtx.iteration());
     if (state) {
         state_map.emplace(well->name(), std::move(state));
         glift_wells.emplace(well->name(), std::move(glift));

@@ -212,7 +212,7 @@ namespace Opm
         }
 
         const int episodeIdx = simulator.episodeIndex();
-        const int iterationIdx = simulator.model().newtonMethod().numIterations();
+        const auto& iterCtx = simulator.problem().iterationContext();
         const int nupcol = schedule[episodeIdx].nupcol();
         const bool oscillating =
             std::ranges::count(this->well_control_log_, from) >= this->param_.max_number_of_well_switches_;
@@ -255,6 +255,9 @@ namespace Opm
             ss << "    Switching control mode for well " << this->name()
                << " from " << from
                << " to " <<  to;
+            if (iterCtx.inLocalSolve()) {
+               ss << " (NLDD domain solve)";
+            }
             if (cc.size() > 1) {
                ss << " on rank " << cc.rank();
             }
@@ -263,7 +266,7 @@ namespace Opm
             // We always store the current control as it is used for output
             // and only after iteration >= nupcol
             // we log all switches to check if the well controls oscillates
-            if (iterationIdx >= nupcol || this->well_control_log_.empty()) {
+            if (!iterCtx.withinNupcol(nupcol) || this->well_control_log_.empty()) {
                 this->well_control_log_.push_back(from);
             }
             updateWellStateWithTarget(simulator, groupStateHelper, well_state);
@@ -572,13 +575,13 @@ namespace Opm
                 const auto msg = fmt::format("    Well {} switched from {} to {} during local solve", this->name(), from, to);
                 deferred_logger.debug(msg);
                 const int episodeIdx = simulator.episodeIndex();
-                const int iterationIdx = simulator.model().newtonMethod().numIterations();
+                const auto& iterCtx = simulator.problem().iterationContext();
                 const auto& schedule = simulator.vanguard().schedule();
                 const int nupcol = schedule[episodeIdx].nupcol();
                 // We always store the current control as it is used for output
                 // and only after iteration >= nupcol
                 // we log all switches to check if the well controls oscillates
-                if (iterationIdx >= nupcol || this->well_control_log_.empty()) {
+                if (!iterCtx.withinNupcol(nupcol) || this->well_control_log_.empty()) {
                     this->well_control_log_.push_back(from);
                 }
             }
@@ -996,8 +999,8 @@ namespace Opm
             checkWellOperability(simulator, well_state, groupStateHelper);
 
         // only use inner well iterations for the first newton iterations.
-        const int iteration_idx = simulator.model().newtonMethod().numIterations();
-        if (iteration_idx < this->param_.max_niter_inner_well_iter_) {
+        const auto& iterCtx = simulator.problem().iterationContext();
+        if (iterCtx.shouldRunInnerWellIterations(this->param_.max_niter_inner_well_iter_)) {
             const auto& ws = well_state.well(this->indexOfWell());
             const bool nonzero_rate_original =
                 std::any_of(ws.surface_rates.begin(),
@@ -1089,13 +1092,15 @@ namespace Opm
                 }
             }
             if (old_well_operable) {
-                deferred_logger.debug(" well " + this->name() + " gets STOPPED during iteration ");
+                const std::string ctx = iterCtx.inLocalSolve() ? " (NLDD domain solve)" : "";
+                deferred_logger.debug(" well " + this->name() + " gets STOPPED during iteration" + ctx);
                 changed_to_stopped_this_step_ = true;
             }
         } else if (well_state.isOpen(this->name())) {
             this->openWell();
             if (!old_well_operable) {
-                deferred_logger.debug(" well " + this->name() + " gets REVIVED during iteration ");
+                const std::string ctx = iterCtx.inLocalSolve() ? " (NLDD domain solve)" : "";
+                deferred_logger.debug(" well " + this->name() + " gets REVIVED during iteration" + ctx);
                 this->changed_to_open_this_step_ = true;
             }
         }
@@ -2289,12 +2294,13 @@ namespace Opm
         // Instantiate group info object (without initialization) since it is needed in GasLiftSingleWell
         auto& comm = simulator.vanguard().grid().comm();
         ecl_well_map.try_emplace(this->name(),  &(this->wellEcl()), this->indexOfWell());
+        const auto& iterCtx = simulator.problem().iterationContext();
         GasLiftGroupInfo<Scalar, IndexTraits> group_info {
                 ecl_well_map,
                 simulator.vanguard().schedule(),
                 simulator.vanguard().summaryState(),
                 simulator.episodeIndex(),
-                simulator.model().newtonMethod().numIterations(),
+                iterCtx,
                 deferred_logger,
                 well_state,
                 group_state,
