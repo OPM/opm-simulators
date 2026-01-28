@@ -276,6 +276,9 @@ public:
                                           const bool use_well_weights,
                                           const WellStateType& well_state) const = 0;
 
+    virtual void addWellOverlapConnectionsToPressureEquations(PressureMatrix& mat,
+                                                              const int cell_number) const = 0;
+
     void addCellRates(std::map<int, RateVector>& cellRates_) const;
 
     Scalar volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const;
