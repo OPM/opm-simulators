@@ -361,6 +361,31 @@ resizeNextReportDates(int size)
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
+sendDontTerminateSignalToSlaves()
+{
+    // Send "don't terminate" signal (value=0) to all spawned slaves.
+    // This is called at the start of each iteration in the master's substep loop.
+    // We send to all spawned slaves, not just activated ones, because even non-activated
+    // slaves are running and waiting at the terminate signal receive point.
+    if (this->comm_.rank() == 0) {
+        int terminate_signal = 0;
+        for (std::size_t i = 0; i < this->numSlavesStarted(); i++) {
+            // NOTE: See comment about error handling at the top of this file.
+            MPI_Send(
+                &terminate_signal,
+                /*count=*/1,
+                /*datatype=*/MPI_INT,
+                /*dest_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SlaveProcessTermination),
+                this->master_slave_comm_[i]
+            );
+        }
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
 sendInjectionTargetsToSlave(std::size_t slave_idx,
                             const std::vector<InjectionGroupTarget>& injection_targets) const
 {
@@ -387,6 +412,40 @@ sendProductionTargetsToSlave(std::size_t slave_idx,
 {
     assert(this->report_step_data_);
     this->report_step_data_->sendProductionTargetsToSlave(slave_idx, production_targets);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendTerminateAndDisconnect()
+{
+    // Step 1: Send terminate signal (value=1) to all spawned slaves (only from rank 0)
+    // We send to all spawned slaves, not just activated ones, because even non-activated
+    // slaves are running and waiting at the terminate signal receive point.
+    if (this->comm_.rank() == 0) {
+        int terminate_signal = 1;
+        for (std::size_t i = 0; i < this->numSlavesStarted(); i++) {
+            this->logger_.info(fmt::format(
+                "Sending terminate signal to slave process: {}", this->slave_names_[i]));
+            // NOTE: See comment about error handling at the top of this file.
+            MPI_Send(
+                &terminate_signal,
+                /*count=*/1,
+                /*datatype=*/MPI_INT,
+                /*dest_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SlaveProcessTermination),
+                this->master_slave_comm_[i]
+            );
+        }
+    }
+    // Step 2: Disconnect intercommunicators (collective operation - all ranks must participate)
+    for (std::size_t i = 0; i < this->numSlavesStarted(); i++) {
+        MPI_Comm_disconnect(&this->master_slave_comm_[i]);
+        if (this->comm_.rank() == 0) {
+            this->logger_.info(fmt::format(
+                "Disconnected intercommunicator with slave: {}", this->slave_names_[i]));
+        }
+    }
 }
 
 template <class Scalar>

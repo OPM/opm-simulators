@@ -106,6 +106,40 @@ maybeActivate(int report_step) {
 }
 
 template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
+maybeReceiveTerminateSignalFromMaster()
+{
+    // Blocking receive for terminate signal from master.
+    // This is called at the start of each timestep iteration in the slave's substep loop.
+    // Master sends 0 (continue) or 1 (terminate) at each iteration.
+
+    int terminate_signal = 0;
+    if (this->comm_.rank() == 0) {
+        MPI_Recv(
+            &terminate_signal,
+            /*count=*/1,
+            /*datatype=*/MPI_INT,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::SlaveProcessTermination),
+            this->slave_master_comm_,
+            MPI_STATUS_IGNORE
+        );
+    }
+    this->comm_.broadcast(&terminate_signal, /*count=*/1, /*emitter_rank=*/0);
+
+    if (terminate_signal != 0) {
+        // Terminate signal received - disconnect and return true
+        this->logger_.info("Received terminate signal from master process");
+        MPI_Comm_disconnect(&this->slave_master_comm_);
+        this->terminated_ = true;
+        this->logger_.info("Disconnected intercommunicator with master process");
+        return true;
+    }
+    return false;
+}
+
+template <class Scalar>
 double
 ReservoirCouplingSlave<Scalar>::
 receiveNextTimeStepFromMaster() {
@@ -154,6 +188,34 @@ receiveProductionGroupTargetsFromMaster(std::size_t num_targets) const
 {
     assert(this->report_step_data_);
     this->report_step_data_->receiveProductionGroupTargetsFromMaster(num_targets);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+receiveTerminateAndDisconnect()
+{
+    // Receive terminate signal from master (only on rank 0, then broadcast)
+    int terminate_signal = 0;
+    if (this->comm_.rank() == 0) {
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Recv(
+            &terminate_signal,
+            /*count=*/1,
+            /*datatype=*/MPI_INT,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::SlaveProcessTermination),
+            this->slave_master_comm_,
+            MPI_STATUS_IGNORE
+        );
+        this->logger_.info("Received terminate signal from master process");
+    }
+    this->comm_.broadcast(&terminate_signal, /*count=*/1, /*emitter_rank=*/0);
+
+    // Disconnect the intercommunicator (collective operation - all ranks must participate)
+    MPI_Comm_disconnect(&this->slave_master_comm_);
+    this->terminated_ = true;
+    this->logger_.info("Disconnected intercommunicator with master process");
 }
 
 template <class Scalar>

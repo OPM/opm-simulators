@@ -150,6 +150,25 @@ public:
     void updateMasterGroupNameOrderMap(
         const std::string& slave_name, const std::map<std::string, std::size_t>& master_group_map);
 
+    /// @brief Send "don't terminate" signal (value=0) to all active slaves.
+    ///
+    /// This method is called at the start of each iteration in the master's substep loop,
+    /// before receiving the next report date from slaves. The slave waits for this signal
+    /// at the start of each iteration - if it receives 0, it continues; if it receives 1
+    /// (from sendTerminateAndDisconnect()), it terminates.
+    void sendDontTerminateSignalToSlaves();
+
+    /// @brief Send terminate signal to all active slaves and disconnect intercommunicators.
+    ///
+    /// This method must be called at the end of the simulation to cleanly shut down
+    /// the MPI intercommunicators created by MPI_Comm_spawn(). It performs two steps:
+    /// 1. Sends a terminate signal to all active slaves (only from rank 0)
+    /// 2. Disconnects the intercommunicators (collective operation)
+    ///
+    /// Both master and slaves must call their respective disconnect methods for
+    /// MPI_Comm_disconnect() to complete - it is a collective operation.
+    void sendTerminateAndDisconnect();
+
 private:
     double getMasterActivationDate_() const;
 
