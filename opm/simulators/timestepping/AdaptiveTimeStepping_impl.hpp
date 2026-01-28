@@ -648,6 +648,7 @@ runStepReservoirCouplingMaster_()
     // The master needs to know which slaves have activated before it can start the substep loop
     reservoirCouplingMaster_().maybeReceiveActivationHandshakeFromSlaves(current_time);
     while (true) {
+        reservoirCouplingMaster_().sendDontTerminateSignalToSlaves(); // Tell the slaves to keep running.
         reservoirCouplingMaster_().receiveNextReportDateFromSlaves();
         bool start_of_report_step = (iteration == 0);
         if (start_of_report_step) {
@@ -706,6 +707,10 @@ runStepReservoirCouplingSlave_()
     }
     while (true) {
         bool start_of_report_step = (iteration == 0);
+        if (reservoirCouplingSlave_().maybeReceiveTerminateSignalFromMaster()) {
+            // Call MPI_Comm_disconnect() to terminate the MPI communicator, etc..
+            break;
+        }
         reservoirCouplingSlave_().sendNextReportDateToMasterProcess();
         const auto timestep = reservoirCouplingSlave_().receiveNextTimeStepFromMaster();
         if (start_of_report_step) {
