@@ -1970,7 +1970,8 @@ updateNONEProductionGroups(const GasLiftOpt& glo, DeferredLogger& deferred_logge
                 targeted_production_groups.insert(group_target->group_name);
             } else {
                 const std::string msg = fmt::format("Well {} is on GRUP control but has no group target assigned.", ws.name);
-                deferred_logger.debug(msg);
+                throw std::runtime_error(msg);
+//                deferred_logger.debug(msg);
             }
         }
     }
