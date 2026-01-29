@@ -270,7 +270,7 @@ writeInit()
             integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
         }
 
-        eclIO_->writeInitial(*this->outputTrans_,
+        eclIO_->writeInitial(this->outputTrans_->front(),
                              integerVectors,
                              this->outputNnc_);
         this->outputTrans_.reset();
@@ -360,9 +360,9 @@ assignLevelTrans_(const LeafGridView& globalGridView,
             if ( is.inside().level() != is.outside().level() )
                 continue;
 
-            // Not 'const' because remapped if 'map' is non-null.
-            unsigned c1 = globalElemMapper.index(is.inside());
-            unsigned c2 = globalElemMapper.index(is.outside());
+            // No remapping is needed here, therefore 'const'
+            const unsigned c1 = globalElemMapper.index(is.inside());
+            const unsigned c2 = globalElemMapper.index(is.outside());
 
             if (c1 > c2)
                 continue; // we only need to handle each connection once, thank you.
@@ -414,7 +414,7 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
               const std::function<unsigned int(unsigned int)>& map) const
 {
     if (!outputTrans_) {
-        outputTrans_ = std::make_unique<data::Solution>();
+        outputTrans_ = std::make_unique<std::vector<data::Solution>>(std::vector<data::Solution>{});
     }
 
     using GlobalGridView = typename EquilGrid::LeafGridView;
@@ -424,22 +424,19 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
 
     // For CpGrid with LGRs, store "TRAN*" per each refined level grid (both cells belonging to the same level grid)
     if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
-        std::vector<Opm::data::Solution> outputTrans_levelGrids{};
-        outputTrans_levelGrids.resize(this->equilGrid_->maxLevel()+1);
-
-        assignLevelTrans_(globalGridView, globalElemMapper, outputTrans_levelGrids);
-        // Overwrite outputTrans_ with level zero grid data, for CpGrid with LGRs
-        outputTrans_ = std::make_unique<data::Solution>(outputTrans_levelGrids[0]);
+        outputTrans_->resize(this->equilGrid_->maxLevel()+1);
+        assignLevelTrans_(globalGridView, globalElemMapper, *this->outputTrans_);
     }
     else { // Grid types other than CpGrid (do not support refinement for now)
         const auto& cartMapper = *equilCartMapper_;
         const auto& cartDims = cartMapper.cartesianDimensions();
 
-        allocateLevelTrans_(cartDims, *outputTrans_);
+        this->outputTrans_->resize(1); // level zero and leaf grids coincide 
+        allocateLevelTrans_(cartDims, this->outputTrans_->front());
 
-        auto& tranx = this->outputTrans_->at("TRANX");
-        auto& trany = this->outputTrans_->at("TRANY");
-        auto& tranz = this->outputTrans_->at("TRANZ");
+        auto& tranx = this->outputTrans_->front().at("TRANX");
+        auto& trany = this->outputTrans_->front().at("TRANY");
+        auto& tranz = this->outputTrans_->front().at("TRANZ");
 
         for (const auto& elem : elements(globalGridView)) {
             for (const auto& is : intersections(globalGridView, elem)) {
