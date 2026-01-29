@@ -45,18 +45,15 @@ void
 RescoupReceiveGroupTargets<Scalar, IndexTraits>::
 receiveGroupTargetsFromMaster()
 {
-    // NOTE: Since this object can only be constructed for a slave process, we can be
-    //   sure that if we are here, we are running as a slave
+    // NOTE: All ranks must call these functions because they contain broadcasts.
+    //   The MPI_Recv parts inside the functions have their own rank 0 checks.
     auto& rescoup_slave = this->reservoir_coupling_slave_;
-    const auto& comm = rescoup_slave.getComm();
-    if (comm.rank() == 0) {
-        auto [num_inj_targets, num_prod_targets] = rescoup_slave.receiveNumGroupTargetsFromMaster();
-        if (num_inj_targets > 0) {
-            rescoup_slave.receiveInjectionGroupTargetsFromMaster(num_inj_targets);
-        }
-        if (num_prod_targets > 0) {
-            rescoup_slave.receiveProductionGroupTargetsFromMaster(num_prod_targets);
-        }
+    auto [num_inj_targets, num_prod_targets] = rescoup_slave.receiveNumGroupTargetsFromMaster();
+    if (num_inj_targets > 0) {
+        rescoup_slave.receiveInjectionGroupTargetsFromMaster(num_inj_targets);
+    }
+    if (num_prod_targets > 0) {
+        rescoup_slave.receiveProductionGroupTargetsFromMaster(num_prod_targets);
     }
 }
 
