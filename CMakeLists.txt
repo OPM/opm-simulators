@@ -19,7 +19,6 @@ project(opm-simulators C CXX)
 
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
-set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
 option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
 option(BUILD_FLOW_FLOAT_VARIANTS "Build the variants for flow using float?" OFF)
