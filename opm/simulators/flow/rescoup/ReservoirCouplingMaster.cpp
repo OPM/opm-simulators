@@ -56,7 +56,8 @@ ReservoirCouplingMaster(
     comm_{comm},
     schedule_{schedule},
     argc_{argc},
-    argv_{argv}
+    argv_{argv},
+    logger_{comm}
 {
     this->activation_date_ = this->getMasterActivationDate_();
 }

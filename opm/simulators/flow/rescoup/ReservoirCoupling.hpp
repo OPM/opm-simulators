@@ -20,6 +20,7 @@
 #ifndef OPM_RESERVOIR_COUPLING_HPP
 #define OPM_RESERVOIR_COUPLING_HPP
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 
@@ -37,7 +38,9 @@ namespace ReservoirCoupling {
 
 class Logger {
 public:
-    Logger() = default;
+    Logger() = delete;  // No default constructor - must have comm
+    explicit Logger(const Parallel::Communication& comm) : comm_(comm) {}
+
     void clearDeferredLogger() { deferred_logger_ = nullptr; }
     DeferredLogger& deferredLogger() { return *deferred_logger_; }
     DeferredLogger& deferredLogger() const { return *deferred_logger_; }
@@ -47,6 +50,7 @@ public:
     void setDeferredLogger(DeferredLogger *deferred_logger) { deferred_logger_ = deferred_logger; }
 
 private:
+    const Parallel::Communication& comm_;
     DeferredLogger *deferred_logger_ = nullptr;
 };
 
