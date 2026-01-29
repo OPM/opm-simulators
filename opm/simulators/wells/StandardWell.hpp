@@ -458,8 +458,23 @@ namespace Opm
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
 
+        EvalWell getWellBoreSurfaceVolume(const Simulator& simulator,
+                                          DeferredLogger& deferred_logger) const;
+
         // density of the first perforation, might not be from this rank
         Scalar cachedRefDensity{0};
+
+        // this is an artificial wellbore volume to account for the fluid accumulation in the wellbore
+        // it is mostly helpful if the well is STOPPed or under zero rate target
+        static constexpr Scalar wellbore_volume = 0.1 * unit::cubic(unit::feet);
+
+        // the volume under surface conditions for different components in the wellbore
+        // at the beginning of the time step
+        std::vector<Scalar> fluids_initial_;
+
+        // computing the accumulation term for later use in conservation equations for wells
+        void computeAccumWell(const Simulator& simulator,
+                              DeferredLogger& deferred_logger);
     };
 
 }
