@@ -165,7 +165,7 @@ protected:
     SimulatorReportSingle sub_step_report_;
     SimulatorReport simulation_report_;
     mutable std::vector<NNCdata> outputNnc_;
-    mutable std::unique_ptr<data::Solution> outputTrans_;
+    mutable std::unique_ptr<std::vector<data::Solution>> outputTrans_;
 
 private:
     void computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
