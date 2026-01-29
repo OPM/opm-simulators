@@ -114,6 +114,7 @@ public:
     std::size_t numSlaveGroups(unsigned int index);
     std::size_t numSlaves() const { return this->numSlavesStarted(); }
     std::size_t numSlavesStarted() const;
+    std::size_t numActivatedSlaves() const;
     void rebuildSlaveIdxToMasterGroupsVector();
     void receiveNextReportDateFromSlaves();
     void receiveProductionDataFromSlaves();

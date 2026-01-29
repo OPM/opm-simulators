@@ -656,6 +656,12 @@ runStepReservoirCouplingMaster_()
         }
         current_step_length = reservoirCouplingMaster_().maybeChopSubStep(
                                           current_step_length, current_time);
+        auto num_active = reservoirCouplingMaster_().numActivatedSlaves();
+        OpmLog::info(fmt::format(
+            "\nChoosing next sync time between master and {} active slave {}: {:.2f} days",
+            num_active, (num_active == 1 ? "process" : "processes"),
+            current_step_length / unit::day
+        ));
         reservoirCouplingMaster_().sendNextTimeStepToSlaves(current_step_length);
         if (start_of_report_step) {
             maybeUpdateTuning_(current_time, current_step_length, /*substep=*/0);

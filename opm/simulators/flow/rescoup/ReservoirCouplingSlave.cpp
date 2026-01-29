@@ -155,12 +155,13 @@ receiveNextTimeStepFromMaster() {
             this->slave_master_comm_,
             MPI_STATUS_IGNORE
         );
-        this->logger_.info(
-            fmt::format("Slave rank 0 received next timestep {} from master.", timestep)
-        );
+        this->logger_.debug(fmt::format(
+            "Received next timestep {} from master",
+            ReservoirCoupling::formatDays(timestep)
+        ));
     }
     this->comm_.broadcast(&timestep, /*count=*/1, /*emitter_rank=*/0);
-    this->logger_.info("Broadcasted slave next time step to all ranks");
+    this->logger_.debug("Broadcasted slave next time step to all ranks");
     return timestep;
 }
 
@@ -262,7 +263,10 @@ sendNextReportDateToMasterProcess() const
             /*tag=*/static_cast<int>(MessageTag::SlaveNextReportDate),
             this->slave_master_comm_
         );
-        this->logger_.info("Sent next report date to master process from rank 0");
+        this->logger_.debug(fmt::format(
+            "Sent next report date {} to master (offset from slave start)",
+            ReservoirCoupling::formatDays(next_report_time_offset)
+        ));
    }
 }
 
@@ -367,8 +371,8 @@ receiveMasterGroupNamesFromMasterProcess_() {
             this->slave_master_comm_,
             MPI_STATUS_IGNORE
         );
-        this->logger_.info(fmt::format(
-            "Received master group names size from master process rank 0: {}", size));
+        this->logger_.debug(fmt::format(
+            "Received master group names size from master: {}", size));
         // size can be 0 for history matching mode (no GRUPMAST on master)
         if (size > 0) {
             group_names.resize(size);
@@ -381,7 +385,7 @@ receiveMasterGroupNamesFromMasterProcess_() {
                 this->slave_master_comm_,
                 MPI_STATUS_IGNORE
             );
-            this->logger_.info("Received master group names from master process rank 0");
+            this->logger_.debug("Received master group names from master");
         }
     }
     this->comm_.broadcast(&size, /*count=*/1, /*emitter_rank=*/0);
@@ -414,7 +418,7 @@ receiveSlaveNameFromMasterProcess_() {
             this->slave_master_comm_,
             MPI_STATUS_IGNORE
         );
-        this->logger_.info("Received slave name size from master process rank 0");
+        this->logger_.debug("Received slave name size from master");
         slave_name.resize(size+1); // +1 for the null terminator
         MPI_Recv(
             slave_name.data(),
@@ -426,7 +430,7 @@ receiveSlaveNameFromMasterProcess_() {
             MPI_STATUS_IGNORE
         );
         slave_name[size] = '\0';  // Add null terminator
-        this->logger_.info("Received slave name from master process rank 0");
+        this->logger_.debug("Received slave name from master");
     }
     this->comm_.broadcast(&size, /*count=*/1, /*emitter_rank=*/0);
     if (this->comm_.rank() != 0) {
@@ -479,7 +483,7 @@ sendActivationDateToMasterProcess_()
             /*tag=*/static_cast<int>(MessageTag::SlaveActivationDate),
             this->slave_master_comm_
         );
-        this->logger_.info("Sent simulation activation date to master process from rank 0");
+        this->logger_.debug("Sent activation date to master");
    }
 }
 
@@ -500,7 +504,7 @@ sendActivationHandshakeToMasterProcess_() const
             /*tag=*/static_cast<int>(MessageTag::SlaveActivationHandshake),
             this->slave_master_comm_
         );
-        this->logger_.info("Sent simulation activation handshake to master process from rank 0");
+        this->logger_.debug("Sent activation handshake to master");
     }
     this->comm_.barrier();
 }
@@ -522,7 +526,7 @@ sendSimulationStartDateToMasterProcess_() const
             /*tag=*/static_cast<int>(MessageTag::SlaveSimulationStartDate),
             this->slave_master_comm_
         );
-        this->logger_.info("Sent simulation start date to master process from rank 0");
+        this->logger_.debug("Sent start date to master");
    }
 }
 
