@@ -569,6 +569,7 @@ add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.c
 use_warnings(TARGET MainDispatchDynamic)
 use_fast_build(TARGET MainDispatchDynamic)
 use_additional_optimization(TARGET MainDispatchDynamic)
+use_only_needed(TARGET MainDispatchDynamic)
 set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # We only wait for the hipification process if we are compiling HIP.
@@ -611,6 +612,7 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   use_warnings(TARGET flow_lib${OBJ})
   use_fast_build(TARGET flow_lib${OBJ})
   use_additional_optimization(TARGET flow_lib${OBJ})
+  use_only_needed(TARGET flow_lib${OBJ})
   list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
   if(TARGET fmt::fmt)
     target_link_libraries(flow_lib${OBJ} PRIVATE fmt::fmt)
