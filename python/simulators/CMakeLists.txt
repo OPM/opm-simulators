@@ -52,6 +52,7 @@ pybind11_add_module(BlackOil ${PYBIND11_SYSTEM}
 )
 use_warnings(TARGET BlackOil)
 use_fast_build(TARGET BlackOil)
+use_additional_optimization(TARGET BlackOil)
 
 pybind11_add_module(GasWater ${PYBIND11_SYSTEM}
   $<TARGET_OBJECTS:moduleVersion>
@@ -60,6 +61,7 @@ pybind11_add_module(GasWater ${PYBIND11_SYSTEM}
 )
 use_warnings(TARGET GasWater)
 use_fast_build(TARGET GasWater)
+use_additional_optimization(TARGET GasWater)
 
 pybind11_add_module(OnePhase ${PYBIND11_SYSTEM}
   $<TARGET_OBJECTS:moduleVersion>
@@ -68,6 +70,7 @@ pybind11_add_module(OnePhase ${PYBIND11_SYSTEM}
 )
 use_warnings(TARGET OnePhase)
 use_fast_build(TARGET OnePhase)
+use_additional_optimization(TARGET OnePhase)
 
 # Create a convenience target to build all Python simulator modules
 add_custom_target(python_simulator_modules
