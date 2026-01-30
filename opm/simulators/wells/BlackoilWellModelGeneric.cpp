@@ -1334,7 +1334,11 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             std::vector<Scalar> resv_coeff(this->numPhases(), 0.0);
             const int fipnum = 0;
             const int pvtreg = well->pvtRegionIdx();
-            calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
+            if (well->isInjector()) {
+                calcInjResvCoeff(fipnum, pvtreg, resv_coeff);
+            } else {
+                calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
+            }
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
             auto& group_target = this->wellState().well(well->indexOfWell()).group_target;
