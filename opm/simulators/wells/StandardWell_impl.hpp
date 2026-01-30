@@ -231,15 +231,18 @@ namespace Opm
 
         // producing perforations
         if (drawdown > 0)  {
-            // Do nothing if crossflow is not allowed
+            // a regularization factor is used to smoothly reduce the flow rate if crossflow is disallowed
+            // and the drawdown is approaching zero or the other way
+            Scalar reg = 1.0;
             if (!allow_cf && this->isInjector()) {
-                return;
+                constexpr Scalar relax_p = 50000.0; // 50000 pascal
+                reg = exp(-(getValue(drawdown)) / relax_p);
             }
 
             // compute component volumetric rates at standard conditions
             for (int componentIdx = 0; componentIdx < this->numConservationQuantities(); ++componentIdx) {
                 const Value cq_p = - Tw[componentIdx] * (mob[componentIdx] * drawdown);
-                cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
+                cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p * reg;
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
