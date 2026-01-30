@@ -32,6 +32,7 @@
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
@@ -523,15 +524,14 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::SequentialImplic
     using ThermalConductionLaw = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
-    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
 public:
 
     void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
     {
+        // update the temperature for output (without derivatives)
         auto& fs = asImp_().fluidState_;
-        const Evaluation T = Evaluation::createVariable(problem.temperature(globalDofIdx, timeIdx), Indices::temperatureIdx);
-        fs.setTemperature(T);
+        fs.setTemperature(problem.temperature(globalDofIdx, timeIdx));
     }
 
     void updateTemperature_(const ElementContext& elemCtx,
@@ -559,56 +559,30 @@ public:
                                  unsigned dofIdx,
                                  unsigned timeIdx)
     {
-        updateEnergyQuantities_(elemCtx.problem(), elemCtx.globalSpaceIndex(dofIdx, timeIdx), timeIdx);
     }
 
     void updateEnergyQuantities_(const Problem& problem,
                                  const unsigned globalSpaceIdx,
                                  const unsigned timeIdx)
     {
-        auto& fs = asImp_().fluidState_;
-
-        // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
-        // and the thermal conductivity coefficients
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                continue;
-            }
-
-            const auto& h = FluidSystem::enthalpy(fs, phaseIdx, problem.pvtRegionIndex(globalSpaceIdx));
-            fs.setEnthalpy(phaseIdx, h);
-        }
-
-        const auto& solidEnergyLawParams = problem.solidEnergyLawParams(globalSpaceIdx, timeIdx);
-        rockInternalEnergy_ = SolidEnergyLaw::solidInternalEnergy(solidEnergyLawParams, fs);
-
-        const auto& thermalConductionLawParams = problem.thermalConductionLawParams(globalSpaceIdx, timeIdx);
-        totalThermalConductivity_ = ThermalConductionLaw::thermalConductivity(thermalConductionLawParams, fs);
-
-        // Retrieve the rock fraction from the problem
-        // Usually 1 - porosity, but if pvmult is used to modify porosity
-        // we will apply the same multiplier to the rock fraction
-        // i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
-        // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
-        rockFraction_ = problem.rockFraction(globalSpaceIdx, timeIdx);
     }
 
     const Evaluation& rockInternalEnergy() const
-    { return rockInternalEnergy_; }
+    {
+        throw std::logic_error("Requested the rock internal energy, which is "
+                             "unavailable because energy is not conserved");
+    }
 
     const Evaluation& totalThermalConductivity() const
-    { return totalThermalConductivity_; }
-
-    const Scalar& rockFraction() const
-    { return rockFraction_; }
+    {
+        throw std::logic_error("Requested the total thermal conductivity, which is "
+                             "unavailable because energy is not conserved");
+    }
 
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
-    Evaluation rockInternalEnergy_;
-    Evaluation totalThermalConductivity_;
-    Scalar rockFraction_;
 };
 
 template <class TypeTag>
@@ -678,10 +652,9 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::FullyImplicitThe
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
 public:
-    template<class FluidState>
+    template<class Evaluation, class FluidState, class IntensiveQuantities>
     static void updateEnergy(Evaluation& energyFlux,
                              const unsigned& focusDofIndex,
                              const unsigned& inIdx,
@@ -786,7 +759,7 @@ public:
         updateEnergyBoundary(energyFlux_, inIq, focusDofIdx, inIdx, alpha, boundaryFs);
     }
 
-    template <class BoundaryFluidState>
+    template <class Evaluation, class BoundaryFluidState, class IntensiveQuantities>
     static void updateEnergyBoundary(Evaluation& energyFlux,
                                      const IntensiveQuantities& inIq,
                                      unsigned focusDofIndex,
@@ -839,12 +812,11 @@ template <class TypeTag>
 class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::ConstantTemperature>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
-    template<class FluidState>
+    template<class Evaluation, class FluidState, class IntensiveQuantities>
     static void updateEnergy(Evaluation& /*energyFlux*/,
                              const unsigned& /*focusDofIndex*/,
                              const unsigned& /*inIdx*/,
@@ -870,7 +842,7 @@ public:
                               const BoundaryFluidState&)
     {}
 
-    template <class BoundaryFluidState>
+    template <class BoundaryFluidState,class IntensiveQuantities>
     static void updateEnergyBoundary(Evaluation& /*heatFlux*/,
                                      const IntensiveQuantities& /*inIq*/,
                                      unsigned /*focusDofIndex*/,
@@ -888,12 +860,11 @@ template <class TypeTag>
 class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::SequentialImplicitThermal>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
-    template<class FluidState>
+    template<class Evaluation, class FluidState, class IntensiveQuantities>
     static void updateEnergy(Evaluation& energyFlux,
                              const unsigned& focusDofIndex,
                              const unsigned& inIdx,
@@ -932,7 +903,7 @@ public:
                               const BoundaryFluidState&)
     { }
 
-    template <class BoundaryFluidState>
+    template <class Evaluation, class BoundaryFluidState, class IntensiveQuantities>
     static void updateEnergyBoundary(Evaluation& /*heatFlux*/,
                                      const IntensiveQuantities& /*inIq*/,
                                      unsigned /*focusDofIndex*/,
@@ -951,11 +922,10 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::NoTemperature>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    template<class FluidState>
+    template<class Evaluation, class FluidState, class IntensiveQuantities>
     static void updateEnergy(Evaluation& /*energyFlux*/,
                              const unsigned& /*focusDofIndex*/,
                              const unsigned& /*inIdx*/,
@@ -981,7 +951,7 @@ public:
                               const BoundaryFluidState&)
     {}
 
-    template <class BoundaryFluidState>
+    template <class Evaluation, class BoundaryFluidState, class IntensiveQuantities>
     static void updateEnergyBoundary(Evaluation& /*heatFlux*/,
                                      const IntensiveQuantities& /*inIq*/,
                                      unsigned /*focusDofIndex*/,

@@ -133,8 +133,8 @@ class BlackOilIntensiveQuantitiesGlobalIndex
 public:
     using FluidState = BlackOilFluidState<Evaluation,
                                           FluidSystem,
-                                          energyModuleType == EnergyModules::ConstantTemperature,
-                                          (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
+                                          energyModuleType != EnergyModules::NoTemperature,
+                                          energyModuleType == EnergyModules::FullyImplicitThermal,
                                           compositionSwitchEnabled,
                                           enableVapwat,
                                           enableBrine,

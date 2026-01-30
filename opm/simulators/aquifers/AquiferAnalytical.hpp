@@ -78,8 +78,8 @@ public:
 
     using FluidState = BlackOilFluidState<Eval,
                                           FluidSystem,
-                                          energyModuleType == EnergyModules::ConstantTemperature,
-                                          (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
+                                          energyModuleType != EnergyModules::NoTemperature,
+                                          energyModuleType == EnergyModules::FullyImplicitThermal,
                                           BlackoilIndices::gasEnabled,
                                           enableVapwat,
                                           enableBrine,
