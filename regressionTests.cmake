@@ -409,6 +409,13 @@ add_test_compareECLFiles(CASENAME 3dwecon9
                          REL_TOL ${rel_tol}
                          DIR wecon_wtest)
 
+add_test_compareECLFiles(CASENAME gconinje_resv_gas_01
+                         FILENAME GCONINJE_RESV_GAS-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR resv_ctrl)
+
 set(_gconprod_cases
   T1L
   T1W
