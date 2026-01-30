@@ -127,16 +127,8 @@ public:
     static constexpr bool has_micp = Indices::enableMICP;
 
     // For the conversion between the surface volume rate and reservoir voidage rate
-    using FluidState = BlackOilFluidState<Eval,
-                                          FluidSystem,
-                                          energyModuleType == EnergyModules::ConstantTemperature,
-                                          (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
-                                          Indices::compositionSwitchIdx >= 0,
-                                          has_watVapor,
-                                          has_brine,
-                                          has_saltPrecip,
-                                          has_disgas_in_water,
-                                          Indices::numPhases >;
+    using FluidState = typename IntensiveQuantities::FluidState;
+
     /// Constructor
     WellInterface(const Well& well,
                   const ParallelWellInfo<Scalar>& pw_info,
