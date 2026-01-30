@@ -783,7 +783,13 @@ namespace Opm {
         this->commitWGState();
 
         //reporting output temperatures
-        this->computeWellTemperature();
+        const auto& eclState = simulator_.vanguard().eclState();
+        bool isTemp = eclState.getSimulationConfig().isTemp();
+        bool isThermal = eclState.getSimulationConfig().isThermal();
+        if (isTemp || isThermal) {
+            this->computeWellTemperature();
+        }
+
     }
 
 
@@ -2173,8 +2179,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeWellTemperature()
     {
-        if constexpr (energyModuleType_ == EnergyModules::FullyImplicitThermal ||
-                      energyModuleType_ == EnergyModules::SequentialImplicitThermal) {
+        if constexpr (energyModuleType_ == EnergyModules::FullyImplicitThermal) {
             int np = this->numPhases();
             Scalar cellInternalEnergy;
             Scalar cellBinv;

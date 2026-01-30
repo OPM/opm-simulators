@@ -137,8 +137,8 @@ class BlackOilIntensiveQuantities
 public:
     using FluidState = BlackOilFluidState<Evaluation,
                                           FluidSystem,
-                                          energyModuleType == EnergyModules::ConstantTemperature,
-                                          (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
+                                          energyModuleType != EnergyModules::NoTemperature,
+                                          energyModuleType == EnergyModules::FullyImplicitThermal,
                                           compositionSwitchEnabled,
                                           enableVapwat,
                                           enableBrine,
@@ -147,9 +147,8 @@ public:
                                           Indices::numPhases>;
     using ScalarFluidState = BlackOilFluidState<Scalar,
                                                 FluidSystem,
-                                                energyModuleType == EnergyModules::ConstantTemperature,
-                                                (energyModuleType == EnergyModules::FullyImplicitThermal || 
-                                                    energyModuleType == EnergyModules::SequentialImplicitThermal),
+                                                energyModuleType != EnergyModules::NoTemperature,
+                                                energyModuleType == EnergyModules::FullyImplicitThermal,
                                                 compositionSwitchEnabled,
                                                 enableVapwat,
                                                 enableBrine,
@@ -633,8 +632,7 @@ public:
         if constexpr (enablePolymer) {
             asImp_().polymerPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
         }
-        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal ||
-                      energyModuleType == EnergyModules::SequentialImplicitThermal) {
+        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
             asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx);
         }
         if constexpr (enableFoam) {

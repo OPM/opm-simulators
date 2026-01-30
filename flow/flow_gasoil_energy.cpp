@@ -49,14 +49,12 @@ private:
     // get the energy module type to determine the equation number
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
     static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
-    static constexpr bool enableSeqImpEnergy = energyModuleType == EnergyModules::SequentialImplicitThermal;
 
 public:
   using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                        getPropValue<TypeTag, Properties::EnableExtbo>(),
                                        getPropValue<TypeTag, Properties::EnablePolymer>(),
                                        numEnergyVars,
-                                       enableSeqImpEnergy,
                                        getPropValue<TypeTag, Properties::EnableFoam>(),
                                        getPropValue<TypeTag, Properties::EnableBrine>(),
                                        /*PVOffset=*/0,

@@ -857,7 +857,7 @@ public:
 
                     const auto& rho = FluidSystem::density(fluidState, phaseIdx, pvtRegionIdx);
                     fluidState.setDensity(phaseIdx, rho);
-                    if constexpr (energyModuleType == EnergyModules::SequentialImplicitThermal || energyModuleType == EnergyModules::FullyImplicitThermal) {
+                    if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
                         const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, pvtRegionIdx);
                         fluidState.setEnthalpy(phaseIdx, h);
                     }
