@@ -32,6 +32,7 @@
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
@@ -515,7 +516,6 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::SequentialImplic
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -523,15 +523,40 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::SequentialImplic
     using ThermalConductionLaw = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
+
+    using EvaluationTemp = DenseAd::Evaluation<Scalar,1>;
+
+
+    enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
+    enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
+    enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
+    enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
+    using FluidStateTemp = BlackOilFluidState<  EvaluationTemp,
+                                                FluidSystem,
+                                                true, //store temperature
+                                                true, // store enthalpy
+                                                compositionSwitchEnabled,
+                                                enableVapwat,
+                                                enableBrine,
+                                                enableSaltPrecipitation,
+                                                enableDisgasInWater,
+                                                Indices::numPhases>;
 
 public:
 
+    void updateTemperatureTEMP_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
+    {
+        const EvaluationTemp T = EvaluationTemp::createVariable(problem.temperature(globalDofIdx, timeIdx), 0);
+        fluidStateTemp_.setTemperature(T);
+    }
+
     void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
     {
+        // update the temperature for output (without derivatives)
         auto& fs = asImp_().fluidState_;
-        const Evaluation T = Evaluation::createVariable(problem.temperature(globalDofIdx, timeIdx), Indices::temperatureIdx);
-        fs.setTemperature(T);
+        fs.setTemperature(problem.temperature(globalDofIdx, timeIdx));
     }
 
     void updateTemperature_(const ElementContext& elemCtx,
@@ -566,8 +591,8 @@ public:
                                  const unsigned globalSpaceIdx,
                                  const unsigned timeIdx)
     {
+        // update the energy quantities for output
         auto& fs = asImp_().fluidState_;
-
         // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
         // and the thermal conductivity coefficients
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -580,10 +605,10 @@ public:
         }
 
         const auto& solidEnergyLawParams = problem.solidEnergyLawParams(globalSpaceIdx, timeIdx);
-        rockInternalEnergy_ = SolidEnergyLaw::solidInternalEnergy(solidEnergyLawParams, fs);
+        rockInternalEnergy_ = getValue(SolidEnergyLaw::solidInternalEnergy(solidEnergyLawParams, fs));
 
         const auto& thermalConductionLawParams = problem.thermalConductionLawParams(globalSpaceIdx, timeIdx);
-        totalThermalConductivity_ = ThermalConductionLaw::thermalConductivity(thermalConductionLawParams, fs);
+        totalThermalConductivity_ = getValue(ThermalConductionLaw::thermalConductivity(thermalConductionLawParams, fs));
 
         // Retrieve the rock fraction from the problem
         // Usually 1 - porosity, but if pvmult is used to modify porosity
@@ -593,21 +618,69 @@ public:
         rockFraction_ = problem.rockFraction(globalSpaceIdx, timeIdx);
     }
 
-    const Evaluation& rockInternalEnergy() const
+    void updateEnergyQuantitiesTEMP_(const Problem& problem,
+                                     const unsigned globalSpaceIdx,
+                                     const unsigned timeIdx)
+    {
+        // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
+        // and the thermal conductivity coefficients
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+
+            const auto& h = FluidSystem::enthalpy(fluidStateTemp_, phaseIdx, problem.pvtRegionIndex(globalSpaceIdx));
+            fluidStateTemp_.setEnthalpy(phaseIdx, h);
+        }
+
+        const auto& solidEnergyLawParams = problem.solidEnergyLawParams(globalSpaceIdx, timeIdx);
+        rockInternalEnergy_ = SolidEnergyLaw::solidInternalEnergy(solidEnergyLawParams, fluidStateTemp_);
+
+        const auto& thermalConductionLawParams = problem.thermalConductionLawParams(globalSpaceIdx, timeIdx);
+        totalThermalConductivity_ = ThermalConductionLaw::thermalConductivity(thermalConductionLawParams, fluidStateTemp_);
+
+        // Retrieve the rock fraction from the problem
+        // Usually 1 - porosity, but if pvmult is used to modify porosity
+        // we will apply the same multiplier to the rock fraction
+        // i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
+        // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
+        rockFraction_ = problem.rockFraction(globalSpaceIdx, timeIdx);
+    }
+
+    const EvaluationTemp& rockInternalEnergy() const
     { return rockInternalEnergy_; }
 
-    const Evaluation& totalThermalConductivity() const
+    const EvaluationTemp& totalThermalConductivity() const
     { return totalThermalConductivity_; }
 
     const Scalar& rockFraction() const
     { return rockFraction_; }
 
+    const FluidStateTemp& fluidStateTemp() const
+    { return fluidStateTemp_; }
+
+    template <class FluidState>
+    void setFluidState(const FluidState& fs)
+    {
+        // copy the needed part of the fluid state
+        fluidStateTemp_.setPvtRegionIndex(fs.pvtRegionIndex());
+        fluidStateTemp_.setRs(getValue(fs.Rs()));
+        fluidStateTemp_.setRv(getValue(fs.Rv()));
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            fluidStateTemp_.setPressure(phaseIdx, getValue(fs.pressure(phaseIdx)));
+            fluidStateTemp_.setDensity(phaseIdx, getValue(fs.density(phaseIdx)));
+            fluidStateTemp_.setSaturation(phaseIdx, getValue(fs.saturation(phaseIdx)));
+            fluidStateTemp_.setInvB(phaseIdx, getValue(fs.invB(phaseIdx)));
+        }
+    }
+
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
-    Evaluation rockInternalEnergy_;
-    Evaluation totalThermalConductivity_;
+    EvaluationTemp rockInternalEnergy_;
+    EvaluationTemp totalThermalConductivity_;
+    FluidStateTemp fluidStateTemp_;
     Scalar rockFraction_;
 };
 
@@ -678,10 +751,9 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::FullyImplicitThe
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
 public:
-    template<class FluidState>
+    template<class Evaluation, class FluidState, class IntensiveQuantities>
     static void updateEnergy(Evaluation& energyFlux,
                              const unsigned& focusDofIndex,
                              const unsigned& inIdx,
@@ -786,7 +858,7 @@ public:
         updateEnergyBoundary(energyFlux_, inIq, focusDofIdx, inIdx, alpha, boundaryFs);
     }
 
-    template <class BoundaryFluidState>
+    template <class Evaluation, class BoundaryFluidState, class IntensiveQuantities>
     static void updateEnergyBoundary(Evaluation& energyFlux,
                                      const IntensiveQuantities& inIq,
                                      unsigned focusDofIndex,
@@ -839,12 +911,11 @@ template <class TypeTag>
 class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::ConstantTemperature>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
-    template<class FluidState>
+    template<class Evaluation, class FluidState, class IntensiveQuantities>
     static void updateEnergy(Evaluation& /*energyFlux*/,
                              const unsigned& /*focusDofIndex*/,
                              const unsigned& /*inIdx*/,
@@ -870,7 +941,7 @@ public:
                               const BoundaryFluidState&)
     {}
 
-    template <class BoundaryFluidState>
+    template <class BoundaryFluidState,class IntensiveQuantities>
     static void updateEnergyBoundary(Evaluation& /*heatFlux*/,
                                      const IntensiveQuantities& /*inIq*/,
                                      unsigned /*focusDofIndex*/,
@@ -888,12 +959,11 @@ template <class TypeTag>
 class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::SequentialImplicitThermal>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
-    template<class FluidState>
+    template<class Evaluation, class FluidState, class IntensiveQuantities>
     static void updateEnergy(Evaluation& energyFlux,
                              const unsigned& focusDofIndex,
                              const unsigned& inIdx,
@@ -932,7 +1002,7 @@ public:
                               const BoundaryFluidState&)
     { }
 
-    template <class BoundaryFluidState>
+    template <class Evaluation, class BoundaryFluidState, class IntensiveQuantities>
     static void updateEnergyBoundary(Evaluation& /*heatFlux*/,
                                      const IntensiveQuantities& /*inIq*/,
                                      unsigned /*focusDofIndex*/,
@@ -951,11 +1021,10 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::NoTemperature>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    template<class FluidState>
+    template<class Evaluation, class FluidState, class IntensiveQuantities>
     static void updateEnergy(Evaluation& /*energyFlux*/,
                              const unsigned& /*focusDofIndex*/,
                              const unsigned& /*inIdx*/,
@@ -981,7 +1050,7 @@ public:
                               const BoundaryFluidState&)
     {}
 
-    template <class BoundaryFluidState>
+    template <class Evaluation, class BoundaryFluidState, class IntensiveQuantities>
     static void updateEnergyBoundary(Evaluation& /*heatFlux*/,
                                      const IntensiveQuantities& /*inIq*/,
                                      unsigned /*focusDofIndex*/,

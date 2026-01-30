@@ -117,17 +117,28 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::Seque
     using ParamCache = typename FluidSystem::template ParameterCache<Evaluation>;
 
     using Indices = GetPropType<TypeTag, Properties::Indices>;
-    static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned numPhases = FluidSystem::numPhases;
 public:
+
+    void updateTemperatureTEMP_([[maybe_unused]] const Problem& problem,
+                            [[maybe_unused]] const PrimaryVariables& priVars,
+                            [[maybe_unused]] unsigned globalSpaceIndex,
+                            [[maybe_unused]] unsigned timeIdx)
+    {
+        throw std::logic_error("updateTemperatureTEMP not implemented "
+                               "SequentialImplicitThermal can not be used with"
+                               "global intensive quantites yet.");
+
+    }
+
     void updateTemperature_([[maybe_unused]] const Problem& problem,
                             [[maybe_unused]] const PrimaryVariables& priVars,
                             [[maybe_unused]] unsigned globalSpaceIndex,
                             [[maybe_unused]] unsigned timeIdx)
     {
-        auto& fs = this->asImp_().fluidState_;
-        Evaluation T = Evaluation::createVariable(problem.temperature(globalSpaceIndex, timeIdx), Indices::temperatureIdx);
-        fs.setTemperature(T);
+        throw std::logic_error("updateTemperatureTEMP not implemented "
+                        "SequentialImplicitThermal can not be used with"
+                        "global intensive quantites yet.");
     }
 
     void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,

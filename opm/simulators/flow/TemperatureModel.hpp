@@ -38,6 +38,7 @@
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -86,13 +87,14 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
-    using TemperatureEvaluation = DenseAd::Evaluation<Scalar,1>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Evaluation = DenseAd::Evaluation<Scalar,1>;
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using WellStateType = WellState<Scalar, IndexTraits>;
+
+    using IntensiveQuantitiesTemp = BlackOilEnergyIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnergyModuleType>()>;
 
     using EnergyMatrix = typename BaseType::EnergyMatrix;
     using EnergyVector = typename BaseType::EnergyVector;
@@ -102,6 +104,7 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
+    static constexpr int temperatureIdx = 0;
 
 public:
     explicit TemperatureModel(Simulator& simulator)
@@ -142,12 +145,15 @@ public:
             return;
         }
 
-        // We copy the intensive quantities here to make it possible to update them
+        // We use the specialized intensive quantities here with only the temperature derivative
         const unsigned int numCells = simulator_.model().numTotalDof();
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for (unsigned globI = 0; globI < numCells; ++globI) {
-            intQuants_[globI] = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
-            intQuants_[globI].updateTemperature_(simulator_.problem(), globI, /*timeIdx*/ 0);
-            intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
+            intQuants_[globI].setFluidState(simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0).fluidState());
+            intQuants_[globI].updateTemperatureTEMP_(simulator_.problem(), globI, /*timeIdx*/ 0);
+            intQuants_[globI].updateEnergyQuantitiesTEMP_(simulator_.problem(), globI, /*timeIdx*/ 0);
         }
         updateStorageCache();
 
@@ -164,12 +170,15 @@ public:
             return;
         }
 
-        // We copy the intensive quantities here to make it possible to update them
+        // We use the specialized intensive quantities here with only the temperature derivative
         const unsigned int numCells = simulator_.model().numTotalDof();
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for (unsigned globI = 0; globI < numCells; ++globI) {
-            intQuants_[globI] = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
-            intQuants_[globI].updateTemperature_(simulator_.problem(), globI, /*timeIdx*/ 0);
-            intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
+            intQuants_[globI].setFluidState(simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0).fluidState());
+            intQuants_[globI].updateTemperatureTEMP_(simulator_.problem(), globI, /*timeIdx*/ 0);
+            intQuants_[globI].updateEnergyQuantitiesTEMP_(simulator_.problem(), globI, /*timeIdx*/ 0);
         }
         advanceTemperatureFields();
 
@@ -246,10 +255,13 @@ protected:
             }
         }
         else {
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
             for (unsigned globI = 0; globI < numCells; ++globI) {
                 this->temperature_[globI] -= std::clamp(dx[globI][0], -this->maxTempChange_, this->maxTempChange_);
-                intQuants_[globI].updateTemperature_(simulator_.problem(), globI, /*timeIdx*/ 0);
-                intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
+                intQuants_[globI].updateTemperatureTEMP_(simulator_.problem(), globI, /*timeIdx*/ 0);
+                intQuants_[globI].updateEnergyQuantitiesTEMP_(simulator_.problem(), globI, /*timeIdx*/ 0);
             }
         }
     }
@@ -264,6 +276,9 @@ protected:
         const IsNumericalAquiferCell isNumericalAquiferCell(simulator_.gridView().grid());
         Scalar sum_pv = 0.0;
         Scalar sum_pv_not_converged = 0.0;
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for (const auto& elem : elements(simulator_.gridView(), Dune::Partitions::interior)) {
             unsigned globI = elemMapper.index(elem);
             const auto pvValue =  simulator_.problem().referencePorosity(globI, /*timeIdx=*/0)
@@ -310,9 +325,9 @@ protected:
     void computeStorageTerm(unsigned globI, LhsEval& storage)
     {
         const auto& intQuants = intQuants_[globI];
-        const auto& poro = decay<LhsEval>(intQuants.porosity());
+        const auto& poro = getValue(simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0).porosity());
         // accumulate the internal energy of the fluids
-        const auto& fs = intQuants.fluidState();
+        const auto& fs = intQuants.fluidStateTemp();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -337,8 +352,8 @@ protected:
                          const ResidualNBInfo& res_nbinfo,
                          Evaluation& flux)
     {
-        const IntensiveQuantities& intQuantsIn = intQuants_[globI];
-        const IntensiveQuantities& intQuantsEx = intQuants_[globJ];
+        const IntensiveQuantities& intQuantsIn = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0); //intQuants_[globI];
+        const IntensiveQuantities& intQuantsEx = simulator_.model().intensiveQuantities(globJ, /*timeIdx*/ 0); //intQuants_[globJ];
         RateVector tmp(0.0); //not used
         RateVector darcyFlux(0.0);
         LocalResidual::computeFlux(tmp, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
@@ -352,12 +367,12 @@ protected:
                 FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
 
             bool inIsUp = darcyFlux[activeCompIdx] > 0;
-            const IntensiveQuantities& up = inIsUp ? intQuantsIn : intQuantsEx;
-            const auto& fs = up.fluidState();
+            const auto& up = inIsUp ? intQuants_[globI] : intQuants_[globJ];
+            const auto& fs = up.fluidStateTemp();
             if (inIsUp) {
                 flux += fs.enthalpy(phaseIdx)
                     * fs.density(phaseIdx)
-                    * darcyFlux[activeCompIdx];
+                    * getValue(darcyFlux[activeCompIdx]);
             }
             else {
                 flux += getValue(fs.enthalpy(phaseIdx))
@@ -373,8 +388,8 @@ protected:
                              const ResidualNBInfo& res_nbinfo,
                              Evaluation& heatFlux)
     {
-        const IntensiveQuantities& intQuantsIn = intQuants_[globI];
-        const IntensiveQuantities& intQuantsEx = intQuants_[globJ];
+        const auto& intQuantsIn = intQuants_[globI];
+        const auto& intQuantsEx = intQuants_[globJ];
         const Scalar inAlpha = simulator_.problem().thermalHalfTransmissibility(globI, globJ);
         const Scalar outAlpha = simulator_.problem().thermalHalfTransmissibility(globJ, globI);
         short interiorDofIdx = 0; // NB
@@ -385,8 +400,8 @@ protected:
                                                         exteriorDofIdx,
                                                         intQuantsIn,
                                                         intQuantsEx,
-                                                        intQuantsIn.fluidState(),
-                                                        intQuantsEx.fluidState(),
+                                                        intQuantsIn.fluidStateTemp(),
+                                                        intQuantsEx.fluidStateTemp(),
                                                         inAlpha,
                                                         outAlpha,
                                                         res_nbinfo.faceArea);
@@ -408,7 +423,7 @@ protected:
             Evaluation storage = 0.0;
             computeStorageTerm(globI, storage);
             this->energyVector_[globI] += storefac * ( getValue(storage) - storage1_[globI] );
-            (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(Indices::temperatureIdx);
+            (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(temperatureIdx);
         }
 
         const auto& neighborInfo = simulator_.model().linearizer().getNeighborInfo();
@@ -425,15 +440,15 @@ protected:
                 Evaluation flux = 0.0;
                 computeFluxTerm(globI, globJ, nbInfo.res_nbinfo, flux);
                 this->energyVector_[globI] += getValue(flux);
-                (*this->energyMatrix_)[globI][globI][0][0] += flux.derivative(Indices::temperatureIdx);
-                (*this->energyMatrix_)[globJ][globI][0][0] -= flux.derivative(Indices::temperatureIdx);
+                (*this->energyMatrix_)[globI][globI][0][0] += flux.derivative(temperatureIdx);
+                (*this->energyMatrix_)[globJ][globI][0][0] -= flux.derivative(temperatureIdx);
 
                 // compute conductive flux
                 Evaluation heatFlux = 0.0;
                 computeHeatFluxTerm(globI, globJ, nbInfo.res_nbinfo, heatFlux);
                 this->energyVector_[globI] += getValue(heatFlux);
-                (*this->energyMatrix_)[globI][globI][0][0] += heatFlux.derivative(Indices::temperatureIdx);
-                (*this->energyMatrix_)[globJ][globI][0][0] -= heatFlux.derivative(Indices::temperatureIdx);
+                (*this->energyMatrix_)[globI][globI][0][0] += heatFlux.derivative(temperatureIdx);
+                (*this->energyMatrix_)[globJ][globI][0][0] -= heatFlux.derivative(temperatureIdx);
             }
         }
 
@@ -447,9 +462,12 @@ protected:
 
         bool enableDriftCompensation = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
         if (enableDriftCompensation) {
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
             for (unsigned globalDofIdx = 0; globalDofIdx < numCells; ++globalDofIdx) {
                 auto dofDriftRate = problem.drift()[globalDofIdx]/dt;
-                const auto& fs = intQuants_[globalDofIdx].fluidState();
+                const auto& fs = intQuants_[globalDofIdx].fluidStateTemp();
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                    const unsigned activeCompIdx =
                         FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
@@ -481,7 +499,7 @@ protected:
         this->energy_rates_[well_index] = 0.0;
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
             const auto globI = ws.perf_data.cell_index[i];
-            auto fs = intQuants_[globI].fluidState(); //copy to make it possible to change the temp in the injector
+            auto fs = intQuants_[globI].fluidStateTemp(); //copy to make it possible to change the temp in the injector
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
@@ -512,14 +530,14 @@ protected:
                 this->energy_rates_[well_index] += getValue(rate);
                 rate *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
                 this->energyVector_[globI] -= getValue(rate);
-                (*this->energyMatrix_)[globI][globI][0][0] -= rate.derivative(Indices::temperatureIdx);
+                (*this->energyMatrix_)[globI][globI][0][0] -= rate.derivative(temperatureIdx);
             }
         }
     }
 
     const Simulator& simulator_;
     EnergyVector storage1_;
-    std::vector<IntensiveQuantities> intQuants_;
+    std::vector<IntensiveQuantitiesTemp> intQuants_;
     std::vector<int> overlapRows_;
     std::vector<int> interiorRows_;
 };

@@ -49,8 +49,7 @@ template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::flowBlackoilTempProblem> { static constexpr bool value = false; };
 
 template<class TypeTag>
-struct NumDerivatives<TypeTag, TTag::flowBlackoilTempProblem>
-{ static constexpr int value = GetPropType<TypeTag, Properties::Indices>::numDerivatives; };
+struct AvoidElementContext<TypeTag, TTag::flowBlackoilTempProblem> { static constexpr bool value = true; };
 
 
 }}
