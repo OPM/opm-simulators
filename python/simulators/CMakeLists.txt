@@ -50,36 +50,21 @@ pybind11_add_module(BlackOil ${PYBIND11_SYSTEM}
   PyBlackOilSimulator.cpp
   ${PYTHON_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
 )
-use_warnings(TARGET BlackOil)
-use_fast_build(TARGET BlackOil)
-use_additional_optimization(TARGET BlackOil)
-use_only_needed(TARGET BlackOil)
-use_threads(TARGET BlackOil)
-use_runpath(TARGET BlackOil)
+opm_add_target_options(TARGET BlackOil)
 
 pybind11_add_module(GasWater ${PYBIND11_SYSTEM}
   $<TARGET_OBJECTS:moduleVersion>
   PyGasWaterSimulator.cpp
   ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
 )
-use_warnings(TARGET GasWater)
-use_fast_build(TARGET GasWater)
-use_additional_optimization(TARGET GasWater)
-use_only_needed(TARGET GasWater)
-use_threads(TARGET GasWater)
-use_runpath(TARGET GasWater)
+opm_add_target_options(TARGET GasWater)
 
 pybind11_add_module(OnePhase ${PYBIND11_SYSTEM}
   $<TARGET_OBJECTS:moduleVersion>
   PyOnePhaseSimulator.cpp
   ${PYTHON_OP_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
 )
-use_warnings(TARGET OnePhase)
-use_fast_build(TARGET OnePhase)
-use_additional_optimization(TARGET OnePhase)
-use_only_needed(TARGET OnePhase)
-use_threads(TARGET OnePhase)
-use_runpath(TARGET OnePhase)
+opm_add_target_options(TARGET OnePhase)
 
 # Create a convenience target to build all Python simulator modules
 add_custom_target(python_simulator_modules
