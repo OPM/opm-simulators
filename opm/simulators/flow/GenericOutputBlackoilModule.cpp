@@ -126,6 +126,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                             const SummaryState& summaryState,
                             const std::string& moduleVersion,
                             RSTConv::LocalToGlobalCellFunc globalCell,
+                            std::function<bool(const unsigned)> isInterior,
                             const Parallel::Communication& comm,
                             bool enableEnergy,
                             bool constantTemperature,
@@ -155,7 +156,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableBioeffects_(enableBioeffects)
-    , flowsC_(schedule, summaryConfig)
+    , flowsC_(schedule, summaryConfig, isInterior)
     , rftC_(eclState_, schedule_,
             [this](const std::string& wname) { return this->isOwnedByCurrentRank(wname); },
             [this](const std::string& wname) { return this->isOnCurrentRank(wname); })
@@ -660,7 +661,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     const bool alloc_fields = isRestart || (schedule_.write_rst_file(reportStepNum) && !substep);
-    this->flowsC_.allocate(bufferSize, numOutputNnc, alloc_fields, rstKeywords);
+    this->flowsC_.allocate(bufferSize, summaryConfig_, numOutputNnc, alloc_fields, rstKeywords);
 
     // Field data should be allocated
     // 1) When we want to restart

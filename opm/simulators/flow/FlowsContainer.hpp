@@ -25,8 +25,10 @@
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/simulators/flow/FlowsData.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -54,9 +56,11 @@ class FlowsContainer
 
 public:
     FlowsContainer(const Schedule& schedule,
-                   const SummaryConfig& summaryConfig);
+                   const SummaryConfig& summaryConfig,
+                   std::function<bool(const int)> );
 
     void allocate(const std::size_t bufferSize,
+                  const SummaryConfig& summaryConfig,
                   const unsigned numOutputNnc,
                   const bool allocRestart,
                   std::map<std::string, int>& rstKeywords);
@@ -67,6 +71,11 @@ public:
                       const Scalar gas,
                       const Scalar oil,
                       const Scalar water);
+
+    void assignBlockFlows(const unsigned globalDofIdx,
+                          const int faceId,
+                          const int comp_idx,
+                          const Scalar flow);
 
     void assignFlows(const unsigned globalDofIdx,
                      const int faceId,
@@ -86,8 +95,17 @@ public:
     bool hasFlows() const
     { return enableFlows_; }
 
-    bool hasBlockFlows() const
-    { return blockFlows_; }
+    const std::vector<int> blockFlows() const
+    { return blockFlowsAllIds_; }
+
+    unsigned blockFlowsIds(const unsigned globalDofIdx,
+                           const int dir,
+                           const int comp_idx) const
+    { 
+        const auto& blockIdxs = blockFlowsIds_[comp_idx][dir];
+        auto it = std::lower_bound(blockIdxs.begin(), blockIdxs.end(), globalDofIdx);
+        return std::distance(blockIdxs.begin(), it); 
+    }
 
     bool anyFlows() const
     { return anyFlows_; }
@@ -104,6 +122,14 @@ public:
     bool anyFlores() const
     { return anyFlores_; }
 
+    bool hasBlockValue(const unsigned globalDofIdx,
+                       const int dir,
+                       const int comp_idx) const
+    {   
+        const auto& blockIdxs = blockFlowsIds_[comp_idx][dir];
+        return std::binary_search(blockIdxs.begin(), blockIdxs.end(), globalDofIdx); 
+    }
+
     Scalar getFlow(const unsigned globalDofIdx,
                    const FaceDir::DirEnum dir,
                    const int comp_idx) const
@@ -112,7 +138,6 @@ public:
 private:
     bool anyFlows_{false};
     bool anyFlores_{false};
-    bool blockFlows_{false};
     bool enableFlows_{false};
     bool enableFlores_{false};
     bool enableFlowsn_{false};
@@ -123,6 +148,9 @@ private:
 
     std::array<FlowsData<double>, 3> floresn_;
     std::array<FlowsData<double>, 3> flowsn_;
+
+    std::vector<int> blockFlowsAllIds_;
+    std::array<std::array<std::vector<int>, 6>, numPhases> blockFlowsIds_;
 };
 
 } // namespace Opm

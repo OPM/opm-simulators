@@ -678,11 +678,11 @@ private:
         // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables
         // For now, do the same also if any block flows are requested (TODO: only save requested cells...)
         // If DISPERC is in the deck, we initialize the sparse table here as well.
-        const bool anyFlows = simulator_().problem().eclWriter().outputModule().getFlows().anyFlows() ||
-                              simulator_().problem().eclWriter().outputModule().getFlows().hasBlockFlows();
+        const bool anyFlows = simulator_().problem().eclWriter().outputModule().getFlows().anyFlows();
+        const auto& blockFlows = simulator_().problem().eclWriter().outputModule().getFlows().blockFlows();
         const bool anyFlores = simulator_().problem().eclWriter().outputModule().getFlows().anyFlores();
         const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
-        if (((!anyFlows || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && (!dispersionActive && !enableBioeffects)) {
+        if (((!(anyFlows || !blockFlows.empty()) || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && (!dispersionActive && !enableBioeffects)) {
             return;
         }
         const auto& model = model_();
@@ -705,6 +705,9 @@ private:
         if (anyFlows) {
             flowsInfo_.reserve(numCells, 6 * numCells);
         }
+        else if (!blockFlows.empty()) {
+            flowsInfo_.reserve(numCells, 6 * blockFlows.size());
+        }
         if (anyFlores) {
             floresInfo_.reserve(numCells, 6 * numCells);
         }
@@ -716,6 +719,19 @@ private:
             stencil.update(elem);
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
                 const unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
+                bool blockFlowFound = false;
+                if (!blockFlows.empty()) {
+                    if (std::binary_search(blockFlows.begin(), blockFlows.end(),
+                                           simulator_().vanguard().cartesianIndex(myIdx))) {
+                        blockFlowFound = true;
+                    }
+                    else {
+                        flowsInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.begin());
+                        if (!dispersionActive && !enableBioeffects && !anyFlores) {
+                            continue;
+                        }
+                    }
+                }
                 const int numFaces = stencil.numBoundaryFaces() + stencil.numInteriorFaces();
                 loc_flinfo.resize(numFaces);
                 loc_vlinfo.resize(stencil.numDof() - 1);
@@ -748,7 +764,7 @@ private:
                     loc_flinfo[stencil.numInteriorFaces() + bdfIdx] = FlowInfo{faceId, flow, nncId};
                 }
 
-                if (anyFlows) {
+                if (anyFlows || blockFlowFound) {
                     flowsInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.end());
                 }
                 if (anyFlores) {
@@ -782,10 +798,10 @@ public:
     void updateFlowsInfo()
     {
         OPM_TIMEBLOCK(updateFlows);
-        const bool enableFlows = simulator_().problem().eclWriter().outputModule().getFlows().hasFlows() ||
-                                 simulator_().problem().eclWriter().outputModule().getFlows().hasBlockFlows();
+        const bool enableFlows = simulator_().problem().eclWriter().outputModule().getFlows().hasFlows();
+        const auto& blockFlows = simulator_().problem().eclWriter().outputModule().getFlows().blockFlows();
         const bool enableFlores = simulator_().problem().eclWriter().outputModule().getFlows().hasFlores();
-        if (!enableFlows && !enableFlores) {
+        if (!enableFlows && !enableFlores && blockFlows.empty()) {
             return;
         }
         const unsigned int numCells = model_().numTotalDof();
@@ -812,7 +828,15 @@ public:
                     LocalResidual::computeFlux(adres, darcyFlux, globI, globJ, intQuantsIn,
                                                intQuantsEx, nbInfo.res_nbinfo, problem_().moduleParams());
                     adres *= nbInfo.res_nbinfo.faceArea;
-                    if (enableFlows) {
+                    if (!blockFlows.empty()) {
+                        if (std::binary_search(blockFlows.begin(), blockFlows.end(),
+                                               simulator_().vanguard().cartesianIndex(globI))) {
+                            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                                flowsInfo_[globI][loc].flow[eqIdx] = adres[eqIdx].value();
+                            }
+                        }
+                    }
+                    else if (enableFlows) {
                         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                             flowsInfo_[globI][loc].flow[eqIdx] = adres[eqIdx].value();
                         }
