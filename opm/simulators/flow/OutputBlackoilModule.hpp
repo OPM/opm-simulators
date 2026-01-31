@@ -141,6 +141,8 @@ public:
                    moduleVersionName(),
                    [this](const int idx)
                    { return simulator_.problem().eclWriter().collectOnIORank().localIdxToGlobalIdx(idx); },
+                   [&collectOnIORank](const int idx)
+                   { return collectOnIORank.isCartIdxOnThisRank(idx); },
                    simulator.vanguard().grid().comm(),
                    energyModuleType == EnergyModules::FullyImplicitThermal || 
                    energyModuleType == EnergyModules::SequentialImplicitThermal,
@@ -260,7 +262,8 @@ public:
                 elemCtx.simulator().episodeIndex(),
                 fs,
                 intQuants,
-                hysterParams
+                hysterParams,
+                elemCtx
             };
 
             if (matLawManager->enableHysteresis()) {
@@ -1645,15 +1648,34 @@ private:
                       const auto water_idx = Indices::waterEnabled ?
                           conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(waterCompIdx) : -1;
                       const auto& flowsInfos = flowsInf[ectx.globalDofIdx];
-                      for (const auto& flowsInfo : flowsInfos) {
-                          flowsC.assignFlows(ectx.globalDofIdx,
-                                             flowsInfo.faceId,
-                                             flowsInfo.nncId,
-                                             value_or_zero(gas_idx, flowsInfo.flow),
-                                             value_or_zero(oil_idx, flowsInfo.flow),
-                                             value_or_zero(water_idx, flowsInfo.flow));
-                        }
-                 }, !this->simulator_.problem().model().linearizer().getFlowsInfo().empty()
+                      if (!flowsC.blockFlows().empty()) {
+                          const std::vector<int>& blockIdxs = flowsC.blockFlows();
+                          const unsigned cartesianIdx = ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx);
+                          if (std::binary_search(blockIdxs.begin(), blockIdxs.end(), cartesianIdx)) {
+                              const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
+                              for (const auto& flowsInfo : flowsInfos) {
+                                  for (unsigned ii = 0; ii < compIdxs.size(); ++ii) {
+                                      if (flowsC.hasBlockValue(cartesianIdx, flowsInfo.faceId, compIdxs[ii])) {;
+                                          flowsC.assignBlockFlows(flowsC.blockFlowsIds(cartesianIdx, flowsInfo.faceId, compIdxs[ii]),
+                                                                  flowsInfo.faceId,
+                                                                  compIdxs[ii],
+                                                                  flowsInfo.flow[compIdxs[ii]]);
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                      else {
+                          for (const auto& flowsInfo : flowsInfos) {
+                              flowsC.assignFlows(ectx.globalDofIdx,
+                                                 flowsInfo.faceId,
+                                                 flowsInfo.nncId,
+                                                 value_or_zero(gas_idx, flowsInfo.flow),
+                                                 value_or_zero(oil_idx, flowsInfo.flow),
+                                                 value_or_zero(water_idx, flowsInfo.flow));
+                          }
+                      }
+                   }, !this->simulator_.problem().model().linearizer().getFlowsInfo().empty()
             },
             Entry{[&floresInf = this->simulator_.problem().model().linearizer().getFloresInfo(),
                    &flowsC = this->flowsC_](const Context& ectx)
@@ -1944,24 +1966,183 @@ private:
                              }
                   }
             },
+            Entry{ScalarEntry{"BFLOGI",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                                           FaceDir::ToIntersectionIndex(Dir::XPlus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::XPlus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOGI-",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XMinus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::XMinus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOGJ",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YPlus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::YPlus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOGJ-",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YMinus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::YMinus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOGK",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZPlus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::ZPlus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOGK-",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZMinus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::ZMinus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOOI",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XPlus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::XPlus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOOI-",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XMinus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::XMinus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOOJ",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YPlus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::YPlus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOOJ-",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YMinus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::YMinus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOOK",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZPlus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::ZPlus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOOK-",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZMinus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::ZMinus, oilCompIdx);
+                              }
+                  }
+            },
             Entry{ScalarEntry{"BFLOWI",
                               [&flowsC = this->flowsC_](const Context& ectx)
                               {
-                                  return flowsC.getFlow(ectx.globalDofIdx, Dir::XPlus, waterCompIdx);
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XPlus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::XPlus, waterCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOWI-",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XMinus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::XMinus, waterCompIdx);
                               }
                   }
             },
             Entry{ScalarEntry{"BFLOWJ",
                               [&flowsC = this->flowsC_](const Context& ectx)
                               {
-                                  return flowsC.getFlow(ectx.globalDofIdx, Dir::YPlus, waterCompIdx);
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YPlus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::YPlus, waterCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOWJ-",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YMinus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::YMinus, waterCompIdx);
                               }
                   }
             },
             Entry{ScalarEntry{"BFLOWK",
                               [&flowsC = this->flowsC_](const Context& ectx)
                               {
-                                  return flowsC.getFlow(ectx.globalDofIdx, Dir::ZPlus, waterCompIdx);
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZPlus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::ZPlus, waterCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BFLOWK-",
+                              [&flowsC = this->flowsC_](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockFlows().empty() ?
+                                      flowsC.blockFlowsIds(ectx.elemCtx.simulator().vanguard().cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZMinus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getFlow(index, Dir::ZMinus, waterCompIdx);
                               }
                   }
             },

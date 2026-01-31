@@ -52,6 +52,7 @@ namespace Opm::detail {
 template<class TypeTag>
 struct Extractor
 {
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidState = typename IntensiveQuantities::FluidState;
@@ -78,6 +79,7 @@ struct Extractor
         const FluidState& fs;  //!< Fluid state for cell
         const IntensiveQuantities& intQuants; //!< Intensive quantities for cell
         const HysteresisParams& hParams; //!< Hysteresis parameters for cell
+        const ElementContext& elemCtx;
     };
 
     /// Callback for extractors handling their own assignements
