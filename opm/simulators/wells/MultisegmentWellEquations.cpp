@@ -144,7 +144,9 @@ void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::clear()
     duneC_ = 0.0;
     duneD_ = 0.0;
     resWell_ = 0.0;
-    duneDSolver_.reset();
+    if constexpr (std::is_same_v<Scalar,double>) {
+        duneDSolver_.reset();
+    }
 }
 
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
@@ -159,12 +161,14 @@ apply(const BVector& x, BVector& Ax) const
     // because the other processes would remain idle while waiting for
     // the single process to complete the computation.
     // invDBx = duneD^-1 * Bx_
-    const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
-    // Ax.size() == 0 indicates that there are no active perforations on this process.
-    // Then, Ax does not need to be updated by the following calculation.
-    if (Ax.size() > 0) {
-        // Ax = Ax - duneC_^T * invDBx
-        duneC_.mmtv(invDBx,Ax);
+    if constexpr (std::is_same_v<Scalar,double>) {
+        const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
+        // Ax.size() == 0 indicates that there are no active perforations on this process.
+        // Then, Ax does not need to be updated by the following calculation.
+        if (Ax.size() > 0) {
+            // Ax = Ax - duneC_^T * invDBx
+            duneC_.mmtv(invDBx,Ax);
+        }
     }
 }
 
@@ -172,16 +176,18 @@ template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
 apply(BVector& r) const
 {
-    // r.size() == 0 indicates that there are no active perforations on this process.
-    // Then, r does not need to be updated by the following calculation.
-    if (r.size() > 0) {
-        // It is ok to do this on each process instead of only on one,
-        // because the other processes would remain idle while waiting for
-        // the single process to complete the computation.
-        // invDrw_ = duneD^-1 * resWell_
-        const BVectorWell invDrw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
-        // r = r - duneC_^T * invDrw
-        duneC_.mmtv(invDrw, r);
+    if constexpr (std::is_same_v<Scalar,double>) {
+        // r.size() == 0 indicates that there are no active perforations on this process.
+        // Then, r does not need to be updated by the following calculation.
+        if (r.size() > 0) {
+            // It is ok to do this on each process instead of only on one,
+            // because the other processes would remain idle while waiting for
+            // the single process to complete the computation.
+            // invDrw_ = duneD^-1 * resWell_
+            const BVectorWell invDrw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
+            // r = r - duneC_^T * invDrw
+            duneC_.mmtv(invDrw, r);
+        }
     }
 }
 
@@ -189,14 +195,13 @@ template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::createSolver()
 {
 #if HAVE_SUITESPARSE_UMFPACK
-    if (duneDSolver_) {
-        return;
-    }
-
     if constexpr (std::is_same_v<Scalar,float>) {
         OPM_THROW(std::runtime_error, "MultisegmentWell support requires UMFPACK, "
                                       "and UMFPACK does not support float");
     } else {
+        if (duneDSolver_) {
+            return;
+        }
         duneDSolver_ = std::make_shared<Dune::UMFPack<DiagMatWell>>(duneD_, 0);
     }
 #else
@@ -209,35 +214,47 @@ template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
 typename MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::BVectorWell
 MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::solve() const
 {
-    // It is ok to do this on each process instead of only on one,
-    // because the other processes would remain idle while waiting for
-    // the single process to complete the computation.
-    return mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
+    if constexpr (std::is_same_v<Scalar,double>) {
+        // It is ok to do this on each process instead of only on one,
+        // because the other processes would remain idle while waiting for
+        // the single process to complete the computation.
+        return mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
+    }
+    else {
+       return {};
+    }
 }
 
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
 typename MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::BVectorWell
 MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::solve(const BVectorWell& rhs) const
 {
-    // It is ok to do this on each process instead of only on one,
-    // because the other processes would remain idle while waiting for
-    // the single process to complete the computation.
-    return mswellhelpers::applyUMFPack(*duneDSolver_, rhs);
+    if constexpr (std::is_same_v<Scalar,double>) {
+        // It is ok to do this on each process instead of only on one,
+        // because the other processes would remain idle while waiting for
+        // the single process to complete the computation.
+        return mswellhelpers::applyUMFPack(*duneDSolver_, rhs);
+    }
+    else {
+        return {};
+    }
 }
 
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
 recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
-    BVectorWell resWell = resWell_;
-    // resWell = resWell - B * x
-    parallelB_.mmv(x, resWell);
+    if constexpr (std::is_same_v<Scalar,double>) {
+        BVectorWell resWell = resWell_;
+        // resWell = resWell - B * x
+        parallelB_.mmv(x, resWell);
 
-    // xw = D^-1 * resWell
-    // It is ok to do this on each process instead of only on one,
-    // because the other processes would remain idle while waiting for
-    // the single process to complete the computation.
-    xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
+        // xw = D^-1 * resWell
+        // It is ok to do this on each process instead of only on one,
+        // because the other processes would remain idle while waiting for
+        // the single process to complete the computation.
+        xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
+    }
 }
 
 #if COMPILE_GPU_BRIDGE
@@ -318,32 +335,34 @@ template<class SparseMatrixAdapter>
 void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
 extract(SparseMatrixAdapter& jacobian) const
 {
-    const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(duneD_.M(),
-                                                                        numWellEq,
-                                                                        *duneDSolver_);
+    if constexpr (std::is_same_v<Scalar,double>) {
+        const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(duneD_.M(),
+                                                                            numWellEq,
+                                                                            *duneDSolver_);
 
-    // We need to change matrix A as follows
-    // A -= C^T D^-1 B
-    // D is a (nseg x nseg) block matrix with (4 x 4) blocks.
-    // B and C are (nseg x ncells) block matrices with (4 x 4 blocks).
-    // They have nonzeros at (i, j) only if this well has a
-    // perforation at cell j connected to segment i.  The code
-    // assumes that no cell is connected to more than one segment,
-    // i.e. the columns of B/C have no more than one nonzero.
-    for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
-        for (auto colC = duneC_[rowC].begin(),
-                  endC = duneC_[rowC].end(); colC != endC; ++colC) {
-            // map the well perforated cell index to global cell index
-            const auto row_index = cells_[colC.index()];
-            for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
-                for (auto colB = duneB_[rowB].begin(),
-                          endB = duneB_[rowB].end(); colB != endB; ++colB) {
-                    const auto col_index = cells_[colB.index()];
-                    OffDiagMatrixBlockWellType tmp1;
-                    detail::multMatrixImpl(invDuneD[rowC][rowB], (*colB), tmp1, std::true_type());
-                    typename SparseMatrixAdapter::MatrixBlock tmp2;
-                    detail::multMatrixTransposedImpl((*colC), tmp1, tmp2, std::false_type());
-                    jacobian.addToBlock(row_index, col_index, tmp2);
+        // We need to change matrix A as follows
+        // A -= C^T D^-1 B
+        // D is a (nseg x nseg) block matrix with (4 x 4) blocks.
+        // B and C are (nseg x ncells) block matrices with (4 x 4 blocks).
+        // They have nonzeros at (i, j) only if this well has a
+        // perforation at cell j connected to segment i.  The code
+        // assumes that no cell is connected to more than one segment,
+        // i.e. the columns of B/C have no more than one nonzero.
+        for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
+            for (auto colC = duneC_[rowC].begin(),
+                      endC = duneC_[rowC].end(); colC != endC; ++colC) {
+                // map the well perforated cell index to global cell index
+                const auto row_index = cells_[colC.index()];
+                for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
+                    for (auto colB = duneB_[rowB].begin(),
+                              endB = duneB_[rowB].end(); colB != endB; ++colB) {
+                        const auto col_index = cells_[colB.index()];
+                        OffDiagMatrixBlockWellType tmp1;
+                        detail::multMatrixImpl(invDuneD[rowC][rowB], (*colB), tmp1, std::true_type());
+                        typename SparseMatrixAdapter::MatrixBlock tmp2;
+                        detail::multMatrixTransposedImpl((*colC), tmp1, tmp2, std::false_type());
+                        jacobian.addToBlock(row_index, col_index, tmp2);
+                    }
                 }
             }
         }

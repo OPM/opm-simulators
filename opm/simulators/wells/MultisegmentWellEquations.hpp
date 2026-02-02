@@ -31,6 +31,7 @@
 #include <dune/istl/bvector.hh>
 
 #include <memory>
+#include <type_traits>
 
 namespace Dune {
 template<class M> class UMFPack;
@@ -145,7 +146,11 @@ public:
     /// \brief solver for diagonal matrix
     ///
     /// This is a shared_ptr as MultisegmentWell is copied in computeWellPotentials...
-    mutable std::shared_ptr<Dune::UMFPack<DiagMatWell>> duneDSolver_;
+    struct EmptyType {};
+    using UMFPackSolver = std::conditional_t<std::is_same_v<Scalar,double>,
+                                             std::shared_ptr<Dune::UMFPack<DiagMatWell>>,
+                                             EmptyType>; // TODO: c++20: add no_unique_address
+    mutable UMFPackSolver duneDSolver_;
 
     // residuals of the well equations
     BVectorWell resWell_;
