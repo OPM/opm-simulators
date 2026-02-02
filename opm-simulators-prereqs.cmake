@@ -1,10 +1,7 @@
 # defines that must be present in config.h for our headers
 set (opm-simulators_CONFIG_VAR
   HAVE_OPM_GRID
-  HAVE_PTHREAD
-  HAVE_EWOMS
   HAVE_MPI
-  HAVE_PETSC
   COMPILE_GPU_BRIDGE
   HAVE_AVX2_EXTENSION
   HAVE_CUDA
@@ -31,7 +28,7 @@ set (opm-simulators_CONFIG_VAR
   FLOW_INSTANTIATE_FLOAT
   HAVE_FLOATING_POINT_FROM_CHARS
   OPM_COMPILE_COMPONENTS_TEMPLATE_LIST
-  )
+)
 
 # CMake 3.30.0 requires to find Boost in CONFIG mode
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.30.0)
