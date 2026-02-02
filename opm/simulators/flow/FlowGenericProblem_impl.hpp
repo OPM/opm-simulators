@@ -339,24 +339,6 @@ porosity(unsigned globalSpaceIdx, unsigned timeIdx) const
 }
 
 template<class GridView, class FluidSystem>
-typename FlowGenericProblem<GridView,FluidSystem>::Scalar
-FlowGenericProblem<GridView,FluidSystem>::
-rockFraction(unsigned elementIdx, unsigned timeIdx) const
-{
-    // For the energy equation, we need the volume of the rock.
-    // The volume of the rock is computed by rockFraction * geometric volume of the element.
-    // The reference porosity is defined as porosity * ntg * pore-volume-multiplier.
-    // A common practice in reservoir simulation is to use large pore-volume-multipliers in boundary cells
-    // to model boundary conditions other than no-flow. This may result in reference porosities that are larger than 1.
-    // A simple (1-reference porosity) * geometric volume of the element may give unphysical results.
-    // We therefore instead consider the pore-volume-multiplier as a volume multiplier. The rock fraction is thus given by
-    // (1 - porosity * ntg) * pore-volume-multiplier = (1 - porosity * ntg) * reference porosity / (porosity * ntg)
-    const auto ntg = this->lookUpData_.fieldPropDouble(eclState_.fieldProps(), "NTG", elementIdx);
-    const auto poro_eff = ntg * this->lookUpData_.fieldPropDouble(eclState_.fieldProps(), "PORO", elementIdx);
-    return (1 - poro_eff) * referencePorosity(elementIdx, timeIdx) / poro_eff;
-}
-
-template<class GridView, class FluidSystem>
 template<class T>
 void FlowGenericProblem<GridView,FluidSystem>::
 updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regions)
