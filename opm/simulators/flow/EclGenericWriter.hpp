@@ -177,17 +177,18 @@ private:
     /// Returns true if either of the two connected cells belongs to a numerical aquifer.
     bool isNumAquConn_(const std::size_t cartIdx1, const std::size_t cartIdx2) const;
 
+    /// Return level (local) indices of the cells adjacent to an intersection.
+    ///
+    /// @tparam equilGridIsCpGrid Compile-time flag indicating whether the equilGrid_ is a Dune::CpGrid
+    ///                           (std::is_same_v<EquilGrid, Dune::CpGrid>).
+    /// @tparam Intersection      Intersection type between two leaf cells.
+    /// @param is                 Intersection between neighboring leaf cells.
+    template <bool equilGridIsCpGrid, typename Intersection>
+    void computeLevelIndices_(const Intersection& is, int& inIdx, int& outIdx) const;
+
     /// Creates/allocates CellData for TRANX/Y/Z for level grids.
     /// Only for CpGrid. Other grid types do not support refinement yet.
     void allocateLevelTrans_(const std::array<int,3>& levelCartDims, data::Solution& levelTrans) const;
-
-    /// Assigns trans values to intersection between two cells belonging to the same level grid.
-    /// Only for CpGrid. Other grid types do not support refinement yet.
-    template<typename LeafGridView, typename LeafElementMapper>
-    void assignLevelTrans_(const LeafGridView& globalGridView,
-                           const LeafElementMapper& globalElementMapper,
-                           std::vector<data::Solution>& levelTrans) const;
-
 };
 
 } // namespace Opm
