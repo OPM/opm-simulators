@@ -331,6 +331,8 @@ public:
             transmissibilities_.update(true, TransUpdateQuantities::All, equilGridToGrid);
             this->referencePorosity_[1] = this->referencePorosity_[0];
             updateReferencePorosity_();
+            this->rockFraction_[1] = this->rockFraction_[0];
+            updateRockFraction_();
             updatePffDofData_();
             this->model().linearizer().updateDiscretizationParameters();
         }
@@ -1401,6 +1403,12 @@ protected:
         ////////////////////////////////
 
         ////////////////////////////////
+        // rock fraction
+        updateRockFraction_();
+        this->rockFraction_[1] = this->rockFraction_[0];
+        ////////////////////////////////
+
+        ////////////////////////////////
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromState(eclState);
@@ -1449,6 +1457,40 @@ protected:
             Scalar dofVolume = simulator.model().dofTotalVolume(sfcdofIdx);
             assert(dofVolume > 0.0);
             this->referencePorosity_[/*timeIdx=*/0][sfcdofIdx] = poreVolume/dofVolume;
+        }
+    }
+
+    void updateRockFraction_()    {
+
+        const bool solveEnergyEquation = (energyModuleType == EnergyModules::FullyImplicitThermal ||
+        energyModuleType == EnergyModules::SequentialImplicitThermal);
+        if (!solveEnergyEquation)
+            return;
+
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
+        const auto& eclState = vanguard.eclState();
+
+        std::size_t numDof = this->model().numGridDof();
+        this->rockFraction_[/*timeIdx=*/0].resize(numDof);
+        // For the energy equation, we need the volume of the rock.
+        // The volume of the rock is computed by rockFraction * geometric volume of the element.
+        // The reference porosity is defined as porosity * ntg * pore-volume-multiplier.
+        // A common practice in reservoir simulation is to use large pore-volume-multipliers in boundary cells
+        // to model boundary conditions other than no-flow. This may result in reference porosities that are larger than 1.
+        // A simple (1-reference porosity) * geometric volume of the element may give unphysical results.
+        // We therefore instead consider the pore-volume-multiplier as a volume multiplier. The rock fraction is thus given by
+        // (1 - porosity * ntg) * pore-volume-multiplier = (1 - porosity * ntg) * reference porosity / (porosity * ntg)
+        const auto& fp = eclState.fieldProps();
+        const std::vector<double> poroData = this->fieldPropDoubleOnLeafAssigner_()(fp, "PORO");
+        const std::vector<double> ntgData = this->fieldPropDoubleOnLeafAssigner_()(fp, "NTG");
+
+        for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+            const auto ntg = ntgData[dofIdx];
+            const auto poro_eff = ntg * poroData[dofIdx];
+            const int sfcdofIdx = simulator.vanguard().gridEquilIdxToGridIdx(dofIdx);
+            const auto rock_fraction = (1 - poro_eff) * this->referencePorosity_[/*timeIdx=*/0][sfcdofIdx] / poro_eff;
+            this->rockFraction_[/*timeIdx=*/0][sfcdofIdx] = rock_fraction;
         }
     }
 
