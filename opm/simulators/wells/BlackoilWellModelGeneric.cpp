@@ -1351,6 +1351,12 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     efficiencyFactor,
                     resv_coeff
                 );
+                if (!group_target.has_value() && ws.production_cmode == Well::ProducerCMode::GRUP) {
+                    const std::string msg = fmt::format("Well {} is under GRUP control but no valid group target "
+                        "could be determined. Switching the well to under BHP control.", well->name());
+                    group_state_helper.deferredLogger().debug(msg);
+                    this->wellState().well(well->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
+                }
             } else {
                 const auto& well_controls = well->wellEcl().injectionControls(summaryState_);
                 auto injectorType = well_controls.injector_type;
