@@ -504,6 +504,7 @@ if (opm-common_EMBEDDED_PYTHON)
   include (${CMAKE_CURRENT_SOURCE_DIR}/pyactionActionXComparisons.cmake)
 endif ()
 include (${CMAKE_CURRENT_SOURCE_DIR}/regressionTests.cmake)
+include (${CMAKE_CURRENT_SOURCE_DIR}/comparisonTests.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
 
 # PORV test
