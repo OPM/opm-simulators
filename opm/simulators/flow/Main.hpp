@@ -520,14 +520,7 @@ private:
                   std::string_view moduleVersion,
                   std::string_view compileTimestamp);
 
-    static int getNumThreads()
-    {
-#ifdef _OPENMP
-        return omp_get_max_threads();
-#else
-        return 1;
-#endif
-    }
+    static int getNumThreads();
 
 #if HAVE_DAMARIS
     void setupDamaris(const std::string& outputDir);
