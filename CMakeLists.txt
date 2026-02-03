@@ -160,10 +160,6 @@ if(USE_GPU_BRIDGE)
   set(COMPILE_GPU_BRIDGE 1)
 endif()
 
-# not the same location as most of the other projects? this hook overrides
-macro (dir_hook)
-endmacro (dir_hook)
-
 # project information is in dune.module. Read this file and set variables.
 # we cannot generate dune.module since it is read by dunecontrol before
 # the build starts, so it makes sense to keep the data there then.
@@ -332,7 +328,7 @@ if(USE_AMGX)
   endif()
 endif()
 
-macro (config_hook)
+macro(${project}_config_hook)
   opm_need_version_of ("dune-common")
   opm_need_version_of ("dune-istl")
   if(dune-fem_FOUND)
@@ -370,12 +366,9 @@ macro (config_hook)
   if(have_float_from_chars)
     set(HAVE_FLOATING_POINT_FROM_CHARS 1)
   endif()
-endmacro (config_hook)
+endmacro()
 
-macro (prereqs_hook)
-endmacro (prereqs_hook)
-
-macro (sources_hook)
+macro(${project}_sources_hook)
   if(OPENCL_FOUND)
     include(opencl-source-provider)
     list(APPEND opm-simulators_SOURCES ${PROJECT_BINARY_DIR}/clSources.cpp)
@@ -394,12 +387,9 @@ macro (sources_hook)
                                 PROPERTIES COMPILE_DEFINITIONS "${qm_defs}"
                                 COMPILE_OPTIONS "${qm_options}")
   endif()
-endmacro (sources_hook)
+endmacro()
 
-macro (fortran_hook)
-endmacro (fortran_hook)
-
-macro (files_hook)
+macro(${project}_files_hook)
   if(hip_FOUND)
     get_filename_component(CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
     if(hip_VERSION VERSION_LESS "5.3")
@@ -439,9 +429,9 @@ macro (files_hook)
   # (CMakeLists_files.cmake and because we need the created lists during
   # then inclusion of OpmLibMain
   include (CMakeLists_files.cmake)
-endmacro (files_hook)
+endmacro()
 
-macro (tests_hook)
+macro(${project}_tests_hook)
   if(HYPRE_FOUND)
     list(APPEND tests_SOURCES tests/test_HyprePreconditionerCPU.cpp)
     list(APPEND tests_SOURCES tests/gpuistl/test_HypreInterfaceCPU.cpp)
@@ -454,8 +444,7 @@ macro (tests_hook)
     list(APPEND tests_SOURCES tests/gpuistl/test_AmgxInterface.cpp)
     list(APPEND tests_SOURCES tests/test_AmgxPreconditioner.cpp)
   endif()
-endmacro (tests_hook)
-
+endmacro()
 
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
