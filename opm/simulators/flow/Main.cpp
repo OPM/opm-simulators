@@ -44,6 +44,10 @@
 #include <amgx_c.h>
 #endif
 
+#if HAVE_OPENMP
+#include <omp.h>
+#endif
+
 #include <iostream>
 // NOTE: There is no C++ header replacement for these C posix headers (as of C++17)
 #include <fcntl.h>  // for open()
@@ -380,5 +384,14 @@ void Main::setupDamaris(const std::string& outputDir )
     }
 }
 #endif
+
+int Main::getNumThreads()
+{
+#ifdef _OPENMP
+    return omp_get_max_threads();
+#else
+    return 1;
+#endif
+}
 
 } // namespace Opm
