@@ -1351,6 +1351,12 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     efficiencyFactor,
                     resv_coeff
                 );
+                if (!group_target.has_value() && ws.production_cmode == Well::ProducerCMode::GRUP) {
+                    const std::string msg = fmt::format("Well {} is under GRUP control but no valid group target "
+                        "could be determined. Switching the well to under BHP control.", well->name());
+                    group_state_helper.deferredLogger().debug(msg);
+                    this->wellState().well(well->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
+                }
             } else {
                 const auto& well_controls = well->wellEcl().injectionControls(summaryState_);
                 auto injectorType = well_controls.injector_type;
@@ -1968,13 +1974,13 @@ updateNONEProductionGroups(const GasLiftOpt& glo, DeferredLogger& deferred_logge
 
     for (std::size_t w = 0; w < well_state.size(); ++w) {
         const auto& ws = well_state.well(w);
-        if (ws.producer && ws.production_cmode == WellProducerCMode::GRUP) {
+        if (ws.producer && ws.production_cmode == WellProducerCMode::GRUP && ws.status == Well::Status::OPEN) {
             const auto& group_target = ws.group_target;
             if (group_target.has_value()) {
                 targeted_production_groups.insert(group_target->group_name);
             } else {
                 const std::string msg = fmt::format("Well {} is on GRUP control but has no group target assigned.", ws.name);
-                deferred_logger.debug(msg);
+                OPM_DEFLOG_THROW(std::runtime_error, msg, deferred_logger);
             }
         }
     }
