@@ -453,14 +453,14 @@ opm_add_test(test_tuning_trgmbe
               SOURCES
                 tests/test_tuning_TRGMBE.cpp
               LIBRARIES
-                ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+                Boost::unit_test_framework
               ONLY_COMPILE)
 
 opm_add_test(test_tuning_tsinit_nextstep
               SOURCES
                 tests/test_tuning_TSINIT_NEXTSTEP.cpp
               LIBRARIES
-                ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} opmcommon
+                Boost::unit_test_framework opmcommon
               ONLY_COMPILE)
 
 # this test is identical to the simulation of the lens problem that

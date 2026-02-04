@@ -42,7 +42,7 @@ check_for_avx2()
 set (opm-simulators_DEPS
   # Various runtime library enhancements
   "Boost 1.44.0
-    COMPONENTS date_time unit_test_framework REQUIRED ${_Boost_CONFIG_MODE}"
+    COMPONENTS date_time REQUIRED ${_Boost_CONFIG_MODE}"
   # DUNE prerequisites
   "dune-common REQUIRED"
   "dune-istl REQUIRED"
