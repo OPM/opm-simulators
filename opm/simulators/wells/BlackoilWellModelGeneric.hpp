@@ -234,6 +234,8 @@ public:
     const WellGroupEvents& reportStepStartEvents() const { return report_step_start_events_; }
 
     std::vector<int> getCellsForConnections(const Well& well) const;
+    std::vector<int> getCellsForConnectionsWithOverlap(const Well& well) const;
+    std::vector<int> getCellsForConnectionsOnOverlap(const Well& well) const;
 
     bool reportStepStarts() const { return report_step_starts_; }
 
@@ -266,6 +268,9 @@ public:
     }
 
     bool operator==(const BlackoilWellModelGeneric& rhs) const;
+
+    const auto& parallelWellInfo() const
+    { return parallel_well_info_; }
 
     const ParallelWellInfo<Scalar>&
     parallelWellInfo(const std::size_t idx) const
@@ -489,6 +494,8 @@ protected:
 
     /// \brief get compressed index for interior cells (-1, otherwise
     virtual int compressedIndexForInterior(int cartesian_cell_idx) const = 0;
+    virtual int compressedIndexForInteriorOrOverlap(int cartesian_cell_idx) const = 0;
+    virtual int compressedIndexForOverlap(int cartesian_cell_idx) const = 0;
 
     std::vector<std::vector<int>> getMaxWellConnections() const;
 
