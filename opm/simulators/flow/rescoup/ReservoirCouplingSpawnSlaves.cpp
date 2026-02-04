@@ -55,7 +55,8 @@ ReservoirCouplingSpawnSlaves(
 ) :
     master_{master},
     rescoup_{rescoup},
-    comm_{master.getComm()}
+    comm_{master.getComm()},
+    logger_{comm_}
 {
 }
 
