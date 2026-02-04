@@ -8,6 +8,7 @@
 
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 
@@ -169,7 +170,8 @@ std::tuple<TimeStepControlType, std::unique_ptr<TimeStepControlInterface>, bool>
 createController(const UnitSystem& unitSystem)
 {
     const double tol =  Parameters::Get<Parameters::TimeStepControlTolerance>();
-    const bool verbose = Parameters::Get<Parameters::TimeStepVerbosity>();
+    const auto& comm = FlowGenericVanguard::comm();
+    const bool verbose = Parameters::Get<Parameters::TimeStepVerbosity>() && (comm.rank() == 0);
     using RetVal = std::tuple<TimeStepControlType, std::unique_ptr<TimeStepControlInterface>, bool>;
     using Func = std::function<RetVal()>;
     const auto creators = std::unordered_map<std::string, Func> {
