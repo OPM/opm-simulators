@@ -2787,11 +2787,7 @@ namespace Opm
 
         {
             const auto info = this->getFirstPerfCellConditions(simulator);
-
-            // TODO: The dyanmic Evaluation needs to be fixed to support the sitaution
-            // scalar operating with EvalWell that the number of derivatives are not determined
-            const int totalNumEq = this->primary_variables_.numWellEq() + Indices::numEq;
-            temperature = EvalWell(totalNumEq, info.temperature);
+            temperature = EvalWell(info.temperature);
             saltConcentration = this->extendEval(info.saltConcentration);
         }
 
@@ -2856,6 +2852,10 @@ namespace Opm
                 b[oilActiveCompIdx] = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(
                                                pvt_region_index, temperature, pressure);
             }
+        }
+
+        if (has_solvent) {
+            b[Indices::contiSolventEqIdx] = SolventModule::solventInverseFormationVolumeFactor(pvt_region_index, temperature, pressure);
         }
 
         auto mix = mix_s;
