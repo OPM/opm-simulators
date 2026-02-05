@@ -218,7 +218,6 @@ namespace Amg
                 if (abs_max != 0) {
                     bweights /=  abs_max; // given normal densities this scales weights to about 1.
                 }
-                
 
                 const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 weights[index] = bweights;
