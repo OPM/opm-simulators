@@ -349,6 +349,49 @@ satRvw(const Scalar press, const Scalar temp) const
     return FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp, press);;
 }
 
+// ==============================================
+// RsConst IMPLEMENTATION
+// ==============================================
+
+template <class FluidSystem>
+RsConst<FluidSystem>::RsConst(const typename FluidSystem::Scalar rs_constant,
+                              const typename FluidSystem::Scalar pb_constant)
+    :rs_constant_(rs_constant)
+    , pb_constant_(pb_constant)
+{
+    // Validate that rs_constant is reasonable
+    if (rs_constant_ < 0.0) {
+        throw std::invalid_argument("RSCONST RS value cannot be negative");
+    }
+    if (pb_constant_ <= 0.0) {
+        throw std::invalid_argument("RSCONST bubble point pressure must be positive");
+    }
+}
+
+template <class FluidSystem>
+typename FluidSystem::Scalar
+RsConst<FluidSystem>::satRs(const typename FluidSystem::Scalar /* press */, 
+                            const typename FluidSystem::Scalar /* temp */) const
+{
+    // For RSCONST, the saturated Rs is the constant value
+    return rs_constant_;
+}
+
+template <class FluidSystem>
+typename FluidSystem::Scalar
+RsConst<FluidSystem>::operator()(const typename FluidSystem::Scalar /* depth */,
+                                 const typename FluidSystem::Scalar press,
+                                 const typename FluidSystem::Scalar temp,
+                                 const typename FluidSystem::Scalar /* satGas */) const
+{
+    // For RSCONST with PVDO (dead oil):
+    // 1. Oil is always treated as undersaturated with constant dissolved gas
+    // 2. Simulation should terminate if pressure < pb_constant_
+    // 3. Always ensure we use undersaturated PVT calculation
+
+    return rs_constant_;
+}
+
 } // namespace Miscibility
 
 template<class Scalar>
