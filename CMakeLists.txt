@@ -109,13 +109,20 @@ if (OPM_ENABLE_PYTHON)
     if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
       find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
     else()
-      find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+      find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module Development.Embed)
     endif()
   endif()
   if(Python3_VERSION_MINOR LESS 3)
     # Python native namespace packages requires python >= 3.3
     message(SEND_ERROR "OPM requires python >= 3.3 but only version ${Python3_VERSION} was found")
   endif()
+
+  find_package(pybind11 CONFIG)
+
+  if(NOT pybind11_FOUND)
+    include(DownloadPyBind11)
+  endif()
+
   # Compatibility settings for PythonInterp and PythonLibs
   # used e.g. in FindCwrap, pybind11
   set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
@@ -737,7 +744,7 @@ if(BUILD_FLOW_FLOAT_VARIANTS)
 endif()
 
 if (OPM_ENABLE_PYTHON)
-  add_subdirectory(python)
+  add_subdirectory(python/simulators)
 endif()
 
 add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
