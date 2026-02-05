@@ -63,14 +63,16 @@ testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, con
     if(prm.get<std::string>("preconditioner.type") == "cprt"){
         transpose = true;
     }
-    std::function<Vector()> wc = [&matrix, transpose]()
+
+    constexpr int pressure_index = std::min(1, bz-1);
+    std::function<Vector()> wc = [&matrix, transpose, pressure_index]()
     {
-        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, 1, transpose, false);
+        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, pressure_index, transpose, false);
     };
 
     using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
     SeqOperatorType op(matrix);
-    Dune::FlexibleSolver<SeqOperatorType> solver(op, prm, wc, std::min(1, bz-1));
+    Dune::FlexibleSolver<SeqOperatorType> solver(op, prm, wc, pressure_index);
     Vector x(rhs.size());
     Dune::InverseOperatorResult res;
     solver.apply(x, rhs, res);

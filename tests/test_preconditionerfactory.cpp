@@ -95,12 +95,14 @@ testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const
     if(prm.get<std::string>("preconditioner.type") == "cprt"){
         transpose = true;
     }
-    std::function<Vector()> wc = [&matrix, transpose]()
+
+    constexpr int pressure_index = std::min(1, bz-1);
+    std::function<Vector()> wc = [&matrix, transpose, pressure_index]()
     {
-        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, 1, transpose, false);
+        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, pressure_index, transpose, false);
     };
 
-    auto prec = PrecFactory::create(op, prm.get_child("preconditioner"), wc, std::min(1, bz-1));
+    auto prec = PrecFactory::create(op, prm.get_child("preconditioner"), wc, pressure_index);
     Dune::BiCGSTABSolver<Vector> solver(op, *prec, prm.get<double>("tol"), prm.get<int>("maxiter"), prm.get<int>("verbosity"));
     Vector x(rhs.size());
     Dune::InverseOperatorResult res;
