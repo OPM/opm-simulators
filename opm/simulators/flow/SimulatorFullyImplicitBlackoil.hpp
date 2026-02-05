@@ -187,6 +187,21 @@ public:
             if (!continue_looping) break;
         }
         simulator_.problem().writeReports(timer);
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // Clean up MPI intercommunicators before MPI_Finalize()
+        // Master sends terminate=1 signal; slave receives it and both call MPI_Comm_disconnect()
+        if (this->reservoirCouplingMaster_) {
+            this->reservoirCouplingMaster_->sendTerminateAndDisconnect();
+        }
+        else if (this->reservoirCouplingSlave_ && !this->reservoirCouplingSlave_->terminated()) {
+            // TODO: Implement GECON item 8: stop master process when a slave finishes
+            // Only call if not already terminated via maybeReceiveTerminateSignalFromMaster()
+            // (which happens when master finishes before slave reaches end of its loop)
+            this->reservoirCouplingSlave_->receiveTerminateAndDisconnect();
+        }
+#endif
+
         return finalize();
     }
 

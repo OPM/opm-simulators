@@ -77,6 +77,28 @@ public:
     const std::string& slaveGroupIdxToGroupName(std::size_t group_idx) const {
         return this->slave_group_order_.at(group_idx);
     }
+    bool terminated() const { return this->terminated_; }
+
+    /// @brief Blocking receive for terminate/continue signal from master.
+    ///
+    /// This method is called at the start of each timestep iteration in the slave's
+    /// substep loop. Master sends 0 (continue) or 1 (terminate) at each iteration.
+    /// If terminate signal (value != 0) is received, disconnects the intercommunicator,
+    /// sets the terminated flag, and returns true.
+    ///
+    /// @return true if terminate signal received and disconnect completed, false to continue.
+    bool maybeReceiveTerminateSignalFromMaster();
+
+    /// @brief Receive terminate signal from master and disconnect the intercommunicator.
+    ///
+    /// This method must be called at the end of the simulation to cleanly shut down
+    /// the MPI intercommunicator created when the slave was spawned. It performs two steps:
+    /// 1. Receives a terminate signal from master (only on rank 0, then broadcast)
+    /// 2. Disconnects the intercommunicator (collective operation)
+    ///
+    /// Both master and slaves must call their respective disconnect methods for
+    /// MPI_Comm_disconnect() to complete - it is a collective operation.
+    void receiveTerminateAndDisconnect();
 
 private:
     void checkGrupSlavGroupNames_();
@@ -97,6 +119,8 @@ private:
     MPI_Comm slave_master_comm_{MPI_COMM_NULL};
     std::map<std::string, std::string> slave_to_master_group_map_;
     bool activated_{false};
+    // True if the slave was terminated by the master process
+    bool terminated_{false};
     // True if no GRUPMAST keyword in the master schedule and no GRUPSLAV keyword in the slave schedule
     bool history_matching_mode_{false};
     std::string slave_name_;  // This is the slave name as defined in the master process
