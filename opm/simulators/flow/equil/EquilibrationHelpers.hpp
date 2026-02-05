@@ -601,6 +601,53 @@ private:
     Scalar satRvw(const Scalar press, const Scalar temp) const;
 };
 
+/**
+ * Type that implements "constant dissolved gas-oil ratio" (Rs)
+ * from RSCONST keyword. This is a global constant value for dead oil.
+ * Oil should use PVDO tables, and gas phase should not be active.
+ * Simulation terminates if pressure falls below bubble point.
+ */
+template <class FluidSystem>
+class RsConst : public RsFunction<typename FluidSystem::Scalar>
+{
+public:
+    using Scalar = typename FluidSystem::Scalar;
+    
+    /**
+     * Constructor.
+     *
+     * \param[in] rs_constant Constant Rs value from RSCONST
+     * \param[in] pb_constant Constant bubble point from RSCONST
+     */
+    RsConst(const Scalar rs_constant,
+            const Scalar pb_constant);
+    
+    /**
+     * Function call - returns constant Rs if pressure above bubble point.
+     * Should ensure undersaturated PVT calculation is always used.
+     */
+    Scalar operator()(const Scalar depth,
+                      const Scalar press,
+                      const Scalar temp,
+                      const Scalar satGas = 0.0) const override;
+    
+    /**
+     * Get the constant bubble point pressure.
+     */
+    Scalar bubblePoint() const { return pb_constant_; }
+    
+    /**
+     * Get the constant Rs value.
+     */
+    Scalar constantRs() const { return rs_constant_; }
+
+    Scalar satRs(const Scalar press, const Scalar temp) const;
+
+private:
+    const Scalar rs_constant_;
+    const Scalar pb_constant_;
+};
+
 } // namespace Miscibility
 
 /**
