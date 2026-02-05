@@ -40,6 +40,7 @@ namespace Opm {
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
 
 #include <opm/simulators/linalg/linalgproperties.hh>
 
@@ -112,6 +113,7 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Water;
 
     using ModelParameters = typename Base::ModelParameters;
+    using SolventModule = BlackOilSolventModule<TypeTag>;
 
     static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
