@@ -2827,6 +2827,12 @@ namespace Opm
             }
         }
 
+        if (has_solvent) {
+            // TODO: there are different solvent models, we just use this one for testing
+            b[Indices::contiSolventEqIdx] = SolventModule::solventPvt().inverseFormationVolumeFactor(
+                                               pvt_region_index, temperature, pressure);
+        }
+
         auto mix = mix_s;
 
         if (oilActive && gasActive) {
