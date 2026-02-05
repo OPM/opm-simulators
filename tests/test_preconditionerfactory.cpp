@@ -100,7 +100,7 @@ testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const
         return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, 1, transpose, false);
     };
 
-    auto prec = PrecFactory::create(op, prm.get_child("preconditioner"), wc, 1);
+    auto prec = PrecFactory::create(op, prm.get_child("preconditioner"), wc, std::min(1, bz-1));
     Dune::BiCGSTABSolver<Vector> solver(op, *prec, prm.get<double>("tol"), prm.get<int>("maxiter"), prm.get<int>("verbosity"));
     Vector x(rhs.size());
     Dune::InverseOperatorResult res;
