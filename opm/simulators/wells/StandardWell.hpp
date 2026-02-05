@@ -78,6 +78,7 @@ namespace Opm
         using typename Base::FluidState;
         using typename Base::RateVector;
         using typename Base::GroupStateHelperType;
+        using typename Base::SolventModule;
 
         using Base::has_solvent;
         using Base::has_zFraction;
