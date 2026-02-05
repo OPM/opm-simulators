@@ -360,12 +360,6 @@ protected:
     }
 #endif
 
-    // removing some connection located in inactive grid cells
-    void filterConnections_()
-    {
-        this->doFilterConnections_(this->schedule());
-    }
-
     // \Note: this globalTrans_ is used for domain decomposition and INIT file output.
     // It only contains trans_ due to permeability and does not contain thermalHalfTrans_,
     // diffusivity_ abd dispersivity_. The main reason is to reduce the memory usage for rank 0
