@@ -66,9 +66,10 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <iomanip>
-#include <utility>
 #include <optional>
+#include <utility>
 
 #include <fmt/format.h>
 
@@ -2245,6 +2246,30 @@ namespace Opm {
         BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, geochemMod.getWellSpeciesRates(), reportStepIdx);
 
         this->assignMswTracerRates(wsrpt, geochemMod.getMswSpeciesRates(), reportStepIdx);
+    }
+
+    template <typename TypeTag>
+    [[nodiscard]] auto BlackoilWellModel<TypeTag>::rsConstInfo() const
+        -> typename WellState<Scalar,IndexTraits>::RsConstInfo
+    {
+        if (! FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ||
+            ! FluidSystem::enableConstantRs())
+        {
+            return {};
+        }
+
+        const auto& rsConstTables = this->eclState_
+            .getTableManager().getRsconstTables();
+
+        if (rsConstTables.empty() ||
+            (rsConstTables[0].numRows() != std::size_t{1}))
+        {
+            return {};
+        }
+
+        const auto rsConst = rsConstTables[0].getColumn(0).front();
+
+        return { true, static_cast<Scalar>(rsConst) };
     }
 
 } // namespace Opm

@@ -65,6 +65,21 @@ template<typename Scalar, typename IndexTraits>
 class WellState
 {
 public:
+    struct RsConstInfo
+    {
+        RsConstInfo() = default;
+        RsConstInfo(const bool en, const Scalar val)
+            : enabled { en  }
+            , value   { val }
+        {}
+
+        // True when RSCONST-based reporting should be applied.
+        bool enabled {false};
+
+        // Constant Rs value (surface gas volume per surface oil volume).
+        Scalar value {};
+    };
+
     static const std::uint64_t event_mask = ScheduleEvents::WELL_STATUS_CHANGE
         | ScheduleEvents::PRODUCTION_UPDATE
         | ScheduleEvents::INJECTION_UPDATE;
@@ -157,8 +172,9 @@ public:
                              const Parallel::Communication& comm) const;
 
     data::Wells
-    report(const int* globalCellIdxMap,
-           const std::function<bool(const int)>& wasDynamicallyClosed) const;
+    report(const int*                            globalCellIdxMap,
+           const std::function<bool(const int)>& wasDynamicallyClosed,
+           const RsConstInfo&                    rsConst = RsConstInfo{}) const;
 
     void reportConnections(std::vector<data::Connection>& connections,
                            std::size_t well_index,

@@ -522,12 +522,16 @@ gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
 template<typename Scalar, typename IndexTraits>
 data::Wells
 WellState<Scalar, IndexTraits>::
-report(const int* globalCellIdxMap,
-       const std::function<bool(const int)>& wasDynamicallyClosed) const
+report(const int*                            globalCellIdxMap,
+       const std::function<bool(const int)>& wasDynamicallyClosed,
+       const RsConstInfo&                    rsConst) const
 {
     if (this->numWells() == 0) {
         return {};
     }
+
+    const auto useRsConst = rsConst.enabled
+        && this->phaseUsageInfo_.phaseIsActive(oilPhaseIdx);
 
     using rt = data::Rates::opt;
 
@@ -575,6 +579,21 @@ report(const int* globalCellIdxMap,
             well.rates.set(rt::well_potential_oil, well_potentials[phase_pos]);
         }
 
+        if (useRsConst && ws.producer) {
+            // Gas production rates are Rs * oil rate for dead-oil runs with
+            // constant Rs values.
+            const auto qg = rsConst.value *
+                wv[pu.canonicalToActivePhaseIdx(oilPhaseIdx)];
+
+            well.rates.set(rt::gas, qg);
+            well.rates.set(rt::dissolved_gas, qg);
+
+            // Reservoir gas is zero since gas is not an active phase.
+            well.rates.set(rt::reservoir_gas, 0.0);
+            well.rates.set(rt::well_potential_gas, 0.0);
+            well.rates.set(rt::productivity_index_gas, 0.0);
+        }
+
         if (pu.phaseIsActive(gasPhaseIdx)) {
             const int phase_pos = pu.canonicalToActivePhaseIdx(gasPhaseIdx);
             well.rates.set(rt::gas, wv[phase_pos]);
@@ -614,9 +633,12 @@ report(const int* globalCellIdxMap,
             well.rates.set(rt::alq, 0.0);
         }
 
-        well.rates.set(rt::dissolved_gas,
-                       ws.phase_mixing_rates[ws.dissolved_gas] +
-                       ws.phase_mixing_rates[ws.dissolved_gas_in_water]);
+        if (!rsConst.enabled) {
+            well.rates.set(rt::dissolved_gas,
+                           ws.phase_mixing_rates[ws.dissolved_gas] +
+                           ws.phase_mixing_rates[ws.dissolved_gas_in_water]);
+        }
+
         well.rates.set(rt::vaporized_oil, ws.phase_mixing_rates[ws.vaporized_oil]);
         well.rates.set(rt::vaporized_water, ws.phase_mixing_rates[ws.vaporized_water]);
 
