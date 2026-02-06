@@ -132,10 +132,6 @@ endif()
 include(OpmInit)
 OpmSetPolicies()
 
-if(USE_MPI)
-  set(HDF5_PREFER_PARALLEL TRUE)
-endif()
-
 if(USE_GPU_BRIDGE)
   set(COMPILE_GPU_BRIDGE 1)
 endif()
