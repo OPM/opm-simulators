@@ -35,6 +35,22 @@ option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
 option(USE_OPENCL "Enable OpenCL support?" ON)
 
+macro(opm-simulators_prereqs_hook)
+  if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
+    message(
+      WARNING
+        "When building parallel OPM flow we need a "
+        "parallel version of hdf5, but found only a serial one. "
+        "Please install a parallel hdf5 library for MPI "
+        "(e.g with apt-get install libhdf5-mpi-dev) and do a clean "
+        "rebuild (build after \"make clean\"). Continuing with "
+        "only normal restart without hdf5 file support."
+    )
+    set(HDF5_FOUND OFF)
+    unset(HAVE_HDF5)
+  endif()
+endmacro()
+
 macro(opm-simulators_sources_hook)
   if(OPENCL_FOUND)
     include(opencl-source-provider)
@@ -74,16 +90,6 @@ macro(opm-simulators_files_hook)
     if(ROCALUTION_FOUND)
       set(HAVE_ROCALUTION 1)
     endif()
-  endif()
-  if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
-    message(WARNING "When building parallel OPM flow we need a "
-      "parallel version of hdf5, but found only a serial one. "
-      "Please install a parallel hdf5 library for MPI "
-      "(e.g with apt-get install libhdf5-mpi-dev) and do a clean "
-      "rebuild (build after \"make clean\"). Continuing with "
-      "only normal restart without hdf5 file support.")
-    set(HDF5_FOUND OFF)
-    unset(HAVE_HDF5)
   endif()
   if(HAVE_ROCSPARSE AND HAVE_CUDA AND USE_GPU_BRIDGE) # unsure if this is the correct way to change this
     message(WARNING "WARNING! Using CUDA and ROCm at the same time is not allowed. Please choose only one of them by setting CMAKE_DISABLE_FIND_PACKAGE_<rocsparse|CUDA>=<ON|OFF>. Disabling CUDA...\n")
