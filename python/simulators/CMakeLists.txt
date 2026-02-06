@@ -5,9 +5,7 @@ set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings_simulators.j
 set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyBlackOilSimulatorDoc.hpp")
 set(PYTHON_GW_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyGasWaterSimulatorDoc.hpp")
 set(PYTHON_OP_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyOnePhaseSimulatorDoc.hpp")
-#  Note: If the new find_package(Python3) is used in the top level CMakeLists.txt, the variable
-#    ${PYTHON_EXECUTABLE} is set there to ${Python3_EXECUTABLE}
-#
+
 # Command to run the Python script
 
 find_file(PYTHON_GENERATE_DOCSTRINGS_PY generate_docstring_hpp.py
@@ -15,28 +13,55 @@ find_file(PYTHON_GENERATE_DOCSTRINGS_PY generate_docstring_hpp.py
   PATH_SUFFIXES python NO_DEFAULT_PATH REQUIRED)
 
 add_custom_command(
-    OUTPUT ${PYTHON_DOCSTRINGS_GENERATED_HPP}
-    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-            ${PYTHON_EXECUTABLE} ${PYTHON_GENERATE_DOCSTRINGS_PY}
-            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_DOCSTRINGS_GENERATED_HPP} PYBLACKOILSIMULATORDOC_HPP "Opm::Pybind::DocStrings" "BlackOil"
-    DEPENDS ${PYTHON_DOCSTRINGS_FILE}
-    COMMENT "Generating PyBlackOilSimulatorDoc.hpp from JSON file"
+    OUTPUT
+      ${PYTHON_DOCSTRINGS_GENERATED_HPP}
+    COMMAND
+      ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+      $<TARGET_FILE:Python3::Interpreter>
+      ${PYTHON_GENERATE_DOCSTRINGS_PY}
+      ${PYTHON_DOCSTRINGS_FILE}
+      ${PYTHON_DOCSTRINGS_GENERATED_HPP}
+      PYBLACKOILSIMULATORDOC_HPP
+      "Opm::Pybind::DocStrings"
+      "BlackOil"
+    DEPENDS
+      ${PYTHON_DOCSTRINGS_FILE}
+    COMMENT
+      "Generating PyBlackOilSimulatorDoc.hpp from JSON file"
 )
 add_custom_command(
-    OUTPUT ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP}
-    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-            ${PYTHON_EXECUTABLE} ${PYTHON_GENERATE_DOCSTRINGS_PY}
-            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP} PYGASWATERSIMULATORDOC_HPP "Opm::Pybind::DocStrings" "GasWater"
-    DEPENDS ${PYTHON_DOCSTRINGS_FILE}
-    COMMENT "Generating PyGasWaterSimulatorDoc.hpp from JSON file"
+    OUTPUT
+      ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP}
+    COMMAND
+      ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+      $<TARGET_FILE:Python3::Interpreter>
+      ${PYTHON_GENERATE_DOCSTRINGS_PY}
+      ${PYTHON_DOCSTRINGS_FILE}
+      ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP}
+      PYGASWATERSIMULATORDOC_HPP
+      "Opm::Pybind::DocStrings"
+      "GasWater"
+    DEPENDS
+      ${PYTHON_DOCSTRINGS_FILE}
+    COMMENT
+      "Generating PyGasWaterSimulatorDoc.hpp from JSON file"
 )
 add_custom_command(
-    OUTPUT ${PYTHON_OP_DOCSTRINGS_GENERATED_HPP}
-    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-            ${PYTHON_EXECUTABLE} ${PYTHON_GENERATE_DOCSTRINGS_PY}
-            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_OP_DOCSTRINGS_GENERATED_HPP} PYONEPHASESIMULATORDOC_HPP "Opm::Pybind::DocStrings" "OnePhase"
-    DEPENDS ${PYTHON_DOCSTRINGS_FILE}
-    COMMENT "Generating PyOnePhaseSimulatorDoc.hpp from JSON file"
+    OUTPUT
+      ${PYTHON_OP_DOCSTRINGS_GENERATED_HPP}
+    COMMAND
+      ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+      $<TARGET_FILE:Python3::Interpreter>
+      ${PYTHON_GENERATE_DOCSTRINGS_PY}
+      ${PYTHON_DOCSTRINGS_FILE}
+      ${PYTHON_OP_DOCSTRINGS_GENERATED_HPP}
+      PYONEPHASESIMULATORDOC_HPP
+      "Opm::Pybind::DocStrings"
+      "OnePhase"
+    DEPENDS
+      ${PYTHON_DOCSTRINGS_FILE}
+    COMMENT
+      "Generating PyOnePhaseSimulatorDoc.hpp from JSON file"
 )
 # NOTE: The variable ${PYBIND11_SYSTEM} is set in python/CMakeLists.txt
 #   to the value "SYSTEM" or unset, depending on the current version of Pybind11.
@@ -87,12 +112,24 @@ find_file(PYTHON_INSTALL_PY install.py
 #  update the files if they have been modified. We use the install.py script in opm-common, see also
 #  CMakeLists.txt in opm-common
 add_custom_target(copy_python ALL
-    COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_INSTALL_PY}"
-        ${PROJECT_SOURCE_DIR}/python/opm ${PROJECT_BINARY_DIR}/python 0
-    COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_INSTALL_PY}"
-        ${PROJECT_SOURCE_DIR}/python/test ${PROJECT_BINARY_DIR}/python 0
-    COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_INSTALL_PY}"
-        ${PROJECT_SOURCE_DIR}/python/test_data ${PROJECT_BINARY_DIR}/python 0
+    COMMAND
+      $<TARGET_FILE:Python3::Interpreter>
+      "${PYTHON_INSTALL_PY}"
+      ${PROJECT_SOURCE_DIR}/python/opm
+      ${PROJECT_BINARY_DIR}/python
+      0
+    COMMAND
+      $<TARGET_FILE:Python3::Interpreter>
+      "${PYTHON_INSTALL_PY}"
+      ${PROJECT_SOURCE_DIR}/python/test
+      ${PROJECT_BINARY_DIR}/python
+      0
+    COMMAND
+      $<TARGET_FILE:Python3::Interpreter>
+      "${PYTHON_INSTALL_PY}"
+      ${PROJECT_SOURCE_DIR}/python/test_data
+      ${PROJECT_BINARY_DIR}/python
+      0
 )
 
 foreach(target_name IN ITEMS BlackOil GasWater OnePhase)
@@ -114,72 +151,94 @@ foreach(target_name IN ITEMS BlackOil GasWater OnePhase)
   if (OPM_INSTALL_PYTHON)
     include(PyInstallPrefix)  # from opm-common
     install(
-      TARGETS ${target_name}
-      DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm
+      TARGETS
+        ${target_name}
+      DESTINATION
+        ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm
     )
     install(
       CODE "execute_process(
-        COMMAND ${PYTHON_EXECUTABLE}
-                ${PYTHON_INSTALL_PY}
-                ${PROJECT_BINARY_DIR}/python/opm
-                ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX} 1)"
+            COMMAND
+              $<TARGET_FILE:Python3::Interpreter>
+              ${PYTHON_INSTALL_PY}
+              ${PROJECT_BINARY_DIR}/python/opm
+              ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}
+              1
+            )"
     )
   endif()
 endforeach()
 
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "
-import site, sys
-try:
-    sys.stdout.write(site.getsitepackages()[-1])
-except e:
-    sys.stdout.write('')" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES_PATH)
-
-if (PYTHON_SITE_PACKAGES_PATH MATCHES ".*/dist-packages/?" AND
-      CMAKE_INSTALL_PREFIX MATCHES "^/usr.*")
-  # dist-packages is only used if we install below /usr and python's site packages
-  # path matches dist-packages
-  set(PYTHON_PACKAGE_PATH "dist-packages")
-else()
-  set(PYTHON_PACKAGE_PATH "site-packages")
-endif()
-
+include(PyInstallPrefix)
 if(OPM_ENABLE_PYTHON_TESTS)
-  set(PYTHON_PATH ${PROJECT_BINARY_DIR}/python:${opm-common_DIR}/python:$ENV{PYTHONPATH})
   set(cases basic fluidstate_variables primary_variables schedule throw)
   if(MPI_FOUND)
     list(APPEND cases mpi)
   endif()
 
   # Create a fixture test that builds Python modules before running Python tests
-  add_test(NAME python_modules_build
-      COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target python_tests)
-  set_tests_properties(python_modules_build PROPERTIES FIXTURES_SETUP python_modules_fixture)
+  add_test(
+    NAME
+      python_modules_build
+    COMMAND
+      ${CMAKE_COMMAND}
+      --build ${CMAKE_BINARY_DIR}
+      --target python_tests
+  )
+  set_tests_properties(python_modules_build
+    PROPERTIES
+    FIXTURES_SETUP
+      python_modules_fixture
+  )
 
   # NOTE: See comment in test_basic.py for the reason why we are
   #   splitting the python tests into multiple add_test() tests instead
   #   of having a single "python -m unittest" test call that will run all
   #   the tests in the "test" sub directory.
   foreach(case_name IN ITEMS ${cases})
-    add_test(NAME python_${case_name}
-        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
-        COMMAND ${CMAKE_COMMAND}
-        -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
-        -m unittest test/test_${case_name}.py)
-    set_tests_properties(python_${case_name} PROPERTIES
-        FIXTURES_REQUIRED python_modules_fixture)
+    add_test(
+      NAME
+        python_${case_name}
+      WORKING_DIRECTORY
+        ${PROJECT_BINARY_DIR}/python
+      COMMAND
+        $<TARGET_FILE:Python3::Interpreter>
+        -m unittest
+        test/test_${case_name}.py
+    )
+    set(env_mod
+      PYTHONPATH=path_list_prepend:${PROJECT_BINARY_DIR}/python
+      PYTHONPATH=path_list_prepend:${opm-common_DIR}/python
+    )
+    set_tests_properties(python_${case_name}
+      PROPERTIES
+      ENVIRONMENT_MODIFICATION
+        "${env_mod}"
+      FIXTURES_REQUIRED
+        python_modules_fixture
+    )
   endforeach()
 endif()
 
-file(COPY ${PROJECT_SOURCE_DIR}/python/opm/CMakeLists.txt DESTINATION ${PROJECT_BINARY_DIR}/python)
-file(COPY ${PROJECT_SOURCE_DIR}/python/requirements.txt DESTINATION ${PROJECT_BINARY_DIR}/python)
-file(COPY ${PROJECT_SOURCE_DIR}/python/README.md DESTINATION ${PROJECT_BINARY_DIR}/python)
-file(COPY ${PROJECT_SOURCE_DIR}/python/MANIFEST.in DESTINATION ${PROJECT_BINARY_DIR}/python)
-file(COPY ${PROJECT_SOURCE_DIR}/python/pyproject.toml DESTINATION ${PROJECT_BINARY_DIR}/python)
+file(
+  COPY
+    ${PROJECT_SOURCE_DIR}/python/opm/CMakeLists.txt
+    ${PROJECT_SOURCE_DIR}/python/requirements.txt
+    ${PROJECT_SOURCE_DIR}/python/README.md
+    ${PROJECT_SOURCE_DIR}/python/MANIFEST.in
+    ${PROJECT_SOURCE_DIR}/python/pyproject.toml
+  DESTINATION
+    ${PROJECT_BINARY_DIR}/python
+)
 
 set(opm-simulators_PYTHON_PACKAGE_VERSION ${OPM_PYTHON_PACKAGE_VERSION_TAG})
 
 # Generate versioned setup.py
 configure_file(${PROJECT_SOURCE_DIR}/python/setup.py.in
                 ${PROJECT_BINARY_DIR}/python/setup.py.tmp @ONLY)
-file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/python/setup.py
-               INPUT ${PROJECT_BINARY_DIR}/python/setup.py.tmp)
+file(GENERATE
+  OUTPUT
+    ${PROJECT_BINARY_DIR}/python/setup.py
+  INPUT
+    ${PROJECT_BINARY_DIR}/python/setup.py.tmp
+)
