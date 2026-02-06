@@ -117,12 +117,12 @@ ReservoirCouplingMasterReportStep<Scalar>::
 receiveInjectionDataFromSlaves()
 {
     auto num_slaves = this->numSlaves();
-    this->logger().info("Receiving injection data from slave processes");
+    this->logger().debug("Receiving injection data from slave processes");
     for (unsigned int i = 0; i < num_slaves; i++) {
         auto num_slave_groups = this->numSlaveGroups(i);
         if (num_slave_groups == 0) {
             // History mode: no slave groups defined, skip data exchange
-            this->logger().info(fmt::format(
+            this->logger().debug(fmt::format(
                 "Slave {} has no slave groups (history mode), skipping injection data exchange",
                 this->slaveName(i)
             ));
@@ -142,19 +142,16 @@ receiveInjectionDataFromSlaves()
                     this->getSlaveComm(i),
                     MPI_STATUS_IGNORE
                 );
-                this->logger().info(
-                    fmt::format(
-                        "Received injection data for {} groups from slave process with name: {}. "
-                        "Number of slave groups: {}", num_slave_groups, this->slaveName(i), num_slave_groups
-                    )
-                );
+                this->logger().debug(fmt::format(
+                    "Received injection data for {} groups from {}",
+                    num_slave_groups, this->slaveName(i)
+                ));
             }
             else {
-                this->logger().info(fmt::format(
-                    "Slave {} has not activated yet, skipping receiving injection data from slave",
-                        this->slaveName(i)
-                    )
-                );
+                this->logger().debug(fmt::format(
+                    "Slave {} has not activated yet, skipping injection data",
+                    this->slaveName(i)
+                ));
                 injection_data.assign(num_slave_groups, SlaveGroupInjectionData{}); // Set to zero injection data
             }
         }
@@ -173,12 +170,12 @@ ReservoirCouplingMasterReportStep<Scalar>::
 receiveProductionDataFromSlaves()
 {
     auto num_slaves = this->numSlaves();
-    this->logger().info("Receiving production data from slave processes");
+    this->logger().debug("Receiving production data from slave processes");
     for (unsigned int i = 0; i < num_slaves; i++) {
         auto num_slave_groups = this->numSlaveGroups(i);
         if (num_slave_groups == 0) {
             // History mode: no slave groups defined, skip data exchange
-            this->logger().info(fmt::format(
+            this->logger().debug(fmt::format(
                 "Slave {} has no slave groups (history mode), skipping production data exchange",
                 this->slaveName(i)
             ));
@@ -198,19 +195,16 @@ receiveProductionDataFromSlaves()
                     this->getSlaveComm(i),
                     MPI_STATUS_IGNORE
                 );
-                this->logger().info(
-                    fmt::format(
-                        "Received production data for {} groups from slave process with name: {}. "
-                        "Number of slave groups: {}", num_slave_groups, this->slaveName(i), num_slave_groups
-                    )
-                );
+                this->logger().debug(fmt::format(
+                    "Received production data for {} groups from {}",
+                    num_slave_groups, this->slaveName(i)
+                ));
             }
             else {
-                this->logger().info(fmt::format(
-                    "Slave {} has not activated yet, skipping receiving production data from slave",
-                        this->slaveName(i)
-                    )
-                );
+                this->logger().debug(fmt::format(
+                    "Slave {} has not activated yet, skipping production data",
+                    this->slaveName(i)
+                ));
                 production_data.assign(num_slave_groups, SlaveGroupProductionData{}); // Set to zero production data
             }
         }
@@ -243,8 +237,8 @@ sendInjectionTargetsToSlave(std::size_t slave_idx,
             /*tag=*/static_cast<int>(MessageTag::InjectionGroupTargets),
             this->getSlaveComm(slave_idx)
         );
-        this->logger().info(fmt::format(
-            "Sent {} injection targets to slave process with name: {}",
+        this->logger().debug(fmt::format(
+            "Sent {} injection targets to {}",
             num_injection_targets, this->slaveName(slave_idx)
         ));
     }
@@ -274,8 +268,8 @@ sendNumGroupTargetsToSlave(std::size_t slave_idx,
             /*tag=*/static_cast<int>(MessageTag::NumSlaveGroupTargets),
             this->getSlaveComm(slave_idx)
         );
-        this->logger().info(fmt::format(
-            "Sent number of injection targets {} and production targets {} to slave process with name: {}",
+        this->logger().debug(fmt::format(
+            "Sent target counts (inj={}, prod={}) to {}",
             num_injection_targets, num_production_targets, this->slaveName(slave_idx)
         ));
     }
@@ -301,8 +295,8 @@ sendProductionTargetsToSlave(std::size_t slave_idx,
             /*tag=*/static_cast<int>(MessageTag::ProductionGroupTargets),
             this->getSlaveComm(slave_idx)
         );
-        this->logger().info(fmt::format(
-            "Sent {} production targets to slave process with name: {}",
+        this->logger().debug(fmt::format(
+            "Sent {} production targets to {}",
             num_production_targets, this->slaveName(slave_idx)
         ));
     }

@@ -162,7 +162,7 @@ initStartOfReportStep(int report_step_idx)
 {
     assert(this->report_step_data_);
     this->report_step_data_->setReportStepIdx(report_step_idx);
-    this->logger_.info("Initializing start of report step");
+    this->logger_.debug("Initializing start of report step");
 }
 
 template <class Scalar>
@@ -291,6 +291,20 @@ ReservoirCouplingMaster<Scalar>::
 numSlavesStarted() const
 {
     return this->slave_names_.size();
+}
+
+template <class Scalar>
+std::size_t
+ReservoirCouplingMaster<Scalar>::
+numActivatedSlaves() const
+{
+    std::size_t count = 0;
+    for (std::size_t i = 0; i < this->slave_activation_status_.size(); ++i) {
+        if (this->slave_activation_status_[i] != 0) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 template <class Scalar>

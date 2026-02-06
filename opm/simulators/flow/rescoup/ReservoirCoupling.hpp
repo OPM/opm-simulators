@@ -23,8 +23,11 @@
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <dune/common/parallel/mpitraits.hh>
+
+#include <fmt/format.h>
 
 #include <mpi.h>
 #include <cmath>
@@ -42,6 +45,7 @@ public:
     explicit Logger(const Parallel::Communication& comm) : comm_(comm) {}
 
     void clearDeferredLogger() { deferred_logger_ = nullptr; }
+    void debug(const std::string &msg) const;
     DeferredLogger& deferredLogger() { return *deferred_logger_; }
     DeferredLogger& deferredLogger() const { return *deferred_logger_; }
     bool haveDeferredLogger() const { return deferred_logger_ != nullptr; }
@@ -238,6 +242,14 @@ void customErrorHandlerSlave_(MPI_Comm* comm, int* err, ...);
 void customErrorHandlerMaster_(MPI_Comm* comm, int* err, ...);
 void setErrhandler(MPI_Comm comm, bool is_master);
 std::pair<std::vector<char>, std::size_t> serializeStrings(const std::vector<std::string>& data);
+
+/// \brief Format seconds as a human-readable string showing both seconds and days.
+/// \param seconds The time value in seconds.
+/// \return A string like "864000s (10.00 days)".
+inline std::string formatDays(double seconds) {
+    double days = seconds / unit::day;
+    return fmt::format("{:.0f}s ({:.2f} days)", seconds, days);
+}
 
 /// \brief Utility class for comparing double values representing epoch dates or elapsed time.
 ///

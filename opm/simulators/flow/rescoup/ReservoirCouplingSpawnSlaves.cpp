@@ -252,12 +252,11 @@ receiveActivationDateFromSlaves_()
                                               "the master process' activation date");
             }
             this->master_.addSlaveActivationDate(slave_activation_date);
-            this->logger_.info(
-                fmt::format(
-                    "Received activation date from slave process with name: {}. "
-                    "Activation date: {}", this->master_.getSlaveName(i), slave_activation_date
-                )
-            );
+            this->logger_.debug(fmt::format(
+                "Received activation date from {}: {}",
+                this->master_.getSlaveName(i),
+                ReservoirCoupling::formatDays(slave_activation_date)
+            ));
         }
     }
     if (this->comm_.rank() != 0) {
@@ -266,7 +265,7 @@ receiveActivationDateFromSlaves_()
     }
     const double* data = this->master_.getSlaveActivationDates();
     this->comm_.broadcast(const_cast<double *>(data), /*count=*/num_slaves, /*emitter_rank=*/0);
-    this->logger_.info("Broadcasted slave activation dates to all ranks");
+    this->logger_.debug("Broadcasted slave activation dates to all ranks");
 }
 
 template <class Scalar>
@@ -289,12 +288,11 @@ receiveSimulationStartDateFromSlaves_()
                 MPI_STATUS_IGNORE
             );
             this->master_.addSlaveStartDate(slave_start_date);
-            this->logger_.info(
-                fmt::format(
-                    "Received start date from slave process with name: {}. "
-                    "Start date: {}", this->master_.getSlaveName(i), slave_start_date
-                )
-            );
+            this->logger_.debug(fmt::format(
+                "Received start date from {}: {}",
+                this->master_.getSlaveName(i),
+                ReservoirCoupling::formatDays(slave_start_date)
+            ));
         }
     }
     if (this->comm_.rank() != 0) {
@@ -303,7 +301,7 @@ receiveSimulationStartDateFromSlaves_()
     }
     const double* data = this->master_.getSlaveStartDates();
     this->comm_.broadcast(const_cast<double *>(data), /*count=*/num_slaves, /*emitter_rank=*/0);
-    this->logger_.info("Broadcasted slave start dates to all ranks");
+    this->logger_.debug("Broadcasted slave start dates to all ranks");
 }
 
 template <class Scalar>
@@ -339,8 +337,8 @@ sendMasterGroupNamesToSlaves_()
                     this->master_.getSlaveComm(slave_idx)
                 );
             }
-            this->logger_.info(fmt::format(
-                "Sent master group names to slave process rank 0 with name: {} (size: {})",
+            this->logger_.debug(fmt::format(
+                "Sent master group names to {} (size: {})",
                 slave_name, size)
             );
         }
@@ -375,9 +373,7 @@ sendSlaveNamesToSlaves_()
                 /*tag=*/static_cast<int>(MessageTag::SlaveName),
                 this->master_.getSlaveComm(i)
             );
-            this->logger_.info(fmt::format(
-                "Sent slave name to slave process rank 0 with name: {}", slave_name)
-            );
+            this->logger_.debug(fmt::format("Sent slave name to {}", slave_name));
         }
     }
 }
