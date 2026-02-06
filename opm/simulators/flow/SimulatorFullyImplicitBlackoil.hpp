@@ -373,6 +373,7 @@ public:
         modelParam_.tolerance_max_ds_ = tuning_dp.TRGDDS;
         modelParam_.tolerance_max_drs_ = tuning_dp.TRGDDRS;
         modelParam_.tolerance_max_drv_ = tuning_dp.TRGDDRV;
+        modelParam_.tolerance_max_dtemp_ = tuning_dp.TRGDDT;
 
         // Terminal warnings
         if (terminalOutput_) {
