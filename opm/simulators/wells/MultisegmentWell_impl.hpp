@@ -1692,6 +1692,7 @@ namespace Opm
         // if we fail to solve eqs, we reset status/operability before leaving
         const auto well_status_orig = this->wellStatus_;
         const auto operability_orig = this->operability_status_;
+        const auto well_state_orig = well_state;
         auto well_status_cur = well_status_orig;
         // don't allow opening wells that has a stopped well status
         const bool allow_open = well_state.well(this->index_of_well_).status == WellStatus::OPEN;
@@ -1814,6 +1815,7 @@ namespace Opm
         } else {
             this->wellStatus_ = well_status_orig;
             this->operability_status_ = operability_orig;
+            well_state = well_state_orig;
             const std::string message = fmt::format("   Well {} did not converge in {} inner iterations ("
                 "{} switches, {} status changes).", this->name(), it, switch_count, status_switch_count);
             deferred_logger.debug(message);
