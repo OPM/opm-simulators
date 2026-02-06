@@ -57,9 +57,7 @@ list(REMOVE_DUPLICATES OPM_COMPILE_COMPONENTS)
 # this will be used in a template argument pack.
 string(REPLACE ";" "," OPM_COMPILE_COMPONENTS_TEMPLATE_LIST "${OPM_COMPILE_COMPONENTS}")
 
-
-# HIP requires cmake version 3.21
-if (CONVERT_CUDA_TO_HIP AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.21")
+if(CONVERT_CUDA_TO_HIP)
   enable_language(HIP)
   message("CUDA code will be hipified")
   set(HAVE_CUDA 1) # we still need this defined so that the preprocessor does not remove the code
@@ -82,8 +80,6 @@ if (CONVERT_CUDA_TO_HIP AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.21")
   else()
     message(FATAL_ERROR "hipify-perl required to convert CUDA to HIP not found")
   endif()
-elseif(CONVERT_CUDA_TO_HIP)
-  message("To generate HIP code for AMD GPUs run CMake with version >= 3.21")
 endif()
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
@@ -117,29 +113,11 @@ find_package(opm-common REQUIRED)
 # The following was copied from CMakeLists.txt in opm-common.
 # TODO: factor out the common parts in opm-common and opm-simulator as a cmake module
 if (OPM_ENABLE_PYTHON)
-  # We need to be compatible with older CMake versions
-  # that do not offer FindPython3
-  # e.g. Ubuntu LTS 18.04 uses cmake 3.10
-  if(${CMAKE_VERSION} VERSION_LESS "3.12.0")
-    find_package(PythonInterp REQUIRED)
-    if(PYTHON_VERSION_MAJOR LESS 3)
-      message(SEND_ERROR "OPM requires version 3 of Python but only version ${PYTHON_VERSION_STRING} was found")
-    endif()
+  # Be backwards compatible.
+  if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
     set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
-    set(Python3_LIBRARIES ${PYTHON_LIBRARIES})
-    set(Python3_VERSION "${PYTHON_VERSION_STRING}")
-    set(Python3_VERSION_MINOR ${PYTHON_VERSION_MINOR})
-  else()
-    # Be backwards compatible.
-    if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
-      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
-    endif()
-    if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
-      find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-    else()
-      find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module Development.Embed)
-    endif()
   endif()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module Development.Embed)
   if(Python3_VERSION_MINOR LESS 3)
     # Python native namespace packages requires python >= 3.3
     message(SEND_ERROR "OPM requires python >= 3.3 but only version ${Python3_VERSION} was found")
@@ -149,10 +127,6 @@ if (OPM_ENABLE_PYTHON)
   if(NOT pybind11_FOUND)
     include(DownloadPyBind11)
   endif()
-
-  # Compatibility settings for PythonInterp and PythonLibs
-  # used e.g. in FindCwrap, pybind11
-  set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
 endif()
 
 include(OpmInit)
@@ -182,16 +156,8 @@ include ("${project}-prereqs")
 
 # Make sure we are using the same compiler underneath
 # NVCC as for the rest. In the case that NVCC does not support
-# that compiler it will error out. Unfortunately this will only
-# work for CMake >= 3.8. We found no way to make FindCUDA.cmake error
-# out. It seems to ignore CMAKE_NVCC_FLAGS and CMAKE. Additionally
-# our way of specifying cuda source files never worked for CMake
-# version < 3.8. Hence we deactivate cuda for these versions.
-# We use "CMAKE_VERSION VERSION_GREATER 3.7.9" instead of
-# CMAKE_VERSION VERSION_GREATER_EQUAL 3.8, because of backwards
-# compatibility to cmake 3.6 and lower.
-if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
-    CMAKE_VERSION VERSION_GREATER 3.7.9)
+# that compiler it will error out.
+if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA)
   if(CMAKE_BUILD_TYPE)
     set(_flags_suffix "_${CMAKE_BUILD_TYPE}")
   endif()
