@@ -40,7 +40,7 @@ namespace Opm
  *       directly. This would simplify the interface and reduce the number of
  *       required method calls before solving the system.
  */
-template <class TypeTag>
+template <class SparseMatrixAdapter, class Vector>
 class AbstractISTLSolver
 {
 public:
@@ -50,8 +50,6 @@ public:
     using CommunicationType = Dune::Communication<int>;
 #endif
 
-    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
-    using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using Matrix = typename SparseMatrixAdapter::IstlMatrix;
 
     virtual ~AbstractISTLSolver() = default;

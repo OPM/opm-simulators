@@ -468,6 +468,7 @@ target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_group_higher_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+target_sources(test_tpsa_localresidual PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 if(MPI_FOUND)
   target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 endif()
@@ -558,8 +559,8 @@ set(FLOW_MODELS blackoil blackoil_temp brine energy extbo foam gasoil gaswater
                 gaswater_saltprec_vapwat gaswater_saltprec_energy brine_precsalt_vapwat
                 blackoil_legacyassembly gasoildiffuse gaswater_dissolution
                 gaswater_dissolution_diffuse gaswater_energy gaswater_solvent biofilm
-                blackoil_nohyst)
-set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
+                blackoil_nohyst blackoil_tpsa gaswater_dissolution_tpsa)
+set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy onephase_tpsa)
 
 set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
