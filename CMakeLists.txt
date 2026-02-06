@@ -53,6 +53,23 @@ macro(opm-simulators_prereqs_hook)
   if(NOT fmt_FOUND)
     include(DownloadFmt)
   endif()
+
+  if (OPM_ENABLE_PYTHON)
+    # Be backwards compatible.
+    if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
+      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+    endif()
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module Development.Embed)
+    if(Python3_VERSION_MINOR LESS 3)
+      # Python native namespace packages requires python >= 3.3
+      message(SEND_ERROR "OPM requires python >= 3.3 but only version ${Python3_VERSION} was found")
+    endif()
+
+    find_package(pybind11 CONFIG)
+    if(NOT pybind11_FOUND)
+      include(DownloadPyBind11)
+    endif()
+  endif()
 endmacro()
 
 macro(opm-simulators_sources_hook)
@@ -241,25 +258,6 @@ if(opm-common_DIR AND NOT IS_DIRECTORY ${opm-common_DIR})
 endif()
 
 find_package(opm-common REQUIRED)
-
-# The following was copied from CMakeLists.txt in opm-common.
-# TODO: factor out the common parts in opm-common and opm-simulator as a cmake module
-if (OPM_ENABLE_PYTHON)
-  # Be backwards compatible.
-  if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
-    set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
-  endif()
-  find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module Development.Embed)
-  if(Python3_VERSION_MINOR LESS 3)
-    # Python native namespace packages requires python >= 3.3
-    message(SEND_ERROR "OPM requires python >= 3.3 but only version ${Python3_VERSION} was found")
-  endif()
-
-  find_package(pybind11 CONFIG)
-  if(NOT pybind11_FOUND)
-    include(DownloadPyBind11)
-  endif()
-endif()
 
 include(OpmInit)
 OpmSetPolicies()
