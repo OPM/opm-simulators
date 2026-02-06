@@ -178,6 +178,23 @@ macro(opm-simulators_config_hook)
 endmacro()
 
 macro(opm-simulators_tests_hook)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
+
+  # Look for the opm-tests repository; if found the variable
+  # HAVE_OPM_TESTS will be set to true.
+  include(Findopm-tests)
+
+  if (HAVE_OPM_TESTS)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
+  endif()
+
+  if(MPI_FOUND)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/parallelUnitTests.cmake)
+  endif()
+
+  if(OPM_ENABLE_PYTHON)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/pythonIntegrationTests.cmake)
+  endif()
 endmacro()
 
 macro(opm-simulators_targets_hook)
@@ -329,10 +346,6 @@ endif()
 # we cannot generate dune.module since it is read by dunecontrol before
 # the build starts, so it makes sense to keep the data there then.
 include (OpmInit)
-
-# Look for the opm-tests repository; if found the variable
-# HAVE_OPM_TESTS will be set to true.
-include(Findopm-tests)
 
 # list of prerequisites for this particular project; this is in a
 # separate file (in cmake/Modules sub-directory) because it is shared
@@ -497,11 +510,7 @@ if(MPI_FOUND)
   target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 endif()
 
-include (${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
-
 if (HAVE_OPM_TESTS)
-  include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
-
   if(OPM_ENABLE_PYTHON)
     if(${CMAKE_BINARY_DIR} STREQUAL ${PROJECT_BINARY_DIR})
       set(sim_dir ${CMAKE_BINARY_DIR})
@@ -514,14 +523,6 @@ if (HAVE_OPM_TESTS)
                       ${PROJECT_SOURCE_DIR}/tests/make_failure_report.sh
                       ${OPM_TESTS_ROOT} ${CMAKE_BINARY_DIR} ${sim_dir})
   endif()
-endif()
-
-if(MPI_FOUND)
-  include (${CMAKE_CURRENT_SOURCE_DIR}/parallelUnitTests.cmake)
-endif()
-
-if(OPM_ENABLE_PYTHON)
-  include (${CMAKE_CURRENT_SOURCE_DIR}/pythonIntegrationTests.cmake)
 endif()
 
 include(OpmBashCompletion)
