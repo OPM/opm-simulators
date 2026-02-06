@@ -177,6 +177,26 @@ macro(opm-simulators_tests_hook)
   endif()
 endmacro()
 
+macro(opm-simulators_targets_hook)
+  # this test is identical to the simulation of the lens problem that
+  # uses the element centered finite volume discretization in
+  # conjunction with automatic differentiation
+  # (lens_immiscible_ecfv_ad). The only difference is that it uses
+  # multiple compile units in order to ensure that eWoms code can be
+  # used within libraries that use the same type tag within multiple
+  # compile units.
+  opm_add_test(lens_immiscible_ecfv_ad_mcu
+    ONLY_COMPILE
+    SOURCES
+     examples/lens_immiscible_ecfv_ad_cu1.cpp
+     examples/lens_immiscible_ecfv_ad_cu2.cpp
+     examples/lens_immiscible_ecfv_ad_main.cpp
+    LIBRARIES
+      opmsimulators
+      opmcommon
+  )
+endmacro()
+
 macro(opm-simulators_install_hook)
   install(
     DIRECTORY
@@ -442,22 +462,6 @@ opm_add_test(test_tuning_tsinit_nextstep
               LIBRARIES
                 Boost::unit_test_framework opmcommon
               ONLY_COMPILE)
-
-# this test is identical to the simulation of the lens problem that
-# uses the element centered finite volume discretization in
-# conjunction with automatic differentiation
-# (lens_immiscible_ecfv_ad). The only difference is that it uses
-# multiple compile units in order to ensure that eWoms code can be
-# used within libraries that use the same type tag within multiple
-# compile units.
-opm_add_test(lens_immiscible_ecfv_ad_mcu
-             SOURCES
-              examples/lens_immiscible_ecfv_ad_cu1.cpp
-              examples/lens_immiscible_ecfv_ad_cu2.cpp
-              examples/lens_immiscible_ecfv_ad_main.cpp
-             LIBRARIES
-              opmsimulators opmcommon
-             ONLY_COMPILE)
 
 if(QuadMath_FOUND)
   foreach(tapp co2injection_flash_ni_ecfv
