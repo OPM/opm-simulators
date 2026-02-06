@@ -11,12 +11,8 @@
 #                                                                         #
 ###########################################################################
 
-# Mandatory call to project
-
 cmake_minimum_required (VERSION 3.23)
-
 project(opm-simulators C CXX)
-
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
@@ -155,6 +151,17 @@ macro(opm-simulators_tests_hook)
     list(APPEND tests_SOURCES tests/gpuistl/test_AmgxInterface.cpp)
     list(APPEND tests_SOURCES tests/test_AmgxPreconditioner.cpp)
   endif()
+endmacro()
+
+macro(opm-simulators_install_hook)
+  install(
+    DIRECTORY
+      doc/man1
+    DESTINATION
+      ${CMAKE_INSTALL_MANDIR}
+    FILES_MATCHING PATTERN
+      "*.1"
+  )
 endmacro()
 
 # Ensure OPM_COMPILE_COMPONENTS is a list of at least one element
@@ -822,6 +829,3 @@ endif()
 if(USE_DAMARIS_LIB AND Damaris_FOUND)
   target_link_libraries(opmsimulators PUBLIC damaris)
 endif()
-
-install(DIRECTORY doc/man1 DESTINATION ${CMAKE_INSTALL_MANDIR}
-  FILES_MATCHING PATTERN "*.1")
