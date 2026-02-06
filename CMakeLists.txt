@@ -211,6 +211,26 @@ macro(opm-simulators_targets_hook)
      LIBRARIES
       Boost::unit_test_framework opmcommon
   )
+
+  if(QuadMath_FOUND)
+    foreach(tapp co2injection_flash_ni_ecfv
+                 co2injection_flash_ni_vcfv
+                 co2injection_flash_ecfv
+                 co2injection_flash_vcfv)
+      opm_add_test(${tapp}_quad
+        ONLY_COMPILE
+        LIBRARIES
+          opmsimulators
+          opmcommon
+        EXE_NAME
+          ${tapp}_quad
+        SOURCES
+          examples/${tapp}.cpp
+      )
+      target_link_libraries(${tapp}_quad PRIVATE QuadMath::QuadMath)
+      target_compile_definitions(${tapp}_quad PRIVATE HAVE_QUAD=1)
+    endforeach()
+  endif()
 endmacro()
 
 macro(opm-simulators_install_hook)
@@ -464,22 +484,6 @@ endif()
 
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
-
-if(QuadMath_FOUND)
-  foreach(tapp co2injection_flash_ni_ecfv
-               co2injection_flash_ni_vcfv
-               co2injection_flash_ecfv
-               co2injection_flash_vcfv)
-    opm_add_test(${tapp}_quad
-                 LIBRARIES opmsimulators opmcommon
-                 EXE_NAME ${tapp}_quad
-                 SOURCES
-                 examples/${tapp}.cpp
-                 ONLY_COMPILE)
-    target_link_libraries(${tapp}_quad PRIVATE QuadMath::QuadMath)
-    target_compile_definitions(${tapp}_quad PRIVATE HAVE_QUAD=1)
-  endforeach()
-endif()
 
 target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
