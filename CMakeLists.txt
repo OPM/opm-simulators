@@ -11,12 +11,8 @@
 #                                                                         #
 ###########################################################################
 
-# Mandatory call to project
-
 cmake_minimum_required (VERSION 3.23)
-
 project(opm-simulators C CXX)
-
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
@@ -38,6 +34,235 @@ option(USE_AMGX "Enable AMGX support?" OFF)
 option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
 option(USE_OPENCL "Enable OpenCL support?" ON)
+
+macro(opm-simulators_prereqs_hook)
+  if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
+    message(
+      WARNING
+        "When building parallel OPM flow we need a "
+        "parallel version of hdf5, but found only a serial one. "
+        "Please install a parallel hdf5 library for MPI "
+        "(e.g with apt-get install libhdf5-mpi-dev) and do a clean "
+        "rebuild (build after \"make clean\"). Continuing with "
+        "only normal restart without hdf5 file support."
+    )
+    set(HDF5_FOUND OFF)
+    unset(HAVE_HDF5)
+  endif()
+
+  if(NOT fmt_FOUND)
+    include(DownloadFmt)
+  endif()
+
+  if (OPM_ENABLE_PYTHON)
+    # Be backwards compatible.
+    if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
+      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+    endif()
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module Development.Embed)
+    if(Python3_VERSION_MINOR LESS 3)
+      # Python native namespace packages requires python >= 3.3
+      message(SEND_ERROR "OPM requires python >= 3.3 but only version ${Python3_VERSION} was found")
+    endif()
+
+    find_package(pybind11 CONFIG)
+    if(NOT pybind11_FOUND)
+      include(DownloadPyBind11)
+    endif()
+  endif()
+endmacro()
+
+macro(opm-simulators_sources_hook)
+  if(OPENCL_FOUND)
+    include(opencl-source-provider)
+    list(APPEND opm-simulators_SOURCES ${PROJECT_BINARY_DIR}/clSources.cpp)
+  endif()
+
+  if(QuadMath_FOUND)
+    get_target_property(qm_defs QuadMath::QuadMath INTERFACE_COMPILE_DEFINITIONS)
+    get_target_property(qm_options QuadMath::QuadMath INTERFACE_COMPILE_OPTIONS)
+    if(qm_defs)
+      list(APPEND qm_defs HAVE_QUAD=1)
+    else()
+      set(qm_defs HAVE_QUAD=1)
+    endif()
+    set_source_files_properties(opm/models/nonlinear/newtonmethodparams.cpp
+                                opm/models/utils/parametersystem.cpp
+                                opm/models/utils/simulatorutils.cpp
+                                PROPERTIES COMPILE_DEFINITIONS "${qm_defs}"
+                                COMPILE_OPTIONS "${qm_options}")
+  endif()
+
+  if(HYPRE_FOUND)
+    list(APPEND tests_SOURCES tests/test_HyprePreconditionerCPU.cpp)
+    list(APPEND tests_SOURCES tests/gpuistl/test_HypreInterfaceCPU.cpp)
+    if(HYPRE_USING_CUDA OR HYPRE_USING_HIP)
+      list(APPEND tests_SOURCES tests/test_HyprePreconditionerGPU.cpp)
+      list(APPEND tests_SOURCES tests/gpuistl/test_HypreInterfaceGPU.cpp)
+    endif()
+  endif()
+
+  if(AMGX_FOUND)
+    list(APPEND tests_SOURCES tests/gpuistl/test_AmgxInterface.cpp)
+    list(APPEND tests_SOURCES tests/test_AmgxPreconditioner.cpp)
+  endif()
+endmacro()
+
+macro(opm-simulators_files_hook)
+  if(hip_FOUND)
+    get_filename_component(CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
+    if(hip_VERSION VERSION_LESS "5.3")
+      if(ROCALUTION_FOUND AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        message(WARNING " Cannot use hipcc/clang for rocalution with rocm < 5.3\n Disabling rocalutionSolver")
+        unset(ROCALUTION_FOUND)
+        unset(HAVE_ROCALUTION)
+      endif()
+    endif()
+    if(rocsparse_FOUND AND rocblas_FOUND)
+      set(HAVE_ROCSPARSE 1)
+    else()
+      unset(HAVE_ROCSPARSE)
+    endif()
+    if(ROCALUTION_FOUND)
+      set(HAVE_ROCALUTION 1)
+    endif()
+  endif()
+  if(HAVE_ROCSPARSE AND HAVE_CUDA AND USE_GPU_BRIDGE) # unsure if this is the correct way to change this
+    message(WARNING "WARNING! Using CUDA and ROCm at the same time is not allowed. Please choose only one of them by setting CMAKE_DISABLE_FIND_PACKAGE_<rocsparse|CUDA>=<ON|OFF>. Disabling CUDA...\n")
+    set(CUDA_FOUND OFF)
+    unset(HAVE_CUDA)
+  endif()
+  # read the list of components from this file (in the project directory);
+  # it should set various lists with the names of the files to include
+  # include needs to be here to make reset HDF5_FOUND available in
+  # (CMakeLists_files.cmake and because we need the created lists during
+  # then inclusion of OpmLibMain
+  include (CMakeLists_files.cmake)
+endmacro()
+
+macro(opm-simulators_config_hook)
+  opm_need_version_of ("dune-common")
+  opm_need_version_of ("dune-istl")
+  if(dune-fem_FOUND)
+      opm_need_version_of ("dune-fem")
+  endif()
+
+  if(USE_TRACY_PROFILER AND Tracy_FOUND)
+    set(USE_TRACY 1)
+    list(APPEND opm-simulators_LIBRARIES Tracy::TracyClient)
+  else()
+    set(USE_TRACY)
+  endif()
+  include_directories(${EXTRA_INCLUDES})
+
+  include(UseDamaris)
+
+  if(BUILD_FLOW_FLOAT_VARIANTS)
+    set(FLOW_INSTANTIATE_FLOAT 1)
+  endif()
+
+  # The parameter system can leverage std::from_chars() for
+  # floating-point types if available.  Detect support for this
+  # feature.
+  try_compile(
+    have_float_from_chars
+    ${CMAKE_BINARY_DIR}
+    ${PROJECT_SOURCE_DIR}/cmake/test/testFloatFromChars.cpp
+    CXX_STANDARD 17
+  )
+
+  unset(HAVE_FLOATING_POINT_FROM_CHARS)
+  if(have_float_from_chars)
+    set(HAVE_FLOATING_POINT_FROM_CHARS 1)
+  endif()
+endmacro()
+
+macro(opm-simulators_tests_hook)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
+
+  # Look for the opm-tests repository; if found the variable
+  # HAVE_OPM_TESTS will be set to true.
+  include(Findopm-tests)
+
+  if (HAVE_OPM_TESTS)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
+  endif()
+
+  if(MPI_FOUND)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/parallelUnitTests.cmake)
+  endif()
+
+  if(OPM_ENABLE_PYTHON)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/pythonIntegrationTests.cmake)
+  endif()
+endmacro()
+
+macro(opm-simulators_targets_hook)
+  # this test is identical to the simulation of the lens problem that
+  # uses the element centered finite volume discretization in
+  # conjunction with automatic differentiation
+  # (lens_immiscible_ecfv_ad). The only difference is that it uses
+  # multiple compile units in order to ensure that eWoms code can be
+  # used within libraries that use the same type tag within multiple
+  # compile units.
+  opm_add_test(lens_immiscible_ecfv_ad_mcu
+    ONLY_COMPILE
+    SOURCES
+     examples/lens_immiscible_ecfv_ad_cu1.cpp
+     examples/lens_immiscible_ecfv_ad_cu2.cpp
+     examples/lens_immiscible_ecfv_ad_main.cpp
+    LIBRARIES
+      opmsimulators
+      opmcommon
+  )
+
+  opm_add_test(test_tuning_trgmbe
+    ONLY_COMPILE
+    SOURCES
+      tests/test_tuning_TRGMBE.cpp
+    LIBRARIES
+      Boost::unit_test_framework
+  )
+
+  opm_add_test(test_tuning_tsinit_nextstep
+    ONLY_COMPILE
+    SOURCES
+      tests/test_tuning_TSINIT_NEXTSTEP.cpp
+     LIBRARIES
+      Boost::unit_test_framework opmcommon
+  )
+
+  if(QuadMath_FOUND)
+    foreach(tapp co2injection_flash_ni_ecfv
+                 co2injection_flash_ni_vcfv
+                 co2injection_flash_ecfv
+                 co2injection_flash_vcfv)
+      opm_add_test(${tapp}_quad
+        ONLY_COMPILE
+        LIBRARIES
+          opmsimulators
+          opmcommon
+        EXE_NAME
+          ${tapp}_quad
+        SOURCES
+          examples/${tapp}.cpp
+      )
+      target_link_libraries(${tapp}_quad PRIVATE QuadMath::QuadMath)
+      target_compile_definitions(${tapp}_quad PRIVATE HAVE_QUAD=1)
+    endforeach()
+  endif()
+endmacro()
+
+macro(opm-simulators_install_hook)
+  install(
+    DIRECTORY
+      doc/man1
+    DESTINATION
+      ${CMAKE_INSTALL_MANDIR}
+    FILES_MATCHING PATTERN
+      "*.1"
+  )
+endmacro()
 
 # Ensure OPM_COMPILE_COMPONENTS is a list of at least one element
 if(OPM_COMPILE_COMPONENTS STREQUAL "")
@@ -110,25 +335,6 @@ endif()
 
 find_package(opm-common REQUIRED)
 
-# The following was copied from CMakeLists.txt in opm-common.
-# TODO: factor out the common parts in opm-common and opm-simulator as a cmake module
-if (OPM_ENABLE_PYTHON)
-  # Be backwards compatible.
-  if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
-    set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
-  endif()
-  find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module Development.Embed)
-  if(Python3_VERSION_MINOR LESS 3)
-    # Python native namespace packages requires python >= 3.3
-    message(SEND_ERROR "OPM requires python >= 3.3 but only version ${Python3_VERSION} was found")
-  endif()
-
-  find_package(pybind11 CONFIG)
-  if(NOT pybind11_FOUND)
-    include(DownloadPyBind11)
-  endif()
-endif()
-
 include(OpmInit)
 OpmSetPolicies()
 
@@ -140,10 +346,6 @@ endif()
 # we cannot generate dune.module since it is read by dunecontrol before
 # the build starts, so it makes sense to keep the data there then.
 include (OpmInit)
-
-# Look for the opm-tests repository; if found the variable
-# HAVE_OPM_TESTS will be set to true.
-include(Findopm-tests)
 
 # list of prerequisites for this particular project; this is in a
 # separate file (in cmake/Modules sub-directory) because it is shared
@@ -296,172 +498,8 @@ if(USE_AMGX)
   endif()
 endif()
 
-macro(${project}_config_hook)
-  opm_need_version_of ("dune-common")
-  opm_need_version_of ("dune-istl")
-  if(dune-fem_FOUND)
-      opm_need_version_of ("dune-fem")
-  endif()
-
-  if(NOT fmt_FOUND)
-    include(DownloadFmt)
-  endif()
-  if(USE_TRACY_PROFILER AND Tracy_FOUND)
-    set(USE_TRACY 1)
-    list(APPEND opm-simulators_LIBRARIES Tracy::TracyClient)
-  else()
-    set(USE_TRACY)
-  endif()
-  include_directories(${EXTRA_INCLUDES})
-
-  include(UseDamaris)
-
-  if(BUILD_FLOW_FLOAT_VARIANTS)
-    set(FLOW_INSTANTIATE_FLOAT 1)
-  endif()
-
-  # The parameter system can leverage std::from_chars() for
-  # floating-point types if available.  Detect support for this
-  # feature.
-  try_compile(
-    have_float_from_chars
-    ${CMAKE_BINARY_DIR}
-    ${PROJECT_SOURCE_DIR}/cmake/test/testFloatFromChars.cpp
-    CXX_STANDARD 17
-  )
-
-  unset(HAVE_FLOATING_POINT_FROM_CHARS)
-  if(have_float_from_chars)
-    set(HAVE_FLOATING_POINT_FROM_CHARS 1)
-  endif()
-endmacro()
-
-macro(${project}_sources_hook)
-  if(OPENCL_FOUND)
-    include(opencl-source-provider)
-    list(APPEND opm-simulators_SOURCES ${PROJECT_BINARY_DIR}/clSources.cpp)
-  endif()
-  if(QuadMath_FOUND)
-    get_target_property(qm_defs QuadMath::QuadMath INTERFACE_COMPILE_DEFINITIONS)
-    get_target_property(qm_options QuadMath::QuadMath INTERFACE_COMPILE_OPTIONS)
-    if(qm_defs)
-      list(APPEND qm_defs HAVE_QUAD=1)
-    else()
-      set(qm_defs HAVE_QUAD=1)
-    endif()
-    set_source_files_properties(opm/models/nonlinear/newtonmethodparams.cpp
-                                opm/models/utils/parametersystem.cpp
-                                opm/models/utils/simulatorutils.cpp
-                                PROPERTIES COMPILE_DEFINITIONS "${qm_defs}"
-                                COMPILE_OPTIONS "${qm_options}")
-  endif()
-endmacro()
-
-macro(${project}_files_hook)
-  if(hip_FOUND)
-    get_filename_component(CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
-    if(hip_VERSION VERSION_LESS "5.3")
-      if(ROCALUTION_FOUND AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        message(WARNING " Cannot use hipcc/clang for rocalution with rocm < 5.3\n Disabling rocalutionSolver")
-        unset(ROCALUTION_FOUND)
-        unset(HAVE_ROCALUTION)
-      endif()
-    endif()
-    if(rocsparse_FOUND AND rocblas_FOUND)
-      set(HAVE_ROCSPARSE 1)
-    else()
-      unset(HAVE_ROCSPARSE)
-    endif()
-    if(ROCALUTION_FOUND)
-      set(HAVE_ROCALUTION 1)
-    endif()
-  endif()
-  if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
-    message(WARNING "When building parallel OPM flow we need a "
-      "parallel version of hdf5, but found only a serial one. "
-      "Please install a parallel hdf5 library for MPI "
-      "(e.g with apt-get install libhdf5-mpi-dev) and do a clean "
-      "rebuild (build after \"make clean\"). Continuing with "
-      "only normal restart without hdf5 file support.")
-    set(HDF5_FOUND OFF)
-    unset(HAVE_HDF5)
-  endif()
-  if(HAVE_ROCSPARSE AND HAVE_CUDA AND USE_GPU_BRIDGE) # unsure if this is the correct way to change this
-    message(WARNING "WARNING! Using CUDA and ROCm at the same time is not allowed. Please choose only one of them by setting CMAKE_DISABLE_FIND_PACKAGE_<rocsparse|CUDA>=<ON|OFF>. Disabling CUDA...\n")
-    set(CUDA_FOUND OFF)
-    unset(HAVE_CUDA)
-  endif()
-  # read the list of components from this file (in the project directory);
-  # it should set various lists with the names of the files to include
-  # include needs to be here to make reset HDF5_FOUND available in
-  # (CMakeLists_files.cmake and because we need the created lists during
-  # then inclusion of OpmLibMain
-  include (CMakeLists_files.cmake)
-endmacro()
-
-macro(${project}_tests_hook)
-  if(HYPRE_FOUND)
-    list(APPEND tests_SOURCES tests/test_HyprePreconditionerCPU.cpp)
-    list(APPEND tests_SOURCES tests/gpuistl/test_HypreInterfaceCPU.cpp)
-    if(HYPRE_USING_CUDA OR HYPRE_USING_HIP)
-      list(APPEND tests_SOURCES tests/test_HyprePreconditionerGPU.cpp)
-      list(APPEND tests_SOURCES tests/gpuistl/test_HypreInterfaceGPU.cpp)
-    endif()
-  endif()
-  if(AMGX_FOUND)
-    list(APPEND tests_SOURCES tests/gpuistl/test_AmgxInterface.cpp)
-    list(APPEND tests_SOURCES tests/test_AmgxPreconditioner.cpp)
-  endif()
-endmacro()
-
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
-
-opm_add_test(test_tuning_trgmbe
-              SOURCES
-                tests/test_tuning_TRGMBE.cpp
-              LIBRARIES
-                Boost::unit_test_framework
-              ONLY_COMPILE)
-
-opm_add_test(test_tuning_tsinit_nextstep
-              SOURCES
-                tests/test_tuning_TSINIT_NEXTSTEP.cpp
-              LIBRARIES
-                Boost::unit_test_framework opmcommon
-              ONLY_COMPILE)
-
-# this test is identical to the simulation of the lens problem that
-# uses the element centered finite volume discretization in
-# conjunction with automatic differentiation
-# (lens_immiscible_ecfv_ad). The only difference is that it uses
-# multiple compile units in order to ensure that eWoms code can be
-# used within libraries that use the same type tag within multiple
-# compile units.
-opm_add_test(lens_immiscible_ecfv_ad_mcu
-             SOURCES
-              examples/lens_immiscible_ecfv_ad_cu1.cpp
-              examples/lens_immiscible_ecfv_ad_cu2.cpp
-              examples/lens_immiscible_ecfv_ad_main.cpp
-             LIBRARIES
-              opmsimulators opmcommon
-             ONLY_COMPILE)
-
-if(QuadMath_FOUND)
-  foreach(tapp co2injection_flash_ni_ecfv
-               co2injection_flash_ni_vcfv
-               co2injection_flash_ecfv
-               co2injection_flash_vcfv)
-    opm_add_test(${tapp}_quad
-                 LIBRARIES opmsimulators opmcommon
-                 EXE_NAME ${tapp}_quad
-                 SOURCES
-                 examples/${tapp}.cpp
-                 ONLY_COMPILE)
-    target_link_libraries(${tapp}_quad PRIVATE QuadMath::QuadMath)
-    target_compile_definitions(${tapp}_quad PRIVATE HAVE_QUAD=1)
-  endforeach()
-endif()
 
 target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
@@ -472,11 +510,7 @@ if(MPI_FOUND)
   target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 endif()
 
-include (${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
-
 if (HAVE_OPM_TESTS)
-  include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
-
   if(OPM_ENABLE_PYTHON)
     if(${CMAKE_BINARY_DIR} STREQUAL ${PROJECT_BINARY_DIR})
       set(sim_dir ${CMAKE_BINARY_DIR})
@@ -489,14 +523,6 @@ if (HAVE_OPM_TESTS)
                       ${PROJECT_SOURCE_DIR}/tests/make_failure_report.sh
                       ${OPM_TESTS_ROOT} ${CMAKE_BINARY_DIR} ${sim_dir})
   endif()
-endif()
-
-if(MPI_FOUND)
-  include (${CMAKE_CURRENT_SOURCE_DIR}/parallelUnitTests.cmake)
-endif()
-
-if(OPM_ENABLE_PYTHON)
-  include (${CMAKE_CURRENT_SOURCE_DIR}/pythonIntegrationTests.cmake)
 endif()
 
 include(OpmBashCompletion)
@@ -822,6 +848,3 @@ endif()
 if(USE_DAMARIS_LIB AND Damaris_FOUND)
   target_link_libraries(opmsimulators PUBLIC damaris)
 endif()
-
-install(DIRECTORY doc/man1 DESTINATION ${CMAKE_INSTALL_MANDIR}
-  FILES_MATCHING PATTERN "*.1")
