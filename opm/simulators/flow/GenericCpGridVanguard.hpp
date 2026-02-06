@@ -224,9 +224,6 @@ protected:
     virtual void allocTrans() = 0;
     virtual double getTransmissibility(unsigned I, unsigned J) const = 0;
 
-    // removing some connection located in inactive grid cells
-    void doFilterConnections_(Schedule& schedule);
-
     Scalar computeCellThickness(const Element& element) const;
 
     std::unique_ptr<Dune::CpGrid> grid_;
