@@ -104,7 +104,16 @@ private:
     /// @brief Collect surface production rates for a specific slave group
     /// @param group_idx Index of the slave group
     /// @return ProductionRates structure containing oil, gas, and water surface rates
+    /// @note These rates are computed with network=false, so efficiency factors are applied
+    ///       according to regular GEFAC/WEFAC settings
     ProductionRates collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const;
+
+    /// @brief Collect network surface production rates for a specific slave group
+    /// @param group_idx Index of the slave group
+    /// @return ProductionRates structure containing oil, gas, and water surface rates for network
+    /// @note These rates are computed with network=true, meaning efficiency factors are 1.0
+    ///       for groups/wells with GEFAC/WEFAC item 3 = "NO"
+    ProductionRates collectSlaveGroupNetworkSurfaceProductionRates_(std::size_t group_idx) const;
 
     /// @brief Collect reservoir production rates for a specific slave group
     /// @param group_idx Index of the slave group

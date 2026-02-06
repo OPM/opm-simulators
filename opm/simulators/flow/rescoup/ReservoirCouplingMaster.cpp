@@ -113,12 +113,17 @@ getMasterGroupInjectionRate(const std::string &group_name, ReservoirCoupling::Ph
 template <class Scalar>
 Scalar
 ReservoirCouplingMaster<Scalar>::
-getMasterGroupProductionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const
+getMasterGroupProductionRate(
+    const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates, bool network
+) const
 {
     if (res_rates) {
         return this->report_step_data_->getMasterGroupProductionReservoirRate(group_name, phase);
     }
     else {
+        if (network) {
+            return this->report_step_data_->getMasterGroupNetworkProductionSurfaceRate(group_name, phase);
+        }
         return this->report_step_data_->getMasterGroupProductionSurfaceRate(group_name, phase);
     }
 }
