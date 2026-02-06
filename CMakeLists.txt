@@ -195,6 +195,22 @@ macro(opm-simulators_targets_hook)
       opmsimulators
       opmcommon
   )
+
+  opm_add_test(test_tuning_trgmbe
+    ONLY_COMPILE
+    SOURCES
+      tests/test_tuning_TRGMBE.cpp
+    LIBRARIES
+      Boost::unit_test_framework
+  )
+
+  opm_add_test(test_tuning_tsinit_nextstep
+    ONLY_COMPILE
+    SOURCES
+      tests/test_tuning_TSINIT_NEXTSTEP.cpp
+     LIBRARIES
+      Boost::unit_test_framework opmcommon
+  )
 endmacro()
 
 macro(opm-simulators_install_hook)
@@ -448,20 +464,6 @@ endif()
 
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
-
-opm_add_test(test_tuning_trgmbe
-              SOURCES
-                tests/test_tuning_TRGMBE.cpp
-              LIBRARIES
-                Boost::unit_test_framework
-              ONLY_COMPILE)
-
-opm_add_test(test_tuning_tsinit_nextstep
-              SOURCES
-                tests/test_tuning_TSINIT_NEXTSTEP.cpp
-              LIBRARIES
-                Boost::unit_test_framework opmcommon
-              ONLY_COMPILE)
 
 if(QuadMath_FOUND)
   foreach(tapp co2injection_flash_ni_ecfv
