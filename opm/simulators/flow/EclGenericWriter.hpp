@@ -165,11 +165,30 @@ protected:
     SimulatorReportSingle sub_step_report_;
     SimulatorReport simulation_report_;
     mutable std::vector<NNCdata> outputNnc_;
-    mutable std::unique_ptr<data::Solution> outputTrans_;
+    mutable std::unique_ptr<std::vector<data::Solution>> outputTrans_;
 
 private:
     void computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
     std::vector<NNCdata> exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
+
+    /// Returns true if the given Cartesian cell index belongs to a numerical aquifer.
+    /// If no numerical aquifer exists, always returns false.
+    bool isNumAquCell_(const std::size_t cartIdx) const;
+    /// Returns true if either of the two connected cells belongs to a numerical aquifer.
+    bool isNumAquConn_(const std::size_t cartIdx1, const std::size_t cartIdx2) const;
+
+    /// Return level (local) indices of the cells adjacent to an intersection.
+    ///
+    /// @tparam equilGridIsCpGrid Compile-time flag indicating whether the equilGrid_ is a Dune::CpGrid
+    ///                           (std::is_same_v<EquilGrid, Dune::CpGrid>).
+    /// @tparam Intersection      Intersection type between two leaf cells.
+    /// @param is                 Intersection between neighboring leaf cells.
+    template <bool equilGridIsCpGrid, typename Intersection>
+    void computeLevelIndices_(const Intersection& is, int& inIdx, int& outIdx) const;
+
+    /// Creates/allocates CellData for TRANX/Y/Z for level grids.
+    /// Only for CpGrid. Other grid types do not support refinement yet.
+    void allocateLevelTrans_(const std::array<int,3>& levelCartDims, data::Solution& levelTrans) const;
 };
 
 } // namespace Opm
