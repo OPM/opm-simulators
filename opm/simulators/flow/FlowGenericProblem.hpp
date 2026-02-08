@@ -146,7 +146,9 @@ public:
      * i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
      * multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
      */
-    Scalar rockFraction(unsigned elementIdx, unsigned timeIdx) const;
+    Scalar rockFraction(unsigned elementIdx, unsigned timeIdx) const {
+        return rockFraction_[timeIdx][elementIdx];
+    };
 
     /*!
      * \brief Sets the porosity of an element
@@ -318,6 +320,7 @@ protected:
 
     static inline std::string briefDescription_;
     std::array<std::vector<Scalar>, 2> referencePorosity_;
+    std::array<std::vector<Scalar>, 2> rockFraction_;
 
     std::vector<int> pvtnum_;
     std::vector<unsigned short> satnum_;
