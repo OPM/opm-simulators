@@ -129,6 +129,13 @@ update()
     distanceBoundary_.clear();
     faceNormalBoundary_.clear();
 
+    // Fill the centroids cache to avoid repeated calculations in loops below
+    centroids_cache_.resize(gridView_.size(0));
+    for (const auto& elem : elements(gridView_)) {
+        const unsigned elemIdx = elemMapper.index(elem);
+        centroids_cache_[elemIdx] = centroids_(elemIdx);
+    }
+
     // Initialize thread safe insert_or_assign for face properties in the grid and separate for boundaries
     ThreadSafeMapBuilder weightsAvgMap(weightsAvg_, num_threads, MapBuilderInsertionMode::Insert_Or_Assign);
     ThreadSafeMapBuilder weightsProdMap(weightsProd_, num_threads, MapBuilderInsertionMode::Insert_Or_Assign);
@@ -237,6 +244,44 @@ update()
                 faceNormalMap.insert_or_assign(id, faceNormal);
             }
         }
+    }
+
+#ifdef _OPENMP
+#pragma omp parallel sections
+#endif
+    {
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        weightsAvgMap.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        weightsProdMap.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        distanceMap.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        faceNormalMap.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        weightsAvgBoundaryMap.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        weightsProdBoundaryMap.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        distanceBoundaryMap.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        faceNormalBoundaryMap.finalize();
     }
 }
 
