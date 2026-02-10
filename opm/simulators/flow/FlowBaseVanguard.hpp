@@ -325,7 +325,6 @@ protected:
     void callImplementationInit()
     {
         asImp_().createGrids_();
-        asImp_().filterConnections_();
         std::string outputDir = Parameters::Get<Parameters::OutputDir>();
         bool enableEclCompatFile = !Parameters::Get<Parameters::EnableOpmRstFile>();
         asImp_().updateOutputDir_(outputDir, enableEclCompatFile);
