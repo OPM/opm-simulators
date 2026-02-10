@@ -349,10 +349,6 @@ satRvw(const Scalar press, const Scalar temp) const
     return FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp, press);;
 }
 
-// ==============================================
-// RsConst IMPLEMENTATION
-// ==============================================
-
 template <class FluidSystem>
 RsConst<FluidSystem>::RsConst(const typename FluidSystem::Scalar rs_constant,
                               const typename FluidSystem::Scalar pb_constant)
@@ -370,7 +366,7 @@ RsConst<FluidSystem>::RsConst(const typename FluidSystem::Scalar rs_constant,
 
 template <class FluidSystem>
 typename FluidSystem::Scalar
-RsConst<FluidSystem>::satRs(const typename FluidSystem::Scalar /* press */, 
+RsConst<FluidSystem>::satRs(const typename FluidSystem::Scalar /* press */,
                             const typename FluidSystem::Scalar /* temp */) const
 {
     // For RSCONST, the saturated Rs is the constant value

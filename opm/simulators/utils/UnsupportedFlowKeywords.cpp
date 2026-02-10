@@ -538,7 +538,7 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"PRTRST", {true, std::nullopt}},
         {"RPTRUNSP", {false, std::nullopt}},
         {"RPTSMRY", {false, std::nullopt}},
-        {"RSCONST", {true, std::nullopt}},
+      //  {"RSCONST", {true, std::nullopt}},
         {"RSCONSTT", {true, std::nullopt}},
         {"RSSPEC", {true, std::nullopt}},
         {"SAMG", {true, std::nullopt}},

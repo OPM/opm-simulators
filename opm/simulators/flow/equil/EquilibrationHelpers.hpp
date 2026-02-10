@@ -612,7 +612,7 @@ class RsConst : public RsFunction<typename FluidSystem::Scalar>
 {
 public:
     using Scalar = typename FluidSystem::Scalar;
-    
+
     /**
      * Constructor.
      *
@@ -621,7 +621,7 @@ public:
      */
     RsConst(const Scalar rs_constant,
             const Scalar pb_constant);
-    
+
     /**
      * Function call - returns constant Rs if pressure above bubble point.
      * Should ensure undersaturated PVT calculation is always used.
@@ -630,16 +630,18 @@ public:
                       const Scalar press,
                       const Scalar temp,
                       const Scalar satGas = 0.0) const override;
-    
+
     /**
      * Get the constant bubble point pressure.
      */
     Scalar bubblePoint() const { return pb_constant_; }
-    
+
     /**
      * Get the constant Rs value.
      */
     Scalar constantRs() const { return rs_constant_; }
+
+    bool isConstantRs() const { return true; }
 
     Scalar satRs(const Scalar press, const Scalar temp) const;
 
