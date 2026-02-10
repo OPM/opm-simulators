@@ -1574,8 +1574,40 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
         }
     }
     else {
+        // Dead oil case
+        // but we want to check constant rs first
+        bool hasRsConst = false;
+        Scalar rs_const_value = 0.0;
+        Scalar pb_const_value = 0.0;
+        const auto gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        const auto oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+        const auto waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        // Check for RS and PB (for dead oil)
+        if (eclipseState.fieldProps().has_double("RS") &&
+            eclipseState.fieldProps().has_double("PB")) {
+            const auto& rsconst_data = eclipseState.fieldProps().get_double("RS");
+            const auto& pbconst_data = eclipseState.fieldProps().get_double("PB");
+
+            // Only global constants
+            if (!rsconst_data.empty() && !pbconst_data.empty()) {
+                rs_const_value = rsconst_data[0];
+                pb_const_value = pbconst_data[0];
+                hasRsConst = (rs_const_value > 0.0);
+
+                OpmLog::info(fmt::format("Using RSCONST keyword: Rs = {}, Pb = {}",
+                                         rs_const_value, pb_const_value));
+            }
+        }
+
         for (std::size_t i = 0; i < rec.size(); ++i) {
-            rsFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
+            if (hasRsConst) {
+                // Use RSCONST for dead oil initialization
+                rsFunc_.push_back(std::make_shared<Miscibility::RsConst<FluidSystem>>(
+                    rs_const_value, pb_const_value));
+            } else {
+                // Normal dead oil (no dissolved gas)
+                rsFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
+            }
         }
     }
 
