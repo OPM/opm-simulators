@@ -91,7 +91,7 @@ public:
     template <class GridSubDomain>
     OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */, const GridSubDomain& /* gridSubDomain */) const {}
     OPM_HOST_DEVICE void updateFailed() {}
-    OPM_HOST_DEVICE auto intensiveQuantities(unsigned int globalIdx, unsigned int timeIdx) const {
+    OPM_HOST_DEVICE const auto& intensiveQuantities(unsigned int globalIdx, unsigned int timeIdx) const {
         assert(timeIdx == 0 || timeIdx == 1); // TODO: do not use assert for this because it can be run in GPU kernel...
         if (timeIdx == 0) {
             return cachedIntensiveQuantities0_[globalIdx];
