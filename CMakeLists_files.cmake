@@ -30,7 +30,7 @@
 macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
   set (cuda_file_path "${PROJECT_SOURCE_DIR}/${DIR}/gpuistl/${FILE}")
 
-  if(CUDA_FOUND AND NOT CONVERT_CUDA_TO_HIP)
+  if(CUDA_FOUND)
     list (APPEND ${LIST} "${DIR}/gpuistl/${FILE}")
   else()
     # we must hipify the code
@@ -308,7 +308,7 @@ if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
 endif()
 
 # add these files if we should compile the hip code
-if (HAVE_CUDA)
+if(CUDA_FOUND OR hip_FOUND)
   list(APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpuistl/device_management.hpp) # should not be hipified to make main independant of library
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg device_management.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/CuBlasHandle.cpp)
@@ -544,7 +544,7 @@ if(CUDA_FOUND)
   endif()
 endif()
 
-if (HAVE_CUDA)
+if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_converttofloatadapter.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cublas_handle.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cublas_safe_call.cpp)
