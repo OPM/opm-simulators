@@ -132,12 +132,6 @@ macro(opm-simulators_files_hook)
     set(CUDA_FOUND OFF)
     unset(HAVE_CUDA)
   endif()
-  # read the list of components from this file (in the project directory);
-  # it should set various lists with the names of the files to include
-  # include needs to be here to make reset HDF5_FOUND available in
-  # (CMakeLists_files.cmake and because we need the created lists during
-  # then inclusion of OpmLibMain
-  include (CMakeLists_files.cmake)
 endmacro()
 
 macro(opm-simulators_config_hook)
