@@ -187,7 +187,6 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     using Stencil = GetPropType<TypeTag, Properties::Stencil>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Evaluation = DenseAd::Evaluation<Scalar,1>;
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
@@ -455,17 +454,11 @@ protected:
         storage*= scalingFactor_;
     }
 
-    template < class ResidualNBInfo>
+    template <class RateVector>
     void computeFluxTerm(unsigned globI, unsigned globJ,
-                         const ResidualNBInfo& res_nbinfo,
+                         const RateVector& darcyFlux,
                          Evaluation& flux)
     {
-        const IntensiveQuantities& intQuantsIn = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
-        const IntensiveQuantities& intQuantsEx = simulator_.model().intensiveQuantities(globJ, /*timeIdx*/ 0);
-        RateVector tmp(0.0); //not used
-        RateVector darcyFlux(0.0);
-        LocalResidual::computeFlux(tmp, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                                   res_nbinfo, simulator_.problem().moduleParams());
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -473,7 +466,6 @@ protected:
 
             const unsigned activeCompIdx =
                 FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-
             bool inIsUp = darcyFlux[activeCompIdx] > 0;
             const auto& up = inIsUp ? intQuants_[globI] : intQuants_[globJ];
             const auto& fs = up.fluidStateTemp();
@@ -535,18 +527,21 @@ protected:
         }
 
         const auto& neighborInfo = simulator_.model().linearizer().getNeighborInfo();
+        const auto& floresInfo = this->simulator_.problem().model().linearizer().getFloresInfo();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for (unsigned globI = 0; globI < numCells; ++globI) {
             const auto& nbInfos = neighborInfo[globI];
+            const auto& floresInfos = floresInfo[globI];
+            int loc = 0;
             for (const auto& nbInfo : nbInfos) {
                 unsigned globJ = nbInfo.neighbor;
                 assert(globJ != globI);
-
+                const auto& darcyflux = floresInfos[loc].flow;
                 // compute convective flux
                 Evaluation flux = 0.0;
-                computeFluxTerm(globI, globJ, nbInfo.res_nbinfo, flux);
+                computeFluxTerm(globI, globJ, darcyflux, flux);
                 this->energyVector_[globI] += getValue(flux);
                 (*this->energyMatrix_)[globI][globI][0][0] += flux.derivative(temperatureIdx);
                 (*this->energyMatrix_)[globJ][globI][0][0] -= flux.derivative(temperatureIdx);
@@ -557,6 +552,7 @@ protected:
                 this->energyVector_[globI] += getValue(heatFlux);
                 (*this->energyMatrix_)[globI][globI][0][0] += heatFlux.derivative(temperatureIdx);
                 (*this->energyMatrix_)[globJ][globI][0][0] -= heatFlux.derivative(temperatureIdx);
+                loc++;
             }
         }
 
