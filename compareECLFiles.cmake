@@ -454,12 +454,11 @@ add_test_runSimulator(CASENAME spe1case1_carfin
                       DIR lgr
                       TEST_ARGS --parsing-strictness=low --enable-ecl-output=true --enable-vtk-output=true)
 
-# Disabled for now as it causes oob memory access
-#add_test_runSimulator(CASENAME spe1case1_carfin_gr
-#                      FILENAME SPE1CASE1_CARFIN_GR
-#                      SIMULATOR flow
-#                      DIR lgr
-#                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=true --enable-vtk-output=true)
+add_test_runSimulator(CASENAME spe1case1_carfin_gr
+                      FILENAME SPE1CASE1_CARFIN_GR
+                      SIMULATOR flow
+                      DIR lgr
+                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=true --enable-vtk-output=true)
 
 if(MPI_FOUND)
   add_test_runSimulator(CASENAME spe1case1_carfin_parallel
