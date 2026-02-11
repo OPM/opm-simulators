@@ -487,8 +487,11 @@ sumDistributed(Parallel::Communication comm)
     INSTANTIATE(T,3,4)      \
     INSTANTIATE(T,4,3)      \
     INSTANTIATE(T,4,4)      \
-    INSTANTIATE(T,4,5)
+    INSTANTIATE(T,4,5)      \
+    INSTANTIATE(T,5,4)      \
+    INSTANTIATE(T,5,5)
 
+// TODO: some combinations above likely needs to be cleaned up some
 INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
