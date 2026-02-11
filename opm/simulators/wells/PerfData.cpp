@@ -33,6 +33,7 @@ PerfData<Scalar>::PerfData(const std::size_t num_perf,
                            const std::size_t num_phases)
     : injector(injector_)
     , pressure(num_perf)
+    , temperature(num_perf)
     , rates(num_perf)
     , phase_rates(num_perf * num_phases)
     , phase_mixing_rates(num_perf)
@@ -73,6 +74,7 @@ PerfData<Scalar> PerfData<Scalar>::serializationTestObject()
     PerfData result;
     result.injector = true;
     result.pressure = {2.0, 3.0, 4.0};
+    result.temperature = {345.};
     result.rates = {5.0, 6.0};
     result.phase_rates = {7.0};
     result.phase_mixing_rates = { {1.0, 2.0, 3.0, 4.0}};
@@ -124,6 +126,7 @@ bool PerfData<Scalar>::try_assign(const PerfData& other)
     }
 
     this->pressure = other.pressure;
+    this->temperature = other.temperature;
     this->rates = other.rates;
     this->phase_rates = other.phase_rates;
     this->phase_mixing_rates = other.phase_mixing_rates;
@@ -150,6 +153,7 @@ bool PerfData<Scalar>::operator==(const PerfData& rhs) const
 {
     return (this->injector == rhs.injector)
         && (this->pressure == rhs.pressure)
+        && (this->temperature == rhs.temperature)
         && (this->rates == rhs.rates)
         && (this->phase_rates == rhs.phase_rates)
         && (this->phase_mixing_rates == rhs.phase_mixing_rates)
