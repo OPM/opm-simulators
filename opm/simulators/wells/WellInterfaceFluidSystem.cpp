@@ -65,12 +65,12 @@ WellInterfaceFluidSystem(const Well& well,
 template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
-calculateReservoirRates(const bool co2store, SingleWellState<Scalar, IndexTraits>& ws) const
+calculateReservoirRates(const bool use_well_bhp_temperature, SingleWellState<Scalar, IndexTraits>& ws) const
 {
     const int np = this->number_of_phases_;
     const auto& pu = this->phaseUsage();
     // Calculate reservoir rates from average pressure and temperature
-    if ( !(co2store || pu.hasEnergy()) || this->wellEcl().isProducer()) {
+    if ( !(use_well_bhp_temperature) || this->wellEcl().isProducer()) {
         const int fipreg = 0; // not considering the region for now
         this->rateConverter_
             .calcReservoirVoidageRates(fipreg,

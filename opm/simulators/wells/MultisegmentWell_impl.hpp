@@ -746,8 +746,11 @@ namespace Opm
             auto& ws = well_state.well(this->index_of_well_);
             this->segments_.copyPhaseDensities(ws.segments);
         }
-
-        Base::calculateReservoirRates(simulator.vanguard().eclState().runspec().co2Storage(), well_state.well(this->index_of_well_));
+        // For injectors in a co2 storage case or a thermal case
+        // we convert to reservoir rates using the well bhp and temperature
+        const bool isThermal = simulator.vanguard().eclState().getSimulationConfig().isThermal();
+        const bool co2store = simulator.vanguard().eclState().runspec().co2Storage();
+        Base::calculateReservoirRates( (isThermal || co2store), well_state.well(this->index_of_well_));
     }
 
 
