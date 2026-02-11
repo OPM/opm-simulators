@@ -376,7 +376,9 @@ using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,M,N>>;
     INSTANTIATE_PARALLELLMSWELLB(T, 3, 4)   \
     INSTANTIATE_PARALLELLMSWELLB(T, 4, 3)   \
     INSTANTIATE_PARALLELLMSWELLB(T, 4, 4)   \
-    INSTANTIATE_PARALLELLMSWELLB(T, 4, 5)
+    INSTANTIATE_PARALLELLMSWELLB(T, 4, 5)   \
+    INSTANTIATE_PARALLELLMSWELLB(T, 5, 4)   \
+    INSTANTIATE_PARALLELLMSWELLB(T, 5, 5)
 
 #define INSTANTIATE_UMF(T,Dim)                                             \
     template Vec<T,Dim> applyUMFPack(Dune::UMFPack<Mat<T,Dim>>&,           \
@@ -414,6 +416,7 @@ using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,M,N>>;
     INSTANTIATE_UMF(T,2)    \
     INSTANTIATE_UMF(T,3)    \
     INSTANTIATE_UMF(T,4)    \
+    INSTANTIATE_UMF(T,5)    \
     INSTANTIATE_EVAL(T,3)   \
     INSTANTIATE_EVAL(T,4)   \
     INSTANTIATE_EVAL(T,5)   \
@@ -421,6 +424,7 @@ using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,M,N>>;
     INSTANTIATE_EVAL(T,7)   \
     INSTANTIATE_EVAL(T,8)   \
     INSTANTIATE_EVAL(T,9)   \
+    INSTANTIATE_EVAL(T,10)  \
     INSTANTIATE_ALL_PARALLELLMSWELLB(T)
 
 INSTANTIATE_TYPE(double)
