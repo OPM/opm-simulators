@@ -66,6 +66,7 @@ SegmentState<Scalar>::SegmentState(int num_phases, const WellSegments& segments)
     , pressure_drop_friction   (segments.size())
     , pressure_drop_hydrostatic(segments.size())
     , pressure_drop_accel      (segments.size())
+    , temperature              (segments.size())
     , m_segment_number         (make_segment_number(segments))
 {}
 
@@ -85,6 +86,7 @@ SegmentState<Scalar> SegmentState<Scalar>::serializationTestObject()
     result.pressure_drop_friction = {16.0};
     result.pressure_drop_hydrostatic = {17.0, 18.0};
     result.pressure_drop_accel = {19.0};
+    result.temperature = {20.0, 21.0};
     result.m_segment_number = {20, 21};
 
     return result;
@@ -144,6 +146,7 @@ bool SegmentState<Scalar>::operator==(const SegmentState& rhs) const
            this->pressure_drop_friction == rhs.pressure_drop_friction &&
            this->pressure_drop_hydrostatic == rhs.pressure_drop_hydrostatic &&
            this->pressure_drop_accel == rhs.pressure_drop_accel &&
+           this->temperature == rhs.temperature &&
            this->m_segment_number == rhs.m_segment_number;
 }
 

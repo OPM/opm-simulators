@@ -391,6 +391,7 @@ private:
     void initSingleProducer(const Well& well,
                             const ParallelWellInfo<Scalar>& well_info,
                             Scalar pressure_first_connection,
+                            Scalar temperature_first_connection,
                             const std::vector<PerforationData<Scalar>>& well_perf_data,
                             const SummaryState& summary_state);
 
