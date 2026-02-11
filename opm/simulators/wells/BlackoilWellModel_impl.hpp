@@ -783,13 +783,7 @@ namespace Opm {
         this->commitWGState();
 
         //reporting output temperatures
-        const auto& eclState = simulator_.vanguard().eclState();
-        bool isTemp = eclState.getSimulationConfig().isTemp();
-        bool isThermal = eclState.getSimulationConfig().isThermal();
-        if (isTemp || isThermal) {
-            this->computeWellTemperature();
-        }
-
+        this->computeWellTemperature();
     }
 
 
