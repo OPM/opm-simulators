@@ -680,7 +680,8 @@ private:
         // If DISPERC is in the deck, we initialize the sparse table here as well.
         const bool anyFlows = simulator_().problem().eclWriter().outputModule().getFlows().anyFlows();
         const auto& blockFlows = simulator_().problem().eclWriter().outputModule().getFlows().blockFlows();
-        const bool anyFlores = simulator_().problem().eclWriter().outputModule().getFlows().anyFlores();
+        const bool isTemp = simulator_().vanguard().eclState().getSimulationConfig().isTemp();
+        const bool anyFlores = simulator_().problem().eclWriter().outputModule().getFlows().anyFlores() || isTemp;
         const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         if (((!(anyFlows || !blockFlows.empty()) || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && (!dispersionActive && !enableBioeffects)) {
             return;
@@ -800,7 +801,9 @@ public:
         OPM_TIMEBLOCK(updateFlows);
         const bool enableFlows = simulator_().problem().eclWriter().outputModule().getFlows().hasFlows();
         const auto& blockFlows = simulator_().problem().eclWriter().outputModule().getFlows().blockFlows();
-        const bool enableFlores = simulator_().problem().eclWriter().outputModule().getFlows().hasFlores();
+        // We reuse the fluxes in the TEMP option
+        const bool isTemp = simulator_().vanguard().eclState().getSimulationConfig().isTemp();
+        const bool enableFlores = simulator_().problem().eclWriter().outputModule().getFlows().hasFlores() || isTemp;
         if (!enableFlows && !enableFlores && blockFlows.empty()) {
             return;
         }
