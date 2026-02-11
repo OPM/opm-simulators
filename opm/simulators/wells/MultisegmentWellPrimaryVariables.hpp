@@ -59,20 +59,22 @@ public:
 
     static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;
     static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
+    static constexpr bool has_temperature = Indices::enableFullyImplicitThermal;
 
     static constexpr int WQTotal = 0;
     static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
     static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
     static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1;
+    static constexpr int Temperature = SPres + 1; // for the tempearture
 
     //  the number of well equations  TODO: it should have a more general strategy for it
-    static constexpr int numWellEq = Indices::numPhases + 1;
+    static constexpr int numWellEq = Indices::numPhases + 1 + has_temperature;
 
     using Scalar = typename FluidSystem::Scalar;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using EvalWell = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq + numWellEq>;
 
-    using Equations = MultisegmentWellEquations<Scalar,IndexTraits,numWellEq,Indices::numEq>;
+    using Equations = MultisegmentWellEquations<Scalar,IndexTraits, numWellEq, Indices::numEq>;
     using BVectorWell = typename Equations::BVectorWell;
 
     explicit MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
