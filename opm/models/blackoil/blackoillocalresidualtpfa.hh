@@ -101,6 +101,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+    static constexpr bool enableTempOrThermal = enableFullyImplicitThermal || (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal);
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
@@ -135,8 +136,8 @@ public:
         FaceDir::DirEnum faceDir;
         double Vin;
         double Vex;
-        ConditionalStorage<enableFullyImplicitThermal, double> inAlpha;
-        ConditionalStorage<enableFullyImplicitThermal, double> outAlpha;
+        ConditionalStorage<enableTempOrThermal, double> inAlpha;
+        ConditionalStorage<enableTempOrThermal, double> outAlpha;
         ConditionalStorage<enableDiffusion, double> diffusivity;
         ConditionalStorage<enableDispersion, double> dispersivity;
     };

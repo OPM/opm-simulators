@@ -497,8 +497,6 @@ protected:
     {
         const auto& intQuantsIn = intQuants_[globI];
         const auto& intQuantsEx = intQuants_[globJ];
-        const Scalar inAlpha = simulator_.problem().thermalHalfTransmissibility(globI, globJ);
-        const Scalar outAlpha = simulator_.problem().thermalHalfTransmissibility(globJ, globI);
         short interiorDofIdx = 0; // NB
         short exteriorDofIdx = 1; // NB
         EnergyModule::ExtensiveQuantities::updateEnergy(heatFlux,
@@ -509,8 +507,8 @@ protected:
                                                         intQuantsEx,
                                                         intQuantsIn.fluidStateTemp(),
                                                         intQuantsEx.fluidStateTemp(),
-                                                        inAlpha,
-                                                        outAlpha,
+                                                        res_nbinfo.inAlpha,
+                                                        res_nbinfo.outAlpha,
                                                         res_nbinfo.faceArea);
         heatFlux *= scalingFactor_*res_nbinfo.faceArea;
     }
