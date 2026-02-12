@@ -84,11 +84,8 @@ public:
     /// @return The canonical index of the master group for the given slave name and master group name.
     std::size_t getMasterGroupCanonicalIdx(
         const std::string &slave_name, const std::string &master_group_name) const;
-    Scalar getMasterGroupInjectionRate(
-        const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const;
-    Scalar getMasterGroupProductionRate(
-        const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates, bool network = false
-    ) const;
+    Scalar getMasterGroupRate(
+        const std::string &group_name, ReservoirCoupling::Phase phase, ReservoirCoupling::RateKind kind) const;
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
          return this->master_group_slave_names_;
     }

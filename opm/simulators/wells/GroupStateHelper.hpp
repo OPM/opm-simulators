@@ -538,9 +538,7 @@ private:
 
     Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
                                                 const int phase_pos,
-                                                const bool res_rates,
-                                                const bool is_injector,
-                                                const bool network) const;
+                                                ReservoirCoupling::RateKind kind) const;
 
     Scalar getSatelliteRate_(const Group& group,
         const int phase_pos,
