@@ -527,6 +527,25 @@ public:
     static bool isH2Sol()
     { return params_.h2sol_; }
 
+    template <typename Value>
+    static Value
+    solventInverseFormationVolumeFactor(const int pvt_region_index,
+                                        const Value& temperature,
+                                        const Value& pressure)
+    {
+        const Value rv = 0.0;
+        const Value rvw = 0.0;
+        if (isCO2Sol()) {
+            return co2GasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, pressure, rv, rvw);
+        }
+
+        if (isH2Sol()) {
+            return h2GasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, pressure, rv, rvw);
+
+        }
+        return solventPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, pressure);
+    }
+
 private:
     static BlackOilSolventParams<Scalar> params_; // the krg(Fs) column of the SSFN table
 };
