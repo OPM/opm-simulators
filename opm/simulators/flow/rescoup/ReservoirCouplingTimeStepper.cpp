@@ -106,13 +106,14 @@ receiveNextReportDateFromSlaves()
 {
     auto num_slaves = this->numSlaves();
     if (this->comm().rank() == 0) {
-        this->logger().info("Receiving next report dates from slave processes");
+        this->logger().debug("Receiving next report dates from slave processes");
         for (unsigned int i = 0; i < num_slaves; i++) {
             if (!this->slaveIsActivated(i)) {
                 // Set to zero to indicate that the slave has not activated yet
                 this->slave_next_report_time_offsets_[i] = 0.0;
-                this->logger().info(fmt::format("Slave {} has not activated yet, setting next report date to 0.0",
-                                        this->slaveName(i)));
+                this->logger().debug(fmt::format(
+                    "Slave {} has not activated yet, setting next report date to 0.0",
+                    this->slaveName(i)));
                 continue;
             }
             double slave_next_report_time_offset; // Elapsed time from the beginning of the simulation
@@ -127,18 +128,16 @@ receiveNextReportDateFromSlaves()
                 MPI_STATUS_IGNORE
             );
             this->slave_next_report_time_offsets_[i] = slave_next_report_time_offset;
-            this->logger().info(
-                fmt::format(
-                    "Received simulation slave next report date from slave process with name: {}. "
-                    "Next report date: {}", this->slaveName(i), slave_next_report_time_offset
-                )
-            );
+            this->logger().debug(fmt::format(
+                "Received next report date from {}: {} (offset from slave start)",
+                this->slaveName(i), ReservoirCoupling::formatDays(slave_next_report_time_offset)
+            ));
         }
     }
     this->comm().broadcast(
         this->slave_next_report_time_offsets_.data(), /*count=*/num_slaves, /*emitter_rank=*/0
     );
-    this->logger().info("Broadcasted slave next report dates to all ranks");
+    this->logger().debug("Broadcasted slave next report dates to all ranks");
 }
 
 template <class Scalar>
@@ -149,8 +148,8 @@ sendNextTimeStepToSlaves(double timestep)
     if (this->comm().rank() == 0) {
         for (unsigned int slave_idx = 0; slave_idx < this->numSlaves(); slave_idx++) {
             if (!this->slaveIsActivated(slave_idx)) {
-                this->logger().info(fmt::format(
-                    "Slave {} has not activated yet, skipping sending next time step to slave",
+                this->logger().debug(fmt::format(
+                    "Slave {} has not activated yet, skipping sending next time step",
                     this->slaveName(slave_idx)
                 ));
                 continue;
@@ -165,9 +164,9 @@ sendNextTimeStepToSlaves(double timestep)
                 /*tag=*/static_cast<int>(MessageTag::SlaveNextTimeStep),
                 this->getSlaveComm(slave_idx)
             );
-            this->logger().info(fmt::format(
-                "Sent next time step {} from master process rank 0 to slave process "
-                "rank 0 with name: {}", timestep, this->slaveName(slave_idx))
+            this->logger().debug(fmt::format(
+                "Sent next time step {} to {}",
+                ReservoirCoupling::formatDays(timestep), this->slaveName(slave_idx))
             );
         }
    }
