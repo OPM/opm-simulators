@@ -35,6 +35,28 @@ option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
 option(USE_OPENCL "Enable OpenCL support?" ON)
 
+# Wrapper for opm_add_target_options that also adds some (optional)
+# common links and dependencies
+function(simulators_add_target_options)
+  cmake_parse_arguments(PARAM "" "TARGET" "" ${ARGN})
+  if(NOT PARAM_TARGET)
+    message(FATAL_ERROR "Function needs a TARGET parameter")
+  endif()
+
+  opm_add_target_options(TARGET ${PARAM_TARGET})
+  if(TARGET fmt::fmt)
+    target_link_libraries(${PARAM_TARGET} PRIVATE fmt::fmt)
+  endif()
+
+  if(USE_TRACY_PROFILER AND Tracy_FOUND)
+    target_link_libraries(${PARAM_TARGET} PRIVATE Tracy::TracyClient)
+  endif()
+
+  if(TARGET opmcommon)
+    add_dependencies(${PARAM_TARGET} opmcommon)
+  endif()
+endfunction()
+
 macro(opm-simulators_prereqs_hook)
   if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
     message(
@@ -645,7 +667,7 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 opm_add_target_options(TARGET moduleVersion)
 
 add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
-opm_add_target_options(TARGET MainDispatchDynamic)
+simulators_add_target_options(TARGET MainDispatchDynamic)
 set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # We only wait for the hipification process if we are compiling HIP.
@@ -654,18 +676,6 @@ set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
 # anything in gpuistl, say.
 if (CONVERT_CUDA_TO_HIP)
   add_dependencies(MainDispatchDynamic hipified_headers)
-endif()
-
-if(TARGET fmt::fmt)
-  target_link_libraries(MainDispatchDynamic PRIVATE fmt::fmt)
-endif()
-
-if(TARGET opmcommon)
-  add_dependencies(MainDispatchDynamic opmcommon)
-endif()
-
-if(USE_TRACY_PROFILER AND Tracy_FOUND)
-  target_link_libraries(MainDispatchDynamic PRIVATE Tracy::TracyClient)
 endif()
 
 # Strictly we only depend on the update-version target,
@@ -685,17 +695,8 @@ set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   add_library(flow_lib${OBJ} OBJECT flow/flow_${OBJ}.cpp)
-  opm_add_target_options(TARGET flow_lib${OBJ})
+  simulators_add_target_options(TARGET flow_lib${OBJ})
   list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
-  if(TARGET fmt::fmt)
-    target_link_libraries(flow_lib${OBJ} PRIVATE fmt::fmt)
-  endif()
-  if(TARGET opmcommon)
-      add_dependencies(flow_lib${OBJ} opmcommon)
-  endif()
-  if(USE_TRACY_PROFILER AND Tracy_FOUND)
-    target_link_libraries(flow_lib${OBJ} PRIVATE Tracy::TracyClient)
-  endif()
 
   # We only wait for the hipification process if we are compiling HIP.
   # That is, we need to wait for the HIP header files to be generated
