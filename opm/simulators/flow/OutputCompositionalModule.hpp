@@ -266,8 +266,7 @@ public:
                 elemCtx.simulator().episodeIndex(),
                 fs,
                 intQuants,
-                hysterParams,
-                elemCtx
+                hysterParams
             };
 
             Extractor::process(ectx, extractors_);
