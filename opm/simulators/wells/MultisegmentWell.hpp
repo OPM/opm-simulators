@@ -56,6 +56,9 @@ namespace Opm {
 
         using Base::has_solvent;
         using Base::has_polymer;
+        static constexpr bool has_temperature = MSWEval::PrimaryVariables::has_temperature;
+        // TODO: primary variable has temperature, while the conservation quantity is energy
+        // TODO: the temperature vs energy distinction should be investigated/resolved
         using Base::Water;
         using Base::Oil;
         using Base::Gas;
@@ -72,6 +75,11 @@ namespace Opm {
         using MSWEval::SPres;
         using typename Base::PressureMatrix;
         using FSInfo = std::tuple<Scalar,typename std::decay<decltype(std::declval<decltype(std::declval<const Simulator&>().model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type>;
+
+        // a fluid state to calculate the properties inside the wellbore for each segment
+        // it will be probably used for more things, but at the moment, it is for the enthaply calculation in the wellbore
+        using SegmentFluidState = BlackOilFluidState<EvalWell, FluidSystem, has_temperature, has_temperature, Indices::compositionSwitchIdx >= 0,
+                                                    /*has_watVapor*/ false, /*has_brine*/ false, /*has_saltPrecip*/ false, /*has_disgas_in_water*/ false, Indices::numPhases>;
 
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo<Scalar>& pw_info,
@@ -329,6 +337,13 @@ namespace Opm {
                        DeferredLogger& deferred_logger) const override;
 
         FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
+
+        // this function can potentially be shared between multisegment wells and standard wells
+        // TODO: this function can be improved to handle both Scalar and Evaluation types
+        // TODO: this function largely overlaps with calculatePhaseProperties(), some refactoring/unificaition should be done
+        SegmentFluidState createFluidState(const std::vector<EvalWell>& fluid_composition,
+                                           const EvalWell& pressure,
+                                           const EvalWell& temperature) const;
     };
 
 }
