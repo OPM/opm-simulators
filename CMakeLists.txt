@@ -176,6 +176,15 @@ macro(opm-simulators_prereqs_hook)
       find_package(CUDAToolkit REQUIRED)
     endif()
   endif()
+
+  # Find AMGX
+  if(USE_AMGX)
+    find_package(AMGX)
+    if(NOT AMGX_FOUND)
+      message(WARNING "AMGX requested but not found. Continuing without AMGX support.")
+      set(USE_AMGX OFF)
+    endif()
+  endif()
 endmacro()
 
 macro(opm-simulators_sources_hook)
@@ -287,6 +296,10 @@ macro(opm-simulators_config_hook)
 
   if(CUDA_FOUND)
     set(HAVE_CUDA 1)
+  endif()
+
+  if(AMGX_FOUND)
+    set(HAVE_AMGX 1)
   endif()
 endmacro()
 
@@ -472,6 +485,10 @@ macro(opm-simulators_targets_hook)
       target_link_libraries(${tgt} PRIVATE CUDA::cudart)
     endforeach()
   endif()
+
+  if(AMGX_FOUND)
+    target_link_libraries(opmsimulators PRIVATE AMGX::AMGX)
+  endif()
 endmacro()
 
 macro(opm-simulators_install_hook)
@@ -630,18 +647,6 @@ elseif(USE_HYPRE)
   message(WARNING "Hypre requested but MPI not activated. Continuing without Hypre support.")
   set(USE_HYPRE OFF)
   set(HYPRE_FOUND OFF)
-endif()
-
-# Find AMGX
-if(USE_AMGX)
-  find_package(AMGX)
-  if(AMGX_FOUND)
-    set(HAVE_AMGX 1)
-    list(APPEND opm-simulators_LIBRARIES AMGX::AMGX)
-  else()
-    message(WARNING "AMGX requested but not found. Continuing without AMGX support.")
-    set(USE_AMGX OFF)
-  endif()
 endif()
 
 # all setup common to the OPM library modules is done here
