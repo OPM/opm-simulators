@@ -329,6 +329,9 @@ namespace Opm {
                        DeferredLogger& deferred_logger) const override;
 
         FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
+
+        void outputDebugInfoNumericalProblem(const SingleWellState<Scalar, IndexTraits>& ws,
+                                             DeferredLogger& deferred_logger) const;
     };
 
 }
