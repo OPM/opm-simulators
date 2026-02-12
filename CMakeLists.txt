@@ -149,8 +149,6 @@ macro(opm-simulators_config_hook)
   endif()
   include_directories(${EXTRA_INCLUDES})
 
-  include(UseDamaris)
-
   if(BUILD_FLOW_FLOAT_VARIANTS)
     set(FLOW_INSTANTIATE_FLOAT 1)
   endif()
@@ -168,6 +166,12 @@ macro(opm-simulators_config_hook)
   unset(HAVE_FLOATING_POINT_FROM_CHARS)
   if(have_float_from_chars)
     set(HAVE_FLOATING_POINT_FROM_CHARS 1)
+  endif()
+
+  if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
+    set(HAVE_DAMARIS 1)
+  else()
+    unset(HAVE_DAMARIS) # Required until we no longer use find_package_deps()
   endif()
 endmacro()
 
@@ -244,6 +248,10 @@ macro(opm-simulators_targets_hook)
       target_link_libraries(${tapp}_quad PRIVATE QuadMath::QuadMath)
       target_compile_definitions(${tapp}_quad PRIVATE HAVE_QUAD=1)
     endforeach()
+  endif()
+
+  if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
+    target_link_libraries(opmsimulators PUBLIC damaris)
   endif()
 endmacro()
 
