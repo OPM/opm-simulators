@@ -73,6 +73,7 @@ namespace Opm
     , MSWEval(static_cast<WellInterfaceIndices<FluidSystem,Indices>&>(*this), pw_info)
     , regularize_(false)
     , segment_fluid_initial_(this->numberOfSegments(), std::vector<Scalar>(this->num_conservation_quantities_, 0.0))
+    , segment_initial_energy_(this->numberOfSegments(), 0.0)
     {
         // not handling solvent or polymer for now with multisegment well
         if constexpr (has_solvent) {
@@ -81,10 +82,6 @@ namespace Opm
 
         if constexpr (has_polymer) {
             OPM_THROW(std::runtime_error, "polymer is not supported by multisegment well yet");
-        }
-
-        if constexpr (Base::has_energy) {
-            OPM_THROW(std::runtime_error, "energy is not supported by multisegment well yet");
         }
 
         if constexpr (Base::has_foam) {
@@ -767,6 +764,9 @@ namespace Opm
         updatePrimaryVariables(groupStateHelper);
         computePerfCellPressDiffs(simulator);
         computeInitialSegmentFluids(simulator, deferred_logger);
+        if constexpr (has_temperature) {
+            computeInitialSegmentEnergy();
+        }
     }
 
 
@@ -2399,7 +2399,7 @@ namespace Opm
 
         const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
 
-        const EvalWell zero_eval_well {this->primary_variables_.numWellEq() + Indices::numEq, 0.};
+        const EvalWell zero_eval_well {0.};
         // let us handle the dissolution first
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2497,6 +2497,44 @@ namespace Opm
             fluid_state.setEnthalpy(phaseIdx, FluidSystem::enthalpy(fluid_state, paramCache, phaseIdx));
         }
         return fluid_state;
+    }
+
+    // it looks like these functions should go to MultisegmentWellSegments class
+    template <typename TypeTag>
+    typename MultisegmentWell<TypeTag>::SegmentFluidState
+    MultisegmentWell<TypeTag>::createSegmentFluidstate(const int seg) const
+    {
+        const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
+        const EvalWell seg_temperature = this->primary_variables_.getSegmentTemperature(seg);
+
+        // TODO: with the energy equation joins, the num_conservation_quantities will be challenged
+        std::vector<EvalWell> fluid_composition(FluidSystem::numPhases, 0.0);
+        for (std::size_t idx = 0; idx < FluidSystem::numPhases; ++idx) {
+            fluid_composition[idx] = this->primary_variables_.surfaceVolumeFraction(seg, idx);
+        }
+
+        return createFluidState(fluid_composition, seg_pressure, seg_temperature);
+    }
+
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::computeInitialSegmentEnergy()
+    {
+        std::fill(segment_initial_energy_.begin(), segment_initial_energy_.end(), 0.0);
+
+        for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
+            const auto segment_fluid_state = createSegmentFluidstate(seg);
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+                const auto u = getValue(segment_fluid_state.internalEnergy(phaseIdx));
+                const auto s = getValue(segment_fluid_state.saturation(phaseIdx));
+                const auto rho = getValue(segment_fluid_state.density(phaseIdx));
+                const Scalar segment_volume = this->wellEcl().getSegments()[seg].volume();
+                segment_initial_energy_[seg] += segment_volume * u * s * rho;
+            }
+        }
     }
 
 } // namespace Opm

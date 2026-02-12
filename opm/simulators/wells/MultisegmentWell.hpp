@@ -178,6 +178,8 @@ namespace Opm {
 
         // the intial amount of fluids in each segment under surface condition
         std::vector<std::vector<Scalar> > segment_fluid_initial_;
+        // total energy inside the segments at the beginning of the time step
+        std::vector<Scalar> segment_initial_energy_;
 
         mutable int debug_cost_counter_ = 0;
 
@@ -341,9 +343,16 @@ namespace Opm {
         // this function can potentially be shared between multisegment wells and standard wells
         // TODO: this function can be improved to handle both Scalar and Evaluation types
         // TODO: this function largely overlaps with calculatePhaseProperties(), some refactoring/unificaition should be done
+        // NOTE: did not manage due to compilation errors related to fluid state
+        // TODO: this function is probably can be done with the computeInitialSegmentFluids() together
         SegmentFluidState createFluidState(const std::vector<EvalWell>& fluid_composition,
                                            const EvalWell& pressure,
                                            const EvalWell& temperature) const;
+
+        SegmentFluidState createSegmentFluidstate(const int seg) const;
+
+        void computeInitialSegmentEnergy();
+
     };
 
 }
