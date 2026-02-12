@@ -58,7 +58,7 @@ HDF5File::HDF5File(const std::string& fileName,
     bool exists = std::filesystem::exists(fileName);
     hid_t acc_tpl = H5P_DEFAULT;
     if (comm.size() > 1) {
-#if HAVE_MPI
+#if HAVE_MPI && H5_HAVE_PARALLEL
         MPI_Info info = MPI_INFO_NULL;
         acc_tpl = H5Pcreate(H5P_FILE_ACCESS);
         H5Pset_fapl_mpio(acc_tpl, comm_, info);
@@ -200,7 +200,7 @@ void HDF5File::writeSplit(hid_t grp,
     std::vector<hsize_t> proc_sizes(comm_.size());
     hid_t dxpl = H5P_DEFAULT;
     if (comm_.size() > 1) {
-#if HAVE_MPI
+#if HAVE_MPI && H5_HAVE_PARALLEL
         hsize_t lsize = buffer.size();
         comm_.allgather(&lsize, 1, proc_sizes.data());
         dxpl = H5Pcreate(H5P_DATASET_XFER);
@@ -251,7 +251,7 @@ void HDF5File::writeRootOnly(hid_t grp,
     hid_t dcpl = this->getCompression(size);
     hid_t dxpl = H5P_DEFAULT;
     if (comm_.size() > 1) {
-#if HAVE_MPI
+#if HAVE_MPI && H5_HAVE_PARALLEL
         dxpl = H5Pcreate(H5P_DATASET_XFER);
         H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
 #else
