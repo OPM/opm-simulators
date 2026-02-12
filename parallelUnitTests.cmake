@@ -1,8 +1,11 @@
 opm_set_test_driver(${CMAKE_CURRENT_SOURCE_DIR}/tests/run-parallel-unitTest.sh "")
 
 opm_add_test(test_gatherconvergencereport
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  DEPENDS
+    opmsimulators
+  LIBRARIES
+    opmsimulators
+    Boost::unit_test_framework
   SOURCES
     tests/test_gatherconvergencereport.cpp
   CONDITION
@@ -15,8 +18,11 @@ opm_add_test(test_gatherconvergencereport
 )
 
 opm_add_test(test_gatherdeferredlogger
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  DEPENDS
+    opmsimulators
+  LIBRARIES
+    opmsimulators
+    Boost::unit_test_framework
   SOURCES
     tests/test_gatherdeferredlogger.cpp
   CONDITION
@@ -39,7 +45,7 @@ opm_add_test(test_parallelwellinfo_mpi
   NO_COMPILE
   PROCESSORS
     4
-    )
+)
 
 foreach(NPROC 2 3 4)
   opm_add_test(test_parallel_wbp_sourcevalues_np${NPROC}
@@ -60,7 +66,9 @@ opm_add_test(test_parallel_wbp_calculation
   SOURCES
     tests/test_parallel_wbp_calculation.cpp
   LIBRARIES
-    opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+    opmcommon
+    opmsimulators
+    Boost::unit_test_framework
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   ONLY_COMPILE
@@ -144,8 +152,11 @@ foreach(NPROC 2 3 4)
 endforeach()
 
 opm_add_test(test_broadcast
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  DEPENDS
+    opmsimulators
+  LIBRARIES
+    opmsimulators
+    Boost::unit_test_framework
   SOURCES
     tests/test_broadcast.cpp
   CONDITION
@@ -158,8 +169,11 @@ opm_add_test(test_broadcast
 )
 
 opm_add_test(test_HDF5File_Parallel
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  DEPENDS
+    opmsimulators
+  LIBRARIES
+    opmsimulators
+    Boost::unit_test_framework
   SOURCES
     tests/test_HDF5File_Parallel.cpp
   CONDITION
@@ -172,8 +186,12 @@ opm_add_test(test_HDF5File_Parallel
 )
 
 opm_add_test(test_HDF5Serializer_Parallel
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  DEPENDS
+    opmsimulators
+  LIBRARIES
+    opmcommon
+    opmsimulators
+    Boost::unit_test_framework
   SOURCES
     tests/test_HDF5Serializer_Parallel.cpp
   CONDITION
