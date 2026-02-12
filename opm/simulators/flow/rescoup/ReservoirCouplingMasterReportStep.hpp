@@ -227,12 +227,10 @@ private:
     /// @brief Get a rate for a master group (helper for the public rate getters)
     /// @param group_name Name of the master group
     /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
-    /// @param reservoir_rates If true, return reservoir rates; if false, return surface rates
-    /// @param is_injection If true, return injection rates; if false, return production rates
-    /// @param network If true, return network rates (where GEFAC/WEFAC item 3 = "NO" is ignored)
+    /// @param kind Selects which kind of rate to retrieve (injection/production, surface/reservoir/network)
     /// @return The requested rate for the specified phase
     Scalar getMasterGroupRate_(const std::string &group_name, ReservoirCoupling::Phase phase,
-                               bool reservoir_rates, bool is_injection, bool network = false) const;
+                               ReservoirCoupling::RateKind kind) const;
 
     /// Reference to the parent ReservoirCouplingMaster object
     ReservoirCouplingMaster<Scalar> &master_;

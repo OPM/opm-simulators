@@ -160,6 +160,19 @@ enum class Phase : std::size_t {
     Count
 };
 
+/// @brief Selects which kind of rate to retrieve from slave group data.
+///
+/// Replaces multiple bool parameters (res_rates, is_injection, network) with a single
+/// enum that names the 5 valid rate categories directly. Only these 5 combinations
+/// of the bools are meaningful; the enum prevents callers from constructing invalid states.
+enum class RateKind {
+    InjectionSurface,
+    InjectionReservoir,
+    ProductionSurface,
+    ProductionNetworkSurface,
+    ProductionReservoir
+};
+
 template <class Scalar>
 struct InjectionRates {
     InjectionRates() = default;
