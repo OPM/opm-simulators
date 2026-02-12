@@ -123,6 +123,9 @@ public:
     //! \brief Get pressure for a segment.
     EvalWell getSegmentPressure(const int seg) const;
 
+    //! \brief Get temperature for a segment.
+    EvalWell getSegmentTemperature(const int seg) const;
+
     //! \brief Get rate for a component in a segment.
     EvalWell getSegmentRate(const int seg,
                             const int comp_idx) const;
