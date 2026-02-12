@@ -35,6 +35,37 @@ option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
 option(USE_OPENCL "Enable OpenCL support?" ON)
 
+# Wrapper for opm_add_target_options that also adds some (optional)
+# common links and dependencies
+function(simulators_add_target_options)
+  cmake_parse_arguments(PARAM "" "TARGET" "" ${ARGN})
+  if(NOT PARAM_TARGET)
+    message(FATAL_ERROR "Function needs a TARGET parameter")
+  endif()
+
+  opm_add_target_options(TARGET ${PARAM_TARGET})
+  if(TARGET fmt::fmt)
+    target_link_libraries(${PARAM_TARGET} PRIVATE fmt::fmt)
+  endif()
+
+  if(USE_TRACY_PROFILER AND Tracy_FOUND)
+    target_link_libraries(${PARAM_TARGET} PRIVATE Tracy::TracyClient)
+  endif()
+
+  if(TARGET opmcommon)
+    add_dependencies(${PARAM_TARGET} opmcommon)
+  endif()
+
+  # We only wait for the hipification process if we are compiling HIP.
+  # That is, we need to wait for the HIP header files to be generated
+  # before the rest of the code can compile. HIP header file includes
+  # anything in gpuistl, say.
+  if (CONVERT_CUDA_TO_HIP)
+    add_dependencies(${PARAM_TARGET} hipified_headers)
+    target_link_libraries(${PARAM_TARGET} PRIVATE roc::hipblas roc::hipsparse)
+  endif()
+endfunction()
+
 macro(opm-simulators_prereqs_hook)
   if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
     message(
@@ -72,6 +103,27 @@ macro(opm-simulators_prereqs_hook)
     find_package(pybind11 CONFIG)
     if(NOT pybind11_FOUND)
       include(DownloadPyBind11)
+    endif()
+  endif()
+
+  if(CONVERT_CUDA_TO_HIP)
+    message("CUDA code will be hipified")
+    enable_language(HIP)
+    find_package(hip REQUIRED)
+    find_package(hipsparse REQUIRED)
+    find_package(hipblas REQUIRED)
+    find_program(HIPIFY_PERL_COMMAND
+                 NAMES hipify-perl
+                 HINTS
+                  PATH /opt/rocm/bin
+    )
+    if(HIPIFY_PERL_COMMAND)
+      add_executable(hipify-perl IMPORTED GLOBAL)
+      set_target_properties(hipify-perl
+                            PROPERTIES IMPORTED_LOCATION ${HIPIFY_PERL_COMMAND}
+      )
+    else()
+      message(FATAL_ERROR "hipify-perl, required to convert CUDA to HIP, not found")
     endif()
   endif()
 endmacro()
@@ -177,6 +229,11 @@ macro(opm-simulators_config_hook)
   else()
     unset(HAVE_DAMARIS) # Required until we no longer use find_package_deps()
   endif()
+
+  if(CONVERT_CUDA_TO_HIP)
+    set(HAVE_CUDA 1) # we still need this defined so that the preprocessor does not remove the code
+    set(USE_HIP 1)
+  endif()
 endmacro()
 
 macro(opm-simulators_tests_hook)
@@ -196,6 +253,96 @@ macro(opm-simulators_tests_hook)
 
   if(OPM_ENABLE_PYTHON)
     include(${CMAKE_CURRENT_SOURCE_DIR}/pythonIntegrationTests.cmake)
+  endif()
+
+  if(CUDA_FOUND OR hip_FOUND)
+    if(USE_GPU_BRIDGE)
+      set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
+    endif()
+
+    # CUISTL
+    set(gpu_label "gpu_cuda")
+    if(USE_HIP)
+      set(gpu_label "gpu_hip")
+    endif()
+
+    set_tests_properties(
+      cusparse_safe_call
+      cublas_safe_call
+      gpu_safe_call
+      cuda_check_last_error
+      cublas_handle
+      GpuJac
+      GpuDILU
+      cusparse_handle
+      cuSparse_matrix_operations
+      cuVector_operations
+      GpuVector
+      GpuSparseMatrix
+      GpuSeqILU0
+      solver_adapter
+      GpuBuffer
+      GpuView
+      gpu_ad
+      gpu_linear_two_phase_material
+      gpuPvt
+      gpu_resources
+      gpu_smart_pointers
+      is_gpu_pointer
+      throw_macros_on_gpu
+      preconditioner_factory_gpu
+      gpuBlackOilFluidSystem
+      blackoilfluidstategpu
+      conditional_storage
+      GpuPressureTransferPolicy
+      deviceBlockOperations
+      primary_variables_gpu
+      MiniVector
+      MiniMatrix
+      GpuSparseTable
+      PROPERTIES
+      LABELS
+        ${gpu_label}
+    )
+    if(MPI_FOUND)
+      set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
+    endif()
+  endif()
+
+  if(HYPRE_FOUND)
+    if (HYPRE_USING_CUDA)
+      set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_cuda)
+      set_tests_properties(HypreInterfaceGPU PROPERTIES LABELS gpu_cuda)
+    elseif (HYPRE_USING_HIP)
+      set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_hip)
+      set_tests_properties(HypreInterfaceGPU PROPERTIES LABELS gpu_hip)
+    endif()
+  endif()
+
+  if(AMGX_FOUND)
+    set_tests_properties(AmgxInterface PROPERTIES LABELS gpu_cuda)
+    set_tests_properties(AmgxPreconditioner PROPERTIES LABELS gpu_cuda)
+  endif()
+
+  if(USE_GPU_BRIDGE)
+    if(OpenCL_FOUND)
+      set_tests_properties(
+        openclSolver
+        solvetransposed3x3
+        csrToCscOffsetMap
+        PROPERTIES
+        LABELS
+          gpu_opencl
+      )
+    endif()
+
+    if(ROCALUTION_FOUND)
+      set_tests_properties(rocalutionSolver PROPERTIES LABELS gpu_rocm)
+    endif()
+
+    if(rocsparse_FOUND AND rocblas_FOUND)
+      set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
+    endif()
   endif()
 endmacro()
 
@@ -257,6 +404,10 @@ macro(opm-simulators_targets_hook)
   if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
     target_link_libraries(opmsimulators PUBLIC damaris)
   endif()
+
+  if(CONVERT_CUDA_TO_HIP)
+    target_link_libraries(opmsimulators PUBLIC roc::hipblas roc::hipsparse)
+  endif()
 endmacro()
 
 macro(opm-simulators_install_hook)
@@ -287,31 +438,6 @@ list(REMOVE_DUPLICATES OPM_COMPILE_COMPONENTS)
 # Make a string we can use in the code
 # this will be used in a template argument pack.
 string(REPLACE ";" "," OPM_COMPILE_COMPONENTS_TEMPLATE_LIST "${OPM_COMPILE_COMPONENTS}")
-
-if(CONVERT_CUDA_TO_HIP)
-  enable_language(HIP)
-  message("CUDA code will be hipified")
-  set(HAVE_CUDA 1) # we still need this defined so that the preprocessor does not remove the code
-  set(CUDA_FOUND ON)
-  set(USE_HIP 1)
-  find_package(hip REQUIRED)
-  find_package(hipsparse REQUIRED)
-  find_package(hipblas REQUIRED)
-  link_libraries(roc::hipblas roc::hipsparse)
-  find_program(HIPIFY_PERL_COMMAND
-               NAMES hipify-perl
-               HINTS
-                PATH /opt/rocm/bin
-  )
-  if(HIPIFY_PERL_COMMAND)
-    add_executable(hipify-perl IMPORTED GLOBAL)
-    set_target_properties(hipify-perl
-                          PROPERTIES IMPORTED_LOCATION ${HIPIFY_PERL_COMMAND}
-    )
-  else()
-    message(FATAL_ERROR "hipify-perl required to convert CUDA to HIP not found")
-  endif()
-endif()
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
@@ -556,28 +682,8 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 opm_add_target_options(TARGET moduleVersion)
 
 add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
-opm_add_target_options(TARGET MainDispatchDynamic)
+simulators_add_target_options(TARGET MainDispatchDynamic)
 set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-# We only wait for the hipification process if we are compiling HIP.
-# That is, we need to wait for the HIP header files to be generated
-# before the rest of the code can compile. HIP header file includes
-# anything in gpuistl, say.
-if (CONVERT_CUDA_TO_HIP)
-  add_dependencies(MainDispatchDynamic hipified_headers)
-endif()
-
-if(TARGET fmt::fmt)
-  target_link_libraries(MainDispatchDynamic PRIVATE fmt::fmt)
-endif()
-
-if(TARGET opmcommon)
-  add_dependencies(MainDispatchDynamic opmcommon)
-endif()
-
-if(USE_TRACY_PROFILER AND Tracy_FOUND)
-  target_link_libraries(MainDispatchDynamic PRIVATE Tracy::TracyClient)
-endif()
 
 # Strictly we only depend on the update-version target,
 # but this is not exposed in a super-build.
@@ -596,25 +702,8 @@ set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   add_library(flow_lib${OBJ} OBJECT flow/flow_${OBJ}.cpp)
-  opm_add_target_options(TARGET flow_lib${OBJ})
+  simulators_add_target_options(TARGET flow_lib${OBJ})
   list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
-  if(TARGET fmt::fmt)
-    target_link_libraries(flow_lib${OBJ} PRIVATE fmt::fmt)
-  endif()
-  if(TARGET opmcommon)
-      add_dependencies(flow_lib${OBJ} opmcommon)
-  endif()
-  if(USE_TRACY_PROFILER AND Tracy_FOUND)
-    target_link_libraries(flow_lib${OBJ} PRIVATE Tracy::TracyClient)
-  endif()
-
-  # We only wait for the hipification process if we are compiling HIP.
-  # That is, we need to wait for the HIP header files to be generated
-  # before the rest of the code can compile. HIP header file includes
-  # anything in gpuistl, say.
-  if(CONVERT_CUDA_TO_HIP)
-    add_dependencies(flow_lib${OBJ} hipified_headers)
-  endif()
 
   opm_add_test(flow_${OBJ}
                ONLY_COMPILE
@@ -764,85 +853,18 @@ if(CUDA_FOUND)
       target_link_libraries(${tgt} PRIVATE CUDA::cudart)
     endforeach()
   endif()
-  if(USE_GPU_BRIDGE)
-    set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
-  endif()
-
-  # CUISTL
-  set(gpu_label "gpu_cuda")
-  if(USE_HIP)
-    set(gpu_label "gpu_hip")
-  endif()
-
-  set_tests_properties(cusparse_safe_call
-                       cublas_safe_call
-                       gpu_safe_call
-                       cuda_check_last_error
-                       cublas_handle
-                       GpuJac
-                       GpuDILU
-                       cusparse_handle
-                       cuSparse_matrix_operations
-                       cuVector_operations
-                       GpuVector
-                       GpuSparseMatrix
-                       GpuSeqILU0
-                       solver_adapter
-                       GpuBuffer
-                       GpuView
-                       gpu_ad
-                       gpu_linear_two_phase_material
-                       gpuPvt
-                       gpu_resources
-                       gpu_smart_pointers
-                       is_gpu_pointer
-                       throw_macros_on_gpu
-                       preconditioner_factory_gpu
-                       gpuBlackOilFluidSystem
-                       blackoilfluidstategpu
-                       conditional_storage
-                       GpuPressureTransferPolicy
-                       deviceBlockOperations
-                       primary_variables_gpu
-                       MiniVector
-                       MiniMatrix
-                       GpuSparseTable
-                       PROPERTIES LABELS ${gpu_label})
-  if(MPI_FOUND)
-    set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
-  endif()
-endif()
-
-if(HYPRE_FOUND)
-  if (HYPRE_USING_CUDA)
-    set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_cuda)
-    set_tests_properties(HypreInterfaceGPU PROPERTIES LABELS gpu_cuda)
-  elseif (HYPRE_USING_HIP)
-    set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_hip)
-    set_tests_properties(HypreInterfaceGPU PROPERTIES LABELS gpu_hip)
-  endif()
-endif()
-
-if(AMGX_FOUND)
-  set_tests_properties(AmgxInterface PROPERTIES LABELS gpu_cuda)
-  set_tests_properties(AmgxPreconditioner PROPERTIES LABELS gpu_cuda)
 endif()
 
 if(USE_GPU_BRIDGE)
   if(OpenCL_FOUND)
     target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
-    set_tests_properties(openclSolver solvetransposed3x3 csrToCscOffsetMap
-                         PROPERTIES LABELS gpu_opencl)
   endif()
 
   if(ROCALUTION_FOUND)
-    target_include_directories(opmsimulators PUBLIC ${rocalution_INCLUDE_DIR}/rocalution)
     set_tests_properties(rocalutionSolver PROPERTIES LABELS gpu_rocm)
   endif()
 
   if(rocsparse_FOUND AND rocblas_FOUND)
-    target_link_libraries( opmsimulators PUBLIC roc::rocsparse )
-    target_link_libraries( opmsimulators PUBLIC roc::rocblas )
     set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
   endif()
 
