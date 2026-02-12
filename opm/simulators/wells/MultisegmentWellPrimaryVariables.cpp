@@ -664,6 +664,14 @@ getSegmentPressure(const int seg) const
 template<class FluidSystem, class Indices>
 typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+getSegmentTemperature(const int seg) const
+{
+    return evaluation_[seg][Temperature];
+}
+
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getBhp() const
 {
     return this->getSegmentPressure(0);
