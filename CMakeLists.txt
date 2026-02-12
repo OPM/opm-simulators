@@ -64,6 +64,15 @@ function(simulators_add_target_options)
     add_dependencies(${PARAM_TARGET} hipified_headers)
     target_link_libraries(${PARAM_TARGET} PRIVATE roc::hipblas roc::hipsparse)
   endif()
+
+  if(CUDA_FOUND)
+    target_link_libraries(${PARAM_TARGET}
+      PUBLIC
+        CUDA::cusparse
+        CUDA::cublas
+        CUDA::nvptxcompiler_static
+    )
+  endif()
 endfunction()
 
 macro(opm-simulators_prereqs_hook)
@@ -124,6 +133,47 @@ macro(opm-simulators_prereqs_hook)
       )
     else()
       message(FATAL_ERROR "hipify-perl, required to convert CUDA to HIP, not found")
+    endif()
+  endif()
+
+  # Make sure we are using the same compiler underneath
+  # NVCC as for the rest. In the case that NVCC does not support
+  # that compiler it will error out.
+  if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND NOT CONVERT_CUDA_TO_HIP)
+    if(CMAKE_BUILD_TYPE)
+      set(_flags_suffix "_${CMAKE_BUILD_TYPE}")
+    endif()
+    if(NOT DEFINED ENV{CUDAHOSTCXX} AND NOT DEFINED CMAKE_CUDA_HOST_COMPILER AND
+        (NOT CMAKE_CUDA_FLAGS${_flags_suffix} OR NOT CMAKE_CUDA_FLAGS${_flags_suffix} MATCHES ".*-ccbin .*"))
+      message(STATUS "Setting CUDA host compiler CMAKE_CUDA_HOST_COMPILER to ${CMAKE_CXX_COMPILER} to "
+        "prevent incompatibilities. Note that this might report that there "
+        "is not CUDA compiler if your system's CUDA compiler does not support "
+        "${CMAKE_CXX_COMPILER}.")
+      # check_language does not seem to care about ${CMAKE_CUDA_FLAGS} or $(CUDA_NVCC_FLAGS}.
+      # Hence we set CMAKE_CUDA_HOST_COMPILER to our C++ compiler.
+      # In check_language(CUDA) we will get an error if we in addition put
+      # "-ccbin ${CMAKE_CXX_COMPILER}" into CMAKE_CUDA_FLAGS. It results
+      # in "${NVCC} -ccbin=${CMAKE_CXX_COMPILER}   -ccbin ${CMAKE_CXX_COMPILER}"
+      # which causes nvcc to abort
+      set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+      set(ENV{CUDAHOSTCXX} ${CMAKE_CUDA_HOST_COMPILER}) # The only thing honored by check_language(CUDA)!
+    endif()
+    include(CheckLanguage)
+    check_language(CUDA)
+    if(CMAKE_CUDA_COMPILER)
+      # OPTIONAL is ignored. Hence the magic above to check whether enabling CUDA works
+      enable_language(CUDA)
+      set(CUDA_FOUND ON)
+    endif()
+    if(CUDA_FOUND AND CMAKE_CUDA_COMPILER_VERSION VERSION_LESS "9.0")
+      set(CUDA_FOUND OFF)
+      message(WARNING
+        "Deactivating CUDA as we require version 9.0 or newer."
+        " Found only CUDA version ${CUDA_VERSION}."
+      )
+    endif()
+    if(CUDA_FOUND)
+      find_package(CUDAToolkit REQUIRED)
     endif()
   endif()
 endmacro()
@@ -233,6 +283,10 @@ macro(opm-simulators_config_hook)
   if(CONVERT_CUDA_TO_HIP)
     set(HAVE_CUDA 1) # we still need this defined so that the preprocessor does not remove the code
     set(USE_HIP 1)
+  endif()
+
+  if(CUDA_FOUND)
+    set(HAVE_CUDA 1)
   endif()
 endmacro()
 
@@ -401,6 +455,23 @@ macro(opm-simulators_targets_hook)
   if(USE_GPU_BRIDGE AND hip_FOUND)
     target_link_libraries(opmsimulators PUBLIC roc::rocalution)
   endif()
+
+  if(CUDA_FOUND)
+    target_link_libraries(opmsimulators
+      PUBLIC
+        CUDA::cusparse
+        CUDA::cublas
+        CUDA::nvptxcompiler_static
+    )
+
+    foreach(tgt
+        test_gpu_safe_call
+        test_cuda_check_last_error
+        test_GpuVector
+        test_is_gpu_pointer)
+      target_link_libraries(${tgt} PRIVATE CUDA::cudart)
+    endforeach()
+  endif()
 endmacro()
 
 macro(opm-simulators_install_hook)
@@ -476,56 +547,6 @@ include (OpmInit)
 # separate file (in cmake/Modules sub-directory) because it is shared
 # with the find module
 include ("${project}-prereqs")
-
-# Make sure we are using the same compiler underneath
-# NVCC as for the rest. In the case that NVCC does not support
-# that compiler it will error out.
-if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA)
-  if(CMAKE_BUILD_TYPE)
-    set(_flags_suffix "_${CMAKE_BUILD_TYPE}")
-  endif()
-  if(NOT DEFINED ENV{CUDAHOSTCXX} AND NOT DEFINED CMAKE_CUDA_HOST_COMPILER AND
-      (NOT CMAKE_CUDA_FLAGS${_flags_suffix} OR NOT CMAKE_CUDA_FLAGS${_flags_suffix} MATCHES ".*-ccbin .*"))
-    message(STATUS "Setting CUDA host compiler CMAKE_CUDA_HOST_COMPILER to ${CMAKE_CXX_COMPILER} to "
-      "prevent incompatibilities. Note that this might report that there "
-      "is not CUDA compiler if your system's CUDA compiler does not support "
-      "${CMAKE_CXX_COMPILER}.")
-    # check_language does not seem to care about ${CMAKE_CUDA_FLAGS} or $(CUDA_NVCC_FLAGS}.
-    # Hence we set CMAKE_CUDA_HOST_COMPILER to our C++ compiler.
-    # In check_language(CUDA) we will get an error if we in addition put
-    # "-ccbin ${CMAKE_CXX_COMPILER}" into CMAKE_CUDA_FLAGS. It results
-    # in "${NVCC} -ccbin=${CMAKE_CXX_COMPILER}   -ccbin ${CMAKE_CXX_COMPILER}"
-    # which causes nvcc to abort
-    set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
-    set(ENV{CUDAHOSTCXX} ${CMAKE_CUDA_HOST_COMPILER}) # The only thing honored by check_language(CUDA)!
-  endif()
-  include(CheckLanguage)
-  check_language(CUDA)
-  if(CMAKE_CUDA_COMPILER)
-    # OPTIONAL is ignored. Hence the magic above to check whether enabling CUDA works
-    enable_language(CUDA OPTIONAL)
-    # While the documentation says that it is deprecated, FindCUDA seems the
-    # only easy way to determine the cublas and cusparse libraries.
-    # Hence we call it unconditionally
-    # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
-    find_package(CUDA)
-    set(CUDA_FOUND ON)
-  endif()
-  if(CUDA_FOUND AND CUDA_VERSION VERSION_LESS "9.0")
-    set(CUDA_FOUND OFF)
-    message(WARNING "Deactivating CUDA as we require version 9.0 or newer."
-      " Found only CUDA version ${CUDA_VERSION}.")
-  endif()
-endif()
-
-find_package(CUDAToolkit)
-if(CUDA_FOUND)
-  set(HAVE_CUDA 1)
-  if(NOT USE_HIP) # no need to include CUDA files if we use rocm stack
-    include_directories(${CUDA_INCLUDE_DIRS})
-    include_directories(${CUDAToolkit_INCLUDE_DIRS})
-  endif()
-endif()
 
 if (USE_OPENCL)
   find_package(OpenCL)
@@ -830,22 +851,6 @@ if(HAVE_AVX2_EXTENSION)
   # Hence we are requesting C17. (-std=c99 -D_ISOC11_SOURCE also seems to work)
   set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_FLAGS "${AVX2_FLAGS}" APPEND_STRING)
   set_property(TARGET opmsimulators PROPERTY C_STANDARD 17)
-endif()
-
-# must link libraries after target 'opmsimulators' has been defined
-if(CUDA_FOUND)
-  if (NOT USE_HIP)
-    target_link_libraries(opmsimulators
-      PUBLIC
-      ${CUDA_cusparse_LIBRARY}
-      ${CUDA_cublas_LIBRARY}
-      ${CUDA_nvptxcompiler_static_LIBRARY}
-    )
-
-    foreach(tgt test_gpu_safe_call test_cuda_check_last_error test_GpuVector test_is_gpu_pointer)
-      target_link_libraries(${tgt} PRIVATE CUDA::cudart)
-    endforeach()
-  endif()
 endif()
 
 if(USE_GPU_BRIDGE)
