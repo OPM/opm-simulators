@@ -197,6 +197,96 @@ macro(opm-simulators_tests_hook)
   if(OPM_ENABLE_PYTHON)
     include(${CMAKE_CURRENT_SOURCE_DIR}/pythonIntegrationTests.cmake)
   endif()
+
+  if(CUDA_FOUND)
+    if(USE_GPU_BRIDGE)
+      set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
+    endif()
+
+    # CUISTL
+    set(gpu_label "gpu_cuda")
+    if(USE_HIP)
+      set(gpu_label "gpu_hip")
+    endif()
+
+    set_tests_properties(
+      cusparse_safe_call
+      cublas_safe_call
+      gpu_safe_call
+      cuda_check_last_error
+      cublas_handle
+      GpuJac
+      GpuDILU
+      cusparse_handle
+      cuSparse_matrix_operations
+      cuVector_operations
+      GpuVector
+      GpuSparseMatrix
+      GpuSeqILU0
+      solver_adapter
+      GpuBuffer
+      GpuView
+      gpu_ad
+      gpu_linear_two_phase_material
+      gpuPvt
+      gpu_resources
+      gpu_smart_pointers
+      is_gpu_pointer
+      throw_macros_on_gpu
+      preconditioner_factory_gpu
+      gpuBlackOilFluidSystem
+      blackoilfluidstategpu
+      conditional_storage
+      GpuPressureTransferPolicy
+      deviceBlockOperations
+      primary_variables_gpu
+      MiniVector
+      MiniMatrix
+      GpuSparseTable
+      PROPERTIES
+      LABELS
+        ${gpu_label}
+    )
+    if(MPI_FOUND)
+      set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
+    endif()
+  endif()
+
+  if(HYPRE_FOUND)
+    if (HYPRE_USING_CUDA)
+      set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_cuda)
+      set_tests_properties(HypreInterfaceGPU PROPERTIES LABELS gpu_cuda)
+    elseif (HYPRE_USING_HIP)
+      set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_hip)
+      set_tests_properties(HypreInterfaceGPU PROPERTIES LABELS gpu_hip)
+    endif()
+  endif()
+
+  if(AMGX_FOUND)
+    set_tests_properties(AmgxInterface PROPERTIES LABELS gpu_cuda)
+    set_tests_properties(AmgxPreconditioner PROPERTIES LABELS gpu_cuda)
+  endif()
+
+  if(USE_GPU_BRIDGE)
+    if(OpenCL_FOUND)
+      set_tests_properties(
+        openclSolver
+        solvetransposed3x3
+        csrToCscOffsetMap
+        PROPERTIES
+        LABELS
+          gpu_opencl
+      )
+    endif()
+
+    if(ROCALUTION_FOUND)
+      set_tests_properties(rocalutionSolver PROPERTIES LABELS gpu_rocm)
+    endif()
+
+    if(rocsparse_FOUND AND rocblas_FOUND)
+      set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
+    endif()
+  endif()
 endmacro()
 
 macro(opm-simulators_targets_hook)
@@ -764,85 +854,18 @@ if(CUDA_FOUND)
       target_link_libraries(${tgt} PRIVATE CUDA::cudart)
     endforeach()
   endif()
-  if(USE_GPU_BRIDGE)
-    set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
-  endif()
-
-  # CUISTL
-  set(gpu_label "gpu_cuda")
-  if(USE_HIP)
-    set(gpu_label "gpu_hip")
-  endif()
-
-  set_tests_properties(cusparse_safe_call
-                       cublas_safe_call
-                       gpu_safe_call
-                       cuda_check_last_error
-                       cublas_handle
-                       GpuJac
-                       GpuDILU
-                       cusparse_handle
-                       cuSparse_matrix_operations
-                       cuVector_operations
-                       GpuVector
-                       GpuSparseMatrix
-                       GpuSeqILU0
-                       solver_adapter
-                       GpuBuffer
-                       GpuView
-                       gpu_ad
-                       gpu_linear_two_phase_material
-                       gpuPvt
-                       gpu_resources
-                       gpu_smart_pointers
-                       is_gpu_pointer
-                       throw_macros_on_gpu
-                       preconditioner_factory_gpu
-                       gpuBlackOilFluidSystem
-                       blackoilfluidstategpu
-                       conditional_storage
-                       GpuPressureTransferPolicy
-                       deviceBlockOperations
-                       primary_variables_gpu
-                       MiniVector
-                       MiniMatrix
-                       GpuSparseTable
-                       PROPERTIES LABELS ${gpu_label})
-  if(MPI_FOUND)
-    set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
-  endif()
-endif()
-
-if(HYPRE_FOUND)
-  if (HYPRE_USING_CUDA)
-    set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_cuda)
-    set_tests_properties(HypreInterfaceGPU PROPERTIES LABELS gpu_cuda)
-  elseif (HYPRE_USING_HIP)
-    set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_hip)
-    set_tests_properties(HypreInterfaceGPU PROPERTIES LABELS gpu_hip)
-  endif()
-endif()
-
-if(AMGX_FOUND)
-  set_tests_properties(AmgxInterface PROPERTIES LABELS gpu_cuda)
-  set_tests_properties(AmgxPreconditioner PROPERTIES LABELS gpu_cuda)
 endif()
 
 if(USE_GPU_BRIDGE)
   if(OpenCL_FOUND)
     target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
-    set_tests_properties(openclSolver solvetransposed3x3 csrToCscOffsetMap
-                         PROPERTIES LABELS gpu_opencl)
   endif()
 
   if(ROCALUTION_FOUND)
-    target_include_directories(opmsimulators PUBLIC ${rocalution_INCLUDE_DIR}/rocalution)
     set_tests_properties(rocalutionSolver PROPERTIES LABELS gpu_rocm)
   endif()
 
   if(rocsparse_FOUND AND rocblas_FOUND)
-    target_link_libraries( opmsimulators PUBLIC roc::rocsparse )
-    target_link_libraries( opmsimulators PUBLIC roc::rocblas )
     set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
   endif()
 
