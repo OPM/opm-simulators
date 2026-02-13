@@ -601,9 +601,6 @@ macro(opm-simulators_targets_hook)
   endif()
 
   add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
-  if(OPM_ENABLE_PYTON)
-    set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
-  endif()
   opm_add_target_options(TARGET moduleVersion)
 
   # Strictly we only depend on the update-version target,
@@ -617,6 +614,11 @@ macro(opm-simulators_targets_hook)
   target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   if(MPI_FOUND)
     target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  endif()
+
+  if(OPM_ENABLE_PYTHON)
+    set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
+    add_subdirectory(python/simulators)
   endif()
 endmacro()
 
@@ -852,8 +854,4 @@ if(BUILD_FLOW_FLOAT_VARIANTS)
     SOURCES
     flow/flow_blackoil_float_main.cpp
     $<TARGET_OBJECTS:moduleVersion>)
-endif()
-
-if (OPM_ENABLE_PYTHON)
-  add_subdirectory(python/simulators)
 endif()
