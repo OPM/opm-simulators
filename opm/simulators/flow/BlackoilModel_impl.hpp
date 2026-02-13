@@ -309,19 +309,23 @@ nonlinearIterationNewton(const int iteration,
         if (param_.use_update_stabilization_) {
             // Stabilize the nonlinear update.
             bool isOscillate = false;
-            bool isStagnate = false;
+            bool isDiverging = false;
             nonlinear_solver.detectOscillations(residual_norms_history_,
                                                 residual_norms_history_.size() - 1,
                                                 isOscillate,
-                                                isStagnate);
-            if (isOscillate) {
-                current_relaxation_ -= nonlinear_solver.relaxIncrement();
-                current_relaxation_ = std::max(current_relaxation_,
-                                               nonlinear_solver.relaxMax());
+                                                isDiverging);
+            if (isOscillate || isDiverging) {
+                current_relaxation_ *= 0.85; //TODO make a parameter
                 if (terminalOutputEnabled()) {
-                    std::string msg = "    Oscillating behavior detected: Relaxation set to "
-                            + std::to_string(current_relaxation_);
-                    OpmLog::info(msg);
+                    if (isDiverging) {
+                        std::string msg = "    Diverging behavior detected: Relaxation set to "
+                                + std::to_string(current_relaxation_);
+                        OpmLog::info(msg);
+                    } else if (isOscillate) {
+                        std::string msg = "    Oscillating behavior detected: Relaxation set to "
+                                + std::to_string(current_relaxation_);
+                        OpmLog::info(msg);
+                    }
                 }
             }
             nonlinear_solver.stabilizeNonlinearUpdate(x, dx_old_, current_relaxation_);
