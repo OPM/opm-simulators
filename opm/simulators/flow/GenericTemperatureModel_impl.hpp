@@ -120,46 +120,7 @@ doInit(std::size_t numGridDof)
     if (!doTemp_)
         return;
 
-    energyVector_.resize(numGridDof);
-    // allocate matrix for storing the Jacobian of the temperature residual
-    energyMatrix_ = std::make_unique<EnergyMatrix>(numGridDof, numGridDof, EnergyMatrix::random);
-
-    // find the sparsity pattern of the temperature matrix
-    using NeighborSet = std::set<unsigned>;
-    std::vector<NeighborSet> neighbors(numGridDof);
-
-    Stencil stencil(gridView_, dofMapper_);
-    for (const auto& elem : elements(gridView_)) {
-        stencil.update(elem);
-
-        for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
-            unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
-
-            for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
-                unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
-                neighbors[myIdx].insert(neighborIdx);
-            }
-        }
-    }
-
-    // allocate space for the rows of the matrix
-    for (unsigned dofIdx = 0; dofIdx < numGridDof; ++ dofIdx) {
-        energyMatrix_->setrowsize(dofIdx, neighbors[dofIdx].size());
-    }
-    energyMatrix_->endrowsizes();
-
-    // fill the rows with indices. each degree of freedom talks to
-    // all of its neighbors. (it also talks to itself since
-    // degrees of freedom are sometimes quite egocentric.)
-    for (unsigned dofIdx = 0; dofIdx < numGridDof; ++ dofIdx) {
-        typename NeighborSet::iterator nIt = neighbors[dofIdx].begin();
-        typename NeighborSet::iterator nEndIt = neighbors[dofIdx].end();
-        for (; nIt != nEndIt; ++nIt) {
-            energyMatrix_->addindex(dofIdx, *nIt);
-        }
-    }
-    energyMatrix_->endindices();
-
+    energyVector_.resize(numGridDof); 
     maxTempChange_ = Parameters::Get<Parameters::MaxTemperatureChange<Scalar>>();
 }
 

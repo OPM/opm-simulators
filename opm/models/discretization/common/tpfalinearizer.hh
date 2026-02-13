@@ -226,7 +226,6 @@ class TpfaLinearizer
     static constexpr bool linearizeNonLocalElements =
         getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
     static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
-    static constexpr bool enableTempOrThermal = enableFullyImplicitThermal || (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal);
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static const bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
@@ -597,7 +596,7 @@ private:
                         auto faceDir = dirId < 0 ? FaceDir::DirEnum::Unknown
                                                  : FaceDir::FromIntersectionIndex(dirId);
                         ResidualNBInfo nbinfo{trans, area, thpres, dZg, faceDir, Vin, Vex, {}, {}, {}, {}};
-                        if constexpr (enableTempOrThermal) {
+                        if constexpr (enableFullyImplicitThermal) {
                             nbinfo.inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
                             nbinfo.outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);
                         }

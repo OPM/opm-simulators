@@ -37,7 +37,7 @@
 #include <opm/simulators/flow/GenericTemperatureModel.hpp>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
-
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
 #include <algorithm>
 #include <cassert>
@@ -201,6 +201,19 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     using Evaluation = typename IntensiveQuantitiesTemp::EvaluationTemp;
     using EnergyMatrix = typename BaseType::EnergyMatrix;
     using EnergyVector = typename BaseType::EnergyVector;
+    using MatrixBlockTemp = typename BaseType::MatrixBlockTemp;
+    using SpareMatrixEnergyAdapter = typename Linear::IstlSparseMatrixAdapter<MatrixBlockTemp>;
+
+
+    //using ResidualNBInfo = typename LocalResidual::ResidualNBInfo;
+    struct ResidualNBInfo
+    {
+        double faceArea;
+        double inAlpha;
+        double outAlpha;
+    };
+
+    using NeighborInfoCPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockTemp>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
@@ -243,6 +256,45 @@ public:
 
         // set the scaling factor
         scalingFactor_ = getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+
+        // find the sparsity pattern of the temperature matrix
+        using NeighborSet = std::set<unsigned>;
+        std::vector<NeighborSet> neighbors(numCells);
+        Stencil stencil(this->gridView_, this->dofMapper_);
+        neighborInfo_.reserve(numCells, 6 * numCells);
+        std::vector<NeighborInfoCPU> loc_nbinfo;
+        for (const auto& elem : elements(this->gridView_)) {
+            stencil.update(elem);
+            for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
+                const unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
+                loc_nbinfo.resize(stencil.numDof() - 1); // Do not include the primary dof in neighborInfo_
+                for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
+                    const unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
+                    neighbors[myIdx].insert(neighborIdx);
+                    if (dofIdx > 0) {
+                        const auto scvfIdx = dofIdx - 1;
+                        const auto& scvf = stencil.interiorFace(scvfIdx);
+                        const Scalar area = scvf.area();
+                        Scalar inAlpha = simulator_.problem().thermalHalfTransmissibility(myIdx, neighborIdx);
+                        Scalar outAlpha = simulator_.problem().thermalHalfTransmissibility(neighborIdx, myIdx);
+                        ResidualNBInfo nbinfo{area, inAlpha, outAlpha};
+                        loc_nbinfo[dofIdx - 1] = NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
+                    }
+                }
+                neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
+            }
+        }
+        // allocate matrix for storing the Jacobian of the temperature residual
+        energyMatrix_ = std::make_unique<SpareMatrixEnergyAdapter>(simulator_);
+        diagMatAddress_.resize(numCells);
+        energyMatrix_->reserve(neighbors);
+        for (unsigned globI = 0; globI < numCells; globI++) {
+            const auto& nbInfos = neighborInfo_[globI];
+            diagMatAddress_[globI] = energyMatrix_->blockAddress(globI, globI);
+            for (auto& nbInfo : nbInfos) {
+                nbInfo.matBlockAddress = energyMatrix_->blockAddress(nbInfo.neighbor, globI);
+            }
+        }
     }
 
     void beginTimeStep()
@@ -363,7 +415,7 @@ protected:
     {
         const unsigned int numCells = simulator_.model().numTotalDof();
         EnergyVector dx(numCells);
-        bool conv = this->linearSolve_(*this->energyMatrix_, dx, this->energyVector_);
+        bool conv = this->linearSolve_(this->energyMatrix_->istlMatrix(), dx, this->energyVector_);
         if (!conv) {
             if (simulator_.gridView().comm().rank() == 0) {
                 OpmLog::warning("Temp model: Linear solver did not converge. Temperature values not updated.");
@@ -516,11 +568,13 @@ protected:
 
     void assembleEquations()
     {
-        this->energyVector_ = 0.0;
-        (*this->energyMatrix_) = 0.0;
-        Opm::MatrixBlock<Scalar, 1, 1> bmat;
-        Scalar dt = simulator_.timeStepSize();
         const unsigned int numCells = simulator_.model().numTotalDof();
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            this->energyVector_[globI] = 0.0;
+            energyMatrix_->clearRow(globI, 0.0);
+        }
+        MatrixBlockTemp bMat;
+        Scalar dt = simulator_.timeStepSize();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -530,10 +584,10 @@ protected:
             Evaluation storage = 0.0;
             computeStorageTerm(globI, storage);
             this->energyVector_[globI] += storefac * ( getValue(storage) - storage1_[globI] );
-            (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(temperatureIdx);
+            bMat[0][0] = storefac * storage.derivative(temperatureIdx);
+            *diagMatAddress_[globI] += bMat;
         }
 
-        const auto& neighborInfo = simulator_.model().linearizer().getNeighborInfo();
         const auto& floresInfo = this->simulator_.problem().model().linearizer().getFloresInfo();
         const bool enableDriftCompensation = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
         const auto& problem = simulator_.problem();
@@ -542,7 +596,7 @@ protected:
 #pragma omp parallel for
 #endif
         for (unsigned globI = 0; globI < numCells; ++globI) {
-            const auto& nbInfos = neighborInfo[globI];
+            const auto& nbInfos = neighborInfo_[globI];
             const auto& floresInfos = floresInfo[globI];
             int loc = 0;
             const auto& intQuantsIn = intQuants_[globI];
@@ -559,8 +613,11 @@ protected:
                 computeHeatFluxTerm(intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, heatFlux);
                 heatFlux += flux;
                 this->energyVector_[globI] += getValue(heatFlux);
-                (*this->energyMatrix_)[globI][globI][0][0] += heatFlux.derivative(temperatureIdx);
-                (*this->energyMatrix_)[globJ][globI][0][0] -= heatFlux.derivative(temperatureIdx);
+                bMat[0][0] = heatFlux.derivative(temperatureIdx);
+                *diagMatAddress_[globI] += bMat;
+                bMat *= -1.0;
+                //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+                *nbInfo.matBlockAddress += bMat;
                 loc++;
             }
 
@@ -582,17 +639,17 @@ protected:
             this->assembleEquationWell(*wellPtr);
         }
 
-        if (simulator_.gridView().comm().size() > 1) {
-            // Set dirichlet conditions for overlapping cells
-            // loop over precalculated overlap rows and columns
-            for (const auto row : overlapRows_) {
-                // Zero out row.
-                (*this->energyMatrix_)[row] = 0.0;
-
-                //diagonal block set to diag(1.0).
-                (*this->energyMatrix_)[row][row][0][0] = 1.0;
-            }
-        }
+ //       if (simulator_.gridView().comm().size() > 1) {
+ //           // Set dirichlet conditions for overlapping cells
+//            // loop over precalculated overlap rows and columns
+//            for (const auto row : overlapRows_) {
+//                // Zero out row.
+//               (*this->energyMatrix_)[row] = 0.0;
+//
+        //        //diagonal block set to diag(1.0).
+        //        (*this->energyMatrix_)[row][row][0][0] = 1.0;
+        //    }
+        //}
     }
 
     template<class Well>
@@ -602,6 +659,7 @@ protected:
         std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
         const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
         this->energy_rates_[well_index] = 0.0;
+        MatrixBlockTemp bMat;
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
             const auto globI = ws.perf_data.cell_index[i];
             auto fs = intQuants_[globI].fluidStateTemp(); //copy to make it possible to change the temp in the injector
@@ -635,7 +693,8 @@ protected:
                 this->energy_rates_[well_index] += getValue(rate);
                 rate *= scalingFactor_;
                 this->energyVector_[globI] -= getValue(rate);
-                (*this->energyMatrix_)[globI][globI][0][0] -= rate.derivative(temperatureIdx);
+                bMat[0][0] = -rate.derivative(temperatureIdx);
+                *diagMatAddress_[globI] += bMat;
             }
         }
     }
@@ -682,6 +741,9 @@ protected:
     const Simulator& simulator_;
     EnergyVector storage1_;
     std::vector<IntensiveQuantitiesTemp> intQuants_;
+    SparseTable<NeighborInfoCPU> neighborInfo_{};
+    std::vector<MatrixBlockTemp*> diagMatAddress_{};
+    std::unique_ptr<SpareMatrixEnergyAdapter> energyMatrix_;
     std::vector<int> overlapRows_;
     std::vector<int> interiorRows_;
     Scalar scalingFactor_{1.0};
