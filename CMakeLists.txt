@@ -136,6 +136,14 @@ macro(opm-simulators_prereqs_hook)
     endif()
   endif()
 
+  if(USE_GPU_BRIDGE AND rocsparse_FOUND AND NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA)
+    message(WARNING
+      "GPU bridge: Using CUDA and ROCm at the same time is not allowed. "
+      "Since rocsparse was found, CUDA will be disabled. "
+      "Use -DCMAKE_DISABLE_FIND_PACKAGE_rocsparse=ON to instead use CUDA.")
+    set(CMAKE_DISABLE_FIND_PACKAGE_CUDA ON)
+  endif()
+
   # Make sure we are using the same compiler underneath
   # NVCC as for the rest. In the case that NVCC does not support
   # that compiler it will error out.
@@ -282,11 +290,6 @@ macro(opm-simulators_files_hook)
     if(ROCALUTION_FOUND)
       set(HAVE_ROCALUTION 1)
     endif()
-  endif()
-  if(HAVE_ROCSPARSE AND HAVE_CUDA AND USE_GPU_BRIDGE) # unsure if this is the correct way to change this
-    message(WARNING "WARNING! Using CUDA and ROCm at the same time is not allowed. Please choose only one of them by setting CMAKE_DISABLE_FIND_PACKAGE_<rocsparse|CUDA>=<ON|OFF>. Disabling CUDA...\n")
-    set(CUDA_FOUND OFF)
-    unset(HAVE_CUDA)
   endif()
 endmacro()
 
@@ -622,6 +625,10 @@ list(REMOVE_DUPLICATES OPM_COMPILE_COMPONENTS)
 # Make a string we can use in the code
 # this will be used in a template argument pack.
 string(REPLACE ";" "," OPM_COMPILE_COMPONENTS_TEMPLATE_LIST "${OPM_COMPILE_COMPONENTS}")
+
+if(CONVERT_CUDA_TO_HIP)
+  set(USE_GPU_BRIDGE OFF)
+endif()
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
