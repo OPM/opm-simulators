@@ -89,6 +89,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                    const bool relax_tolerance,
                    const bool well_is_stopped) const
 {
+    std::cout << " B_avg.size() " << B_avg.size() << " numConservationQuantities " << baseif_.numConservationQuantities() << std::endl;
     assert(int(B_avg.size()) == baseif_.numConservationQuantities());
 
     // checking if any residual is NaN or too large. The two large one is only handled for the well flux
