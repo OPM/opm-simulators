@@ -1921,6 +1921,11 @@ namespace Opm
                     MultisegmentWellAssemble(*this).
                         assemblePerforationEq(seg, local_perf_index, comp_idx, cq_s_effective, this->linSys_);
                 }
+
+                // // assembling the energy equation for the perforation if needed
+                // if constexpr (Base::has_energy) {
+                //
+                // }
             }
         }
         // Accumulate dissolved gas and vaporized oil flow rates across all ranks sharing this well.
@@ -1944,11 +1949,19 @@ namespace Opm
                 // difficult cases
                 const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
                 // for each component
+                // TODO:
                 for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
                     const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx)
                                                      - segment_fluid_initial_[seg][comp_idx]) / dt;
                     MultisegmentWellAssemble(*this).
                         assembleAccumulationTerm(seg, comp_idx, accumulation_term, this->linSys_);
+                }
+
+                if constexpr (Base::has_energy) {
+                    const EvalWell segment_energy = this->computeSegmentEnergy(seg);
+                    const EvalWell accumulation_term_energy = regularization_factor * (segment_energy - segment_initial_energy_[seg]) / dt;
+                        MultisegmentWellAssemble(*this).
+                                assembleAccumulationTerm(seg, MSWEval::PrimaryVariables::Temperature, accumulation_term_energy, this->linSys_);
                 }
             }
             // considering the contributions due to flowing out from the segment
@@ -2535,6 +2548,26 @@ namespace Opm
                 segment_initial_energy_[seg] += segment_volume * u * s * rho;
             }
         }
+    }
+
+
+    template <typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::computeSegmentEnergy(const int seg) const
+    {
+        EvalWell result {0.};
+        const auto segment_fluid_state = createSegmentFluidstate(seg);
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+            const auto u = segment_fluid_state.internalEnergy(phaseIdx);
+            const auto s = segment_fluid_state.saturation(phaseIdx);
+            const auto rho = segment_fluid_state.density(phaseIdx);
+            const Scalar segment_volume = this->wellEcl().getSegments()[seg].volume();
+            result += segment_volume * u * s * rho;
+        }
+        return result;
     }
 
 } // namespace Opm
