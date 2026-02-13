@@ -1655,7 +1655,7 @@ private:
                               const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
                               for (const auto& flowsInfo : flowsInfos) {
                                   for (unsigned ii = 0; ii < compIdxs.size(); ++ii) {
-                                      if (flowsC.hasBlockValue(cartesianIdx, flowsInfo.faceId, compIdxs[ii])) {;
+                                      if (flowsC.hasBlockFlowValue(cartesianIdx, flowsInfo.faceId, compIdxs[ii])) {;
                                           flowsC.assignBlockFlows(flowsC.blockFlowsIds(cartesianIdx, flowsInfo.faceId, compIdxs[ii]),
                                                                   flowsInfo.faceId,
                                                                   compIdxs[ii],
@@ -1696,6 +1696,29 @@ private:
                                               value_or_zero(water_idx, floresInfo.flow));
                       }
                  }, !this->simulator_.problem().model().linearizer().getFloresInfo().empty()
+            },
+            Entry{[&velocityInf = this->simulator_.problem().model().linearizer().getVelocityInfo(),
+                   &flowsC = this->flowsC_,
+                   &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                {
+                    const auto& velocityInfos = velocityInf[ectx.globalDofIdx];
+                    const std::vector<int>& blockIdxs = flowsC.blockVelocity();
+                    const unsigned cartesianIdx = vanguard.cartesianIndex(ectx.globalDofIdx);
+                    if (std::binary_search(blockIdxs.begin(), blockIdxs.end(), cartesianIdx)) {
+                        const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
+                        for (const auto& velocityInfo : velocityInfos) {
+                            for (unsigned ii = 0; ii < compIdxs.size(); ++ii) {
+                                if (flowsC.hasBlockVelocityValue(cartesianIdx, velocityInfo.faceId, compIdxs[ii])) {;
+                                    flowsC.assignBlockVelocity(flowsC.blockVelocityIds(cartesianIdx, velocityInfo.faceId, compIdxs[ii]),
+                                                               velocityInfo.faceId,
+                                                               compIdxs[ii],
+                                                               velocityInfo.velocity[compIdxs[ii]]);
+                                }
+                            }
+                        }
+                    }
+                }, !this->flowsC_.blockVelocity().empty() &&
+                   !this->simulator_.problem().model().linearizer().getVelocityInfo().empty()
             },
             // hack to make the intial output of rs and rv Ecl compatible.
             // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step
@@ -2161,6 +2184,204 @@ private:
                                       flowsC.blockFlowsIds(vanguard.cartesianIndex(ectx.globalDofIdx),
                                       FaceDir::ToIntersectionIndex(Dir::ZMinus), waterCompIdx) : ectx.globalDofIdx;
                                   return flowsC.getFlow(index, Dir::ZMinus, waterCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELGI",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::XPlus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::XPlus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELGI-",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::XMinus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::XMinus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELGJ",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::YPlus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::YPlus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELGJ-",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::YMinus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::YMinus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELGK",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::ZPlus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::ZPlus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELGK-",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::ZMinus), gasCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::ZMinus, gasCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELOI",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::XPlus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::XPlus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELOI-",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::XMinus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::XMinus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELOJ",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::YPlus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::YPlus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELOJ-",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::YMinus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::YMinus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELOK",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::ZPlus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::ZPlus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELOK-",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::ZMinus), oilCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::ZMinus, oilCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELWI",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::XPlus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::XPlus, waterCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELWI-",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::XMinus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::XMinus, waterCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELWJ",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::YPlus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::YPlus, waterCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELWJ-",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::YMinus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::YMinus, waterCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELWK",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::ZPlus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::ZPlus, waterCompIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BVELWK-",
+                              [&flowsC = this->flowsC_,
+                               &vanguard = this->simulator_.vanguard()](const Context& ectx)
+                              {
+                                  const unsigned index = !flowsC.blockVelocity().empty() ?
+                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                          FaceDir::ToIntersectionIndex(Dir::ZMinus), waterCompIdx) : ectx.globalDofIdx;
+                                  return flowsC.getVelocity(index, Dir::ZMinus, waterCompIdx);
                               }
                   }
             },

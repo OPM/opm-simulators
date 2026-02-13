@@ -110,6 +110,39 @@ FlowsContainer(const Schedule& schedule,
                                 return rstkw.find("FLOWS") != rstkw.end();
                             });
 
+    // Check for any BVEL[G|O|W][I|J|K][|-] summary keys
+    if (summaryConfig.keywords("BVEL*").size() > 0) {
+        const std::array<int, 3> phaseIdxs { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
+        const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
+        const std::string nameIdxs[3] { "G", "O", "W" };
+        const std::string ijkIdxs[6] { "I-", "I", "J-", "J", "K-", "K" };
+        const std::array<int, 6> dirIdxs { FaceDir::ToIntersectionIndex(Dir::XMinus),
+                                           FaceDir::ToIntersectionIndex(Dir::XPlus),
+                                           FaceDir::ToIntersectionIndex(Dir::YMinus),
+                                           FaceDir::ToIntersectionIndex(Dir::YPlus),
+                                           FaceDir::ToIntersectionIndex(Dir::ZMinus),
+                                           FaceDir::ToIntersectionIndex(Dir::ZPlus) };
+        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
+            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
+                for (unsigned jj = 0; jj < dirIdxs.size(); ++jj) {
+                    std::string blockid = "BVEL" + nameIdxs[ii] + ijkIdxs[jj];
+                    if (summaryConfig.keywords(blockid).size() == 0) {
+                        continue;
+                    }
+                    for (const auto& node : summaryConfig.keywords(blockid)) {
+                        if (isInterior(node.number() - 1)) {
+                            blockVelocityIds_[compIdxs[ii]][dirIdxs[jj]].push_back(node.number() - 1);
+                            blockVelocityAllIds_.push_back(node.number() - 1);
+                        }
+                    }
+                }
+            }
+        }
+        std::sort(blockVelocityAllIds_.begin(), blockVelocityAllIds_.end());
+        auto last = std::unique(blockVelocityAllIds_.begin(), blockVelocityAllIds_.end());
+        blockVelocityAllIds_.erase(last, blockVelocityAllIds_.end());
+    }
+
     // Check for any BFLO[G|O|W][I|J|K][|-] summary keys
     if (summaryConfig.keywords("BFLO*").size() > 0 && !anyFlows_) {
         const std::array<int, 3> phaseIdxs { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
@@ -163,6 +196,17 @@ allocate(const std::size_t bufferSize,
                                        FaceDir::ToIntersectionIndex(Dir::YPlus),
                                        FaceDir::ToIntersectionIndex(Dir::ZMinus),
                                        FaceDir::ToIntersectionIndex(Dir::ZPlus) };
+
+    // Allocate vels for BVEL[G|O|W][I|J|K][|-] summary keywords
+    if (!blockVelocityAllIds_.empty()) {
+        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
+            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
+                for (unsigned jj = 0; jj < dirIdxs.size(); ++jj) {
+                    velocity_[compIdxs[ii]][dirIdxs[jj]].resize(blockVelocityIds_[compIdxs[ii]][dirIdxs[jj]].size(), 0.0);
+                }
+            }
+        }
+    }
 
     // Allocate flows for BFLO[G|O|W][I|J|K][|-] summary keywords
     if (!blockFlowsAllIds_.empty()) {
@@ -303,6 +347,14 @@ assignFlows(const unsigned globalDofIdx,
         assignToNnc<waterCompIdx>(this->flowsn_, nncId, water);
     }
 }
+
+template<class FluidSystem>
+void FlowsContainer<FluidSystem>::
+assignBlockVelocity(const unsigned index,
+                    const int faceId,
+                    const int comp_idx,
+                    const Scalar velocity)
+{ velocity_[comp_idx][faceId][index] = velocity; }
 
 template<class FluidSystem>
 void FlowsContainer<FluidSystem>::
