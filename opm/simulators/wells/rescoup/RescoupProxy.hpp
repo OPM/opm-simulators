@@ -116,6 +116,13 @@ public:
         return master_ && master_->isMasterGroup(group_name);
     }
 
+    /// @brief Check if a group is a slave group
+    /// @param group_name The name of the group to check
+    /// @return true if in slave mode and the group is a slave group, false otherwise
+    bool isSlaveGroup(const std::string& group_name) const {
+        return slave_ && slave_->isSlaveGroup(group_name);
+    }
+
 private:
     ReservoirCouplingMaster<Scalar>* master_ = nullptr;
     ReservoirCouplingSlave<Scalar>* slave_ = nullptr;

@@ -32,6 +32,7 @@
 #include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/gatherDeferredLogger.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -302,6 +303,8 @@ public:
 
     bool isReservoirCouplingSlave() const { return rescoup_.isSlave(); }
 
+    bool isReservoirCouplingSlaveGroup(const Group& group) const { return rescoup_.isSlaveGroup(group.name()); }
+
     constexpr int numPhases() const {
         return this->wellState().numPhases();
     }
@@ -538,8 +541,7 @@ private:
 
     Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
                                                 const int phase_pos,
-                                                const bool res_rates,
-                                                const bool is_injector) const;
+                                                ReservoirCoupling::RateKind kind) const;
 
     Scalar getSatelliteRate_(const Group& group,
         const int phase_pos,
@@ -656,7 +658,32 @@ GroupStateHelper<Scalar, IndexTraits>::updateGpMaintTargetForGroups(const Group&
     const auto& region = gpm->region();
     if (!region)
         return;
-
+    if (this->isReservoirCouplingMasterGroup(group)) {
+        // GPMAINT is not supported for reservoir coupling master groups since master groups do not have
+        //   subordinate wells in the master reservoir, so the slaves cannot influence the master reservoir's
+        //   average pressure.
+        //   Even specifying GPMAINT on a group superior to the master group might not make sense, since if the
+        //   superior target is distributed down to the master group with guide rate fractions, adjusting
+        //   the master group's target (that is sent to the slave) could only indirectly influence the master
+        //   reservoir's average pressure by affecting the guide rate fractions distributed to actual wells
+        //   in the master reservoir.
+        OPM_DEFLOG_THROW(
+            std::runtime_error,
+            "GPMAINT is not supported for reservoir coupling master groups.",
+            this->deferredLogger()
+        );
+        return;
+    }
+    else if (this->isReservoirCouplingSlaveGroup(group)) {
+        // GPMAINT is not supported for reservoir coupling slave groups since their targets will be overridden
+        //   by the corresponding master group's target anyway.
+        OPM_DEFLOG_THROW(
+            std::runtime_error,
+            "GPMAINT is not supported for reservoir coupling slave groups.",
+            this->deferredLogger()
+        );
+        return;
+    }
     const auto [name, number] = *region;
     const Scalar error = gpm->pressure_target() - regional_values.at(name)->pressure(number);
     Scalar current_rate = 0.0;

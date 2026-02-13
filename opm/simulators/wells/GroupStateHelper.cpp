@@ -986,7 +986,19 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
             return this->getSatelliteRate_(group, phase_pos, res_rates, is_injector);
         }
         if (this->isReservoirCouplingMasterGroup(group)) {
-            return this->getReservoirCouplingMasterGroupRate_(group, phase_pos, res_rates, is_injector);
+            using RateKind = ReservoirCoupling::RateKind;
+            RateKind kind;
+            if (is_injector) {
+                kind = res_rates ? RateKind::InjectionReservoir : RateKind::InjectionSurface;
+            } else {
+                if (res_rates)
+                    kind = RateKind::ProductionReservoir;
+                else if (network)
+                    kind = RateKind::ProductionNetworkSurface;
+                else
+                    kind = RateKind::ProductionSurface;
+            }
+            return this->getReservoirCouplingMasterGroupRate_(group, phase_pos, kind);
         }
     }
     Scalar rate = 0.0;
@@ -1608,20 +1620,15 @@ GroupStateHelper<Scalar, IndexTraits>::getLocalReductionLevel_(const std::vector
 
 template <typename Scalar, typename IndexTraits>
 Scalar
-GroupStateHelper<Scalar, IndexTraits>::getReservoirCouplingMasterGroupRate_([[maybe_unused]] const Group& group,
-                                                                            [[maybe_unused]] const int phase_pos,
-                                                                            [[maybe_unused]] const bool res_rates,
-                                                                            [[maybe_unused]] const bool is_injector) const
+GroupStateHelper<Scalar, IndexTraits>::
+getReservoirCouplingMasterGroupRate_([[maybe_unused]] const Group& group,
+                                     [[maybe_unused]] const int phase_pos,
+                                     [[maybe_unused]] ReservoirCoupling::RateKind kind) const
 {
 #ifdef RESERVOIR_COUPLING_ENABLED
     if (this->isReservoirCouplingMaster()) {
         ReservoirCoupling::Phase rescoup_phase = this->activePhaseIdxToRescoupPhase_(phase_pos);
-        if (is_injector) {
-            return this->reservoirCouplingMaster().getMasterGroupInjectionRate(group.name(), rescoup_phase, res_rates);
-        }
-        else {
-            return this->reservoirCouplingMaster().getMasterGroupProductionRate(group.name(), rescoup_phase, res_rates);
-        }
+        return this->reservoirCouplingMaster().getMasterGroupRate(group.name(), rescoup_phase, kind);
     }
     else {
         return 0.0;

@@ -484,9 +484,12 @@ namespace Opm {
             }
             const double dt = simulator_.timeStepSize();
             const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
-            this->groupStateHelper().updateGpMaintTargetForGroups(fieldGroup,
-                                                          regionalAveragePressureCalculator_,
-                                                          dt);
+            try {
+                this->groupStateHelper().updateGpMaintTargetForGroups(fieldGroup,
+                                                              regionalAveragePressureCalculator_,
+                                                              dt);
+            }
+            OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
         }
 
         this->updateAndCommunicateGroupData(reportStepIdx,

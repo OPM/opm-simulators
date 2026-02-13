@@ -89,7 +89,8 @@ RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper)
 //     rate to calculate the group target for the phase under group control. NOTE: Also applies to
 //     parents of the master group.
 //
-// 5) If the master group or any of its parents is a pressure maintenance group. It may need
+// 5) If a parent of the master group is a pressure maintenance group (GPMAINT not supported for the
+//   master group itself), it may need to know the following slave group data:
 //   a) slave group reservoir voidage production rate (GPMAINT item 2 = PROD)
 //   b) slave group reservoir injection rates (GPMAINT item 2 = OINJ, WINJ, or GINJ)
 //   c) slave group surface injection reates (GPMAINT item 2 = OINS, WINS, or GINS)
@@ -190,6 +191,50 @@ collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const
 template<typename Scalar, typename IndexTraits>
 typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupNetworkSurfaceProductionRates_(std::size_t group_idx) const
+{
+    auto& rescoup_slave = this->reservoir_coupling_slave_;
+    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
+    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+    const auto& pu = this->phase_usage_;
+
+    // Collect surface rates for each phase with network=true
+    // This means efficiency factors are 1.0 for groups/wells with GEFAC/WEFAC item 3 = "NO"
+    Scalar oil_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+        oil_rate = this->groupStateHelper_.sumWellPhaseRates(
+            /*res_rates=*/false, group, pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx),
+            /*is_injector=*/false, /*network=*/true);
+    }
+
+    Scalar gas_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+        gas_rate = this->groupStateHelper_.sumWellPhaseRates(
+            /*res_rates=*/false, group, pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx),
+            /*is_injector=*/false, /*network=*/true);
+    }
+
+    Scalar water_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+        water_rate = this->groupStateHelper_.sumWellPhaseRates(
+            /*res_rates=*/false, group, pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx),
+            /*is_injector=*/false, /*network=*/true);
+    }
+
+    // Sum across all MPI ranks since wells in a group may be owned by different ranks
+    oil_rate = this->comm().sum(oil_rate);
+    gas_rate = this->comm().sum(gas_rate);
+    water_rate = this->comm().sum(water_rate);
+    ProductionRates network_rates;
+    network_rates[ReservoirCoupling::Phase::Oil] = oil_rate;
+    network_rates[ReservoirCoupling::Phase::Gas] = gas_rate;
+    network_rates[ReservoirCoupling::Phase::Water] = water_rate;
+    return network_rates;
+}
+
+template<typename Scalar, typename IndexTraits>
+typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
 collectSlaveGroupReservoirProductionRates_(std::size_t group_idx) const
 {
     auto& rescoup_slave = this->reservoir_coupling_slave_;
@@ -242,6 +287,10 @@ collectSlaveGroupProductionData_(std::size_t group_idx) const
     // Production rates are used to transform guiderate targets for master production groups
     //   from one phase to another
     production_data.surface_rates = this->collectSlaveGroupSurfaceProductionRates_(group_idx);
+    // Network surface rates are used for network leaf node calculations where efficiency
+    // factors may be excluded (when GEFAC/WEFAC item 3 = "NO")
+    production_data.network_surface_rates =
+        this->collectSlaveGroupNetworkSurfaceProductionRates_(group_idx);
     // Reservoir rates are needed when master's parent group has RESV control mode,
     // so the conversion uses slave's PVT properties rather than master's
     production_data.reservoir_rates = this->collectSlaveGroupReservoirProductionRates_(group_idx);

@@ -62,7 +62,7 @@ Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
 getMasterGroupInjectionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const
 {
-    return this->getMasterGroupRate_(group_name, phase, /*reservoir_rates=*/false, /*is_injection=*/true);
+    return this->getMasterGroupRate_(group_name, phase, ReservoirCoupling::RateKind::InjectionSurface);
 }
 
 template <class Scalar>
@@ -70,7 +70,7 @@ Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
 getMasterGroupInjectionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const
 {
-    return this->getMasterGroupRate_(group_name, phase, /*reservoir_rates=*/true, /*is_injection=*/true);
+    return this->getMasterGroupRate_(group_name, phase, ReservoirCoupling::RateKind::InjectionReservoir);
 }
 
 template <class Scalar>
@@ -78,7 +78,17 @@ Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
 getMasterGroupProductionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const
 {
-    return this->getMasterGroupRate_(group_name, phase, /*reservoir_rates=*/false, /*is_injection=*/false);
+    return this->getMasterGroupRate_(group_name, phase, ReservoirCoupling::RateKind::ProductionSurface);
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingMasterReportStep<Scalar>::
+getMasterGroupNetworkProductionSurfaceRate(
+    const std::string &group_name, ReservoirCoupling::Phase phase
+) const
+{
+    return this->getMasterGroupRate_(group_name, phase, ReservoirCoupling::RateKind::ProductionNetworkSurface);
 }
 
 template <class Scalar>
@@ -86,7 +96,7 @@ Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
 getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const
 {
-    return this->getMasterGroupRate_(group_name, phase, /*reservoir_rates=*/true, /*is_injection=*/false);
+    return this->getMasterGroupRate_(group_name, phase, ReservoirCoupling::RateKind::ProductionReservoir);
 }
 
 template <class Scalar>
@@ -319,24 +329,26 @@ template <class Scalar>
 Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
 getMasterGroupRate_(const std::string &group_name, ReservoirCoupling::Phase phase,
-                    bool reservoir_rates, bool is_injection) const
+                    ReservoirCoupling::RateKind kind) const
 {
+    using RateKind = ReservoirCoupling::RateKind;
     auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
     if (it != this->getMasterGroupToSlaveNameMap().end()) {
         auto& slave_name = it->second;
         auto group_idx = this->getMasterGroupCanonicalIdx(slave_name, group_name);
-        if (is_injection) {
-            const auto& rates = reservoir_rates
-                ? this->slave_group_injection_data_.at(slave_name)[group_idx].reservoir_rates
-                : this->slave_group_injection_data_.at(slave_name)[group_idx].surface_rates;
-            return rates[phase];
+        switch (kind) {
+        case RateKind::InjectionSurface:
+            return this->slave_group_injection_data_.at(slave_name)[group_idx].surface_rates[phase];
+        case RateKind::InjectionReservoir:
+            return this->slave_group_injection_data_.at(slave_name)[group_idx].reservoir_rates[phase];
+        case RateKind::ProductionSurface:
+            return this->slave_group_production_data_.at(slave_name)[group_idx].surface_rates[phase];
+        case RateKind::ProductionNetworkSurface:
+            return this->slave_group_production_data_.at(slave_name)[group_idx].network_surface_rates[phase];
+        case RateKind::ProductionReservoir:
+            return this->slave_group_production_data_.at(slave_name)[group_idx].reservoir_rates[phase];
         }
-        else {
-            const auto& rates = reservoir_rates
-                ? this->slave_group_production_data_.at(slave_name)[group_idx].reservoir_rates
-                : this->slave_group_production_data_.at(slave_name)[group_idx].surface_rates;
-            return rates[phase];
-        }
+        RCOUP_LOG_THROW(std::logic_error, "Unknown RateKind");
     }
     else {
         RCOUP_LOG_THROW(

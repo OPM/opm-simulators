@@ -160,6 +160,19 @@ enum class Phase : std::size_t {
     Count
 };
 
+/// @brief Selects which kind of rate to retrieve from slave group data.
+///
+/// Replaces multiple bool parameters (res_rates, is_injection, network) with a single
+/// enum that names the 5 valid rate categories directly. Only these 5 combinations
+/// of the bools are meaningful; the enum prevents callers from constructing invalid states.
+enum class RateKind {
+    InjectionSurface,
+    InjectionReservoir,
+    ProductionSurface,
+    ProductionNetworkSurface,
+    ProductionReservoir
+};
+
 template <class Scalar>
 struct InjectionRates {
     InjectionRates() = default;
@@ -201,7 +214,10 @@ struct SlaveGroupProductionData {
     Potentials<Scalar> potentials;
     // Production rates are used by the master group in guiderate calculations
     // when converting the guide rate target to the phase of the master group.
-    ProductionRates<Scalar> surface_rates;  // Surface production rates by phase
+    ProductionRates<Scalar> surface_rates;  // Surface production rates by phase (network=false)
+    // Network surface rates - computed with network=true, meaning efficiency factors
+    // are 1.0 for groups/wells with GEFAC/WEFAC item 3 = "NO"
+    ProductionRates<Scalar> network_surface_rates;  // Surface rates for network calculations
     // Individual phase reservoir production rates - needed when master's parent group
     // has RESV control mode, so the conversion uses slave's PVT properties
     ProductionRates<Scalar> reservoir_rates;  // Reservoir production rates by phase

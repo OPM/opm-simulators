@@ -521,7 +521,7 @@ getSlaveGroupReservoirRate_(const Group& group)
     Scalar total_resv_rate = 0.0;
     const auto& master = this->groupStateHelper().reservoirCouplingMaster();
     for (auto phase : {ReservoirCoupling::Phase::Oil, ReservoirCoupling::Phase::Gas, ReservoirCoupling::Phase::Water}) {
-        total_resv_rate += master.getMasterGroupProductionRate(group.name(), phase, /*res_rates=*/true);
+        total_resv_rate += master.getMasterGroupRate(group.name(), phase, ReservoirCoupling::RateKind::ProductionReservoir);
     }
     return total_resv_rate;
 }

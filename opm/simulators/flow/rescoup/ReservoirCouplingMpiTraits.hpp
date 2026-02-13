@@ -245,6 +245,7 @@ struct MPITraits<::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>>
           ::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::potentials,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::surface_rates,
+          &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::network_surface_rates,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::reservoir_rates,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::voidage_rate,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::gas_reinjection_rate

@@ -100,27 +100,25 @@ getMasterGroupCanonicalIdx(
 template <class Scalar>
 Scalar
 ReservoirCouplingMaster<Scalar>::
-getMasterGroupInjectionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const
+getMasterGroupRate(
+    const std::string &group_name, ReservoirCoupling::Phase phase, ReservoirCoupling::RateKind kind
+) const
 {
-    if (res_rates) {
-        return this->report_step_data_->getMasterGroupInjectionReservoirRate(group_name, phase);
-    }
-    else {
+    using RateKind = ReservoirCoupling::RateKind;
+    switch (kind) {
+    case RateKind::InjectionSurface:
         return this->report_step_data_->getMasterGroupInjectionSurfaceRate(group_name, phase);
-    }
-}
-
-template <class Scalar>
-Scalar
-ReservoirCouplingMaster<Scalar>::
-getMasterGroupProductionRate(const std::string &group_name, ReservoirCoupling::Phase phase, bool res_rates) const
-{
-    if (res_rates) {
+    case RateKind::InjectionReservoir:
+        return this->report_step_data_->getMasterGroupInjectionReservoirRate(group_name, phase);
+    case RateKind::ProductionSurface:
+        return this->report_step_data_->getMasterGroupProductionSurfaceRate(group_name, phase);
+    case RateKind::ProductionNetworkSurface:
+        return this->report_step_data_->getMasterGroupNetworkProductionSurfaceRate(group_name, phase);
+    case RateKind::ProductionReservoir:
         return this->report_step_data_->getMasterGroupProductionReservoirRate(group_name, phase);
     }
-    else {
-        return this->report_step_data_->getMasterGroupProductionSurfaceRate(group_name, phase);
-    }
+    // Should be unreachable, but silences compiler warnings about missing return
+    RCOUP_LOG_THROW(std::logic_error, "Unknown RateKind");
 }
 
 template <class Scalar>
