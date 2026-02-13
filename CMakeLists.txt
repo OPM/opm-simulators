@@ -272,11 +272,6 @@ macro(opm-simulators_sources_hook)
   endif()
 endmacro()
 
-macro(opm-simulators_files_hook)
-  if(hip_FOUND)
-  endif()
-endmacro()
-
 macro(opm-simulators_config_hook)
   opm_need_version_of ("dune-common")
   opm_need_version_of ("dune-istl")
