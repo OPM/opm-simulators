@@ -2094,6 +2094,9 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>::numConservationQuantities() const
     {
+        // TODO: when the energy equation joins, here should be the start
+        // of the refactoring related to the the usage of the numConservationQuantities()
+
         // The numPhases() functions returns 1-3, depending on which
         // of the (oil, water, gas) phases are active. For each of those phases,
         // if the phase is active the corresponding component is present and
