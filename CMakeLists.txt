@@ -607,6 +607,9 @@ macro(opm-simulators_targets_hook)
   # but this is not exposed in a super-build.
   add_dependencies(moduleVersion opmsimulators)
 
+  add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
+  simulators_add_target_options(TARGET MainDispatchDynamic)
+
   target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_group_higher_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
@@ -617,7 +620,11 @@ macro(opm-simulators_targets_hook)
   endif()
 
   if(OPM_ENABLE_PYTHON)
-    set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
+    set_target_properties(moduleVersion MainDispatchDynamic
+      PROPERTIES
+      POSITION_INDEPENDENT_CODE
+        ON
+    )
     add_subdirectory(python/simulators)
   endif()
 endmacro()
@@ -715,10 +722,6 @@ if (NOT BUILD_FLOW_POLY_GRID)
 else()
   set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "TRUE")
 endif()
-
-add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
-simulators_add_target_options(TARGET MainDispatchDynamic)
-set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 set(FLOW_MODELS blackoil blackoil_temp brine energy extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
