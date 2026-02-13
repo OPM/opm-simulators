@@ -641,6 +641,29 @@ macro(opm-simulators_targets_hook)
     )
     add_subdirectory(python/simulators)
   endif()
+
+  # We now specify the files we actually want to compile
+  set(FLOWEXP_COMPONENTS_SOURCES)
+  foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
+    list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}.cpp)
+    list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}_2p.cpp)
+  endforeach()
+
+  opm_add_test(flowexp_comp
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEPENDS
+      opmsimulators
+    LIBRARIES
+      opmsimulators
+    SOURCES
+      flowexperimental/comp/flowexp_comp.cpp
+      ${FLOWEXP_COMPONENTS_SOURCES}
+      $<TARGET_OBJECTS:moduleVersion>
+  )
+  if(NOT BUILD_FLOW_VARIANTS)
+    set_target_properties(flowexp_comp PROPERTIES EXCLUDE_FROM_ALL ON)
+  endif()
 endmacro()
 
 macro(opm-simulators_install_hook)
@@ -812,24 +835,6 @@ opm_add_test(flowexp_blackoil
   LIBRARIES opmsimulators
   SOURCES
   flowexperimental/flowexp_blackoil.cpp
-  $<TARGET_OBJECTS:moduleVersion>
-)
-
-# We now specify the files we actually want to compile
-set(FLOWEXP_COMPONENTS_SOURCES)
-foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
-  list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}.cpp)
-  list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}_2p.cpp)
-endforeach()
-
-opm_add_test(flowexp_comp
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flowexperimental/comp/flowexp_comp.cpp
-  ${FLOWEXP_COMPONENTS_SOURCES}
   $<TARGET_OBJECTS:moduleVersion>
 )
 
