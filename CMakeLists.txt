@@ -702,12 +702,26 @@ macro(opm-simulators_targets_hook)
     )
   endif()
 
+  if(BUILD_FLOW_POLY_GRID)
+    opm_add_test(flow_blackoil_polyhedralgrid
+      ONLY_COMPILE
+      ALWAYS_ENABLE
+      DEPENDS
+        opmsimulators
+      LIBRARIES
+        opmsimulators
+      SOURCES
+        flow/flow_blackoil_polyhedralgrid.cpp
+        $<TARGET_OBJECTS:moduleVersion>
+    )
+  endif()
 
   if(NOT BUILD_FLOW_VARIANTS)
     foreach(target flowexp_blackoil
                    flowexp_comp
                    flow_blackoil_alugrid
-                   flow_blackoil_float)
+                   flow_blackoil_float
+                   flow_blackoil_polyhedralgrid)
       if(TARGET ${target})
         set_target_properties(${target}
           PROPERTIES
@@ -856,16 +870,6 @@ opm_add_test(flow
   $<TARGET_OBJECTS:moduleVersion>
   $<TARGET_OBJECTS:MainDispatchDynamic>
   )
-
-opm_add_test(flow_blackoil_polyhedralgrid
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEFAULT_ENABLE_IF ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF}
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flow/flow_blackoil_polyhedralgrid.cpp
-  $<TARGET_OBJECTS:moduleVersion>)
 
 opm_add_test(flow_distribute_z
   ONLY_COMPILE
