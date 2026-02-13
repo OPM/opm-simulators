@@ -443,9 +443,6 @@ protected:
         const IsNumericalAquiferCell isNumericalAquiferCell(simulator_.gridView().grid());
         Scalar sum_pv = 0.0;
         Scalar sum_pv_not_converged = 0.0;
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
         for (const auto& elem : elements(simulator_.gridView(), Dune::Partitions::interior)) {
             unsigned globI = elemMapper.index(elem);
             const auto pvValue =  simulator_.problem().referencePorosity(globI, /*timeIdx=*/0)
