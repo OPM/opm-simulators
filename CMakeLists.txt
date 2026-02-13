@@ -472,6 +472,20 @@ macro(opm-simulators_tests_hook)
                         ${OPM_TESTS_ROOT} ${CMAKE_BINARY_DIR} ${sim_dir})
     endif()
   endif()
+
+  if(BUILD_FLOW)
+    add_test(
+      NAME
+        flow__version
+      COMMAND
+        $<TARGET_FILE:flow> --version
+    )
+    set_tests_properties(flow__version
+      PROPERTIES
+      PASS_REGULAR_EXPRESSION
+        ${${project}_LABEL}
+    )
+  endif()
 endmacro()
 
 macro(opm-simulators_targets_hook)
@@ -840,11 +854,6 @@ endif()
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
   opm_add_bash_completion(flow)
-
-  add_test(NAME flow__version
-    COMMAND flow --version)
-  set_tests_properties(flow__version PROPERTIES
-    PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
 endif()
 
 if(BUILD_FLOW_FLOAT_VARIANTS)
