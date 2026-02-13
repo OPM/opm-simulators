@@ -688,14 +688,33 @@ macro(opm-simulators_targets_hook)
       $<TARGET_OBJECTS:moduleVersion>
   )
 
-  if(NOT BUILD_FLOW_VARIANTS)
-    set_target_properties(
-      flowexp_blackoil
-      flowexp_comp
-      flow_blackoil_float
-      PROPERTIES
-        EXCLUDE_FROM_ALL ON
+  if(dune-alugrid_FOUND AND BUILD_FLOW_ALU_GRID)
+    opm_add_test(flow_blackoil_alugrid
+      ONLY_COMPILE
+      ALWAYS_ENABLE
+      DEPENDS
+        opmsimulators
+      LIBRARIES
+        opmsimulators
+      SOURCES
+        flow/flow_blackoil_alugrid.cpp
+        $<TARGET_OBJECTS:moduleVersion>
     )
+  endif()
+
+
+  if(NOT BUILD_FLOW_VARIANTS)
+    foreach(target flowexp_blackoil
+                   flowexp_comp
+                   flow_blackoil_alugrid
+                   flow_blackoil_float)
+      if(TARGET ${target})
+        set_target_properties(${target}
+          PROPERTIES
+          EXCLUDE_FROM_ALL ON
+        )
+      endif()
+    endforeach()
   endif()
 endmacro()
 
@@ -860,24 +879,6 @@ opm_add_test(flow_distribute_z
   $<TARGET_OBJECTS:moduleVersion>
   $<TARGET_OBJECTS:MainDispatchDynamic>
   )
-
-if(dune-alugrid_FOUND)
-  if (NOT BUILD_FLOW_ALU_GRID)
-    set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "FALSE")
-  else()
-    set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "TRUE")
-  endif()
-
-  opm_add_test(flow_blackoil_alugrid
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEFAULT_ENABLE_IF ${FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF}
-    DEPENDS opmsimulators
-    LIBRARIES opmsimulators
-    SOURCES
-    flow/flow_blackoil_alugrid.cpp
-    $<TARGET_OBJECTS:moduleVersion>)
-endif()
 
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
