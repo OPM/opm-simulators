@@ -25,7 +25,7 @@
 
 #include <opm/simulators/linalg/gpubridge/GpuBridge.hpp>
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
-#include <rocalution.hpp>
+#include <rocalution/rocalution.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>

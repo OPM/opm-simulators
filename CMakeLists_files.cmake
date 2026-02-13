@@ -32,7 +32,7 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
 
   if(CUDA_FOUND)
     list (APPEND ${LIST} "${DIR}/gpuistl/${FILE}")
-  else()
+  elseif(CONVERT_CUDA_TO_HIP)
     # we must hipify the code
     # and include the correct path which is in the build/binary dir
     string(REPLACE ".cu" ".hip" HIP_SOURCE_FILE ${FILE})

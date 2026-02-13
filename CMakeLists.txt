@@ -256,72 +256,61 @@ macro(opm-simulators_tests_hook)
   endif()
 
   if(CUDA_FOUND OR hip_FOUND)
-    if(USE_GPU_BRIDGE)
-      set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
-    endif()
-
     # CUISTL
     set(gpu_label "gpu_cuda")
     if(USE_HIP)
       set(gpu_label "gpu_hip")
     endif()
 
-    set_tests_properties(
-      cusparse_safe_call
-      cublas_safe_call
-      gpu_safe_call
-      cuda_check_last_error
-      cublas_handle
-      GpuJac
-      GpuDILU
-      cusparse_handle
-      cuSparse_matrix_operations
-      cuVector_operations
-      GpuVector
-      GpuSparseMatrix
-      GpuSeqILU0
-      solver_adapter
-      GpuBuffer
-      GpuView
-      gpu_ad
-      gpu_linear_two_phase_material
-      gpuPvt
-      gpu_resources
-      gpu_smart_pointers
-      is_gpu_pointer
-      throw_macros_on_gpu
-      preconditioner_factory_gpu
-      gpuBlackOilFluidSystem
-      blackoilfluidstategpu
-      conditional_storage
-      GpuPressureTransferPolicy
-      deviceBlockOperations
-      primary_variables_gpu
-      MiniVector
-      MiniMatrix
-      GpuSparseTable
-      PROPERTIES
-      LABELS
-        ${gpu_label}
-    )
-    if(MPI_FOUND)
-      set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
-    endif()
-  endif()
-
-  if(HYPRE_FOUND)
-    if (HYPRE_USING_CUDA)
-      set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_cuda)
-      set_tests_properties(HypreInterfaceGPU PROPERTIES LABELS gpu_cuda)
-    elseif (HYPRE_USING_HIP)
-      set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_hip)
-      set_tests_properties(HypreInterfaceGPU PROPERTIES LABELS gpu_hip)
-    endif()
-  endif()
-
-  if(AMGX_FOUND)
-    set_tests_properties(AmgxInterface PROPERTIES LABELS gpu_cuda)
-    set_tests_properties(AmgxPreconditioner PROPERTIES LABELS gpu_cuda)
+    foreach(test
+                 AmgxInterface
+                 AmgxPreconditioner
+                 blackoilfluidstategpu
+                 conditional_storage
+                 cublas_handle
+                 cublas_safe_call
+                 cuda_check_last_error
+                 cusparse_handle
+                 cuSparse_matrix_operations
+                 cusparse_safe_call
+                 cusparseSolver
+                 cuVector_operations
+                 deviceBlockOperations
+                 gpu_ad
+                 gpu_linear_two_phase_material
+                 gpu_resources
+                 gpu_safe_call
+                 gpu_smart_pointers
+                 gpuBlackOilFluidSystem
+                 GpuBuffer
+                 GpuDILU
+                 GpuJac
+                 GpuOwnerOverlapCopy
+                 GpuPressureTransferPolicy
+                 gpuPvt
+                 GpuSeqILU0
+                 GpuSparseMatrix
+                 GpuSparseTable
+                 GpuVector
+                 GpuView
+                 HypreInterfaceGPU
+                 HyprePreconditionerGPU
+                 is_gpu_pointer
+                 MiniMatrix
+                 MiniVector
+                 preconditioner_factory_gpu
+                 primary_variables_gpu
+                 solver_adapter
+                 throw_macros_on_gpu
+           )
+      if(TEST ${test})
+        set_tests_properties(${test}
+          PROPERTIES
+          LABELS
+            ${gpu_label}
+        )
+      endif()
+    endforeach()
   endif()
 
   if(USE_GPU_BRIDGE)
@@ -407,6 +396,10 @@ macro(opm-simulators_targets_hook)
 
   if(CONVERT_CUDA_TO_HIP)
     target_link_libraries(opmsimulators PUBLIC roc::hipblas roc::hipsparse)
+  endif()
+
+  if(USE_GPU_BRIDGE AND hip_FOUND)
+    target_link_libraries(opmsimulators PUBLIC roc::rocalution)
   endif()
 endmacro()
 
@@ -860,19 +853,7 @@ if(USE_GPU_BRIDGE)
     target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
   endif()
 
-  if(ROCALUTION_FOUND)
-    set_tests_properties(rocalutionSolver PROPERTIES LABELS gpu_rocm)
-  endif()
-
-  if(rocsparse_FOUND AND rocblas_FOUND)
-    set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
-  endif()
-
   if(VexCL_FOUND)
     target_link_libraries( opmsimulators PUBLIC OPM::VexCL::OpenCL )
   endif()
-endif()
-
-if(USE_DAMARIS_LIB AND Damaris_FOUND)
-  target_link_libraries(opmsimulators PUBLIC damaris)
 endif()

@@ -39,8 +39,8 @@
 
 #include <opm/simulators/linalg/gpubridge/rocm/rocalutionSolverBackend.hpp>
 
-#include <rocalution.hpp>
-#include <base/matrix_formats_ind.hpp> // check if blocks are interpreted as row-major or column-major
+#include <rocalution/rocalution.hpp>
+#include <rocalution/base/matrix_formats_ind.hpp> // check if blocks are interpreted as row-major or column-major
 
 #ifdef HIP_HAVE_CUDA_DEFINED
 #define HAVE_CUDA HIP_HAVE_CUDA_DEFINED
