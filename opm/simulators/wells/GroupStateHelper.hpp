@@ -539,9 +539,11 @@ private:
                                         bool is_production_group,
                                         Phase injection_phase) const;
 
+#ifdef RESERVOIR_COUPLING_ENABLED
     Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
                                                 const int phase_pos,
                                                 ReservoirCoupling::RateKind kind) const;
+#endif
 
     Scalar getSatelliteRate_(const Group& group,
         const int phase_pos,
