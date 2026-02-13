@@ -462,7 +462,8 @@ public:
     /*!
      * \brief Return constant reference to the velocityInfo.
      *
-     * (This object is only non-empty if the DISPERC keyword is true.)
+     * (This object is only non-empty if dispersion, bioeffects, or block
+     * velocities are active.)
      */
     const auto& getVelocityInfo() const
     { return velocityInfo_; }
@@ -675,15 +676,17 @@ private:
     void createFlows_()
     {
         OPM_TIMEBLOCK(createFlows);
-        // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables
-        // For now, do the same also if any block flows are requested (TODO: only save requested cells...)
+        // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables.
         // If DISPERC is in the deck, we initialize the sparse table here as well.
         const bool anyFlows = simulator_().problem().eclWriter().outputModule().getFlows().anyFlows();
         const auto& blockFlows = simulator_().problem().eclWriter().outputModule().getFlows().blockFlows();
+        const auto& blockVelocity = simulator_().problem().eclWriter().outputModule().getFlows().blockVelocity();
         const bool isTemp = simulator_().vanguard().eclState().getSimulationConfig().isTemp();
         const bool anyFlores = simulator_().problem().eclWriter().outputModule().getFlows().anyFlores() || isTemp;
         const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
-        if (((!(anyFlows || !blockFlows.empty()) || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && (!dispersionActive && !enableBioeffects)) {
+        if (!dispersionActive && !enableBioeffects && blockVelocity.empty()
+            && !((anyFlows || !blockFlows.empty()) && flowsInfo_.empty())
+            && !(anyFlores && floresInfo_.empty())) {
             return;
         }
         const auto& model = model_();
@@ -715,12 +718,16 @@ private:
         if (dispersionActive || enableBioeffects) {
             velocityInfo_.reserve(numCells, 6 * numCells);
         }
+        else if (!blockVelocity.empty()) {
+            velocityInfo_.reserve(numCells, 6 * blockVelocity.size());
+        }
 
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
                 const unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
                 bool blockFlowFound = false;
+                bool blockVelocityFound = false;
                 if (!blockFlows.empty()) {
                     if (std::binary_search(blockFlows.begin(), blockFlows.end(),
                                            simulator_().vanguard().cartesianIndex(myIdx))) {
@@ -728,7 +735,19 @@ private:
                     }
                     else {
                         flowsInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.begin());
-                        if (!dispersionActive && !enableBioeffects && !anyFlores) {
+                        if (!dispersionActive && !enableBioeffects && !anyFlores && blockVelocity.empty()) {
+                            continue;
+                        }
+                    }
+                }
+                if (!blockVelocity.empty() && !(dispersionActive || enableBioeffects)) {
+                    if (std::binary_search(blockVelocity.begin(), blockVelocity.end(),
+                                           simulator_().vanguard().cartesianIndex(myIdx))) {
+                        blockVelocityFound = true;
+                    }
+                    else {
+                        velocityInfo_.appendRow(loc_vlinfo.begin(), loc_vlinfo.begin());
+                        if (!anyFlows && blockFlows.empty() && !anyFlores) {
                             continue;
                         }
                     }
@@ -755,7 +774,7 @@ private:
                             }
                         }
                         loc_flinfo[dofIdx - 1] = FlowInfo{faceId, flow, nncId};
-                        loc_vlinfo[dofIdx - 1] = VelocityInfo{flow};
+                        loc_vlinfo[dofIdx - 1] = VelocityInfo{faceId, flow};
                     }
                 }
 
@@ -771,7 +790,7 @@ private:
                 if (anyFlores) {
                     floresInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.end());
                 }
-                if (dispersionActive || enableBioeffects) {
+                if (dispersionActive || enableBioeffects || blockVelocityFound) {
                     velocityInfo_.appendRow(loc_vlinfo.begin(), loc_vlinfo.end());
                 }
             }
@@ -895,6 +914,7 @@ private:
         // the full system to zero, not just our part.
         // Instead, that must be called before starting the linearization.
         const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
+        const auto& blockVelocity = simulator_().problem().eclWriter().outputModule().getFlows().blockVelocity();
         const unsigned int numCells = domain.cells.size();
 
         // Fetch timestepsize used later in accumulation term.
@@ -933,6 +953,15 @@ private:
                         for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
                             velocityInfo_[globI][loc].velocity[phaseIdx] =
                                 darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+                        }
+                    }
+                    else if (!blockVelocity.empty()) {
+                        if (std::binary_search(blockVelocity.begin(), blockVelocity.end(),
+                                               simulator_().vanguard().cartesianIndex(globI))) {
+                            for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
+                                velocityInfo_[globI][loc].velocity[phaseIdx] =
+                                    darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+                            }
                         }
                     }
                     setResAndJacobi(res, bMat, adres);
@@ -1089,6 +1118,7 @@ private:
 
     struct VelocityInfo
     {
+        int faceId;
         VectorBlock velocity;
     };
     SparseTable<VelocityInfo> velocityInfo_;

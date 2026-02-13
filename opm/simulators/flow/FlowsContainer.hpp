@@ -72,6 +72,11 @@ public:
                       const Scalar oil,
                       const Scalar water);
 
+    void assignBlockVelocity(const unsigned globalDofIdx,
+                             const int faceId,
+                             const int comp_idx,
+                             const Scalar velocity);
+
     void assignBlockFlows(const unsigned globalDofIdx,
                           const int faceId,
                           const int comp_idx,
@@ -95,6 +100,9 @@ public:
     bool hasFlows() const
     { return enableFlows_; }
 
+    const std::vector<int> blockVelocity() const
+    { return blockVelocityAllIds_; }
+
     const std::vector<int> blockFlows() const
     { return blockFlowsAllIds_; }
 
@@ -103,6 +111,15 @@ public:
                            const int comp_idx) const
     { 
         const auto& blockIdxs = blockFlowsIds_[comp_idx][dir];
+        auto it = std::lower_bound(blockIdxs.begin(), blockIdxs.end(), globalDofIdx);
+        return std::distance(blockIdxs.begin(), it); 
+    }
+
+    unsigned blockVelocityIds(const unsigned globalDofIdx,
+                              const int dir,
+                              const int comp_idx) const
+    { 
+        const auto& blockIdxs = blockVelocityIds_[comp_idx][dir];
         auto it = std::lower_bound(blockIdxs.begin(), blockIdxs.end(), globalDofIdx);
         return std::distance(blockIdxs.begin(), it); 
     }
@@ -122,13 +139,26 @@ public:
     bool anyFlores() const
     { return anyFlores_; }
 
-    bool hasBlockValue(const unsigned globalDofIdx,
-                       const int dir,
-                       const int comp_idx) const
+    bool hasBlockVelocityValue(const unsigned globalDofIdx,
+                               const int dir,
+                               const int comp_idx) const
+    {   
+        const auto& blockIdxs = blockVelocityIds_[comp_idx][dir];
+        return std::binary_search(blockIdxs.begin(), blockIdxs.end(), globalDofIdx); 
+    }
+
+    bool hasBlockFlowValue(const unsigned globalDofIdx,
+                           const int dir,
+                           const int comp_idx) const
     {   
         const auto& blockIdxs = blockFlowsIds_[comp_idx][dir];
         return std::binary_search(blockIdxs.begin(), blockIdxs.end(), globalDofIdx); 
     }
+
+    Scalar getVelocity(const unsigned globalDofIdx,
+                       const FaceDir::DirEnum dir,
+                       const int comp_idx) const
+    { return velocity_[comp_idx][FaceDir::ToIntersectionIndex(dir)][globalDofIdx]; }
 
     Scalar getFlow(const unsigned globalDofIdx,
                    const FaceDir::DirEnum dir,
@@ -145,12 +175,15 @@ private:
 
     std::array<std::array<ScalarBuffer, 6>, numPhases> flows_;
     std::array<std::array<ScalarBuffer, 6>, numPhases> flores_;
+    std::array<std::array<ScalarBuffer, 6>, numPhases> velocity_;
 
     std::array<FlowsData<double>, 3> floresn_;
     std::array<FlowsData<double>, 3> flowsn_;
 
     std::vector<int> blockFlowsAllIds_;
+    std::vector<int> blockVelocityAllIds_;
     std::array<std::array<std::vector<int>, 6>, numPhases> blockFlowsIds_;
+    std::array<std::array<std::vector<int>, 6>, numPhases> blockVelocityIds_;
 };
 
 } // namespace Opm
