@@ -265,9 +265,13 @@ namespace Opm
 
             // We always store the current control as it is used for output
             // and only after iteration >= nupcol
-            // we log all switches to check if the well controls oscillates
-            if (!iterCtx.withinNupcol(nupcol) || this->well_control_log_.empty()) {
-                this->well_control_log_.push_back(from);
+            // we log all switches to check if the well controls oscillates.
+            // Skip logging during NLDD local solves to avoid exhausting the
+            // global oscillation budget with provisional domain-level switches.
+            if (!iterCtx.inLocalSolve()) {
+                if (!iterCtx.withinNupcol(nupcol) || this->well_control_log_.empty()) {
+                    this->well_control_log_.push_back(from);
+                }
             }
             updateWellStateWithTarget(simulator, groupStateHelper, well_state);
             updatePrimaryVariables(groupStateHelper);

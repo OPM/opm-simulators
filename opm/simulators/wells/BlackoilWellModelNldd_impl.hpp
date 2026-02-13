@@ -74,6 +74,9 @@ assemble(const double dt,
     //      and it is not called here.
     //    - Group production targets and VREP/REIN injection targets use stale
     //      group state from the last global assembly.
+    //    - Well control switches during domain solves are not logged to
+    //      well_control_log_ (gated by inLocalSolve), preventing local
+    //      oscillations from exhausting the global oscillation budget.
     //
     // The final Newton step after NLDD domain solves re-synchronizes everything
     // via a global BlackoilWellModel::assemble() which performs the full control
