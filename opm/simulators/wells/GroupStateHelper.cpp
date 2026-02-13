@@ -985,6 +985,7 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
         if (this->isSatelliteGroup_(group)) {
             return this->getSatelliteRate_(group, phase_pos, res_rates, is_injector);
         }
+#ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingMasterGroup(group)) {
             using RateKind = ReservoirCoupling::RateKind;
             RateKind kind;
@@ -1000,6 +1001,7 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
             }
             return this->getReservoirCouplingMasterGroupRate_(group, phase_pos, kind);
         }
+#endif
     }
     Scalar rate = 0.0;
     for (const std::string& group_name : group.groups()) {
@@ -1618,14 +1620,14 @@ GroupStateHelper<Scalar, IndexTraits>::getLocalReductionLevel_(const std::vector
     return local_reduction_level;
 }
 
+#ifdef RESERVOIR_COUPLING_ENABLED
 template <typename Scalar, typename IndexTraits>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::
-getReservoirCouplingMasterGroupRate_([[maybe_unused]] const Group& group,
-                                     [[maybe_unused]] const int phase_pos,
-                                     [[maybe_unused]] ReservoirCoupling::RateKind kind) const
+getReservoirCouplingMasterGroupRate_(const Group& group,
+                                     const int phase_pos,
+                                     ReservoirCoupling::RateKind kind) const
 {
-#ifdef RESERVOIR_COUPLING_ENABLED
     if (this->isReservoirCouplingMaster()) {
         ReservoirCoupling::Phase rescoup_phase = this->activePhaseIdxToRescoupPhase_(phase_pos);
         return this->reservoirCouplingMaster().getMasterGroupRate(group.name(), rescoup_phase, kind);
@@ -1633,10 +1635,8 @@ getReservoirCouplingMasterGroupRate_([[maybe_unused]] const Group& group,
     else {
         return 0.0;
     }
-#else
-    return 0.0;
-#endif
 }
+#endif
 
 template <typename Scalar, typename IndexTraits>
 Scalar

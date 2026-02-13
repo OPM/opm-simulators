@@ -171,6 +171,10 @@ private:
     bool isMasterGroup(const std::string& /*group_name*/) const noexcept {
         return false;
     }
+
+    bool isSlaveGroup(const std::string& /*group_name*/) const noexcept {
+        return false;
+    }
 #endif // !RESERVOIR_COUPLING_ENABLED
 };
 
