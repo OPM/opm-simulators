@@ -274,14 +274,6 @@ endmacro()
 
 macro(opm-simulators_files_hook)
   if(hip_FOUND)
-    if(rocsparse_FOUND AND rocblas_FOUND)
-      set(HAVE_ROCSPARSE 1)
-    else()
-      unset(HAVE_ROCSPARSE)
-    endif()
-    if(ROCALUTION_FOUND)
-      set(HAVE_ROCALUTION 1)
-    endif()
   endif()
 endmacro()
 
@@ -360,6 +352,14 @@ macro(opm-simulators_config_hook)
 
   if(USE_GPU_BRIDGE)
     set(COMPILE_GPU_BRIDGE 1)
+  endif()
+
+  if(rocsparse_FOUND AND rocblas_FOUND)
+    set(HAVE_ROCSPARSE 1)
+  endif()
+
+  if(ROCALUTION_FOUND)
+    set(HAVE_ROCALUTION 1)
   endif()
 endmacro()
 
