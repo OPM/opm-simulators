@@ -676,8 +676,21 @@ macro(opm-simulators_targets_hook)
     )
   endif()
 
+  opm_add_test(flowexp_blackoil
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEPENDS
+      opmsimulators
+    LIBRARIES
+      opmsimulators
+    SOURCES
+      flowexperimental/flowexp_blackoil.cpp
+      $<TARGET_OBJECTS:moduleVersion>
+  )
+
   if(NOT BUILD_FLOW_VARIANTS)
     set_target_properties(
+      flowexp_blackoil
       flowexp_comp
       flow_blackoil_float
       PROPERTIES
@@ -847,16 +860,6 @@ opm_add_test(flow_distribute_z
   $<TARGET_OBJECTS:moduleVersion>
   $<TARGET_OBJECTS:MainDispatchDynamic>
   )
-
-opm_add_test(flowexp_blackoil
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flowexperimental/flowexp_blackoil.cpp
-  $<TARGET_OBJECTS:moduleVersion>
-)
 
 if(dune-alugrid_FOUND)
   if (NOT BUILD_FLOW_ALU_GRID)
