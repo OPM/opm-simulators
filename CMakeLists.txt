@@ -258,6 +258,10 @@ macro(opm-simulators_sources_hook)
     list(APPEND tests_SOURCES tests/gpuistl/test_AmgxInterface.cpp)
     list(APPEND tests_SOURCES tests/test_AmgxPreconditioner.cpp)
   endif()
+
+  if(HAVE_AVX2_EXTENSION)
+    set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_OPTIONS "${AVX2_FLAGS}" APPEND_STRING)
+  endif()
 endmacro()
 
 macro(opm-simulators_files_hook)
@@ -857,7 +861,3 @@ if (OPM_ENABLE_PYTHON)
 endif()
 
 add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
-
-if(HAVE_AVX2_EXTENSION)
-  set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_OPTIONS "${AVX2_FLAGS}" APPEND_STRING)
-endif()
