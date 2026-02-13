@@ -102,6 +102,8 @@ public:
                    moduleVersionName(),
                    [this](const int idx)
                    { return simulator_.problem().eclWriter().collectOnIORank().localIdxToGlobalIdx(idx); },
+                   [&collectToIORank](const int idx)
+                   { return collectToIORank.isCartIdxOnThisRank(idx); },
                    simulator.vanguard().grid().comm(),
                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature,

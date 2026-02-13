@@ -303,6 +303,7 @@ protected:
                                 const SummaryState& summaryState,
                                 const std::string& moduleVersionName,
                                 RSTConv::LocalToGlobalCellFunc globalCell,
+                                std::function<bool(const unsigned)> isInterior,
                                 const Parallel::Communication& comm,
                                 bool enableEnergy,
                                 bool constantTemperature,
