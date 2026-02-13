@@ -858,10 +858,6 @@ endif()
 
 add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 
-# must activate avx2 flags and C11 for mixed precision.
 if(HAVE_AVX2_EXTENSION)
-  # Trying to set the standard using `set(CMAKE_C_STANDARD 11)` had no effect, still used -std=c99
-  # Hence we are requesting C17. (-std=c99 -D_ISOC11_SOURCE also seems to work)
   set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_OPTIONS "${AVX2_FLAGS}" APPEND_STRING)
-  set_property(TARGET opmsimulators PROPERTY C_STANDARD 17)
 endif()
