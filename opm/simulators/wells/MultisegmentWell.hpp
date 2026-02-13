@@ -349,10 +349,11 @@ namespace Opm {
                                            const EvalWell& pressure,
                                            const EvalWell& temperature) const;
 
-        SegmentFluidState createSegmentFluidstate(const int seg) const;
+        SegmentFluidState createSegmentFluidstate(int seg) const;
 
         void computeInitialSegmentEnergy();
 
+        EvalWell computeSegmentEnergy(int seg) const;
     };
 
 }
