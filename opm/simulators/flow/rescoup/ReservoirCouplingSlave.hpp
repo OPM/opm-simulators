@@ -56,17 +56,37 @@ public:
     const std::string& getSlaveName() const { return slave_name_; }
     const std::map<std::string, std::string>& getSlaveToMasterGroupNameMap() const {
         return slave_to_master_group_map_; }
+    /// @brief Check if a master-imposed injection target exists for a group and phase
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    bool hasMasterInjectionTarget(const std::string& gname, Phase phase) const;
+
+    /// @brief Check if a master-imposed production target exists for a group
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    bool hasMasterProductionTarget(const std::string& gname) const;
     void initTimeStepping();
     bool isFirstSubstepOfSyncTimestep() const;
     bool isSlaveGroup(const std::string& group_name) const;
     ReservoirCoupling::Logger& logger() { return this->logger_; }
     ReservoirCoupling::Logger& logger() const { return this->logger_; }
+    /// @brief Get the master-imposed injection target and control mode for a group and phase
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    std::pair<Scalar, Group::InjectionCMode> masterInjectionTarget(const std::string& gname, Phase phase) const;
+
+    /// @brief Get the master-imposed production target and control mode for a group
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    std::pair<Scalar, Group::ProductionCMode> masterProductionTarget(const std::string& gname) const;
     void maybeActivate(int report_step);
     std::size_t numSlaveGroups() const { return this->slave_group_order_.size(); }
     double receiveNextTimeStepFromMaster();
     std::pair<std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
-    void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets) const;
-    void receiveProductionGroupConstraintsFromMaster(std::size_t num_targets) const;
+    /// @brief Receive injection group targets from master and store them locally
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets);
+
+    /// @brief Receive production group constraints from master and store them locally
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void receiveProductionGroupConstraintsFromMaster(std::size_t num_targets);
+
     void sendAndReceiveInitialData();
     void sendInjectionDataToMaster(const std::vector<SlaveGroupInjectionData> &injection_data) const;
     void sendNextReportDateToMasterProcess() const;

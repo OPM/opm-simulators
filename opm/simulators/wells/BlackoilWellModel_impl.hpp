@@ -472,7 +472,8 @@ namespace Opm {
         if (this->isReservoirCouplingSlave()) {
             if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
                 this->sendSlaveGroupDataToMaster();
-                this->receiveGroupTargetsFromMaster(reportStepIdx);
+                this->receiveGroupConstraintsFromMaster();
+                this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
             }
         }
 #endif
@@ -617,15 +618,13 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    receiveGroupTargetsFromMaster(int reportStepIdx)
+    receiveGroupConstraintsFromMaster()
     {
         RescoupReceiveGroupTargets<Scalar, IndexTraits> target_receiver{
             this->guide_rate_handler_,
-            this->wellState(),
-            this->groupState(),
-            reportStepIdx
+            this->groupStateHelper()
         };
-        target_receiver.receiveGroupTargetsFromMaster();
+        target_receiver.receiveGroupConstraintsFromMaster();
     }
 
 #endif // RESERVOIR_COUPLING_ENABLED
