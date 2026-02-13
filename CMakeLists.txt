@@ -16,7 +16,7 @@ project(opm-simulators C CXX)
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
-option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
+option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" ON)
 option(BUILD_FLOW_FLOAT_VARIANTS "Build the variants for flow using float?" OFF)
 option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
 option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
