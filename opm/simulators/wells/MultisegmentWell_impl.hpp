@@ -761,7 +761,7 @@ namespace Opm
         updatePrimaryVariables(groupStateHelper);
         computePerfCellPressDiffs(simulator);
         computeInitialSegmentFluids(simulator, deferred_logger);
-        if constexpr (has_temperature) {
+        if constexpr (enable_energy) {
             computeInitialSegmentEnergy();
         }
     }
