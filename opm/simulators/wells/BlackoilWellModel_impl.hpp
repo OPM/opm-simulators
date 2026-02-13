@@ -471,7 +471,7 @@ namespace Opm {
         if (this->isReservoirCouplingSlave()) {
             if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
                 this->sendSlaveGroupDataToMaster();
-                this->receiveGroupTargetsFromMaster(reportStepIdx);
+                this->receiveGroupTargetsFromMaster();
             }
         }
 #endif
@@ -613,13 +613,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    receiveGroupTargetsFromMaster(int reportStepIdx)
+    receiveGroupTargetsFromMaster()
     {
         RescoupReceiveGroupTargets<Scalar, IndexTraits> target_receiver{
             this->guide_rate_handler_,
-            this->wellState(),
-            this->groupState(),
-            reportStepIdx
+            this->groupStateHelper()
         };
         target_receiver.receiveGroupTargetsFromMaster();
     }

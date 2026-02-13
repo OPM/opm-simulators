@@ -432,7 +432,7 @@ template<class Scalar> class WellContributions;
             /// \brief Receive comprehensive slave group data from slaves
             void receiveSlaveGroupData();
 
-            void receiveGroupTargetsFromMaster(const int reportStepIdx);
+            void receiveGroupTargetsFromMaster();
             void sendMasterGroupConstraintsToSlaves();
 
             /// \brief Setup RAII guard for reservoir coupling logger

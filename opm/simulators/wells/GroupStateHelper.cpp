@@ -26,6 +26,7 @@
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
@@ -360,6 +361,28 @@ getInjectionGroupTarget(
     const std::vector<Scalar>& resv_coeff) const
 {
     const auto cmode = this->groupState().injection_control(group.name(), injection_phase);
+
+    // Check for master target override (reservoir coupling slave)
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (this->isReservoirCouplingSlave()
+        && this->reservoirCouplingSlave().hasMasterInjectionTarget(group.name(), injection_phase))
+    {
+        auto [master_target, master_cmode] =
+            this->reservoirCouplingSlave().masterInjectionTarget(group.name(), injection_phase);
+        auto filter = this->getInjectionFilterFlag_(group.name(), injection_phase);
+        using FilterFlag = ReservoirCoupling::GrupSlav::FilterFlag;
+        if (filter == FilterFlag::MAST) {
+            return master_target;
+        }
+        if (filter == FilterFlag::BOTH) {
+            Scalar slave_target = this->getInjectionGroupTargetForMode_(
+                group, injection_phase, resv_coeff, cmode);
+            return std::min(master_target, slave_target);
+        }
+        // FilterFlag::SLAV: fall through to original (non-RC) logic below
+    }
+#endif
+
     return this->getInjectionGroupTargetForMode_(group, injection_phase, resv_coeff, cmode);
 }
 
@@ -447,6 +470,27 @@ GroupStateHelper<Scalar, IndexTraits>::
 getProductionGroupTarget(const Group& group) const
 {
     const auto cmode = this->groupState().production_control(group.name());
+
+    // Check for master target override (reservoir coupling slave)
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (this->isReservoirCouplingSlave()
+        && this->reservoirCouplingSlave().hasMasterProductionTarget(group.name()))
+    {
+        auto [master_target, master_cmode] =
+            this->reservoirCouplingSlave().masterProductionTarget(group.name());
+        auto filter = this->getProductionFilterFlag_(group.name(), master_cmode);
+        using FilterFlag = ReservoirCoupling::GrupSlav::FilterFlag;
+        if (filter == FilterFlag::MAST) {
+            return master_target;
+        }
+        if (filter == FilterFlag::BOTH) {
+            Scalar slave_target = this->getProductionGroupTargetForMode_(group, cmode);
+            return std::min(master_target, slave_target);
+        }
+        // FilterFlag::SLAV: fall through to original (non-RC) logic below
+    }
+#endif
+
     return this->getProductionGroupTargetForMode_(group, cmode);
 }
 
@@ -457,48 +501,6 @@ getProductionGroupTargetForMode(const Group& group,
                                  Group::ProductionCMode cmode) const
 {
     return this->getProductionGroupTargetForMode_(group, cmode);
-}
-
-template<typename Scalar, typename IndexTraits>
-Scalar
-GroupStateHelper<Scalar, IndexTraits>::
-getProductionGroupTargetForMode_(const Group& group,
-                                  Group::ProductionCMode cmode) const
-{
-    Group::ProductionControls ctrl = group.productionControls(this->summary_state_);
-    switch (cmode) {
-    case Group::ProductionCMode::ORAT:
-        return ctrl.oil_target;
-    case Group::ProductionCMode::WRAT:
-        return ctrl.water_target;
-    case Group::ProductionCMode::GRAT:
-    {
-        Scalar grat_target_from_sales = 0.0;
-        if (this->groupState().has_grat_sales_target(group.name())) {
-            grat_target_from_sales = this->groupState().grat_sales_target(group.name());
-        }
-        // gas target may have been adjusted by GCONSALE
-        if (grat_target_from_sales > 0)
-            return grat_target_from_sales;
-
-        return ctrl.gas_target;
-    }
-    case Group::ProductionCMode::LRAT:
-        return ctrl.liquid_target;
-    case Group::ProductionCMode::RESV:
-    {
-        bool use_gpmaint = group.has_gpmaint_control(cmode);
-        if (use_gpmaint && this->groupState().has_gpmaint_target(group.name()))
-            return this->groupState().gpmaint_target(group.name());
-
-        return ctrl.resv_target;
-    }
-    default:
-        OPM_DEFLOG_THROW(std::logic_error,
-                         "Invalid Group::ProductionCMode in getProductionGroupTargetForMode_",
-                         this->deferredLogger());
-        return 0.0;
-    }
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -1666,6 +1668,48 @@ GroupStateHelper<Scalar, IndexTraits>::getLocalReductionLevel_(const std::vector
     return local_reduction_level;
 }
 
+template<typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+getProductionGroupTargetForMode_(const Group& group,
+                                  Group::ProductionCMode cmode) const
+{
+    Group::ProductionControls ctrl = group.productionControls(this->summary_state_);
+    switch (cmode) {
+    case Group::ProductionCMode::ORAT:
+        return ctrl.oil_target;
+    case Group::ProductionCMode::WRAT:
+        return ctrl.water_target;
+    case Group::ProductionCMode::GRAT:
+    {
+        Scalar grat_target_from_sales = 0.0;
+        if (this->groupState().has_grat_sales_target(group.name())) {
+            grat_target_from_sales = this->groupState().grat_sales_target(group.name());
+        }
+        // gas target may have been adjusted by GCONSALE
+        if (grat_target_from_sales > 0)
+            return grat_target_from_sales;
+
+        return ctrl.gas_target;
+    }
+    case Group::ProductionCMode::LRAT:
+        return ctrl.liquid_target;
+    case Group::ProductionCMode::RESV:
+    {
+        bool use_gpmaint = group.has_gpmaint_control(cmode);
+        if (use_gpmaint && this->groupState().has_gpmaint_target(group.name()))
+            return this->groupState().gpmaint_target(group.name());
+
+        return ctrl.resv_target;
+    }
+    default:
+        OPM_DEFLOG_THROW(std::logic_error,
+                         "Invalid Group::ProductionCMode in getProductionGroupTargetForMode_",
+                         this->deferredLogger());
+        return 0.0;
+    }
+}
+
 #ifdef RESERVOIR_COUPLING_ENABLED
 template <typename Scalar, typename IndexTraits>
 Scalar
@@ -2124,6 +2168,91 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
     }
 }
 
+
+// -------------------------------------------------------------------------
+// Reservoir coupling helper methods for GRUPSLAV filter flags
+// -------------------------------------------------------------------------
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+template <typename Scalar, typename IndexTraits>
+ReservoirCoupling::GrupSlav::FilterFlag
+GroupStateHelper<Scalar, IndexTraits>::
+getProductionFilterFlag_(const std::string& group_name,
+                         Group::ProductionCMode cmode) const
+{
+    const auto& rescoup_info = this->schedule_[this->report_step_].rescoup();
+    if (!rescoup_info.hasGrupSlav(group_name)) {
+        return ReservoirCoupling::GrupSlav::FilterFlag::MAST;
+    }
+    const auto& grup_slav = rescoup_info.grupSlav(group_name);
+    switch (cmode) {
+    case Group::ProductionCMode::ORAT:
+        return grup_slav.oilProdFlag();
+    case Group::ProductionCMode::WRAT:
+    case Group::ProductionCMode::LRAT:
+        return grup_slav.liquidProdFlag();
+    case Group::ProductionCMode::GRAT:
+        return grup_slav.gasProdFlag();
+    case Group::ProductionCMode::RESV:
+        return grup_slav.fluidVolumeProdFlag();
+    default:
+        return ReservoirCoupling::GrupSlav::FilterFlag::MAST;
+    }
+}
+
+template <typename Scalar, typename IndexTraits>
+ReservoirCoupling::GrupSlav::FilterFlag
+GroupStateHelper<Scalar, IndexTraits>::
+getInjectionFilterFlag_(const std::string& group_name,
+                        Phase injection_phase) const
+{
+    const auto& rescoup_info = this->schedule_[this->report_step_].rescoup();
+    if (!rescoup_info.hasGrupSlav(group_name)) {
+        return ReservoirCoupling::GrupSlav::FilterFlag::MAST;
+    }
+    const auto& grup_slav = rescoup_info.grupSlav(group_name);
+    switch (injection_phase) {
+    case Phase::OIL:
+        return grup_slav.oilInjFlag();
+    case Phase::WATER:
+        return grup_slav.waterInjFlag();
+    case Phase::GAS:
+        return grup_slav.gasInjFlag();
+    default:
+        return ReservoirCoupling::GrupSlav::FilterFlag::MAST;
+    }
+}
+
+template <typename Scalar, typename IndexTraits>
+void
+GroupStateHelper<Scalar, IndexTraits>::
+updateSlaveGroupCmodesFromMaster()
+{
+    using FilterFlag = ReservoirCoupling::GrupSlav::FilterFlag;
+    auto& slave = this->reservoirCouplingSlave();
+    for (std::size_t i = 0; i < slave.numSlaveGroups(); ++i) {
+        const auto& gname = slave.slaveGroupIdxToGroupName(i);
+        // Production cmode
+        if (slave.hasMasterProductionTarget(gname)) {
+            auto [master_target, master_cmode] = slave.masterProductionTarget(gname);
+            auto filter = this->getProductionFilterFlag_(gname, master_cmode);
+            if (filter != FilterFlag::SLAV) {
+                this->groupState().production_control(gname, master_cmode);
+            }
+        }
+        // Injection cmode — check each phase
+        for (const auto phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
+            if (slave.hasMasterInjectionTarget(gname, phase)) {
+                auto [master_target, master_cmode] = slave.masterInjectionTarget(gname, phase);
+                auto filter = this->getInjectionFilterFlag_(gname, phase);
+                if (filter != FilterFlag::SLAV) {
+                    this->groupState().injection_control(gname, phase, master_cmode);
+                }
+            }
+        }
+    }
+}
+#endif
 
 template class GroupStateHelper<double, BlackOilDefaultFluidSystemIndices>;
 #ifdef FLOW_INSTANTIATE_FLOAT

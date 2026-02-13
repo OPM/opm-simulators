@@ -28,14 +28,10 @@ template <class Scalar, class IndexTraits>
 RescoupReceiveGroupTargets<Scalar, IndexTraits>::
 RescoupReceiveGroupTargets(
     GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
-    const WellState<Scalar, IndexTraits>& well_state,
-    const GroupState<Scalar>& group_state,
-    const int report_step_idx
+    GroupStateHelper<Scalar, IndexTraits>& group_state_helper
 )
     : guide_rate_handler_{guide_rate_handler}
-    , well_state_{well_state}
-    , group_state_{group_state}
-    , report_step_idx_{report_step_idx}
+    , group_state_helper_{group_state_helper}
     , reservoir_coupling_slave_{guide_rate_handler.reservoirCouplingSlave()}
 {
 }
@@ -55,6 +51,7 @@ receiveGroupTargetsFromMaster()
     if (num_prod_constraints > 0) {
         rescoup_slave.receiveProductionGroupConstraintsFromMaster(num_prod_constraints);
     }
+    this->group_state_helper_.updateSlaveGroupCmodesFromMaster();
 }
 
 template class RescoupReceiveGroupTargets<double, BlackOilDefaultFluidSystemIndices>;

@@ -28,7 +28,6 @@
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-
 #include <dune/common/parallel/mpitraits.hh>
 
 #include <vector>
@@ -63,6 +62,24 @@ ReservoirCouplingSlave(
 }
 
 template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
+hasMasterInjectionTarget(const std::string& gname, Phase phase) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->hasMasterInjectionTarget(gname, phase);
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
+hasMasterProductionTarget(const std::string& gname) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->hasMasterProductionTarget(gname);
+}
+
+template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
 initTimeStepping()
@@ -85,6 +102,24 @@ bool
 ReservoirCouplingSlave<Scalar>::
 isSlaveGroup(const std::string& group_name) const {
     return this->slave_to_master_group_map_.find(group_name) != this->slave_to_master_group_map_.end();
+}
+
+template <class Scalar>
+std::pair<Scalar, Group::InjectionCMode>
+ReservoirCouplingSlave<Scalar>::
+masterInjectionTarget(const std::string& gname, Phase phase) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->masterInjectionTarget(gname, phase);
+}
+
+template <class Scalar>
+std::pair<Scalar, Group::ProductionCMode>
+ReservoirCouplingSlave<Scalar>::
+masterProductionTarget(const std::string& gname) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->masterProductionTarget(gname);
 }
 
 // NOTE: It is not legal for a slave to activate before the master has activated. This problem
@@ -147,6 +182,15 @@ maybeReceiveTerminateSignalFromMaster()
 }
 
 template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+receiveInjectionGroupTargetsFromMaster(std::size_t num_targets)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->receiveInjectionGroupTargetsFromMaster(num_targets);
+}
+
+template <class Scalar>
 double
 ReservoirCouplingSlave<Scalar>::
 receiveNextTimeStepFromMaster() {
@@ -183,16 +227,7 @@ receiveNumGroupConstraintsFromMaster() const {
 template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
-receiveInjectionGroupTargetsFromMaster(std::size_t num_targets) const
-{
-    assert(this->report_step_data_);
-    this->report_step_data_->receiveInjectionGroupTargetsFromMaster(num_targets);
-}
-
-template <class Scalar>
-void
-ReservoirCouplingSlave<Scalar>::
-receiveProductionGroupConstraintsFromMaster(std::size_t num_targets) const
+receiveProductionGroupConstraintsFromMaster(std::size_t num_targets)
 {
     assert(this->report_step_data_);
     this->report_step_data_->receiveProductionGroupConstraintsFromMaster(num_targets);

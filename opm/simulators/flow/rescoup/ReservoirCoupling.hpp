@@ -260,6 +260,7 @@ struct ProductionGroupConstraints {
 
 // Helper functions
 Phase convertPhaseToReservoirCouplingPhase(::Opm::Phase phase);
+::Opm::Phase convertToOpmPhase(Phase phase);
 void customErrorHandler_(MPI_Comm* comm, int* err, const std::string &msg);
 void customErrorHandlerSlave_(MPI_Comm* comm, int* err, ...);
 void customErrorHandlerMaster_(MPI_Comm* comm, int* err, ...);

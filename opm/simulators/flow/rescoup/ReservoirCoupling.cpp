@@ -45,6 +45,20 @@ Phase convertPhaseToReservoirCouplingPhase(::Opm::Phase phase)
     }
 }
 
+::Opm::Phase convertToOpmPhase(Phase phase)
+{
+    switch (phase) {
+    case Phase::Oil:
+        return ::Opm::Phase::OIL;
+    case Phase::Gas:
+        return ::Opm::Phase::GAS;
+    case Phase::Water:
+        return ::Opm::Phase::WATER;
+    default:
+        throw std::invalid_argument{"Unsupported ReservoirCoupling::Phase value for conversion to Opm::Phase."};
+    }
+}
+
 void customErrorHandler_(MPI_Comm* comm, int* err, const std::string &msg)
 {
     // It can be useful to have a custom error handler for debugging purposes.
