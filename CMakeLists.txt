@@ -260,7 +260,7 @@ macro(opm-simulators_sources_hook)
   endif()
 
   if(HAVE_AVX2_EXTENSION)
-    set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_OPTIONS "${AVX2_FLAGS}" APPEND_STRING)
+    set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_OPTIONS ${AVX2_FLAGS})
   endif()
 endmacro()
 
