@@ -37,12 +37,39 @@
 #include <opm/simulators/flow/countGlobalCells.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <filesystem>
+#include <functional>
 #include <iomanip>
 #include <limits>
-#include <stdexcept>
+#include <memory>
+#include <numeric>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include <fmt/format.h>
+
+namespace {
+    template <typename TypeTag>
+    std::string_view
+    make_string(const typename Opm::BlackoilModel<TypeTag>::DebugFlags f)
+    {
+        using F = typename Opm::BlackoilModel<TypeTag>::DebugFlags;
+
+        switch (f) {
+        case F::STRICT:   return "Strict";
+        case F::RELAXED:  return "Relaxed";
+        case F::TUNINGDP: return "TuningDP";
+        }
+
+        return "< ??? >";
+    }
+} // Anonymous namespace
 
 namespace Opm {
 
@@ -1040,8 +1067,8 @@ getReservoirConvergence(const double reportTime,
                 msg += use_drv_tol ? "    DRV    " : "";
             }
 
-            msg += " MBFLAG";
-            msg += " CNVFLAG";
+            msg += "   MBFLAG";
+            msg += "  CNVFLAG";
 
             OpmLog::debug(msg);
         }
@@ -1078,11 +1105,18 @@ getReservoirConvergence(const double reportTime,
             print_dsol(use_drv_tol, maxSolUpd.dRvMax);
         }
 
-        int mb_flag = use_relaxed_mb ? static_cast<int>(DebugFlags::RELAXED) : static_cast<int>(DebugFlags::STRICT);
-        int cnv_flag = relax_dsol_cnv ? static_cast<int>(DebugFlags::TUNINGDP) :
-            (use_relaxed_cnv ? static_cast<int>(DebugFlags::RELAXED) : static_cast<int>(DebugFlags::STRICT));
-        ss << std::setw(7) << mb_flag;
-        ss << std::setw(8) << cnv_flag;
+        const auto mb_flag = use_relaxed_mb
+            ? DebugFlags::RELAXED
+            : DebugFlags::STRICT;
+
+        const auto cnv_flag = relax_dsol_cnv ?
+            DebugFlags::TUNINGDP
+            : (use_relaxed_cnv
+               ? DebugFlags::RELAXED
+               : DebugFlags::STRICT);
+
+        ss << std::setw(9) << make_string<TypeTag>(mb_flag)
+           << std::setw(9) << make_string<TypeTag>(cnv_flag);
 
         ss.precision(oprec);
         ss.flags(oflags);
