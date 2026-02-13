@@ -70,7 +70,6 @@ class BlackOilEnergyIntensiveQuantitiesTemp
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
-    using EvaluationTemp = DenseAd::Evaluation<Scalar,1>;
 
 
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
@@ -79,6 +78,9 @@ class BlackOilEnergyIntensiveQuantitiesTemp
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
+
+    public:
+    using EvaluationTemp = DenseAd::Evaluation<Scalar,1>;
     using FluidStateTemp = BlackOilFluidState<  EvaluationTemp,
                                                 FluidSystem,
                                                 true, //store temperature
@@ -90,7 +92,7 @@ class BlackOilEnergyIntensiveQuantitiesTemp
                                                 enableDisgasInWater,
                                                 Indices::numPhases>;
 
-public:
+
 
     void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
     {
@@ -188,7 +190,6 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
-    using Evaluation = DenseAd::Evaluation<Scalar,1>;
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
@@ -196,7 +197,8 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     using WellStateType = WellState<Scalar, IndexTraits>;
 
     using IntensiveQuantitiesTemp = BlackOilEnergyIntensiveQuantitiesTemp<TypeTag>;
-
+    using FluidStateTemp = typename IntensiveQuantitiesTemp::FluidStateTemp;
+    using Evaluation = typename IntensiveQuantitiesTemp::EvaluationTemp;
     using EnergyMatrix = typename BaseType::EnergyMatrix;
     using EnergyVector = typename BaseType::EnergyVector;
 
@@ -462,7 +464,8 @@ protected:
     }
 
     template <class RateVector>
-    void computeFluxTerm(unsigned globI, unsigned globJ,
+    void computeFluxTerm(const FluidStateTemp& fsIn,
+                         const FluidStateTemp& fsEx,
                          const RateVector& darcyFlux,
                          Evaluation& flux)
     {
@@ -474,8 +477,7 @@ protected:
             const unsigned activeCompIdx =
                 FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
             bool inIsUp = darcyFlux[activeCompIdx] > 0;
-            const auto& up = inIsUp ? intQuants_[globI] : intQuants_[globJ];
-            const auto& fs = up.fluidStateTemp();
+            const auto& fs = inIsUp ? fsIn : fsEx;
             if (inIsUp) {
                 flux += fs.enthalpy(phaseIdx)
                     * fs.density(phaseIdx)
@@ -491,12 +493,11 @@ protected:
     }
 
     template < class ResidualNBInfo>
-    void computeHeatFluxTerm(unsigned globI, unsigned globJ,
+    void computeHeatFluxTerm(const IntensiveQuantitiesTemp& intQuantsIn,
+                             const IntensiveQuantitiesTemp& intQuantsEx,
                              const ResidualNBInfo& res_nbinfo,
                              Evaluation& heatFlux)
     {
-        const auto& intQuantsIn = intQuants_[globI];
-        const auto& intQuantsEx = intQuants_[globJ];
         short interiorDofIdx = 0; // NB
         short exteriorDofIdx = 1; // NB
         EnergyModule::ExtensiveQuantities::updateEnergy(heatFlux,
@@ -517,6 +518,7 @@ protected:
     {
         this->energyVector_ = 0.0;
         (*this->energyMatrix_) = 0.0;
+        Opm::MatrixBlock<Scalar, 1, 1> bmat;
         Scalar dt = simulator_.timeStepSize();
         const unsigned int numCells = simulator_.model().numTotalDof();
 #ifdef _OPENMP
@@ -533,6 +535,9 @@ protected:
 
         const auto& neighborInfo = simulator_.model().linearizer().getNeighborInfo();
         const auto& floresInfo = this->simulator_.problem().model().linearizer().getFloresInfo();
+        const bool enableDriftCompensation = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
+        const auto& problem = simulator_.problem();
+
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -540,24 +545,34 @@ protected:
             const auto& nbInfos = neighborInfo[globI];
             const auto& floresInfos = floresInfo[globI];
             int loc = 0;
+            const auto& intQuantsIn = intQuants_[globI];
             for (const auto& nbInfo : nbInfos) {
                 unsigned globJ = nbInfo.neighbor;
+                const auto& intQuantsEx = intQuants_[globJ];
                 assert(globJ != globI);
                 const auto& darcyflux = floresInfos[loc].flow;
                 // compute convective flux
                 Evaluation flux = 0.0;
-                computeFluxTerm(globI, globJ, darcyflux, flux);
-                this->energyVector_[globI] += getValue(flux);
-                (*this->energyMatrix_)[globI][globI][0][0] += flux.derivative(temperatureIdx);
-                (*this->energyMatrix_)[globJ][globI][0][0] -= flux.derivative(temperatureIdx);
-
+                computeFluxTerm(intQuantsIn.fluidStateTemp(), intQuantsEx.fluidStateTemp(), darcyflux, flux);
                 // compute conductive flux
                 Evaluation heatFlux = 0.0;
-                computeHeatFluxTerm(globI, globJ, nbInfo.res_nbinfo, heatFlux);
+                computeHeatFluxTerm(intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, heatFlux);
+                heatFlux += flux;
                 this->energyVector_[globI] += getValue(heatFlux);
                 (*this->energyMatrix_)[globI][globI][0][0] += heatFlux.derivative(temperatureIdx);
                 (*this->energyMatrix_)[globJ][globI][0][0] -= heatFlux.derivative(temperatureIdx);
                 loc++;
+            }
+
+            if (enableDriftCompensation) {
+                auto dofDriftRate = problem.drift()[globI]/dt;
+                const auto& fs = intQuantsIn.fluidStateTemp();
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                   const unsigned activeCompIdx =
+                        FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                   auto drift_hrate = dofDriftRate[activeCompIdx]*getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) /  getValue(fs.invB(phaseIdx));
+                   this->energyVector_[globI] -= drift_hrate*scalingFactor_;
+                }
             }
         }
 
@@ -565,25 +580,6 @@ protected:
         const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
         for (const auto& wellPtr : wellPtrs) {
             this->assembleEquationWell(*wellPtr);
-        }
-
-        const auto& problem = simulator_.problem();
-
-        bool enableDriftCompensation = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
-        if (enableDriftCompensation) {
-            #ifdef _OPENMP
-            #pragma omp parallel for
-            #endif
-            for (unsigned globalDofIdx = 0; globalDofIdx < numCells; ++globalDofIdx) {
-                auto dofDriftRate = problem.drift()[globalDofIdx]/dt;
-                const auto& fs = intQuants_[globalDofIdx].fluidStateTemp();
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                   const unsigned activeCompIdx =
-                        FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-                   auto drift_hrate = dofDriftRate[activeCompIdx]*getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) /  getValue(fs.invB(phaseIdx));
-                   this->energyVector_[globalDofIdx] -= drift_hrate*scalingFactor_;
-                }
-            }
         }
 
         if (simulator_.gridView().comm().size() > 1) {
