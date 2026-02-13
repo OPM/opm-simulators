@@ -197,6 +197,31 @@ macro(opm-simulators_prereqs_hook)
     set(USE_HYPRE OFF)
     set(HYPRE_FOUND OFF)
   endif()
+
+  if(USE_OPENCL AND USE_GPU_BRIDGE)
+    find_package(OpenCL)
+
+    if(OpenCL_FOUND)
+      # the current OpenCL implementation relies on cl2.hpp, not cl.hpp
+      # make sure it is available, otherwise disable OpenCL
+      find_file(CL2_HPP CL/cl2.hpp HINTS ${OpenCL_INCLUDE_DIRS})
+      if(NOT CL2_HPP)
+        message(WARNING
+          " OpenCL was found, but this version of opm-simulators relies on CL/cl2.hpp, "
+          "which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL"
+        )
+        set(OpenCL_FOUND OFF)
+        set(OPENCL_FOUND OFF)
+      endif()
+    elseif(USE_CHOW_PATEL_ILU)
+      message(FATAL_ERROR " CHOW_PATEL_ILU only works for openclSolver, but OpenCL was not found")
+    endif()
+    find_package(VexCL)
+  endif()
+
+  if(USE_GPU_BRIDGE)
+    find_package(amgcl)
+  endif()
 endmacro()
 
 macro(opm-simulators_sources_hook)
@@ -316,6 +341,22 @@ macro(opm-simulators_config_hook)
 
   if(HYPRE_FOUND)
     set(HAVE_HYPRE 1)
+  endif()
+
+  if(OpenCL_FOUND)
+    set(HAVE_OPENCL 1)
+    find_file(OPENCL_HPP CL/opencl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
+    if(OPENCL_HPP)
+      set(HAVE_OPENCL_HPP 1)
+    endif()
+  endif()
+
+  if(amgcl_FOUND)
+    set(HAVE_AMGCL 1)
+  endif()
+
+  if(VexCL_FOUND)
+    set(HAVE_VEXCL 1)
   endif()
 endmacro()
 
@@ -509,6 +550,40 @@ macro(opm-simulators_targets_hook)
   if(HYPRE_FOUND)
     target_link_libraries(opmsimulators PUBLIC HYPRE::HYPRE)
   endif()
+
+  if(OpenCL_FOUND)
+    target_link_libraries(opmsimulators PUBLIC OpenCL::OpenCL)
+  endif()
+
+  if(USE_CHOW_PATEL_ILU)
+    target_compile_options(opmsimulators PRIVATE CHOW_PATEL=1)
+    if(USE_CHOW_PATEL_ILU_GPU)
+      target_compile_options(opmsimulators PRIVATE CHOW_PATEL_GPU=1)
+      if(USE_CHOW_PATEL_ILU_GPU_PARALLEL)
+        target_compile_options(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=1)
+      else()
+        target_compile_options(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=0)
+      endif()
+    else()
+      target_compile_options(opmsimulators
+        PRIVATE
+          CHOW_PATEL_GPU=0
+          CHOW_PATEL_GPU_PARALLEL=0
+      )
+    endif()
+  endif()
+
+  if(amgcl_FOUND)
+    target_link_libraries(opmsimulators PUBLIC amgcl::amgcl)
+  endif()
+
+  if(VexCL_FOUND)
+    # VexCL sets c++ specific flags. Remove so we don't get warnings in .c sources
+    get_target_property(compile_opts VexCL::Common INTERFACE_COMPILE_OPTIONS)
+    list(FILTER compile_opts EXCLUDE REGEX .*-Wno-catch-value.*)
+    set_property(TARGET VexCL::Common PROPERTY INTERFACE_COMPILE_OPTIONS ${compile_opts})
+    target_link_libraries(opmsimulators PUBLIC VexCL::Common VexCL::OpenCL)
+  endif()
 endmacro()
 
 macro(opm-simulators_install_hook)
@@ -584,75 +659,6 @@ include (OpmInit)
 # separate file (in cmake/Modules sub-directory) because it is shared
 # with the find module
 include ("${project}-prereqs")
-
-if (USE_OPENCL)
-  find_package(OpenCL)
-
-  if(OpenCL_FOUND)
-    # the current OpenCL implementation relies on cl2.hpp, not cl.hpp
-    # make sure it is available, otherwise disable OpenCL
-    find_file(CL2_HPP CL/cl2.hpp HINTS ${OpenCL_INCLUDE_DIRS})
-    if(CL2_HPP)
-      set(HAVE_OPENCL 1)
-      include_directories(${OpenCL_INCLUDE_DIRS})
-      find_file(OPENCL_HPP CL/opencl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
-      if(OPENCL_HPP)
-        set(HAVE_OPENCL_HPP 1)
-      endif()
-    else()
-      message(WARNING " OpenCL was found, but this version of opm-simulators relies on CL/cl2.hpp, which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL")
-      set(OpenCL_FOUND OFF)
-      set(OPENCL_FOUND OFF)
-    endif()
-    if(USE_CHOW_PATEL_ILU)
-      add_compile_options(-DCHOW_PATEL=1)
-      if(USE_CHOW_PATEL_ILU_GPU)
-        add_compile_options(-DCHOW_PATEL_GPU=1)
-        if(USE_CHOW_PATEL_ILU_GPU_PARALLEL)
-          add_compile_options(-DCHOW_PATEL_GPU_PARALLEL=1)
-        else()
-          add_compile_options(-DCHOW_PATEL_GPU_PARALLEL=0)
-        endif()
-      else()
-        add_compile_options(-DCHOW_PATEL_GPU=0)
-        add_compile_options(-DCHOW_PATEL_GPU_PARALLEL=0)
-      endif()
-    endif()
-  else()
-    if(USE_CHOW_PATEL_ILU)
-      message(FATAL_ERROR " CHOW_PATEL_ILU only works for openclSolver, but OpenCL was not found")
-    endif()
-  endif()
-endif()
-
-find_package(amgcl)
-if(amgcl_FOUND)
-  set(HAVE_AMGCL 1)
-  # Linking to target angcl::amgcl drags in OpenMP and -fopenmp as a compile
-  # flag. With that nvcc fails as it does not that flag.
-  # Hence we set AMGCL_INCLUDE_DIRS.
-  get_property(AMGCL_INCLUDE_DIRS TARGET amgcl::amgcl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-  include_directories(SYSTEM ${AMGCL_INCLUDE_DIRS})
-endif()
-
-if(OpenCL_FOUND)
-  find_package(VexCL)
-  if(VexCL_FOUND)
-    set(HAVE_VEXCL 1)
-    # generator expressions in vexcl do not seem to work and therefore
-    # we cannot use the imported target. Hence we exract the needed info
-    # from the targets
-    get_property(VEXCL_INCLUDE_DIRS TARGET VexCL::Common PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-    get_property(VEXCL_LINK_LIBRARIES TARGET VexCL::Common PROPERTY INTERFACE_LINK_LIBRARIES)
-    get_property(VEXCL_COMPILE_DEFINITIONS TARGET VexCL::OpenCL PROPERTY INTERFACE_COMPILE_DEFINITIONS)
-    set(VEXCL_LINK_LIBRARIES "${VEXCL_LINK_LIBRARIES};OpenCL::OpenCL")
-    add_library(OPM::VexCL::OpenCL INTERFACE IMPORTED)
-    set_target_properties(OPM::VexCL::OpenCL PROPERTIES
-      INTERFACE_COMPILE_DEFINITIONS "${VEXCL_COMPILE_DEFINITIONS}"
-      INTERFACE_LINK_LIBRARIES "${VEXCL_LINK_LIBRARIES}")
-    target_include_directories(OPM::VexCL::OpenCL SYSTEM INTERFACE "${VEXCL_INCLUDE_DIRS}")
-  endif()
-endif()
 
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
@@ -861,14 +867,4 @@ if(HAVE_AVX2_EXTENSION)
   # Hence we are requesting C17. (-std=c99 -D_ISOC11_SOURCE also seems to work)
   set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_FLAGS "${AVX2_FLAGS}" APPEND_STRING)
   set_property(TARGET opmsimulators PROPERTY C_STANDARD 17)
-endif()
-
-if(USE_GPU_BRIDGE)
-  if(OpenCL_FOUND)
-    target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
-  endif()
-
-  if(VexCL_FOUND)
-    target_link_libraries( opmsimulators PUBLIC OPM::VexCL::OpenCL )
-  endif()
 endif()
