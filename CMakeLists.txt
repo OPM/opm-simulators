@@ -643,9 +643,6 @@ endif()
 
 find_package(opm-common REQUIRED)
 
-include(OpmInit)
-OpmSetPolicies()
-
 if(USE_GPU_BRIDGE)
   set(COMPILE_GPU_BRIDGE 1)
 endif()
