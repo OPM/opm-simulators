@@ -358,6 +358,10 @@ macro(opm-simulators_config_hook)
   if(VexCL_FOUND)
     set(HAVE_VEXCL 1)
   endif()
+
+  if(USE_GPU_BRIDGE)
+    set(COMPILE_GPU_BRIDGE 1)
+  endif()
 endmacro()
 
 macro(opm-simulators_tests_hook)
@@ -642,10 +646,6 @@ if(opm-common_DIR AND NOT IS_DIRECTORY ${opm-common_DIR})
 endif()
 
 find_package(opm-common REQUIRED)
-
-if(USE_GPU_BRIDGE)
-  set(COMPILE_GPU_BRIDGE 1)
-endif()
 
 # project information is in dune.module. Read this file and set variables.
 # we cannot generate dune.module since it is read by dunecontrol before
