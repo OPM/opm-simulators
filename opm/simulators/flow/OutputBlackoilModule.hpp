@@ -1652,14 +1652,22 @@ private:
                           const std::vector<int>& blockIdxs = flowsC.blockFlows();
                           const unsigned cartesianIdx = vanguard.cartesianIndex(ectx.globalDofIdx);
                           if (std::binary_search(blockIdxs.begin(), blockIdxs.end(), cartesianIdx)) {
-                              const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
+                              const auto compIdxs = std::array{ gasCompIdx, oilCompIdx, waterCompIdx };
+                              const auto compEnabled = std::array{ Indices::gasEnabled, Indices::oilEnabled, Indices::waterEnabled };
                               for (const auto& flowsInfo : flowsInfos) {
+                                  if (flowsInfo.faceId < 0) {
+                                      continue;
+                                  }
                                   for (unsigned ii = 0; ii < compIdxs.size(); ++ii) {
-                                      if (flowsC.hasBlockFlowValue(cartesianIdx, flowsInfo.faceId, compIdxs[ii])) {;
+                                      if (!compEnabled[ii]) {
+                                          continue;
+                                      }
+                                      if (flowsC.hasBlockFlowValue(cartesianIdx, flowsInfo.faceId, compIdxs[ii])) {
                                           flowsC.assignBlockFlows(flowsC.blockFlowsIds(cartesianIdx, flowsInfo.faceId, compIdxs[ii]),
                                                                   flowsInfo.faceId,
                                                                   compIdxs[ii],
-                                                                  flowsInfo.flow[compIdxs[ii]]);
+                                                                  flowsInfo.flow[conti0EqIdx
+                                                                      + FluidSystem::canonicalToActiveCompIdx(compIdxs[ii])]);
                                       }
                                   }
                               }
@@ -1705,14 +1713,22 @@ private:
                     const std::vector<int>& blockIdxs = flowsC.blockVelocity();
                     const unsigned cartesianIdx = vanguard.cartesianIndex(ectx.globalDofIdx);
                     if (std::binary_search(blockIdxs.begin(), blockIdxs.end(), cartesianIdx)) {
-                        const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
+                        const auto compIdxs = std::array{ gasCompIdx, oilCompIdx, waterCompIdx };
+                        const auto compEnabled = std::array{ Indices::gasEnabled, Indices::oilEnabled, Indices::waterEnabled };
                         for (const auto& velocityInfo : velocityInfos) {
+                            if (velocityInfo.faceId < 0) {
+                                continue;
+                            }
                             for (unsigned ii = 0; ii < compIdxs.size(); ++ii) {
-                                if (flowsC.hasBlockVelocityValue(cartesianIdx, velocityInfo.faceId, compIdxs[ii])) {;
+                                if (!compEnabled[ii]) {
+                                    continue;
+                                }
+                                if (flowsC.hasBlockVelocityValue(cartesianIdx, velocityInfo.faceId, compIdxs[ii])) {
                                     flowsC.assignBlockVelocity(flowsC.blockVelocityIds(cartesianIdx, velocityInfo.faceId, compIdxs[ii]),
                                                                velocityInfo.faceId,
                                                                compIdxs[ii],
-                                                               velocityInfo.velocity[compIdxs[ii]]);
+                                                               velocityInfo.velocity[conti0EqIdx
+                                                                   + FluidSystem::canonicalToActiveCompIdx(compIdxs[ii])]);
                                 }
                             }
                         }
@@ -2191,9 +2207,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::XPlus), gasCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XPlus), gasCompIdx);
                                   return flowsC.getVelocity(index, Dir::XPlus, gasCompIdx);
                               }
                   }
@@ -2202,9 +2217,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::XMinus), gasCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XMinus), gasCompIdx);
                                   return flowsC.getVelocity(index, Dir::XMinus, gasCompIdx);
                               }
                   }
@@ -2213,9 +2227,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::YPlus), gasCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YPlus), gasCompIdx);
                                   return flowsC.getVelocity(index, Dir::YPlus, gasCompIdx);
                               }
                   }
@@ -2224,9 +2237,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::YMinus), gasCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YMinus), gasCompIdx);
                                   return flowsC.getVelocity(index, Dir::YMinus, gasCompIdx);
                               }
                   }
@@ -2235,9 +2247,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::ZPlus), gasCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZPlus), gasCompIdx);
                                   return flowsC.getVelocity(index, Dir::ZPlus, gasCompIdx);
                               }
                   }
@@ -2246,9 +2257,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::ZMinus), gasCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZMinus), gasCompIdx);
                                   return flowsC.getVelocity(index, Dir::ZMinus, gasCompIdx);
                               }
                   }
@@ -2257,9 +2267,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::XPlus), oilCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XPlus), oilCompIdx);
                                   return flowsC.getVelocity(index, Dir::XPlus, oilCompIdx);
                               }
                   }
@@ -2268,9 +2277,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::XMinus), oilCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XMinus), oilCompIdx);
                                   return flowsC.getVelocity(index, Dir::XMinus, oilCompIdx);
                               }
                   }
@@ -2279,9 +2287,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::YPlus), oilCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YPlus), oilCompIdx);
                                   return flowsC.getVelocity(index, Dir::YPlus, oilCompIdx);
                               }
                   }
@@ -2290,9 +2297,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::YMinus), oilCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YMinus), oilCompIdx);
                                   return flowsC.getVelocity(index, Dir::YMinus, oilCompIdx);
                               }
                   }
@@ -2301,9 +2307,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::ZPlus), oilCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZPlus), oilCompIdx);
                                   return flowsC.getVelocity(index, Dir::ZPlus, oilCompIdx);
                               }
                   }
@@ -2312,9 +2317,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::ZMinus), oilCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZMinus), oilCompIdx);
                                   return flowsC.getVelocity(index, Dir::ZMinus, oilCompIdx);
                               }
                   }
@@ -2323,9 +2327,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::XPlus), waterCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XPlus), waterCompIdx);
                                   return flowsC.getVelocity(index, Dir::XPlus, waterCompIdx);
                               }
                   }
@@ -2334,9 +2337,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::XMinus), waterCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::XMinus), waterCompIdx);
                                   return flowsC.getVelocity(index, Dir::XMinus, waterCompIdx);
                               }
                   }
@@ -2345,9 +2347,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::YPlus), waterCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YPlus), waterCompIdx);
                                   return flowsC.getVelocity(index, Dir::YPlus, waterCompIdx);
                               }
                   }
@@ -2356,9 +2357,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::YMinus), waterCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::YMinus), waterCompIdx);
                                   return flowsC.getVelocity(index, Dir::YMinus, waterCompIdx);
                               }
                   }
@@ -2367,9 +2367,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::ZPlus), waterCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZPlus), waterCompIdx);
                                   return flowsC.getVelocity(index, Dir::ZPlus, waterCompIdx);
                               }
                   }
@@ -2378,9 +2377,8 @@ private:
                               [&flowsC = this->flowsC_,
                                &vanguard = this->simulator_.vanguard()](const Context& ectx)
                               {
-                                  const unsigned index = !flowsC.blockVelocity().empty() ?
-                                      flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
-                                          FaceDir::ToIntersectionIndex(Dir::ZMinus), waterCompIdx) : ectx.globalDofIdx;
+                                  const unsigned index = flowsC.blockVelocityIds(vanguard.cartesianIndex(ectx.globalDofIdx),
+                                      FaceDir::ToIntersectionIndex(Dir::ZMinus), waterCompIdx);
                                   return flowsC.getVelocity(index, Dir::ZMinus, waterCompIdx);
                               }
                   }

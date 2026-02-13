@@ -89,7 +89,18 @@ FlowsContainer(const Schedule& schedule,
                const SummaryConfig& summaryConfig,
                std::function<bool(const int)> isInterior)
 {
+    using namespace std::string_literals;
     using Dir = FaceDir::DirEnum;
+    const std::array<int, 3> phaseIdxs = {gasPhaseIdx, oilPhaseIdx, waterPhaseIdx};
+    const std::array<int, 3> compIdxs = {gasCompIdx, oilCompIdx, waterCompIdx};
+    const auto nameIdxs = std::array{ "G"s, "O"s, "W"s };
+    const auto ijkIdxs = std::array{ "I-"s, "I"s, "J-"s, "J"s, "K-"s, "K"s };
+    const auto dirIdxs = std::array{ FaceDir::ToIntersectionIndex(Dir::XMinus),
+                                     FaceDir::ToIntersectionIndex(Dir::XPlus),
+                                     FaceDir::ToIntersectionIndex(Dir::YMinus),
+                                     FaceDir::ToIntersectionIndex(Dir::YPlus),
+                                     FaceDir::ToIntersectionIndex(Dir::ZMinus),
+                                     FaceDir::ToIntersectionIndex(Dir::ZPlus) };
 
     // Check if FLORES/FLOWS is set in any RPTRST in the schedule
     enableFlores_ = false;  // Used for the output of i+, j+, k+
@@ -112,16 +123,6 @@ FlowsContainer(const Schedule& schedule,
 
     // Check for any BVEL[G|O|W][I|J|K][|-] summary keys
     if (summaryConfig.keywords("BVEL*").size() > 0) {
-        const std::array<int, 3> phaseIdxs { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
-        const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
-        const std::string nameIdxs[3] { "G", "O", "W" };
-        const std::string ijkIdxs[6] { "I-", "I", "J-", "J", "K-", "K" };
-        const std::array<int, 6> dirIdxs { FaceDir::ToIntersectionIndex(Dir::XMinus),
-                                           FaceDir::ToIntersectionIndex(Dir::XPlus),
-                                           FaceDir::ToIntersectionIndex(Dir::YMinus),
-                                           FaceDir::ToIntersectionIndex(Dir::YPlus),
-                                           FaceDir::ToIntersectionIndex(Dir::ZMinus),
-                                           FaceDir::ToIntersectionIndex(Dir::ZPlus) };
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
             if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
                 for (unsigned jj = 0; jj < dirIdxs.size(); ++jj) {
@@ -145,16 +146,6 @@ FlowsContainer(const Schedule& schedule,
 
     // Check for any BFLO[G|O|W][I|J|K][|-] summary keys
     if (summaryConfig.keywords("BFLO*").size() > 0 && !anyFlows_) {
-        const std::array<int, 3> phaseIdxs { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
-        const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
-        const std::string nameIdxs[3] { "G", "O", "W" };
-        const std::string ijkIdxs[6] { "I-", "I", "J-", "J", "K-", "K" };
-        const std::array<int, 6> dirIdxs { FaceDir::ToIntersectionIndex(Dir::XMinus),
-                                           FaceDir::ToIntersectionIndex(Dir::XPlus),
-                                           FaceDir::ToIntersectionIndex(Dir::YMinus),
-                                           FaceDir::ToIntersectionIndex(Dir::YPlus),
-                                           FaceDir::ToIntersectionIndex(Dir::ZMinus),
-                                           FaceDir::ToIntersectionIndex(Dir::ZPlus) };
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
             if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
                 for (unsigned jj = 0; jj < dirIdxs.size(); ++jj) {
@@ -185,17 +176,18 @@ allocate(const std::size_t bufferSize,
          const bool allocRestart,
          std::map<std::string, int>& rstKeywords)
 {
+    using namespace std::string_literals;
     using Dir = FaceDir::DirEnum;
-    const std::array<int, 3> phaseIdxs { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
-    const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
-    const std::string nameIdxs[3] { "G", "O", "W" };
-    const std::string ijkIdxs[6] { "I-", "I", "J-", "J", "K-", "K" };
-    const std::array<int, 6> dirIdxs { FaceDir::ToIntersectionIndex(Dir::XMinus),
-                                       FaceDir::ToIntersectionIndex(Dir::XPlus),
-                                       FaceDir::ToIntersectionIndex(Dir::YMinus),
-                                       FaceDir::ToIntersectionIndex(Dir::YPlus),
-                                       FaceDir::ToIntersectionIndex(Dir::ZMinus),
-                                       FaceDir::ToIntersectionIndex(Dir::ZPlus) };
+    const std::array<int, 3> phaseIdxs = {gasPhaseIdx, oilPhaseIdx, waterPhaseIdx};
+    const std::array<int, 3> compIdxs = {gasCompIdx, oilCompIdx, waterCompIdx};
+    const auto nameIdxs = std::array{ "G"s, "O"s, "W"s };
+    const auto ijkIdxs = std::array{ "I-"s, "I"s, "J-"s, "J"s, "K-"s, "K"s };
+    const auto dirIdxs = std::array{ FaceDir::ToIntersectionIndex(Dir::XMinus),
+                                     FaceDir::ToIntersectionIndex(Dir::XPlus),
+                                     FaceDir::ToIntersectionIndex(Dir::YMinus),
+                                     FaceDir::ToIntersectionIndex(Dir::YPlus),
+                                     FaceDir::ToIntersectionIndex(Dir::ZMinus),
+                                     FaceDir::ToIntersectionIndex(Dir::ZPlus) };
 
     // Allocate vels for BVEL[G|O|W][I|J|K][|-] summary keywords
     if (!blockVelocityAllIds_.empty()) {
