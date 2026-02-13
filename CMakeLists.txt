@@ -661,8 +661,28 @@ macro(opm-simulators_targets_hook)
       ${FLOWEXP_COMPONENTS_SOURCES}
       $<TARGET_OBJECTS:moduleVersion>
   )
+
+  if(BUILD_FLOW_FLOAT_VARIANTS)
+    opm_add_test(flow_blackoil_float
+      ONLY_COMPILE
+      ALWAYS_ENABLE
+      DEPENDS
+        opmsimulators
+      LIBRARIES
+        opmsimulators
+      SOURCES
+        flow/flow_blackoil_float_main.cpp
+        $<TARGET_OBJECTS:moduleVersion>
+    )
+  endif()
+
   if(NOT BUILD_FLOW_VARIANTS)
-    set_target_properties(flowexp_comp PROPERTIES EXCLUDE_FROM_ALL ON)
+    set_target_properties(
+      flowexp_comp
+      flow_blackoil_float
+      PROPERTIES
+        EXCLUDE_FROM_ALL ON
+    )
   endif()
 endmacro()
 
@@ -859,16 +879,4 @@ endif()
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
   opm_add_bash_completion(flow)
-endif()
-
-if(BUILD_FLOW_FLOAT_VARIANTS)
-  opm_add_test(flow_blackoil_float
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
-    DEPENDS opmsimulators
-    LIBRARIES opmsimulators
-    SOURCES
-    flow/flow_blackoil_float_main.cpp
-    $<TARGET_OBJECTS:moduleVersion>)
 endif()
