@@ -455,6 +455,23 @@ macro(opm-simulators_tests_hook)
       set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
     endif()
   endif()
+
+  add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
+
+  if(HAVE_OPM_TESTS)
+    if(OPM_ENABLE_PYTHON)
+      if(${CMAKE_BINARY_DIR} STREQUAL ${PROJECT_BINARY_DIR})
+        set(sim_dir ${CMAKE_BINARY_DIR})
+      else()
+        set(sim_dir ${CMAKE_BINARY_DIR}/opm-simulators)
+      endif()
+      add_custom_target(failure_report
+                        USES_TERMINAL
+                        COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=${opm-common_DIR}/python"
+                        ${PROJECT_SOURCE_DIR}/tests/make_failure_report.sh
+                        ${OPM_TESTS_ROOT} ${CMAKE_BINARY_DIR} ${sim_dir})
+    endif()
+  endif()
 endmacro()
 
 macro(opm-simulators_targets_hook)
@@ -667,21 +684,6 @@ if(MPI_FOUND)
   target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 endif()
 
-if (HAVE_OPM_TESTS)
-  if(OPM_ENABLE_PYTHON)
-    if(${CMAKE_BINARY_DIR} STREQUAL ${PROJECT_BINARY_DIR})
-      set(sim_dir ${CMAKE_BINARY_DIR})
-    else()
-      set(sim_dir ${CMAKE_BINARY_DIR}/opm-simulators)
-    endif()
-    add_custom_target(failure_report
-                      USES_TERMINAL
-                      COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=${opm-common_DIR}/python"
-                      ${PROJECT_SOURCE_DIR}/tests/make_failure_report.sh
-                      ${OPM_TESTS_ROOT} ${CMAKE_BINARY_DIR} ${sim_dir})
-  endif()
-endif()
-
 include(OpmBashCompletion)
 
 if (NOT BUILD_FLOW)
@@ -853,5 +855,3 @@ endif()
 if (OPM_ENABLE_PYTHON)
   add_subdirectory(python/simulators)
 endif()
-
-add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
