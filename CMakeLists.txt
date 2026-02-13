@@ -599,6 +599,25 @@ macro(opm-simulators_targets_hook)
     set_property(TARGET VexCL::Common PROPERTY INTERFACE_COMPILE_OPTIONS ${compile_opts})
     target_link_libraries(opmsimulators PUBLIC VexCL::Common VexCL::OpenCL)
   endif()
+
+  add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
+  if(OPM_ENABLE_PYTON)
+    set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
+  endif()
+  opm_add_target_options(TARGET moduleVersion)
+
+  # Strictly we only depend on the update-version target,
+  # but this is not exposed in a super-build.
+  add_dependencies(moduleVersion opmsimulators)
+
+  target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_group_higher_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  if(MPI_FOUND)
+    target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  endif()
 endmacro()
 
 macro(opm-simulators_install_hook)
@@ -675,15 +694,6 @@ include ("${project}-prereqs")
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
 
-target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-target_sources(test_group_higher_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-if(MPI_FOUND)
-  target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-endif()
-
 include(OpmBashCompletion)
 
 if (NOT BUILD_FLOW)
@@ -704,17 +714,9 @@ else()
   set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
-add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
-set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
-opm_add_target_options(TARGET moduleVersion)
-
 add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
 simulators_add_target_options(TARGET MainDispatchDynamic)
 set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-# Strictly we only depend on the update-version target,
-# but this is not exposed in a super-build.
-add_dependencies(moduleVersion opmsimulators)
 
 set(FLOW_MODELS blackoil blackoil_temp brine energy extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
