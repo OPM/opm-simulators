@@ -46,7 +46,6 @@ namespace Opm {
                                                      getPropValue<TypeTag, Properties::EnableExtbo>(),
                                                      getPropValue<TypeTag, Properties::EnablePolymer>(),
                                                      getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal,
-                                                     getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal,
                                                      getPropValue<TypeTag, Properties::EnableFoam>(),
                                                      getPropValue<TypeTag, Properties::EnableBrine>(),
                                                      /*PVOffset=*/0,

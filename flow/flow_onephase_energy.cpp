@@ -50,14 +50,12 @@ private:
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
     static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
-    static constexpr bool enableSeqImpEnergy = energyModuleType == EnergyModules::SequentialImplicitThermal;
 
 public:
     using type = Opm::BlackOilOnePhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                               getPropValue<TypeTag, Properties::EnableExtbo>(),
                                               getPropValue<TypeTag, Properties::EnablePolymer>(),
                                               numEnergyVars,
-                                              enableSeqImpEnergy,
                                               getPropValue<TypeTag, Properties::EnableFoam>(),
                                               getPropValue<TypeTag, Properties::EnableBrine>(),
                                               /*PVOffset=*/0,

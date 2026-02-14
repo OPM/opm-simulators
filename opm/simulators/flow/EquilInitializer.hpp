@@ -88,8 +88,8 @@ public:
     // internal energy!
     using ScalarFluidState = BlackOilFluidState<Scalar,
                                                 FluidSystem,
-                                                energyModuleType == EnergyModules::ConstantTemperature,
-                                                (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
+                                                energyModuleType != EnergyModules::NoTemperature,
+                                                energyModuleType == EnergyModules::FullyImplicitThermal,
                                                 enableDissolution,
                                                 enableVapwat,
                                                 enableBrine,
@@ -173,7 +173,7 @@ public:
                 const auto& rho = FluidSystem::density(fluidState, phaseIdx, regionIdx);
                 fluidState.setDensity(phaseIdx, rho);
 
-                if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal) {
+                if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
                     const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, regionIdx);
                     fluidState.setEnthalpy(phaseIdx, h);
                 }

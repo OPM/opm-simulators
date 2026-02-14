@@ -43,7 +43,6 @@ template<unsigned numSolventsV,
          unsigned numExtbosV,
          unsigned numPolymersV,
          unsigned numEnergyV,
-         bool enableSequentialImplicitThermal,
          bool enableFoam,
          bool enableBrine,
          int PVOffset,
@@ -105,8 +104,8 @@ struct BlackOilTwoPhaseIndices
     static constexpr int numEq = numPhases + numSolvents + numExtbos + numPolymers +
                                  numEnergy + numFoam + numBrine + numBioComp;
 
-    //! For seqential implicit approches we evaluate the intensive quantities with a larger number of derivatives than equations
-    static constexpr int numDerivatives = numEq + enableSequentialImplicitThermal;
+    //! We may want to evaluate with more derivatives that equations, but not this time
+    static constexpr int numDerivatives = numEq;
 
     //////////////////////////////
     // Primary variable indices
@@ -177,7 +176,7 @@ struct BlackOilTwoPhaseIndices
 
     //! Index of the primary variable for temperature
     static constexpr int temperatureIdx  =
-        (enableSequentialImplicitThermal || enableFullyImplicitThermal) ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numBioComp + numFoam + numBrine : - 1000;
+        (enableFullyImplicitThermal) ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numBioComp + numFoam + numBrine : - 1000;
 
     //////////////////////
     // Equation indices
