@@ -333,6 +333,15 @@ public:
     const auto& getFloresInfo() const
     { return floresInfo_; }
 
+    /*!
+     * \brief Return constant reference to the velocityInfo.
+     *
+     * (This object is only non-empty if dispersion, bioeffects, or block
+     * velocities are active.)
+     */
+    const auto& getVelocityInfo() const
+    { return velocityInfo_; }
+
     template <class SubDomainType>
     void resetSystem_(const SubDomainType& domain)
     {
@@ -683,6 +692,13 @@ private:
     };
     SparseTable<FlowInfo> flowsInfo_;
     SparseTable<FlowInfo> floresInfo_;
+
+    struct VelocityInfo
+    {
+        int faceId;
+        VectorBlock velocity;
+    };
+    SparseTable<VelocityInfo> velocityInfo_;
 
     // the jacobian matrix
     std::unique_ptr<SparseMatrixAdapter> jacobian_;
