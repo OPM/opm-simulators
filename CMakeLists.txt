@@ -830,6 +830,11 @@ macro(opm-simulators_install_hook)
     FILES_MATCHING PATTERN
       "*.1"
   )
+  if (BUILD_FLOW)
+    install(TARGETS flow DESTINATION bin)
+    include(OpmBashCompletion)
+    opm_add_bash_completion(flow)
+  endif()
 endmacro()
 
 # Ensure OPM_COMPILE_COMPONENTS is a list of at least one element
@@ -894,10 +899,3 @@ include ("${project}-prereqs")
 
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
-
-include(OpmBashCompletion)
-
-if (BUILD_FLOW)
-  install(TARGETS flow DESTINATION bin)
-  opm_add_bash_completion(flow)
-endif()
