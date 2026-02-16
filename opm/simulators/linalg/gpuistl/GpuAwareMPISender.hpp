@@ -114,7 +114,7 @@ public:
 
             if (status.MPI_ERROR != MPI_SUCCESS) {
                 OPM_THROW(std::runtime_error,
-                          fmt::format("MPI_Error occurred while rank {} received a message from rank {}",
+                          fmt::format(fmt::runtime("MPI_Error occurred while rank {} received a message from rank {}"),
                                       rank,
                                       processMap[finished]));
             }
@@ -123,7 +123,7 @@ public:
         for (size_t i = 0; i < m_messageInformation.size(); i++) {
             if (MPI_SUCCESS != MPI_Wait(&sendRequests[i], &recvStatus)) {
                 OPM_THROW(std::runtime_error,
-                          fmt::format("MPI_Error occurred while rank {} sent a message from rank {}",
+                          fmt::format(fmt::runtime("MPI_Error occurred while rank {} sent a message from rank {}"),
                                       rank,
                                       processMap[finished]));
             }

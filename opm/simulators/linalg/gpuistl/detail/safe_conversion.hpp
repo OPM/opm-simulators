@@ -65,7 +65,7 @@ to_int(std::size_t s)
 
     if (s > std::size_t(std::numeric_limits<int>::max())) {
         OPM_THROW(std::invalid_argument,
-                  fmt::format("Trying to convert {} to int, but it is out of range. Maximum possible int: {}. ",
+                  fmt::format(fmt::runtime("Trying to convert {} to int, but it is out of range. Maximum possible int: {}. "),
                               s,
                               std::numeric_limits<int>::max()));
     }
@@ -100,7 +100,7 @@ to_size_t(int i)
     assert(i >= int(0));
 #else
     if (i < int(0)) {
-        OPM_THROW(std::invalid_argument, fmt::format("Trying to convert the negative number {} to size_t.", i));
+        OPM_THROW(std::invalid_argument, fmt::format(fmt::runtime("Trying to convert the negative number {} to size_t."), i));
     }
 #endif
 

@@ -676,7 +676,9 @@ namespace Opm {
                                   ecl_well_map,
                                   this->well_open_times_);
             } catch (const std::exception& e) {
-                const std::string msg = fmt::format("Exception during testing of well: {}. The well will not open.\n Exception message: {}", wellEcl.name(), e.what());
+                const std::string msg =
+                  fmt::format(fmt::runtime("Exception during testing of well: {}. The well will not open.\n"
+                                           "Exception message: {}"), wellEcl.name(), e.what());
                 deferred_logger.warning("WELL_TESTING_FAILED", msg);
             }
         }
@@ -1003,7 +1005,7 @@ namespace Opm {
                         : well_ecl.injectionControls(this->summaryState_).anyZeroRateConstraint();
                     if (any_zero_rate_constraint) {
                         // Treat as shut, do not add to container.
-                        local_deferredLogger.debug(fmt::format("  Well {} gets shut due to having zero rate constraint and disallowing crossflow ", well_ecl.name()) );
+                        local_deferredLogger.debug(fmt::format(fmt::runtime("  Well {} gets shut due to having zero rate constraint and disallowing crossflow "), well_ecl.name()));
                         this->wellState().shutWell(w);
                         this->well_close_times_.erase(well_name);
                         this->well_open_times_.erase(well_name);
@@ -1140,7 +1142,7 @@ namespace Opm {
         // It should be able to find in wells_ecl.
         if (it == this->wells_ecl_.end()) {
             OPM_DEFLOG_THROW(std::logic_error,
-                             fmt::format("Could not find well {} in wells_ecl ", well_name),
+                             fmt::format(fmt::runtime("Could not find well {} in wells_ecl"), well_name),
                              deferred_logger);
         }
 
@@ -1163,7 +1165,7 @@ namespace Opm {
         if constexpr (BlackoilWellModelGasLift<TypeTag>::glift_debug) {
             if (gaslift_.terminalOutput()) {
                 const std::string msg =
-                    fmt::format("assemble() : iteration {}" , iterationIdx);
+                    fmt::format(fmt::runtime("assemble() : iteration {}"), iterationIdx);
                 gaslift_.gliftDebug(msg, local_deferredLogger);
             }
         }

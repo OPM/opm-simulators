@@ -916,7 +916,7 @@ checkTimeStepMaxRestartLimit_(const int restarts) const
     // many times, we have failed and throw an exception.
     if (restarts >= solverRestartMax_()) {
         const auto msg = fmt::format(
-            "Solver failed to converge after cutting timestep {} times.", restarts
+            fmt::runtime("Solver failed to converge after cutting timestep {} times."), restarts
         );
         if (solverVerbose_()) {
             OpmLog::error(msg);
@@ -936,7 +936,7 @@ checkTimeStepMinLimit_(const double new_time_step) const
     // If we have restarted (i.e. cut the timestep) too
     // much, we have failed and throw an exception.
     if (new_time_step < minTimeStep_()) {
-        auto msg = fmt::format("Solver failed to converge after cutting timestep to ");
+        std::string msg = "Solver failed to converge after cutting timestep to ";
         if (Parameters::Get<Parameters::EnableTuning>()) {
             const UnitSystem& unit_system = solver_().model().simulator().vanguard().eclState().getDeckUnitSystem();
             msg += fmt::format(
@@ -967,7 +967,7 @@ chopTimeStep_(const double new_time_step)
 {
     setTimeStep_(new_time_step);
     if (solverVerbose_()) {
-        const auto msg = fmt::format("{}\nTimestep chopped to {} days\n",
+        const auto msg = fmt::format(fmt::runtime("{}\nTimestep chopped to {} days\n"),
                     this->cause_of_failure_,
                     unit::convert::to(this->substep_timer_.currentStepLength(), unit::day));
         OpmLog::problem(msg);
@@ -1026,8 +1026,8 @@ chopTimeStepOrCloseFailingWells_(const double new_time_step)
             wells_shut = true;
             if (solverVerbose_()) {
                 const std::string msg =
-                        fmt::format("\nProblematic well(s) were shut: {}"
-                                    "(retrying timestep)\n",
+                        fmt::format(fmt::runtime("\nProblematic well(s) were shut: {}"
+                                    "(retrying timestep)\n"),
                                     fmt::join(shut_wells, " "));
                 OpmLog::problem(msg);
             }

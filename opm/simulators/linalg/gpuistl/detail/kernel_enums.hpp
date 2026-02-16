@@ -41,11 +41,11 @@ namespace Opm::gpuistl {
     inline MatrixStorageMPScheme makeMatrixStorageMPScheme(int scheme) {
         if (!detail::isValidMatrixStorageMPScheme(scheme)) {
             OPM_THROW(std::invalid_argument,
-                      fmt::format("Invalid matrix storage mixed precision scheme chosen: {}.\n"
+                      fmt::format(fmt::runtime("Invalid matrix storage mixed precision scheme chosen: {}.\n"
                                   "Valid Schemes:\n"
                                   "\t0: DOUBLE_DIAG_DOUBLE_OFFDIAG\n"
                                   "\t1: FLOAT_DIAG_FLOAT_OFFDIAG\n"
-                                  "\t2: DOUBLE_DIAG_FLOAT_OFFDIAG",
+                                  "\t2: DOUBLE_DIAG_FLOAT_OFFDIAG"),
                                   scheme));
         }
         return static_cast<MatrixStorageMPScheme>(scheme);

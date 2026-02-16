@@ -229,8 +229,10 @@ protected:
             solveAndUpdate();
         }
         if (!is_converged) {
-            const auto msg = fmt::format("Temperature model (TEMP): Newton did not converge after {} iterations. \n"
-                                         "The Simulator will continue to the next step with an unconverged solution.",max_iter);
+            const auto msg =
+                fmt::format(fmt::runtime("Temperature model (TEMP): Newton did not converge after {} iterations. \n"
+                                         "The Simulator will continue to the next step with an unconverged solution."),
+                            max_iter);
             OpmLog::debug(msg);
         }
     }
@@ -293,13 +295,14 @@ protected:
         const bool tolerance_cnv_energy = relax? Parameters::Get<Parameters::ToleranceCnvEnergyRelaxed<Scalar>>():
                                             tolerance_cnv_energy_strict;
 
-        const auto msg = fmt::format("Temperature model (TEMP): Newton iter {}: "
-                                     "CNV(E): {:.1e}, EB: {:.1e}",
+        const auto msg = fmt::format(fmt::runtime("Temperature model (TEMP): Newton iter {}: "
+                                     "CNV(E): {:.1e}, EB: {:.1e}"),
                                      iter, maxNorm, sumNorm);
         OpmLog::debug(msg);
         if (maxNorm < tolerance_cnv_energy && sumNorm < tolerance_energy_balance) {
-            const auto msg2 = fmt::format("Temperature model (TEMP): Newton converged after {} iterations"
-                                         , iter);
+            const auto msg2 =
+                fmt::format(fmt::runtime("Temperature model (TEMP): Newton converged after {} iterations"),
+                                         iter);
             OpmLog::debug(msg2);
             return true;
         }

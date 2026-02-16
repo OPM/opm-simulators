@@ -122,13 +122,13 @@ makeGpuOwnerOverlapCopy(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlap
 
             if (!mpiSupportsCudaAwareAtCompileTime || !mpiSupportsCudaAwareAtRunTime) {
                 OPM_THROW(std::runtime_error,
-                          fmt::format("The GPU-aware MPI support is not available. "
+                          fmt::format(fmt::runtime("The GPU-aware MPI support is not available. "
                                       "CUDA aware support at compile time: {}, "
                                       "CUDA aware support at runtime: {}. "
                                       "Please check your MPI installation and the OPM configuration "
                                       "or run with --gpu-aware-mpi=false. If you are sure that your MPI "
                                       "implementation supports GPU aware MPI, you can disable this check "
-                                      "by setting --verify-gpu-aware-mpi=false.",
+                                      "by setting --verify-gpu-aware-mpi=false."),
                                       mpiSupportsCudaAwareAtCompileTime ? "yes" : "no",
                                       mpiSupportsCudaAwareAtRunTime ? "yes" : "no"));
             }

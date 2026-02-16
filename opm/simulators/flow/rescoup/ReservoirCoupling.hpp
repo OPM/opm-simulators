@@ -264,7 +264,7 @@ std::pair<std::vector<char>, std::size_t> serializeStrings(const std::vector<std
 /// \return A string like "864000s (10.00 days)".
 inline std::string formatDays(double seconds) {
     double days = seconds / unit::day;
-    return fmt::format("{:.0f}s ({:.2f} days)", seconds, days);
+    return fmt::format(fmt::runtime("{:.0f}s ({:.2f} days)"), seconds, days);
 }
 
 /// \brief Utility class for comparing double values representing epoch dates or elapsed time.

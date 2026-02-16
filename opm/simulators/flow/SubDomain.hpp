@@ -51,7 +51,7 @@ namespace Opm
         } else if (measure == "averagepressure") {
             return DomainOrderingMeasure::AveragePressure;
         } else {
-            throw std::runtime_error(fmt::format("Invalid domain ordering '{}' specified", measure));
+            throw std::runtime_error(fmt::format(fmt::runtime("Invalid domain ordering '{}' specified"), measure));
         }
     }
 

@@ -225,7 +225,7 @@ public:
               if (wanted_vars_set_.count(name) || wanted_vars_set_.empty())
               {
                   const data::CellData&  dataCol = damVar.second ;
-                  OpmLog::debug(fmt::format("Name of Damaris Variable       : ( rank:{})  name: {}  ",  rank_, name));
+                  OpmLog::debug(fmt::format(fmt::runtime("Name of Damaris Variable       : ( rank:{})  name: {}  "),  rank_, name));
 
                   // Call damaris_set_position() for all available variables
                   // There is an assumption that all variables are the same size, with the same offset.
@@ -238,7 +238,7 @@ public:
                     if (dataCol.data<double>().size() >= static_cast<std::vector<double>::size_type>(this->numElements_)) {
                         dam_err_ = DamarisOutput::write(name.c_str(), dataCol.data<double>().data()) ;
                     } else {
-                        OpmLog::info(fmt::format("( rank:{}) The variable \"{}\" was found to be of a different size {} (not {}).",  rank_, name, dataCol.data<double>().size(), this->numElements_ ));
+                        OpmLog::info(fmt::format(fmt::runtime("( rank:{}) The variable \"{}\" was found to be of a different size {} (not {})."),  rank_, name, dataCol.data<double>().size(), this->numElements_ ));
                     }
                   }
                   catch (std::bad_variant_access const& ex) {
@@ -246,7 +246,7 @@ public:
                     if (dataCol.data<int>().size() >= static_cast<std::vector<int>::size_type>(this->numElements_)) {
                         dam_err_ = DamarisOutput::write(name.c_str(), dataCol.data<int>().data()) ;
                     } else {
-                        OpmLog::info(fmt::format("( rank:{}) The variable \"{}\" was found to be of a different size {} (not {}).",  rank_, name, dataCol.data<int>().size(), this->numElements_ ));
+                        OpmLog::info(fmt::format(fmt::runtime("( rank:{}) The variable \"{}\" was found to be of a different size {} (not {})."),  rank_, name, dataCol.data<int>().size(), this->numElements_ ));
                     }
                   }
                   ++cell_data_written ;
@@ -255,9 +255,9 @@ public:
             DamarisOutput::handleError(dam_err_, cc, "setPosition() and write() for available variables");
 
             if (!cell_data_written) {
-                  OpmLog::info(fmt::format("( rank:{}) No simulation data written to the Damaris server - check --damaris-limit-variables command line option (if used) has valid variable name(s) and that the Damaris XML file contains variable names that are available in your simulation.",  rank_));
+                  OpmLog::info(fmt::format(fmt::runtime("( rank:{}) No simulation data written to the Damaris server - check --damaris-limit-variables command line option (if used) has valid variable name(s) and that the Damaris XML file contains variable names that are available in your simulation."),  rank_));
             } else {
-                  OpmLog::debug(fmt::format("( rank:{}) {} Damaris Variables written to the Damaris servers",  rank_, cell_data_written));
+                  OpmLog::debug(fmt::format(fmt::runtime("( rank:{}) {} Damaris Variables written to the Damaris servers"),  rank_, cell_data_written));
             }
 
            /*
@@ -353,7 +353,7 @@ private:
         try {
             const bool hasPolyCells = geomData.polyhedralCellPresent() ;
             if ( hasPolyCells ) {
-                OpmLog::error(fmt::format("ERORR: rank {} The DUNE geometry grid has polyhedral elements - These elements are currently not supported.", rank_ ));
+                OpmLog::error(fmt::format(fmt::runtime("ERORR: rank {} The DUNE geometry grid has polyhedral elements - These elements are currently not supported."), rank_ ));
             }
 
             // This is the template XML model for x,y,z coordinates defined in initDamarisXmlFile.cpp which is used to

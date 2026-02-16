@@ -79,9 +79,7 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
                                 well_model_.simulator().vanguard().grid().comm());
 
     if (!converged) {
-        const std::string msg =
-            fmt::format("Initial (pre-step) network balance did not converge.");
-        deferred_logger.warning(msg);
+        deferred_logger.warning("Initial (pre-step) network balance did not converge.");
     }
 }
 

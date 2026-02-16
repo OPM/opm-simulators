@@ -347,7 +347,7 @@ private:
         if constexpr (blockSizeCompileTime > 1) {
             return dispatchOnBlocksizeImpl<blockSizeCompileTime - 1>(function);
         } else {
-            OPM_THROW(std::runtime_error, fmt::format("Unsupported block size: {}", m_blockSize));
+            OPM_THROW(std::runtime_error, fmt::format(fmt::runtime("Unsupported block size: {}"), m_blockSize));
         }
     }
 };

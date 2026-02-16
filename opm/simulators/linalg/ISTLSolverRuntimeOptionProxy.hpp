@@ -164,7 +164,7 @@ private:
         else {
             // If we reach here, it means the backend is not supported. This could be because we have added a third backend
             // that we need to handle. A user error would be handled in the linearSolverAcceleratorTypeFromString function called above.
-            OPM_THROW(std::invalid_argument, fmt::format("Unknown backend: {}", Parameters::toString(backend)));
+            OPM_THROW(std::invalid_argument, fmt::format(fmt::runtime("Unknown backend: {}"), Parameters::toString(backend)));
         }
     }
 };

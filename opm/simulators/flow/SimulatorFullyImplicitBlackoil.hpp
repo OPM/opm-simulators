@@ -305,8 +305,8 @@ public:
         modelParam_.newton_max_iter_ = tuning.NEWTMX;
         modelParam_.newton_min_iter_ = tuning.NEWTMN;
         if (terminalOutput_) {
-            const auto msg = fmt::format("Tuning values: "
-                                         "MB: {:.2e}, CNV: {:.2e}, NEWTMN: {}, NEWTMX: {}",
+            const auto msg = fmt::format(fmt::runtime("Tuning values: "
+                                         "MB: {:.2e}, CNV: {:.2e}, NEWTMN: {}, NEWTMX: {}"),
                                          tuning.TRGMBE, tuning.TRGCNV, tuning.NEWTMN, tuning.NEWTMX);
             OpmLog::debug(msg);
             if (tuning.TRGTTE_has_value) {

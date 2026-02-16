@@ -212,7 +212,8 @@ public:
     {
         if (numberOfElements > size()) {
             OPM_THROW(std::runtime_error,
-                    fmt::format("Requesting to copy too many elements. buffer has {} elements, while {} was requested.",
+                    fmt::format(fmt::runtime("Requesting to copy too many elements. "
+                                             "buffer has {} elements, while {} was requested."),
                                 size(),
                                 numberOfElements));
         }
@@ -359,7 +360,8 @@ private:
     {
         if (size != m_numberOfElements) {
             OPM_THROW(std::invalid_argument,
-                    fmt::format("Given buffer has {}, while we have {}.", size, m_numberOfElements));
+                    fmt::format(fmt::runtime("Given buffer has {}, while we have {}."),
+                                size, m_numberOfElements));
         }
     }
 

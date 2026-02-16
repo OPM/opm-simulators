@@ -429,10 +429,10 @@ public:
         // increment indices and generate tag
         exportCount_ = exportIndex_ == idx ? ++exportCount_ : 0;
         exportIndex_ = idx;
-        tag = fmt::format("_{:03d}_{:02d}", exportIndex_, exportCount_);
+        tag = fmt::format(fmt::runtime("_{:03d}_{:02d}"), exportIndex_, exportCount_);
 
-        fmt::print("index = {:d}\n", exportIndex_);
-        fmt::print("count = {:d}\n", exportCount_);
+        fmt::print(fmt::runtime("index = {:d}\n"), exportIndex_);
+        fmt::print(fmt::runtime("count = {:d}\n"), exportCount_);
 
         Opm::exportSystem(jacobian_->istlMatrix(), residual_, export_sparsity, tag.c_str(), path);
     }
