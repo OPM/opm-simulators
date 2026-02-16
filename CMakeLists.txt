@@ -16,7 +16,7 @@ project(opm-simulators C CXX)
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
-option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
+option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" ON)
 option(BUILD_FLOW_FLOAT_VARIANTS "Build the variants for flow using float?" OFF)
 option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
 option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
@@ -633,13 +633,191 @@ macro(opm-simulators_targets_hook)
     target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   endif()
 
+  set(FLOW_MODELS
+    blackoil
+    blackoil_legacyassembly
+    blackoil_nohyst
+    blackoil_temp
+    biofilm
+    brine
+    brine_energy
+    brine_precsalt_vapwat
+    brine_saltprecipitation
+    energy
+    extbo
+    foam
+    gasoil
+    gasoildiffuse
+    gasoil_energy
+    gaswater
+    gaswater_brine
+    gaswater_dissolution
+    gaswater_dissolution_diffuse
+    gaswater_energy
+    gaswater_saltprec_energy
+    gaswater_saltprec_vapwat
+    gaswater_solvent
+    micp
+    oilwater
+    oilwater_brine
+    oilwater_polymer
+    oilwater_polymer_injectivity
+    onephase
+    onephase_energy
+    polymer
+    solvent
+    solvent_foam
+  )
+
+  foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
+    add_library(flow_lib${OBJ} OBJECT flow/flow_${OBJ}.cpp)
+    simulators_add_target_options(TARGET flow_lib${OBJ})
+    list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
+    list(APPEND FLOWMODELS_PREFIXED flow_${OBJ})
+
+    opm_add_test(flow_${OBJ}
+      ONLY_COMPILE
+      SOURCES
+        flow/flow_${OBJ}_main.cpp
+        $<TARGET_OBJECTS:moduleVersion>
+        $<TARGET_OBJECTS:flow_lib${OBJ}>
+      EXE_NAME
+        flow_${OBJ}
+      DEPENDS
+        opmsimulators
+      LIBRARIES
+        opmsimulators
+    )
+  endforeach()
+
+  opm_add_test(flow
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEPENDS
+      opmsimulators
+    LIBRARIES
+      opmsimulators
+    SOURCES
+      flow/flow.cpp
+      ${FLOW_TGTS}
+      $<TARGET_OBJECTS:moduleVersion>
+      $<TARGET_OBJECTS:MainDispatchDynamic>
+  )
+
+  opm_add_test(flow_distribute_z
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEPENDS
+      opmsimulators
+    LIBRARIES
+      opmsimulators
+    SOURCES
+      flow/flow_distribute_z.cpp
+      ${FLOW_TGTS}
+      $<TARGET_OBJECTS:moduleVersion>
+      $<TARGET_OBJECTS:MainDispatchDynamic>
+  )
+
   if(OPM_ENABLE_PYTHON)
-    set_target_properties(moduleVersion MainDispatchDynamic
+    set_target_properties(
+      flow_libblackoil
+      moduleVersion
+      MainDispatchDynamic
       PROPERTIES
       POSITION_INDEPENDENT_CODE
         ON
     )
     add_subdirectory(python/simulators)
+  endif()
+
+  # We now specify the files we actually want to compile
+  set(FLOWEXP_COMPONENTS_SOURCES)
+  foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
+    list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}.cpp)
+    list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}_2p.cpp)
+  endforeach()
+
+  opm_add_test(flowexp_comp
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEPENDS
+      opmsimulators
+    LIBRARIES
+      opmsimulators
+    SOURCES
+      flowexperimental/comp/flowexp_comp.cpp
+      ${FLOWEXP_COMPONENTS_SOURCES}
+      $<TARGET_OBJECTS:moduleVersion>
+  )
+
+  if(BUILD_FLOW_FLOAT_VARIANTS)
+    opm_add_test(flow_blackoil_float
+      ONLY_COMPILE
+      ALWAYS_ENABLE
+      DEPENDS
+        opmsimulators
+      LIBRARIES
+        opmsimulators
+      SOURCES
+        flow/flow_blackoil_float_main.cpp
+        $<TARGET_OBJECTS:moduleVersion>
+    )
+  endif()
+
+  opm_add_test(flowexp_blackoil
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEPENDS
+      opmsimulators
+    LIBRARIES
+      opmsimulators
+    SOURCES
+      flowexperimental/flowexp_blackoil.cpp
+      $<TARGET_OBJECTS:moduleVersion>
+  )
+
+  if(dune-alugrid_FOUND AND BUILD_FLOW_ALU_GRID)
+    opm_add_test(flow_blackoil_alugrid
+      ONLY_COMPILE
+      ALWAYS_ENABLE
+      DEPENDS
+        opmsimulators
+      LIBRARIES
+        opmsimulators
+      SOURCES
+        flow/flow_blackoil_alugrid.cpp
+        $<TARGET_OBJECTS:moduleVersion>
+    )
+  endif()
+
+  if(BUILD_FLOW_POLY_GRID)
+    opm_add_test(flow_blackoil_polyhedralgrid
+      ONLY_COMPILE
+      ALWAYS_ENABLE
+      DEPENDS
+        opmsimulators
+      LIBRARIES
+        opmsimulators
+      SOURCES
+        flow/flow_blackoil_polyhedralgrid.cpp
+        $<TARGET_OBJECTS:moduleVersion>
+    )
+  endif()
+
+  if(NOT BUILD_FLOW_VARIANTS)
+    foreach(target flowexp_blackoil
+                   flowexp_comp
+                   flow_blackoil_alugrid
+                   flow_blackoil_float
+                   flow_blackoil_polyhedralgrid
+                   ${FLOWMODELS_PREFIXED})
+      if(TARGET ${target})
+        set_target_properties(${target}
+          PROPERTIES
+          EXCLUDE_FROM_ALL ON
+        )
+      endif()
+    endforeach()
   endif()
 endmacro()
 
@@ -652,6 +830,11 @@ macro(opm-simulators_install_hook)
     FILES_MATCHING PATTERN
       "*.1"
   )
+  if (BUILD_FLOW)
+    install(TARGETS flow DESTINATION bin)
+    include(OpmBashCompletion)
+    opm_add_bash_completion(flow)
+  endif()
 endmacro()
 
 # Ensure OPM_COMPILE_COMPONENTS is a list of at least one element
@@ -716,154 +899,3 @@ include ("${project}-prereqs")
 
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
-
-include(OpmBashCompletion)
-
-if (NOT BUILD_FLOW)
-  set(FLOW_DEFAULT_ENABLE_IF "FALSE")
-else()
-  set(FLOW_DEFAULT_ENABLE_IF "TRUE")
-endif()
-
-if (NOT BUILD_FLOW_VARIANTS)
-  set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "FALSE")
-else()
-  set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "TRUE")
-endif()
-
-if (NOT BUILD_FLOW_POLY_GRID)
-  set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "FALSE")
-else()
-  set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "TRUE")
-endif()
-
-set(FLOW_MODELS blackoil blackoil_temp brine energy extbo foam gasoil gaswater
-                oilwater oilwater_brine gaswater_brine oilwater_polymer
-                oilwater_polymer_injectivity micp polymer solvent solvent_foam
-                gasoil_energy brine_saltprecipitation
-                gaswater_saltprec_vapwat gaswater_saltprec_energy brine_precsalt_vapwat
-                blackoil_legacyassembly gasoildiffuse gaswater_dissolution
-                gaswater_dissolution_diffuse gaswater_energy gaswater_solvent biofilm
-                blackoil_nohyst)
-set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
-
-set(FLOW_TGTS)
-foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
-  add_library(flow_lib${OBJ} OBJECT flow/flow_${OBJ}.cpp)
-  simulators_add_target_options(TARGET flow_lib${OBJ})
-  list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
-
-  opm_add_test(flow_${OBJ}
-               ONLY_COMPILE
-               SOURCES
-               flow/flow_${OBJ}_main.cpp
-               $<TARGET_OBJECTS:moduleVersion>
-               $<TARGET_OBJECTS:flow_lib${OBJ}>
-               EXE_NAME flow_${OBJ}
-               DEPENDS opmsimulators
-               LIBRARIES opmsimulators)
-endforeach()
-set_property(TARGET flow_libblackoil PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-foreach(OBJ ${FLOW_VARIANT_MODELS})
-  set_property(TARGET flow_lib${OBJ} PROPERTY EXCLUDE_FROM_ALL ${FLOW_VARIANTS_DEFAULT_ENABLE_IF})
-endforeach()
-
-opm_add_test(flow
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flow/flow.cpp
-  ${FLOW_TGTS}
-  $<TARGET_OBJECTS:moduleVersion>
-  $<TARGET_OBJECTS:MainDispatchDynamic>
-  )
-
-opm_add_test(flow_blackoil_polyhedralgrid
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEFAULT_ENABLE_IF ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF}
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flow/flow_blackoil_polyhedralgrid.cpp
-  $<TARGET_OBJECTS:moduleVersion>)
-
-opm_add_test(flow_distribute_z
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flow/flow_distribute_z.cpp
-  ${FLOW_TGTS}
-  $<TARGET_OBJECTS:moduleVersion>
-  $<TARGET_OBJECTS:MainDispatchDynamic>
-  )
-
-opm_add_test(flowexp_blackoil
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flowexperimental/flowexp_blackoil.cpp
-  $<TARGET_OBJECTS:moduleVersion>
-)
-
-# We now specify the files we actually want to compile
-set(FLOWEXP_COMPONENTS_SOURCES)
-foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
-  list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}.cpp)
-  list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}_2p.cpp)
-endforeach()
-
-opm_add_test(flowexp_comp
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flowexperimental/comp/flowexp_comp.cpp
-  ${FLOWEXP_COMPONENTS_SOURCES}
-  $<TARGET_OBJECTS:moduleVersion>
-)
-
-if(dune-alugrid_FOUND)
-  if (NOT BUILD_FLOW_ALU_GRID)
-    set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "FALSE")
-  else()
-    set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "TRUE")
-  endif()
-
-  opm_add_test(flow_blackoil_alugrid
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEFAULT_ENABLE_IF ${FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF}
-    DEPENDS opmsimulators
-    LIBRARIES opmsimulators
-    SOURCES
-    flow/flow_blackoil_alugrid.cpp
-    $<TARGET_OBJECTS:moduleVersion>)
-endif()
-
-if (BUILD_FLOW)
-  install(TARGETS flow DESTINATION bin)
-  opm_add_bash_completion(flow)
-endif()
-
-if(BUILD_FLOW_FLOAT_VARIANTS)
-  opm_add_test(flow_blackoil_float
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
-    DEPENDS opmsimulators
-    LIBRARIES opmsimulators
-    SOURCES
-    flow/flow_blackoil_float_main.cpp
-    $<TARGET_OBJECTS:moduleVersion>)
-endif()
