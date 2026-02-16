@@ -165,16 +165,44 @@ protected:
     const EquilGrid* equilGrid_;
     SimulatorReportSingle sub_step_report_;
     SimulatorReport simulation_report_;
-    mutable std::vector<NNCdata> outputNnc_;
+    mutable std::vector<NNCdata> outputNnc_; 
+    
+    // Regular NNCs per grid: internal to a grid.
+    // Both cells belong to the same level grid, either the main grid or a level/local grid. 
+    // nnc.cell1 (NNC1 in *.EGRID) Level/Local Cartesian index of cell1 
+    // nnc.cell2 (NNC2 in *.EGRID) Level/Local Cartesian index of cell2
+    // Equivalent to TRANNNC in *.INIT
+     mutable std::vector<std::vector<NNCdata>> outputInnerLevelNnc_;
+
+    // NNCs between main (level zero) grid and local grids:
+    // nnc.cell1 (NNCG in *.EGRID) Cartesian index of cell1 in the main grid where the cell belongs to. 
+    // nnc.cell2 (NNCL in *.EGRID) Level/Local Cartesian index of cell2 in the refined level grid where the cell belongs to.
+    // Equivalent to TRANGL in *.INIT
+    mutable std::vector<std::vector<NNCdata>> outputNncGlobalLocal_; // here GLOBAL refers to level 0 grid, local to any LGR (refined grid)
+
+    // Amalgamated NNCs: nncs between different LGRs. For example, nested refinement or neighboring LGRs.
+    // The cells belong to different refined level grids. 
+    // nnc.cell1 (NNA1 in *.EGRID) Level/Local Cartesian index of cell1 (in its level grid: level1)
+    // nnc.cell2 (NNA2 in *.EGRID) Level/Local Cartesian index of cell2 (in its level grid: level2, with level2 > level1).
+    // Equivalent to TRANLL in *.INIT
+    mutable std::vector<std::vector<std::vector<NNCdata>>> outputAmalgamatedNnc_;
+    
     mutable std::unique_ptr<std::vector<data::Solution>> outputTrans_;
 
 private:
+    template<typename LevelIndicesFunction>
     void computeTrans_(const Opm::LevelCartesianIndexMapper<EquilGrid>& levelCartMapp,
                        const std::vector<std::unordered_map<int,int>>& levelCartToLevelCompressed,
-                       const std::function<unsigned int(unsigned int)>& map) const;
-    
-    std::vector<NNCdata> exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive,
-                                             const std::function<unsigned int(unsigned int)>& map) const;
+                       const std::function<unsigned int(unsigned int)>& map,
+                       const LevelIndicesFunction& computeLevelIndices,
+                       const std::function<int(int, int)>& computeLevelCartIdx) const;
+
+    template<typename LevelIndicesFunction>
+    std::vector<NNCdata> exportNncStructure_(const Opm::LevelCartesianIndexMapper<EquilGrid>& levelCartMapp,
+                                             const std::unordered_map<int,int>& cartesianToActive,
+                                             const std::function<unsigned int(unsigned int)>& map,
+                                             const LevelIndicesFunction& computeLevelIndices,
+                                             const std::function<int(int, int)>& computeLevelCartIdx) const;
 
     /// Returns true if the given Cartesian cell index belongs to a numerical aquifer.
     /// If no numerical aquifer exists, always returns false.
@@ -231,6 +259,12 @@ private:
     /// Only for CpGrid. Other grid types do not support refinement yet.
     void allocateLevelTrans_(const std::array<int,3>& levelCartDims,
                              data::Solution& levelTrans) const;
+    /// Allocates NNCdata  vectors for
+    /// - TRANNNC for level grids,
+    /// - TRANGL for NNCs between level zero grid and an LGR (refined level grid)
+    /// - TRANLL for NNCs between two different refined level grids. 
+    /// Only for CpGrid. Other grid types do not support refinement yet.
+    void allocateAllNncs_(int maxLevel) const;
 };
 
 } // namespace Opm
