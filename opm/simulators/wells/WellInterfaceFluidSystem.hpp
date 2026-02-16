@@ -83,7 +83,7 @@ protected:
                              const std::vector<PerforationData<Scalar>>& perf_data);
 
     // updating the voidage rates in well_state when requested
-    void calculateReservoirRates(const bool co2store, SingleWellState<Scalar, IndexTraits>& ws) const;
+    void calculateReservoirRates(const bool use_well_bhp_temperature, SingleWellState<Scalar, IndexTraits>& ws) const;
 
     bool checkIndividualConstraints(SingleWellState<Scalar, IndexTraits>& ws,
                                     const SummaryState& summaryState,
