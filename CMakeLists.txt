@@ -136,6 +136,14 @@ macro(opm-simulators_prereqs_hook)
     endif()
   endif()
 
+  if(USE_GPU_BRIDGE AND rocsparse_FOUND AND NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA)
+    message(WARNING
+      "GPU bridge: Using CUDA and ROCm at the same time is not allowed. "
+      "Since rocsparse was found, CUDA will be disabled. "
+      "Use -DCMAKE_DISABLE_FIND_PACKAGE_rocsparse=ON to instead use CUDA.")
+    set(CMAKE_DISABLE_FIND_PACKAGE_CUDA ON)
+  endif()
+
   # Make sure we are using the same compiler underneath
   # NVCC as for the rest. In the case that NVCC does not support
   # that compiler it will error out.
@@ -258,31 +266,9 @@ macro(opm-simulators_sources_hook)
     list(APPEND tests_SOURCES tests/gpuistl/test_AmgxInterface.cpp)
     list(APPEND tests_SOURCES tests/test_AmgxPreconditioner.cpp)
   endif()
-endmacro()
 
-macro(opm-simulators_files_hook)
-  if(hip_FOUND)
-    get_filename_component(CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
-    if(hip_VERSION VERSION_LESS "5.3")
-      if(ROCALUTION_FOUND AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        message(WARNING " Cannot use hipcc/clang for rocalution with rocm < 5.3\n Disabling rocalutionSolver")
-        unset(ROCALUTION_FOUND)
-        unset(HAVE_ROCALUTION)
-      endif()
-    endif()
-    if(rocsparse_FOUND AND rocblas_FOUND)
-      set(HAVE_ROCSPARSE 1)
-    else()
-      unset(HAVE_ROCSPARSE)
-    endif()
-    if(ROCALUTION_FOUND)
-      set(HAVE_ROCALUTION 1)
-    endif()
-  endif()
-  if(HAVE_ROCSPARSE AND HAVE_CUDA AND USE_GPU_BRIDGE) # unsure if this is the correct way to change this
-    message(WARNING "WARNING! Using CUDA and ROCm at the same time is not allowed. Please choose only one of them by setting CMAKE_DISABLE_FIND_PACKAGE_<rocsparse|CUDA>=<ON|OFF>. Disabling CUDA...\n")
-    set(CUDA_FOUND OFF)
-    unset(HAVE_CUDA)
+  if(HAVE_AVX2_EXTENSION)
+    set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_OPTIONS ${AVX2_FLAGS})
   endif()
 endmacro()
 
@@ -357,6 +343,18 @@ macro(opm-simulators_config_hook)
 
   if(VexCL_FOUND)
     set(HAVE_VEXCL 1)
+  endif()
+
+  if(USE_GPU_BRIDGE)
+    set(COMPILE_GPU_BRIDGE 1)
+  endif()
+
+  if(rocsparse_FOUND AND rocblas_FOUND)
+    set(HAVE_ROCSPARSE 1)
+  endif()
+
+  if(ROCALUTION_FOUND)
+    set(HAVE_ROCALUTION 1)
   endif()
 endmacro()
 
@@ -456,6 +454,37 @@ macro(opm-simulators_tests_hook)
     if(rocsparse_FOUND AND rocblas_FOUND)
       set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
     endif()
+  endif()
+
+  add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
+
+  if(HAVE_OPM_TESTS)
+    if(OPM_ENABLE_PYTHON)
+      if(${CMAKE_BINARY_DIR} STREQUAL ${PROJECT_BINARY_DIR})
+        set(sim_dir ${CMAKE_BINARY_DIR})
+      else()
+        set(sim_dir ${CMAKE_BINARY_DIR}/opm-simulators)
+      endif()
+      add_custom_target(failure_report
+                        USES_TERMINAL
+                        COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=${opm-common_DIR}/python"
+                        ${PROJECT_SOURCE_DIR}/tests/make_failure_report.sh
+                        ${OPM_TESTS_ROOT} ${CMAKE_BINARY_DIR} ${sim_dir})
+    endif()
+  endif()
+
+  if(BUILD_FLOW)
+    add_test(
+      NAME
+        flow__version
+      COMMAND
+        $<TARGET_FILE:flow> --version
+    )
+    set_tests_properties(flow__version
+      PROPERTIES
+      PASS_REGULAR_EXPRESSION
+        ${${project}_LABEL}
+    )
   endif()
 endmacro()
 
@@ -584,6 +613,34 @@ macro(opm-simulators_targets_hook)
     set_property(TARGET VexCL::Common PROPERTY INTERFACE_COMPILE_OPTIONS ${compile_opts})
     target_link_libraries(opmsimulators PUBLIC VexCL::Common VexCL::OpenCL)
   endif()
+
+  add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
+  opm_add_target_options(TARGET moduleVersion)
+
+  # Strictly we only depend on the update-version target,
+  # but this is not exposed in a super-build.
+  add_dependencies(moduleVersion opmsimulators)
+
+  add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
+  simulators_add_target_options(TARGET MainDispatchDynamic)
+
+  target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_group_higher_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  if(MPI_FOUND)
+    target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  endif()
+
+  if(OPM_ENABLE_PYTHON)
+    set_target_properties(moduleVersion MainDispatchDynamic
+      PROPERTIES
+      POSITION_INDEPENDENT_CODE
+        ON
+    )
+    add_subdirectory(python/simulators)
+  endif()
 endmacro()
 
 macro(opm-simulators_install_hook)
@@ -615,6 +672,10 @@ list(REMOVE_DUPLICATES OPM_COMPILE_COMPONENTS)
 # this will be used in a template argument pack.
 string(REPLACE ";" "," OPM_COMPILE_COMPONENTS_TEMPLATE_LIST "${OPM_COMPILE_COMPONENTS}")
 
+if(CONVERT_CUDA_TO_HIP)
+  set(USE_GPU_BRIDGE OFF)
+endif()
+
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
   get_filename_component(_leaf_dir_name ${PROJECT_BINARY_DIR} NAME)
@@ -643,10 +704,6 @@ endif()
 
 find_package(opm-common REQUIRED)
 
-if(USE_GPU_BRIDGE)
-  set(COMPILE_GPU_BRIDGE 1)
-endif()
-
 # project information is in dune.module. Read this file and set variables.
 # we cannot generate dune.module since it is read by dunecontrol before
 # the build starts, so it makes sense to keep the data there then.
@@ -659,30 +716,6 @@ include ("${project}-prereqs")
 
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
-
-target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-target_sources(test_group_higher_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-if(MPI_FOUND)
-  target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-endif()
-
-if (HAVE_OPM_TESTS)
-  if(OPM_ENABLE_PYTHON)
-    if(${CMAKE_BINARY_DIR} STREQUAL ${PROJECT_BINARY_DIR})
-      set(sim_dir ${CMAKE_BINARY_DIR})
-    else()
-      set(sim_dir ${CMAKE_BINARY_DIR}/opm-simulators)
-    endif()
-    add_custom_target(failure_report
-                      USES_TERMINAL
-                      COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=${opm-common_DIR}/python"
-                      ${PROJECT_SOURCE_DIR}/tests/make_failure_report.sh
-                      ${OPM_TESTS_ROOT} ${CMAKE_BINARY_DIR} ${sim_dir})
-  endif()
-endif()
 
 include(OpmBashCompletion)
 
@@ -703,18 +736,6 @@ if (NOT BUILD_FLOW_POLY_GRID)
 else()
   set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "TRUE")
 endif()
-
-add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
-set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
-opm_add_target_options(TARGET moduleVersion)
-
-add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
-simulators_add_target_options(TARGET MainDispatchDynamic)
-set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-# Strictly we only depend on the update-version target,
-# but this is not exposed in a super-build.
-add_dependencies(moduleVersion opmsimulators)
 
 set(FLOW_MODELS blackoil blackoil_temp brine energy extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
@@ -833,11 +854,6 @@ endif()
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
   opm_add_bash_completion(flow)
-
-  add_test(NAME flow__version
-    COMMAND flow --version)
-  set_tests_properties(flow__version PROPERTIES
-    PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
 endif()
 
 if(BUILD_FLOW_FLOAT_VARIANTS)
@@ -850,18 +866,4 @@ if(BUILD_FLOW_FLOAT_VARIANTS)
     SOURCES
     flow/flow_blackoil_float_main.cpp
     $<TARGET_OBJECTS:moduleVersion>)
-endif()
-
-if (OPM_ENABLE_PYTHON)
-  add_subdirectory(python/simulators)
-endif()
-
-add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
-
-# must activate avx2 flags and C11 for mixed precision.
-if(HAVE_AVX2_EXTENSION)
-  # Trying to set the standard using `set(CMAKE_C_STANDARD 11)` had no effect, still used -std=c99
-  # Hence we are requesting C17. (-std=c99 -D_ISOC11_SOURCE also seems to work)
-  set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_FLAGS "${AVX2_FLAGS}" APPEND_STRING)
-  set_property(TARGET opmsimulators PROPERTY C_STANDARD 17)
 endif()
