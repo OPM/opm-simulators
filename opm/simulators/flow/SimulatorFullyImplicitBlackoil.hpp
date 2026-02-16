@@ -38,6 +38,8 @@
 
 #include <opm/grid/utility/StopWatch.hpp>
 
+#include <opm/models/tpsa/tpsanewtonmethodparams.hpp>
+
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
@@ -47,6 +49,7 @@
 #include <opm/simulators/flow/SimulatorConvergenceOutput.hpp>
 #include <opm/simulators/flow/SimulatorReportBanners.hpp>
 #include <opm/simulators/flow/SimulatorSerializer.hpp>
+#include <opm/simulators/linalg/TPSALinearSolverParameters.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
@@ -159,6 +162,9 @@ public:
         SolverParameters::registerParameters();
         TimeStepper::registerParameters();
         detail::registerSimulatorParameters();
+
+        TpsaNewtonMethodParams<Scalar>::registerParameters();
+        TpsaLinearSolverParameters::registerParameters();
     }
 
     /// Run the simulation.
