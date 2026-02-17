@@ -53,6 +53,15 @@
 namespace Opm
 {
 
+struct RsConstInfo {
+    bool enabled = false;
+    double value = 0.0;
+
+    // Constructors
+    RsConstInfo() = default;
+    RsConstInfo(bool en, double val) : enabled(en), value(val) {}
+};
+
 template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
 template<class Scalar> class ConnFracStatistics;
@@ -158,7 +167,7 @@ public:
 
     data::Wells
     report(const int* globalCellIdxMap,
-           const std::function<bool(const int)>& wasDynamicallyClosed) const;
+           const std::function<bool(const int)>& wasDynamicallyClosed, const RsConstInfo& rsConst = RsConstInfo{}) const;
 
     void reportConnections(std::vector<data::Connection>& connections,
                            std::size_t well_index,
