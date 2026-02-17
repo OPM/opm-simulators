@@ -205,10 +205,10 @@ public:
 
     template <class ConvectiveMixingModuleParam>
     OPM_HOST_DEVICE static void modifyAvgDensity(Evaluation& rhoAvg,
-                                 const IntensiveQuantities& intQuantsIn,
-                                 const IntensiveQuantities& intQuantsEx,
-                                 const unsigned phaseIdx,
-                                 const ConvectiveMixingModuleParam& info) {
+                                                 const IntensiveQuantities& intQuantsIn,
+                                                 const IntensiveQuantities& intQuantsEx,
+                                                 const unsigned phaseIdx,
+                                                 const ConvectiveMixingModuleParam& info) {
 
         if (info.active_.empty()) {
             return;
