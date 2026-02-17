@@ -203,12 +203,12 @@ public:
     }
     #endif
 
-    template <class ConvectiveMixingModuleParam>
+    template <class CMMParam>
     OPM_HOST_DEVICE static void modifyAvgDensity(Evaluation& rhoAvg,
                                                  const IntensiveQuantities& intQuantsIn,
                                                  const IntensiveQuantities& intQuantsEx,
                                                  const unsigned phaseIdx,
-                                                 const ConvectiveMixingModuleParam& info) {
+                                                 const CMMParam& info) {
 
         if (info.active_.empty()) {
             return;
@@ -307,7 +307,7 @@ public:
      * \brief Adds the convective mixing mass flux flux to the flux vector over a flux
      *        integration point.
       */
-    template <class RateVectorT = RateVector, class ConvectiveMixingModuleParam = ConvectiveMixingModuleParamT>
+    template <class RateVectorT = RateVector, class CMMParam = ConvectiveMixingModuleParamT>
     OPM_HOST_DEVICE static void addConvectiveMixingFlux(RateVectorT& flux,
                                         const IntensiveQuantities& intQuantsIn,
                                         const IntensiveQuantities& intQuantsEx,
@@ -316,7 +316,7 @@ public:
                                         const Scalar distZg,
                                         const Scalar trans,
                                         const Scalar faceArea,
-                                        const ConvectiveMixingModuleParam& info)
+                                        const CMMParam& info)
     {
         const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
