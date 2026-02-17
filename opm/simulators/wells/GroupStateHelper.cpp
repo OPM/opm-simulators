@@ -189,7 +189,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
 
     const Scalar orig_target = tcalc.groupTarget();
     const Scalar current_rate_available = tcalc.calcModeRateFromRates(rates);
-    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
+    const std::size_t local_reduction_level = this->getLocalReductionLevel(
         chain, /*is_production_group=*/false, injection_phase);
 
     const Scalar target = this->applyReductionsAndFractions_(chain,
@@ -330,7 +330,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
         return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
     }
 
-    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
+    const std::size_t local_reduction_level = this->getLocalReductionLevel(
         chain, /*is_production_group=*/true, /*injection_phase=*/Phase::OIL);
 
     const Scalar target = this->applyReductionsAndFractions_(chain,
@@ -351,62 +351,6 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
         scale = target_rate_available / current_rate_available;
 
     return std::make_pair(current_rate_available > target_rate_available, scale);
-}
-
-template <typename Scalar, typename IndexTraits>
-Scalar
-GroupStateHelper<Scalar, IndexTraits>::getGuideRate(const std::string& name,
-                                                   const GuideRateModel::Target target) const
-{
-    if (this->schedule_.hasWell(name, this->report_step_)) {
-        if (this->guide_rate_.has(name) || this->guide_rate_.hasPotentials(name)) {
-            return this->guide_rate_.get(name, target, this->getWellRateVector(name));
-        } else {
-            return 0.0;
-        }
-    }
-
-    if (this->guide_rate_.has(name)) {
-        return this->guide_rate_.get(name, target, this->getProductionGroupRateVector(name));
-    }
-
-    Scalar total_guide_rate = 0.0;
-    const Group& group = this->schedule_.getGroup(name, this->report_step_);
-
-    for (const std::string& group_name : group.groups()) {
-        const Group::ProductionCMode& current_group_control
-            = this->groupState().production_control(group_name);
-        if (current_group_control == Group::ProductionCMode::FLD
-            || current_group_control == Group::ProductionCMode::NONE) {
-            // accumulate from sub wells/groups
-            total_guide_rate += this->getGuideRate(group_name, target);
-        }
-    }
-
-    for (const std::string& well_name : group.wells()) {
-        const auto& well_tmp = this->schedule_.getWell(well_name, this->report_step_);
-
-        if (well_tmp.isInjector())
-            continue;
-
-        const auto well_index = this->wellState().index(well_name);
-        if (!well_index.has_value())
-            continue;
-
-        const auto& ws = this->wellState().well(well_index.value());
-        if (ws.status == Well::Status::SHUT)
-            continue;
-
-        if (!this->wellState().isProductionGrup(well_name))
-            continue;
-
-        // Only count wells under group control or the ru
-        if (!this->wellState().isProductionGrup(well_name))
-            continue;
-
-        total_guide_rate += this->getGuideRate(well_name, target);
-    }
-    return total_guide_rate;
 }
 
 template <typename Scalar, typename IndexTraits>
@@ -671,7 +615,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
     const Scalar current_rate_available = tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
 
-    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
+    const std::size_t local_reduction_level = this->getLocalReductionLevel(
         chain, /*is_production_group=*/false, injection_phase);
 
     // Add-back is only performed when the well is under individual control (not GRUP)
@@ -767,7 +711,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
     const Scalar current_rate_available = -tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
 
-    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
+    const std::size_t local_reduction_level = this->getLocalReductionLevel(
         chain, /*is_production_group=*/true, /*injection_phase=*/Phase::OIL);
 
     // Add-back is only performed when the well is under individual control (not GRUP)
@@ -1596,7 +1540,7 @@ GroupStateHelper<Scalar, IndexTraits>::getGuideRateVector_(const std::vector<Sca
 
 template <typename Scalar, typename IndexTraits>
 std::size_t
-GroupStateHelper<Scalar, IndexTraits>::getLocalReductionLevel_(const std::vector<std::string>& chain,
+GroupStateHelper<Scalar, IndexTraits>::getLocalReductionLevel(const std::vector<std::string>& chain,
                                                                const bool is_production_group,
                                                                const Phase injection_phase) const
 {
@@ -1684,21 +1628,58 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
     const auto& control_group_name = this->controlGroup_(group);
     const auto& control_group = this->schedule_.getGroup(control_group_name, this->report_step_);
 
-    // Calculate target rate for this auto choke group
+    // Calculate target rate for this auto choke group using a guide rate ratio
+    // formula. This is an approximation that ignores intermediate reductions.
+    // A more accurate calculation would use WellGroupControls::getAutoChokeGroupProductionTargetRate(),
+    // but that requires reduction rates not yet available during
+    // updateGroupControlledWells() (circular dependency). The efficiency factor is however accounted for
+    // below meaning that the current target rate will be correct for the special case where the control
+    // group has no reductions and the auto choke group is a direct child of the control group.
+    // TODO: The issue with missing handling of reductions should be fixed by refactoring the auto choke
+    // target calculation below to use the more accurate
+    // WellGroupControls::getAutoChokeGroupProductionTargetRate() function.
     const auto num_phases = this->numPhases();
     std::vector<Scalar> resv_coeff(num_phases, 1.0);
     GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                    resv_coeff,
                                                                    control_group};
     const auto& control_group_target = tcalc.groupTarget();
-    const auto& control_group_guide_rate
-        = this->getGuideRate(control_group_name, tcalc.guideTargetMode());
+
+    // Sum guide rates of the control group's FLD children. The control group's
+    // own guide rate (from GCONPROD) is NOT used here — it governs the control
+    // group's share of its parent's target, not how its own target is distributed.
+    Scalar control_group_guide_rate = 0.0;
+    for (const std::string& child : control_group.groups()) {
+        const auto child_ctrl = this->groupState().production_control(child);
+        if (child_ctrl == Group::ProductionCMode::FLD
+            || child_ctrl == Group::ProductionCMode::NONE) {
+            if (this->guide_rate_.has(child)) {
+                control_group_guide_rate += this->guide_rate_.get(
+                    child, tcalc.guideTargetMode(),
+                    this->getProductionGroupRateVector(child));
+            }
+        }
+    }
 
     if (control_group_guide_rate <= 0) {
         return false;
     }
 
-    const Scalar target_rate = control_group_target * group_guide_rate / control_group_guide_rate;
+    // Accumulate group efficiency factors from the autochoke group up to (but not
+    // including) the control group. This matches what
+    // getAutoChokeGroupProductionTargetRate() does during its recursion.
+    Scalar accumulated_efficiency = 1.0;
+    {
+        std::string current = group.name();
+        while (current != control_group_name) {
+            const auto& g = this->schedule_.getGroup(current, this->report_step_);
+            accumulated_efficiency *= g.getGroupEfficiencyFactor();
+            current = g.parent();
+        }
+    }
+
+    const Scalar target_rate = control_group_target * group_guide_rate
+                             / control_group_guide_rate / accumulated_efficiency;
 
     // Calculate current rate for this group
     std::vector<Scalar> rates(num_phases, 0.0);

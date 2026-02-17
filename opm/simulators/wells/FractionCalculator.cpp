@@ -168,7 +168,10 @@ guideRate(const std::string& name,
           const bool always_use_potentials)
 {
     if (schedule_.hasWell(name, report_step_)) {
-        return this->groupStateHelper().getGuideRate(name, target_);
+        if (guide_rate_->has(name) || guide_rate_->hasPotentials(name)) {
+            return guide_rate_->get(name, target_, this->groupStateHelper().getWellRateVector(name));
+        }
+        return 0.0;
     } else {
         if (groupControlledWells(name, always_included_child) > 0) {
             if (is_producer_ && guide_rate_->has(name) && !always_use_potentials) {

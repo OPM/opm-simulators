@@ -392,13 +392,19 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
     const auto chain = groupStateHelper.groupChainTopBot(bottom_group.name(), group.name());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
+    const std::size_t local_reduction_level = groupStateHelper.getLocalReductionLevel(
+        chain, /*is_production_group=*/true, Phase::OIL);
     Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || guideRate->has(chain[ii])) {
-        //     Apply local reductions only at the control level
-        //     (top) and for levels where we have a specified
-        //     group guide rate.
-            target -= localReduction(chain[ii]);
+            // Apply local reductions only at the control level (top) and for
+            // intermediate levels where we have both a guide rate and
+            // group-controlled wells (local_reduction_level >= ii).  Without
+            // this gating, reductions from a group with GCW=0 would be
+            // double-counted.
+            if (local_reduction_level >= ii) {
+                target -= localReduction(chain[ii]);
+            }
         }
         target *= localFraction(chain[ii+1]);
     }

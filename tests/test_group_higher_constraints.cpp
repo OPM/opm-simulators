@@ -1131,18 +1131,12 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupProductionTargetRate)
 //!
 //! MANI's well rates are set low enough (total=5000) that isAutoChokeGroupUnderperforming_()
 //! detects underperformance and updateGroupControlledWells() naturally sets MANI GCW=0.
-//!
-//! This test demonstrates the double-counting bug in the autochoke loop when an intermediate
-//! group has a guide rate but GCW=0.  The autochoke loop subtracts reductions unconditionally
-//! at every level where guideRate->has() is true, without local_reduction_level gating.
-//! When GCW=0 at MANI and PLAT, updateGroupTargetReductionRecursive_() propagates MANI's
-//! total production into PLAT's reduction (case 1), which then propagates into FIELD's
-//! reduction (case 1 again).  The autochoke loop subtracts reduction(FIELD) at ii=0 and
-//! reduction(PLAT) at ii=1, double-counting MANI's production.
-//!
-//! BUG: The buggy code gives target=0 (double-counted reductions make the target negative,
-//! clamped to 0 by std::max at WellGroupControls.cpp:406).
-//! FIX: With local_reduction_level gating, the correct target is ~7013.89 SM3/day.
+//! With GCW=0 at MANI and PLAT, updateGroupTargetReductionRecursive_() uses case 1 (total
+//! production propagated up) instead of case 3 (guide rate distribution).  The
+//! local_reduction_level gating in getAutoChokeGroupProductionTargetRate() ensures that
+//! the PLAT-level reduction is skipped (since PLAT has GCW=0 and therefore
+//! local_reduction_level=0 < ii=1), avoiding double-counting of reductions that were
+//! already propagated into FIELD's reduction via case 1.
 //!
 //! \code
 //!   FIELD (ORAT = 10000, GCW=1)
@@ -1155,7 +1149,7 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupProductionTargetRate)
 //!   └── PLAT-2 (E=0.85, FLD, GUIDERATE=2550, GCW=1)
 //!       └── WELL-C (RATE=3000, POT=3000, GRUP)
 //! \endcode
-BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateDoubleCountingBug)
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateWithUnderperformance)
 {
     // Uses NETWORK DATA file: MANI has as_choke()=true from NODEPROP,
     // wells under MANI are switched to THP control by the NODEPROP handler.
@@ -1236,12 +1230,14 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateDoubleCountingBug)
     BOOST_CHECK(control_mode == Opm::Group::ProductionCMode::ORAT);
 
     // ========================================================================
-    // EXPECTED COMPUTATION (buggy code, no local_reduction_level gating)
+    // EXPECTED COMPUTATION
     // ========================================================================
     //
     // chain = [FIELD, PLAT, MANI], efficiencyFactor = E_MANI * E_PLAT = 0.72
+    // local_reduction_level = 0 (PLAT has guide rate but GCW=0 → doesn't qualify)
     //
     // ii=0 (FIELD):
+    //   local_reduction_level(0) >= ii(0) → true → apply reduction
     //   reduction(FIELD) = 4950
     //   target = 10000 - 4950 = 5050
     //   localFraction("PLAT") = 1.0  (PLAT GCW=0 → excluded from sum,
@@ -1249,32 +1245,17 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateDoubleCountingBug)
     //   target = 5050 * 1.0 = 5050
     //
     // ii=1 (PLAT):
-    //   guideRate->has("PLAT") = true → apply reduction  [BUG: should be gated]
-    //   reduction(PLAT) = 5500
-    //   target = 5050 - 5500 = -450    ← DOUBLE-COUNTED!
+    //   local_reduction_level(0) >= ii(1) → false → skip reduction
+    //   (PLAT's reduction was already propagated into FIELD's via case 1)
     //   localFraction("MANI") = 1.0  (MANI GCW=0, MANI-2 ORAT → num_active=0,
     //     total=0, potentials=0 → return 1.0)
-    //   target = -450 * 1.0 = -450
+    //   target = 5050 * 1.0 = 5050
     //
-    // Final: max(0, -450 / 0.72) = 0.0
-    //
-    // The double-counting: reduction(FIELD) = 4950 already includes
-    //   E_PLAT * sumWellSurfaceRates(PLAT) = 0.9 * 5500 = 4950
-    // which accounts for ALL of PLAT's production.  Then reduction(PLAT) = 5500
-    // subtracts MANI's production AGAIN (via E_MANI * 5000 = 4000).
-    //
-    // With local_reduction_level gating (commit 2 fix):
-    //   local_reduction_level = 0 (PLAT has GR but GCW=0 → doesn't qualify)
-    //   ii=0: 0 >= 0 → true → target = 5050
-    //   ii=1: 0 >= 1 → false → skip reduction → target stays 5050
-    //   Final: max(0, 5050 / 0.72) ≈ 7013.89
+    // Final: max(0, 5050 / 0.72) ≈ 7013.89
     //
     const double target_rate_metric = metric_rate(target_rate_si);
-
-    // BUG: double-counting makes target negative, clamped to 0 by std::max
-    // After fix in commit 2, this should be updated to expect ~7013.89
-    const double expected_buggy_target = 0.0;
-    BOOST_CHECK_EQUAL(target_rate_metric, expected_buggy_target);
+    const double expected_target = 5050.0 / 0.72;  // ≈ 7013.89
+    checkAlgo(target_rate_metric, expected_target);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
