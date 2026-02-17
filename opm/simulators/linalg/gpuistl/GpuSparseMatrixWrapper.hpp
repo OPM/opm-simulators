@@ -392,11 +392,11 @@ public:
     }
 
     /**
-     * @brief resetMatrix resets the matrix to zero values.
+     * @brief setToZero resets the matrix to zero values.
      */
-    void resetMatrix()
+    void setToZero()
     {
-        m_matrix->resetMatrix();
+        m_matrix->setToZero();
     }
 
     /**

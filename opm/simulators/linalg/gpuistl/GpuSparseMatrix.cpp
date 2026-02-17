@@ -203,11 +203,11 @@ GpuSparseMatrix<T>::updateNonzeroValues(const GpuSparseMatrixGeneric<T>& matrix)
 
 template <class T>
 void
-GpuSparseMatrix<T>::resetMatrix()
+GpuSparseMatrix<T>::setToZero()
 {
     // For blockSize == 1, use GpuSparseMatrixGeneric
     if (m_genericMatrixForBlockSize1) {
-        m_genericMatrixForBlockSize1->resetMatrix();
+        m_genericMatrixForBlockSize1->setToZero();
         return;
     }
 

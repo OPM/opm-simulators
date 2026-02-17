@@ -342,9 +342,9 @@ public:
      void updateNonzeroValues(const GpuSparseMatrixGeneric<T>& matrix);
 
     /**
-     * @brief resetMatrix resets the matrix to zero values.
+     * @brief setToZero resets the matrix to zero values.
      */
-     void resetMatrix();
+     void setToZero();
 
     /**
      * @brief Dispatches a function based on the block size of the matrix.

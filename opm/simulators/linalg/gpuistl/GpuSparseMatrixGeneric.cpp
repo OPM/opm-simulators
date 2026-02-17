@@ -255,7 +255,7 @@ GpuSparseMatrixGeneric<T>::updateNonzeroValues(const GpuSparseMatrixGeneric<T>& 
 
 template <class T>
 void
-GpuSparseMatrixGeneric<T>::resetMatrix()
+GpuSparseMatrixGeneric<T>::setToZero()
 {
     cudaMemset(m_nonZeroElements.data(), 0, nonzeroes() * blockSize() * blockSize() * sizeof(T));
 }
