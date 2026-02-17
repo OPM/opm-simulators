@@ -523,7 +523,7 @@ template<typename Scalar, typename IndexTraits>
 data::Wells
 WellState<Scalar, IndexTraits>::
 report(const int* globalCellIdxMap,
-       const std::function<bool(const int)>& wasDynamicallyClosed) const
+       const std::function<bool(const int)>& wasDynamicallyClosed,  const RsConstInfo& rsConst) const
 {
     if (this->numWells() == 0) {
         return {};
