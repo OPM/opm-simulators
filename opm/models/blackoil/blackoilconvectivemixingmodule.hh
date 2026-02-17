@@ -210,7 +210,7 @@ public:
                                  const unsigned phaseIdx,
                                  const ConvectiveMixingModuleParam& info) {
 
-        if (info.active_.size() == 0) {
+        if (info.active_.empty()) {
             return;
         }
         if (!info.active_[intQuantsIn.pvtRegionIndex()] || !info.active_[intQuantsEx.pvtRegionIndex()]) {
@@ -320,7 +320,7 @@ public:
     {
         const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
-        if (info.active_.size() == 0) {
+        if (info.active_.empty()) {
             return;
         }
 
