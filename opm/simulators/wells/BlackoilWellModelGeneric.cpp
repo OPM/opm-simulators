@@ -2011,7 +2011,8 @@ updateNONEProductionGroups(const GasLiftOpt& glo, DeferredLogger& deferred_logge
             continue;
         }
         const auto& gname = gnames[i];
-        if (group_state.production_control(gname) != Group::ProductionCMode::NONE) {
+        if (group_state.production_control(gname) != Group::ProductionCMode::NONE &&
+            group_state.production_control(gname) != Group::ProductionCMode::FLD) {
             // If the production group is specified for gas lift optimization,
             // the current gas lift optimization implementation relies on the control
             // mode is not NONE or FLD. As a result, we can not set it to NONE here.
