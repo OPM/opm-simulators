@@ -2186,16 +2186,18 @@ namespace Opm {
                     }
                 }
                 std::array<Scalar,2> weighted{0.0,0.0};
+                auto& [weighted_temperature, total_weight] = weighted;
                 const auto& well_info = this->local_parallel_well_info_[wellID].get();
                 using int_type = decltype(this->well_perf_data_[wellID].size());
                 for (int_type perf = 0, end_perf = this->well_perf_data_[wellID].size(); perf < end_perf; ++perf) {
                     const int cell_idx = this->well_perf_data_[wellID][perf].cell_index;
                     const auto& intQuants = simulator_.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
                     const auto& fs = intQuants.fluidState();
-                    computeWellTemperature(perf, np, fs, ws, weighted);
+                    Scalar weight_factor = computeTemperatureWeightFactor(perf, np, fs, ws);
+                    total_weight += weight_factor;
+                    weighted_temperature += weight_factor * fs.temperature(/*phaseIdx*/0).value();
                 }
                 well_info.communication().sum(weighted.data(), 2);
-                const auto& [weighted_temperature, total_weight] = weighted;
                 this->wellState().well(wellID).temperature = weighted_temperature / total_weight;
             }
         }

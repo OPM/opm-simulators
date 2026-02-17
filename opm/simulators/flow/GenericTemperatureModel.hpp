@@ -35,7 +35,6 @@
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
 
 #include <opm/models/blackoil/blackoilmodel.hh>
-#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 
 #include <opm/simulators/linalg/matrixblock.hh>
 

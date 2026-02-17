@@ -38,6 +38,7 @@
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
+#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 
 #include <algorithm>
 #include <cassert>
@@ -80,17 +81,17 @@ class BlackOilEnergyIntensiveQuantitiesTemp
     static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
 
     public:
-    using EvaluationTemp = DenseAd::Evaluation<Scalar,1>;
-    using FluidStateTemp = BlackOilFluidState<  EvaluationTemp,
-                                                FluidSystem,
-                                                true, //store temperature
-                                                true, // store enthalpy
-                                                compositionSwitchEnabled,
-                                                enableVapwat,
-                                                enableBrine,
-                                                enableSaltPrecipitation,
-                                                enableDisgasInWater,
-                                                Indices::numPhases>;
+    using EvaluationTemp = DenseAd::Evaluation<Scalar, 1>;
+    using FluidStateTemp = BlackOilFluidState<EvaluationTemp,
+                                              FluidSystem,
+                                              true, //store temperature
+                                              true, // store enthalpy
+                                              compositionSwitchEnabled,
+                                              enableVapwat,
+                                              enableBrine,
+                                              enableSaltPrecipitation,
+                                              enableDisgasInWater,
+                                              Indices::numPhases>;
 
 
 
@@ -636,13 +637,15 @@ protected:
             this->assembleEquationWell(*wellPtr);
         }
 
- //       if (simulator_.gridView().comm().size() > 1) {
- //           // Set dirichlet conditions for overlapping cells
-//            // loop over precalculated overlap rows and columns
-//            for (const auto row : overlapRows_) {
-//                // Zero out row.
-//               (*this->energyMatrix_)[row] = 0.0;
-//
+        // For standard ilu0 we need to set the overlapping cells to identity. But since we use "paroverilu0"
+        // here this is not needed.
+        //       if (simulator_.gridView().comm().size() > 1) {
+        //           // Set dirichlet conditions for overlapping cells
+        //            // loop over precalculated overlap rows and columns
+        //            for (const auto row : overlapRows_) {
+        //                // Zero out row.
+        //               (*this->energyMatrix_)[row] = 0.0;
+        //
         //        //diagonal block set to diag(1.0).
         //        (*this->energyMatrix_)[row][row][0][0] = 1.0;
         //    }
@@ -707,12 +710,14 @@ protected:
         }
         const int np = simulator_.problem().wellModel().wellState().numPhases();
         std::array<Scalar,2> weighted{0.0,0.0};
+        auto& [weighted_temperature, total_weight] = weighted;
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
             const auto globI = ws.perf_data.cell_index[i];
             const auto& fs = intQuants_[globI].fluidStateTemp();
-            simulator_.problem().wellModel().computeWellTemperature(i, np, fs, ws, weighted);
+            Scalar weight_factor = simulator_.problem().wellModel().computeTemperatureWeightFactor(i, np, fs, ws);
+            total_weight += weight_factor;
+            weighted_temperature += weight_factor * fs.temperature(/*phaseIdx*/0).value();
         }
-        const auto& [weighted_temperature, total_weight] = weighted;
         //simulator_.gridView().comm().sum(weighted.data(), 2);
         ws.temperature = weighted_temperature / total_weight;
     }
