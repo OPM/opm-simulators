@@ -201,6 +201,19 @@ GpuSparseMatrix<T>::updateNonzeroValues(const GpuSparseMatrixGeneric<T>& matrix)
     m_nonZeroElements.copyFromDeviceToDevice(matrix.getNonZeroValues());
 }
 
+template <class T>
+void
+GpuSparseMatrix<T>::setToZero()
+{
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (m_genericMatrixForBlockSize1) {
+        m_genericMatrixForBlockSize1->setToZero();
+        return;
+    }
+
+    cudaMemset(m_nonZeroElements.data(), 0, nonzeroes() * blockSize() * blockSize() * sizeof(T));
+}
+
 template <typename T>
 void
 GpuSparseMatrix<T>::setUpperTriangular()
@@ -345,8 +358,6 @@ GpuSparseMatrix<T>::assertSameSize(const VectorType& x) const
     // Assume square matrices: numberOfColumns == numberOfRows
     detail::validateVectorMatrixSizes(x.dim(), blockSize(), N());
 }
-
-
 
 template class GpuSparseMatrix<float>;
 template class GpuSparseMatrix<double>;

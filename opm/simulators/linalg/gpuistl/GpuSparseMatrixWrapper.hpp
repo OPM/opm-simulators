@@ -391,6 +391,13 @@ public:
         m_matrix->updateNonzeroValues(matrix.get());
     }
 
+    /**
+     * @brief setToZero resets the matrix to zero values.
+     */
+    void setToZero()
+    {
+        m_matrix->setToZero();
+    }
 
     /**
      * @brief Dispatches a function based on the block size of the matrix.

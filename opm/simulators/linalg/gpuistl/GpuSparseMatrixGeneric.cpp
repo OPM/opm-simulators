@@ -253,6 +253,12 @@ GpuSparseMatrixGeneric<T>::updateNonzeroValues(const GpuSparseMatrixGeneric<T>& 
     m_nonZeroElements.copyFromDeviceToDevice(matrix.getNonZeroValues());
 }
 
+template <class T>
+void
+GpuSparseMatrixGeneric<T>::setToZero()
+{
+    cudaMemset(m_nonZeroElements.data(), 0, nonzeroes() * blockSize() * blockSize() * sizeof(T));
+}
 
 
 template <typename T>
