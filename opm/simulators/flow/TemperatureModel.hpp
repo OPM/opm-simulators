@@ -122,6 +122,7 @@ public:
 
         // we need the storage term at start of the iteration (timeIdx = 1)
         storage1_.resize(numCells);
+        dT_.resize(numCells);
 
         // set the initial temperature
         for (unsigned globI = 0; globI < numCells; ++globI) {
@@ -134,12 +135,20 @@ public:
         // find and store the overlap cells
         const auto& elemMapper = simulator_.model().elementMapper();
         detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
+
+        dTMax_limit_ =  Parameters::Get<Parameters::ToleranceMaxDtemp<Scalar>>();
     }
 
     void beginTimeStep()
     {
         if (!this->doTemp()) {
             return;
+        }
+        const int reportStepIdx = simulator_.episodeIndex();
+        const auto& tuning_dp = simulator_.vanguard().schedule()[reportStepIdx].tuning_dp();
+
+        if (tuning_dp.TRGDDT > 0) {
+            dTMax_limit_ = tuning_dp.TRGDDT;
         }
 
         // We copy the intensive quantities here to make it possible to update them
@@ -238,8 +247,7 @@ protected:
     void solveAndUpdate()
     {
         const unsigned int numCells = simulator_.model().numTotalDof();
-        EnergyVector dx(numCells);
-        bool conv = this->linearSolve_(*this->energyMatrix_, dx, this->energyVector_);
+        bool conv = this->linearSolve_(*this->energyMatrix_, dT_, this->energyVector_);
         if (!conv) {
             if (simulator_.gridView().comm().rank() == 0) {
                 OpmLog::warning("Temp model: Linear solver did not converge. Temperature values not updated.");
@@ -247,7 +255,7 @@ protected:
         }
         else {
             for (unsigned globI = 0; globI < numCells; ++globI) {
-                this->temperature_[globI] -= std::clamp(dx[globI][0], -this->maxTempChange_, this->maxTempChange_);
+                this->temperature_[globI] -= std::clamp(dT_[globI][0], -this->maxTempChange_, this->maxTempChange_);
                 intQuants_[globI].updateTemperature_(simulator_.problem(), globI, /*timeIdx*/ 0);
                 intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
             }
@@ -264,17 +272,19 @@ protected:
         const IsNumericalAquiferCell isNumericalAquiferCell(simulator_.gridView().grid());
         Scalar sum_pv = 0.0;
         Scalar sum_pv_not_converged = 0.0;
+        Scalar dTMax = 0.0;
         for (const auto& elem : elements(simulator_.gridView(), Dune::Partitions::interior)) {
             unsigned globI = elemMapper.index(elem);
             const auto pvValue =  simulator_.problem().referencePorosity(globI, /*timeIdx=*/0)
             *  simulator_.model().dofTotalVolume(globI);
 
             const Scalar scaled_norm = dt * std::abs(this->energyVector_[globI])/ pvValue;
-            maxNorm = max(maxNorm, scaled_norm);
+            maxNorm = std::max(maxNorm, scaled_norm);
             sumNorm += scaled_norm;
             if (!isNumericalAquiferCell(elem)) {
                 if (scaled_norm > tolerance_cnv_energy_strict) {
                     sum_pv_not_converged += pvValue;
+                    dTMax = std::max(dTMax, std::abs(dT_[globI]));
                 }
                 sum_pv += pvValue;
             }
@@ -283,6 +293,8 @@ protected:
         sumNorm = simulator_.gridView().comm().sum(sumNorm);
         sum_pv = simulator_.gridView().comm().sum(sum_pv);
         sumNorm /= sum_pv;
+
+        dTMax = simulator_.gridView().comm().max(dTMax);
 
         // Use relaxed tolerance if the fraction of unconverged cells porevolume is less than relaxed_max_pv_fraction
         sum_pv_not_converged = simulator_.gridView().comm().sum(sum_pv_not_converged);
@@ -294,10 +306,15 @@ protected:
                                             tolerance_cnv_energy_strict;
 
         const auto msg = fmt::format("Temperature model (TEMP): Newton iter {}: "
-                                     "CNV(E): {:.1e}, EB: {:.1e}",
-                                     iter, maxNorm, sumNorm);
+                                     "CNV(E): {:.1e}, EB: {:.1e}, dT: {:.1e}",
+                                     iter, maxNorm, sumNorm, dTMax);
         OpmLog::debug(msg);
-        if (maxNorm < tolerance_cnv_energy && sumNorm < tolerance_energy_balance) {
+        bool dtmax_converged = false;
+        if (dTMax_limit_ > 0 && iter > 0) {
+            dtmax_converged = (dTMax > 0.0 && dTMax < dTMax_limit_);
+        }
+
+        if ((dtmax_converged || maxNorm < tolerance_cnv_energy) && sumNorm < tolerance_energy_balance) {
             const auto msg2 = fmt::format("Temperature model (TEMP): Newton converged after {} iterations"
                                          , iter);
             OpmLog::debug(msg2);
@@ -519,9 +536,11 @@ protected:
 
     const Simulator& simulator_;
     EnergyVector storage1_;
+    EnergyVector dT_;
     std::vector<IntensiveQuantities> intQuants_;
     std::vector<int> overlapRows_;
     std::vector<int> interiorRows_;
+    Scalar dTMax_limit_;
 };
 
 // need for the old linearizer
