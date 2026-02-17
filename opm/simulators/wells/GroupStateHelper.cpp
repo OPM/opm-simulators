@@ -1705,6 +1705,7 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
     for (int phase_pos = 0; phase_pos < num_phases; ++phase_pos) {
         rates[phase_pos] = this->sumWellSurfaceRates(group, phase_pos, /*injector=*/false);
     }
+    this->comm_.sum(rates.data(), rates.size());
     const Scalar current_rate = tcalc.calcModeRateFromRates(rates);
 
     // If underperforming, wells should be excluded from GCW count
