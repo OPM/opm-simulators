@@ -68,7 +68,6 @@ WellInterfaceFluidSystem<FluidSystem>::
 calculateReservoirRates(const bool use_well_bhp_temperature, SingleWellState<Scalar, IndexTraits>& ws) const
 {
     const int np = this->number_of_phases_;
-    const auto& pu = this->phaseUsage();
     // Calculate reservoir rates from average pressure and temperature
     if ( !(use_well_bhp_temperature) || this->wellEcl().isProducer()) {
         const int fipreg = 0; // not considering the region for now
