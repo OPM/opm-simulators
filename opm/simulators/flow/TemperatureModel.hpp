@@ -707,30 +707,12 @@ protected:
         }
         const int np = simulator_.problem().wellModel().wellState().numPhases();
         std::array<Scalar,2> weighted{0.0,0.0};
-        auto& [weighted_temperature, total_weight] = weighted;
-        auto& perf_data = ws.perf_data;
-        auto& perf_phase_rate = perf_data.phase_rates;
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
             const auto globI = ws.perf_data.cell_index[i];
             const auto& fs = intQuants_[globI].fluidStateTemp();
-            // we on only have one temperature pr cell any phaseIdx will do
-            Scalar cellTemperatures = fs.temperature(/*phaseIdx*/0).value();
-            Scalar weight_factor = 0.0;
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-                Scalar cellInternalEnergy = fs.enthalpy(phaseIdx).value() -
-                                        fs.pressure(phaseIdx).value() / fs.density(phaseIdx).value();
-                Scalar cellBinv = fs.invB(phaseIdx).value();
-                Scalar cellDensity = fs.density(phaseIdx).value();
-                Scalar perfPhaseRate = perf_phase_rate[i*np + phaseIdx];
-                weight_factor += cellDensity * perfPhaseRate / cellBinv * cellInternalEnergy / cellTemperatures;
-            }
-            weight_factor = std::abs(weight_factor) + 1e-13;
-            total_weight += weight_factor;
-            weighted_temperature += weight_factor * cellTemperatures;
+            simulator_.problem().wellModel().computeWellTemperature(i, np, fs, ws, weighted);
         }
+        const auto& [weighted_temperature, total_weight] = weighted;
         //simulator_.gridView().comm().sum(weighted.data(), 2);
         ws.temperature = weighted_temperature / total_weight;
     }

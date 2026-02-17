@@ -2174,11 +2174,7 @@ namespace Opm {
     computeWellTemperature()
     {
         if constexpr (energyModuleType_ == EnergyModules::FullyImplicitThermal) {
-            int np = this->numPhases();
-            Scalar cellInternalEnergy;
-            Scalar cellBinv;
-            Scalar cellDensity;
-            Scalar perfPhaseRate;
+            const int np = this->numPhases();
             const int nw = this->numLocalWells();
             for (auto wellID = 0*nw; wellID < nw; ++wellID) {
                 const Well& well = this->wells_ecl_[wellID];
@@ -2189,40 +2185,17 @@ namespace Opm {
                         continue;
                     }
                 }
-
                 std::array<Scalar,2> weighted{0.0,0.0};
-                auto& [weighted_temperature, total_weight] = weighted;
-
-                auto& well_info = this->local_parallel_well_info_[wellID].get();
-                auto& perf_data = ws.perf_data;
-                auto& perf_phase_rate = perf_data.phase_rates;
-
+                const auto& well_info = this->local_parallel_well_info_[wellID].get();
                 using int_type = decltype(this->well_perf_data_[wellID].size());
                 for (int_type perf = 0, end_perf = this->well_perf_data_[wellID].size(); perf < end_perf; ++perf) {
                     const int cell_idx = this->well_perf_data_[wellID][perf].cell_index;
                     const auto& intQuants = simulator_.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
                     const auto& fs = intQuants.fluidState();
-
-                    // we on only have one temperature pr cell any phaseIdx will do
-                    Scalar cellTemperatures = fs.temperature(/*phaseIdx*/0).value();
-
-                    Scalar weight_factor = 0.0;
-                    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                        if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                            continue;
-                        }
-                        cellInternalEnergy = fs.enthalpy(phaseIdx).value() -
-                                             fs.pressure(phaseIdx).value() / fs.density(phaseIdx).value();
-                        cellBinv = fs.invB(phaseIdx).value();
-                        cellDensity = fs.density(phaseIdx).value();
-                        perfPhaseRate = perf_phase_rate[perf*np + phaseIdx];
-                        weight_factor += cellDensity * perfPhaseRate / cellBinv * cellInternalEnergy / cellTemperatures;
-                    }
-                    weight_factor = std::abs(weight_factor) + 1e-13;
-                    total_weight += weight_factor;
-                    weighted_temperature += weight_factor * cellTemperatures;
+                    computeWellTemperature(perf, np, fs, ws, weighted);
                 }
                 well_info.communication().sum(weighted.data(), 2);
+                const auto& [weighted_temperature, total_weight] = weighted;
                 this->wellState().well(wellID).temperature = weighted_temperature / total_weight;
             }
         }
