@@ -269,9 +269,9 @@ public:
 
     template <class Context>
     OPM_HOST_DEVICE static void addConvectiveMixingFlux(RateVector& flux,
-                                        const Context& elemCtx,
-                                        unsigned scvfIdx,
-                                        unsigned timeIdx)
+                                                        const Context& elemCtx,
+                                                        unsigned scvfIdx,
+                                                        unsigned timeIdx)
     {
         // need for darcy flux calculation
         const auto& problem = elemCtx.problem();
@@ -309,14 +309,14 @@ public:
       */
     template <class RateVectorT = RateVector, class CMMParam = ConvectiveMixingModuleParamT>
     OPM_HOST_DEVICE static void addConvectiveMixingFlux(RateVectorT& flux,
-                                        const IntensiveQuantities& intQuantsIn,
-                                        const IntensiveQuantities& intQuantsEx,
-                                        const unsigned globalIndexIn,
-                                        const unsigned globalIndexEx,
-                                        const Scalar distZg,
-                                        const Scalar trans,
-                                        const Scalar faceArea,
-                                        const CMMParam& info)
+                                                        const IntensiveQuantities& intQuantsIn,
+                                                        const IntensiveQuantities& intQuantsEx,
+                                                        const unsigned globalIndexIn,
+                                                        const unsigned globalIndexEx,
+                                                        const Scalar distZg,
+                                                        const Scalar trans,
+                                                        const Scalar faceArea,
+                                                        const CMMParam& info)
     {
         const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
