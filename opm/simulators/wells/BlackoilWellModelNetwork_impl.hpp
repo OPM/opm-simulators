@@ -38,7 +38,6 @@
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
-#include <opm/simulators/wells/WellGroupControls.hpp>
 
 #include <fmt/format.h>
 
@@ -192,10 +191,9 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                 // derived via group guide rates
                 const Scalar efficiencyFactor = 1.0;
                 const Group& parentGroup = well_model_.schedule().getGroup(group.parent(), reportStepIdx);
-                auto target = WellGroupControls<Scalar, IndexTraits>::
+                auto target = well_model_.groupStateHelper().
                     getAutoChokeGroupProductionTargetRate(group,
                                                           parentGroup,
-                                                          well_model_.groupStateHelper(),
                                                           resv_coeff,
                                                           efficiencyFactor);
                 target_tmp = target.first;

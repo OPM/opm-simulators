@@ -86,12 +86,6 @@ public:
                                         const RateConvFunc& rateConverter,
                                         Scalar efficiencyFactor) const;
 
-    static std::pair<Scalar, Group::ProductionCMode> getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
-                                                        const Group& group,
-                                                        const GroupStateHelperType& groupStateHelper,
-                                                        const std::vector<Scalar>& resv_coeff,
-                                                        Scalar efficiencyFactor);
-
 private:
     const WellInterfaceGeneric<Scalar, IndexTraits>& well_; //!< Reference to well interface
 };
