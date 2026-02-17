@@ -209,7 +209,6 @@ public:
                                  const IntensiveQuantities& intQuantsEx,
                                  const unsigned phaseIdx,
                                  const ConvectiveMixingModuleParam& info) {
-        const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
         if (info.active_.size() == 0) {
             return;
@@ -218,6 +217,7 @@ public:
             return;
         }
 
+        FluidSystem fsys = intQuantsIn.getFluidSystem();
         if (phaseIdx == fsys.gasPhaseIdx) {
             return;
         }
