@@ -43,7 +43,6 @@ TargetCalculator(const Opm::GroupStateHelper<Scalar, IndexTraits>& groupStateHel
     : cmode_{groupStateHelper.groupState().production_control(group.name())}
     , groupStateHelper_{groupStateHelper}
     , resv_coeff_{resv_coeff}
-    , group_{group}
 {
 }
 
@@ -92,14 +91,6 @@ RateType TargetCalculator<Scalar, IndexTraits>::calcModeRateFromRates(const Rate
 }
 
 template<typename Scalar, typename IndexTraits>
-Scalar
-TargetCalculator<Scalar, IndexTraits>::
-groupTarget() const
-{
-    return this->groupStateHelper_.getProductionGroupTarget(this->group_);
-}
-
-template<typename Scalar, typename IndexTraits>
 GuideRateModel::Target
 TargetCalculator<Scalar, IndexTraits>::guideTargetMode() const
 {
@@ -124,14 +115,8 @@ TargetCalculator<Scalar, IndexTraits>::guideTargetMode() const
 template<typename Scalar, typename IndexTraits>
 InjectionTargetCalculator<Scalar, IndexTraits>::
 InjectionTargetCalculator(const GroupStateHelperType& groupStateHelper,
-                          const std::vector<Scalar>& resv_coeff,
-                          const Group& group,
                           const Phase& injection_phase)
     : groupStateHelper_{groupStateHelper}
-    , resv_coeff_{resv_coeff}
-    , group_{group}
-    , injection_phase_{injection_phase}
-    , cmode_{groupStateHelper.groupState().injection_control(group.name(), injection_phase)}
 {
     pos_ = this->groupStateHelper_.phaseToActivePhaseIdx(injection_phase);
     // initialize to avoid warning
@@ -153,16 +138,8 @@ InjectionTargetCalculator(const GroupStateHelperType& groupStateHelper,
     default:
         OPM_DEFLOG_THROW(std::logic_error,
                          "Invalid injection phase in InjectionTargetCalculator",
-                         this->deferredLogger());
+                         this->groupStateHelper_.deferredLogger());
     }
-}
-
-template<typename Scalar, typename IndexTraits>
-Scalar
-InjectionTargetCalculator<Scalar, IndexTraits>::
-groupTarget() const
-{
-    return this->groupStateHelper_.getInjectionGroupTarget(this->group_, this->injection_phase_, this->resv_coeff_);
 }
 
 template<typename Scalar, typename IndexTraits>

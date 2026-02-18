@@ -204,7 +204,7 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
             if (!fld_none)
             {
                 // Target is set for the autochoke group itself
-                target_tmp = tcalc.groupTarget();
+                target_tmp = well_model_.groupStateHelper().getProductionGroupTarget(group);
             }
 
             const Scalar orig_target = target_tmp;

@@ -124,8 +124,6 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
     // If we are here, we are at the topmost group to be visited in the recursion.
     // This is the group containing the control we will check against.
     GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {*this,
-                                                                             resv_coeff,
-                                                                             group,
                                                                              injection_phase};
 
     GroupStateHelpers::FractionCalculator fcalc {this->schedule_,
@@ -187,7 +185,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
         return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
     }
 
-    const Scalar orig_target = tcalc.groupTarget();
+    const Scalar orig_target = this->getInjectionGroupTarget(group, injection_phase, resv_coeff);
     const Scalar current_rate_available = tcalc.calcModeRateFromRates(rates);
     const std::size_t local_reduction_level = this->getLocalReductionLevel_(
         chain, /*is_production_group=*/false, injection_phase);
@@ -286,7 +284,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
         return tcalc.calcModeRateFromRates(group_surface_rates);
     };
 
-    const Scalar orig_target = tcalc.groupTarget();
+    const Scalar orig_target = this->getProductionGroupTarget(group);
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
@@ -568,7 +566,7 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
-    const Scalar orig_target = tcalc.groupTarget();
+    const Scalar orig_target = this->getProductionGroupTarget(group);
     const auto chain = this->groupChainTopBot(bottom_group.name(), group.name());
     const std::size_t local_reduction_level = this->getLocalReductionLevel_(
         chain, /*is_production_group=*/true, Phase::OIL);
@@ -660,8 +658,6 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
     // If we are here, we are at the topmost group to be visited in the recursion.
     // This is the group containing the control we will check against.
     GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc{*this,
-                                                                             resv_coeff,
-                                                                             group,
                                                                              injection_phase};
 
     GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
@@ -687,7 +683,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
         return fcalc.localFraction(child, always_included);
     };
 
-    const Scalar orig_target = tcalc.groupTarget();
+    const Scalar orig_target = this->getInjectionGroupTarget(group, injection_phase, resv_coeff);
     const Scalar current_rate_available = tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
 
@@ -782,7 +778,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
         return fcalc.localFraction(child, always_included);
     };
 
-    const Scalar orig_target = tcalc.groupTarget();
+    const Scalar orig_target = this->getProductionGroupTarget(group);
     // Switch sign since 'rates' are negative for producers.
     const Scalar current_rate_available = -tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
@@ -1719,7 +1715,7 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
     GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                    resv_coeff,
                                                                    control_group};
-    const auto& control_group_target = tcalc.groupTarget();
+    const Scalar control_group_target = this->getProductionGroupTarget(control_group);
 
     // Sum guide rates of the control group's FLD children. The control group's
     // own guide rate (from GCONPROD) is NOT used here — it governs the control
