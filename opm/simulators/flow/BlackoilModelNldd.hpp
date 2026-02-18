@@ -624,10 +624,10 @@ private:
             // Check if we should dampen. Only do so if wells are converged.
             if (!convreport.converged() && !convreport.wellFailed()) {
                 bool oscillate = false;
-                bool stagnate = false;
+                bool diverging = false;
                 const auto num_residuals = convergence_history.front().size();
                 detail::detectOscillations(convergence_history, iter, num_residuals,
-                                           Scalar{0.2}, 1, oscillate, stagnate);
+                                           Scalar{0.2}, 1, oscillate, diverging);
                 if (oscillate) {
                     damping_factor *= 0.85;
                     logger.debug(fmt::format(fmt::runtime("| Damping factor is now {}"), damping_factor));

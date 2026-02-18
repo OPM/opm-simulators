@@ -34,36 +34,27 @@ template<class Scalar>
 void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
                         const int it, const int numPhases, const Scalar relaxRelTol,
                         const int minimumOscillatingPhases,
-                        bool& oscillate, bool& stagnate)
+                        bool& oscillate, bool& diverging)
 {
-    // The detection of oscillation in two primary variable results in the report of the detection
-    // of oscillation for the solver.
-    // Only the saturations are used for oscillation detection for the black oil model.
-    // Stagnate is not used for any treatment here.
-
+    // The detection of oscillation and stagnation in the residuals
     if (it < 2) {
         oscillate = false;
-        stagnate = false;
+        diverging = false;
         return;
     }
-
-    stagnate = true;
     int oscillatePhase = 0;
+    int divergingPhase = 0;
     const auto& F0 = residualHistory[it];
     const auto& F1 = residualHistory[it - 1];
     const auto& F2 = residualHistory[it - 2];
     for (int p = 0; p < numPhases; ++p) {
         const Scalar d1 = std::abs((F0[p] - F2[p]) / F0[p]);
         const Scalar d2 = std::abs((F0[p] - F1[p]) / F0[p]);
-
         oscillatePhase += (d1 < relaxRelTol) && (relaxRelTol < d2);
-
-        // Process is 'stagnate' unless at least one phase
-        // exhibits significant residual change.
-        stagnate = (stagnate && !(std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3));
+        divergingPhase += F0[p] > F1[p] && F1[p] > F2[p] && (d1 > relaxRelTol) && (d2 > relaxRelTol);
     }
-
     oscillate = (oscillatePhase >= minimumOscillatingPhases);
+    diverging = (divergingPhase >= minimumOscillatingPhases);
 }
 
 template <class BVector, class Scalar>
