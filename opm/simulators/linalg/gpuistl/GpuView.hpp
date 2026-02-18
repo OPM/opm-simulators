@@ -122,6 +122,13 @@ public:
     }
 
     /**
+     * @return true if the view has no elements, false otherwise
+     */
+    __host__ __device__ bool empty() const {
+        return m_numberOfElements == 0;
+    }
+
+    /**
      * @return fetch the first element in a GpuView
      */
     __host__ __device__ T& front()

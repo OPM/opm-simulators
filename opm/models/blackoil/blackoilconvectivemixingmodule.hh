@@ -40,6 +40,10 @@
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <opm/common/utility/VectorWithDefaultAllocator.hpp>
+
+#include <opm/common/utility/gpuistl_if_available.hpp>
+
 #if HAVE_ECL_INPUT
 #include <cstddef>
 #endif
@@ -47,6 +51,40 @@
 #include <vector>
 
 namespace Opm {
+
+    template<class Scalar, template<class> class Storage = Opm::VectorWithDefaultAllocator>
+    struct ConvectiveMixingModuleParam
+    {
+        Storage<bool> active_;
+        Storage<Scalar> Xhi_;
+        Storage<Scalar> Psi_;
+    };
+
+#ifdef HAVE_CUDA
+namespace gpuistl
+{
+    template <class Scalar>
+    ConvectiveMixingModuleParam<Scalar, GpuView> make_view(ConvectiveMixingModuleParam<Scalar, GpuBuffer>& params)
+    {
+        ConvectiveMixingModuleParam<Scalar, GpuView> view;
+        view.active_ = gpuistl::make_view(params.active_);
+        view.Xhi_ = gpuistl::make_view(params.Xhi_);
+        view.Psi_ = gpuistl::make_view(params.Psi_);
+        return view;
+    }
+
+    template <class Scalar>
+    ConvectiveMixingModuleParam<Scalar, GpuBuffer> copy_to_gpu(const ConvectiveMixingModuleParam<Scalar, Opm::VectorWithDefaultAllocator>& params)
+    {
+        return ConvectiveMixingModuleParam<Scalar, GpuBuffer>{
+            gpuistl::GpuBuffer(params.active_),
+            gpuistl::GpuBuffer(params.Xhi_),
+            gpuistl::GpuBuffer(params.Psi_)
+        };
+    }
+}
+
+#endif
 
 /*!
  * \copydoc Opm::BlackOilConvectiveMixingModule
@@ -77,14 +115,12 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/false>
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
 public:
-    struct ConvectiveMixingModuleParam
-    {};
 
     #if HAVE_ECL_INPUT
     static void beginEpisode(const EclipseState&,
                              const Schedule&,
                              const int,
-                             ConvectiveMixingModuleParam&)
+                             ConvectiveMixingModuleParam<Scalar>&)
     {}
     #endif
 
@@ -96,7 +132,7 @@ public:
                                  const IntensiveQuantities&,
                                  const IntensiveQuantities&,
                                  const unsigned int,
-                                 const ConvectiveMixingModuleParam&)
+                                 const ConvectiveMixingModuleParam<Scalar>&)
     {}
 
     template <class Context>
@@ -118,7 +154,7 @@ public:
                                         const Scalar,
                                         const Scalar,
                                         const Scalar,
-                                        const ConvectiveMixingModuleParam&)
+                                        const ConvectiveMixingModuleParam<Scalar>&)
     {}
 };
 
@@ -133,6 +169,7 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Toolbox = MathToolbox<Evaluation>;
+    using ConvectiveMixingModuleParamT = ConvectiveMixingModuleParam<Scalar>;
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { dimWorld = GridView::dimensionworld };
@@ -142,18 +179,11 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
 public:
-    struct ConvectiveMixingModuleParam
-    {
-        std::vector<bool> active_;
-        std::vector<Scalar> Xhi_;
-        std::vector<Scalar> Psi_;
-    };
-
     #if HAVE_ECL_INPUT
     static void beginEpisode(const EclipseState& eclState,
                              const Schedule& schedule,
                              const int episodeIdx,
-                             ConvectiveMixingModuleParam& info)
+                             ConvectiveMixingModuleParamT& info)
     {
         // check that Xhi and Psi didn't change
         std::size_t numRegions = eclState.runspec().tabdims().getNumPVTTables();
@@ -173,11 +203,12 @@ public:
     }
     #endif
 
-    static void modifyAvgDensity(Evaluation& rhoAvg,
-                                 const IntensiveQuantities& intQuantsIn,
-                                 const IntensiveQuantities& intQuantsEx,
-                                 const unsigned phaseIdx,
-                                 const ConvectiveMixingModuleParam& info) {
+    template <class CMMParam>
+    OPM_HOST_DEVICE static void modifyAvgDensity(Evaluation& rhoAvg,
+                                                 const IntensiveQuantities& intQuantsIn,
+                                                 const IntensiveQuantities& intQuantsEx,
+                                                 const unsigned phaseIdx,
+                                                 const CMMParam& info) {
 
         if (info.active_.empty()) {
             return;
@@ -186,14 +217,15 @@ public:
             return;
         }
 
-        if (phaseIdx == FluidSystem::gasPhaseIdx) {
+        FluidSystem fsys = intQuantsIn.getFluidSystem();
+        if (phaseIdx == fsys.gasPhaseIdx) {
             return;
         }
 
         const auto& liquidPhaseIdx =
-            FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
-               ? FluidSystem::waterPhaseIdx
-               : FluidSystem::oilPhaseIdx;
+            fsys.phaseIsActive(fsys.waterPhaseIdx)
+               ? fsys.waterPhaseIdx
+               : fsys.oilPhaseIdx;
 
         // Compute avg density based on pure water
         const auto& t_in = intQuantsIn.fluidState().temperature(liquidPhaseIdx);
@@ -201,16 +233,16 @@ public:
         const auto& salt_in = intQuantsIn.fluidState().saltConcentration();
 
         const auto& bLiquidIn =
-            FluidSystem::phaseIsActive(waterPhaseIdx)
-                ? FluidSystem::waterPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
+            fsys.phaseIsActive(waterPhaseIdx)
+                ? fsys.waterPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
                                                                          t_in, p_in, Evaluation(0.0), salt_in)
-                : FluidSystem::oilPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
+                : fsys.oilPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
                                                                  t_in, p_in, Evaluation(0.0));
 
         const auto& refDensityLiquidIn =
-            FluidSystem::phaseIsActive(waterPhaseIdx)
-                ? FluidSystem::waterPvt().waterReferenceDensity(intQuantsIn.pvtRegionIndex())
-                : FluidSystem::oilPvt().oilReferenceDensity(intQuantsIn.pvtRegionIndex());
+            fsys.phaseIsActive(waterPhaseIdx)
+                ? fsys.waterPvt().waterReferenceDensity(intQuantsIn.pvtRegionIndex())
+                : fsys.oilPvt().oilReferenceDensity(intQuantsIn.pvtRegionIndex());
 
         const auto& rho_in =  bLiquidIn * refDensityLiquidIn;
 
@@ -219,16 +251,16 @@ public:
         const auto salt_ex = Toolbox::value(intQuantsEx.fluidState().saltConcentration());
 
         const auto bLiquidEx =
-            FluidSystem::phaseIsActive(waterPhaseIdx)
-                ? FluidSystem::waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
+            fsys.phaseIsActive(waterPhaseIdx)
+                ? fsys.waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
                                                                        t_ex, p_ex, Scalar{0.0}, salt_ex)
-                : FluidSystem::oilPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
+                : fsys.oilPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
                                                                      t_ex, p_ex, Scalar{0.0});
 
         const auto& refDensityLiquidEx =
-            FluidSystem::phaseIsActive(waterPhaseIdx)
-                ? FluidSystem::waterPvt().waterReferenceDensity(intQuantsEx.pvtRegionIndex())
-                : FluidSystem::oilPvt().oilReferenceDensity(intQuantsEx.pvtRegionIndex());
+            fsys.phaseIsActive(waterPhaseIdx)
+                ? fsys.waterPvt().waterReferenceDensity(intQuantsEx.pvtRegionIndex())
+                : fsys.oilPvt().oilReferenceDensity(intQuantsEx.pvtRegionIndex());
 
         const auto rho_ex =  bLiquidEx * refDensityLiquidEx;
 
@@ -236,10 +268,10 @@ public:
     }
 
     template <class Context>
-    static void addConvectiveMixingFlux(RateVector& flux,
-                                        const Context& elemCtx,
-                                        unsigned scvfIdx,
-                                        unsigned timeIdx)
+    OPM_HOST_DEVICE static void addConvectiveMixingFlux(RateVector& flux,
+                                                        const Context& elemCtx,
+                                                        unsigned scvfIdx,
+                                                        unsigned timeIdx)
     {
         // need for darcy flux calculation
         const auto& problem = elemCtx.problem();
@@ -275,16 +307,19 @@ public:
      * \brief Adds the convective mixing mass flux flux to the flux vector over a flux
      *        integration point.
       */
-    static void addConvectiveMixingFlux(RateVector& flux,
-                                        const IntensiveQuantities& intQuantsIn,
-                                        const IntensiveQuantities& intQuantsEx,
-                                        const unsigned globalIndexIn,
-                                        const unsigned globalIndexEx,
-                                        const Scalar distZg,
-                                        const Scalar trans,
-                                        const Scalar faceArea,
-                                        const ConvectiveMixingModuleParam& info)
+    template <class RateVectorT = RateVector, class CMMParam = ConvectiveMixingModuleParamT>
+    OPM_HOST_DEVICE static void addConvectiveMixingFlux(RateVectorT& flux,
+                                                        const IntensiveQuantities& intQuantsIn,
+                                                        const IntensiveQuantities& intQuantsEx,
+                                                        const unsigned globalIndexIn,
+                                                        const unsigned globalIndexEx,
+                                                        const Scalar distZg,
+                                                        const Scalar trans,
+                                                        const Scalar faceArea,
+                                                        const CMMParam& info)
     {
+        const FluidSystem& fsys = intQuantsIn.getFluidSystem();
+
         if (info.active_.empty()) {
             return;
         }
@@ -294,9 +329,9 @@ public:
         }
 
         const auto& liquidPhaseIdx =
-            FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
-                ? FluidSystem::waterPhaseIdx
-                : FluidSystem::oilPhaseIdx;
+            fsys.phaseIsActive(fsys.waterPhaseIdx)
+                ? fsys.waterPhaseIdx
+                : fsys.oilPhaseIdx;
 
         // interiour
         const auto& t_in = intQuantsIn.fluidState().temperature(liquidPhaseIdx);
@@ -305,21 +340,21 @@ public:
         const auto& salt_in = intQuantsIn.fluidState().saltSaturation();
 
         const auto bLiquidSatIn =
-            FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
-                ? FluidSystem::waterPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
+            fsys.phaseIsActive(fsys.waterPhaseIdx)
+                ? fsys.waterPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
                                                                        t_in, p_in, rssat_in, salt_in)
-                : FluidSystem::oilPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
+                : fsys.oilPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
                                                                      t_in, p_in, rssat_in);
 
         const auto& densityLiquidIn =
-            FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
-                ? FluidSystem::waterPvt().waterReferenceDensity(intQuantsIn.pvtRegionIndex())
-                : FluidSystem::oilPvt().oilReferenceDensity(intQuantsIn.pvtRegionIndex());
+            fsys.phaseIsActive(fsys.waterPhaseIdx)
+                ? fsys.waterPvt().waterReferenceDensity(intQuantsIn.pvtRegionIndex())
+                : fsys.oilPvt().oilReferenceDensity(intQuantsIn.pvtRegionIndex());
 
         const auto rho_in = Opm::getValue(intQuantsIn.fluidState().invB(liquidPhaseIdx)) * densityLiquidIn;
         const auto rho_sat_in = bLiquidSatIn *
                                 (densityLiquidIn +
-                                 rssat_in * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx,
+                                 rssat_in * fsys.referenceDensity(fsys.gasPhaseIdx,
                                                                           intQuantsIn.pvtRegionIndex()));
 
         // exteriour
@@ -328,21 +363,21 @@ public:
         const auto rssat_ex = Opm::getValue(intQuantsEx.saturatedDissolutionFactor());
         const auto salt_ex = Opm::getValue(intQuantsEx.fluidState().saltSaturation());
         const auto bLiquidSatEx =
-            FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
-                ? FluidSystem::waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
+            fsys.phaseIsActive(fsys.waterPhaseIdx)
+                ? fsys.waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
                                                                        t_ex, p_ex, rssat_ex, salt_ex)
-                : FluidSystem::oilPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
+                : fsys.oilPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
                                                                      t_ex, p_ex, rssat_ex);
 
         const auto& densityLiquidEx =
-            FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
-                ? FluidSystem::waterPvt().waterReferenceDensity(intQuantsEx.pvtRegionIndex())
-                : FluidSystem::oilPvt().oilReferenceDensity(intQuantsEx.pvtRegionIndex());
+            fsys.phaseIsActive(fsys.waterPhaseIdx)
+                ? fsys.waterPvt().waterReferenceDensity(intQuantsEx.pvtRegionIndex())
+                : fsys.oilPvt().oilReferenceDensity(intQuantsEx.pvtRegionIndex());
 
         const auto rho_ex = Opm::getValue(intQuantsEx.fluidState().invB(liquidPhaseIdx)) * densityLiquidEx;
         const auto rho_sat_ex = bLiquidSatEx *
                                 (densityLiquidEx +
-                                 rssat_ex * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx,
+                                 rssat_ex * fsys.referenceDensity(fsys.gasPhaseIdx,
                                                                           intQuantsEx.pvtRegionIndex()));
         // rho difference approximation
         const auto delta_rho = (rho_sat_ex + rho_sat_in - rho_in - rho_ex) / 2;
@@ -363,7 +398,7 @@ public:
             const auto& rssat_up = (upIdx == interiorDofIdx) ? rssat_in : rssat_ex;
             unsigned globalUpIndex = (upIdx == interiorDofIdx) ? globalIndexIn : globalIndexEx;
             const auto& Rsup =
-                FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+                fsys.phaseIsActive(fsys.waterPhaseIdx)
                     ? up.fluidState().Rsw()
                     : up.fluidState().Rs();
 
@@ -376,7 +411,7 @@ public:
 
             const auto convectiveFlux = -trans * transMult * info.Xhi_[up.pvtRegionIndex()] * invB *
                                         pressure_difference_convective_mixing * RsupRestricted / (visc * faceArea);
-            unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+            unsigned activeGasCompIdx = fsys.canonicalToActiveCompIdx(fsys.gasCompIdx);
             if (globalUpIndex == globalIndexIn) {
                 flux[conti0EqIdx + activeGasCompIdx] += convectiveFlux;
             }
@@ -386,7 +421,7 @@ public:
 
             if constexpr (enableFullyImplicitThermal) {
                 const auto& h = up.fluidState().enthalpy(liquidPhaseIdx) *
-                                FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, up.pvtRegionIndex());
+                                fsys.referenceDensity(fsys.gasPhaseIdx, up.pvtRegionIndex());
                 if (globalUpIndex == globalIndexIn) {
                     flux[contiEnergyEqIdx] += convectiveFlux * h;
                 }
@@ -434,7 +469,7 @@ public:
                                                                               SoMax);
     }
 
-    const Evaluation& saturatedDissolutionFactor() const
+    OPM_HOST_DEVICE const Evaluation& saturatedDissolutionFactor() const
     { return saturatedDissolutionFactor_; }
 
 protected:

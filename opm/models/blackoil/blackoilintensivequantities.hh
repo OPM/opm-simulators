@@ -814,6 +814,14 @@ public:
         }
     }
 
+    /*!
+     * \brief Returns the fluid system used by this intensive quantities.
+     */
+    OPM_HOST_DEVICE const auto& getFluidSystem() const
+    {
+        return fluidState_.fluidSystem();
+    }
+
 private:
     friend BlackOilSolventIntensiveQuantities<TypeTag, enableSolvent>;
     friend BlackOilExtboIntensiveQuantities<TypeTag, enableExtbo>;
