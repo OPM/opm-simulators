@@ -196,6 +196,7 @@ computeFluidProperties(const EvalWell& temperature,
         }
         densities_[seg] = density / volrat;
 
+        // TODO: the enthalpy flux rate should be calculated in the similar manner.
         // calculate the mass rates
         mass_rates_[seg] = 0.;
         for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
