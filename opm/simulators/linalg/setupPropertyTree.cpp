@@ -297,7 +297,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.type", "cprw"s);
     prm.put("preconditioner.use_well_weights", "false"s);
     prm.put("preconditioner.add_wells", "true"s);
-    prm.put("preconditioner.weight_type", "trueimpes"s);
+    prm.put("preconditioner.weight_type", "trueimpesanalytic"s);
     prm.put("preconditioner.pre_smooth", 0);
     prm.put("preconditioner.post_smooth", 1);
     prm.put("preconditioner.finesmoother.type", "paroverilu0"s);
