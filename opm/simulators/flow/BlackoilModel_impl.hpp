@@ -473,7 +473,7 @@ solveJacobianSystem(BVector& x)
             times[solver] = perfTimer.stop();
             perfTimer.reset();
             if (terminal_output_) {
-                OpmLog::debug(fmt::format("Solver time {}: {}", solver, times[solver]));
+                OpmLog::debug(fmt::format(fmt::runtime("Solver time {}: {}"), solver, times[solver]));
             }
         }
 

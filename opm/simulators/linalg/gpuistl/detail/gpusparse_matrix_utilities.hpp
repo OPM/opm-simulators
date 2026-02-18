@@ -216,7 +216,8 @@ validateVectorMatrixSizes(size_t vectorSize, size_t matrixBlockSize, size_t matr
     const size_t expectedSize = matrixBlockSize * matrixColumns;
     if (vectorSize != expectedSize) {
         OPM_THROW(std::invalid_argument,
-                  fmt::format("Size mismatch. Input vector has {} elements, while matrix expects {} elements.",
+                  fmt::format(fmt::runtime("Size mismatch. Input vector has {} elements, "
+                                          "while matrix expects {} elements."),
                               vectorSize,
                               expectedSize));
     }

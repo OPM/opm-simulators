@@ -51,7 +51,7 @@ getCusparseErrorCodeToString(int code)
     CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_ZERO_PIVOT);
     CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_NOT_SUPPORTED);
     CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_INSUFFICIENT_RESOURCES);
-    return fmt::format("UNKNOWN CUSPARSE ERROR {}.", code);
+    return fmt::format(fmt::runtime("UNKNOWN CUSPARSE ERROR {}."), code);
 }
 
 #undef CHECK_CUSPARSE_ERROR_TYPE
@@ -77,9 +77,9 @@ getCusparseErrorMessage(cusparseStatus_t error,
                         const std::string_view& functionName,
                         size_t lineNumber)
 {
-    return fmt::format("cuSparse expression did not execute correctly. Expression was: \n\n"
+    return fmt::format(fmt::runtime("cuSparse expression did not execute correctly. Expression was: \n\n"
                        "    {}\n\nin function {}, in {}, at line {}\n"
-                       "CuSparse error code was: {}\n",
+                       "CuSparse error code was: {}\n"),
                        expression,
                        functionName,
                        filename,

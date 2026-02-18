@@ -378,7 +378,7 @@ private:
 #else
         if (size != m_numberOfElements) {
             OPM_THROW(std::invalid_argument,
-                    fmt::format("Given view has {}, while this View has {}.", size, m_numberOfElements));
+                    fmt::format(fmt::runtime("Given view has {}, while this View has {}."), size, m_numberOfElements));
         }
 #endif
     }
@@ -405,7 +405,7 @@ private:
 #else
         if (idx >= m_numberOfElements) {
             OPM_THROW(std::invalid_argument,
-                    fmt::format("The index provided was not in the range [0, buffersize-1]"));
+                    fmt::format(fmt::runtime("The index provided was not in the range [0, buffersize-1]")));
         }
 #endif
     }

@@ -194,7 +194,7 @@ void writePartitions(
     }
 
     const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
-    auto partition_fname = odir / fmt::format("{1:0>{0}}", nDigit, rank);
+    auto partition_fname = odir / fmt::format(fmt::runtime("{1:0>{0}}"), nDigit, rank);
     std::ofstream pfile { partition_fname };
 
     auto cell_index = 0;

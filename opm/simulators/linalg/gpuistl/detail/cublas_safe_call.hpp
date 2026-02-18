@@ -56,7 +56,7 @@ namespace
         CHECK_CUBLAS_ERROR_TYPE(code, CUBLAS_STATUS_NOT_SUPPORTED);
         CHECK_CUBLAS_ERROR_TYPE(code, CUBLAS_STATUS_LICENSE_ERROR);
 
-        return fmt::format("UNKNOWN CUBLAS ERROR {}.", code);
+        return fmt::format(fmt::runtime("UNKNOWN CUBLAS ERROR {}."), code);
     }
 
 #undef CHECK_CUBLAS_ERROR_TYPE
@@ -85,10 +85,10 @@ getCublasErrorMessage(cublasStatus_t error,
                       const std::string_view& functionName,
                       size_t lineNumber)
 {
-    return fmt::format("cuBLAS expression did not execute correctly. Expression was: \n\n"
+    return fmt::format(fmt::runtime("cuBLAS expression did not execute correctly. Expression was: \n\n"
                        "    {}\n\n"
                        "in function {}, in {}, at line {}.\n"
-                       "CuBLAS error code was: {}\n",
+                       "CuBLAS error code was: {}\n"),
                        expression,
                        functionName,
                        filename,

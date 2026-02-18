@@ -48,10 +48,10 @@ getCudaErrorMessage(cudaError_t error,
                     const std::string_view& functionName,
                     size_t lineNumber)
 {
-    return fmt::format("GPU expression did not execute correctly. Expression was: \n"
+    return fmt::format(fmt::runtime("GPU expression did not execute correctly. Expression was: \n"
                        "    {}\n"
                        "GPU error was {}\n"
-                       "in function {}, in {}, at line {}\n",
+                       "in function {}, in {}, at line {}\n"),
                        expression,
                        cudaGetErrorString(error),
                        functionName,

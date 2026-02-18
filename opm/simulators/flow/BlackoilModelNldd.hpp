@@ -400,7 +400,7 @@ public:
 
         const bool is_iorank = this->rank_ == 0;
         if (is_iorank) {
-            OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains. {} domains were skipped. {} domains did no work. {} total local Newton iterations.\n",
+            OpmLog::debug(fmt::format(fmt::runtime("Local solves finished. Converged for {}/{} domains. {} domains were skipped. {} domains did no work. {} total local Newton iterations.\n"),
                                       num_converged, num_domains, num_skipped, num_converged_already, num_local_newtons));
         }
         auto total_local_solve_time = localSolveTimer.stop();
@@ -630,7 +630,7 @@ private:
                                            Scalar{0.2}, 1, oscillate, stagnate);
                 if (oscillate) {
                     damping_factor *= 0.85;
-                    logger.debug(fmt::format("| Damping factor is now {}", damping_factor));
+                    logger.debug(fmt::format(fmt::runtime("| Damping factor is now {}"), damping_factor));
                 }
             }
         } while (!convreport.converged() && iter <= max_iter);

@@ -233,8 +233,8 @@ public:
         // TODO: [perf] vector.dim() can be replaced by bvector.N() * BlockDimension
         if (detail::to_size_t(m_numberOfElements) != bvector.dim()) {
             OPM_THROW(std::runtime_error,
-                      fmt::format("Given incompatible vector size. GpuVector has size {},\n however, the BlockVector "
-                                  "has has N() = {}, and dim() = {}.",
+                      fmt::format(fmt::runtime("Given incompatible vector size. GpuVector has size {},\n"
+                                               "however, the BlockVector has has N() = {}, and dim() = {}."),
                                   m_numberOfElements,
                                   bvector.N(),
                                   bvector.dim()));
