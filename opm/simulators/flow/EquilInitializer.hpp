@@ -63,6 +63,7 @@ class EquilInitializer
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
@@ -86,17 +87,7 @@ class EquilInitializer
 public:
     // NB: setting the enableEnergy argument to true enables storage of enthalpy and
     // internal energy!
-    using ScalarFluidState = BlackOilFluidState<Scalar,
-                                                FluidSystem,
-                                                energyModuleType == EnergyModules::ConstantTemperature,
-                                                (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
-                                                enableDissolution,
-                                                enableVapwat,
-                                                enableBrine,
-                                                enableSaltPrecipitation,
-                                                enableDisgasInWater,
-                                                Indices::numPhases>;
-
+    using ScalarFluidState = typename IntensiveQuantities::ScalarFluidState;
 
     template <class EclMaterialLawManager>
     EquilInitializer(const Simulator& simulator,

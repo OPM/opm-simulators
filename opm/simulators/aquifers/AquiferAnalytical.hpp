@@ -76,16 +76,7 @@ public:
 
     static constexpr int numEq = BlackoilIndices::numEq;
 
-    using FluidState = BlackOilFluidState<Eval,
-                                          FluidSystem,
-                                          energyModuleType == EnergyModules::ConstantTemperature,
-                                          (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
-                                          BlackoilIndices::gasEnabled,
-                                          enableVapwat,
-                                          enableBrine,
-                                          enableSaltPrecipitation,
-                                          has_disgas_in_water,
-                                          BlackoilIndices::numPhases>;
+    using FluidState = typename IntensiveQuantities::FluidState;
 
     // Constructor
     AquiferAnalytical(const int aqID,
