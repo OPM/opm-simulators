@@ -460,6 +460,28 @@ template<class Scalar> class WellContributions;
             const ModelParameters& param() const
             { return param_; }
 
+
+            template<class FluidState, class SingleWellState>
+            static Scalar computeTemperatureWeightFactor(const int perf_index, const int np, const FluidState& fs, const SingleWellState& ws)
+            {
+                const auto& perf_phase_rate = ws.perf_data.phase_rates;
+                // we only have one temperature pr cell any phaseIdx will do
+                Scalar cellTemperatures = fs.temperature(/*phaseIdx*/0).value();
+                Scalar weight_factor = 0.0;
+                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+                    Scalar cellInternalEnergy = fs.enthalpy(phaseIdx).value() -
+                                            fs.pressure(phaseIdx).value() / fs.density(phaseIdx).value();
+                    Scalar cellBinv = fs.invB(phaseIdx).value();
+                    Scalar cellDensity = fs.density(phaseIdx).value();
+                    Scalar perfPhaseRate = perf_phase_rate[perf_index*np + phaseIdx];
+                    weight_factor += cellDensity * (perfPhaseRate / cellBinv) * (cellInternalEnergy / cellTemperatures);
+                }
+                return (std::abs(weight_factor) + 1e-13);
+            }
+
         protected:
             Simulator& simulator_;
 

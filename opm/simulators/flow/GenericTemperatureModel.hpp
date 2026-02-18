@@ -51,7 +51,9 @@ template<class Grid, class GridView, class DofMapper, class Stencil, class Fluid
 class GenericTemperatureModel
 {
 public:
-    using EnergyMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
+    // the jacobian matrix
+    using MatrixBlockTemp = MatrixBlock<Scalar, 1, 1>;
+    using EnergyMatrix = Dune::BCRSMatrix<MatrixBlockTemp>;
     using EnergyVector = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     static constexpr int dimWorld = Grid::dimensionworld;
@@ -85,7 +87,6 @@ protected:
     const DofMapper& dofMapper_;
 
     EnergyVector energyVector_;
-    std::unique_ptr<EnergyMatrix> energyMatrix_;
     std::vector<Scalar> temperature_;
     std::vector<Scalar> energy_rates_;
     bool doTemp_{false};
