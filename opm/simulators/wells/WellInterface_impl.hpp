@@ -663,41 +663,6 @@ namespace Opm
             }
         }
 
-        if (!converged) {
-            // Well did not converge, switch to explicit fractions
-            this->operability_status_.use_vfpexplicit = true;
-            this->openWell();
-            auto bhp_target = estimateOperableBhp(
-                simulator, dt, groupStateHelper, summary_state, well_state
-            );
-            if (!bhp_target.has_value()) {
-                // solve with zero rate
-                // well can't operate using explicit fractions stop the well
-                converged = solveWellWithZeroRate(simulator, dt, groupStateHelper, well_state);
-                this->stopWell();
-                this->operability_status_.can_obtain_bhp_with_thp_limit = false;
-                this->operability_status_.obey_thp_limit_under_bhp_limit = false;
-                return converged;
-            } else {
-                // solve well with the estimated target bhp (or limit)
-                const Scalar bhp = std::max(bhp_target.value(),
-                                            static_cast<Scalar>(prod_controls.bhp_limit));
-                solveWellWithBhp(
-                    simulator, dt, bhp, groupStateHelper, well_state
-                );
-                ws.thp = this->getTHPConstraint(summary_state);
-                const auto msg = fmt::format("Well {} did not converge, re-solving with explicit fractions for VFP caculations.", this->name());
-                deferred_logger.debug(msg);
-                converged = this->iterateWellEqWithSwitching(simulator, dt,
-                                                             inj_controls,
-                                                             prod_controls,
-                                                             groupStateHelper,
-                                                             well_state,
-                                                             /*fixed_control=*/false,
-                                                             /*fixed_status=*/false,
-                                                             /*solving_with_zero_rate=*/false);
-            }
-        }
         // update operability
         this->operability_status_.can_obtain_bhp_with_thp_limit = !this->wellIsStopped();
         this->operability_status_.obey_thp_limit_under_bhp_limit = !this->wellIsStopped();
