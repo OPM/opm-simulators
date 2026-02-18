@@ -571,12 +571,12 @@ protected:
             this->energyVector_[globI] = 0.0;
             energyMatrix_->clearRow(globI, 0.0);
         }
-        MatrixBlockTemp bMat;
         Scalar dt = simulator_.timeStepSize();
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for (unsigned globI = 0; globI < numCells; ++globI) {
+            MatrixBlockTemp bMat;
             Scalar volume = simulator_.model().dofTotalVolume(globI);
             Scalar storefac = volume / dt;
             Evaluation storage = 0.0;
@@ -590,14 +590,15 @@ protected:
         const bool enableDriftCompensation = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
         const auto& problem = simulator_.problem();
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for (unsigned globI = 0; globI < numCells; ++globI) {
             const auto& nbInfos = neighborInfo_[globI];
             const auto& floresInfos = floresInfo[globI];
             int loc = 0;
             const auto& intQuantsIn = intQuants_[globI];
+            MatrixBlockTemp bMat;
             for (const auto& nbInfo : nbInfos) {
                 unsigned globJ = nbInfo.neighbor;
                 const auto& intQuantsEx = intQuants_[globJ];
