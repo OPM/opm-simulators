@@ -91,62 +91,22 @@ RateType TargetCalculator<Scalar, IndexTraits>::calcModeRateFromRates(const Rate
 }
 
 template<typename Scalar, typename IndexTraits>
-GuideRateModel::Target
-TargetCalculator<Scalar, IndexTraits>::guideTargetMode() const
-{
-    switch (this->cmode_) {
-    case Group::ProductionCMode::ORAT:
-        return GuideRateModel::Target::OIL;
-    case Group::ProductionCMode::WRAT:
-        return GuideRateModel::Target::WAT;
-    case Group::ProductionCMode::GRAT:
-        return GuideRateModel::Target::GAS;
-    case Group::ProductionCMode::LRAT:
-        return GuideRateModel::Target::LIQ;
-    case Group::ProductionCMode::RESV:
-        return GuideRateModel::Target::RES;
-    default:
-        // Should never be here.
-        assert(false);
-        return GuideRateModel::Target::NONE;
-    }
-}
-
-template<typename Scalar, typename IndexTraits>
 InjectionTargetCalculator<Scalar, IndexTraits>::
 InjectionTargetCalculator(const GroupStateHelperType& groupStateHelper,
                           const Phase& injection_phase)
-    : groupStateHelper_{groupStateHelper}
 {
-    pos_ = this->groupStateHelper_.phaseToActivePhaseIdx(injection_phase);
-    // initialize to avoid warning
-    target_ = GuideRateModel::Target::WAT;
+    pos_ = groupStateHelper.phaseToActivePhaseIdx(injection_phase);
 
     switch (injection_phase) {
-    case Phase::WATER: {
-        target_ = GuideRateModel::Target::WAT;
+    case Phase::WATER:
+    case Phase::OIL:
+    case Phase::GAS:
         break;
-    }
-    case Phase::OIL: {
-        target_ = GuideRateModel::Target::OIL;
-        break;
-    }
-    case Phase::GAS: {
-        target_ = GuideRateModel::Target::GAS;
-        break;
-    }
     default:
         OPM_DEFLOG_THROW(std::logic_error,
                          "Invalid injection phase in InjectionTargetCalculator",
-                         this->groupStateHelper_.deferredLogger());
+                         groupStateHelper.deferredLogger());
     }
-}
-
-template<typename Scalar, typename IndexTraits>
-GuideRateModel::Target
-InjectionTargetCalculator<Scalar, IndexTraits>::guideTargetMode() const
-{
-    return this->target_;
 }
 
 #define INSTANTIATE_TARGET_CALCULATOR(T,...) \

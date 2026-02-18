@@ -22,17 +22,11 @@
 #define OPM_TARGETCALCULATOR_HEADER_INCLUDED
 
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
-#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 
-#include <optional>
-#include <string>
 #include <vector>
 
 namespace Opm {
 
-class DeferredLogger;
-template<class Scalar> class GroupState;
-template<typename IndexTraits> class PhaseUsageInfo;
 template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 
 namespace GroupStateHelpers
@@ -59,8 +53,6 @@ public:
     template <typename RateType>
     RateType calcModeRateFromRates(const RateType* rates) const;
 
-    GuideRateModel::Target guideTargetMode() const;
-
 private:
     Group::ProductionCMode cmode_;
     const GroupStateHelperType& groupStateHelper_;
@@ -84,12 +76,8 @@ public:
         return rates[pos_];
     }
 
-    GuideRateModel::Target guideTargetMode() const;
-
 private:
-    const GroupStateHelperType& groupStateHelper_;
     int pos_;
-    GuideRateModel::Target target_;
 };
 
 } // namespace GroupStateHelpers

@@ -131,7 +131,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
                                                  this->summary_state_,
                                                  this->report_step_,
                                                  &this->guide_rate_,
-                                                 tcalc.guideTargetMode(),
+                                                 this->getInjectionGuideTargetMode(injection_phase),
                                                  /*is_producer=*/false,
                                                  injection_phase};
 
@@ -267,7 +267,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
                                                                       this->summary_state_,
                                                                       this->report_step_,
                                                                       &this->guide_rate_,
-                                                                      tcalc.guideTargetMode(),
+                                                                      this->getProductionGuideTargetMode(group),
                                                                       /*is_producer=*/true,
                                                                       /*injection_phase=*/Phase::OIL};
 
@@ -552,7 +552,7 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
                                                                       this->summary_state_,
                                                                       this->report_step_,
                                                                       &this->guide_rate_,
-                                                                      tcalc.guideTargetMode(),
+                                                                      this->getProductionGuideTargetMode(group),
                                                                       true,
                                                                       Phase::OIL);
 
@@ -665,7 +665,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
                                                                       this->summary_state_,
                                                                       this->report_step_,
                                                                       &this->guide_rate_,
-                                                                      tcalc.guideTargetMode(),
+                                                                      this->getInjectionGuideTargetMode(injection_phase),
                                                                       /*is_producer=*/false,
                                                                       injection_phase};
 
@@ -760,7 +760,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
                                                                       this->summary_state_,
                                                                       this->report_step_,
                                                                       &this->guide_rate_,
-                                                                      tcalc.guideTargetMode(),
+                                                                      this->getProductionGuideTargetMode(group),
                                                                       /*is_producer=*/true,
                                                                       /*injection_phase=*/Phase::OIL};
 
@@ -1727,7 +1727,7 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
             || child_ctrl == Group::ProductionCMode::NONE) {
             if (this->guide_rate_.has(child)) {
                 control_group_guide_rate += this->guide_rate_.get(
-                    child, tcalc.guideTargetMode(),
+                    child, this->getProductionGuideTargetMode(control_group),
                     this->getProductionGroupRateVector(child));
             }
         }
