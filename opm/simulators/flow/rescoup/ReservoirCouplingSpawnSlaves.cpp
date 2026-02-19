@@ -206,8 +206,8 @@ getMasterGroupNamesForSlave_(std::size_t slave_idx) const
     //          the index-based mapping
     //       - ReservoirCouplingSlave::saveMasterGroupNamesAsMap_() which establishes the same mapping
     //          on the slave side
-    //       - RescoupTargetCalculator::calculateMasterGroupTargetsAndSendToSlaves() which uses
-    //          the index-based mapping to send the group targets to the slaves
+    //       - RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves() which uses
+    //          the index-based mapping to send the group constraints to the slaves
     auto master_groups = this->rescoup_.masterGroups();
     std::vector<std::string> data;
     const auto& master_group_names = this->master_.getMasterGroupNamesForSlave(slave_idx);

@@ -43,19 +43,19 @@
 namespace Opm {
 
 /**
- * Calculate group-level targets for production and injection.
+ * Calculate group-level constraints for production and injection.
  *
  * This class traverses the group hierarchy to determine effective control
- * modes and targets, applying guide-rate based distribution, sales limits
+ * modes and constraints, applying guide-rate based distribution, sales limits
  * (e.g., GCONSALE), efficiency factors, and RESV coefficients where
  * applicable. It provides a uniform interface for both producers and injectors
  * and consolidates common logic through nested helper classes.
  */
 template<class Scalar, class IndexTraits>
-class GroupTargetCalculator {
+class GroupConstraintCalculator {
 public:
     /**
-     * Union of control-mode types used by group target calculations.
+     * Union of control-mode types used by group constraint calculations.
      * Holds Group::InjectionCMode for injection, Group::ProductionCMode for
      * production; std::monostate denotes that no specific control applies.
      */
@@ -69,25 +69,47 @@ public:
     using TargetCalculator = GroupStateHelpers::TargetCalculator<Scalar, IndexTraits>;
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
-    enum class TargetType {
-        Injection,
-        Production
+    /** Type of constraint to calculate: target or limit. */
+    enum class ConstraintType {
+        Target,
+        Limit
     };
-
-    /** Generic result for a computed target and its control mode. */
-    struct TargetInfo {
-        Scalar target;
+    /** Generic result for a computed constraint and its control mode. */
+    struct ConstraintInfo {
+        Scalar constraint;  // Target or limit value
         ControlMode cmode;
     };
-    /** Result for a production target with its production control mode. */
-    struct ProductionTargetInfo {
-        Scalar target;
+    /** Result for a production constraint with its production control mode. */
+    struct ProductionConstraintInfo {
+        Scalar constraint;  // Target or limit value
         Group::ProductionCMode cmode;
     };
-    /** Result for an injection target with its injection control mode. */
-    struct InjectionTargetInfo {
-        Scalar target;
+    /** Result for an injection constraint with its injection control mode. */
+    struct InjectionConstraintInfo {
+        Scalar constraint;  // Target
         Group::InjectionCMode cmode;
+    };
+    /** Per-rate-type production constraints info for a group.
+     *
+     *  A master group defines both an active control-mode target and limits for
+     *  other rate types (ORAT, WRAT, GRAT, LRAT, RESV).  The active target
+     *  alone is not sufficient for reservoir-coupling slaves: a slave group must
+     *  know every effective limit so that it can enforce the most restrictive
+     *  constraint for each rate type independently (the active cmode on the
+     *  master side may differ from what is binding on the slave side).
+     *
+     *  Each limit field holds the guide-rate-distributed value that applies
+     *  to this group, or -1 when no ancestor in the hierarchy defines a
+     *  limit for that rate type.
+     */
+    struct ProductionConstraintResult {
+        Scalar active_target;
+        Group::ProductionCMode active_cmode;
+        Scalar oil_limit = -1;
+        Scalar water_limit = -1;
+        Scalar gas_limit = -1;
+        Scalar liquid_limit = -1;
+        Scalar resv_limit = -1;
     };
 
     /**
@@ -104,11 +126,19 @@ public:
     public:
         using TargetCalculatorType = std::variant<std::monostate, TargetCalculator, InjectionTargetCalculator>;
         GeneralCalculator(
-            GroupTargetCalculator& calculator,
+            GroupConstraintCalculator& calculator,
             const Group& original_group,  // the bottom group we want to calculate the target for
             std::optional<ReservoirCoupling::Phase> injection_phase = std::nullopt
         );
-        std::optional<TargetInfo> calculateGroupTarget();
+        /// Construct for computing a limit for an explicit production rate type.
+        /// The recursion stops at ancestors with has_control(explicit_cmode).
+        GeneralCalculator(
+            GroupConstraintCalculator& calculator,
+            const Group& original_group,
+            Group::ProductionCMode explicit_cmode
+        );
+        std::optional<ConstraintInfo> calculateGroupConstraint();
+        ConstraintType constraintType() const { return this->constraint_type_; }
         DeferredLogger& deferredLogger() { return this->parent_calculator_.deferredLogger(); }
         // Const overload: allows logging from const methods.
         DeferredLogger& deferredLogger() const { return this->parent_calculator_.deferredLogger(); }
@@ -120,17 +150,21 @@ public:
         TargetCalculatorType getInjectionTargetCalculator(const Group& group);
         TargetCalculatorType getProductionTargetCalculator(const Group& group) const;
         TargetCalculatorType getTargetCalculator(const Group& group);
-        TargetInfo getGroupTargetNoGuideRate(const Group& group);
+        std::optional<ConstraintInfo> getGroupConstraintNoGuideRate(const Group& group);
+        std::optional<Group::ProductionCMode> getProdCmode(const Group& group) const;
+        Group::ProductionCMode getProdCmode() const;
         const GuideRate& guideRate() const { return this->parent_calculator_.guideRate(); }
         bool hasGuideRate(const Group& group) const { return this->hasGuideRate(group.name()); }
         bool hasGuideRate(const std::string& name) const {
-            if (this->targetType() == TargetType::Injection) {
+            if (this->isInjectionConstraint()) {
                 return this->guideRate().has(name, this->injectionPhase_());
             }
             return this->guideRate().has(name);
         }
-        bool hasFldOrNoneControl(const Group& group);
+        bool hasHigherLevelControlOrLimit(const Group& group);
         Phase injectionPhase_() const;
+        bool isInjectionConstraint() const { return this->injection_phase_.has_value(); }
+        bool isProductionConstraint() const { return !this->injection_phase_.has_value(); }
         const Group& originalGroup() const { return this->original_group_; }
         const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_calculator_.phaseUsage(); }
         int pvtreg() const { return this->parent_calculator_.pvtreg(); }
@@ -142,29 +176,36 @@ public:
         const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel() const {
             return this->parent_calculator_.wellModel();
         }
-        TargetType targetType() const {
-            return this->injection_phase_.has_value() ? TargetType::Injection : TargetType::Production;
-        }
         const WellState<Scalar, IndexTraits>& wellState() const { return this->parent_calculator_.wellState(); }
         const GroupStateHelperType& groupStateHelper() const { return this->parent_calculator_.groupStateHelper(); }
     private:
-        std::optional<TargetInfo> calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_factor);
+        GeneralCalculator(
+            GroupConstraintCalculator<Scalar, IndexTraits>& parent_calculator,
+            const Group& original_group,
+            std::optional<ReservoirCoupling::Phase> injection_phase,  // Only used for injectors
+            std::optional<Group::ProductionCMode> production_cmode,
+            ConstraintType constraint_type
+        );
+        std::optional<ConstraintInfo> calculateGroupConstraintRecursive_(
+            const Group& group, const Scalar efficiency_factor);
         const Group& parentGroup(const Group& group) const {
             return this->schedule().getGroup(group.parent(), this->reportStepIdx());
         }
         bool parentGroupControlAvailable_(const Group& group);
         Phase reservoirCouplingToOpmPhase_(ReservoirCoupling::Phase reservoir_coupling_phase) const;
 
-        GroupTargetCalculator& parent_calculator_;
+        GroupConstraintCalculator& parent_calculator_;
         const Group& original_group_; // The bottom group we want to calculate the target for
         std::optional<ReservoirCoupling::Phase> injection_phase_;
+        ControlMode control_mode_;
+        ConstraintType constraint_type_;
         std::vector<Scalar> resv_coeffs_prod_;
     };
 
     /**
-     * Distribute a top-level target down to the requested group.
+     * Distribute a top-level constraint (target or limit) down to the requested group.
      *
-     * After the effective top target and control mode are known, this helper
+     * After the effective top constraint (target or limit) and control mode are known, this helper
      * walks the chain of groups from the top to the bottom group and applies
      * either a production TargetCalculator or an InjectionTargetCalculator.
      * A FractionCalculator is used where guide-rate fractions/reductions are
@@ -183,13 +224,19 @@ public:
             Scalar efficiency_factor
         );
 
-        std::optional<TargetInfo> calculateGroupTarget();
+        std::optional<ConstraintInfo> calculateGroupConstraint();
+        ConstraintType constraintType() const { return this->parent_calculator_.constraintType(); }
         DeferredLogger& deferredLogger() { return this->parent_calculator_.deferredLogger(); }
         // Const overload: allows logging from const methods (logical constness for external logger).
         DeferredLogger& deferredLogger() const { return this->parent_calculator_.deferredLogger(); }
+        Group::ProductionCMode getProdCmode() const { return this->parent_calculator_.getProdCmode(); }
+        std::optional<Group::ProductionCMode> getProdCmode(const Group& group) const {
+            return this->parent_calculator_.getProdCmode(group);
+        }
         const GroupState<Scalar>& groupState() const { return this->parent_calculator_.groupState(); }
         const GuideRate& guideRate() const { return this->parent_calculator_.guideRate(); }
-        TargetType targetType() const { return this->parent_calculator_.targetType(); }
+        bool isInjectionConstraint() const { return this->parent_calculator_.isInjectionConstraint(); }
+        bool isProductionConstraint() const { return this->parent_calculator_.isProductionConstraint(); }
         const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->parent_calculator_.phaseUsage(); }
         int reportStepIdx() const { return this->parent_calculator_.reportStepIdx(); }
         const std::vector<Scalar>& resvCoeffsInj() const { return this->parent_calculator_.resvCoeffsInj(); }
@@ -219,13 +266,13 @@ public:
         /// @param group The master group to get the corresponding slave group reservoir rate for
         /// @return Total reservoir rate, or throws an error if not a RC master group
         Scalar getSlaveGroupReservoirRate_(const Group& master_group);
-        TargetInfo getGroupTargetNoGuideRate_(const Group& group) const {
-            return this->parent_calculator_.getGroupTargetNoGuideRate(group);
+        std::optional<ConstraintInfo> getGroupConstraintNoGuideRate_(const Group& group) const {
+            return this->parent_calculator_.getGroupConstraintNoGuideRate(group);
         }
         ControlMode getToplevelControlMode_() const;
-        Scalar getTopLevelTarget_();
-        bool hasFldOrNoneControl_(const Group& group) {
-            return this->parent_calculator_.hasFldOrNoneControl(group);
+        Scalar getTopLevelTargetOrLimit_();
+        bool hasHigherLevelControlOrLimit(const Group& group) {
+            return this->parent_calculator_.hasHigherLevelControlOrLimit(group);
         }
         bool hasFLDControl_(const Group& group) const;
         bool hasGuideRate_(const std::string& name) const {
@@ -254,7 +301,7 @@ public:
     /**
      * Construct a calculator bound to one report step and simulator state.
      */
-    GroupTargetCalculator(
+    GroupConstraintCalculator(
         const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
         const GroupStateHelperType& group_state_helper
     );
@@ -263,11 +310,15 @@ public:
     DeferredLogger& deferredLogger() const { return this->group_state_helper_.deferredLogger(); }
     int fipnum() const { return this->fipnum_; }
     /** Compute injection target for group in the given injection phase. */
-    std::optional<InjectionTargetInfo> groupInjectionTarget(
+    std::optional<InjectionConstraintInfo> groupInjectionTarget(
         const Group& group, ReservoirCoupling::Phase injection_phase
     );
     /** Compute production target for group. */
-    std::optional<ProductionTargetInfo> groupProductionTarget(const Group& group);
+    std::optional<ProductionConstraintInfo> groupProductionTarget(const Group& group);
+    /** Compute per-rate-type production constraints for a group.
+     *  Returns the active target plus effective limits for all rate types
+     *  with defined limits in the group hierarchy. */
+    std::optional<ProductionConstraintResult> groupProductionConstraints(const Group& group);
     const GroupState<Scalar>& groupState() const { return this->group_state_; }
     const GuideRate& guideRate() const { return this->guide_rate_; }
     const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->phase_usage_; }

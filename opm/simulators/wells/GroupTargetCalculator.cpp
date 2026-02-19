@@ -27,11 +27,11 @@
 namespace Opm {
 
 // ----------------------------------------------------
-// Constructor for the GroupTargetCalculator class
+// Constructor for the GroupConstraintCalculator class
 // ----------------------------------------------------
 template<class Scalar, class IndexTraits>
-GroupTargetCalculator<Scalar, IndexTraits>::
-GroupTargetCalculator(
+GroupConstraintCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator(
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
     const GroupStateHelperType& group_state_helper
 ) :
@@ -54,37 +54,111 @@ GroupTargetCalculator(
 }
 
 template<class Scalar, class IndexTraits>
-std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::InjectionTargetInfo>
-GroupTargetCalculator<Scalar, IndexTraits>::
+std::optional<typename GroupConstraintCalculator<Scalar, IndexTraits>::InjectionConstraintInfo>
+GroupConstraintCalculator<Scalar, IndexTraits>::
 groupInjectionTarget(const Group& group, ReservoirCoupling::Phase injection_phase)
 {
     GeneralCalculator general_calculator{*this, group, injection_phase};
-    auto target_info = general_calculator.calculateGroupTarget();
+    auto target_info = general_calculator.calculateGroupConstraint();
     if (!target_info) {
-        // No target was calculated, return an empty optional.
+        // No constraints were calculated, return an empty optional.
         return std::nullopt;
     }
-    return std::make_optional<InjectionTargetInfo>(
-        InjectionTargetInfo{target_info->target, std::get<Group::InjectionCMode>(target_info->cmode)}
+    return std::make_optional<InjectionConstraintInfo>(
+        InjectionConstraintInfo{
+            target_info->constraint,
+            std::get<Group::InjectionCMode>(target_info->cmode)
+        }
     );
 }
 
 template<class Scalar, class IndexTraits>
-std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::ProductionTargetInfo>
-GroupTargetCalculator<Scalar, IndexTraits>::
+std::optional<typename GroupConstraintCalculator<Scalar, IndexTraits>::ProductionConstraintInfo>
+GroupConstraintCalculator<Scalar, IndexTraits>::
 groupProductionTarget(const Group& group) {
     GeneralCalculator general_calculator{*this, group};
-    auto target_info = general_calculator.calculateGroupTarget();
+    auto target_info = general_calculator.calculateGroupConstraint();
     if (!target_info) {
-        // No target was calculated, return an empty optional.
+        // No constraints were calculated, return an empty optional.
         return std::nullopt;
     }
-    return std::make_optional<ProductionTargetInfo>(
-        ProductionTargetInfo{
-            target_info->target,
+    return std::make_optional<ProductionConstraintInfo>(
+        ProductionConstraintInfo{
+            target_info->constraint,
             std::get<Group::ProductionCMode>(target_info->cmode)
         }
     );
+}
+
+template<class Scalar, class IndexTraits>
+std::optional<typename GroupConstraintCalculator<Scalar, IndexTraits>::ProductionConstraintResult>
+GroupConstraintCalculator<Scalar, IndexTraits>::
+groupProductionConstraints(const Group& group)
+{
+    // First, compute the active target using the existing method.
+    auto active_target = this->groupProductionTarget(group);
+    if (!active_target) {
+        return std::nullopt;
+    }
+
+    ProductionConstraintResult constraints;
+    constraints.active_target = active_target->constraint;
+    constraints.active_cmode = active_target->cmode;
+
+    // Store the active target in the corresponding limit field as well.
+    switch (constraints.active_cmode) {
+    case Group::ProductionCMode::ORAT:
+        constraints.oil_limit = constraints.active_target; break;
+    case Group::ProductionCMode::WRAT:
+        constraints.water_limit = constraints.active_target; break;
+    case Group::ProductionCMode::GRAT:
+        constraints.gas_limit = constraints.active_target; break;
+    case Group::ProductionCMode::LRAT:
+        constraints.liquid_limit = constraints.active_target; break;
+    case Group::ProductionCMode::RESV:
+        constraints.resv_limit = constraints.active_target; break;
+    default:
+        break;
+    }
+
+    // For each non-active rate type, compute the effective limit
+    // by running the hierarchy traversal with an explicit cmode.
+    static const std::array<Group::ProductionCMode, 5> all_modes = {
+        Group::ProductionCMode::ORAT,
+        Group::ProductionCMode::WRAT,
+        Group::ProductionCMode::GRAT,
+        Group::ProductionCMode::LRAT,
+        Group::ProductionCMode::RESV
+    };
+
+    for (const auto mode : all_modes) {
+        if (mode == constraints.active_cmode) {
+            continue; // Already computed as the active target
+        }
+        // Check if any group in the hierarchy has a limit for this rate type.
+        // We do this by creating a GeneralCalculator with the explicit cmode.
+        // The recursion will walk up until it finds a group with has_control(mode).
+        GeneralCalculator general_calculator{*this, group, mode};
+        auto limit_info = general_calculator.calculateGroupConstraint();
+        if (limit_info) {
+            switch (mode) {
+            case Group::ProductionCMode::ORAT:
+                constraints.oil_limit = limit_info->constraint; break;
+            case Group::ProductionCMode::WRAT:
+                constraints.water_limit = limit_info->constraint; break;
+            case Group::ProductionCMode::GRAT:
+                constraints.gas_limit = limit_info->constraint; break;
+            case Group::ProductionCMode::LRAT:
+                constraints.liquid_limit = limit_info->constraint; break;
+            case Group::ProductionCMode::RESV:
+                constraints.resv_limit = limit_info->constraint; break;
+            default:
+                break;
+            }
+        }
+    }
+
+    return constraints;
 }
 
 // ----------------------------------------------------
@@ -92,18 +166,64 @@ groupProductionTarget(const Group& group) {
 // ----------------------------------------------------
 
 template<class Scalar, class IndexTraits>
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 GeneralCalculator(
-    GroupTargetCalculator<Scalar, IndexTraits>& parent_calculator,
+    GroupConstraintCalculator<Scalar, IndexTraits>& parent_calculator,
     const Group& original_group,
     std::optional<ReservoirCoupling::Phase> injection_phase  // Only used for injectors
+) : GeneralCalculator(
+    parent_calculator,
+    original_group,
+    injection_phase,
+    /*production_cmode=*/std::nullopt,
+    /*constraint_type=*/ConstraintType::Target
+) {}
+
+template<class Scalar, class IndexTraits>
+GroupConstraintCalculator<Scalar, IndexTraits>::
+GeneralCalculator::
+GeneralCalculator(
+    GroupConstraintCalculator<Scalar, IndexTraits>& parent_calculator,
+    const Group& original_group,
+    Group::ProductionCMode production_cmode
+) : GeneralCalculator(
+    parent_calculator,
+    original_group,
+    /*injection_phase=*/std::nullopt,
+    /*production_cmode=*/production_cmode,
+    /*constraint_type=*/ConstraintType::Limit
+) {}
+
+// Private constructor for the GeneralCalculator class
+template<class Scalar, class IndexTraits>
+GroupConstraintCalculator<Scalar, IndexTraits>::
+GeneralCalculator::
+GeneralCalculator(
+    GroupConstraintCalculator<Scalar, IndexTraits>& parent_calculator,
+    const Group& original_group,
+    std::optional<ReservoirCoupling::Phase> injection_phase,  // Only used for injectors
+    std::optional<Group::ProductionCMode> production_cmode,
+    ConstraintType constraint_type  // Target or Limit ?
 ) :
     parent_calculator_{parent_calculator},
     original_group_{original_group},
     injection_phase_{injection_phase},
+    constraint_type_{constraint_type},
     resv_coeffs_prod_(this->phaseUsage().numPhases, 0.0)
 {
+    if (constraint_type == ConstraintType::Limit) {
+        assert(production_cmode.has_value());
+        this->control_mode_ = ControlMode{*production_cmode};
+    }
+    else {
+        if (injection_phase.has_value()) {
+            this->control_mode_ = ControlMode{this->groupState().injection_control(original_group.name(), this->injectionPhase_())};
+        }
+        else {
+            this->control_mode_ = ControlMode{this->groupState().production_control(original_group.name())};
+        }
+    }
     this->wellModel().calcResvCoeff(
         this->fipnum(),
         this->pvtreg(),
@@ -117,10 +237,10 @@ GeneralCalculator(
 // -------------------------------------------------------
 
 template<class Scalar, class IndexTraits>
-std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo>
-GroupTargetCalculator<Scalar, IndexTraits>::
+std::optional<typename GroupConstraintCalculator<Scalar, IndexTraits>::ConstraintInfo>
+GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
-calculateGroupTarget()
+calculateGroupConstraint()
 {
     // TODO: For now this is adapted to the reservoir coupling implementation where "group" below will
     //   correspond to a master group. In the future we might want to port the logic to include
@@ -128,19 +248,19 @@ calculateGroupTarget()
     const auto& group = this->original_group_;  // The bottom group we want to calculate the target for.
     // For injection, check if the group has injection control defined for this phase.
     // If not, there is no target to calculate.
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         if (!group.hasInjectionControl(this->injectionPhase_())) {
             return std::nullopt;
         }
     }
     if (group.is_field() || !this->parentGroupControlAvailable_(group)) {
-        return this->getGroupTargetNoGuideRate(group);
+        return this->getGroupConstraintNoGuideRate(group);
     }
     assert(this->parentGroupControlAvailable_(group));
     if (!this->hasGuideRate(group)) {
-        if (this->hasFldOrNoneControl(group)) {
+        if (this->hasHigherLevelControlOrLimit(group)) {
             // Parent control is available, but no guide rate is defined. This is illegal for a master group
-            // under FLD or NONE control.
+            // under higher level control or limit.
             OPM_DEFLOG_THROW(
                 std::runtime_error,
                 fmt::format("No guide rate defined for master group {}", group.name()),
@@ -151,24 +271,24 @@ calculateGroupTarget()
         //   - parent control available,
         //   - but no guide rate
         // this could be considered an error, but we can also fall back to use its own target.
-        return this->getGroupTargetNoGuideRate(group);
+        return this->getGroupConstraintNoGuideRate(group);
     }
     const auto efficiency_factor = group.getGroupEfficiencyFactor();
-    auto target = this->calculateGroupTargetRecursive_(this->parentGroup(group), efficiency_factor);
-    if (target) {
+    auto constraint = this->calculateGroupConstraintRecursive_(this->parentGroup(group), efficiency_factor);
+    if (constraint.has_value()) {
         // TODO: We could probably switch the group to FLD control mode now. However, this call is coming
         //    from beginTimeStep() in BlackoilWellModel_impl.hpp, but the regular higher constraints
         //    checks (for all groups, not just the master group) will first be done during the assemble() step,
         //    at which point the group should be switched to FLD control mode if necessary.
-        return target;
+        return constraint;
     }
-    // If a higher level target was not found or not violated, use the group's own target.
-    return this->getGroupTargetNoGuideRate(group);
+    // If a higher level constraint was not found or not violated, use the group's own constraint.
+    return this->getGroupConstraintNoGuideRate(group);
 }
 
 template<class Scalar, class IndexTraits>
-typename GroupTargetCalculator<Scalar, IndexTraits>::GeneralCalculator::TargetCalculatorType
-GroupTargetCalculator<Scalar, IndexTraits>::
+typename GroupConstraintCalculator<Scalar, IndexTraits>::GeneralCalculator::TargetCalculatorType
+GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 getInjectionTargetCalculator(const Group& /*group*/)
 {
@@ -179,8 +299,8 @@ getInjectionTargetCalculator(const Group& /*group*/)
 }
 
 template<class Scalar, class IndexTraits>
-typename GroupTargetCalculator<Scalar, IndexTraits>::GeneralCalculator::TargetCalculatorType
-GroupTargetCalculator<Scalar, IndexTraits>::
+typename GroupConstraintCalculator<Scalar, IndexTraits>::GeneralCalculator::TargetCalculatorType
+GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 getProductionTargetCalculator(const Group& group) const
 {
@@ -192,12 +312,12 @@ getProductionTargetCalculator(const Group& group) const
 }
 
 template<class Scalar, class IndexTraits>
-typename GroupTargetCalculator<Scalar, IndexTraits>::GeneralCalculator::TargetCalculatorType
-GroupTargetCalculator<Scalar, IndexTraits>::
+typename GroupConstraintCalculator<Scalar, IndexTraits>::GeneralCalculator::TargetCalculatorType
+GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 getTargetCalculator(const Group& group)
 {
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         return this->getInjectionTargetCalculator(group);
     }
     else {
@@ -205,11 +325,12 @@ getTargetCalculator(const Group& group)
     }
 }
 
+// Get constraint info for a particular group, not considering parent control or guide rates.
 template<class Scalar, class IndexTraits>
-typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo
-GroupTargetCalculator<Scalar, IndexTraits>::
+std::optional<typename GroupConstraintCalculator<Scalar, IndexTraits>::ConstraintInfo>
+GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
-getGroupTargetNoGuideRate(const Group& group)
+getGroupConstraintNoGuideRate(const Group& group)
 {
     // Efficiency factor is not applied here, since it only applies to child rates, not to the group's
     // own target.
@@ -218,36 +339,80 @@ getGroupTargetNoGuideRate(const Group& group)
     //   since the master and slave groups in general have different PVT properties.
     // TODO: For now we assume the RESV rate target is in slave reservoir units, and just send it as is
     //   to the slave group. Alternatively, we could also throw an error here for that case
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         const auto& control_mode = this->groupState().injection_control(group.name(), this->injectionPhase_());
-        return TargetInfo{
+        return ConstraintInfo{
             this->groupStateHelper().getInjectionGroupTarget(group, this->injectionPhase_(), this->resvCoeffsInj()),
             control_mode
         };
     }
-    else {
-        const auto& control_mode = this->groupState().production_control(group.name());
-        return TargetInfo{
-            this->groupStateHelper().getProductionGroupTarget(group),
-            control_mode
+    assert(this->isProductionConstraint());
+    const auto cmode = this->getProdCmode(group);
+    if (cmode.has_value()) {
+        return ConstraintInfo{
+            this->groupStateHelper().getProductionGroupTargetForMode(group, *cmode),
+            *cmode
         };
+    }
+    // No limit found for this rate type.
+    assert(this->constraintType() == ConstraintType::Limit);
+    return std::nullopt;
+}
+
+// This method is only used for production constraints.
+// For this->constraintType() == ConstraintType::Limit, there is a possibility that the group
+// does not have a limit, in that case, we return std::nullopt.
+template<class Scalar, class IndexTraits>
+std::optional<Group::ProductionCMode>
+GroupConstraintCalculator<Scalar, IndexTraits>::
+GeneralCalculator::
+getProdCmode(const Group& group) const
+{
+    assert(this->isProductionConstraint());
+    if (this->constraintType() == ConstraintType::Limit) {
+        auto cmode = std::get<Group::ProductionCMode>(this->control_mode_);
+        if (group.has_control(cmode)) {
+            return cmode;
+        }
+        return std::nullopt;
+    }
+    else {
+        return this->groupState().production_control(group.name());
     }
 }
 
 template<class Scalar, class IndexTraits>
-bool
-GroupTargetCalculator<Scalar, IndexTraits>::
+Group::ProductionCMode
+GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
-hasFldOrNoneControl(const Group& group)
+getProdCmode() const
+{
+    assert(this->isProductionConstraint());
+    return std::get<Group::ProductionCMode>(this->control_mode_);
+}
+
+template<class Scalar, class IndexTraits>
+bool
+GroupConstraintCalculator<Scalar, IndexTraits>::
+GeneralCalculator::
+hasHigherLevelControlOrLimit(const Group& group)
 {
     // Check if the group (constrained to production or injection) has control FLD or NONE.
     // For example, a pure injection group will have production control NONE.
     const auto& name = group.name();
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         return this->groupState().has_field_or_none_control(name, this->injectionPhase_());
     }
     else {
-        return this->groupState().has_field_or_none_control(name);
+        if (this->constraintType() == ConstraintType::Limit) {
+            // For constraint type Limit: if the current group does not have a limit, check
+            // recursively if any parent groups has a limit.
+            auto cmode = this->getProdCmode(group);
+            return !cmode.has_value();
+        }
+        else {
+            return this->groupState().has_field_or_none_control(name);
+        }
     }
 }
 
@@ -256,15 +421,15 @@ hasFldOrNoneControl(const Group& group)
 // Private methods for the GeneralCalculator class
 // -------------------------------------------------------
 
-// See comments above RescoupTargetCalculator::calculateMasterGroupTargetsAndSendToSlaves() about how
+// See comments above RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves() about how
 // the target is calculated.
 template<class Scalar, class IndexTraits>
-std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo>
-GroupTargetCalculator<Scalar, IndexTraits>::
+std::optional<typename GroupConstraintCalculator<Scalar, IndexTraits>::ConstraintInfo>
+GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
-calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_factor)
+calculateGroupConstraintRecursive_(const Group& group, const Scalar efficiency_factor)
 {
-    if (this->hasFldOrNoneControl(group)) {
+    if (this->hasHigherLevelControlOrLimit(group)) {
         // NOTE: A pure injection group is assumed to have production control NONE and
         //   a pure production group is assumed to have injection control NONE, see
         //   GroupStateHelper.cpp::setCmodeGroup() for details.
@@ -274,24 +439,24 @@ calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_facto
             //   - group.is_field() is true.
             // NOTE: it cannot have control mode FLD, since FLD will ovverride item 8 of
             //   GCONPROD/GCONINJE, see GroupKeywordHandlers.cpp
-            // TODO: We could throw an error here. Or try to fall back to use the group's own target.
-            // Fall back to use the group's own target.
+            // TODO: We could throw an error here. Or try to fall back to use the group's own constraint.
+            // Fall back to use the group's own constraint.
             return std::nullopt;
         } else {
             assert(!group.is_field());  // The field group should not have parent control.
             auto new_efficiency_factor = efficiency_factor * group.getGroupEfficiencyFactor();
-            return this->calculateGroupTargetRecursive_(this->parentGroup(group), new_efficiency_factor);
+            return this->calculateGroupConstraintRecursive_(this->parentGroup(group), new_efficiency_factor);
         }
     }
 
-    if ((this->targetType() == TargetType::Injection && !group.isInjectionGroup()) ||
-            (this->targetType() == TargetType::Production && !group.isProductionGroup()))
+    if ((this->isInjectionConstraint() && !group.isInjectionGroup()) ||
+            (this->isProductionConstraint() && !group.isProductionGroup()))
     {
         // Controlling group that is not of the type we are interested in.
         // This should never happen, since any group that is not an injector should have injection
         // control NONE. And any group that is not a producer should have production control NONE.
         // See GroupStateHelper.cpp::setCmodeGroup() for details.
-        // .. and therefore should be caught by the hasFldOrNoneControl() check above.
+        // .. and therefore should be caught by the hasHigherLevelControlOrLimit() check above.
         OPM_DEFLOG_THROW(
             std::runtime_error,
             fmt::format("Controlling group that is not of the type we are interested in: {}", group.name()),
@@ -305,16 +470,16 @@ calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_facto
     const auto& top_group = group;
     const auto& bottom_group = this->original_group_;
     TopToBottomCalculator top_bottom_calc{*this, top_group, bottom_group, efficiency_factor};
-    return top_bottom_calc.calculateGroupTarget();
+    return top_bottom_calc.calculateGroupConstraint();
 }
 
 template<class Scalar, class IndexTraits>
 bool
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 parentGroupControlAvailable_(const Group& group)
 {
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         return group.injectionGroupControlAvailable(this->injectionPhase_());
     } else {
         return group.productionGroupControlAvailable();
@@ -323,7 +488,7 @@ parentGroupControlAvailable_(const Group& group)
 
 template<class Scalar, class IndexTraits>
 Phase
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 injectionPhase_() const
 {
@@ -350,7 +515,7 @@ injectionPhase_() const
 // ----------------------------------------------------
 
 template<class Scalar, class IndexTraits>
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 TopToBottomCalculator(
     GeneralCalculator& parent_calculator,
@@ -363,7 +528,7 @@ TopToBottomCalculator(
     bottom_group_{bottom_group},
     chain_efficiency_factor_{chain_efficiency_factor}
 {
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         this->initForInjector_();
     }
     else {
@@ -376,10 +541,10 @@ TopToBottomCalculator(
 // -------------------------------------------------------
 
 template<class Scalar, class IndexTraits>
-std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo>
-GroupTargetCalculator<Scalar, IndexTraits>::
+std::optional<typename GroupConstraintCalculator<Scalar, IndexTraits>::ConstraintInfo>
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
-calculateGroupTarget()
+calculateGroupConstraint()
 {
     const auto chain = this->getGroupChainTopBot_();
     // NOTE: For reservoir coupling: we are called from beginTimeStep() in BlackoilWellModel_impl.hpp,
@@ -388,7 +553,7 @@ calculateGroupTarget()
     //  GroupStateHelper.cpp::checkGroupConstraintsInj() since the guide rate will be checked during the
     //   assemble() step.
     const auto local_reduction_level = this->getLocalReductionLevel_(chain);
-    Scalar top_level_target = this->getTopLevelTarget_();
+    Scalar top_level_target = this->getTopLevelTargetOrLimit_();
     Scalar bottom_group_current_rate_available = this->getBottomGroupCurrentRateAvailable_();
     // Because the bottom group (the original group) is the last of the elements,
     //   and not an ancestor, we subtract one:
@@ -428,19 +593,22 @@ calculateGroupTarget()
                 const Scalar slave_resv_rate = this->getSlaveGroupReservoirRate_(this->bottom_group_);
                 // Scale the slave's reservoir rate by the same factor we would scale surface rates
                 const Scalar scale = full_target / bottom_group_current_rate_available;
-                return TargetInfo{scale * slave_resv_rate, toplevel_control_mode};
+                return ConstraintInfo{scale * slave_resv_rate, toplevel_control_mode};
             }
             else {
-                return TargetInfo{full_target, toplevel_control_mode};
+                return ConstraintInfo{full_target, toplevel_control_mode};
             }
         }
-        else if (this->hasFLDControl_(this->bottom_group_)) {
-            // The bottom group is under FLD control, so we return the top level target as is.
-            return TargetInfo{full_target, toplevel_control_mode};
+        else if (
+            (this->constraintType() == ConstraintType::Limit) ||
+            ((this->constraintType() == ConstraintType::Target) && (this->hasFLDControl_(this->bottom_group_)))
+        ) {
+            // The bottom group is under FLD control, so we return the top level constraint as is.
+            return ConstraintInfo{full_target, toplevel_control_mode};
         }
     }
-    // Return the bottom group's target rate as is.
-    return this->getGroupTargetNoGuideRate_(this->bottom_group_);
+    // Return the bottom group's constraint as is.
+    return this->getGroupConstraintNoGuideRate_(this->bottom_group_);
 }
 
 // -------------------------------------------------------
@@ -449,16 +617,16 @@ calculateGroupTarget()
 
 template <class Scalar, class IndexTraits>
 bool
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 bottomGroupHasIndividualControl_()
 {
-    return !this->hasFldOrNoneControl_(this->bottom_group_);
+    return !this->hasHigherLevelControlOrLimit(this->bottom_group_);
 }
 
 template <class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 computeAddbackEfficiency_(
     const std::vector<std::string>& chain,
@@ -488,12 +656,12 @@ computeAddbackEfficiency_(
 
 template<class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 getBottomGroupCurrentRateAvailable_() const
 {
     const auto& group = this->bottom_group_;
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         return std::get<InjectionTargetCalculator>(this->target_calculator_).calcModeRateFromRates(
             this->groupStateHelper().getGroupRatesAvailableForHigherLevelControl(group, /*is_injector=*/true)
         );
@@ -508,7 +676,7 @@ getBottomGroupCurrentRateAvailable_() const
 
 template<class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 getSlaveGroupReservoirRate_(const Group& group)
 {
@@ -526,7 +694,7 @@ getSlaveGroupReservoirRate_(const Group& group)
 
 template<class Scalar, class IndexTraits>
 std::vector<std::string>
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 getGroupChainTopBot_() const
 {
@@ -535,7 +703,7 @@ getGroupChainTopBot_() const
 
 template<class Scalar, class IndexTraits>
 std::size_t
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 getLocalReductionLevel_(const std::vector<std::string>& chain)
 {
@@ -545,7 +713,7 @@ getLocalReductionLevel_(const std::vector<std::string>& chain)
         const int num_gr_ctrl = this->groupStateHelper().groupControlledWells(
             chain[ii],
             /*always_included_child=*/"",
-            /*is_producer=*/this->targetType() == TargetType::Production,
+            /*is_producer=*/this->isProductionConstraint(),
             /*injection_phase=*/this->injectionPhase_());
         if (this->hasGuideRate_(chain[ii]) && num_gr_ctrl > 0) {
             local_reduction_level = ii;
@@ -555,41 +723,53 @@ getLocalReductionLevel_(const std::vector<std::string>& chain)
 }
 
 template<class Scalar, class IndexTraits>
-typename GroupTargetCalculator<Scalar, IndexTraits>::ControlMode
-GroupTargetCalculator<Scalar, IndexTraits>::
+typename GroupConstraintCalculator<Scalar, IndexTraits>::ControlMode
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 getToplevelControlMode_() const
 {
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         return this->groupState().injection_control(this->top_group_.name(), this->injectionPhase_());
     }
     else {
-        return this->groupState().production_control(this->top_group_.name());
+        if (this->constraintType() == ConstraintType::Limit) {
+            const auto cmode = this->getProdCmode(this->top_group_);
+            assert(cmode.has_value());
+            return ControlMode{*cmode};
+        }
+        return ControlMode{this->groupState().production_control(this->top_group_.name())};
     }
 }
 
 template<class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
-getTopLevelTarget_()
+getTopLevelTargetOrLimit_()
 {
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         return this->groupStateHelper().getInjectionGroupTarget(
             this->top_group_, this->injectionPhase_(), this->resvCoeffsInj());
     }
     else {
-        return this->groupStateHelper().getProductionGroupTarget(this->top_group_);
+        if (this->constraintType() == ConstraintType::Limit) {
+            const auto cmode = this->getProdCmode(this->top_group_);
+            assert(cmode.has_value());
+            return this->groupStateHelper().getProductionGroupTargetForMode(this->top_group_, *cmode);
+        }
+        else {
+            return this->groupStateHelper().getProductionGroupTarget(this->top_group_);
+        }
     }
 }
 
 template<class Scalar, class IndexTraits>
 bool
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 hasFLDControl_(const Group& group) const
 {
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         return this->groupState().injection_control(group.name(), this->injectionPhase_()) == Group::InjectionCMode::FLD;
     }
     else {
@@ -599,7 +779,7 @@ hasFLDControl_(const Group& group) const
 
 template<class Scalar, class IndexTraits>
 void
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForInjector_()
 {
@@ -622,15 +802,26 @@ initForInjector_()
 
 template<class Scalar, class IndexTraits>
 void
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForProducer_()
 {
-    this->target_calculator_.template emplace<TargetCalculator>(
-        this->groupStateHelper(),
-        this->resvCoeffsProd(),
-        this->top_group_
-    );
+    if (this->constraintType() == ConstraintType::Limit) {
+        const auto control_mode = this->getProdCmode();
+        // Use the control mode for per-rate-type limit computation
+        this->target_calculator_.template emplace<TargetCalculator>(
+            this->groupStateHelper(),
+            this->resvCoeffsProd(),
+            control_mode
+        );
+    }
+    else {
+        this->target_calculator_.template emplace<TargetCalculator>(
+            this->groupStateHelper(),
+            this->resvCoeffsProd(),
+            this->top_group_
+        );
+    }
     const auto guide_target_mode = this->groupStateHelper().getProductionGuideTargetMode(this->top_group_);
     const auto dummy_phase = Phase::OIL; // Dummy phase, not used for producers.
     this->fraction_calculator_.emplace(
@@ -647,11 +838,18 @@ initForProducer_()
 
 template<class Scalar, class IndexTraits>
 bool
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 isProducerAndRESVControl_(const Group& group) const
 {
-    if (this->targetType() == TargetType::Production) {
+    if (this->isProductionConstraint()) {
+        if (this->constraintType() == ConstraintType::Limit) {
+            const auto cmode = this->getProdCmode(group);
+            if (!cmode.has_value()) {
+                return false;
+            }
+            return *cmode == Group::ProductionCMode::RESV;
+        }
         return this->groupState().production_control(group.name()) == Group::ProductionCMode::RESV;
     }
     else {
@@ -661,7 +859,7 @@ isProducerAndRESVControl_(const Group& group) const
 
 template<class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 localFraction_(const std::string& group_name)
 {
@@ -671,11 +869,11 @@ localFraction_(const std::string& group_name)
 
 template<class Scalar, class IndexTraits>
 Scalar
-GroupTargetCalculator<Scalar, IndexTraits>::
+GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 localReduction_(const std::string& group_name)
 {
-    if (this->targetType() == TargetType::Injection) {
+    if (this->isInjectionConstraint()) {
         const std::vector<Scalar>& group_target_reductions =
             this->groupState().injection_reduction_rates(group_name);
         return std::get<InjectionTargetCalculator>(this->target_calculator_).calcModeRateFromRates(
@@ -693,10 +891,10 @@ localReduction_(const std::string& group_name)
 }
 
 
-template class GroupTargetCalculator<double, BlackOilDefaultFluidSystemIndices>;
+template class GroupConstraintCalculator<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class GroupTargetCalculator<float, BlackOilDefaultFluidSystemIndices>;
+template class GroupConstraintCalculator<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm
