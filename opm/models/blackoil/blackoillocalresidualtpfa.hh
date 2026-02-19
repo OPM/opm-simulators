@@ -160,15 +160,11 @@ public:
         computeStorage<LhsEval>(storage, intQuants);
     }
 
-    // The nice pattern of having a fluidSystem() function as used in fluidState
-    // Does not work as nicely here when we are dealing with static functions
-    // and a class without any fluidsystem member... Should find way to avoid duplicating
-    // the content of this function.
     template <class LhsEval, class StorageType, class IntensiveQuantitiesType = IntensiveQuantities>
     OPM_HOST_DEVICE static void computeStorage(StorageType& storage,
                                const IntensiveQuantitiesType& intQuants)
     {
-        // OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
+        OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
         // retrieve the intensive quantities for the SCV at the specified point in time
         const auto& fs = intQuants.fluidState();
         storage = 0.0;
@@ -224,37 +220,26 @@ public:
 
         adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex(), fsysptr);
 
-        // These have to be protected because I have not bothered to change the signature
-        // in each of these classes to be generic in terms of storage type.
-        if constexpr (usesStaticFluidSystem)
-        {
+        // deal with solvents (if present)
+        SolventModule::template addStorage<LhsEval>(storage, intQuants);
 
-            // deal with solvents (if present)
-            SolventModule::addStorage(storage, intQuants);
+        // deal with zFracton (if present)
+        ExtboModule::template addStorage<LhsEval>(storage, intQuants);
 
-            // deal with zFracton (if present)
-            ExtboModule::addStorage(storage, intQuants);
+        // deal with polymer (if present)
+        PolymerModule::template addStorage<LhsEval>(storage, intQuants);
 
-            // deal with polymer (if present)
-            PolymerModule::addStorage(storage, intQuants);
-        }
-
-        // TODO: figure out why the energumodule gives really wrong answers on gpu (a couple orders of magnitutde)
         // deal with energy (if present)
         EnergyModule::template addStorage<LhsEval>(storage, intQuants);
 
-        if constexpr (usesStaticFluidSystem)
-        {
-            // deal with foam (if present)
-            FoamModule::addStorage(storage, intQuants);
+        // deal with foam (if present)
+        FoamModule::template addStorage<LhsEval>(storage, intQuants);
 
-            // deal with salt (if present)
-            BrineModule::addStorage(storage, intQuants);
+        // deal with salt (if present)
+        BrineModule::template addStorage<LhsEval>(storage, intQuants);
 
-            // deal with bioeffects (if present)
-            BioeffectsModule::addStorage(storage, intQuants);
-
-        }
+        // deal with bioeffects (if present)
+        BioeffectsModule::template addStorage<LhsEval>(storage, intQuants);
     }
 
     /*!
@@ -367,7 +352,7 @@ public:
                                  const ResidualNBInfoT& nbInfo,
                                  const ModuleParamsT& moduleParams)
     {
-        // OPM_TIMEBLOCK_LOCAL(calculateFluxes, Subsystem::Assembly);
+        OPM_TIMEBLOCK_LOCAL(calculateFluxes, Subsystem::Assembly);
         const Scalar Vin = nbInfo.Vin;
         const Scalar Vex = nbInfo.Vex;
         const Scalar distZg = nbInfo.dZg;
@@ -376,7 +361,6 @@ public:
         const Scalar faceArea = nbInfo.faceArea;
         FaceDir::DirEnum facedir = nbInfo.faceDir;
 
-        // TODO: this can be made cleaner by centralizing this logic in the getter
         FluidSystem fsys = intQuantsIn.getFluidSystem();
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -519,7 +503,7 @@ public:
             EnergyModule::addHeatFlux(flux, heatFlux);
         }
         // NB need to be tha last energy call since it does scaling
-        // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx); // TODO: write a new computeFlux that does not use elemCtx
+        // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with foam (if present)
         static_assert(!enableFoam,
@@ -540,17 +524,17 @@ public:
         }
 
         // deal with dispersion (if present). opm-models expects per area flux (added in the tmpdispersivity).
-        // if constexpr (enableDispersion) {
-        //     typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
-        //     DispersionModule::ExtensiveQuantities::update(normVelocityAvg, intQuantsIn, intQuantsEx);
-        //     const Scalar dispersivity = nbInfo.dispersivity;
-        //     const Scalar tmpdispersivity = dispersivity / faceArea;
-        //     DispersionModule::addDispersiveFlux(flux,
-        //                                         intQuantsIn,
-        //                                         intQuantsEx,
-        //                                         tmpdispersivity,
-        //                                         normVelocityAvg);
-        // }
+        if constexpr (enableDispersion) {
+            typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
+            DispersionModule::ExtensiveQuantities::update(normVelocityAvg, intQuantsIn, intQuantsEx);
+            const Scalar dispersivity = nbInfo.dispersivity;
+            const Scalar tmpdispersivity = dispersivity / faceArea;
+            DispersionModule::addDispersiveFlux(flux,
+                                                intQuantsIn,
+                                                intQuantsEx,
+                                                tmpdispersivity,
+                                                normVelocityAvg);
+        }
 
         // apply the scaling for the urea equation in MICP
         if constexpr (enableMICP) {
@@ -924,7 +908,6 @@ public:
                                  const Eval& surfaceVolumeFlux,
                                  const FluidState& upFs)
     {
-        // TODO: this can be made cleaner by centralizing this logic in the getter
         FluidSystem fsys = upFs.fluidSystem();
 
 

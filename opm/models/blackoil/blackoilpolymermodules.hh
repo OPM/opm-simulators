@@ -31,6 +31,7 @@
 #include <dune/common/fvector.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 
@@ -232,8 +233,8 @@ public:
     }
 
     // must be called after water storage is computed
-    template <class LhsEval>
-    static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
+    template <class LhsEval, class StorageType>
+    OPM_HOST_DEVICE static void addStorage(StorageType& storage,
                            const IntensiveQuantities& intQuants)
     {
         if constexpr (enablePolymer) {

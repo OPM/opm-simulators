@@ -74,7 +74,7 @@ template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { static constexpr bool value = true; };
+struct EnableDispersion<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { static constexpr bool value = false; };
 
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {

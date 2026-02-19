@@ -34,6 +34,8 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/common/utility/gpuDecorators.hpp>
+
 #include <opm/models/blackoil/blackoilextboparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
@@ -152,8 +154,8 @@ public:
         return static_cast<Scalar>(1.0);
     }
 
-    template <class LhsEval>
-    static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
+    template <class LhsEval, class StorageType>
+    OPM_HOST_DEVICE static void addStorage(StorageType& storage,
                            const IntensiveQuantities& intQuants)
     {
         if constexpr (enableExtbo) {
