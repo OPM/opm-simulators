@@ -311,6 +311,13 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
             // ---- Solve linear system ----
             solveJacobianSystem(x);
 
+            // If the solver produced a well solution (system solver),
+            // pass it to the well model for use during postSolve.
+            auto& linSolver = simulator_.model().newtonMethod().linearSolver();
+            if (auto wellSol = linSolver.getWellSolution()) {
+                wellModel().setWellSolution(wellSol->solution, wellSol->dofOffsets);
+            }
+
             report.linear_solve_setup_time += linear_solve_setup_time_;
             report.linear_solve_time += perfTimer.stop();
             report.total_linear_iterations += linearIterationsLastSolve();

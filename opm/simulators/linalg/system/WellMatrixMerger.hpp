@@ -230,7 +230,8 @@ public:
                  const WWMatrix& D,
                  const std::vector<int>& cellIndices,
                  int wellIndex,
-                 const std::string& wellName)
+                 const std::string& wellName,
+                 const WellVector& residual)
     {
         B_matrices_.push_back(B);
         C_matrices_.push_back(C);
@@ -238,6 +239,7 @@ public:
         wellIndices_.push_back(wellIndex);
         wellCells_.push_back(cellIndices);
         wellNames_.push_back(wellName);
+        well_residuals_.push_back(residual);
 
         // Map cell indices to well indices
         for (const auto& cellIdx : cellIndices) {
@@ -245,12 +247,23 @@ public:
         }
     }
 
-    // Finalize the merger by creating the merged matrices
+    // Finalize the merger by creating the merged matrices and residual
     void finalize()
     {
         mergeWRMatrices(B_matrices_, mergedB_, wellCells_, numResDof_);
         mergeRWMatrices(C_matrices_, mergedC_, wellCells_, numResDof_);
         createDiagonalBlockMatrix(D_matrices_, mergedD_);
+        mergeWellResiduals();
+    }
+
+    const WellVector& getMergedWellResidual() const
+    {
+        return mergedWellResidual_;
+    }
+
+    const std::vector<int>& getWellDofOffsets() const
+    {
+        return wellDofOffsets_;
     }
 
     const WRMatrix& getMergedB() const
@@ -299,10 +312,30 @@ public:
     }
 
 private:
+    void mergeWellResiduals()
+    {
+        int totalSize = 0;
+        wellDofOffsets_.clear();
+        wellDofOffsets_.push_back(0);
+        for (const auto& res : well_residuals_) {
+            totalSize += res.N();
+            wellDofOffsets_.push_back(totalSize);
+        }
+        mergedWellResidual_.resize(totalSize);
+        int offset = 0;
+        for (const auto& res : well_residuals_) {
+            for (std::size_t i = 0; i < res.N(); ++i) {
+                mergedWellResidual_[offset + i] = res[i];
+            }
+            offset += res.N();
+        }
+    }
+
     int numResDof_;
     std::vector<WRMatrix> B_matrices_;
     std::vector<RWMatrix> C_matrices_;
     std::vector<WWMatrix> D_matrices_;
+    std::vector<WellVector> well_residuals_;
     std::vector<int> wellIndices_;
     std::vector<std::vector<int>> wellCells_;
     std::vector<std::string> wellNames_;
@@ -311,6 +344,8 @@ private:
     WRMatrix mergedB_;
     RWMatrix mergedC_;
     WWMatrix mergedD_;
+    WellVector mergedWellResidual_;
+    std::vector<int> wellDofOffsets_;
 };
 
 } // namespace Opm
