@@ -154,6 +154,15 @@ private:
                              GlobalEqVector& res,
                              const WellType& well)
     {
+        // When the system solver is active, it solves the full coupled
+        // reservoir+well block system directly using the unmodified
+        // reservoir RHS and well residuals. The Schur complement
+        // modifications (addWellContributions on the Jacobian and
+        // apply(r) on the RHS) must be skipped.
+        if (model_.useSystemSolver()) {
+            return;
+        }
+
         if (model_.addMatrixContributions()) {
             well->addWellContributions(jacobian);
         }

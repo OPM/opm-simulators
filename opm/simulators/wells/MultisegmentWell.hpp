@@ -119,6 +119,13 @@ namespace Opm {
                                                    const GroupStateHelperType& groupStateHelper,
                                                    WellStateType& well_state) override;
 
+        void updateWellStateFromSystemSolution(const Simulator& simulator,
+                                               const Opm::WellVector& mergedWellSolution,
+                                               int wellDofOffset,
+                                               int nWellDofs,
+                                               const GroupStateHelperType& groupStateHelper,
+                                               WellStateType& well_state) override;
+
         /// computing the well potentials for group control
         void computeWellPotentials(const Simulator& simulator,
                                    const WellStateType& well_state,
@@ -303,7 +310,8 @@ namespace Opm {
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
                                             WellStateType& well_state,
-                                            const bool solving_with_zero_rate) override;
+                                            const bool solving_with_zero_rate,
+                                            const bool skipLocalInverse) override;
 
         void updateWaterThroughput(const double dt, WellStateType& well_state) const override;
 

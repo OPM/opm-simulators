@@ -143,6 +143,12 @@ public:
         return istlSolver_->getSolveCount();
     }
 
+    std::optional<typename AbstractISTLSolver<TypeTag>::WellSolutionView>
+    getWellSolution() const override
+    {
+        return istlSolver_->getWellSolution();
+    }
+
 private:
     std::unique_ptr<AbstractISTLSolver<TypeTag>> istlSolver_;
 
