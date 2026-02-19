@@ -18,7 +18,7 @@
 */
 #include <config.h>
 #include <opm/input/eclipse/Schedule/Group/GuideRateModel.hpp>
-#include <opm/simulators/wells/GroupTargetCalculator.hpp>
+#include <opm/simulators/wells/GroupConstraintCalculator.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
 #include <tuple>  // for std::tie

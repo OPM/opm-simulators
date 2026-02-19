@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_GROUP_TARGET_CALCULATOR_HPP
-#define OPM_GROUP_TARGET_CALCULATOR_HPP
+#ifndef OPM_GROUP_CONSTRAINT_CALCULATOR_HPP
+#define OPM_GROUP_CONSTRAINT_CALCULATOR_HPP
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -348,4 +348,4 @@ private:
 
 } // namespace Opm
 
-#endif // OPM_GROUP_TARGET_CALCULATOR_HPP
+#endif // OPM_GROUP_CONSTRAINT_CALCULATOR_HPP

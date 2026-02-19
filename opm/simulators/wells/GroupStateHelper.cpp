@@ -2032,7 +2032,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
                 } else {
                     // Accumulate from this subgroup only if no group guide rate is set for it.
                     // NOTE: For reservoir coupling master groups that are not under individual control
-                    //   it is required that they have a guide rate set, see GroupTargetCalculator.cpp.
+                    //   it is required that they have a guide rate set, see GroupConstraintCalculator.cpp.
                     if (!this->guide_rate_.has(sub_group.name(), phase)) {
                         group_target_reduction[phase_pos]
                             += sub_group_efficiency * sub_group_target_reduction[phase_pos];
@@ -2061,7 +2061,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
             } else {
                 // The subgroup may participate in group control.
                 // NOTE: Reservoir coupling master groups that are not under individual control
-                //   must have a guide rate set, see GroupTargetCalculator.cpp.
+                //   must have a guide rate set, see GroupConstraintCalculator.cpp.
                 if (!this->guide_rate_.has(sub_group.name())) {
                     // Accumulate from this subgroup only if no group guide rate is set for it.
                     for (int phase = 0; phase < np; phase++) {
