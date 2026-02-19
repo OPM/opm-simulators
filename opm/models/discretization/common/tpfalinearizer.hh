@@ -42,6 +42,7 @@
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/Schedule/BCProp.hpp>
 
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
@@ -1068,7 +1069,7 @@ private:
     template <class SubDomainType>
     void linearize_(const SubDomainType& domain, bool isNlddLocalSolve)
     {
-#if HAVE_CUDA
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
         // Make sure we have can have the domain on the GPU.
         if constexpr (std::is_same_v<SubDomainType, FullDomain<>>) {
 
@@ -1370,6 +1371,7 @@ private:
             assert(!enableBioeffects && "Bioeffects not yet supported on GPU");
             assert(!dispersionActive && "Dispersion not yet supported on GPU");
             int constexpr blockSize = 256;
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
             gpu_parallelize_linearization_kernel<LocalIntensiveQuantities, LocalModelClass, LocalResidualKernel, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, ResidualType><<<((numCells + blockSize - 1) / blockSize), blockSize>>>(
                 numCells,
                 localDomain,
@@ -1382,6 +1384,9 @@ private:
                 enableBioeffects,
                 onFullDomain,
                 localVolumes);
+#else
+            assert(false && "Trying to run GPU code without GPU support");
+#endif
         }
         else {
 #pragma omp parallel for
@@ -1440,8 +1445,6 @@ private:
         }
     }
 #endif
-
-#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 
     template<typename T, bool useGPU>
     using ArgType = std::conditional_t<useGPU, T, T&>;
@@ -1531,14 +1534,14 @@ private:
                 // The cached storage for timeIdx 0 (current time) is not
                 // used, but after storage cache is shifted at the end of the
                 // timestep, it will become cached storage for timeIdx 1.
-                model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
+                localModel.updateCachedStorage(globI, /*timeIdx=*/0, res);
                 // We should not update the storage cache here for NLDD local solves.
                 // This will reset the start-of-step storage to incorrect numbers when
                 // we do local solves, where the iteration number will start from 0,
                 // but the starting state may not be identical to the start-of-step state.
                 // Note that a full assembly must be done before local solves
                 // otherwise this will be left un-updated.
-                if (model_().newtonMethod().numIterations() == 0 && !isNlddLocalSolve) {
+                if (localModel.newtonMethod().numIterations() == 0 /*&& !isNlddLocalSolve this was added in rebase, resolve! */) {
                     // Need to update the storage cache.
                     if (localProblem.recycleFirstIterationStorage()) {
                         // Assumes nothing have changed in the system which
@@ -1592,6 +1595,8 @@ private:
         *reinterpret_cast<MatrixBlockType*>(GPU_LOCAL_diagMatAddress[globI]) += bMat;
     }
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+
     template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class GpuResidualView, class GpuBoundaryInfoView, class GpuProblem>
     __global__ static void linearize_kernel_bc(
         DiagPtrType GPU_LOCAL_diagMatAddress,
@@ -1636,6 +1641,7 @@ private:
             }
         }
     }
+#endif
 
     template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class GpuResidualView, class GpuBoundaryInfoView>
     void linearize_kernel_CPU_boundary(
@@ -1662,7 +1668,6 @@ private:
             }
         }
     }
-#endif
 
     void updateStoredTransmissibilities()
     {
