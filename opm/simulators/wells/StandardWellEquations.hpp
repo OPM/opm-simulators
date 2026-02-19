@@ -128,31 +128,33 @@ public:
     {
         return resWell_;
     }
-    
+
+    const OffDiagMatWell& getB() const { return duneB_; }
+    const OffDiagMatWell& getC() const { return duneC_; }
+    const DiagMatWell& getD() const { return duneD_; }
+    const std::vector<int>& cells() const { return cells_; }
+
 private:
     friend class StandardWellEquationAccess<Scalar, IndexTraits, numEq>;
 
-    // two off-diagonal matrices
- public:   
+        // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;
     // diagonal matrix for the well
     DiagMatWell invDuneD_;
     DiagMatWell duneD_;
-private:
+
     // Wrapper for the parallel application of B for distributed wells
     wellhelpers::ParallelStandardWellB<Scalar> parallelB_;
 
     // residuals of the well equations
- public:   
     BVectorWell resWell_;
-private:
+
     // several vector used in the matrix calculation
     mutable BVectorWell Bx_;
     mutable BVectorWell invDrw_;
 
     // Store the global index of well perforated cells
-public:    
     std::vector<int> cells_;
 };
 

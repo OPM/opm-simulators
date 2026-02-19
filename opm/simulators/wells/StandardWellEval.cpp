@@ -83,37 +83,33 @@ template<class FluidSystem, class Indices>
 void
 StandardWellEval<FluidSystem,Indices>::
 addBCDMatrix(std::vector<BMatrix>& b_matrices,
-                std::vector<CMatrix>& c_matrices,
-                std::vector<DMatrix>& d_matrices,
-                std::vector<std::vector<int>>& wcells,
-                std::vector<WVector>& residual) const
+             std::vector<CMatrix>& c_matrices,
+             std::vector<DMatrix>& d_matrices,
+             std::vector<std::vector<int>>& wcells,
+             std::vector<WVector>& residual) const
 {
-    // Implementation of addBCDMatrix for StandardWellEval
+    const auto& srcB = linSys_.getB();
+    const auto& srcC = linSys_.getC();
+    const auto& srcD = linSys_.getD();
+    const size_t numPerfs = srcB.M();
+
+    // Copy residual (DynamicVector -> FieldVector)
     WVector res(1);
-    for(int i=0; i< primary_variables_.numWellEq(); ++i) {
+    for (int i = 0; i < primary_variables_.numWellEq(); ++i) {
         res[0][i] = linSys_.residual()[0][i];
     }
     residual.push_back(res);
-    BMatrix duneB;
-    CMatrix duneC;
+
+    // Copy D matrix (1x1 block, DynamicMatrix -> FieldMatrix)
     DMatrix duneD;
     duneD.setSize(1, 1, 1);
-    assert(linSys_.duneB_.N() == 1);
-    duneB.setSize(linSys_.duneB_.N(), linSys_.duneB_.M(), linSys_.duneB_.M());
-    duneC.setSize(linSys_.duneC_.M(), linSys_.duneC_.N(), linSys_.duneC_.M());
-    const size_t numPerfs = linSys_.duneB_.M();
-    for (auto row = duneD.createbegin(),
-              end = duneD.createend(); row != end; ++row) {
+    for (auto row = duneD.createbegin(); row != duneD.createend(); ++row) {
         // Add nonzeros for diagonal
         row.insert(row.index());
     }
-      // the block size is run-time determined now
     {
         auto& dest = duneD[0][0];
-        const auto& src = linSys_.duneD_[0][0];
-        assert(dest.M() == src.M());
-        assert(dest.N() == src.N());
-
+        const auto& src = srcD[0][0];
         for (size_t i = 0; i < dest.N(); ++i) {
             for (size_t j = 0; j < dest.M(); ++j) {
                 dest[i][j] = src[i][j];
@@ -121,53 +117,45 @@ addBCDMatrix(std::vector<BMatrix>& b_matrices,
         }
     }
 
-    for (auto row = duneB.createbegin(),
-              end = duneB.createend(); row != end; ++row) {
-        for (size_t perf = 0 ; perf < numPerfs; ++perf) {
+    // Copy B matrix (DynamicMatrix -> FieldMatrix)
+    BMatrix duneB;
+    assert(srcB.N() == 1);
+    duneB.setSize(srcB.N(), srcB.M(), srcB.M());
+    for (auto row = duneB.createbegin(); row != duneB.createend(); ++row) {
+        for (size_t perf = 0; perf < numPerfs; ++perf) {
             row.insert(perf);
         }
     }
-
-    for (size_t i = 0 ; i < linSys_.duneB_.M(); ++i) {
-        // the block size is run-time determined now
-        //duneB[0][perf].resize(numWellEq, numEq);
-        const auto& src = linSys_.duneB_[0][i];
+    for (size_t i = 0; i < srcB.M(); ++i) {
+        const auto& src = srcB[0][i];
         auto& dest = duneB[0][i];
-        assert(dest.M() == src.M());
-        assert(dest.N() == src.N());
-        for( size_t j = 0; j < src.N(); ++j) {
+        for (size_t j = 0; j < src.N(); ++j) {
             for (size_t k = 0; k < src.M(); ++k) {
-                dest[j][k] =   src[j][k];
+                dest[j][k] = src[j][k];
             }
         }
     }
 
-         // make the C^T matrix
-    for (auto row = duneC.createbegin(),
-              end = duneC.createend(); row != end; ++row) {
-             row.insert(0);//only one well dofs
+    // Build C as transpose of internal C^T layout
+    CMatrix duneC;
+    duneC.setSize(srcC.M(), srcC.N(), srcC.M());
+    for (auto row = duneC.createbegin(); row != duneC.createend(); ++row) {
+        row.insert(0);  // Only one well dofs
     }
-
-
     for (size_t perf = 0; perf < numPerfs; ++perf) {
         auto& dest = duneC[perf][0];
-        const auto& src = linSys_.duneC_[0][perf];
-        assert(dest.N() == src.M());
-        assert(dest.M() == src.N());
-        for(size_t i = 0; i < src.N(); ++i) {
+        const auto& src = srcC[0][perf];
+        for (size_t i = 0; i < src.N(); ++i) {
             for (size_t j = 0; j < src.M(); ++j) {
                 dest[j][i] = src[i][j];
             }
         }
     }
-    //NB need to fill duneC for duneC_ as transpose
-    wcells.push_back(linSys_.cells_);
-    
-    d_matrices.push_back(duneD);
 
-    c_matrices.push_back(duneC);
     b_matrices.push_back(duneB);
- 
+    c_matrices.push_back(duneC);
+    d_matrices.push_back(duneD);
+    wcells.push_back(linSys_.cells());
 }
 
 template<class FluidSystem, class Indices>

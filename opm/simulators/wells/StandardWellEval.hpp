@@ -47,13 +47,13 @@ class StandardWellEval
 public:
     using Scalar = typename FluidSystem::Scalar;
     static constexpr int numResDofs = Indices::numEq;
-    static constexpr int numWellDofs = numResDofs + 1;//NB will fail for for thermal for now
+    static constexpr int numWellDofs = numResDofs + 1;// NB will fail for for thermal for now
     using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
     using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
     using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
     using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+
 protected:
-    //using Scalar = typename FluidSystem::Scalar;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices>;
     using StdWellConnections = StandardWellConnections<FluidSystem,Indices>;
