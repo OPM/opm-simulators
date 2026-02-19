@@ -134,16 +134,20 @@ public:
     {
         return resWell_;
     }
-    
-  private:
+
+    const OffDiagMatWell& getB() const { return duneB_; }
+    const OffDiagMatWell& getC() const { return duneC_; }
+    const DiagMatWell& getD() const { return duneD_; }
+    const std::vector<int>& cells() const { return cells_; }
+
+private:
     friend class MultisegmentWellEquationAccess<Scalar,IndexTraits,numWellEq,numEq>;
     // two off-diagonal matrices
-  public:
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;
     // "diagonal" matrix for the well. It has offdiagonal entries for inlets and outlets.
     DiagMatWell duneD_;
-  private:
+
     /// \brief solver for diagonal matrix
     ///
     /// This is a shared_ptr as MultisegmentWell is copied in computeWellPotentials...
@@ -159,7 +163,6 @@ public:
     const MultisegmentWellGeneric<Scalar, IndexTraits>& well_; //!< Reference to well
 
     // Store the global index of well perforated cells
-    public:
     std::vector<int> cells_;
 
     // Wrapper for the parallel application of B for distributed wells

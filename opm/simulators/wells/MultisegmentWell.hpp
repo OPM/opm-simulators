@@ -168,10 +168,14 @@ namespace Opm {
 
         int setPrimaryVars(typename std::vector<Scalar>::const_iterator it) override;
         void addBCDMatrix(std::vector<BMatrix>& b_matrices,
-                std::vector<CMatrix>& c_matrices,
-                std::vector<DMatrix>& d_matrices,
-                std::vector<std::vector<int>>& wcells,
-                std::vector<WVector>& residual) const override{ MSWEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells,residual);}
+                          std::vector<CMatrix>& c_matrices,
+                          std::vector<DMatrix>& d_matrices,
+                          std::vector<std::vector<int>>& wcells,
+                          std::vector<WVector>& residual) const override
+        {
+            MSWEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells, residual);
+        }
+
     protected:
         // regularize msw equation
         bool regularize_;

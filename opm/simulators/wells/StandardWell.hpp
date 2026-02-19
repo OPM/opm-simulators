@@ -254,12 +254,14 @@ namespace Opm
 
 
         void addBCDMatrix(std::vector<BMatrix>& b_matrices,
-                std::vector<CMatrix>& c_matrices,
-                std::vector<DMatrix>& d_matrices,
-                std::vector<std::vector<int>>& wcells,
-                std::vector<WVector>& residual) const override{ 
-                    StdWellEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells,residual);
+                          std::vector<CMatrix>& c_matrices,
+                          std::vector<DMatrix>& d_matrices,
+                          std::vector<std::vector<int>>& wcells,
+                          std::vector<WVector>& residual) const override
+        {
+            StdWellEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells, residual);
         }
+
     protected:
         bool regularize_;
 
