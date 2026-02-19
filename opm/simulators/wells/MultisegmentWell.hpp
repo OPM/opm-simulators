@@ -24,6 +24,7 @@
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
+#include <opm/common/Exceptions.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
@@ -173,7 +174,15 @@ namespace Opm {
                           std::vector<std::vector<int>>& wcells,
                           std::vector<WVector>& residual) const override
         {
-            MSWEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells, residual);
+            // System solver is only supported when well DOF dimensions
+            // match between WellInterface and MultisegmentWellEval (standard 3-phase blackoil).
+            if constexpr (Base::numWellDofs == MSWEval::numWellDofs) {
+                MSWEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells, residual);
+            } else {
+                OPM_THROW(std::runtime_error,
+                          "System solver with multisegment wells is only supported for standard "
+                          "3-phase blackoil (Indices::numEq == 3). This model has different equation count.");
+            }
         }
 
     protected:

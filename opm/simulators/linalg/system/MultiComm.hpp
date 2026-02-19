@@ -151,6 +151,11 @@ public:
         forEach(integralRange(Hybrid::size(*this)),
                 [&](auto&& i) { (*this)[i].copyOwnerToAll(x[i], y[i]); });
     }
+
+    decltype(auto) communicator() const
+    {
+        return std::get<0>(*this).communicator();
+    }
 };
 
 } // namespace Dune

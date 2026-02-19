@@ -38,11 +38,21 @@
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
+#include <dune/istl/multitypeblockvector.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/umfpack.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/paamg/pinfo.hh>
 #include <type_traits>
+
+namespace Opm::detail {
+template <typename T>
+struct is_multi_type_block_vector : std::false_type {};
+template <typename... Args>
+struct is_multi_type_block_vector<Dune::MultiTypeBlockVector<Args...>> : std::true_type {};
+template <typename T>
+inline constexpr bool is_multi_type_block_vector_v = is_multi_type_block_vector<T>::value;
+} // namespace Opm::detail
 
 #if HAVE_CUDA
 #if USE_HIP
@@ -189,6 +199,8 @@ namespace Dune
           } else if (solver_type == "mixed-bicgstab") {
               if constexpr (Opm::is_gpu_operator_v<Operator>) {
                 OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for GPU operatorsg");
+            } else if constexpr (Opm::detail::is_multi_type_block_vector_v<VectorType>) {
+                OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for multi-type block vectors.");
             } else if constexpr (std::is_same_v<typename VectorType::field_type, float>){
                 OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for single precision.");
             } else {
@@ -219,19 +231,23 @@ namespace Dune
                                                                                   restart,
                                                                                   maxiter, // maximum number of iterations
                                                                                   verbosity);
+        } else if (solver_type == "flexgmres") {
+            if constexpr (Opm::is_gpu_operator_v<Operator>) {
+                OPM_THROW(std::invalid_argument, "flexgmres solver not supported for GPU operators.");
+            } else {
+                int restart = prm.get<int>("restart", 15);
+                linsolver_ = std::make_shared<Dune::RestartedFlexibleGMResSolver<VectorType>>(*linearoperator_for_solver_,
+                                                                                        *scalarproduct_,
+                                                                                        *preconditioner_,
+                                                                                        tol,// desired residual reduction factor
+                                                                                        restart,
+                                                                                        maxiter, // maximum number of iterations
+                                                                                        verbosity);
+            }
         } else {
-            if constexpr (!Opm::is_gpu_operator_v<Operator>) {
-                if (solver_type == "flexgmres") {
-                    int restart = prm.get<int>("restart", 15);
-                    linsolver_ = std::make_shared<Dune::RestartedFlexibleGMResSolver<VectorType>>(*linearoperator_for_solver_,
-                                                                                            *scalarproduct_,
-                                                                                            *preconditioner_,
-                                                                                            tol,// desired residual reduction factor
-                                                                                            restart,
-                                                                                            maxiter, // maximum number of iterations
-                                                                                            verbosity);
+            if constexpr (!Opm::is_gpu_operator_v<Operator> && !Opm::detail::is_multi_type_block_vector_v<VectorType>) {
 #if HAVE_SUITESPARSE_UMFPACK
-                } else if (solver_type == "umfpack") {
+                if (solver_type == "umfpack") {
                     if constexpr (std::is_same_v<typename VectorType::field_type,float>) {
                         OPM_THROW(std::invalid_argument, "UMFPack cannot be used with floats");
                     } else {
@@ -272,7 +288,7 @@ namespace Dune
     recreateDirectSolver()
     {
 #if HAVE_SUITESPARSE_UMFPACK
-        if constexpr (!Opm::is_gpu_operator_v<Operator>) {
+        if constexpr (!Opm::is_gpu_operator_v<Operator> && !Opm::detail::is_multi_type_block_vector_v<VectorType>) {
             if constexpr (std::is_same_v<typename VectorType::field_type, float>) {
                 OPM_THROW(std::invalid_argument, "UMFPack cannot be used with floats");
             } else {
