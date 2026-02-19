@@ -102,7 +102,7 @@ public:
 
     const std::vector<NNCdata>& getOutputNnc() const
     {
-        return outputNnc_;
+        return outputNnc_[0];
     }
 
     const CollectDataOnIORankType& collectOnIORank() const
@@ -165,17 +165,16 @@ protected:
     const EquilGrid* equilGrid_;
     SimulatorReportSingle sub_step_report_;
     SimulatorReport simulation_report_;
-    mutable std::vector<NNCdata> outputNnc_; 
-    
+
     // Regular NNCs per grid: internal to a grid.
-    // Both cells belong to the same level grid, either the main grid or a level/local grid. 
-    // nnc.cell1 (NNC1 in *.EGRID) Level/Local Cartesian index of cell1 
+    // Both cells belong to the same level grid, either the main grid or a level/local grid.
+    // nnc.cell1 (NNC1 in *.EGRID) Level/Local Cartesian index of cell1
     // nnc.cell2 (NNC2 in *.EGRID) Level/Local Cartesian index of cell2
     // Equivalent to TRANNNC in *.INIT
-     mutable std::vector<std::vector<NNCdata>> outputInnerLevelNnc_;
+     mutable std::vector<std::vector<NNCdata>> outputNnc_;
 
     // NNCs between main (level zero) grid and local grids:
-    // nnc.cell1 (NNCG in *.EGRID) Cartesian index of cell1 in the main grid where the cell belongs to. 
+    // nnc.cell1 (NNCG in *.EGRID) Cartesian index of cell1 in the main grid where the cell belongs to.
     // nnc.cell2 (NNCL in *.EGRID) Level/Local Cartesian index of cell2 in the refined level grid where the cell belongs to.
     // Equivalent to TRANGL in *.INIT
     mutable std::vector<std::vector<NNCdata>> outputNncGlobalLocal_; // here GLOBAL refers to level 0 grid, local to any LGR (refined grid)
@@ -186,23 +185,38 @@ protected:
     // nnc.cell2 (NNA2 in *.EGRID) Level/Local Cartesian index of cell2 (in its level grid: level2, with level2 > level1).
     // Equivalent to TRANLL in *.INIT
     mutable std::vector<std::vector<std::vector<NNCdata>>> outputAmalgamatedNnc_;
-    
+
     mutable std::unique_ptr<std::vector<data::Solution>> outputTrans_;
 
 private:
     template<typename LevelIndicesFunction>
-    void computeTrans_(const Opm::LevelCartesianIndexMapper<EquilGrid>& levelCartMapp,
-                       const std::vector<std::unordered_map<int,int>>& levelCartToLevelCompressed,
+    void computeTrans_(const std::vector<std::unordered_map<int,int>>& levelCartToLevelCompressed,
                        const std::function<unsigned int(unsigned int)>& map,
                        const LevelIndicesFunction& computeLevelIndices,
-                       const std::function<int(int, int)>& computeLevelCartIdx) const;
+                       const std::function<int(int, int)>& computeLevelCartIdx,
+                       const std::function<std::array<int,3>(int)>& computeLevelCartDimensions) const;
 
     template<typename LevelIndicesFunction>
-    std::vector<NNCdata> exportNncStructure_(const Opm::LevelCartesianIndexMapper<EquilGrid>& levelCartMapp,
-                                             const std::unordered_map<int,int>& cartesianToActive,
+    std::vector<NNCdata> exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToLevelCompressed,
                                              const std::function<unsigned int(unsigned int)>& map,
                                              const LevelIndicesFunction& computeLevelIndices,
-                                             const std::function<int(int, int)>& computeLevelCartIdx) const;
+                                             const std::function<int(int, int)>& computeLevelCartIdx,
+                                             const std::function<std::array<int,3>(int)>& computeLevelCartDimensions) const;
+
+    /// Returns true if cells (belonging to the same level grid) are (level) Cartesian neighbors (share a face)
+    bool isCartesianNeighbour_(const std::array<int,3>& levelCartDims,
+                               const std::size_t levelCartIdx1,
+                               const std::size_t levelCartIdx2) const;
+    
+    bool isDirectNeighbours_(const std::unordered_map<int,int>& levelCartesianToActive,
+                             const std::array<int,3>& levelCartDims,
+                             const std::size_t levelCartIdx1,
+                             const std::size_t levelCartIdx2) const;
+    
+    auto activeCell_(const std::unordered_map<int,int>& levelCartToLevelCompressed,
+                     const std::size_t levelCartIdx) const;
+    
+    
 
     /// Returns true if the given Cartesian cell index belongs to a numerical aquifer.
     /// If no numerical aquifer exists, always returns false.
