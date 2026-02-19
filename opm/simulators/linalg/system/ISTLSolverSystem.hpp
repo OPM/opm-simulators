@@ -85,8 +85,7 @@ public:
         sysX_[_1] = 0.0;
 
         sysRhs_[_0] = *Parent::rhs_;
-        sysRhs_[_1].resize(cachedWellDofs_);
-        sysRhs_[_1] = 0.0;
+        sysRhs_[_1] = mergedWellResidual_;
 
         Dune::InverseOperatorResult result;
         sysSolver_->apply(sysX_, sysRhs_, result);
@@ -97,9 +96,16 @@ public:
         return this->checkConvergence(result);
     }
 
+    std::optional<typename Parent::WellSolutionView> getWellSolution() const override
+    {
+        return typename Parent::WellSolutionView{sysX_[_1], wellDofOffsets_};
+    }
+
 private:
     bool sysInitialized_ = false;
     size_t cachedWellDofs_ = 0;
+    WellVector mergedWellResidual_;
+    std::vector<int> wellDofOffsets_;
 
     SystemMatrix sysMatrix_;
     SystemVector sysX_;
@@ -143,9 +149,13 @@ private:
                            d_matrices[i],
                            wcells[i],
                            static_cast<int>(i),
-                           "Well" + std::to_string(i + 1));
+                           "Well" + std::to_string(i + 1),
+                           well_residuals[i]);
         }
         merger.finalize();
+
+        mergedWellResidual_ = merger.getMergedWellResidual();
+        wellDofOffsets_ = merger.getWellDofOffsets();
 
         const size_t newWellDofs = merger.getMergedD().N();
         const bool localNeedRebuild = !sysInitialized_ || (newWellDofs != cachedWellDofs_);
