@@ -44,6 +44,12 @@ public:
                      const std::vector<Scalar>& resv_coeff,
                      const Group& group);
 
+    /// Construct with an explicit production control mode (not read from group state).
+    /// Used when computing targets/limits for non-active rate types.
+    TargetCalculator(const GroupStateHelperType& groupStateHelper,
+                     const std::vector<Scalar>& resv_coeff,
+                     Group::ProductionCMode cmode);
+
     template <typename RateType>
     RateType calcModeRateFromRates(const std::vector<RateType>& rates) const
     {

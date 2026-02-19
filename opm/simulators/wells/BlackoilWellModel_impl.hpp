@@ -531,7 +531,7 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingMaster()) {
             if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
-                this->sendMasterGroupTargetsToSlaves();
+                this->sendMasterGroupConstraintsToSlaves();
             }
         }
 #endif
@@ -600,14 +600,14 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    sendMasterGroupTargetsToSlaves()
+    sendMasterGroupConstraintsToSlaves()
     {
-        // This function is called by the master process to send the group targets to the slaves.
-        RescoupTargetCalculator<Scalar, IndexTraits> target_calculator{
+        // This function is called by the master process to send the group constraints to the slaves.
+        RescoupConstraintsCalculator<Scalar, IndexTraits> constraints_calculator{
             this->guide_rate_handler_,
             this->groupStateHelper()
         };
-        target_calculator.calculateMasterGroupTargetsAndSendToSlaves();
+        constraints_calculator.calculateMasterGroupConstraintsAndSendToSlaves();
     }
 
     template<typename TypeTag>

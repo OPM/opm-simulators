@@ -245,6 +245,10 @@ public:
 
     Scalar getProductionGroupTarget(const Group& group) const;
 
+    /// Get the production target for a specific control mode (not necessarily the active one).
+    Scalar getProductionGroupTargetForMode(const Group& group,
+                                           Group::ProductionCMode cmode) const;
+
     /// @brief Get the guide rate target mode for a production group
     /// @param group The production group
     /// @return The GuideRateModel::Target based on the group's production control mode
@@ -526,6 +530,14 @@ private:
                                      std::size_t local_reduction_level) const;
 
     std::string controlGroup_(const Group& group) const;
+
+    Scalar getInjectionGroupTargetForMode_(const Group& group,
+                                          const Phase& injection_phase,
+                                          const std::vector<Scalar>& resv_coeff,
+                                          Group::InjectionCMode cmode) const;
+
+    Scalar getProductionGroupTargetForMode_(const Group& group,
+                                            Group::ProductionCMode cmode) const;
 
     GuideRate::RateVector getGuideRateVector_(const std::vector<Scalar>& rates) const;
 

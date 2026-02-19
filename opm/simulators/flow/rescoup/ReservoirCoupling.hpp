@@ -136,8 +136,8 @@ enum class MessageTag : int {
     MasterGroupNames,
     MasterGroupNamesSize,
     MasterStartOfReportStep,
-    NumSlaveGroupTargets,
-    ProductionGroupTargets,
+    NumSlaveGroupConstraints,
+    ProductionGroupConstraints,
     SlaveActivationDate,
     SlaveActivationHandshake,
     SlaveInjectionData,
@@ -243,12 +243,19 @@ struct InjectionGroupTarget {
 };
 
 template <class Scalar>
-struct ProductionGroupTarget {
+struct ProductionGroupConstraints {
     // To save memory and avoid varying size of the struct when serializing
     // and deserializing the group name, we use an index instead of the full name.
     std::size_t group_name_idx;   // Index of group name in the master group names vector
-    Scalar target;                // Target rate for the group
-    Group::ProductionCMode cmode;  // Control mode for the group
+    Scalar target;                // Target rate for the active control mode
+    Group::ProductionCMode cmode; // Active control mode for the group
+    // Per-rate-type effective limits (-1 = no limit defined in hierarchy).
+    // These are guide-rate-distributed limits from the group hierarchy.
+    Scalar oil_limit;
+    Scalar water_limit;
+    Scalar gas_limit;
+    Scalar liquid_limit;
+    Scalar resv_limit;
 };
 
 // Helper functions

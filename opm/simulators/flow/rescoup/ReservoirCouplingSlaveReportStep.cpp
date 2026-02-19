@@ -107,7 +107,7 @@ sendDataToMaster_(
 template <class Scalar>
 std::pair<std::size_t, std::size_t>
 ReservoirCouplingSlaveReportStep<Scalar>::
-receiveNumGroupTargetsFromMaster() const {
+receiveNumGroupConstraintsFromMaster() const {
     std::vector<std::size_t> num_group_targets(2);
     if (this->comm().rank() == 0) {
         auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
@@ -117,19 +117,19 @@ receiveNumGroupTargetsFromMaster() const {
             /*count=*/2,
             /*datatype=*/MPI_SIZE_T_TYPE,
             /*source_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::NumSlaveGroupTargets),
+            /*tag=*/static_cast<int>(MessageTag::NumSlaveGroupConstraints),
             this->getSlaveMasterComm(),
             MPI_STATUS_IGNORE
         );
-        this->logger().info("Received number of slave group targets from master process rank 0");
+        this->logger().info("Received number of slave group constraints from master process rank 0");
     }
     this->comm().broadcast(num_group_targets.data(), /*count=*/2, /*emitter_rank=*/0);
     auto num_injection_targets = num_group_targets[0];
-    auto num_production_targets = num_group_targets[1];
+    auto num_production_constraints = num_group_targets[1];
     this->logger().info(fmt::format("Received number of injection targets: {} and "
-                             "production targets: {} from master process",
-                             num_injection_targets, num_production_targets));
-    return std::make_pair(num_injection_targets, num_production_targets);
+                             "production constraints: {} from master process",
+                             num_injection_targets, num_production_constraints));
+    return std::make_pair(num_injection_targets, num_production_constraints);
 }
 
 template <class Scalar>
@@ -162,27 +162,27 @@ receiveInjectionGroupTargetsFromMaster(std::size_t num_targets) const
 template <class Scalar>
 void
 ReservoirCouplingSlaveReportStep<Scalar>::
-receiveProductionGroupTargetsFromMaster(std::size_t num_targets) const
+receiveProductionGroupConstraintsFromMaster(std::size_t num_targets) const
 {
-    std::vector<ProductionGroupTarget> production_targets(num_targets);
+    std::vector<ProductionGroupConstraints> production_constraints(num_targets);
     if (this->comm().rank() == 0) {
-        auto MPI_PRODUCTION_GROUP_TARGET_TYPE = Dune::MPITraits<ProductionGroupTarget>::getType();
+        auto MPI_PRODUCTION_GROUP_CONSTRAINTS_TYPE = Dune::MPITraits<ProductionGroupConstraints>::getType();
         // NOTE: See comment about error handling at the top of this file.
         MPI_Recv(
-            production_targets.data(),
+            production_constraints.data(),
             /*count=*/num_targets,
-            /*datatype=*/MPI_PRODUCTION_GROUP_TARGET_TYPE,
+            /*datatype=*/MPI_PRODUCTION_GROUP_CONSTRAINTS_TYPE,
             /*source_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::ProductionGroupTargets),
+            /*tag=*/static_cast<int>(MessageTag::ProductionGroupConstraints),
             this->getSlaveMasterComm(),
             MPI_STATUS_IGNORE
         );
         this->logger().info(fmt::format(
-            "Received production {} group targets from master process rank 0", num_targets
+            "Received production {} group constraints from master process rank 0", num_targets
         ));
     }
     this->comm().broadcast(
-        production_targets.data(), num_targets, /*emitter_rank=*/0
+        production_constraints.data(), num_targets, /*emitter_rank=*/0
     );
 }
 

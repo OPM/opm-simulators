@@ -193,11 +193,11 @@ bool Seconds::compare_lt_or_eq(double a, double b)
 }
 
 template struct InjectionGroupTarget<double>;
-template struct ProductionGroupTarget<double>;
+template struct ProductionGroupConstraints<double>;
 
 #if FLOW_INSTANTIATE_FLOAT
 template struct InjectionGroupTarget<float>;
-template struct ProductionGroupTarget<float>;
+template struct ProductionGroupConstraints<float>;
 #endif
 
 } // namespace ReservoirCoupling
