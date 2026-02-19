@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_RESCOUP_TARGET_CALCULATOR_HPP
-#define OPM_RESCOUP_TARGET_CALCULATOR_HPP
+#ifndef OPM_RESCOUP_CONSTRAINTS_CALCULATOR_HPP
+#define OPM_RESCOUP_CONSTRAINTS_CALCULATOR_HPP
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
@@ -68,4 +68,4 @@ private:
 };
 
 }  // namespace Opm
-#endif // OPM_RESCOUP_TARGET_CALCULATOR_HPP
+#endif // OPM_RESCOUP_CONSTRAINTS_CALCULATOR_HPP

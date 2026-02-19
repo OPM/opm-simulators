@@ -52,7 +52,7 @@
 #include <opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
 #include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
-#include <opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp>
+#include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
 #endif
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
