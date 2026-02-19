@@ -555,15 +555,15 @@ public:
      * \brief Compute the intensive quantities needed to handle energy conservation
      *
      */
-    void updateEnergyQuantities_(const ElementContext& elemCtx,
-                                 unsigned dofIdx,
-                                 unsigned timeIdx)
+    void updateEnergyQuantities_([[maybe_unused]] const ElementContext& elemCtx,
+                                 [[maybe_unused]] unsigned dofIdx,
+                                 [[maybe_unused]] unsigned timeIdx)
     {
     }
 
-    void updateEnergyQuantities_(const Problem& problem,
-                                 const unsigned globalSpaceIdx,
-                                 const unsigned timeIdx)
+    void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
+                                 [[maybe_unused]] const unsigned globalSpaceIdx,
+                                 [[maybe_unused]] const unsigned timeIdx)
     {
     }
 
