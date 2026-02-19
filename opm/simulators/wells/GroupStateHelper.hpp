@@ -234,8 +234,6 @@ public:
 
     std::vector<Scalar> getGroupRatesAvailableForHigherLevelControl(const Group& group, const bool is_injector) const;
 
-    Scalar getGuideRate(const std::string& name, const GuideRateModel::Target target) const;
-
     Scalar getInjectionGroupTarget(const Group& group,
                                    const Phase& injection_phase,
                                    const std::vector<Scalar>& resv_coeff) const;
@@ -244,6 +242,20 @@ public:
     /// @param injection_phase The injection phase (WATER, OIL, or GAS)
     /// @return The corresponding GuideRateModel::Target for the injection phase
     GuideRateModel::Target getInjectionGuideTargetMode(Phase injection_phase) const;
+
+    //! \brief Find the local reduction level in a group chain.
+    //!
+    //! The local reduction level is the deepest level in the chain (starting from level 1)
+    //! where a group has both a guide rate and group-controlled wells (GCW > 0).
+    //! This level determines where reductions are applied and add-back occurs.
+    //!
+    //! \param chain Group chain from control group (top) to bottom group
+    //! \param is_production_group True for production, false for injection
+    //! \param injection_phase Phase for injection groups (ignored for production)
+    //! \return The local reduction level (0 if no intermediate group qualifies)
+    std::size_t getLocalReductionLevel(const std::vector<std::string>& chain,
+        bool is_production_group,
+        Phase injection_phase) const;
 
     Scalar getProductionGroupTarget(const Group& group) const;
 
@@ -525,19 +537,6 @@ private:
 
     GuideRate::RateVector getGuideRateVector_(const std::vector<Scalar>& rates) const;
 
-    //! \brief Find the local reduction level in a group chain.
-    //!
-    //! The local reduction level is the deepest level in the chain (starting from level 1)
-    //! where a group has both a guide rate and group-controlled wells (GCW > 0).
-    //! This level determines where reductions are applied and add-back occurs.
-    //!
-    //! \param chain Group chain from control group (top) to bottom group
-    //! \param is_production_group True for production, false for injection
-    //! \param injection_phase Phase for injection groups (ignored for production)
-    //! \return The local reduction level (0 if no intermediate group qualifies)
-    std::size_t getLocalReductionLevel_(const std::vector<std::string>& chain,
-                                        bool is_production_group,
-                                        Phase injection_phase) const;
 
 #ifdef RESERVOIR_COUPLING_ENABLED
     Scalar getReservoirCouplingMasterGroupRate_(const Group& group,

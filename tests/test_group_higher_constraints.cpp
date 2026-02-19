@@ -62,6 +62,7 @@
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
+#include <opm/simulators/wells/WellGroupControls.hpp>
 
 #include <boost/test/unit_test.hpp>
 
@@ -92,12 +93,20 @@ struct GroupConstraintTestFixture : ToleranceAndUnitFixture
         bool plat_has_guide_rate,
         Opm::Group::ProductionCMode mani_control,
         Opm::Well::ProducerCMode well_a_control,
-        Opm::Well::ProducerCMode well_a2_control)
+        Opm::Well::ProducerCMode well_a2_control,
+        Opm::Group::ProductionCMode mani2_control = Opm::Group::ProductionCMode::FLD,
+        const std::string& data_file = "GROUP_HIGHER_CONSTRAINTS.DATA",
+        double well_a_rate_metric = 6000.0,
+        double well_a2_rate_metric = 4000.0)
     {
         plat_has_guide_rate_ = plat_has_guide_rate;
         mani_control_ = mani_control;
+        mani2_control_ = mani2_control;
         well_a_control_ = well_a_control;
         well_a2_control_ = well_a2_control;
+        data_file_ = data_file;
+        well_a_rate_metric_ = well_a_rate_metric;
+        well_a2_rate_metric_ = well_a2_rate_metric;
 
         setupSimulator_();
         setupWellRates_();
@@ -208,6 +217,12 @@ private:
     //! Control mode for MANI group (ORAT or FLD)
     Opm::Group::ProductionCMode mani_control_{Opm::Group::ProductionCMode::ORAT};
 
+    //! Control mode for MANI-2 group (FLD or ORAT)
+    Opm::Group::ProductionCMode mani2_control_{Opm::Group::ProductionCMode::FLD};
+
+    //! DATA file to load
+    std::string data_file_{"GROUP_HIGHER_CONSTRAINTS.DATA"};
+
     // Well rates (SM3/day, metric units for readability)
     double well_a_rate_metric_{6000.0};
     double well_a2_rate_metric_{4000.0};
@@ -228,8 +243,7 @@ private:
 
     void setupSimulator_()
     {
-        const std::string filename = "GROUP_HIGHER_CONSTRAINTS.DATA";
-        simulator_ = Opm::initSimulator<TypeTag>(filename.data());
+        simulator_ = Opm::initSimulator<TypeTag>(data_file_.data());
 
         simulator_->model().applyInitialSolution();
         simulator_->setEpisodeIndex(-1);
@@ -339,7 +353,7 @@ private:
 
         // Set group controls
         gs.production_control("MANI", mani_control_);
-        gs.production_control("MANI-2", Opm::Group::ProductionCMode::FLD);
+        gs.production_control("MANI-2", mani2_control_);
         gs.production_control("PLAT", Opm::Group::ProductionCMode::FLD);
         gs.production_control("PLAT-2", Opm::Group::ProductionCMode::FLD);
         gs.production_control("FIELD", Opm::Group::ProductionCMode::ORAT);
@@ -969,6 +983,279 @@ BOOST_AUTO_TEST_CASE(TestWellGroupTargetProducerWithSiblingIndividualControl)
     // Expected value derived from actual algorithm output:
     const double expected_target_metric = 3665.2835408022129;
     checkAlgo(metric_rate(target), expected_target_metric);
+}
+
+//! \brief Test getAutoChokeGroupProductionTargetRate() for autochoke group MANI
+//!
+//! This test exercises the autochoke target calculation which uses a simpler reduction loop
+//! than applyReductionsAndFractions_(): it omits both local_reduction_level gating and addback.
+//! With MANI-2 under individual ORAT control, a non-zero reduction exists at the PLAT level,
+//! exposing the code-path difference.
+//!
+//! Code-path difference vs applyReductionsAndFractions_():
+//! - Standard algorithm: applies reduction only at ii >= local_reduction_level, plus addback
+//! - Autochoke loop:     applies reduction at ii==0 OR where guideRate->has(chain[ii]) is true
+//!   In this scenario both produce the same result because:
+//!   (a) The autochoke group (MANI) has no individual wells, so no addback is needed
+//!   (b) PLAT has a guide rate, so both algorithms apply the PLAT-level reduction
+//!
+//! \code
+//!   FIELD (ORAT = 10000)
+//!   ├── PLAT (E=0.9, FLD, GUIDERATE=9500, GCW=2)
+//!   │   ├── MANI (E=0.8, FLD, GUIDERATE=8000, GCW=2, autochoke group)
+//!   │   │   ├── WELL-A (RATE=6000, POT=6000, GRUP)
+//!   │   │   └── WELL-A2 (RATE=4000, POT=4000, GRUP)
+//!   │   └── MANI-2 (E=0.75, IDV, ORAT, GUIDERATE=1500)
+//!   │       └── WELL-B (RATE=2000, POT=2000, GRUP)
+//!   └── PLAT-2 (E=0.85, FLD, GUIDERATE=2550, GCW=1)
+//!       └── WELL-C (RATE=3000, POT=3000, GRUP)
+//! \endcode
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupProductionTargetRate)
+{
+    // Configuration: MANI under FLD control (autochoke group follows parent),
+    // both wells under GRUP control, MANI-2 under individual ORAT control.
+    // MANI-2 under ORAT creates a non-zero reduction at PLAT level (MANI-2's
+    // wells contribute) which is the key ingredient that differentiates the
+    // autochoke loop from applyReductionsAndFractions_().
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::GRUP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::GRUP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::ORAT
+    );
+
+    auto& gs = groupState();
+    auto& gsh = groupStateHelper();
+
+    // Verify MANI-2 is under individual ORAT control
+    BOOST_CHECK(gs.production_control("MANI-2") == Opm::Group::ProductionCMode::ORAT);
+    BOOST_CHECK(gs.production_control("MANI") == Opm::Group::ProductionCMode::FLD);
+
+    // Verify reduction rates:
+    // - PLAT reduction: MANI is FLD with guide rate → skip.
+    //   MANI-2 is ORAT (individual) → add E_MANI2 * wellB = 0.75 * 2000 = 1500
+    // - FIELD reduction: PLAT has guide rate and GCW > 0 → skip. PLAT-2 likewise → 0
+    {
+        const auto& plat_red = gs.production_reduction_rates("PLAT");
+        checkRate(metric_rate(plat_red[oilPhasePos()]), eMani2() * mani2TotalRateMetric()); // 1500
+        const auto& field_red = gs.production_reduction_rates("FIELD");
+        checkRate(metric_rate(field_red[oilPhasePos()]), 0.0);
+    }
+
+    // Verify groupControlledWells:
+    // MANI-2 is under individual ORAT → its wells don't count as group-controlled
+    // for the parent, but MANI-2 itself is excluded from PLAT's FLD children
+    {
+        const auto always_included = std::string("");
+        const auto is_prod = true;
+        const auto phase = Opm::Phase::OIL;
+        BOOST_CHECK_EQUAL(gsh.groupControlledWells("MANI", always_included, is_prod, phase), 2);
+        BOOST_CHECK_EQUAL(gsh.groupControlledWells("PLAT", always_included, is_prod, phase), 2);
+        BOOST_CHECK_EQUAL(gsh.groupControlledWells("FIELD", always_included, is_prod, phase), 3);
+    }
+
+    // Call getAutoChokeGroupProductionTargetRate()
+    // This is how it's called in BlackoilWellModelNetwork:
+    //   getAutoChokeGroupProductionTargetRate(bottom_group=MANI, group=MANI, gsh, resv_coeff, 1.0)
+    // The function recurses upward from MANI (FLD) → PLAT (FLD) → FIELD (ORAT=controlling).
+    // During recursion: efficiencyFactor accumulates E_MANI * E_PLAT = 0.8 * 0.9 = 0.72.
+    auto resv_coeff = resvCoeff();
+
+    using WGC = Opm::WellGroupControls<double, IndexTraits>;
+    auto [target_rate_si, control_mode] = WGC::getAutoChokeGroupProductionTargetRate(
+        maniGroup(),      // bottom_group
+        maniGroup(),      // group (starts recursion here, recurses up to controlling group)
+        gsh,
+        resv_coeff,
+        /*efficiencyFactor=*/1.0
+    );
+
+    // Verify control mode is ORAT (from FIELD, the controlling group)
+    BOOST_CHECK(control_mode == Opm::Group::ProductionCMode::ORAT);
+
+    // ========================================================================
+    // EXPECTED COMPUTATION
+    // ========================================================================
+    //
+    // The function recurses from MANI (FLD) → PLAT (FLD) → FIELD (ORAT).
+    // During recursion, efficiencyFactor accumulates:
+    //   1.0 * E_MANI * E_PLAT = 0.8 * 0.9 = 0.72
+    // (Both MANI and PLAT multiply into efficiencyFactor before reaching FIELD.)
+    //
+    // chain = groupChainTopBot("MANI", "FIELD") = ["FIELD", "PLAT", "MANI"]
+    // num_ancestors = 2
+    // orig_target = 10000 SM3/day (FIELD's ORAT target)
+    //
+    // Loop ii=0 (FIELD):
+    //   (ii==0) → apply reduction
+    //   localReduction("FIELD") = 0 (no reduction at FIELD level)
+    //   target = 10000 - 0 = 10000
+    //   localFraction("PLAT"): PLAT=9500, PLAT-2=2550, both FLD → 9500/12050
+    //   target = 10000 * 9500/12050 ≈ 7884.65
+    //
+    // Loop ii=1 (PLAT):
+    //   guideRate->has("PLAT") = true → apply reduction
+    //   localReduction("PLAT") = E_MANI2 * wellB_rate = 0.75 * 2000 = 1500
+    //   target = 7884.65 - 1500 = 6384.65
+    //   localFraction("MANI"): MANI is FLD with GCW=2, MANI-2 is ORAT (excluded) → 1.0
+    //   target = 6384.65 * 1.0 = 6384.65
+    //
+    // Final: target / efficiencyFactor = 6384.65 / 0.72 ≈ 8867.57 SM3/day
+    //
+    // Code-path difference: in applyReductionsAndFractions_(), local_reduction_level
+    // gating and addback would apply at the intermediate PLAT level. Here, the autochoke
+    // loop applies reduction wherever guideRate->has() is true (PLAT), without addback.
+    // Both algorithms produce the same result here because MANI has no individual wells
+    // (reduction and addback would cancel if present).
+    //
+    const double eff = eMani() * ePlat();  // 0.72
+    const double plat_fraction = platGuideRateMetric()
+                               / (platGuideRateMetric() + plat2GuideRateMetric()); // 9500/12050
+    const double plat_reduction_metric = eMani2() * mani2TotalRateMetric();  // 1500
+    const double field_target_metric = 10000.0;
+    const double target_after_field = field_target_metric * plat_fraction;   // ≈ 7884.65
+    const double target_after_plat = target_after_field - plat_reduction_metric; // ≈ 6384.65
+    const double mani_fraction = 1.0;  // MANI is only FLD child at PLAT level
+    const double expected_target_metric = (target_after_plat * mani_fraction)
+                                        / eff;  // ≈ 8867.57
+
+    const double target_rate_metric = metric_rate(target_rate_si);
+    checkAlgo(target_rate_metric, expected_target_metric);
+}
+
+//! \brief Test getAutoChokeGroupProductionTargetRate() with GCW=0 (underperformance scenario)
+//!
+//! Uses the NETWORK DATA file where MANI is a sub-sea manifold (as_choke=true via NODEPROP).
+//! NODEPROP switches MANI's wells to THP control and disables their guide rate availability.
+//!
+//! MANI's well rates are set low enough (total=5000) that isAutoChokeGroupUnderperforming_()
+//! detects underperformance and updateGroupControlledWells() naturally sets MANI GCW=0.
+//! With GCW=0 at MANI and PLAT, updateGroupTargetReductionRecursive_() uses case 1 (total
+//! production propagated up) instead of case 3 (guide rate distribution).  The
+//! local_reduction_level gating in getAutoChokeGroupProductionTargetRate() ensures that
+//! the PLAT-level reduction is skipped (since PLAT has GCW=0 and therefore
+//! local_reduction_level=0 < ii=1), avoiding double-counting of reductions that were
+//! already propagated into FIELD's reduction via case 1.
+//!
+//! \code
+//!   FIELD (ORAT = 10000, GCW=1)
+//!   ├── PLAT (E=0.9, FLD, GUIDERATE=9500, GCW=0)
+//!   │   ├── MANI (E=0.8, FLD, GUIDERATE=8000, GCW=0, as_choke, underperforming)
+//!   │   │   ├── WELL-A (RATE=3000, POT=3000, THP)
+//!   │   │   └── WELL-A2 (RATE=2000, POT=2000, THP)
+//!   │   └── MANI-2 (E=0.75, IDV, ORAT, GUIDERATE=1500, GCW=1)
+//!   │       └── WELL-B (RATE=2000, POT=2000, GRUP)
+//!   └── PLAT-2 (E=0.85, FLD, GUIDERATE=2550, GCW=1)
+//!       └── WELL-C (RATE=3000, POT=3000, GRUP)
+//! \endcode
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateWithUnderperformance)
+{
+    // Uses NETWORK DATA file: MANI has as_choke()=true from NODEPROP,
+    // wells under MANI are switched to THP control by the NODEPROP handler.
+    // Lower MANI well rates (3000+2000=5000) trigger underperformance detection
+    // in isAutoChokeGroupUnderperforming_(), which naturally sets MANI GCW=0.
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::ORAT,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA",
+        /*well_a_rate_metric =*/3000.0,
+        /*well_a2_rate_metric=*/2000.0
+    );
+
+    // Verify NODEPROP correctly set as_choke() on MANI
+    BOOST_CHECK(maniGroup().as_choke());
+    BOOST_CHECK(!platGroup().as_choke());
+
+    auto& gs = groupState();
+    auto& gsh = groupStateHelper();
+
+    // finalizeSetup_() called updateGroupControlledWells() which runs
+    // isAutoChokeGroupUnderperforming_(): MANI (total=5000) is below its target
+    // share, so all wells are excluded → MANI GCW=0.
+    // With MANI GCW=0 and MANI-2 under ORAT (not FLD), PLAT GCW also becomes 0.
+    //
+    // Verify GCW values (naturally 0 from underperformance detection)
+    {
+        const auto always_included = std::string("");
+        const auto is_prod = true;
+        const auto phase = Opm::Phase::OIL;
+        BOOST_CHECK_EQUAL(gsh.groupControlledWells("MANI", always_included, is_prod, phase), 0);
+        BOOST_CHECK_EQUAL(gsh.groupControlledWells("PLAT", always_included, is_prod, phase), 0);
+        BOOST_CHECK_EQUAL(gsh.groupControlledWells("FIELD", always_included, is_prod, phase), 1);
+    }
+
+    // finalizeSetup_() called updateGroupTargetReduction() with
+    // GCW=0 at MANI and PLAT. updateGroupTargetReductionRecursive_() uses
+    // case 1 (total production propagated up) instead of case 3 (nothing):
+    //
+    //   reduction(MANI) = 0  (wells are THP, and !group.as_choke() is false)
+    //
+    //   reduction(PLAT):
+    //     MANI (FLD, GCW=0): case 1 → E_MANI * sumWellSurfaceRates(MANI) = 0.8 * 5000 = 4000
+    //     MANI-2 (ORAT):     case 1 → E_MANI2 * sumWellSurfaceRates(MANI-2) = 0.75 * 2000 = 1500
+    //     reduction(PLAT) = 5500
+    //
+    //   reduction(FIELD):
+    //     PLAT (FLD, GCW=0): case 1 → E_PLAT * sumWellSurfaceRates(PLAT) = 0.9 * 5500 = 4950
+    //     PLAT-2 (FLD, GCW>0, guide rate): case 3 → nothing
+    //     reduction(FIELD) = 4950
+    //
+    // Verify reduction rates
+    {
+        const auto& plat_red = gs.production_reduction_rates("PLAT");
+        const double plat_red_metric = eMani() * maniTotalRateMetric()
+                                     + eMani2() * mani2TotalRateMetric();  // 4000 + 1500 = 5500
+        checkRate(metric_rate(plat_red[oilPhasePos()]), plat_red_metric);
+
+        const auto& field_red = gs.production_reduction_rates("FIELD");
+        const double field_red_metric = ePlat() * platTotalRateMetric();  // 0.9 * 5500 = 4950
+        checkRate(metric_rate(field_red[oilPhasePos()]), field_red_metric);
+    }
+
+    // Call getAutoChokeGroupProductionTargetRate
+    auto resv_coeff = resvCoeff();
+    using WGC = Opm::WellGroupControls<double, IndexTraits>;
+    auto [target_rate_si, control_mode] = WGC::getAutoChokeGroupProductionTargetRate(
+        maniGroup(),      // bottom_group
+        maniGroup(),      // group (starts recursion here)
+        gsh,
+        resv_coeff,
+        /*efficiencyFactor=*/1.0
+    );
+
+    BOOST_CHECK(control_mode == Opm::Group::ProductionCMode::ORAT);
+
+    // ========================================================================
+    // EXPECTED COMPUTATION
+    // ========================================================================
+    //
+    // chain = [FIELD, PLAT, MANI], efficiencyFactor = E_MANI * E_PLAT = 0.72
+    // local_reduction_level = 0 (PLAT has guide rate but GCW=0 → doesn't qualify)
+    //
+    // ii=0 (FIELD):
+    //   local_reduction_level(0) >= ii(0) → true → apply reduction
+    //   reduction(FIELD) = 4950
+    //   target = 10000 - 4950 = 5050
+    //   localFraction("PLAT") = 1.0  (PLAT GCW=0 → excluded from sum,
+    //     but PLAT-2 is the only active sibling → num_active=1 → return 1.0)
+    //   target = 5050 * 1.0 = 5050
+    //
+    // ii=1 (PLAT):
+    //   local_reduction_level(0) >= ii(1) → false → skip reduction
+    //   (PLAT's reduction was already propagated into FIELD's via case 1)
+    //   localFraction("MANI") = 1.0  (MANI GCW=0, MANI-2 ORAT → num_active=0,
+    //     total=0, potentials=0 → return 1.0)
+    //   target = 5050 * 1.0 = 5050
+    //
+    // Final: max(0, 5050 / 0.72) ≈ 7013.89
+    //
+    const double target_rate_metric = metric_rate(target_rate_si);
+    const double expected_target = 5050.0 / 0.72;  // ≈ 7013.89
+    checkAlgo(target_rate_metric, expected_target);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -1,0 +1,278 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Extended network variant of GROUP_HIGHER_CONSTRAINTS.DATA
+--
+-- Adds NETWORK, BRANPROP and NODEPROP keywords to enable the extended network
+-- model.  MANI is designated as a sub-sea manifold (autochoke group) via
+-- NODEPROP, which sets as_choke()=true on the MANI group.
+--
+-- Group hierarchy:
+--
+--                          FIELD (ORAT = 10000, terminal pressure = 200 barsa)
+--                          /           \
+--                         /             \
+--         PLAT (GEFAC=0.9)              PLAT-2 (GEFAC=0.85)
+--              /      \                       |
+--             /        \                   WELL-C
+--   MANI (0.8,SSM)   MANI-2 (0.75)
+--       /   \            |
+--  WELL-A  WELL-A2    WELL-B
+--
+-- Network branches (all VFP=9999, no pressure drop):
+--   MANI   -> PLAT  (autochoke branch)
+--   MANI-2 -> PLAT
+--   PLAT   -> FIELD
+--   PLAT-2 -> FIELD
+--
+-- NODEPROP effects on MANI (as_choke=YES):
+--   - group.as_choke() = true
+--   - Wells switched to THP control (ProducerCMode::THP)
+--   - Wells' guide rate availability disabled
+--
+RUNSPEC
+
+TITLE
+EFFICIENCY_FACTOR_NETWORK_TEST
+
+DIMENS
+   5 5 3 /
+
+OIL
+WATER
+GAS
+DISGAS
+
+METRIC
+
+START
+ 1 'JAN' 2020 /
+
+WELLDIMS
+-- max wells, max cons/well, max groups, max wells/group
+   6 5 6 4 /
+
+TABDIMS
+/
+
+EQLDIMS
+/
+
+UNIFIN
+UNIFOUT
+
+NETWORK
+-- max_nodes  max_branches
+   5          4 /
+
+-- =============================================================================
+GRID
+-- =============================================================================
+
+DXV
+5*100.0 /
+
+DYV
+5*100.0 /
+
+DZV
+3*10.0 /
+
+TOPS
+25*2000 /
+
+PORO
+75*0.25 /
+
+PERMX
+75*500 /
+
+COPY
+  PERMX PERMY /
+  PERMX PERMZ /
+/
+
+MULTIPLY
+  PERMZ 0.1 /
+/
+
+-- =============================================================================
+PROPS
+-- =============================================================================
+
+PVTW
+-- ref.pres  Bw      Cw          Vw    Vw.visc
+   250.0    1.02   4.0E-05      0.5    0.0 /
+
+ROCK
+-- ref.pres  compressibility
+   250.0    4.0E-05 /
+
+DENSITY
+-- oil    water   gas
+   850    1014    1.0 /
+
+PVDO
+-- P       Bo      Vo
+  100.0   1.05    2.0
+  250.0   1.02    2.5
+  400.0   1.00    3.0 /
+
+PVDG
+-- P       Bg       Vg
+  100.0   0.010    0.015
+  250.0   0.005    0.020
+  400.0   0.003    0.025 /
+
+SWOF
+-- Sw      Krw      Kro      Pcow
+  0.2     0.0      1.0      0.0
+  0.3     0.05     0.6      0.0
+  0.5     0.15     0.3      0.0
+  0.7     0.35     0.1      0.0
+  0.8     0.5      0.0      0.0 /
+
+SGOF
+-- Sg      Krg      Kro      Pcog
+  0.0     0.0      1.0      0.0
+  0.1     0.02     0.6      0.0
+  0.3     0.10     0.3      0.0
+  0.5     0.25     0.1      0.0
+  0.7     0.5      0.0      0.0 /
+
+-- =============================================================================
+SOLUTION
+-- =============================================================================
+
+EQUIL
+-- datum  pressure  OWC    Pc@OWC  GOC    Pc@GOC  RSVD  RVVD  SOLN
+   2000   250.0     2100   0.0     1900   0.0     1     0     0 /
+
+RSVD
+   1900   100.0
+   2100   100.0 /
+
+-- =============================================================================
+SUMMARY
+-- =============================================================================
+
+WOPR
+/
+WGPR
+/
+WWPR
+/
+WBHP
+/
+GOPR
+/
+FOPR
+FGPR
+FWPR
+
+-- =============================================================================
+SCHEDULE
+-- =============================================================================
+
+GRUPTREE
+ 'PLAT'   'FIELD' /
+ 'PLAT-2' 'FIELD' /
+ 'MANI'   'PLAT'  /
+ 'MANI-2' 'PLAT'  /
+/
+
+-- Well specifications
+WELSPECS
+ 'WELL-A'   'MANI'   3 3 2010 'OIL' /
+ 'WELL-A2'  'MANI'   4 4 2010 'OIL' /
+ 'WELL-B'   'MANI-2' 5 5 2010 'OIL' /
+ 'WELL-C'   'PLAT-2' 2 2 2010 'OIL' /
+/
+
+COMPDAT
+ 'WELL-A'   3 3 1 3 'OPEN' 1* 1* 0.2 /
+ 'WELL-A2'  4 4 1 3 'OPEN' 1* 1* 0.2 /
+ 'WELL-B'   5 5 1 3 'OPEN' 1* 1* 0.2 /
+ 'WELL-C'   2 2 1 3 'OPEN' 1* 1* 0.2 /
+/
+
+-- Group efficiency factors
+GEFAC
+ 'PLAT'   0.9 /
+ 'PLAT-2' 0.85 /
+ 'MANI'   0.8 /
+ 'MANI-2' 0.75 /
+/
+
+-- Well efficiency factors
+WEFAC
+ 'WELL-A'  1.0 /
+ 'WELL-A2' 1.0 /
+ 'WELL-B'  1.0 /
+ 'WELL-C'  1.0 /
+/
+
+-- Group controls
+-- FIELD has overall oil rate target
+GCONPROD
+'FIELD' 'ORAT' 10000 1* 1* 1* 'RATE' /
+/
+
+-- PLAT is under FLD control with explicit guide rate
+GCONPROD
+'PLAT' 'FLD' 1* 1* 1* 1* 'RATE' 'YES' 9500 'OIL' /
+/
+
+-- PLAT-2 is under FLD control with explicit guide rate
+GCONPROD
+'PLAT-2' 'FLD' 1* 1* 1* 1* 'RATE' 'YES' 2550 'OIL' /
+/
+
+-- MANI is under FLD control with explicit guide rate (autochoke group)
+-- Guide rate = E_MANI * (WELL-A + WELL-A2) = 0.8 * 10000 = 8000
+GCONPROD
+'MANI' 'FLD' 1* 1* 1* 1* 'RATE' 'YES' 8000 'OIL' /
+/
+
+-- MANI-2 is under FLD control with explicit guide rate
+GCONPROD
+'MANI-2' 'FLD' 1* 1* 1* 1* 'RATE' 'YES' 1500 'OIL' /
+/
+
+-- Guide rate formula for wells (guide_rate = oil_potential)
+GUIDERAT
+-- min.int  type  A    B    C    D    E    F  allow.inc  damp.factor  use.free.gas
+   0        'OIL' 1.0  1.0  0.0  0.0  0.0  0.0  'YES'       1.0          'NO' /
+
+-- Wells under group control (NODEPROP will switch MANI wells to THP)
+WCONPROD
+ 'WELL-A'  'OPEN' 'GRUP' 1* 1* 1* 1* 1* 100.0 /
+ 'WELL-A2' 'OPEN' 'GRUP' 1* 1* 1* 1* 1* 100.0 /
+ 'WELL-B'  'OPEN' 'GRUP' 1* 1* 1* 1* 1* 100.0 /
+ 'WELL-C'  'OPEN' 'GRUP' 1* 1* 1* 1* 1* 100.0 /
+/
+
+-- Extended network branches (all VFP=9999: no pressure drop)
+BRANPROP
+-- Downtree  Uptree   VFP   ALQ
+   'MANI'    'PLAT'   9999  1* /
+   'MANI-2'  'PLAT'   9999  1* /
+   'PLAT'    'FIELD'  9999  1* /
+   'PLAT-2'  'FIELD'  9999  1* /
+/
+
+-- Extended network node properties
+-- FIELD: terminal node with fixed pressure (200 barsa)
+-- MANI: sub-sea manifold (autochoke group, as_choke=YES)
+NODEPROP
+-- Node    Pressure  autoChoke  addGasLift
+   'FIELD'  200      'NO'       'NO' /
+   'MANI'   1*       'YES'      'NO' /
+/
+
+TSTEP
+1 /
+
+END
