@@ -50,15 +50,14 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     static constexpr int numResDofs = Indices::numEq;
     using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
-    static constexpr int numWellDofs = PrimaryVariables::numWellEq;//numResDofs + 1;//NB will fail for for thermal for now
+    static constexpr int numWellDofs = PrimaryVariables::numWellEq;// numResDofs + 1; // NB will fail for for thermal for now
     using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
     using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
     using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
-    using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;  
+    using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+
 protected:
-    //using Scalar = typename FluidSystem::Scalar;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
-    //using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
     static constexpr int numWellEq = PrimaryVariables::numWellEq;
     static constexpr int SPres = PrimaryVariables::SPres;
     static constexpr int WQTotal = PrimaryVariables::WQTotal;

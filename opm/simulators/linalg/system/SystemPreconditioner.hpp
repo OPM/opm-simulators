@@ -1,146 +1,122 @@
 #pragma once
-#include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/bvector.hh>
+
+#include "MultiComm.hpp"
+#include "SystemTypes.hpp"
+
 #include <dune/istl/operators.hh>
-#include <dune/istl/solvers.hh>
 #include <dune/istl/preconditioners.hh>
-#include <dune/istl/multitypeblockmatrix.hh>
-#include <dune/istl/multitypeblockvector.hh>
+#include <dune/istl/solvers.hh>
+
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
-#include <opm/simulators/linalg/matrixblock.hh>
-#include "MultiComm.hpp"
-//#include "WellMatrixMerger.hpp"
-namespace Opm {
-// Simple diagonal preconditioner for the system
-const int numResDofs = 3;
-const int numWellDofs = 4;
 
-using ResVector = Dune::BlockVector<Dune::FieldVector<double, numResDofs>>;
-using WellVector = Dune::BlockVector<Dune::FieldVector<double, numWellDofs>>;
-using SystemVector = Dune::MultiTypeBlockVector<ResVector, WellVector>;
+namespace Opm
+{
 
-// template<class Matrix>
-// auto diagvec(const Matrix& matrix) {
-//     using BlockType = typename Matrix::block_type;
-//     using FieldType = typename BlockType::field_type;
-//     using VectorBlock = Dune::FieldVector<FieldType, BlockType::rows>;
-//     using VectorType = Dune::BlockVector<VectorBlock>;
-    
-//     VectorType diag(matrix.N());
-//     for (size_t i = 0; i < matrix.N(); ++i) {
-//         auto row = matrix[i];
-//         auto col = row.find(i);
-//         if (col != row.end()) {
-//             // Extract diagonal elements
-//             for (size_t j = 0; j < BlockType::rows; ++j) {
-//                 diag[i][j] = (*col)[j][j];
-//             }
-//         } else {
-//             // If diagonal element doesn't exist, set to 1.0
-//             for (size_t j = 0; j < BlockType::rows; ++j) {
-//                 diag[i][j] = 1.0;
-//             }
-//         }
-//     }
-//     return diag;
-// }
 class SystemPreconditioner : public Dune::Preconditioner<SystemVector, SystemVector>
 {
 public:
-    using RRMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, numResDofs, numResDofs>>;
-    using RWMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, numResDofs, numWellDofs>>;
-    using WRMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, numWellDofs, numResDofs>>;
-    using WWMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, numWellDofs, numWellDofs>>;
-    using SystemMatrix = Dune::MultiTypeBlockMatrix<
-    Dune::MultiTypeBlockVector<RRMatrix, RWMatrix>,
-    Dune::MultiTypeBlockVector<WRMatrix, WWMatrix>
->;
-
-    using ResVector = Dune::BlockVector<Dune::FieldVector<double, numResDofs>>;
-    using WellVector = Dune::BlockVector<Dune::FieldVector<double, numWellDofs>>;
     using ResOperator = Dune::MatrixAdapter<RRMatrix, ResVector, ResVector>;
     using ResFlexibleSolverType = Dune::FlexibleSolver<ResOperator>;
     using WellOperator = Dune::MatrixAdapter<WWMatrix, WellVector, WellVector>;
-    using WellFlexibleSolverType = Dune::FlexibleSolver<WellOperator>;        
+    using WellFlexibleSolverType = Dune::FlexibleSolver<WellOperator>;
     static constexpr auto _0 = Dune::Indices::_0;
     static constexpr auto _1 = Dune::Indices::_1;
-    
-    
 
-    SystemPreconditioner(const SystemMatrix& S, 
-        const std::function<ResVector()> &weightCalculator, 
-        int pressureIndex, 
-        const Opm::PropertyTree& prm);
-    virtual void apply(SystemVector& v, const SystemVector& d) override;
-    virtual void pre(SystemVector& /*x*/, SystemVector& /*b*/) override {}
-    virtual void post(SystemVector& /*x*/) override {}
-    virtual Dune::SolverCategory::Category category() const override {
-        return Dune::SolverCategory::sequential;
-        //return SolverCategory::overlapping;
+    SystemPreconditioner(const SystemMatrix& S,
+                         const std::function<ResVector()>& weightCalculator,
+                         int pressureIndex,
+                         const Opm::PropertyTree& prm);
+
+    void apply(SystemVector& v, const SystemVector& d) override;
+    void pre(SystemVector&, SystemVector&) override
+    {
     }
-    
+    void post(SystemVector&) override
+    {
+    }
+    Dune::SolverCategory::Category category() const override
+    {
+        return Dune::SolverCategory::sequential;
+    }
+
+    void update();
+
 private:
     const SystemMatrix& S_;
-    const Opm::PropertyTree& prm_;
+    const double well_tol_;
+    const double res_tol_;
+
     std::unique_ptr<ResOperator> rop_;
     std::unique_ptr<WellOperator> wop_;
-    std::unique_ptr<Dune::InverseOperator<ResVector, ResVector>> resSolver_;
-    std::unique_ptr<Dune::InverseOperator<ResVector, ResVector>> resSmoother_;
-    std::unique_ptr<Dune::InverseOperator<WellVector, WellVector>> wellSolver_;
-    
+    std::unique_ptr<ResFlexibleSolverType> resSolver_;
+    std::unique_ptr<ResFlexibleSolverType> resSmoother_;
+    std::unique_ptr<WellFlexibleSolverType> wellSolver_;
+
+    WellVector wSol_;
+    ResVector resSol_;
+    ResVector dresSol_;
+    WellVector dwSol_;
+    ResVector tmp_resRes_;
+    WellVector tmp_wRes_;
+    ResVector resRes_;
+    WellVector wRes_;
 };
 
 class SystemPreconditionerParallel : public Dune::Preconditioner<SystemVector, SystemVector>
 {
 public:
-    
     using WellComm = Dune::JacComm;
     using ResComm = Dune::OwnerOverlapCopyCommunication<int, int>;
     using SystemComm = Dune::MultiCommunicator<const ResComm&, const WellComm&>;
-    using RRMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, numResDofs, numResDofs>>;
-    using RWMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, numResDofs, numWellDofs>>;
-    using WRMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, numWellDofs, numResDofs>>;
-    using WWMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, numWellDofs, numWellDofs>>;
-    using SystemMatrix = Dune::MultiTypeBlockMatrix<
-    Dune::MultiTypeBlockVector<RRMatrix, RWMatrix>,
-    Dune::MultiTypeBlockVector<WRMatrix, WWMatrix>
->;
 
-    using ResVector = Dune::BlockVector<Dune::FieldVector<double, numResDofs>>;
-    using WellVector = Dune::BlockVector<Dune::FieldVector<double, numWellDofs>>;
-    using ResOperator = Dune::OverlappingSchwarzOperator<RRMatrix, ResVector, ResVector, ResComm >; //
-    //using ResOperator = Dune::MatrixAdapter<RRMatrix, ResVector, ResVector>;
+    using ResOperator = Dune::OverlappingSchwarzOperator<RRMatrix, ResVector, ResVector, ResComm>;
     using ResFlexibleSolverType = Dune::FlexibleSolver<ResOperator>;
-    using WellOperator = Dune::MatrixAdapter<WWMatrix, WellVector, WellVector>;//NB not parallel for now
-    using WellFlexibleSolverType = Dune::FlexibleSolver<WellOperator>;        
+    using WellOperator = Dune::MatrixAdapter<WWMatrix, WellVector, WellVector>;
+    using WellFlexibleSolverType = Dune::FlexibleSolver<WellOperator>;
     static constexpr auto _0 = Dune::Indices::_0;
     static constexpr auto _1 = Dune::Indices::_1;
-    
-    
 
-    SystemPreconditionerParallel(const SystemMatrix& S, 
-                                 const std::function<ResVector()> &weightCalculator, 
-                                 int pressureIndex, 
+    SystemPreconditionerParallel(const SystemMatrix& S,
+                                 const std::function<ResVector()>& weightCalculator,
+                                 int pressureIndex,
                                  const Opm::PropertyTree& prm,
                                  const SystemComm& syscomm);
-    virtual void apply(SystemVector& v, const SystemVector& d) override;
-    virtual void pre(SystemVector& /*x*/, SystemVector& /*b*/) override {}
-    virtual void post(SystemVector& /*x*/) override {}
-    virtual Dune::SolverCategory::Category category() const override {
-        //return Dune::SolverCategory::sequential;
+
+    void apply(SystemVector& v, const SystemVector& d) override;
+    void pre(SystemVector&, SystemVector&) override
+    {
+    }
+    void post(SystemVector&) override
+    {
+    }
+    Dune::SolverCategory::Category category() const override
+    {
         return Dune::SolverCategory::overlapping;
     }
-    
+
+    void update();
+
 private:
     const SystemMatrix& S_;
-    const Opm::PropertyTree& prm_;
     const SystemComm& syscomm_;
+    const double well_tol_;
+    const double res_tol_;
+
     std::unique_ptr<ResOperator> rop_;
     std::unique_ptr<WellOperator> wop_;
-    std::unique_ptr<Dune::InverseOperator<ResVector, ResVector>> resSolver_;
-    std::unique_ptr<Dune::InverseOperator<ResVector, ResVector>> resSmoother_;
-    std::unique_ptr<Dune::InverseOperator<WellVector, WellVector>> wellSolver_;
-    
+    std::unique_ptr<ResFlexibleSolverType> resSolver_;
+    std::unique_ptr<ResFlexibleSolverType> resSmoother_;
+    std::unique_ptr<WellFlexibleSolverType> wellSolver_;
+
+    WellVector wSol_;
+    ResVector resSol_;
+    ResVector dresSol_;
+    WellVector dwSol_;
+    ResVector tmp_resRes_;
+    WellVector tmp_wRes_;
+    ResVector resRes_;
+    WellVector wRes_;
 };
-}
+
+} // namespace Opm

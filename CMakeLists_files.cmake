@@ -192,7 +192,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/PreconditionerFactory7.cpp
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
-  opm/simulators/linalg/system/ISTLSolverExperiment.cpp 
   opm/simulators/linalg/system/SystemPreconditioner.cpp
   opm/simulators/linalg/TPSALinearSolverParameters.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
