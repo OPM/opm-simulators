@@ -25,7 +25,7 @@
 
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
-#include <opm/simulators/linalg/system/ISTLSolverExperiment.hpp>
+
 namespace Opm {
     namespace Properties {
 
@@ -41,10 +41,6 @@ namespace Opm {
         template<class TypeTag>
         struct AvoidElementContext<TypeTag, TTag::FlowProblemTPFA> { static constexpr bool value = true; };
 
-        template<class TypeTag>
-        struct LinearSolverBackend<TypeTag, TTag::FlowProblemTPFA> {
-        using type = ISTLSolverExperiment<TypeTag>;
-        };
     }
 }
 

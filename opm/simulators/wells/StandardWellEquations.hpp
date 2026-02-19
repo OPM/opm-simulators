@@ -137,7 +137,7 @@ public:
 private:
     friend class StandardWellEquationAccess<Scalar, IndexTraits, numEq>;
 
-        // two off-diagonal matrices
+    // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;
     // diagonal matrix for the well
