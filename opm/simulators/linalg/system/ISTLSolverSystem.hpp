@@ -104,33 +104,33 @@ public:
 private:
     bool sysInitialized_ = false;
     size_t cachedWellDofs_ = 0;
-    WellVector mergedWellResidual_;
+    WellVectorT<Scalar> mergedWellResidual_;
     std::vector<int> wellDofOffsets_;
 
     // Owned storage for merged well matrices; SystemMatrix points into these.
-    WRMatrix mergedB_;
-    RWMatrix mergedC_;
-    WWMatrix mergedD_;
+    WRMatrixT<Scalar> mergedB_;
+    RWMatrixT<Scalar> mergedC_;
+    WWMatrixT<Scalar> mergedD_;
 
-    SystemMatrix sysMatrix_;
-    SystemVector sysX_;
-    SystemVector sysRhs_;
+    SystemMatrixT<Scalar> sysMatrix_;
+    SystemVectorT<Scalar> sysX_;
+    SystemVectorT<Scalar> sysRhs_;
 
     // Serial solver components
-    std::unique_ptr<SystemSeqOp> sysOp_;
-    std::unique_ptr<Dune::FlexibleSolver<SystemSeqOp>> sysFlexSolverSeq_;
+    std::unique_ptr<SystemSeqOpT<Scalar>> sysOp_;
+    std::unique_ptr<Dune::FlexibleSolver<SystemSeqOpT<Scalar>>> sysFlexSolverSeq_;
 
     // Parallel solver components
 #if HAVE_MPI
     using WellComm = Dune::JacComm;
     std::unique_ptr<WellComm> wellComm_;
     std::unique_ptr<SystemComm> systemComm_;
-    std::unique_ptr<SystemParOp> sysOpPar_;
-    std::unique_ptr<Dune::FlexibleSolver<SystemParOp>> sysFlexSolverPar_;
+    std::unique_ptr<SystemParOpT<Scalar>> sysOpPar_;
+    std::unique_ptr<Dune::FlexibleSolver<SystemParOpT<Scalar>>> sysFlexSolverPar_;
 #endif
 
-    using SysSolverType = Dune::InverseOperator<SystemVector, SystemVector>;
-    using SysPrecondType = Dune::PreconditionerWithUpdate<SystemVector, SystemVector>;
+    using SysSolverType = Dune::InverseOperator<SystemVectorT<Scalar>, SystemVectorT<Scalar>>;
+    using SysPrecondType = Dune::PreconditionerWithUpdate<SystemVectorT<Scalar>, SystemVectorT<Scalar>>;
     SysSolverType* sysSolver_ = nullptr;
     SysPrecondType* sysPrecond_ = nullptr;
 
@@ -138,16 +138,16 @@ private:
     {
         OPM_TIMEBLOCK(flexibleSolverPrepare);
 
-        std::vector<WRMatrix> b_matrices;
-        std::vector<RWMatrix> c_matrices;
-        std::vector<WWMatrix> d_matrices;
+        std::vector<WRMatrixT<Scalar>> b_matrices;
+        std::vector<RWMatrixT<Scalar>> c_matrices;
+        std::vector<WWMatrixT<Scalar>> d_matrices;
         std::vector<std::vector<int>> wcells;
-        std::vector<WellVector> well_residuals;
+        std::vector<WellVectorT<Scalar>> well_residuals;
 
         this->simulator_.problem().wellModel().addBCDMatrix(
             b_matrices, c_matrices, d_matrices, wcells, well_residuals);
 
-        Opm::WellMatrixMerger merger(Parent::matrix_->N());
+        Opm::WellMatrixMerger<Scalar> merger(Parent::matrix_->N());
         for (size_t i = 0; i < b_matrices.size(); ++i) {
             merger.addWell(b_matrices[i],
                            c_matrices[i],
@@ -196,13 +196,13 @@ private:
     {
         // Derive weights from the reservoir sub-block config (which uses CPR internally)
         auto resSolverPrm = prm.get_child("preconditioner.reservoir_solver");
-        std::function<ResVector()> resWeightCalc
+        std::function<ResVectorT<Scalar>()> resWeightCalc
             = this->getWeightsCalculator(resSolverPrm, this->getMatrix(), pressureIndex);
 
-        std::function<SystemVector()> sysWeightCalc;
+        std::function<SystemVectorT<Scalar>()> sysWeightCalc;
         if (resWeightCalc) {
             sysWeightCalc = [resWeightCalc]() {
-                SystemVector w;
+                SystemVectorT<Scalar> w;
                 w[_0] = resWeightCalc();
                 return w;
             };
@@ -215,18 +215,18 @@ private:
             wellComm_ = std::make_unique<WellComm>();
             systemComm_ = std::make_unique<SystemComm>(*(this->comm_), *wellComm_);
 
-            sysOpPar_ = std::make_unique<SystemParOp>(sysMatrix_, *systemComm_);
+            sysOpPar_ = std::make_unique<SystemParOpT<Scalar>>(sysMatrix_, *systemComm_);
 
-            sysFlexSolverPar_ = std::make_unique<Dune::FlexibleSolver<SystemParOp>>(
+            sysFlexSolverPar_ = std::make_unique<Dune::FlexibleSolver<SystemParOpT<Scalar>>>(
                 *sysOpPar_, *systemComm_, prm, sysWeightCalc, pressureIndex);
 
             sysSolver_ = sysFlexSolverPar_.get();
             sysPrecond_ = &sysFlexSolverPar_->preconditioner();
 #endif
         } else {
-            sysOp_ = std::make_unique<SystemSeqOp>(sysMatrix_);
+            sysOp_ = std::make_unique<SystemSeqOpT<Scalar>>(sysMatrix_);
 
-            sysFlexSolverSeq_ = std::make_unique<Dune::FlexibleSolver<SystemSeqOp>>(
+            sysFlexSolverSeq_ = std::make_unique<Dune::FlexibleSolver<SystemSeqOpT<Scalar>>>(
                 *sysOp_, prm, sysWeightCalc, pressureIndex);
 
             sysSolver_ = sysFlexSolverSeq_.get();

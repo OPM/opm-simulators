@@ -291,7 +291,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateWellStateFromSystemSolution(const Simulator& simulator,
-                                      const Opm::WellVector& mergedWellSolution,
+                                      const Opm::WellVectorT<Scalar>& mergedWellSolution,
                                       const int wellDofOffset,
                                       const int nWellDofs,
                                       const GroupStateHelperType& groupStateHelper,
