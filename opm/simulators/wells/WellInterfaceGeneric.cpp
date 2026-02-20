@@ -439,10 +439,10 @@ setPrevSurfaceRates(WellState<Scalar, IndexTraits>& well_state,
     // or (if newly opened) from updateWellStateRates. This is fine unless well was
     // stopped in previous step in which case it's rates will be zero. In this case,
     // we select the previous rates of the previous well state (and hope for the best).
-    const bool zero_rates = std::all_of(ws.surface_rates.begin(), ws.surface_rates.end(),
-            [](Scalar rate) {
-                return rate == 0.; // TODO: should we use a threshhold for comparison?
-            } );
+    const bool zero_rates =
+        std::ranges::all_of(ws.surface_rates,
+                            [](Scalar rate)
+                            { return rate == 0.; }); // TODO: should we use a threshhold for comparison?
 
     if (zero_rates) {
         ws.prev_surface_rates = ws_prev.prev_surface_rates;
