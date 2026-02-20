@@ -660,7 +660,7 @@ checkGroupHigherConstraints(const Group& group,
             bool group_is_oscillating = false;
             if (auto groupPos = switched_inj_groups_.find(group.name()); groupPos != switched_inj_groups_.end()) {
                 auto& ctrls = groupPos->second[static_cast<std::underlying_type_t<Phase>>(phase)];
-                const int number_of_switches = std::count(ctrls.begin(), ctrls.end(), currentControl);
+                const int number_of_switches = std::ranges::count(ctrls, currentControl);
                 group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
                 if (group_is_oscillating) {
                     const bool output_first_time = (number_of_switches == max_number_of_group_switch);
@@ -719,7 +719,7 @@ checkGroupHigherConstraints(const Group& group,
         const Group::ProductionCMode currentControl = this->groupState().production_control(group.name());
         if (auto groupPos = switched_prod_groups_.find(group.name()); groupPos != switched_prod_groups_.end()) {
             auto& ctrls = groupPos->second;
-            const int number_of_switches = std::count(ctrls.begin(), ctrls.end(), currentControl);
+            const int number_of_switches = std::ranges::count(ctrls, currentControl);
             const bool group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
             if (group_is_oscillating) {
                 const bool output_first_time = (number_of_switches== max_number_of_group_switch);

@@ -214,10 +214,12 @@ namespace Opm
         const int episodeIdx = simulator.episodeIndex();
         const int iterationIdx = simulator.model().newtonMethod().numIterations();
         const int nupcol = schedule[episodeIdx].nupcol();
-        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
+        const bool oscillating =
+            std::ranges::count(this->well_control_log_, from) >= this->param_.max_number_of_well_switches_;
         if (oscillating && !is_grup) { // we would like to avoid ending up as GRUP
             // only output first time
-            const bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == this->param_.max_number_of_well_switches_;
+            const bool output =
+                std::ranges::count(this->well_control_log_, from) == this->param_.max_number_of_well_switches_;
             if (output) {
                 const auto msg = fmt::format("    The control mode for well {} is oscillating. \n"
                     "We don't allow for more than {} switches after NUPCOL iterations. (NUPCOL = {}) \n"
@@ -295,7 +297,8 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
+        const bool oscillating =
+            std::ranges::count(this->well_control_log_, from) >= this->param_.max_number_of_well_switches_;
 
         if (oscillating || this->wellUnderZeroRateTarget(groupStateHelper) || !(well_state.well(this->index_of_well_).status == WellStatus::OPEN)) {
            return false;
