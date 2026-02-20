@@ -170,12 +170,10 @@ template<class Scalar, class IndexTraits>
 typename GroupTargetCalculator<Scalar, IndexTraits>::GeneralCalculator::TargetCalculatorType
 GroupTargetCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
-getInjectionTargetCalculator(const Group& group)
+getInjectionTargetCalculator(const Group& /*group*/)
 {
     return InjectionTargetCalculator{
         this->groupStateHelper(),
-        this->resvCoeffsInj(),
-        group,
         this->injectionPhase_()
     };
 }
@@ -577,10 +575,11 @@ TopToBottomCalculator::
 getTopLevelTarget_()
 {
     if (this->targetType() == TargetType::Injection) {
-        return std::get<InjectionTargetCalculator>(this->target_calculator_).groupTarget();
+        return this->groupStateHelper().getInjectionGroupTarget(
+            this->top_group_, this->injectionPhase_(), this->resvCoeffsInj());
     }
     else {
-        return std::get<TargetCalculator>(this->target_calculator_).groupTarget();
+        return this->groupStateHelper().getProductionGroupTarget(this->top_group_);
     }
 }
 
@@ -606,8 +605,6 @@ initForInjector_()
 {
     this->target_calculator_.template emplace<InjectionTargetCalculator>(
         this->groupStateHelper(),
-        this->resvCoeffsInj(),
-        this->top_group_,
         this->injectionPhase_()
     );
     const auto guide_target_mode = this->groupStateHelper().getInjectionGuideTargetMode(this->injectionPhase_());

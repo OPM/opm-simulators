@@ -22,17 +22,11 @@
 #define OPM_TARGETCALCULATOR_HEADER_INCLUDED
 
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
-#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 
-#include <optional>
-#include <string>
 #include <vector>
 
 namespace Opm {
 
-class DeferredLogger;
-template<class Scalar> class GroupState;
-template<typename IndexTraits> class PhaseUsageInfo;
 template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 
 namespace GroupStateHelpers
@@ -59,20 +53,10 @@ public:
     template <typename RateType>
     RateType calcModeRateFromRates(const RateType* rates) const;
 
-    Scalar groupTarget() const;
-
-    GuideRateModel::Target guideTargetMode() const;
-
-    DeferredLogger& deferredLogger() const
-    {
-        return this->groupStateHelper_.deferredLogger();
-    }
-
 private:
     Group::ProductionCMode cmode_;
     const GroupStateHelperType& groupStateHelper_;
     const std::vector<Scalar>& resv_coeff_;
-    const Group& group_;
 };
 
 /// Based on a group control mode, extract or calculate rates, and
@@ -84,8 +68,6 @@ public:
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
     InjectionTargetCalculator(const GroupStateHelperType& groupStateHelper,
-                              const std::vector<Scalar>& resv_coeff,
-                              const Group& group,
                               const Phase& injection_phase);
 
     template <typename RateVec>
@@ -94,23 +76,8 @@ public:
         return rates[pos_];
     }
 
-    Scalar groupTarget() const;
-
-    GuideRateModel::Target guideTargetMode() const;
-
-    DeferredLogger& deferredLogger() const
-    {
-        return this->groupStateHelper_.deferredLogger();
-    }
-
 private:
-    const GroupStateHelperType& groupStateHelper_;
-    const std::vector<Scalar>& resv_coeff_;
-    const Group& group_;
-    const Phase injection_phase_;
-    Group::InjectionCMode cmode_;
     int pos_;
-    GuideRateModel::Target target_;
 };
 
 } // namespace GroupStateHelpers
