@@ -63,7 +63,7 @@ public:
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
-    using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
+    using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
 
     /// @brief Construct a report step manager for the master process
     /// @param master Reference to the parent ReservoirCouplingMaster object
@@ -195,11 +195,11 @@ public:
     void sendInjectionTargetsToSlave(
         std::size_t slave_idx, const std::vector<InjectionGroupTarget>& injection_targets
     ) const;
-    void sendNumGroupTargetsToSlave(
-        std::size_t slave_idx, std::size_t num_injection_targets, std::size_t num_production_targets
+    void sendNumGroupConstraintsToSlave(
+        std::size_t slave_idx, std::size_t num_injection_targets, std::size_t num_production_constraints
     ) const;
-    void sendProductionTargetsToSlave(
-        std::size_t slave_idx, const std::vector<ProductionGroupTarget>& production_targets
+    void sendProductionConstraintsToSlave(
+        std::size_t slave_idx, const std::vector<ProductionGroupConstraints>& production_constraints
     ) const;
 
     /// @brief Set whether this is the first substep within a "sync" timestep.

@@ -179,147 +179,9 @@ checkGroupInjectionConstraints(const Group& group,
 template<typename Scalar, typename IndexTraits>
 std::pair<Group::ProductionCMode, Scalar>
 BlackoilWellModelConstraints<Scalar, IndexTraits>::
-checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_logger) const
+checkGroupProductionConstraints(const Group& group) const
 {
-    const auto controls = group.productionControls(wellModel_.summaryState());
-    const Group::ProductionCMode& currentControl = wellModel_.groupState().production_control(group.name());
-    const auto& pu = wellModel_.phaseUsage();
-    if (group.has_control(Group::ProductionCMode::ORAT))
-    {
-        if (currentControl != Group::ProductionCMode::ORAT)
-        {
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellSurfaceRates(group,
-                                                           pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                           /*is_injector=*/false);
-
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
-
-            if (controls.oil_target < current_rate  ) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = controls.oil_target / current_rate;
-                return std::make_pair(Group::ProductionCMode::ORAT, scale);
-            }
-        }
-    }
-
-    if (group.has_control(Group::ProductionCMode::WRAT))
-    {
-        if (currentControl != Group::ProductionCMode::WRAT)
-        {
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellSurfaceRates(group,
-                                                           pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                           /*is_injector=*/false);
-
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
-
-            if (controls.water_target < current_rate  ) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = controls.water_target / current_rate;
-                return std::make_pair(Group::ProductionCMode::WRAT, scale);
-            }
-        }
-    }
-    if (group.has_control(Group::ProductionCMode::GRAT))
-    {
-        if (currentControl != Group::ProductionCMode::GRAT)
-        {
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellSurfaceRates(group,
-                                                           pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                           /*is_injector=*/false);
-
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
-            if (controls.gas_target < current_rate  ) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = controls.gas_target / current_rate;
-                return std::make_pair(Group::ProductionCMode::GRAT, scale);
-            }
-        }
-    }
-    if (group.has_control(Group::ProductionCMode::LRAT))
-    {
-        if (currentControl != Group::ProductionCMode::LRAT)
-        {
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellSurfaceRates(group,
-                                                           pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                           /*is_injector=*/false);
-            current_rate += groupStateHelper().sumWellSurfaceRates(group,
-                                                           pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                           /*is_injector=*/false);
-
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
-
-            bool skip = false;
-            if (controls.liquid_target == controls.oil_target) {
-                Scalar current_water_rate =
-                    groupStateHelper().sumWellSurfaceRates(group,
-                                                   pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                   /*is_injector=*/false);
-                current_water_rate = wellModel_.comm().sum(current_water_rate);
-                if (std::abs(current_water_rate) < 1e-12) {
-                    skip = true;
-                    deferred_logger.debug("LRAT_ORAT_GROUP", "GROUP " + group.name() + " The LRAT target is equal the ORAT target and the water rate is zero, skip checking LRAT");
-                }
-            }
-
-            if (!skip && controls.liquid_target < current_rate ) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = controls.liquid_target / current_rate;
-                return std::make_pair(Group::ProductionCMode::LRAT, scale);
-            }
-        }
-    }
-
-    if (group.has_control(Group::ProductionCMode::CRAT))
-    {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "CRAT control for production groups not implemented" , deferred_logger);
-    }
-    if (group.has_control(Group::ProductionCMode::RESV))
-    {
-        if (currentControl != Group::ProductionCMode::RESV)
-        {
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellResRates(group,
-                                                       pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                      /*is_injector=*/false);
-            current_rate += groupStateHelper().sumWellResRates(group,
-                                                       pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                       /*is_injector=*/false);
-            current_rate += groupStateHelper().sumWellResRates(group,
-                                                       pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                       /*is_injector=*/false);
-
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
-
-            Scalar target = controls.resv_target;
-            if (group.has_gpmaint_control(Group::ProductionCMode::RESV))
-                target = wellModel_.groupState().gpmaint_target(group.name());
-
-            if ( target < current_rate ) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = target / current_rate;
-                return std::make_pair(Group::ProductionCMode::RESV, scale);
-            }
-        }
-    }
-    if (group.has_control(Group::ProductionCMode::PRBL))
-    {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "PRBL control for production groups not implemented", deferred_logger);
-    }
-    return std::make_pair(Group::ProductionCMode::NONE, Scalar(1.0));
+    return groupStateHelper().checkGroupProductionConstraints(group);
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -539,7 +401,7 @@ updateGroupIndividualControl(const Group& group,
             }
         }
 
-        const auto& changed_this = this->checkGroupProductionConstraints(group, deferred_logger);
+        const auto& changed_this = this->checkGroupProductionConstraints(group);
         const auto controls = group.productionControls(wellModel_.summaryState());
 
         if (changed_this.first != Group::ProductionCMode::NONE)

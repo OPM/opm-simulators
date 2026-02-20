@@ -258,16 +258,16 @@ sendInjectionTargetsToSlave(std::size_t slave_idx,
 template <class Scalar>
 void
 ReservoirCouplingMasterReportStep<Scalar>::
-sendNumGroupTargetsToSlave(std::size_t slave_idx,
+sendNumGroupConstraintsToSlave(std::size_t slave_idx,
                            std::size_t num_injection_targets,
-                           std::size_t num_production_targets) const
+                           std::size_t num_production_constraints) const
 {
     // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
     // do not participate in master-slave communication (no else branch needed).
     if (this->comm().rank() == 0) {
         std::vector<std::size_t> num_targets(2);
         num_targets[0] = num_injection_targets;
-        num_targets[1] = num_production_targets;
+        num_targets[1] = num_production_constraints;
         auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
         // NOTE: See comment about error handling at the top of this file.
         MPI_Send(
@@ -275,12 +275,12 @@ sendNumGroupTargetsToSlave(std::size_t slave_idx,
             /*count=*/2,
             /*datatype=*/MPI_SIZE_T_TYPE,
             /*dest_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::NumSlaveGroupTargets),
+            /*tag=*/static_cast<int>(MessageTag::NumSlaveGroupConstraints),
             this->getSlaveComm(slave_idx)
         );
         this->logger().debug(fmt::format(
-            "Sent target counts (inj={}, prod={}) to {}",
-            num_injection_targets, num_production_targets, this->slaveName(slave_idx)
+            "Sent constraint counts (inj={}, prod={}) to {}",
+            num_injection_targets, num_production_constraints, this->slaveName(slave_idx)
         ));
     }
 }
@@ -288,26 +288,26 @@ sendNumGroupTargetsToSlave(std::size_t slave_idx,
 template <class Scalar>
 void
 ReservoirCouplingMasterReportStep<Scalar>::
-sendProductionTargetsToSlave(std::size_t slave_idx,
-                             const std::vector<ProductionGroupTarget>& production_targets) const
+sendProductionConstraintsToSlave(std::size_t slave_idx,
+                             const std::vector<ProductionGroupConstraints>& production_constraints) const
 {
     // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
     // do not participate in master-slave communication (no else branch needed).
     if (this->comm().rank() == 0) {
-        auto num_production_targets = production_targets.size();
-        auto MPI_PRODUCTION_TARGETS_TYPE = Dune::MPITraits<ProductionGroupTarget>::getType();
+        auto num_production_constraints = production_constraints.size();
+        auto MPI_PRODUCTION_CONSTRAINTS_TYPE = Dune::MPITraits<ProductionGroupConstraints>::getType();
         // NOTE: See comment about error handling at the top of this file.
         MPI_Send(
-            production_targets.data(),
-            /*count=*/num_production_targets,
-            /*datatype=*/MPI_PRODUCTION_TARGETS_TYPE,
+            production_constraints.data(),
+            /*count=*/num_production_constraints,
+            /*datatype=*/MPI_PRODUCTION_CONSTRAINTS_TYPE,
             /*dest_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::ProductionGroupTargets),
+            /*tag=*/static_cast<int>(MessageTag::ProductionGroupConstraints),
             this->getSlaveComm(slave_idx)
         );
         this->logger().debug(fmt::format(
-            "Sent {} production targets to {}",
-            num_production_targets, this->slaveName(slave_idx)
+            "Sent {} production constraints to {}",
+            num_production_constraints, this->slaveName(slave_idx)
         ));
     }
 }
