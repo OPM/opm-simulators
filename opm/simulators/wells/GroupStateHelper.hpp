@@ -193,6 +193,8 @@ public:
         bool do_mpi_gather_{true};         // Whether to gather messages across MPI ranks
     };
 
+    using GroupTarget = typename SingleWellState<Scalar, IndexTraits>::GroupTarget;
+
     GroupStateHelper(WellState<Scalar, IndexTraits>& well_state,
                     GroupState<Scalar>& group_state,
                     const Schedule& schedule,
@@ -220,6 +222,9 @@ public:
                                                       const Scalar efficiency_factor,
                                                       const std::vector<Scalar>& resv_coeff,
                                                       const bool check_guide_rate) const;
+
+    std::pair<Group::ProductionCMode, Scalar>
+    checkGroupProductionConstraints(const Group& group) const;
 
     const Parallel::Communication& comm() const { return this->comm_; }
 
@@ -262,8 +267,6 @@ public:
                                           Scalar efficiencyFactor) const;
 
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
-
-    using GroupTarget = typename SingleWellState<Scalar, IndexTraits>::GroupTarget;
 
     std::optional<GroupTarget> getWellGroupTargetInjector(const std::string& name,
                                                           const std::string& parent,
@@ -530,6 +533,13 @@ private:
                                         FractionLambda&& local_fraction_lambda,
                                         bool do_addback) const;
 
+    std::pair<Group::ProductionCMode, Scalar>
+    checkProductionRateConstraint_(const Group& group,
+                                   Group::ProductionCMode cmode,
+                                   Group::ProductionCMode currentControl,
+                                   Scalar target,
+                                   Scalar current_rate) const;
+
     //! \brief Compute partial efficiency factor for addback calculation.
     //!
     //! The addback in constraint checking must use the partial efficiency factor
@@ -579,6 +589,10 @@ private:
                                                 ReservoirCoupling::RateKind kind) const;
 #endif
 
+    Scalar getProductionConstraintTarget_(const Group& group,
+                                          Group::ProductionCMode cmode,
+                                          const Group::ProductionControls& controls) const;
+
     Scalar getProductionGroupTargetForMode_(const Group& group, Group::ProductionCMode cmode) const;
 
     Scalar getSatelliteRate_(const Group& group,
@@ -608,6 +622,8 @@ private:
                                     bool res_rates) const;
 
     std::optional<GSatProd::GSatProdGroupProp::Rate> selectRateComponent_(const int phase_pos) const;
+
+    Scalar sumProductionRate_(const Group& group, Group::ProductionCMode cmode) const;
 
     int updateGroupControlledWellsRecursive_(const std::string& group_name,
                                              const bool is_production_group,

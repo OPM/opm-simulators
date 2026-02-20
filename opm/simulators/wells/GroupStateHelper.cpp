@@ -352,6 +352,71 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
     return std::make_pair(current_rate_available > target_rate_available, scale);
 }
 
+template<typename Scalar, typename IndexTraits>
+std::pair<Group::ProductionCMode, Scalar>
+GroupStateHelper<Scalar, IndexTraits>::
+checkGroupProductionConstraints(const Group& group) const
+{
+    const auto controls = group.productionControls(this->summary_state_);
+    const auto currentControl = this->groupState().production_control(group.name());
+
+    for (const auto cmode : {
+        Group::ProductionCMode::ORAT,
+        Group::ProductionCMode::WRAT,
+        Group::ProductionCMode::GRAT,
+        Group::ProductionCMode::LRAT,
+        Group::ProductionCMode::RESV})
+    {
+        if (!group.has_control(cmode) || currentControl == cmode) {
+            continue;
+        }
+
+        Scalar current_rate = this->sumProductionRate_(group, cmode);
+        Scalar target = this->getProductionConstraintTarget_(group, cmode, controls);
+
+        // LRAT skip heuristic: if liquid and oil targets are equal
+        // and water rate is ~0, skip the LRAT check.
+        if (cmode == Group::ProductionCMode::LRAT
+            && target == controls.oil_target)
+        {
+            const auto& pu = this->phaseUsage();
+            Scalar water_rate = this->sumWellSurfaceRates(group,
+                pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx),
+                false);
+            water_rate = this->comm().sum(water_rate);
+            if (std::abs(water_rate) < 1e-12) {
+                this->deferredLogger().debug(
+                    "LRAT_ORAT_GROUP",
+                    "GROUP " + group.name()
+                    + " The LRAT target is equal the ORAT target"
+                      " and the water rate is zero, skip checking LRAT");
+                continue;
+            }
+        }
+
+        auto result = this->checkProductionRateConstraint_(
+            group, cmode, currentControl, target, current_rate);
+        if (result.first != Group::ProductionCMode::NONE) {
+            return result;
+        }
+    }
+
+    if (group.has_control(Group::ProductionCMode::CRAT)) {
+        OPM_DEFLOG_THROW(std::runtime_error,
+            "Group " + group.name()
+            + "CRAT control for production groups not implemented",
+            this->deferredLogger());
+    }
+    if (group.has_control(Group::ProductionCMode::PRBL)) {
+        OPM_DEFLOG_THROW(std::runtime_error,
+            "Group " + group.name()
+            + "PRBL control for production groups not implemented",
+            this->deferredLogger());
+    }
+
+    return {Group::ProductionCMode::NONE, Scalar(1.0)};
+}
+
 template <typename Scalar, typename IndexTraits>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::
@@ -1671,6 +1736,27 @@ GroupStateHelper<Scalar, IndexTraits>::getLocalReductionLevel_(const std::vector
 template<typename Scalar, typename IndexTraits>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::
+getProductionConstraintTarget_(const Group& group,
+                                Group::ProductionCMode cmode,
+                                const Group::ProductionControls& controls) const
+{
+    switch (cmode) {
+    case Group::ProductionCMode::ORAT: return controls.oil_target;
+    case Group::ProductionCMode::WRAT: return controls.water_target;
+    case Group::ProductionCMode::GRAT: return controls.gas_target;
+    case Group::ProductionCMode::LRAT: return controls.liquid_target;
+    case Group::ProductionCMode::RESV: {
+        if (group.has_gpmaint_control(Group::ProductionCMode::RESV))
+            return this->groupState().gpmaint_target(group.name());
+        return controls.resv_target;
+    }
+    default: return 0.0;
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
 getProductionGroupTargetForMode_(const Group& group,
                                   Group::ProductionCMode cmode) const
 {
@@ -1708,6 +1794,30 @@ getProductionGroupTargetForMode_(const Group& group,
                          this->deferredLogger());
         return 0.0;
     }
+}
+
+template<typename Scalar, typename IndexTraits>
+std::pair<Group::ProductionCMode, Scalar>
+GroupStateHelper<Scalar, IndexTraits>::
+checkProductionRateConstraint_(const Group& group,
+                                Group::ProductionCMode cmode,
+                                Group::ProductionCMode currentControl,
+                                Scalar target,
+                                Scalar current_rate) const
+{
+    if (!group.has_control(cmode)) {
+        return {Group::ProductionCMode::NONE, Scalar(1.0)};
+    }
+    if (currentControl == cmode) {
+        return {Group::ProductionCMode::NONE, Scalar(1.0)};
+    }
+    if (target < current_rate) {
+        Scalar scale = 1.0;
+        if (current_rate > 1e-12)
+            scale = target / current_rate;
+        return {cmode, scale};
+    }
+    return {Group::ProductionCMode::NONE, Scalar(1.0)};
 }
 
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -1945,6 +2055,47 @@ GroupStateHelper<Scalar, IndexTraits>::selectRateComponent_(const int phase_pos)
     }
 
     return std::nullopt;
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+sumProductionRate_(const Group& group,
+                    Group::ProductionCMode cmode) const
+{
+    const auto& pu = this->phaseUsage();
+    Scalar rate = 0.0;
+    switch (cmode) {
+    case Group::ProductionCMode::ORAT:
+        rate = this->sumWellSurfaceRates(group,
+            pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), false);
+        break;
+    case Group::ProductionCMode::WRAT:
+        rate = this->sumWellSurfaceRates(group,
+            pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), false);
+        break;
+    case Group::ProductionCMode::GRAT:
+        rate = this->sumWellSurfaceRates(group,
+            pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx), false);
+        break;
+    case Group::ProductionCMode::LRAT:
+        rate = this->sumWellSurfaceRates(group,
+            pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), false);
+        rate += this->sumWellSurfaceRates(group,
+            pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), false);
+        break;
+    case Group::ProductionCMode::RESV:
+        rate = this->sumWellResRates(group,
+            pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), false);
+        rate += this->sumWellResRates(group,
+            pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), false);
+        rate += this->sumWellResRates(group,
+            pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx), false);
+        break;
+    default:
+        break;
+    }
+    return this->comm().sum(rate);
 }
 
 template <typename Scalar, typename IndexTraits>
