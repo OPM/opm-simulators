@@ -1671,6 +1671,30 @@ GroupStateHelper<Scalar, IndexTraits>::applyReductionsAndFractions_(const std::v
     return target;
 }
 
+template<typename Scalar, typename IndexTraits>
+std::pair<Group::ProductionCMode, Scalar>
+GroupStateHelper<Scalar, IndexTraits>::
+checkProductionRateConstraint_(const Group& group,
+                                Group::ProductionCMode cmode,
+                                Group::ProductionCMode currentControl,
+                                Scalar target,
+                                Scalar current_rate) const
+{
+    if (!group.has_control(cmode)) {
+        return {Group::ProductionCMode::NONE, Scalar(1.0)};
+    }
+    if (currentControl == cmode) {
+        return {Group::ProductionCMode::NONE, Scalar(1.0)};
+    }
+    if (target < current_rate) {
+        Scalar scale = 1.0;
+        if (current_rate > 1e-12)
+            scale = target / current_rate;
+        return {cmode, scale};
+    }
+    return {Group::ProductionCMode::NONE, Scalar(1.0)};
+}
+
 template <typename Scalar, typename IndexTraits>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::computeAddbackEfficiency_(const std::vector<std::string>& chain,
@@ -1824,18 +1848,29 @@ getProductionConstraintTarget_(const Group& group,
                                 Group::ProductionCMode cmode,
                                 const Group::ProductionControls& controls) const
 {
+    Scalar target = 0.0;
     switch (cmode) {
-    case Group::ProductionCMode::ORAT: return controls.oil_target;
-    case Group::ProductionCMode::WRAT: return controls.water_target;
-    case Group::ProductionCMode::GRAT: return controls.gas_target;
-    case Group::ProductionCMode::LRAT: return controls.liquid_target;
+    case Group::ProductionCMode::ORAT: target = controls.oil_target; break;
+    case Group::ProductionCMode::WRAT: target = controls.water_target; break;
+    case Group::ProductionCMode::GRAT: target = controls.gas_target; break;
+    case Group::ProductionCMode::LRAT: target = controls.liquid_target; break;
     case Group::ProductionCMode::RESV: {
         if (group.has_gpmaint_control(Group::ProductionCMode::RESV))
-            return this->groupState().gpmaint_target(group.name());
-        return controls.resv_target;
+            target = this->groupState().gpmaint_target(group.name());
+        else
+            target = controls.resv_target;
+        break;
     }
     default: return 0.0;
     }
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (this->isReservoirCouplingSlave()
+        && this->isReservoirCouplingSlaveGroup(group))
+    {
+        target = this->getEffectiveProductionLimit_(group.name(), cmode, target);
+    }
+#endif
+    return target;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -1880,31 +1915,44 @@ getProductionGroupTargetForMode_(const Group& group,
     }
 }
 
-template<typename Scalar, typename IndexTraits>
-std::pair<Group::ProductionCMode, Scalar>
+#ifdef RESERVOIR_COUPLING_ENABLED
+template <typename Scalar, typename IndexTraits>
+Scalar
 GroupStateHelper<Scalar, IndexTraits>::
-checkProductionRateConstraint_(const Group& group,
-                                Group::ProductionCMode cmode,
-                                Group::ProductionCMode currentControl,
-                                Scalar target,
-                                Scalar current_rate) const
+getEffectiveProductionLimit_(
+    const std::string& gname,
+    Group::ProductionCMode rate_type,
+    Scalar slave_local_target) const
 {
-    if (!group.has_control(cmode)) {
-        return {Group::ProductionCMode::NONE, Scalar(1.0)};
+    auto& slave = this->reservoirCouplingSlave();
+    if (!slave.hasMasterProductionLimits(gname)) {
+        return slave_local_target;
     }
-    if (currentControl == cmode) {
-        return {Group::ProductionCMode::NONE, Scalar(1.0)};
+    const auto& limits = slave.masterProductionLimits(gname);
+    Scalar master_limit = -1;
+    switch (rate_type) {
+    case Group::ProductionCMode::ORAT: master_limit = limits.oil_limit; break;
+    case Group::ProductionCMode::WRAT: master_limit = limits.water_limit; break;
+    case Group::ProductionCMode::GRAT: master_limit = limits.gas_limit; break;
+    case Group::ProductionCMode::LRAT: master_limit = limits.liquid_limit; break;
+    case Group::ProductionCMode::RESV: master_limit = limits.resv_limit; break;
+    default: return slave_local_target;
     }
-    if (target < current_rate) {
-        Scalar scale = 1.0;
-        if (current_rate > 1e-12)
-            scale = target / current_rate;
-        return {cmode, scale};
+    if (master_limit < 0) {
+        return slave_local_target;  // no master limit for this rate type
     }
-    return {Group::ProductionCMode::NONE, Scalar(1.0)};
+    auto filter = this->getProductionFilterFlag_(gname, rate_type);
+    using FilterFlag = ReservoirCoupling::GrupSlav::FilterFlag;
+    if (filter == FilterFlag::MAST) {
+        return master_limit;
+    }
+    if (filter == FilterFlag::BOTH) {
+        return std::min(master_limit, slave_local_target);
+    }
+    // FilterFlag::SLAV
+    return slave_local_target;
 }
 
-#ifdef RESERVOIR_COUPLING_ENABLED
 template <typename Scalar, typename IndexTraits>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::
@@ -1920,7 +1968,7 @@ getReservoirCouplingMasterGroupRate_(const Group& group,
         return 0.0;
     }
 }
-#endif
+#endif // RESERVOIR_COUPLING_ENABLED
 
 template <typename Scalar, typename IndexTraits>
 Scalar

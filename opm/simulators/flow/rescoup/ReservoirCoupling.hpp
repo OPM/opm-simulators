@@ -182,7 +182,6 @@ struct InjectionRates {
     [[nodiscard]] Scalar  operator[](Phase p) const noexcept { return rate[static_cast<std::size_t>(p)]; }
 };
 
-
 // Used to communicate potentials for oil, gas, and water rates between slave and master processes
 template <class Scalar>
 struct Potentials {
@@ -256,6 +255,17 @@ struct ProductionGroupConstraints {
     Scalar gas_limit;
     Scalar liquid_limit;
     Scalar resv_limit;
+};
+
+/// @brief Per-rate-type production limits received from master hierarchy.
+/// A value of -1 means no limit defined in the hierarchy for that rate type.
+template <class Scalar>
+struct MasterProductionLimits {
+    Scalar oil_limit{-1};
+    Scalar water_limit{-1};
+    Scalar gas_limit{-1};
+    Scalar liquid_limit{-1};
+    Scalar resv_limit{-1};
 };
 
 // Helper functions
