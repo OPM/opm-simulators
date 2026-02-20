@@ -15,97 +15,128 @@ namespace Opm
 template <class Operator, class Comm, typename>
 struct StandardPreconditioners;
 
-using SystemSeqOp = Dune::MatrixAdapter<SystemMatrix, SystemVector, SystemVector>;
+template<typename Scalar>
+using SystemSeqOpT = Dune::MatrixAdapter<SystemMatrixT<Scalar>, SystemVectorT<Scalar>, SystemVectorT<Scalar>>;
 
 #if HAVE_MPI
 using SystemComm = Dune::MultiCommunicator<const Dune::OwnerOverlapCopyCommunication<int, int>&,
                                            const Dune::JacComm&>;
-using SystemParOp
-    = Dune::OverlappingSchwarzOperator<SystemMatrix, SystemVector, SystemVector, SystemComm>;
+template<typename Scalar>
+using SystemParOpT = Dune::OverlappingSchwarzOperator<SystemMatrixT<Scalar>, SystemVectorT<Scalar>,
+                                                      SystemVectorT<Scalar>, SystemComm>;
 #endif
 
-template <>
-struct StandardPreconditioners<SystemSeqOp, Dune::Amg::SequentialInformation, void> {
-    static void add()
-    {
-        using O = SystemSeqOp;
-        using C = Dune::Amg::SequentialInformation;
-        using F = PreconditionerFactory<O, C>;
-        using V = SystemVector;
-        using P = PropertyTree;
+// Full specialisations of StandardPreconditioners for the coupled system
+// operators.  Partial specialisations would be ambiguous with the generic
+// serial factory (!is_gpu_operator_v guard), so full specialisations are
+// used; detail:: helpers factor out the shared logic.
 
-        F::addCreator("system_cpr",
-                      [](const O& op,
-                         const P& prm,
-                         const std::function<V()>& sysWeightCalc,
-                         std::size_t pressureIndex) {
-                          std::function<ResVector()> resWeightCalc;
-                          if (sysWeightCalc) {
-                              resWeightCalc = [sysWeightCalc]() {
-                                  return sysWeightCalc()[Dune::Indices::_0];
-                              };
-                          }
-                          return std::make_shared<SystemPreconditioner<SeqResOperator>>(
-                              op.getmat(), resWeightCalc, pressureIndex, prm);
-                      });
-    }
+namespace detail {
+
+template<typename Scalar>
+void addSystemCprSeq()
+{
+    using O = SystemSeqOpT<Scalar>;
+    using F = PreconditionerFactory<O, Dune::Amg::SequentialInformation>;
+    using V = SystemVectorT<Scalar>;
+    using P = PropertyTree;
+
+    F::addCreator("system_cpr",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex) {
+                      std::function<ResVectorT<Scalar>()> resWeightCalc;
+                      if (sysWeightCalc) {
+                          resWeightCalc = [sysWeightCalc]() {
+                              return sysWeightCalc()[Dune::Indices::_0];
+                          };
+                      }
+                      return std::make_shared<SystemPreconditioner<Scalar, SeqResOperatorT<Scalar>>>(
+                          op.getmat(), resWeightCalc, pressureIndex, prm);
+                  });
+}
+
+#if HAVE_MPI
+template<typename Scalar>
+void addSystemCprParSeq()
+{
+    using O = SystemParOpT<Scalar>;
+    using F = PreconditionerFactory<O, Dune::Amg::SequentialInformation>;
+    using V = SystemVectorT<Scalar>;
+    using P = PropertyTree;
+
+    F::addCreator("system_cpr",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex) {
+                      std::function<ResVectorT<Scalar>()> resWeightCalc;
+                      if (sysWeightCalc) {
+                          resWeightCalc = [sysWeightCalc]() {
+                              return sysWeightCalc()[Dune::Indices::_0];
+                          };
+                      }
+                      return std::make_shared<SystemPreconditioner<Scalar, SeqResOperatorT<Scalar>>>(
+                          op.getmat(), resWeightCalc, pressureIndex, prm);
+                  });
+}
+
+template<typename Scalar>
+void addSystemCprPar()
+{
+    using O = SystemParOpT<Scalar>;
+    using F = PreconditionerFactory<O, SystemComm>;
+    using V = SystemVectorT<Scalar>;
+    using P = PropertyTree;
+
+    F::addCreator("system_cpr",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex,
+                     const SystemComm& comm) {
+                      std::function<ResVectorT<Scalar>()> resWeightCalc;
+                      if (sysWeightCalc) {
+                          resWeightCalc = [sysWeightCalc]() {
+                              return sysWeightCalc()[Dune::Indices::_0];
+                          };
+                      }
+                      const auto& resComm = comm[Dune::Indices::_0];
+                      return std::make_shared<SystemPreconditioner<Scalar, ParResOperatorT<Scalar>, ParResComm>>(
+                          op.getmat(), resWeightCalc, pressureIndex, prm, resComm);
+                  });
+}
+#endif
+
+} // namespace detail
+
+template <>
+struct StandardPreconditioners<SystemSeqOpT<double>, Dune::Amg::SequentialInformation, void> {
+    static void add() { detail::addSystemCprSeq<double>(); }
+};
+
+template <>
+struct StandardPreconditioners<SystemSeqOpT<float>, Dune::Amg::SequentialInformation, void> {
+    static void add() { detail::addSystemCprSeq<float>(); }
 };
 
 #if HAVE_MPI
-// Sequential initOpPrecSp overload instantiates PreconditionerFactory<SystemParOp, SeqInfo>
 template <>
-struct StandardPreconditioners<SystemParOp, Dune::Amg::SequentialInformation, void> {
-    static void add()
-    {
-        using O = SystemParOp;
-        using C = Dune::Amg::SequentialInformation;
-        using F = PreconditionerFactory<O, C>;
-        using V = SystemVector;
-        using P = PropertyTree;
-
-        F::addCreator("system_cpr",
-                      [](const O& op,
-                         const P& prm,
-                         const std::function<V()>& sysWeightCalc,
-                         std::size_t pressureIndex) {
-                          std::function<ResVector()> resWeightCalc;
-                          if (sysWeightCalc) {
-                              resWeightCalc = [sysWeightCalc]() {
-                                  return sysWeightCalc()[Dune::Indices::_0];
-                              };
-                          }
-                          return std::make_shared<SystemPreconditioner<SeqResOperator>>(
-                              op.getmat(), resWeightCalc, pressureIndex, prm);
-                      });
-    }
+struct StandardPreconditioners<SystemParOpT<double>, Dune::Amg::SequentialInformation, void> {
+    static void add() { detail::addSystemCprParSeq<double>(); }
 };
 
 template <>
-struct StandardPreconditioners<SystemParOp, SystemComm, void> {
-    static void add()
-    {
-        using O = SystemParOp;
-        using F = PreconditionerFactory<O, SystemComm>;
-        using V = SystemVector;
-        using P = PropertyTree;
+struct StandardPreconditioners<SystemParOpT<float>, Dune::Amg::SequentialInformation, void> {
+    static void add() { detail::addSystemCprParSeq<float>(); }
+};
 
-        F::addCreator("system_cpr",
-                      [](const O& op,
-                         const P& prm,
-                         const std::function<V()>& sysWeightCalc,
-                         std::size_t pressureIndex,
-                         const SystemComm& comm) {
-                          std::function<ResVector()> resWeightCalc;
-                          if (sysWeightCalc) {
-                              resWeightCalc = [sysWeightCalc]() {
-                                  return sysWeightCalc()[Dune::Indices::_0];
-                              };
-                          }
-                          const auto& resComm = comm[Dune::Indices::_0];
-                          return std::make_shared<SystemPreconditioner<ParResOperator, ParResComm>>(
-                              op.getmat(), resWeightCalc, pressureIndex, prm, resComm);
-                      });
-    }
+template <>
+struct StandardPreconditioners<SystemParOpT<double>, SystemComm, void> {
+    static void add() { detail::addSystemCprPar<double>(); }
+};
+
+template <>
+struct StandardPreconditioners<SystemParOpT<float>, SystemComm, void> {
+    static void add() { detail::addSystemCprPar<float>(); }
 };
 #endif
 

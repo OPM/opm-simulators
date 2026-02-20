@@ -296,7 +296,7 @@ template<class Scalar> class WellContributions;
                                             std::vector<std::vector<int>>& wcells,
                                             std::vector<WVector>& residual) const;
 
-            void setWellSolution(WellVector solution,
+            void setWellSolution(WellVectorT<Scalar> solution,
                                  std::vector<int> dofOffsets)
             {
                 cachedSystemWellSolution_ = std::move(solution);
@@ -654,7 +654,7 @@ template<class Scalar> class WellContributions;
 
             // Cached well solution from the system solver, consumed by
             // recoverWellSolutionAndUpdateWellState during postSolve.
-            std::optional<WellVector> cachedSystemWellSolution_;
+            std::optional<WellVectorT<Scalar>> cachedSystemWellSolution_;
             std::vector<int> cachedWellDofOffsets_;
 
             void assignWellTracerRates(data::Wells& wsrpt) const;

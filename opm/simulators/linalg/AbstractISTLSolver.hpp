@@ -152,9 +152,11 @@ public:
      */
     virtual bool solve(Vector& x) = 0;
 
+    using Scalar = typename SparseMatrixAdapter::Scalar;
+
     /// Non-owning view of the well solution produced by a coupled system solve.
     struct WellSolutionView {
-        const WellVector& solution;
+        const WellVectorT<Scalar>& solution;
         const std::vector<int>& dofOffsets;
     };
 
