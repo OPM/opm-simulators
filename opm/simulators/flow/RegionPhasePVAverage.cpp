@@ -58,7 +58,7 @@ namespace {
         for (auto rset = 0*nset; rset < nset; ++rset) {
             const auto& reg = getRegionArray(regionNames[rset]);
 
-            auto m = std::max_element(reg.begin(), reg.end());
+            const auto m = std::ranges::max_element(reg);
             if (m == reg.end()) { // reg.empty()
                 continue;
             }

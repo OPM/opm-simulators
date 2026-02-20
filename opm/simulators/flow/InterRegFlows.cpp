@@ -34,7 +34,7 @@ InterRegFlowMapSingleFIP(const std::vector<int>& region)
 {
     if (! region.empty()) {
         this->maxLocalRegionID_= this->maxGlobalRegionID_ =
-            *std::max_element(region.begin(), region.end());
+            *std::ranges::max_element(region);
     }
 
     std::ranges::transform(region, this->region_.begin(),
