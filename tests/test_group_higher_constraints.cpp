@@ -62,7 +62,6 @@
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
-#include <opm/simulators/wells/WellGroupControls.hpp>
 
 #include <boost/test/unit_test.hpp>
 
@@ -1057,16 +1056,14 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupProductionTargetRate)
 
     // Call getAutoChokeGroupProductionTargetRate()
     // This is how it's called in BlackoilWellModelNetwork:
-    //   getAutoChokeGroupProductionTargetRate(bottom_group=MANI, group=MANI, gsh, resv_coeff, 1.0)
+    //   gsh.getAutoChokeGroupProductionTargetRate(bottom_group=MANI, group=MANI, resv_coeff, 1.0)
     // The function recurses upward from MANI (FLD) → PLAT (FLD) → FIELD (ORAT=controlling).
     // During recursion: efficiencyFactor accumulates E_MANI * E_PLAT = 0.8 * 0.9 = 0.72.
     auto resv_coeff = resvCoeff();
 
-    using WGC = Opm::WellGroupControls<double, IndexTraits>;
-    auto [target_rate_si, control_mode] = WGC::getAutoChokeGroupProductionTargetRate(
+    auto [target_rate_si, control_mode] = gsh.getAutoChokeGroupProductionTargetRate(
         maniGroup(),      // bottom_group
         maniGroup(),      // group (starts recursion here, recurses up to controlling group)
-        gsh,
         resv_coeff,
         /*efficiencyFactor=*/1.0
     );
@@ -1218,11 +1215,9 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateWithUnderperformance)
 
     // Call getAutoChokeGroupProductionTargetRate
     auto resv_coeff = resvCoeff();
-    using WGC = Opm::WellGroupControls<double, IndexTraits>;
-    auto [target_rate_si, control_mode] = WGC::getAutoChokeGroupProductionTargetRate(
+    auto [target_rate_si, control_mode] = gsh.getAutoChokeGroupProductionTargetRate(
         maniGroup(),      // bottom_group
         maniGroup(),      // group (starts recursion here)
-        gsh,
         resv_coeff,
         /*efficiencyFactor=*/1.0
     );

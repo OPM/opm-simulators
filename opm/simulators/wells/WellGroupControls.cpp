@@ -31,7 +31,6 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
-#include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
@@ -326,92 +325,6 @@ getGroupProductionTargetRate(const Group& group,
         scale = target_rate->target_value / current_rate;
 
     return scale;
-}
-
-template<typename Scalar, typename IndexTraits>
-std::pair<Scalar, Group::ProductionCMode> WellGroupControls<Scalar, IndexTraits>::
-getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
-                                      const Group& group,
-                                      const GroupStateHelperType& groupStateHelper,
-                                      const std::vector<Scalar>& resv_coeff,
-                                      Scalar efficiencyFactor)
-{
-    const auto& schedule = groupStateHelper.schedule();
-    const auto& summaryState = groupStateHelper.summaryState();
-    const int reportStepIdx = groupStateHelper.reportStepIdx();
-    const GuideRate* guideRate = &groupStateHelper.guideRate();
-    const auto& group_state = groupStateHelper.groupState();
-    const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
-    if (currentGroupControl == Group::ProductionCMode::FLD ||
-        currentGroupControl == Group::ProductionCMode::NONE) {
-        if (!group.productionGroupControlAvailable()) {
-            return std::make_pair(1.0, currentGroupControl);
-        } else {
-            // Produce share of parents control
-            const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
-            efficiencyFactor *= group.getGroupEfficiencyFactor();
-            return getAutoChokeGroupProductionTargetRate(bottom_group, parent, groupStateHelper,
-                                                resv_coeff, efficiencyFactor);
-        }
-    }
-
-    if (!group.isProductionGroup()) {
-        return std::make_pair(1.0, currentGroupControl);
-    }
-
-    // If we are here, we are at the topmost group to be visited in the recursion.
-    // This is the group containing the control we will check against.
-
-    // Make conversion factors for RESV <-> surface rates.
-    // std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
-    // rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
-
-    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{groupStateHelper,
-                                                                   resv_coeff,
-                                                                   group};
-
-    GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc(schedule,
-                                                                     groupStateHelper,
-                                                                     summaryState,
-                                                                     reportStepIdx,
-                                                                     guideRate,
-                                                                     tcalc.guideTargetMode(),
-                                                                     true,
-                                                                     Phase::OIL);
-
-    auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
-    };
-
-    auto localReduction = [&](const std::string& group_name) {
-        const std::vector<Scalar>& groupTargetReductions = group_state.production_reduction_rates(group_name);
-        return tcalc.calcModeRateFromRates(groupTargetReductions);
-    };
-
-    const Scalar orig_target = tcalc.groupTarget();
-    const auto chain = groupStateHelper.groupChainTopBot(bottom_group.name(), group.name());
-    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const std::size_t num_ancestors = chain.size() - 1;
-    const std::size_t local_reduction_level = groupStateHelper.getLocalReductionLevel(
-        chain, /*is_production_group=*/true, Phase::OIL);
-    Scalar target = orig_target;
-    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
-        if ((ii == 0) || guideRate->has(chain[ii])) {
-            // Apply local reductions only at the control level (top) and for
-            // intermediate levels where we have both a guide rate and
-            // group-controlled wells (local_reduction_level >= ii).  Without
-            // this gating, reductions from a group with GCW=0 would be
-            // double-counted.
-            if (local_reduction_level >= ii) {
-                target -= localReduction(chain[ii]);
-            }
-        }
-        target *= localFraction(chain[ii+1]);
-    }
-    // Avoid negative target rates coming from too large local reductions.
-    const double target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
-
-    return std::make_pair(target_rate, currentGroupControl);
 }
 
 #define INSTANTIATE(T,...)                                               \

@@ -189,7 +189,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
 
     const Scalar orig_target = tcalc.groupTarget();
     const Scalar current_rate_available = tcalc.calcModeRateFromRates(rates);
-    const std::size_t local_reduction_level = this->getLocalReductionLevel(
+    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
         chain, /*is_production_group=*/false, injection_phase);
 
     const Scalar target = this->applyReductionsAndFractions_(chain,
@@ -330,7 +330,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
         return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
     }
 
-    const std::size_t local_reduction_level = this->getLocalReductionLevel(
+    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
         chain, /*is_production_group=*/true, /*injection_phase=*/Phase::OIL);
 
     const Scalar target = this->applyReductionsAndFractions_(chain,
@@ -515,6 +515,82 @@ getInjectionGuideTargetMode(Phase injection_phase) const
     }
 }
 
+template<typename Scalar, typename IndexTraits>
+std::pair<Scalar, Group::ProductionCMode>
+GroupStateHelper<Scalar, IndexTraits>::
+getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
+                                      const Group& group,
+                                      const std::vector<Scalar>& resv_coeff,
+                                      Scalar efficiencyFactor) const
+{
+    const Group::ProductionCMode& currentGroupControl
+        = this->groupState().production_control(group.name());
+    if (currentGroupControl == Group::ProductionCMode::FLD ||
+        currentGroupControl == Group::ProductionCMode::NONE) {
+        if (!group.productionGroupControlAvailable()) {
+            return std::make_pair(1.0, currentGroupControl);
+        } else {
+            // Produce share of parents control
+            const auto& parent = this->schedule_.getGroup(group.parent(), this->report_step_);
+            efficiencyFactor *= group.getGroupEfficiencyFactor();
+            return this->getAutoChokeGroupProductionTargetRate(bottom_group, parent,
+                                                               resv_coeff, efficiencyFactor);
+        }
+    }
+
+    if (!group.isProductionGroup()) {
+        return std::make_pair(1.0, currentGroupControl);
+    }
+
+    // If we are here, we are at the topmost group to be visited in the recursion.
+    // This is the group containing the control we will check against.
+
+    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
+                                                                    resv_coeff,
+                                                                    group};
+
+    GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc(this->schedule_,
+                                                                      *this,
+                                                                      this->summary_state_,
+                                                                      this->report_step_,
+                                                                      &this->guide_rate_,
+                                                                      tcalc.guideTargetMode(),
+                                                                      true,
+                                                                      Phase::OIL);
+
+    auto localFraction = [&](const std::string& child) {
+        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
+    };
+
+    auto localReduction = [&](const std::string& group_name) {
+        const std::vector<Scalar>& groupTargetReductions
+            = this->groupState().production_reduction_rates(group_name);
+        return tcalc.calcModeRateFromRates(groupTargetReductions);
+    };
+
+    const Scalar orig_target = tcalc.groupTarget();
+    const auto chain = this->groupChainTopBot(bottom_group.name(), group.name());
+    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
+        chain, /*is_production_group=*/true, Phase::OIL);
+
+    // Delegate to applyReductionsAndFractions_ with no addback.  Addback is not
+    // needed because autochoke wells are excluded from reductions via the
+    // !group.as_choke() check in updateGroupTargetReductionRecursive_().
+    const Scalar target = this->applyReductionsAndFractions_(chain,
+                                                              orig_target,
+                                                              /*current_rate_available=*/Scalar(0.0),
+                                                              local_reduction_level,
+                                                              /*is_production_group=*/true,
+                                                              /*injection_phase=*/Phase::OIL,
+                                                              localReduction,
+                                                              localFraction,
+                                                              /*do_addback=*/false);
+    // Avoid negative target rates coming from too large local reductions.
+    const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
+
+    return std::make_pair(target_rate, currentGroupControl);
+}
+
 template <typename Scalar, typename IndexTraits>
 std::vector<Scalar>
 GroupStateHelper<Scalar, IndexTraits>::
@@ -615,7 +691,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
     const Scalar current_rate_available = tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
 
-    const std::size_t local_reduction_level = this->getLocalReductionLevel(
+    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
         chain, /*is_production_group=*/false, injection_phase);
 
     // Add-back is only performed when the well is under individual control (not GRUP)
@@ -711,7 +787,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
     const Scalar current_rate_available = -tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
 
-    const std::size_t local_reduction_level = this->getLocalReductionLevel(
+    const std::size_t local_reduction_level = this->getLocalReductionLevel_(
         chain, /*is_production_group=*/true, /*injection_phase=*/Phase::OIL);
 
     // Add-back is only performed when the well is under individual control (not GRUP)
@@ -1540,7 +1616,7 @@ GroupStateHelper<Scalar, IndexTraits>::getGuideRateVector_(const std::vector<Sca
 
 template <typename Scalar, typename IndexTraits>
 std::size_t
-GroupStateHelper<Scalar, IndexTraits>::getLocalReductionLevel(const std::vector<std::string>& chain,
+GroupStateHelper<Scalar, IndexTraits>::getLocalReductionLevel_(const std::vector<std::string>& chain,
                                                                const bool is_production_group,
                                                                const Phase injection_phase) const
 {
@@ -1630,14 +1706,14 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
 
     // Calculate target rate for this auto choke group using a guide rate ratio
     // formula. This is an approximation that ignores intermediate reductions.
-    // A more accurate calculation would use WellGroupControls::getAutoChokeGroupProductionTargetRate(),
+    // A more accurate calculation would use getAutoChokeGroupProductionTargetRate(),
     // but that requires reduction rates not yet available during
     // updateGroupControlledWells() (circular dependency). The efficiency factor is however accounted for
     // below meaning that the current target rate will be correct for the special case where the control
     // group has no reductions and the auto choke group is a direct child of the control group.
     // TODO: The issue with missing handling of reductions should be fixed by refactoring the auto choke
     // target calculation below to use the more accurate
-    // WellGroupControls::getAutoChokeGroupProductionTargetRate() function.
+    // getAutoChokeGroupProductionTargetRate() function.
     const auto num_phases = this->numPhases();
     std::vector<Scalar> resv_coeff(num_phases, 1.0);
     GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
