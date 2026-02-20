@@ -167,7 +167,7 @@ outputRestart(data::Solution& sol)
         DataEntry{"MECHPOTF", UnitSystem::measure::pressure, &potentialForce_},
         DataEntry{"PRESPOTF", UnitSystem::measure::pressure, &potentialPressForce_},
         DataEntry{"STRAIN",   UnitSystem::measure::identity, &strain_},
-        DataEntry{"STRESS",   UnitSystem::measure::length,   &stress_},
+        DataEntry{"STRESS",   UnitSystem::measure::pressure,   &stress_},
         DataEntry{"TEMPPOTF", UnitSystem::measure::pressure, &potentialTempForce_},
     };
 
