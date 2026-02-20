@@ -256,28 +256,20 @@ public:
         mergeWellResiduals();
     }
 
-    const WellVector& getMergedWellResidual() const
-    {
-        return mergedWellResidual_;
-    }
+    WellVector& getMergedWellResidual() { return mergedWellResidual_; }
+    const WellVector& getMergedWellResidual() const { return mergedWellResidual_; }
 
-    const std::vector<int>& getWellDofOffsets() const
-    {
-        return wellDofOffsets_;
-    }
+    std::vector<int>& getWellDofOffsets() { return wellDofOffsets_; }
+    const std::vector<int>& getWellDofOffsets() const { return wellDofOffsets_; }
 
-    const WRMatrix& getMergedB() const
-    {
-        return mergedB_;
-    }
-    const RWMatrix& getMergedC() const
-    {
-        return mergedC_;
-    }
-    const WWMatrix& getMergedD() const
-    {
-        return mergedD_;
-    }
+    WRMatrix& getMergedB() { return mergedB_; }
+    const WRMatrix& getMergedB() const { return mergedB_; }
+
+    RWMatrix& getMergedC() { return mergedC_; }
+    const RWMatrix& getMergedC() const { return mergedC_; }
+
+    WWMatrix& getMergedD() { return mergedD_; }
+    const WWMatrix& getMergedD() const { return mergedD_; }
 
     int getWellIndexForCell(int cellIndex) const
     {
@@ -297,18 +289,6 @@ public:
             }
         }
         return notFound;
-    }
-
-    SystemMatrix createSystemMatrix(const RRMatrix& A) const
-    {
-        constexpr auto _0 = Dune::Indices::_0;
-        constexpr auto _1 = Dune::Indices::_1;
-        SystemMatrix S;
-        S[_0][_0] = A;
-        S[_0][_1] = mergedC_;
-        S[_1][_0] = mergedB_;
-        S[_1][_1] = mergedD_;
-        return S;
     }
 
 private:
