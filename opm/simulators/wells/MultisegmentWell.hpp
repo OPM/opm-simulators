@@ -120,7 +120,7 @@ namespace Opm {
                                                    WellStateType& well_state) override;
 
         void updateWellStateFromSystemSolution(const Simulator& simulator,
-                                               const Opm::WellVector& mergedWellSolution,
+                                               const Opm::WellVectorT<Scalar>& mergedWellSolution,
                                                int wellDofOffset,
                                                int nWellDofs,
                                                const GroupStateHelperType& groupStateHelper,

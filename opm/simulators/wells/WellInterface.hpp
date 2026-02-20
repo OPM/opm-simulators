@@ -218,7 +218,7 @@ public:
     /// Update well state directly from the well solution obtained
     /// by the coupled system solver (no D^-1 recovery needed).
     virtual void updateWellStateFromSystemSolution(const Simulator& simulator,
-                                                   const Opm::WellVector& mergedWellSolution,
+                                                   const Opm::WellVectorT<Scalar>& mergedWellSolution,
                                                    int wellDofOffset,
                                                    int nWellDofs,
                                                    const GroupStateHelperType& groupStateHelper,

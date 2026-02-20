@@ -23,15 +23,21 @@ namespace Opm
 inline constexpr int numResDofs = 3;
 inline constexpr int numWellDofs = 4;
 
-using RRMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, numResDofs, numResDofs>>;
-using RWMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, numResDofs, numWellDofs>>;
-using WRMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, numWellDofs, numResDofs>>;
-using WWMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, numWellDofs, numWellDofs>>;
+template<typename Scalar>
+using RRMatrixT = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, numResDofs, numResDofs>>;
+template<typename Scalar>
+using RWMatrixT = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+template<typename Scalar>
+using WRMatrixT = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+template<typename Scalar>
+using WWMatrixT = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
 
-using ResVector = Dune::BlockVector<Dune::FieldVector<double, numResDofs>>;
-using WellVector = Dune::BlockVector<Dune::FieldVector<double, numWellDofs>>;
-
-using SystemVector = Dune::MultiTypeBlockVector<ResVector, WellVector>;
+template<typename Scalar>
+using ResVectorT = Dune::BlockVector<Dune::FieldVector<Scalar, numResDofs>>;
+template<typename Scalar>
+using WellVectorT = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+template<typename Scalar>
+using SystemVectorT = Dune::MultiTypeBlockVector<ResVectorT<Scalar>, WellVectorT<Scalar>>;
 
 // --------------------------------------------------------------------------
 // SystemMatrix: a lightweight read-only view over a 2×2 block-matrix
@@ -44,45 +50,45 @@ using SystemVector = Dune::MultiTypeBlockVector<ResVector, WellVector>;
 // sub-block access via the index syntax  S[_0][_0]  used by
 // SystemPreconditioner.
 // --------------------------------------------------------------------------
+template<typename Scalar> struct SystemMatrixRow0T;  // forward
+template<typename Scalar> struct SystemMatrixRow1T;
 
-struct SystemMatrixRow0;   // forward
-struct SystemMatrixRow1;
-
-class SystemMatrix
+template<typename Scalar>
+class SystemMatrixT
 {
 public:
-    using size_type = std::size_t;
-    using field_type = double;
+    using size_type  = std::size_t;
+    using field_type = Scalar;
 
     static constexpr size_type N() { return 2; }
     static constexpr size_type M() { return 2; }
 
     // Block pointers — set directly by the owning solver.
-    const RRMatrix* A = nullptr;   // (0,0) reservoir
-    const RWMatrix* C = nullptr;   // (0,1) reservoir–well coupling
-    const WRMatrix* B = nullptr;   // (1,0) well–reservoir coupling
-    const WWMatrix* D = nullptr;   // (1,1) well
+    const RRMatrixT<Scalar>* A = nullptr;  // (0,0) reservoir
+    const RWMatrixT<Scalar>* C = nullptr;  // (0,1) reservoir–well coupling
+    const WRMatrixT<Scalar>* B = nullptr;  // (1,0) well–reservoir coupling
+    const WWMatrixT<Scalar>* D = nullptr;  // (1,1) well
 
     // Sub-block access: S[_0][_0], S[_0][_1], S[_1][_0], S[_1][_1]
-    inline SystemMatrixRow0 operator[](Dune::index_constant<0>) const;
-    inline SystemMatrixRow1 operator[](Dune::index_constant<1>) const;
+    inline SystemMatrixRow0T<Scalar> operator[](Dune::index_constant<0>) const;
+    inline SystemMatrixRow1T<Scalar> operator[](Dune::index_constant<1>) const;
 
     // Matrix-vector products required by Dune linear operators.
-    void mv(const SystemVector& x, SystemVector& y) const
+    void mv(const SystemVectorT<Scalar>& x, SystemVectorT<Scalar>& y) const
     {
         using namespace Dune::Indices;
         A->mv (x[_0], y[_0]);   C->umv(x[_1], y[_0]);
         B->mv (x[_0], y[_1]);   D->umv(x[_1], y[_1]);
     }
 
-    void umv(const SystemVector& x, SystemVector& y) const
+    void umv(const SystemVectorT<Scalar>& x, SystemVectorT<Scalar>& y) const
     {
         using namespace Dune::Indices;
         A->umv(x[_0], y[_0]);   C->umv(x[_1], y[_0]);
         B->umv(x[_0], y[_1]);   D->umv(x[_1], y[_1]);
     }
 
-    void usmv(field_type alpha, const SystemVector& x, SystemVector& y) const
+    void usmv(field_type alpha, const SystemVectorT<Scalar>& x, SystemVectorT<Scalar>& y) const
     {
         using namespace Dune::Indices;
         A->usmv(alpha, x[_0], y[_0]);   C->usmv(alpha, x[_1], y[_0]);
@@ -91,26 +97,30 @@ public:
 };
 
 // Row proxies for  S[row][col]  — simple aggregates, no back-pointers.
-struct SystemMatrixRow0
+template<typename Scalar>
+struct SystemMatrixRow0T
 {
-    const RRMatrix& A;
-    const RWMatrix& C;
-    const RRMatrix& operator[](Dune::index_constant<0>) const { return A; }
-    const RWMatrix& operator[](Dune::index_constant<1>) const { return C; }
+    const RRMatrixT<Scalar>& A;
+    const RWMatrixT<Scalar>& C;
+    const RRMatrixT<Scalar>& operator[](Dune::index_constant<0>) const { return A; }
+    const RWMatrixT<Scalar>& operator[](Dune::index_constant<1>) const { return C; }
 };
 
-struct SystemMatrixRow1
+template<typename Scalar>
+struct SystemMatrixRow1T
 {
-    const WRMatrix& B;
-    const WWMatrix& D;
-    const WRMatrix& operator[](Dune::index_constant<0>) const { return B; }
-    const WWMatrix& operator[](Dune::index_constant<1>) const { return D; }
+    const WRMatrixT<Scalar>& B;
+    const WWMatrixT<Scalar>& D;
+    const WRMatrixT<Scalar>& operator[](Dune::index_constant<0>) const { return B; }
+    const WWMatrixT<Scalar>& operator[](Dune::index_constant<1>) const { return D; }
 };
 
-inline SystemMatrixRow0 SystemMatrix::operator[](Dune::index_constant<0>) const
+template<typename Scalar>
+SystemMatrixRow0T<Scalar> SystemMatrixT<Scalar>::operator[](Dune::index_constant<0>) const
 { return {*A, *C}; }
 
-inline SystemMatrixRow1 SystemMatrix::operator[](Dune::index_constant<1>) const
+template<typename Scalar>
+SystemMatrixRow1T<Scalar> SystemMatrixT<Scalar>::operator[](Dune::index_constant<1>) const
 { return {*B, *D}; }
 
 } // namespace Opm

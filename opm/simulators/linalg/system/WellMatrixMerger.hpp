@@ -17,9 +17,10 @@ countRowEntries(const Row& row)
     return std::distance(row.begin(), row.end());
 }
 
-inline void
-mergeWRMatrices(const std::vector<WRMatrix>& matrices,
-                WRMatrix& mergedMatrix,
+template<typename Scalar>
+void
+mergeWRMatrices(const std::vector<WRMatrixT<Scalar>>& matrices,
+                WRMatrixT<Scalar>& mergedMatrix,
                 const std::vector<std::vector<int>>& wellIndices,
                 int numResDof)
 {
@@ -34,7 +35,7 @@ mergeWRMatrices(const std::vector<WRMatrix>& matrices,
     }
 
     mergedMatrix.setSize(totalRows, numCols);
-    mergedMatrix.setBuildMode(WRMatrix::random);
+    mergedMatrix.setBuildMode(WRMatrixT<Scalar>::random);
 
     int rowOffset = 0;
     for (const auto& matrix : matrices) {
@@ -76,9 +77,10 @@ mergeWRMatrices(const std::vector<WRMatrix>& matrices,
     }
 }
 
-inline void
-mergeRWMatrices(const std::vector<RWMatrix>& matrices,
-                RWMatrix& mergedMatrix,
+template<typename Scalar>
+void
+mergeRWMatrices(const std::vector<RWMatrixT<Scalar>>& matrices,
+                RWMatrixT<Scalar>& mergedMatrix,
                 const std::vector<std::vector<int>>& wellIndices,
                 int numResDof)
 {
@@ -97,7 +99,7 @@ mergeRWMatrices(const std::vector<RWMatrix>& matrices,
 
     // Set up the merged matrix with random build mode (required for setrowsize)
     mergedMatrix.setSize(numRows, totalCols);
-    mergedMatrix.setBuildMode(RWMatrix::random);
+    mergedMatrix.setBuildMode(RWMatrixT<Scalar>::random);
 
     // Phase 1: Set row sizes
     std::vector<int> row_sizes(numRows, 0);
@@ -142,8 +144,9 @@ mergeRWMatrices(const std::vector<RWMatrix>& matrices,
 }
 
 // Create diagonal block matrix from D matrices (well-to-well)
-inline void
-createDiagonalBlockMatrix(const std::vector<WWMatrix>& matrices, WWMatrix& mergedMatrix)
+template<typename Scalar>
+void
+createDiagonalBlockMatrix(const std::vector<WWMatrixT<Scalar>>& matrices, WWMatrixT<Scalar>& mergedMatrix)
 {
     if (matrices.empty()) {
         return;
@@ -156,7 +159,7 @@ createDiagonalBlockMatrix(const std::vector<WWMatrix>& matrices, WWMatrix& merge
 
     // Set up the merged matrix with random build mode (required for setrowsize)
     mergedMatrix.setSize(totalSize, totalSize);
-    mergedMatrix.setBuildMode(WWMatrix::random);
+    mergedMatrix.setBuildMode(WWMatrixT<Scalar>::random);
 
     // Helper struct to find which original matrix a row belongs to
     struct MatrixLocation {
@@ -217,6 +220,7 @@ createDiagonalBlockMatrix(const std::vector<WWMatrix>& matrices, WWMatrix& merge
 }
 
 // Class to handle well matrix merging
+template<typename Scalar>
 class WellMatrixMerger
 {
 public:
@@ -225,13 +229,13 @@ public:
     {
     }
 
-    void addWell(const WRMatrix& B,
-                 const RWMatrix& C,
-                 const WWMatrix& D,
+    void addWell(const WRMatrixT<Scalar>& B,
+                 const RWMatrixT<Scalar>& C,
+                 const WWMatrixT<Scalar>& D,
                  const std::vector<int>& cellIndices,
                  int wellIndex,
                  const std::string& wellName,
-                 const WellVector& residual)
+                 const WellVectorT<Scalar>& residual)
     {
         B_matrices_.push_back(B);
         C_matrices_.push_back(C);
@@ -250,26 +254,26 @@ public:
     // Finalize the merger by creating the merged matrices and residual
     void finalize()
     {
-        mergeWRMatrices(B_matrices_, mergedB_, wellCells_, numResDof_);
-        mergeRWMatrices(C_matrices_, mergedC_, wellCells_, numResDof_);
-        createDiagonalBlockMatrix(D_matrices_, mergedD_);
+        mergeWRMatrices<Scalar>(B_matrices_, mergedB_, wellCells_, numResDof_);
+        mergeRWMatrices<Scalar>(C_matrices_, mergedC_, wellCells_, numResDof_);
+        createDiagonalBlockMatrix<Scalar>(D_matrices_, mergedD_);
         mergeWellResiduals();
     }
 
-    WellVector& getMergedWellResidual() { return mergedWellResidual_; }
-    const WellVector& getMergedWellResidual() const { return mergedWellResidual_; }
+    WellVectorT<Scalar>& getMergedWellResidual() { return mergedWellResidual_; }
+    const WellVectorT<Scalar>& getMergedWellResidual() const { return mergedWellResidual_; }
 
     std::vector<int>& getWellDofOffsets() { return wellDofOffsets_; }
     const std::vector<int>& getWellDofOffsets() const { return wellDofOffsets_; }
 
-    WRMatrix& getMergedB() { return mergedB_; }
-    const WRMatrix& getMergedB() const { return mergedB_; }
+    WRMatrixT<Scalar>& getMergedB() { return mergedB_; }
+    const WRMatrixT<Scalar>& getMergedB() const { return mergedB_; }
 
-    RWMatrix& getMergedC() { return mergedC_; }
-    const RWMatrix& getMergedC() const { return mergedC_; }
+    RWMatrixT<Scalar>& getMergedC() { return mergedC_; }
+    const RWMatrixT<Scalar>& getMergedC() const { return mergedC_; }
 
-    WWMatrix& getMergedD() { return mergedD_; }
-    const WWMatrix& getMergedD() const { return mergedD_; }
+    WWMatrixT<Scalar>& getMergedD() { return mergedD_; }
+    const WWMatrixT<Scalar>& getMergedD() const { return mergedD_; }
 
     int getWellIndexForCell(int cellIndex) const
     {
@@ -294,15 +298,15 @@ public:
 private:
     void mergeWellResiduals()
     {
-        int totalSize = 0;
+        std::size_t totalSize = 0;
         wellDofOffsets_.clear();
         wellDofOffsets_.push_back(0);
         for (const auto& res : well_residuals_) {
             totalSize += res.N();
-            wellDofOffsets_.push_back(totalSize);
+            wellDofOffsets_.push_back(static_cast<int>(totalSize));
         }
         mergedWellResidual_.resize(totalSize);
-        int offset = 0;
+        std::size_t offset = 0;
         for (const auto& res : well_residuals_) {
             for (std::size_t i = 0; i < res.N(); ++i) {
                 mergedWellResidual_[offset + i] = res[i];
@@ -312,19 +316,19 @@ private:
     }
 
     int numResDof_;
-    std::vector<WRMatrix> B_matrices_;
-    std::vector<RWMatrix> C_matrices_;
-    std::vector<WWMatrix> D_matrices_;
-    std::vector<WellVector> well_residuals_;
+    std::vector<WRMatrixT<Scalar>> B_matrices_;
+    std::vector<RWMatrixT<Scalar>> C_matrices_;
+    std::vector<WWMatrixT<Scalar>> D_matrices_;
+    std::vector<WellVectorT<Scalar>> well_residuals_;
     std::vector<int> wellIndices_;
     std::vector<std::vector<int>> wellCells_;
     std::vector<std::string> wellNames_;
     std::map<int, int> cellToWellMap_;
 
-    WRMatrix mergedB_;
-    RWMatrix mergedC_;
-    WWMatrix mergedD_;
-    WellVector mergedWellResidual_;
+    WRMatrixT<Scalar> mergedB_;
+    RWMatrixT<Scalar> mergedC_;
+    WWMatrixT<Scalar> mergedD_;
+    WellVectorT<Scalar> mergedWellResidual_;
     std::vector<int> wellDofOffsets_;
 };
 
