@@ -306,7 +306,7 @@ public:
         ParentType::finishInit();
 
         minActivityCoeff_.resize(this->numGridDof());
-        std::fill(minActivityCoeff_.begin(), minActivityCoeff_.end(), 1.0);
+        std::ranges::fill(minActivityCoeff_, 1.0);
     }
 
     void adaptGrid()

@@ -150,7 +150,7 @@ colorVerticesWelshPowell(const Graph& graph)
 
     // Overwrite degree with color
     auto& colors = degrees;
-    std::fill(colors.begin(), colors.end(), -1);
+    std::ranges::fill(colors, -1);
 
     int color = 0;
     std::vector<std::size_t> verticesPerColor;

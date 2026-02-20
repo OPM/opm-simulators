@@ -84,8 +84,8 @@ void MultisegmentWellContribution<Scalar>::apply(Scalar* h_x, Scalar* h_y)
 {
     OPM_TIMEBLOCK(apply);
     // reset z1 and z2
-    std::fill(z1.begin(), z1.end(), 0.0);
-    std::fill(z2.begin(), z2.end(), 0.0);
+    std::ranges::fill(z1, 0.0);
+    std::ranges::fill(z2, 0.0);
 
     // z1 = B * x
     for (unsigned int row = 0; row < Mb; ++row) {

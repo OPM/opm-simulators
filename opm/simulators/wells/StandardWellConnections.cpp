@@ -405,7 +405,7 @@ initialiseConnectionMixture(const int                  num_quantities,
         componentMixture[num_quantities - 1] = Scalar{1};
     }
     else {
-        std::fill(componentMixture.begin(), componentMixture.end(), Scalar{0});
+        std::ranges::fill(componentMixture, Scalar{0});
 
         // No flow => use fractions defined at well level for componentMixture.
         if ( (this->well_.isInjector() || (perf == 0)) &&  preferredPhaseIdx.has_value()) {

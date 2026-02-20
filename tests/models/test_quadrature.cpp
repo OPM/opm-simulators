@@ -283,7 +283,7 @@ void testQuadrature()
 
     std::array<int, dim> cellRes;
 
-    std::fill(cellRes.begin(), cellRes.end(), 10);
+    std::ranges::fill(cellRes, 10);
 
     GlobalPosition upperRight(1.0);
 

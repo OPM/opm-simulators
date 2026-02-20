@@ -910,11 +910,11 @@ void
 MultisegmentWellSegments<FluidSystem, Indices>::
 PhaseCalcResult::clear()
 {
-    std::fill(b.begin(), b.end(), 0.0);
-    std::fill(mix.begin(), mix.end(), 0.0);
-    std::fill(mix_s.begin(), mix_s.end(), 0.0);
-    std::fill(phase_viscosities.begin(), phase_viscosities.end(), 0.0);
-    std::fill(phase_densities.begin(), phase_densities.end(), 0.0);
+    std::ranges::fill(b, 0.0);
+    std::ranges::fill(mix, 0.0);
+    std::ranges::fill(mix_s, 0.0);
+    std::ranges::fill(phase_viscosities, 0.0);
+    std::ranges::fill(phase_densities, 0.0);
     vol_ratio = 0.0;
 }
 

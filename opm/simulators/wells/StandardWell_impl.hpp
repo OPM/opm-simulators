@@ -835,8 +835,8 @@ namespace Opm
         // TODO: not handling solvent related here for now
 
         // initialize all the values to be zero to begin with
-        std::fill(this->ipr_a_.begin(), this->ipr_a_.end(), 0.);
-        std::fill(this->ipr_b_.begin(), this->ipr_b_.end(), 0.);
+        std::ranges::fill(this->ipr_a_, 0.0);
+        std::ranges::fill(this->ipr_b_, 0.0);
 
         for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             std::vector<Scalar> mob(this->num_conservation_quantities_, 0.0);
@@ -955,8 +955,8 @@ namespace Opm
             */
         }
 
-        std::fill(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), 0.);
-        std::fill(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), 0.);
+        std::ranges::fill(ws.implicit_ipr_a, 0.0);
+        std::ranges::fill(ws.implicit_ipr_b, 0.0);
 
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);

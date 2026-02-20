@@ -82,7 +82,7 @@ bool RSTConv::hasConv() const
 
 void RSTConv::prepareConv()
 {
-    std::fill(conv_new_.begin(), conv_new_.end(), 1);
+    std::ranges::fill(conv_new_, 1);
 }
 
 void RSTConv::updateNewton(const std::vector<int>& convNewt)

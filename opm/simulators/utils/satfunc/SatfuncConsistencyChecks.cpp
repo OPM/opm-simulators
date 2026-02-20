@@ -293,9 +293,7 @@ buildStructure(ViolationSample& violation)
     violation.checkValues.resize(this->startCheckValues_.back());
 
     if constexpr (std::numeric_limits<Scalar>::has_quiet_NaN) {
-        std::fill(violation.checkValues.begin(),
-                  violation.checkValues.end(),
-                  std::numeric_limits<Scalar>::quiet_NaN());
+        std::ranges::fill(violation.checkValues, std::numeric_limits<Scalar>::quiet_NaN());
     }
 }
 

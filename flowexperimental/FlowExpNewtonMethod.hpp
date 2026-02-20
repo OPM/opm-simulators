@@ -155,7 +155,7 @@ public:
         // the solution's residual
         this->error_ = 0.0;
         Dune::FieldVector<Scalar, numEq> componentSumError;
-        std::fill(componentSumError.begin(), componentSumError.end(), 0.0);
+        std::ranges::fill(componentSumError, 0.0);
         Scalar sumPv = 0.0;
         errorPvFraction_ = 0.0;
         const Scalar dt = this->simulator_.timeStepSize();

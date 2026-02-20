@@ -553,7 +553,7 @@ prepareStoringSolutionUpdate()
         solUpd_[globalElemIdx] = simulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
         // Ensure each element is zero
-        std::fill(solUpd_[globalElemIdx].begin(), solUpd_[globalElemIdx].end(), 0.0);
+        std::ranges::fill(solUpd_[globalElemIdx], 0.0);
     }
 }
 

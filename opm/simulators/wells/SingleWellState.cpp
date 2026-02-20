@@ -98,12 +98,12 @@ void SingleWellState<Scalar, IndexTraits>::shut()
     this->bhp = 0;
     this->thp = 0;
     this->status = Well::Status::SHUT;
-    std::fill(this->surface_rates.begin(), this->surface_rates.end(), 0);
-    std::fill(this->prev_surface_rates.begin(), this->prev_surface_rates.end(), 0);
-    std::fill(this->reservoir_rates.begin(), this->reservoir_rates.end(), 0);
-    std::fill(this->productivity_index.begin(), this->productivity_index.end(), 0);
-    std::fill(this->implicit_ipr_a.begin(), this->implicit_ipr_a.end(), 0);
-    std::fill(this->implicit_ipr_b.begin(), this->implicit_ipr_b.end(), 0);
+    std::ranges::fill(this->surface_rates, 0);
+    std::ranges::fill(this->prev_surface_rates, 0);
+    std::ranges::fill(this->reservoir_rates, 0);
+    std::ranges::fill(this->productivity_index, 0);
+    std::ranges::fill(this->implicit_ipr_a, 0);
+    std::ranges::fill(this->implicit_ipr_b, 0);
 
     auto& connpi = this->perf_data.prod_index;
     connpi.assign(connpi.size(), 0);
@@ -261,7 +261,7 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
         return;
     }
 
-    std::fill(this->surface_rates.begin(), this->surface_rates.end(), 0.0);
+    std::ranges::fill(this->surface_rates, 0.0);
     switch (prod_controls.cmode) {
     case Well::ProducerCMode::ORAT:
         assert(pu.phaseIsActive(oilPhaseIdx));
