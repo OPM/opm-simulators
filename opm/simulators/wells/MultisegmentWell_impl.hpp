@@ -2327,7 +2327,7 @@ namespace Opm
         std::vector<Scalar> retval(num_seg * num_eq);
         for (int ii = 0; ii < num_seg; ++ii) {
             const auto& pv = this->primary_variables_.value(ii);
-            std::copy(pv.begin(), pv.end(), retval.begin() + ii * num_eq);
+            std::ranges::copy(pv, retval.begin() + ii * num_eq);
         }
         return retval;
     }

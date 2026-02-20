@@ -249,9 +249,8 @@ copyGlobalToLocal(const std::vector<Scalar>& global,
                 local[local_index++] = global[global_index++];
         }
     }
-    else
-    {
-        std::copy(global.begin(), global.end(), local.begin());
+    else {
+        std::ranges::copy(global, local.begin());
     }
 }
 

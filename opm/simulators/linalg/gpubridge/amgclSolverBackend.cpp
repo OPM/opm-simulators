@@ -402,7 +402,7 @@ void amgclSolverBackend<Scalar,block_size>::get_result(Scalar* x_)
 {
     Timer t;
 
-    std::copy(x.begin(), x.end(), x_);
+    std::ranges::copy(x, x_);
 
     if (verbosity >= 3) {
         std::ostringstream out;

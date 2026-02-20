@@ -1498,7 +1498,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
             } else {
                 const auto& input = eclipseState.fieldProps().get_double("SWATINIT");
                 swatInit_.resize(input.size());
-                std::copy(input.begin(), input.end(), swatInit_.begin());
+                std::ranges::copy(input, swatInit_.begin());
             }
         }
     }
@@ -1527,7 +1527,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
         } else {
             std::vector<Scalar> output;
             output.resize(input.size());
-            std::copy(input.begin(), input.end(), output.begin());
+            std::ranges::copy(input, output.begin());
             return output;
         }
     };

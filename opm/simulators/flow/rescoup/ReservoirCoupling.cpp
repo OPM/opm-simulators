@@ -81,7 +81,7 @@ std::pair<std::vector<char>, std::size_t> serializeStrings(const std::vector<std
     std::size_t total_size = 0;
     std::vector<char> serialized_data;
     for (const auto& str: data) {
-        std::copy(str.begin(), str.end(), std::back_inserter(serialized_data));
+        std::ranges::copy(str, std::back_inserter(serialized_data));
         serialized_data.push_back('\0');
         total_size += str.size() + 1;
     }

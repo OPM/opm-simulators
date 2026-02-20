@@ -572,7 +572,7 @@ storeSolutionUpdate(const BVector& dx)
         assert(value.size() == update.size());
 
         // Transfer update from dx to solution update container (SolutionVector type)
-        std::copy(update.begin(), update.end(), value.begin());
+        std::ranges::copy(update, value.begin());
     }
 }
 
