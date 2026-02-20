@@ -2423,7 +2423,7 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
                 return std::atan2(a[1] - cy, a[0] - cx) < std::atan2(b[1] - cy, b[0] - cx);
             };
 
-            std::sort(intersectionPoints.begin(), intersectionPoints.end(), angleCompare);
+            std::ranges::sort(intersectionPoints, angleCompare);
 
             return polygonArea(intersectionPoints);
 

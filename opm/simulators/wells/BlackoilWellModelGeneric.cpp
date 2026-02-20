@@ -1784,8 +1784,7 @@ getMaxWellConnections() const
         }
 
         // also include wells with no perforations in case
-        std::sort(compressed_well_perforations.begin(),
-                  compressed_well_perforations.end());
+        std::ranges::sort(compressed_well_perforations);
     }
 
     return wellConnections;

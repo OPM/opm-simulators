@@ -262,7 +262,7 @@ void ZoltanPartitioner::connectNeighbors(std::vector<int>& cells,
 
     // Sort final result for faster processing in later steps
     cells.assign(visited.begin(), visited.end());
-    std::sort(cells.begin(), cells.end());
+    std::ranges::sort(cells);
 }
 
 template <class GridView, class Element>

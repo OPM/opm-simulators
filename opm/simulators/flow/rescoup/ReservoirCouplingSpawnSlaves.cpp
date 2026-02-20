@@ -106,13 +106,9 @@ createMasterGroupNameOrder_()
             }
         }
         // Sort the vector based on the slave group names in lexicographical order
-        std::sort(
-            slave_group_names.begin(),
-            slave_group_names.end(),
-            [](const auto &lhs, const auto &rhs) {
-                return lhs.second < rhs.second;
-            }
-        );
+        std::ranges::sort(slave_group_names,
+                          [](const auto &lhs, const auto &rhs)
+                          { return lhs.second < rhs.second; });
         // Create a map from the master group name to the index in the vector
         // This is used to determine the order in which the slaves will send the potentials
         std::map<std::string, std::size_t> master_group_map;

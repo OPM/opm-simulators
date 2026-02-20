@@ -139,7 +139,7 @@ FlowsContainer(const Schedule& schedule,
                 }
             }
         }
-        std::sort(blockVelocityAllIds_.begin(), blockVelocityAllIds_.end());
+        std::ranges::sort(blockVelocityAllIds_);
         auto last = std::unique(blockVelocityAllIds_.begin(), blockVelocityAllIds_.end());
         blockVelocityAllIds_.erase(last, blockVelocityAllIds_.end());
     }
@@ -162,7 +162,7 @@ FlowsContainer(const Schedule& schedule,
                 }
             }
         }
-        std::sort(blockFlowsAllIds_.begin(), blockFlowsAllIds_.end());
+        std::ranges::sort(blockFlowsAllIds_);
         auto last = std::unique(blockFlowsAllIds_.begin(), blockFlowsAllIds_.end());
         blockFlowsAllIds_.erase(last, blockFlowsAllIds_.end());
     }

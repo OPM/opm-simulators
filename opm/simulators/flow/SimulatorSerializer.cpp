@@ -213,8 +213,8 @@ void SimulatorSerializer::checkSerializedCmdLine(const std::string& current,
 
     auto curr_strings = split_string(current, '\n');
     auto stored_strings = split_string(stored, '\n');
-    std::sort(curr_strings.begin(), curr_strings.end());
-    std::sort(stored_strings.begin(), stored_strings.end());
+    std::ranges::sort(curr_strings);
+    std::ranges::sort(stored_strings);
     curr_strings = filter_strings(curr_strings);
     stored_strings = filter_strings(stored_strings);
 

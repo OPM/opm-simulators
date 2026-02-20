@@ -867,7 +867,7 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
             sortedCartesianIdx_.push_back(cartMapper.cartesianIndex(idx));
         }
 
-        std::sort(sortedCartesianIdx_.begin(), sortedCartesianIdx_.end());
+        std::ranges::sort(sortedCartesianIdx_);
         localIdxToGlobalIdx_.resize(localGridView.size(0), -1);
 
         // the I/O rank receives from all other ranks

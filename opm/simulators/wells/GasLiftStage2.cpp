@@ -768,7 +768,7 @@ sortGradients_(std::vector<GradPair>& grads)
     auto cmp = [](GradPair a, GradPair b) {
          return a.second <  b.second;
     };
-    std::sort(grads.begin(), grads.end(), cmp);
+    std::ranges::sort(grads, cmp);
 }
 
 template<typename Scalar, typename IndexTraits>

@@ -37,7 +37,7 @@ namespace {
     {
         auto regs = regionNames;
 
-        std::sort(regs.begin(), regs.end());
+        std::ranges::sort(regs);
 
         return { regs.begin(), std::unique(regs.begin(), regs.end()) };
     }

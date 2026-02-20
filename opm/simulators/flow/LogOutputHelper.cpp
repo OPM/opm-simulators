@@ -65,7 +65,7 @@ void logUniqueFailedCells(const std::string& messageTag,
     }
 
     std::vector<int> sorted(cells);
-    std::sort(sorted.begin(), sorted.end());
+    std::ranges::sort(sorted);
     auto u = std::unique(sorted.begin(), sorted.end());
 
     const auto numFailed = static_cast<std::size_t>
