@@ -375,8 +375,7 @@ public:
 
         bool operator==(const BlockVectorWrapper& wrapper) const
         {
-            return std::equal(this->blockVector_.begin(), this->blockVector_.end(),
-                              wrapper.blockVector_.begin(), wrapper.blockVector_.end());
+            return std::ranges::equal(this->blockVector_, wrapper.blockVector_);
         }
 
         template<class Serializer>
@@ -1904,12 +1903,9 @@ public:
 
     bool operator==(const FvBaseDiscretization& rhs) const
     {
-        return std::equal(this->solution_.begin(), this->solution_.end(),
-                          rhs.solution_.begin(), rhs.solution_.end(),
-                          [](const auto& x, const auto& y)
-                          {
-                              return *x == *y;
-                          });
+        return std::ranges::equal(this->solution_, rhs.solution_,
+                                 [](const auto& x, const auto& y)
+                                 { return *x == *y; });
     }
 
 protected:

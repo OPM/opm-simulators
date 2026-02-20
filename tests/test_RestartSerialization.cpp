@@ -443,10 +443,7 @@ public:
             return false;
         }
         for (size_t i = 0; i < this->tracerConcentration_.size(); ++i) {
-            if (!std::equal(this->tracerConcentration_[i].begin(),
-                            this->tracerConcentration_[i].end(),
-                            rhs.tracerConcentration_[i].begin(),
-                            rhs.tracerConcentration_[i].end())) {
+            if (!std::ranges::equal(this->tracerConcentration_[i], rhs.tracerConcentration_[i])) {
                 return false;
             }
         }
