@@ -1004,15 +1004,15 @@ void WellState<Scalar, IndexTraits>::communicateGroupRates(const Parallel::Commu
     // Make a vector and collect all data into it.
     std::vector<Scalar> data(sz);
     auto pos = data.begin();
-    std::for_each(this->well_rates.begin(), this->well_rates.end(),
-                  [&pos](const auto& input)
-                  {
-                      const auto& [owner, rates] = input.second;
-                      if (owner) {
-                          std::copy(rates.begin(), rates.end(), pos);
-                      }
-                      pos += rates.size();
-                  });
+    std::ranges::for_each(this->well_rates,
+                          [&pos](const auto& input)
+                          {
+                              const auto& [owner, rates] = input.second;
+                              if (owner) {
+                                  std::copy(rates.begin(), rates.end(), pos);
+                              }
+                              pos += rates.size();
+                          });
 
     assert(pos == data.end());
 
@@ -1020,13 +1020,13 @@ void WellState<Scalar, IndexTraits>::communicateGroupRates(const Parallel::Commu
     comm.sum(data.data(), data.size());
 
     pos = data.begin();
-    std::for_each(this->well_rates.begin(), this->well_rates.end(),
-                  [&pos](auto& input)
-                  {
-                      auto& rates = input.second.second;
-                      std::copy(pos, pos + rates.size(), rates.begin());
-                      pos += rates.size();
-                  });
+    std::ranges::for_each(this->well_rates,
+                          [&pos](auto& input)
+                          {
+                              auto& rates = input.second.second;
+                              std::copy(pos, pos + rates.size(), rates.begin());
+                              pos += rates.size();
+                          });
     assert(pos == data.end());
 }
 

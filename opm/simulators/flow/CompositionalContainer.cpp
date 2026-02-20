@@ -73,10 +73,9 @@ assignGasFractions(const unsigned globalDofIdx,
         return;
     }
 
-    std::for_each(phaseMoleFractions_[gasPhaseIdx].begin(),
-                  phaseMoleFractions_[gasPhaseIdx].end(),
-                  [globalDofIdx, &fractions, c = 0](auto& comp) mutable
-                  { comp[globalDofIdx] = fractions(c++); });
+    std::ranges::for_each(phaseMoleFractions_[gasPhaseIdx],
+                          [globalDofIdx, &fractions, c = 0](auto& comp) mutable
+                          { comp[globalDofIdx] = fractions(c++); });
 }
 
 template<class FluidSystem>
@@ -88,9 +87,9 @@ assignMoleFractions(const unsigned globalDofIdx,
         return;
     }
 
-    std::for_each(moleFractions_.begin(), moleFractions_.end(),
-                  [&fractions, globalDofIdx, c = 0](auto& comp) mutable
-                  { comp[globalDofIdx] = fractions(c++); });
+    std::ranges::for_each(moleFractions_,
+                          [&fractions, globalDofIdx, c = 0](auto& comp) mutable
+                          { comp[globalDofIdx] = fractions(c++); });
 }
 
 template<class FluidSystem>
@@ -102,10 +101,9 @@ assignOilFractions(const unsigned globalDofIdx,
         return;
     }
 
-    std::for_each(phaseMoleFractions_[oilPhaseIdx].begin(),
-                  phaseMoleFractions_[oilPhaseIdx].end(),
-                  [globalDofIdx, &fractions, c = 0](auto& comp) mutable
-                  { comp[globalDofIdx] = fractions(c++); });
+    std::ranges::for_each(phaseMoleFractions_[oilPhaseIdx],
+                          [globalDofIdx, &fractions, c = 0](auto& comp) mutable
+                          { comp[globalDofIdx] = fractions(c++); });
 }
 
 template<class FluidSystem>
@@ -161,9 +159,9 @@ outputRestart(data::Solution& sol,
         entries.emplace_back("SOIL", UnitSystem::measure::identity, oil_saturation);
     }
 
-    std::for_each(entries.begin(), entries.end(),
-                  [&doInsert](auto& array)
-                  { doInsert(array, data::TargetType::RESTART_SOLUTION); });
+    std::ranges::for_each(entries,
+                          [&doInsert](auto& array)
+                          { doInsert(array, data::TargetType::RESTART_SOLUTION); });
 
     this->allocated_ = false;
 }

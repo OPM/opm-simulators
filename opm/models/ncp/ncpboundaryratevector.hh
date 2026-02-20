@@ -185,8 +185,8 @@ public:
         this->setFreeFlow(context, bfIdx, timeIdx, fluidState);
 
         // we only allow fluxes in the direction opposite to the outer unit normal
-        std::for_each(this->begin(), this->end(),
-                      [](auto& val) { val = Toolbox::min(Scalar{0.0}, val); });
+        std::ranges::for_each(*this,
+                              [](auto& val) { val = Toolbox::min(Scalar{0.0}, val); });
     }
 
     /*!
@@ -201,8 +201,8 @@ public:
         this->setFreeFlow(context, bfIdx, timeIdx, fluidState);
 
         // we only allow fluxes in the same direction as the outer unit normal
-        std::for_each(this->begin(), this->end(),
-                      [](auto& val) { val = Toolbox::max(Scalar{0.0}, val); });
+        std::ranges::for_each(*this,
+                              [](auto& val) { val = Toolbox::max(Scalar{0.0}, val); });
     }
 
     /*!

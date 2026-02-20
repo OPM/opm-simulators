@@ -561,22 +561,22 @@ void Opm::prepareResultOutputDirectory(const std::string&           baseName,
     });
 
     // Affect actual file removal.
-    std::for_each(fileRemovalList.begin(), fileRemovalList.end(),
-                  [](const fs::path& file)
-    {
-        auto ec = std::error_code{};
-        fs::remove(file, ec);
+    std::ranges::for_each(fileRemovalList,
+                          [](const fs::path& file)
+                          {
+                              auto ec = std::error_code{};
+                              fs::remove(file, ec);
 
-        if (ec) {
-            // Failed to remove the file for some reason.  Report condition
-            // to user, but don't do anything else.  Note: We print directly
-            // to 'cerr' here since we're typically called before the
-            // logging system is operational.
-            std::cerr << fmt::format("Failed to remove existing "
-                                     "result file '{}': {}\n",
-                                     file.string(), ec.message());
-        }
-    });
+                              if (ec) {
+                                  // Failed to remove the file for some reason.  Report condition
+                                  // to user, but don't do anything else.  Note: We print directly
+                                  // to 'cerr' here since we're typically called before the
+                                  // logging system is operational.
+                                  std::cerr << fmt::format("Failed to remove existing "
+                                                           "result file '{}': {}\n",
+                                                           file.string(), ec.message());
+                              }
+                          });
 }
 
 // Setup the OpmLog backends

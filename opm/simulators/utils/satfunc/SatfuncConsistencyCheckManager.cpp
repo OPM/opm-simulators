@@ -483,8 +483,7 @@ template <typename Body>
 void Opm::Satfunc::PhaseChecks::SatfuncConsistencyCheckManager<Scalar>::
 curveLoop(Body&& body)
 {
-    std::for_each(this->curves_.begin(), this->curves_.end(),
-                  std::forward<Body>(body));
+    std::ranges::for_each(this->curves_, std::forward<Body>(body));
 }
 
 template <typename Scalar>
@@ -492,8 +491,7 @@ template <typename Body>
 void Opm::Satfunc::PhaseChecks::SatfuncConsistencyCheckManager<Scalar>::
 curveLoop(Body&& body) const
 {
-    std::for_each(this->curves_.begin(), this->curves_.end(),
-                  std::forward<Body>(body));
+    std::ranges::for_each(this->curves_, std::forward<Body>(body));
 }
 
 // ===========================================================================

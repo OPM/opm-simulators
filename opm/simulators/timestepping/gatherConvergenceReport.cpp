@@ -154,9 +154,9 @@ namespace Opm
         const auto rankReports =
             CollectConvReports { packer, mpi_communicator }(local_report);
 
-        std::for_each(rankReports.begin(), rankReports.end(),
-                      [&combinedReport](const auto& rankReport)
-                      { combinedReport += rankReport; });
+        std::ranges::for_each(rankReports,
+                              [&combinedReport](const auto& rankReport)
+                              { combinedReport += rankReport; });
 
         return combinedReport;
     }

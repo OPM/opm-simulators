@@ -50,13 +50,13 @@ namespace {
             }
         }
 
-        std::for_each(partition.begin(), partition.end(),
-                      [Low = low, &compressed](auto& domain)
-                      {
-                         if (domain >= 0) {
-                             domain = compressed[domain - Low];
-                         }
-                      });
+        std::ranges::for_each(partition,
+                              [Low = low, &compressed](auto& domain)
+                              {
+                                  if (domain >= 0) {
+                                      domain = compressed[domain - Low];
+                                  }
+                              });
     }
 } // Anonymous namespace
 

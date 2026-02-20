@@ -1771,8 +1771,8 @@ public:
         const bool needFullContextUpdate =
             std::any_of(outputModules_.begin(), outputModules_.end(),
                         [](const auto& mod) { return mod->needExtensiveQuantities(); });
-        std::for_each(outputModules_.begin(), outputModules_.end(),
-                      [](auto& mod) { mod->allocBuffers(); });
+        std::ranges::for_each(outputModules_,
+                              [](auto& mod) { mod->allocBuffers(); });
 
         // iterate over grid
         ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView());
@@ -1797,8 +1797,8 @@ public:
                     elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 }
 
-                std::for_each(outputModules_.begin(), outputModules_.end(),
-                              [&elemCtx](auto& mod) { mod->processElement(elemCtx); });
+                std::ranges::for_each(outputModules_,
+                                      [&elemCtx](auto& mod) { mod->processElement(elemCtx); });
             }
         }
     }
@@ -1809,8 +1809,8 @@ public:
      */
     void appendOutputFields(BaseOutputWriter& writer) const
     {
-        std::for_each(outputModules_.begin(), outputModules_.end(),
-                      [&writer](auto& mod) { mod->commitBuffers(writer); });
+        std::ranges::for_each(outputModules_,
+                              [&writer](auto& mod) { mod->commitBuffers(writer); });
     }
 
     /*!

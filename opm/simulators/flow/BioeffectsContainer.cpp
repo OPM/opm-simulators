@@ -119,9 +119,9 @@ outputRestart(data::Solution& sol, const bool isMICP)
             DataEntry{"OXYGEN",  UnitSystem::measure::concentration,  cOxygen_},
             DataEntry{"UREA",    UnitSystem::measure::concentration,    cUrea_},
         };
-        std::for_each(solutionVectors.begin(), solutionVectors.end(),
-            [&insert](auto& entry)
-            { insert(entry); });
+        std::ranges::for_each(solutionVectors,
+                              [&insert](auto& entry)
+                              { insert(entry); });
     }
 
     allocated_ = false;
@@ -156,9 +156,9 @@ readRestart(const unsigned globalDofIdx,
             std::pair{"UREA",     &cUrea_},
             std::pair{"CALCITE",  &cCalcite_},
         };
-        std::for_each(fields.begin(), fields.end(),
-            [&assign](const auto& p)
-            { assign(p.first, *p.second); });
+        std::ranges::for_each(fields,
+                              [&assign](const auto& p)
+                              { assign(p.first, *p.second); });
     }
 }
 
