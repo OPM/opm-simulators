@@ -257,7 +257,7 @@ template <class T>
 void
 GpuSparseMatrixGeneric<T>::setToZero()
 {
-    cudaMemset(m_nonZeroElements.data(), 0, nonzeroes() * blockSize() * blockSize() * sizeof(T));
+    OPM_GPU_SAFE_CALL(cudaMemset(m_nonZeroElements.data(), 0, nonzeroes() * blockSize() * blockSize() * sizeof(T)));
 }
 
 

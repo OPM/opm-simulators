@@ -22,6 +22,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_wrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_utilities.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
@@ -211,7 +212,7 @@ GpuSparseMatrix<T>::setToZero()
         return;
     }
 
-    cudaMemset(m_nonZeroElements.data(), 0, nonzeroes() * blockSize() * blockSize() * sizeof(T));
+    OPM_GPU_SAFE_CALL(cudaMemset(m_nonZeroElements.data(), 0, nonzeroes() * blockSize() * blockSize() * sizeof(T)));
 }
 
 template <typename T>
