@@ -30,6 +30,8 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/common/utility/gpuDecorators.hpp>
+
 #include <opm/models/blackoil/blackoilbrineparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
@@ -159,10 +161,12 @@ public:
     }
 
     // must be called after water storage is computed
-    template <class LhsEval>
-    static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
-                           const IntensiveQuantities& intQuants)
+    template <class StorageType>
+    OPM_HOST_DEVICE static void addStorage(StorageType& storage,
+                                           const IntensiveQuantities& intQuants)
     {
+        using LhsEval = typename StorageType::value_type;
+
         if constexpr (enableBrine) {
             const auto& fs = intQuants.fluidState();
 

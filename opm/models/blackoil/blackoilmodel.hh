@@ -220,6 +220,10 @@ template<class TypeTag>
 struct EnableConvectiveMixing<TypeTag, TTag::BlackOilModel>
 { static constexpr bool value = false; };
 
+template<class TypeTag>
+struct RunAssemblyOnGpu<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 //! by default, scale the energy equation by the inverse of the energy required to heat
 //! up one kg of water by 30 Kelvin. If we conserve surface volumes, this must be divided
 //! by the weight of one cubic meter of water. This is required to make the "dumb" linear
