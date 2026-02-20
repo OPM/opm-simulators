@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE(RstConvTest)
             std::vector<int>& v = max[c];
             while (v.size() < sample.N) {
                 int m = dist(mersenne_engine);
-                if (std::find(v.begin(), v.end(), m) == v.end()) {
+                if (std::ranges::find(v, m) == v.end()) {
                     v.push_back(m);
                 }
             }
@@ -145,9 +145,7 @@ BOOST_AUTO_TEST_CASE(RstConvTest)
     for (int i = 0; i < 10; ++i) {
         for (int c = 0; c < 6; ++c) {
             if (sample.phase[c] != -1) {
-                bool inMax = std::find(max[c].begin(),
-                                       max[c].end(),
-                                       cellMapping[i]) != max[c].end();
+                const bool inMax = std::ranges::find(max[c], cellMapping[i]) != max[c].end();
                 residual[i][sample.phase[c]] = inMax ? 1.0 : 1.0 / (i+2);
             }
         }
@@ -169,8 +167,7 @@ BOOST_AUTO_TEST_CASE(RstConvTest)
         for (int i = 0; i < cc.size() * 10; ++i) {
             for (int c = 0; c < 6; ++c) {
                 if (sample.phase[c] != -1) {
-                    bool inMax = std::find(max[c].begin(),
-                                           max[c].end(), i) != max[c].end();
+                    const bool inMax = std::ranges::find(max[c], i) != max[c].end();
                     BOOST_CHECK_EQUAL(cnv.getData()[c][i], inMax ? 2 : 0);
                 }
             }

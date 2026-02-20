@@ -80,7 +80,7 @@ create_preconditioner_amg(BlockedMatrix<Scalar> *mat_)
                 for (int row = 0; row < cprNb; ++row) {
                     int start = mat->rowPointers[row];
                     int end = mat->rowPointers[row + 1];
-                    auto candidate = std::find(mat->colIndices + start, mat->colIndices + end, row);
+                    const auto candidate = std::find(mat->colIndices + start, mat->colIndices + end, row);
                     assert(candidate != mat->colIndices + end);
                     diagIndices[0][row] = candidate - mat->colIndices;
                 }

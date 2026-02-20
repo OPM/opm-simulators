@@ -135,7 +135,7 @@ int
 ReservoirCouplingMaster<Scalar>::
 getSlaveIdx(const std::string &slave_name) const
 {
-    auto it = std::find(this->slave_names_.begin(), this->slave_names_.end(), slave_name);
+    const auto it = std::ranges::find(this->slave_names_, slave_name);
     if (it != this->slave_names_.end()) {
         return std::distance(this->slave_names_.begin(), it);
     }

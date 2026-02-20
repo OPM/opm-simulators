@@ -693,7 +693,7 @@ template<typename Scalar, typename IndexTraits>
 void WellInterfaceGeneric<Scalar, IndexTraits>::addPerforations(const std::vector<RuntimePerforation>& perfs)
 {
     for (const auto& perf : perfs) {
-        auto it = std::find(well_cells_.begin(), well_cells_.end(), perf.cell);
+        const auto it = std::ranges::find(well_cells_, perf.cell);
         if (it != this->well_cells_.end()) {
             // If perforation to cell already exists, just add contribution.
             const auto ind = std::distance(this->well_cells_.begin(), it);
