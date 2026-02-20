@@ -89,6 +89,28 @@ public:
         Scalar target;
         Group::InjectionCMode cmode;
     };
+    /** Per-rate-type production constraints for a group.
+     *
+     *  A master group defines both an active control-mode target and limits for
+     *  other rate types (ORAT, WRAT, GRAT, LRAT, RESV).  The active target
+     *  alone is not sufficient for reservoir-coupling slaves: a slave group must
+     *  know every effective limit so that it can enforce the most restrictive
+     *  constraint for each rate type independently (the active cmode on the
+     *  master side may differ from what is binding on the slave side).
+     *
+     *  Each limit field holds the guide-rate-distributed value that applies
+     *  to this group, or -1 when no ancestor in the hierarchy defines a
+     *  limit for that rate type.
+     */
+    struct ProductionConstraintsInfo {
+        Scalar active_target;
+        Group::ProductionCMode active_cmode;
+        Scalar oil_limit = -1;
+        Scalar water_limit = -1;
+        Scalar gas_limit = -1;
+        Scalar liquid_limit = -1;
+        Scalar resv_limit = -1;
+    };
 
     /**
      * Shared logic for injector and producer paths.
@@ -107,6 +129,13 @@ public:
             GroupTargetCalculator& calculator,
             const Group& original_group,  // the bottom group we want to calculate the target for
             std::optional<ReservoirCoupling::Phase> injection_phase = std::nullopt
+        );
+        /// Construct for computing a limit for an explicit production rate type.
+        /// The recursion stops at ancestors with has_control(explicit_cmode).
+        GeneralCalculator(
+            GroupTargetCalculator& calculator,
+            const Group& original_group,
+            Group::ProductionCMode explicit_cmode
         );
         std::optional<TargetInfo> calculateGroupTarget();
         DeferredLogger& deferredLogger() { return this->parent_calculator_.deferredLogger(); }
@@ -147,6 +176,8 @@ public:
         }
         const WellState<Scalar, IndexTraits>& wellState() const { return this->parent_calculator_.wellState(); }
         const GroupStateHelperType& groupStateHelper() const { return this->parent_calculator_.groupStateHelper(); }
+        /// Returns the explicit production cmode if set (for per-rate-type limit computation).
+        std::optional<Group::ProductionCMode> explicitProdCmode() const { return this->explicit_prod_cmode_; }
     private:
         std::optional<TargetInfo> calculateGroupTargetRecursive_(const Group& group, const Scalar efficiency_factor);
         const Group& parentGroup(const Group& group) const {
@@ -158,6 +189,7 @@ public:
         GroupTargetCalculator& parent_calculator_;
         const Group& original_group_; // The bottom group we want to calculate the target for
         std::optional<ReservoirCoupling::Phase> injection_phase_;
+        std::optional<Group::ProductionCMode> explicit_prod_cmode_;
         std::vector<Scalar> resv_coeffs_prod_;
     };
 
@@ -268,6 +300,10 @@ public:
     );
     /** Compute production target for group. */
     std::optional<ProductionTargetInfo> groupProductionTarget(const Group& group);
+    /** Compute per-rate-type production constraints for a group.
+     *  Returns the active target plus effective limits for all rate types
+     *  with defined limits in the group hierarchy. */
+    std::optional<ProductionConstraintsInfo> groupProductionConstraints(const Group& group);
     const GroupState<Scalar>& groupState() const { return this->group_state_; }
     const GuideRate& guideRate() const { return this->guide_rate_; }
     const PhaseUsageInfo<IndexTraits>& phaseUsage() const { return this->phase_usage_; }

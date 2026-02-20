@@ -528,6 +528,8 @@ has_gpmaint_target(const std::string& gname) const
     return (this->m_gpmaint_target.count(gname) > 0);
 }
 
+//-------------------------------------------------------------------------
+
 template<class Scalar>
 void GroupState<Scalar>::
 update_gconsump(const Schedule& schedule, const int report_step, const SummaryState& summary_state) {

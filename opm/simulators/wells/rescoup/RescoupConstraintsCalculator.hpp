@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_RESCOUP_TARGET_CALCULATOR_HPP
-#define OPM_RESCOUP_TARGET_CALCULATOR_HPP
+#ifndef OPM_RESCOUP_CONSTRAINTS_CALCULATOR_HPP
+#define OPM_RESCOUP_CONSTRAINTS_CALCULATOR_HPP
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
@@ -34,24 +34,24 @@
 namespace Opm {
 
 template<class Scalar, class IndexTraits>
-class RescoupTargetCalculator {
+class RescoupConstraintsCalculator {
 public:
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
-    using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
-    RescoupTargetCalculator(
+    using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
+    RescoupConstraintsCalculator(
         GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
         GroupStateHelper<Scalar, IndexTraits>& group_state_helper
     );
 
-    void calculateMasterGroupTargetsAndSendToSlaves();
+    void calculateMasterGroupConstraintsAndSendToSlaves();
 private:
-    std::tuple<std::vector<InjectionGroupTarget>, std::vector<ProductionGroupTarget>>
-        calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar, IndexTraits>& calculator) const;
-    void sendSlaveGroupTargetsToSlave_(
+    std::tuple<std::vector<InjectionGroupTarget>, std::vector<ProductionGroupConstraints>>
+        calculateSlaveGroupConstraints_(std::size_t slave_idx, GroupTargetCalculator<Scalar, IndexTraits>& calculator) const;
+    void sendSlaveGroupConstraintsToSlave_(
         const ReservoirCouplingMaster<Scalar>& rescoup_master,
         std::size_t slave_idx,
         const std::vector<InjectionGroupTarget>& injection_targets,
-        const std::vector<ProductionGroupTarget>& production_targets
+        const std::vector<ProductionGroupConstraints>& production_constraints
     ) const;
 
     GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler_;
@@ -68,4 +68,4 @@ private:
 };
 
 }  // namespace Opm
-#endif // OPM_RESCOUP_TARGET_CALCULATOR_HPP
+#endif // OPM_RESCOUP_CONSTRAINTS_CALCULATOR_HPP
