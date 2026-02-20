@@ -259,11 +259,9 @@ void Main::initMPI()
 void Main::handleVersionCmdLine_(int argc, char** argv,
                                  std::string_view moduleVersionName)
 {
-    auto pos = std::find_if(argv, argv + argc,
-        [](const char* arg)
-    {
-        return std::strcmp(arg, "--version") == 0;
-    });
+    const auto pos = std::find_if(argv, argv + argc,
+                                  [](const char* arg)
+                                  { return std::strcmp(arg, "--version") == 0; });
 
     if (pos != argv + argc) {
         std::cout << "flow " << moduleVersionName << std::endl;

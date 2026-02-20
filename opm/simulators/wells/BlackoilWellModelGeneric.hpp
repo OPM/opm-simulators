@@ -612,10 +612,10 @@ private:
     template <typename Predicate>
     bool parallelWellSatisfies(const std::string& wname, Predicate&& p) const
     {
-        auto pwInfoPos = std::find_if(this->parallel_well_info_.begin(),
-                                      this->parallel_well_info_.end(),
-                                      [&wname](const auto& pwInfo)
-                                      { return pwInfo.name() == wname; });
+        const auto pwInfoPos =
+            std::ranges::find_if(this->parallel_well_info_,
+                                 [&wname](const auto& pwInfo)
+                                 { return pwInfo.name() == wname; });
 
         return (pwInfoPos != this->parallel_well_info_.end())
             && p(*pwInfoPos);

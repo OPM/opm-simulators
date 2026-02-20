@@ -791,9 +791,9 @@ updateGradVector_(const std::string& name,
                   std::vector<GradPair>& grads,
                   Scalar grad)
 {
-    auto it = std::find_if(grads.begin(), grads.end(),
-                           [&name](const auto& itr)
-                           { return itr.first == name; });
+    auto it = std::ranges::find_if(grads,
+                                  [&name](const auto& itr)
+                                  { return itr.first == name; });
     if (it != grads.end()) {
         it->second = grad;
     }

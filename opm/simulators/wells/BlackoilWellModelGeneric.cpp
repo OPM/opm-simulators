@@ -198,11 +198,10 @@ const Well& BlackoilWellModelGeneric<Scalar, IndexTraits>::
 getWellEcl(const std::string& well_name) const
 {
     // finding the iterator of the well in wells_ecl
-    auto well_ecl = std::find_if(wells_ecl_.begin(),
-                                 wells_ecl_.end(),
-                                 [&well_name](const Well& elem)->bool {
-                                     return elem.name() == well_name;
-                                 });
+    const auto well_ecl =
+        std::ranges::find_if(wells_ecl_,
+                             [&well_name](const Well& elem) -> bool
+                             { return elem.name() == well_name; });
 
     assert(well_ecl != wells_ecl_.end());
 
@@ -814,10 +813,10 @@ wellUpdateLoop(Iter first, Iter last, const int timeStepIdx, Body&& body)
                    loopBody = std::forward<Body>(body)]
                   (const auto& wname)
     {
-        auto well_iter = std::find_if(this->wells_ecl_.begin(),
-                                      this->wells_ecl_.end(),
-                                      [&wname](const auto& well)
-                                      { return well.name() == wname; });
+        const auto well_iter =
+            std::ranges::find_if(this->wells_ecl_,
+                                 [&wname](const auto& well)
+                                 { return well.name() == wname; });
 
         if (well_iter == this->wells_ecl_.end()) {
             return;
@@ -919,11 +918,10 @@ Scalar
 BlackoilWellModelGeneric<Scalar, IndexTraits>::
 wellPI(const std::string& well_name) const
 {
-    auto well_iter = std::find_if(this->wells_ecl_.begin(), this->wells_ecl_.end(),
-        [&well_name](const Well& well)
-    {
-        return well.name() == well_name;
-    });
+    const auto well_iter =
+        std::ranges::find_if(this->wells_ecl_,
+                             [&well_name](const Well& well)
+                             { return well.name() == well_name; });
 
     if (well_iter == this->wells_ecl_.end()) {
         throw std::logic_error { "Could not find well: " + well_name };
@@ -1402,30 +1400,32 @@ forceShutWellByName(const std::string& wellname,
     // Only add the well to the closed list on the
     // process that owns it.
     int well_was_shut = 0;
-    const auto it = std::find_if(well_container_generic_.begin(),
-                                 well_container_generic_.end(),
-                                 [&wellname, &wState = this->wellState(), dont_shut_grup_wells](const auto& well)
-                                 {
-                                     if (well->name() == wellname) {
-                                         // if one well on individual control (typical thp/bhp)
-                                         // in a group struggles to converge
-                                         // it may lead to problems for the other wells in the group
-                                         // we dont want to shut all the wells in a group only the one
-                                         // creating the problems.
-                                          if (dont_shut_grup_wells) {
-                                             const auto& ws = wState.well(well->indexOfWell());
-                                             if (well->isInjector()) {
-                                                 return ws.injection_cmode != Well::InjectorCMode::GRUP;
-                                             } else {
-                                                 return ws.production_cmode != Well::ProducerCMode::GRUP;
-                                             }
+    const auto it =
+        std::ranges::find_if(well_container_generic_,
+                             [&wellname, &wState = this->wellState(), dont_shut_grup_wells]
+                             (const auto& well)
+                             {
+                                 if (well->name() == wellname) {
+                                     // if one well on individual control (typical thp/bhp)
+                                     // in a group struggles to converge
+                                     // it may lead to problems for the other wells in the group
+                                     // we dont want to shut all the wells in a group only the one
+                                     // creating the problems.
+                                     if (dont_shut_grup_wells) {
+                                         const auto& ws = wState.well(well->indexOfWell());
+                                         if (well->isInjector()) {
+                                             return ws.injection_cmode != Well::InjectorCMode::GRUP;
                                          }
-                                         return true;
+                                         else {
+                                             return ws.production_cmode != Well::ProducerCMode::GRUP;
+                                         }
                                      }
-                                     else {
-                                         return false;
-                                     }
-                                 });
+                                     return true;
+                                 }
+                                 else {
+                                     return false;
+                                 }
+                             });
     if (it != well_container_generic_.end()) {
         wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
         well_was_shut = 1;
@@ -1490,11 +1490,10 @@ BlackoilWellModelGeneric<Scalar, IndexTraits>::
 getGenWell(const std::string& well_name)
 {
     // finding the iterator of the well in wells_ecl
-    auto well = std::find_if(well_container_generic_.begin(),
-                             well_container_generic_.end(),
-                                [&well_name](const WellInterfaceGeneric<Scalar, IndexTraits>* elem)->bool {
-                                     return elem->name() == well_name;
-                                 });
+    const auto well =
+        std::ranges::find_if(well_container_generic_,
+                             [&well_name](const auto* elem) -> bool
+                             { return elem->name() == well_name; });
 
     assert(well != well_container_generic_.end());
 

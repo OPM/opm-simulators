@@ -316,12 +316,9 @@ void BlackoilAquiferModel<TypeTag>::createDynamicAquifers(const int episode_inde
 
     for (const auto& [id, aquFlux] : sched.aqufluxs) {
         auto aquPos =
-            std::find_if(std::begin(this->aquifers),
-                         std::end(this->aquifers),
-                [Id = id](const auto& aquPtr)
-            {
-                return aquPtr->aquiferID() == Id;
-            });
+            std::ranges::find_if(this->aquifers,
+                                [Id = id](const auto& aquPtr)
+                                { return aquPtr->aquiferID() == Id; });
 
         if (aquPos == std::end(this->aquifers)) {
             // An aquifer with this 'id' does not yet exist in

@@ -276,9 +276,8 @@ struct BlockExtractor
                 unsigned phase{};
                 const auto& [key, cell] = bd_info.first;
                 const auto& handler_info =
-                    std::find_if(
-                        handlers.begin(),
-                        handlers.end(),
+                    std::ranges::find_if(
+                        handlers,
                         [&kw_name = bd_info.first.first, &phase](const auto& handler)
                         {
                            // Extract list of keyword names from handler

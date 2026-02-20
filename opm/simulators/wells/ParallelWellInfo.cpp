@@ -580,8 +580,9 @@ void ParallelWellInfo<Scalar>::communicateFirstPerforation(bool hasFirst)
     int first = hasFirst;
     std::vector<int> firstVec(comm_->size());
     comm_->allgather(&first, 1, firstVec.data());
-    auto found = std::find_if(firstVec.begin(), firstVec.end(),
-                              [](int i) -> bool{ return i;});
+    const auto found =
+        std::ranges::find_if(firstVec,
+                             [](int i) -> bool { return i; });
     if (found != firstVec.end())
         rankWithFirstPerf_ = found - firstVec.begin();
 }
