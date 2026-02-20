@@ -1795,9 +1795,9 @@ int BlackoilWellModelGeneric<Scalar, IndexTraits>::numLocalWellsEnd() const
 {
     const auto& wnames = schedule().back().well_order().names();
 
-    return std::count_if(wnames.begin(), wnames.end(),
-                         [this](const std::string& wname)
-                         { return ! this->not_on_process_(wname); });
+    return std::ranges::count_if(wnames,
+                                 [this](const std::string& wname)
+                                 { return ! this->not_on_process_(wname); });
 }
 
 template<typename Scalar, typename IndexTraits>

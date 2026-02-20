@@ -232,8 +232,9 @@ void printDomainDistributionSummary(
     const int owned_cells = partition_vector.size();
 
     // Count overlap cells using grid view iteration
-    int overlap_cells = std::count_if(elements(gridView).begin(), elements(gridView).end(),
-                                      [](const auto& cell) { return cell.partitionType() == Dune::OverlapEntity; });
+    int overlap_cells = std::ranges::count_if(elements(gridView),
+                                              [](const auto& cell)
+                                              { return cell.partitionType() == Dune::OverlapEntity; });
 
     // Store data for summary output
     local_reports_accumulated.success.num_wells = num_wells;
