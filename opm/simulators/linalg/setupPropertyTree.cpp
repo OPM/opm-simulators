@@ -232,6 +232,17 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         return setupCPRW(conf, p);
     }
 
+    // System CPR configuration (coupled reservoir-well system solver).
+    if (conf == "system_cpr") {
+        if (!linearSolverMaxIterSet) {
+            p.linear_solver_maxiter_ = 20;
+        }
+        if (!linearSolverReductionSet) {
+            p.linear_solver_reduction_ = 0.005;
+        }
+        return setupSystemCPR(conf, p);
+    }
+
     if (conf == "amg") {
         return setupAMG(conf, p);
     }
@@ -270,7 +281,7 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     // No valid configuration option found.
     OPM_THROW(std::invalid_argument,
               conf + " is not a valid setting for --linear-solver-configuration."
-              " Please use ilu0, dilu, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic or isai");
+              " Please use ilu0, dilu, isai, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic, or system_cpr");
 }
 
 std::string getSolverString(const FlowLinearSolverParameters& p)
@@ -452,6 +463,63 @@ setupUMFPack([[maybe_unused]] const std::string& conf, const FlowLinearSolverPar
     PropertyTree prm;
     prm.put("verbosity", p.linear_solver_verbosity_);
     prm.put("solver", "umfpack"s);
+    return prm;
+}
+
+
+PropertyTree
+setupSystemCPR([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
+{
+    using namespace std::string_literals;
+    PropertyTree prm;
+
+    // Outer solver
+    prm.put("maxiter", p.linear_solver_maxiter_);
+    prm.put("tol", p.linear_solver_reduction_);
+    prm.put("verbosity", p.linear_solver_verbosity_);
+    prm.put("solver", getSolverString(p));
+
+    // Top-level preconditioner: system_cpr
+    prm.put("preconditioner.type", "system_cpr"s);
+
+    // --- Reservoir smoother ---
+    prm.put("preconditioner.reservoir_smoother.maxiter", 1);
+    prm.put("preconditioner.reservoir_smoother.tol", p.linear_solver_reduction_);
+    prm.put("preconditioner.reservoir_smoother.verbosity", 0);
+    prm.put("preconditioner.reservoir_smoother.solver", "loopsolver"s);
+    prm.put("preconditioner.reservoir_smoother.preconditioner.type", "paroverilu0"s);
+    prm.put("preconditioner.reservoir_smoother.preconditioner.relaxation", 1.0);
+
+    // --- Reservoir solver (CPR with AMG coarse solver) ---
+    prm.put("preconditioner.reservoir_solver.maxiter", 1);
+    prm.put("preconditioner.reservoir_solver.tol", p.linear_solver_reduction_);
+    prm.put("preconditioner.reservoir_solver.verbosity", 0);
+    prm.put("preconditioner.reservoir_solver.solver", "loopsolver"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.type", "cpr"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.relaxation", 1.0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.use_well_weights", "false"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.add_wells", "false"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.weight_type", "trueimpes"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.pre_smooth", 0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.post_smooth", 0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.finesmoother.type", "paroverilu0"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.finesmoother.relaxation", 1.0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.verbosity", 0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.maxiter", 1);
+    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.tol", 1e-1);
+    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.solver", "loopsolver"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.verbosity", 0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.type", "amg"s);
+    setupDuneAMG(prm, "preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.");
+
+    // --- Well solver ---
+    prm.put("preconditioner.well_solver.maxiter", 1);
+    prm.put("preconditioner.well_solver.tol", p.linear_solver_reduction_);
+    prm.put("preconditioner.well_solver.verbosity", 0);
+    prm.put("preconditioner.well_solver.solver", "umfpack"s);
+    prm.put("preconditioner.well_solver.preconditioner.type", "paroverilu0"s);
+    prm.put("preconditioner.well_solver.preconditioner.relaxation", 1.0);
+
     return prm;
 }
 

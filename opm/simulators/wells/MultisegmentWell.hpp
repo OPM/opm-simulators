@@ -24,6 +24,7 @@
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
+#include <opm/common/Exceptions.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
@@ -73,6 +74,10 @@ namespace Opm {
         using typename Base::PressureMatrix;
         using FSInfo = std::tuple<Scalar,typename std::decay<decltype(std::declval<decltype(std::declval<const Simulator&>().model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type>;
 
+        using BMatrix = typename Base::BMatrix;
+        using CMatrix = typename Base::CMatrix;
+        using DMatrix = typename Base::DMatrix;
+        using WVector = typename Base::WVector;
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo<Scalar>& pw_info,
                          const int time_step,
@@ -113,6 +118,13 @@ namespace Opm {
                                                    const BVector& x,
                                                    const GroupStateHelperType& groupStateHelper,
                                                    WellStateType& well_state) override;
+
+        void updateWellStateFromSystemSolution(const Simulator& simulator,
+                                               const Opm::WellVectorT<Scalar>& mergedWellSolution,
+                                               int wellDofOffset,
+                                               int nWellDofs,
+                                               const GroupStateHelperType& groupStateHelper,
+                                               WellStateType& well_state) override;
 
         /// computing the well potentials for group control
         void computeWellPotentials(const Simulator& simulator,
@@ -163,6 +175,22 @@ namespace Opm {
         std::vector<Scalar> getPrimaryVars() const override;
 
         int setPrimaryVars(typename std::vector<Scalar>::const_iterator it) override;
+        void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                          std::vector<CMatrix>& c_matrices,
+                          std::vector<DMatrix>& d_matrices,
+                          std::vector<std::vector<int>>& wcells,
+                          std::vector<WVector>& residual) const override
+        {
+            // System solver is only supported when well DOF dimensions
+            // match between WellInterface and MultisegmentWellEval (standard 3-phase blackoil).
+            if constexpr (Base::numWellDofs == MSWEval::numWellDofs) {
+                MSWEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells, residual);
+            } else {
+                OPM_THROW(std::runtime_error,
+                          "System solver with multisegment wells is only supported for standard "
+                          "3-phase blackoil (Indices::numEq == 3). This model has different equation count.");
+            }
+        }
 
     protected:
         // regularize msw equation
@@ -282,7 +310,8 @@ namespace Opm {
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
                                             WellStateType& well_state,
-                                            const bool solving_with_zero_rate) override;
+                                            const bool solving_with_zero_rate,
+                                            const bool skipLocalInverse) override;
 
         void updateWaterThroughput(const double dt, WellStateType& well_state) const override;
 

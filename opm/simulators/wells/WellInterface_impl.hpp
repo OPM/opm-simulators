@@ -952,7 +952,8 @@ namespace Opm
         OPM_TIMEFUNCTION();
         prepareWellBeforeAssembling(simulator, dt, groupStateHelper, well_state);
         assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, well_state,
-                                       /*solving_with_zero_rate=*/false);
+                                       /*solving_with_zero_rate=*/false,
+                                       /*skipLocalInverse=*/false);
     }
 
 
@@ -964,7 +965,8 @@ namespace Opm
                                    const GroupStateHelperType& groupStateHelper,
                                    const double dt,
                                    WellStateType& well_state,
-                                   const bool solving_with_zero_rate)
+                                   const bool solving_with_zero_rate,
+                                   const bool skipLocalInverse)
     {
         OPM_TIMEFUNCTION();
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -972,7 +974,7 @@ namespace Opm
         const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         // TODO: the reason to have inj_controls and prod_controls in the arguments, is that we want to change the control used for the well functions
         // TODO: maybe we can use std::optional or pointers to simplify here
-        assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls, well_state, solving_with_zero_rate);
+        assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls, well_state, solving_with_zero_rate, skipLocalInverse);
     }
 
 

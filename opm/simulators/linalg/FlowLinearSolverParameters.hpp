@@ -89,6 +89,7 @@ struct OpenclIluParallel { static constexpr bool value = true; }; // note: false
 struct GpuAwareMpi { static constexpr bool value = false; };
 struct VerifyGpuAwareMpi { static constexpr bool value = false; };
 struct CprWeightsThreadParallel { static constexpr bool value = false; };
+struct UseSystemSolver { static constexpr bool value = false; };
 } // namespace Opm::Parameters
 
 namespace Opm {

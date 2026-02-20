@@ -307,6 +307,9 @@ public:
     /// Whether to add influences of wells between cells to the matrix and preconditioner matrix
     bool matrix_add_well_contributions_;
 
+    /// Whether the coupled reservoir-well system solver is active
+    bool use_system_solver_;
+
     /// Whether to check well operability
     bool check_well_operability_;
     /// Whether to check well operability during iterations
