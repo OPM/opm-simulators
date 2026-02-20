@@ -47,6 +47,7 @@ class EclipseIO;
 class EclipseState;
 class InterRegFlowMap;
 class Inplace;
+template <class Grid> class LevelCartesianIndexMapper;
 struct NNCdata;
 class Schedule;
 class SummaryConfig;
@@ -101,7 +102,7 @@ public:
 
     const std::vector<NNCdata>& getOutputNnc() const
     {
-        return outputNnc_;
+        return outputNnc_[0];
     }
 
     const CollectDataOnIORankType& collectOnIORank() const
@@ -164,12 +165,120 @@ protected:
     const EquilGrid* equilGrid_;
     SimulatorReportSingle sub_step_report_;
     SimulatorReport simulation_report_;
-    mutable std::vector<NNCdata> outputNnc_;
-    mutable std::unique_ptr<data::Solution> outputTrans_;
+
+    // Regular NNCs per grid: internal to a grid.
+    // Both cells belong to the same level grid, either the main grid or a level/local grid.
+    // nnc.cell1 (NNC1 in *.EGRID) Level/Local Cartesian index of cell1
+    // nnc.cell2 (NNC2 in *.EGRID) Level/Local Cartesian index of cell2
+    // Equivalent to TRANNNC in *.INIT
+     mutable std::vector<std::vector<NNCdata>> outputNnc_;
+
+    // NNCs between main (level zero) grid and local grids:
+    // nnc.cell1 (NNCG in *.EGRID) Cartesian index of cell1 in the main grid where the cell belongs to.
+    // nnc.cell2 (NNCL in *.EGRID) Level/Local Cartesian index of cell2 in the refined level grid where the cell belongs to.
+    // Equivalent to TRANGL in *.INIT
+    mutable std::vector<std::vector<NNCdata>> outputNncGlobalLocal_; // here GLOBAL refers to level 0 grid, local to any LGR (refined grid)
+
+    // Amalgamated NNCs: nncs between different LGRs. For example, nested refinement or neighboring LGRs.
+    // The cells belong to different refined level grids. 
+    // nnc.cell1 (NNA1 in *.EGRID) Level/Local Cartesian index of cell1 (in its level grid: level1)
+    // nnc.cell2 (NNA2 in *.EGRID) Level/Local Cartesian index of cell2 (in its level grid: level2, with level2 > level1).
+    // Equivalent to TRANLL in *.INIT
+    mutable std::vector<std::vector<std::vector<NNCdata>>> outputAmalgamatedNnc_;
+
+    mutable std::unique_ptr<std::vector<data::Solution>> outputTrans_;
 
 private:
-    void computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
-    std::vector<NNCdata> exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
+    template<typename LevelIndicesFunction>
+    void computeTrans_(const std::vector<std::unordered_map<int,int>>& levelCartToLevelCompressed,
+                       const std::function<unsigned int(unsigned int)>& map,
+                       const LevelIndicesFunction& computeLevelIndices,
+                       const std::function<int(int, int)>& computeLevelCartIdx,
+                       const std::function<std::array<int,3>(int)>& computeLevelCartDimensions) const;
+
+    template<typename LevelIndicesFunction>
+    std::vector<NNCdata> exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToLevelCompressed,
+                                             const std::function<unsigned int(unsigned int)>& map,
+                                             const LevelIndicesFunction& computeLevelIndices,
+                                             const std::function<int(int, int)>& computeLevelCartIdx,
+                                             const std::function<std::array<int,3>(int)>& computeLevelCartDimensions) const;
+
+    /// Returns true if cells (belonging to the same level grid) are (level) Cartesian neighbors (share a face)
+    bool isCartesianNeighbour_(const std::array<int,3>& levelCartDims,
+                               const std::size_t levelCartIdx1,
+                               const std::size_t levelCartIdx2) const;
+    
+    bool isDirectNeighbours_(const std::unordered_map<int,int>& levelCartesianToActive,
+                             const std::array<int,3>& levelCartDims,
+                             const std::size_t levelCartIdx1,
+                             const std::size_t levelCartIdx2) const;
+    
+    auto activeCell_(const std::unordered_map<int,int>& levelCartToLevelCompressed,
+                     const std::size_t levelCartIdx) const;
+    
+    
+
+    /// Returns true if the given Cartesian cell index belongs to a numerical aquifer.
+    /// If no numerical aquifer exists, always returns false.
+    bool isNumAquCell_(const std::size_t cartIdx) const;
+    /// Returns true if either of the two connected cells belongs to a numerical aquifer.
+    bool isNumAquConn_(const std::size_t cartIdx1, const std::size_t cartIdx2) const;
+
+    /// Create LevelCartesianIndexMapper.
+    ///
+    /// For CpGrid, the LevelCartesianIndexMapper constructor takes the grid
+    /// For other grid types,the CartesianIndexMapper.
+    /// Note: the design of the LevelCartesianIndexMapper class and its relation/duplication
+    ///       with CartesianIndexMapper will be improved "soon".
+    /// @tparam equilGridIsCpGrid Compile-time flag indicating whether the equilGrid_ is a Dune::CpGrid
+    ///                           (std::is_same_v<EquilGrid, Dune::CpGrid>).
+    template<bool equilGridIsCpGrid>
+    Opm::LevelCartesianIndexMapper<EquilGrid> createLevelCartMapp_() const;
+
+    /// Create maps from [level Cartesian index] to [level active/compressed index]
+    ///
+    /// Note: Refinement is supported only for CpGrid for now. For other grid types,
+    ///       there is only one map carteisanToActive since level zero and leaf grids
+    ///       coincide.
+    /// @tparam equilGridIsCpGrid Compile-time flag indicating whether the equilGrid_ is a Dune::CpGrid
+    ///                           (std::is_same_v<EquilGrid, Dune::CpGrid>).
+    template<bool equilGridIsCpGrid>
+    std::vector<std::unordered_map<int,int>> createCartesianToActiveMaps_(const Opm::LevelCartesianIndexMapper<EquilGrid>& levelCartMapp) const;
+
+    /// Return function to compute (level) Cartesian dimensions
+    ///
+    /// Note: Refinement is supported only for CpGrid for now.
+    /// @tparam equilGridIsCpGrid Compile-time flag indicating whether the equilGrid_ is a Dune::CpGrid
+    ///                           (std::is_same_v<EquilGrid, Dune::CpGrid>).
+    template<bool equilGridIsCpGrid>
+    std::function<std::array<int,3>(int)> computeLevelCartDimensions_(const Opm::LevelCartesianIndexMapper<EquilGrid>& levelCartMapp,
+                                                                      const Dune::CartesianIndexMapper<EquilGrid>& equilCartMapp) const;
+
+    /// Return function to compute (level) Cartesian indices of the cells adjacent to an intersection.
+    ///
+    /// @tparam equilGridIsCpGrid Compile-time flag indicating whether the equilGrid_ is a Dune::CpGrid
+    ///                           (std::is_same_v<EquilGrid, Dune::CpGrid>).
+    template<bool equilGridIsCpGrid>
+    std::function<int(int, int)> computeLevelCartIdx_(const Opm::LevelCartesianIndexMapper<EquilGrid>& levelCartMapp,
+                                                      const Dune::CartesianIndexMapper<EquilGrid>& equilCartMapp) const;
+
+    /// Return function to compute level (local/compressed) indices of the cells adjacent to an intersection.
+    ///
+    /// @tparam equilGridIsCpGrid Compile-time flag indicating whether the equilGrid_ is a Dune::CpGrid
+    ///                           (std::is_same_v<EquilGrid, Dune::CpGrid>).
+    template <bool equilGridIsCpGrid>
+    auto computeLevelIndices_() const;
+
+    /// Creates/allocates CellData for TRANX/Y/Z for level grids.
+    /// Only for CpGrid. Other grid types do not support refinement yet.
+    void allocateLevelTrans_(const std::array<int,3>& levelCartDims,
+                             data::Solution& levelTrans) const;
+    /// Allocates NNCdata  vectors for
+    /// - TRANNNC for level grids,
+    /// - TRANGL for NNCs between level zero grid and an LGR (refined level grid)
+    /// - TRANLL for NNCs between two different refined level grids. 
+    /// Only for CpGrid. Other grid types do not support refinement yet.
+    void allocateAllNncs_(int maxLevel) const;
 };
 
 } // namespace Opm
