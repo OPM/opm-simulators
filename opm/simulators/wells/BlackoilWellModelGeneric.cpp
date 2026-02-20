@@ -625,8 +625,9 @@ getGroupFipnumAndPvtreg() const
         auto regIndexPair = std::make_pair(pvtreg, firstWellIndex);
         std::vector<decltype(regIndexPair)> pairs(comm_.size());
         comm_.allgather(&regIndexPair, 1, pairs.data());
-        pvtreg = std::min_element(pairs.begin(), pairs.end(),
-                                  [](const auto& p1, const auto& p2){ return p1.second < p2.second;})
+        pvtreg = std::ranges::min_element(pairs,
+                                          [](const auto& p1, const auto& p2)
+                                          { return p1.second < p2.second; })
             ->first;
     }
     return std::make_pair(fipnum, pvtreg);
