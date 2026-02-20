@@ -62,11 +62,9 @@ void standardConnFactorsExplicitDrainRadius(const Opm::Well&     well,
     const auto& connections = well.getConnections();
     const auto rdrain = well.getDrainageRadius();
 
-    std::transform(connections.begin(), connections.end(), stdConnFact.begin(),
-        [rdrain](const Opm::Connection& conn)
-    {
-        return conn.CF() * logRescale(conn.r0(), conn.rw(), rdrain, conn.skinFactor());
-    });
+    std::ranges::transform(connections, stdConnFact.begin(),
+                           [rdrain](const Opm::Connection& conn)
+                           { return conn.CF() * logRescale(conn.r0(), conn.rw(), rdrain, conn.skinFactor()); });
 }
 
 template<class Scalar>
@@ -75,11 +73,9 @@ void standardConnFactorsDrainIsEquivalent(const Opm::Well&     well,
 {
     const auto& connections = well.getConnections();
 
-    std::transform(connections.begin(), connections.end(), stdConnFact.begin(),
-        [](const Opm::Connection& conn)
-    {
-        return conn.CF();
-    });
+    std::ranges::transform(connections, stdConnFact.begin(),
+                           [](const Opm::Connection& conn)
+                           { return conn.CF(); });
 }
 
 template<class Scalar>

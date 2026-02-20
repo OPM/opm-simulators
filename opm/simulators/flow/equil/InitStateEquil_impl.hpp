@@ -1443,7 +1443,7 @@ equilnum(const EclipseState& eclipseState,
 
     if (eclipseState.fieldProps().has_int("EQLNUM")) {
         const auto& e = eclipseState.fieldProps().get_int("EQLNUM");
-        std::transform(e.begin(), e.end(), eqlnum.begin(), [](int n){ return n - 1;});
+        std::ranges::transform(e, eqlnum.begin(), [](int n) { return n - 1; });
     }
     OPM_BEGIN_PARALLEL_TRY_CATCH();
     const int num_regions = eclipseState.getTableManager().getEqldims().getNumEquilRegions();

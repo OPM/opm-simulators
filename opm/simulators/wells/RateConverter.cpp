@@ -88,8 +88,8 @@ sumRates(std::unordered_map<RegionId,Attributes>& attributes_hpv,
             assert(ra.pv > 0.);
         }
         const Scalar pv_sum = ra.pv;
-        std::transform(ra.data.begin(), ra.data.end(), ra.data.begin(),
-                       [pv_sum](const auto d) { return d / pv_sum; });
+        std::ranges::transform(ra.data, ra.data.begin(),
+                               [pv_sum](const auto d) { return d / pv_sum; });
         ra.pv = pv_sum;
     }
 }

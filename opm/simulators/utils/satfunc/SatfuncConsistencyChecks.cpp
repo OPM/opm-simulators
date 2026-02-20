@@ -391,10 +391,9 @@ namespace {
     {
         auto fieldWidths = std::vector<std::size_t>(columnHeaders.size());
 
-        std::transform(columnHeaders.begin(), columnHeaders.end(),
-                       fieldWidths.begin(),
-                       [minColWidth](const std::string& header)
-                       { return std::max(minColWidth, header.size()); });
+        std::ranges::transform(columnHeaders, fieldWidths.begin(),
+                               [minColWidth](const std::string& header)
+                               { return std::max(minColWidth, header.size()); });
 
         return fieldWidths;
     }

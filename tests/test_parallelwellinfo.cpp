@@ -119,10 +119,9 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
 
     std::vector<Opm::ParallelWellInfo<double>> well_info;
 
-    std::transform(pairs.begin(), pairs.end(),
-                   std::back_inserter(well_info),
-                   [](const auto& wellinfo) -> Opm::ParallelWellInfo<double>
-                   { return {wellinfo, Opm::Parallel::Communication()}; });
+    std::ranges::transform(pairs, std::back_inserter(well_info),
+                           [](const auto& wellinfo) -> Opm::ParallelWellInfo<double>
+                           { return {wellinfo, Opm::Parallel::Communication()}; });
 
     //well_info.assign(pairs.begin(), pairs.end());
 
@@ -177,8 +176,8 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveBelowSelf)
     {
         std::vector<int> eclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
         std::vector<double> current(eclIndex.size());
-        std::transform(eclIndex.begin(), eclIndex.end(), current.begin(),
-                       [](double v){ return 1+10.0*v;});
+        std::ranges::transform(eclIndex, current.begin(),
+                               [](double v){ return 1+10.0*v;});
         commAboveBelow.beginReset();
         for (std::size_t i = 0; i < current.size(); ++i)
         {
@@ -212,8 +211,8 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveBelowSelf1)
     {
         std::vector<int> eclIndex = {0};
         std::vector<double> current(eclIndex.size());
-        std::transform(eclIndex.begin(), eclIndex.end(), current.begin(),
-                       [](double v){ return 1+10.0*v;});
+        std::ranges::transform(eclIndex, current.begin(),
+                               [](double v){ return 1+10.0*v;});
         commAboveBelow.beginReset();
         for (std::size_t i = 0; i < current.size(); ++i)
         {
@@ -297,8 +296,8 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveBelowParallel)
     {
         auto globalEclIndex = createGlobalEclIndex(comm);
         std::vector<double> globalCurrent(globalEclIndex.size());
-        std::transform(globalEclIndex.begin(), globalEclIndex.end(), globalCurrent.begin(),
-                       [](double v){ return 1+10.0*v;});
+        std::ranges::transform(globalEclIndex, globalCurrent.begin(),
+                               [](double v) { return 1 + 10.0 * v; });
 
         auto current = populateCommAbove(commAboveBelow, comm, globalEclIndex, globalCurrent);
         auto above = commAboveBelow.communicateAbove(-10.0, current.data(), current.size());
@@ -355,8 +354,8 @@ BOOST_AUTO_TEST_CASE(PartialSumself)
     Opm::CommunicateAboveBelow<double> commAboveBelow{ comm };
     std::vector<int> eclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
     std::vector<double> current(eclIndex.size());
-    std::transform(eclIndex.begin(), eclIndex.end(), current.begin(),
-                   [](double v){ return 1+10.0*v;});
+    std::ranges::transform(eclIndex, current.begin(),
+                           [](double v) { return 1 + 10.0 * v; });
     commAboveBelow.beginReset();
     for (std::size_t i = 0; i < current.size(); ++i)
     {
@@ -439,20 +438,17 @@ void testGlobalPerfFactoryParallel(int num_component, bool local_consecutive = f
     BOOST_CHECK_EQUAL_COLLECTIONS(std::begin(globalCurrent), std::end(globalCurrent),
                                   std::begin(globalCreated), std::end(globalCreated));
 
-    std::transform(std::begin(globalAdd), std::end(globalAdd),
-                   std::begin(globalCreated), std::begin(globalCreated),
-                   std::plus<double>());
+    std::ranges::transform(globalAdd, globalCreated,
+                           std::begin(globalCreated), std::plus<double>());
 
     auto globalSol = globalCurrent;
-    std::transform(std::begin(globalAdd), std::end(globalAdd),
-                   std::begin(globalSol), std::begin(globalSol),
-                   std::plus<double>());
+    std::ranges::transform(globalAdd, globalSol,
+                           std::begin(globalSol), std::plus<double>());
 
     auto localSol = localCurrent;
 
-    std::transform(std::begin(localAdd), std::end(localAdd),
-                   std::begin(localSol), std::begin(localSol),
-                   std::plus<double>());
+    std::ranges::transform(localAdd, localSol,
+                           std::begin(localSol), std::plus<double>());
     factory.copyGlobalToLocal(globalCreated, localCurrent, num_component);
 
     for (std::size_t i = 0; i < localCurrent.size() / num_component; ++i)

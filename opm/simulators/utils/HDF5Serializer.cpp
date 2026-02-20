@@ -59,11 +59,9 @@ std::vector<int> HDF5Serializer::reportSteps() const
 {
     const auto entries = m_h5file.list("/report_step");
     std::vector<int> result(entries.size());
-    std::transform(entries.begin(), entries.end(), result.begin(),
-                   [](const std::string& input)
-                   {
-                      return std::atoi(input.c_str());
-                   });
+    std::ranges::transform(entries, result.begin(),
+                           [](const std::string& input)
+                           { return std::atoi(input.c_str()); });
     std::sort(result.begin(), result.end());
     return result;
 }

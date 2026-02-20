@@ -506,8 +506,8 @@ namespace {
         comm.broadcast(startPtr.data(), comm.size() + 1, 0);
 
         // We're scattering two ints per cell
-        std::transform(startPtr.begin(), startPtr.end(), startPtr.begin(),
-                       [](const auto startIx) { return startIx * 2; });
+        std::ranges::transform(startPtr, startPtr.begin(),
+                               [](const auto startIx) { return startIx * 2; });
 
         auto sendLength = std::vector<int>(comm.size());
         std::adjacent_difference(startPtr.begin() + 1,

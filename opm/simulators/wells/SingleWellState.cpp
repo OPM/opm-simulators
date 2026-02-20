@@ -364,16 +364,14 @@ update_type_and_targets(const Well& ecl_well, const SummaryState& st)
         if (switchedToProducer) {
             this->production_cmode = ecl_well.productionControls(st).cmode;
             // clear injection rates (those are positive)
-            std::transform(this->surface_rates.begin(), this->surface_rates.end(),
-                           this->surface_rates.begin(),
-                           [](const Scalar& val){ return std::min(Scalar(), val);});
+            std::ranges::transform(this->surface_rates, this->surface_rates.begin(),
+                                   [](const Scalar& val){ return std::min(Scalar(), val);});
         } else {
             perf_data.prepareInjectorContainers();
             this->injection_cmode = ecl_well.injectionControls(st).cmode;
             // clear production rates (those are negative)
-            std::transform(this->surface_rates.begin(), this->surface_rates.end(),
-                           this->surface_rates.begin(),
-                           [](const Scalar& val){ return std::max(Scalar(), val);});
+            std::ranges::transform(this->surface_rates, this->surface_rates.begin(),
+                                   [](const Scalar& val){ return std::max(Scalar(), val);});
         }
     }
 

@@ -143,12 +143,14 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
     {
         const auto& comp = rock_config.comp();
         rockParams_.clear();
-        std::transform(comp.begin(), comp.end(), std::back_inserter(rockParams_),
-                       [](const auto& c)
-                       {
-                            return RockParams{static_cast<Scalar>(c.pref),
-                                              static_cast<Scalar>(c.compressibility)};
-                       });
+        std::ranges::transform(comp, std::back_inserter(rockParams_),
+                               [](const auto& c)
+                               {
+                                   return RockParams{
+                                       static_cast<Scalar>(c.pref),
+                                       static_cast<Scalar>(c.compressibility)
+                                   };
+                               });
     }
 
     // Warn that ROCK and ROCKOPTS item 2 = STORE is used together

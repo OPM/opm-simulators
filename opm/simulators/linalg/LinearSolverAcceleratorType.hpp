@@ -66,7 +66,8 @@ inline LinearSolverAcceleratorType
 linearSolverAcceleratorTypeFromString(const std::string& str)
 {
     std::string lowerStr = str;
-    std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::ranges::transform(lowerStr, lowerStr.begin(),
+                           [](unsigned char c) { return std::tolower(c); });
     if (lowerStr == "gpu") {
         return LinearSolverAcceleratorType::GPU;
     } else if (lowerStr == "cpu") {

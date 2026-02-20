@@ -2055,9 +2055,9 @@ namespace Opm {
         // compute global average
         grid.comm().sum(B_avg.data(), B_avg.size());
         B_avg_.resize(B_avg.size());
-        std::transform(B_avg.begin(), B_avg.end(), B_avg_.begin(),
-                       [gcells = global_num_cells_](const auto bval)
-                       { return bval / gcells; });
+        std::ranges::transform(B_avg, B_avg_.begin(),
+                               [gcells = global_num_cells_](const auto bval)
+                               { return bval / gcells; });
     }
 
 

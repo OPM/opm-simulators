@@ -205,10 +205,9 @@ BlackoilWellModelNldd<TypeTag>::
 setupDomains(const std::vector<Domain>& domains)
 {
     std::vector<const SubDomainIndices*> genDomains;
-    std::transform(domains.begin(), domains.end(),
-                   std::back_inserter(genDomains),
-                   [](const auto& domain)
-                   { return static_cast<const SubDomainIndices*>(&domain); });
+    std::ranges::transform(domains, std::back_inserter(genDomains),
+                           [](const auto& domain)
+                           { return static_cast<const SubDomainIndices*>(&domain); });
     this->calcDomains(genDomains);
 }
 

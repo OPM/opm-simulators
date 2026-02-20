@@ -129,10 +129,9 @@ computeWellRates_(Scalar bhp, bool bhp_is_limited, bool debug_output ) const
         this->displayDebugMessage_(msg);
     }
 
-    std::transform(potentials.begin(), potentials.end(),
-                   potentials.begin(),
-                   [](const auto& potential)
-                   { return std::min(Scalar{0}, potential); });
+    std::ranges::transform(potentials, potentials.begin(),
+                           [](const auto& potential)
+                           { return std::min(Scalar{0}, potential); });
     return {-potentials[this->oil_pos_],
             -potentials[this->gas_pos_],
             -potentials[this->water_pos_],
