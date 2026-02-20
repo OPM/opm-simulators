@@ -60,9 +60,10 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
     auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
     Scalar sumTw = 0;
-    bool calculateSumTw = std::any_of(segment_rates.begin(), segment_rates.end(), [](const auto& unscaled_top_seg_rate) {
-        return std::abs(unscaled_top_seg_rate) <= 1e-12;
-    });
+    const bool calculateSumTw =
+        std::ranges::any_of(segment_rates,
+                            [](const auto& unscaled_top_seg_rate)
+                            { return std::abs(unscaled_top_seg_rate) <= 1e-12; });
     if (calculateSumTw) {
         // Due to various reasons, the well/top segment rate can be zero for this phase.
         // We can not scale this rate directly. The following approach is used to initialize the segment rates.

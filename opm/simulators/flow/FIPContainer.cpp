@@ -124,8 +124,8 @@ hasCo2InGas() const
         Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped,
     };
 
-    return std::any_of(phases.begin(), phases.end(),
-                       [this](const auto phase) { return has(phase); });
+    return std::ranges::any_of(phases,
+                               [this](const auto phase) { return has(phase); });
 }
 
 template<class FluidSystem>
@@ -313,8 +313,8 @@ hasCo2InWater() const
         Inplace::Phase::CO2Mass,
     };
 
-    return std::any_of(phases.begin(), phases.end(),
-                       [this](const auto phase) { return has(phase); });
+    return std::ranges::any_of(phases,
+                               [this](const auto phase) { return has(phase); });
 }
 
 template<class FluidSystem>

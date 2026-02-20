@@ -1809,7 +1809,7 @@ namespace Opm
             // Remember of we evaluated the rates at (approx.) 1 bar or not.
             rates_evaluated_at_1bar = (bhp_limit < 1.1 * unit::barsa);
             // Check that no rates are positive.
-            if (std::any_of(well_q_s.begin(), well_q_s.end(), [](Scalar q) { return q > 0.0; })) {
+            if (std::ranges::any_of(well_q_s, [](Scalar q) { return q > 0.0; })) {
                 // Did we evaluate at 1 bar? If not, then we can try again at 1 bar.
                 if (!rates_evaluated_at_1bar) {
                     this->computeWellRatesWithBhp(simulator, 1.0 * unit::barsa, well_q_s, deferred_logger);

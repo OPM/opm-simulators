@@ -157,12 +157,9 @@ template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
 hasLocalWell(const std::string& wname) const
 {
-    return std::any_of(this->wells_ecl_.begin(),
-                       this->wells_ecl_.end(),
-        [&wname](const Well& well)
-    {
-        return well.name() == wname;
-    });
+    return std::ranges::any_of(this->wells_ecl_,
+                               [&wname](const Well& well)
+                               { return well.name() == wname; });
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -170,12 +167,9 @@ bool
 BlackoilWellModelGeneric<Scalar, IndexTraits>::
 hasOpenLocalWell(const std::string& wname) const
 {
-    return std::any_of(well_container_generic_.begin(),
-                       well_container_generic_.end(),
-        [&wname](const auto* elem) -> bool
-    {
-        return elem->name() == wname;
-    });
+    return std::ranges::any_of(well_container_generic_,
+                               [&wname](const auto* elem) -> bool
+                               { return elem->name() == wname; });
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -189,8 +183,9 @@ template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
 anyMSWellOpenLocal() const
 {
-    return std::any_of(wells_ecl_.begin(), wells_ecl_.end(),
-                       [](const auto& well) { return well.isMultiSegment(); });
+    return std::ranges::any_of(wells_ecl_,
+                               [](const auto& well)
+                               { return well.isMultiSegment(); });
 }
 
 template<typename Scalar, typename IndexTraits>

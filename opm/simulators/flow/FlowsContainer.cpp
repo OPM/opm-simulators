@@ -108,18 +108,18 @@ FlowsContainer(const Schedule& schedule,
     enableFlows_ = false;
     enableFlowsn_ = false;
 
-    anyFlores_ = std::any_of(schedule.begin(), schedule.end(),
-                             [](const auto& block)
-                             {
-                                const auto& rstkw = block.rst_config().keywords;
-                                return rstkw.find("FLORES") != rstkw.end();
-                             });
-    anyFlows_ = std::any_of(schedule.begin(), schedule.end(),
-                            [](const auto& block)
-                            {
-                                const auto& rstkw = block.rst_config().keywords;
-                                return rstkw.find("FLOWS") != rstkw.end();
-                            });
+    anyFlores_ = std::ranges::any_of(schedule,
+                                     [](const auto& block)
+                                     {
+                                         const auto& rstkw = block.rst_config().keywords;
+                                         return rstkw.find("FLORES") != rstkw.end();
+                                     });
+    anyFlows_ = std::ranges::any_of(schedule,
+                                    [](const auto& block)
+                                    {
+                                        const auto& rstkw = block.rst_config().keywords;
+                                        return rstkw.find("FLOWS") != rstkw.end();
+                                    });
 
     // Check for any BVEL[G|O|W][I|J|K][|-] summary keys
     if (summaryConfig.keywords("BVEL*").size() > 0) {
