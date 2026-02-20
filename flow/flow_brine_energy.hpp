@@ -19,7 +19,12 @@
 #define FLOW_BRINE_ENERGY_HPP
 
 namespace Opm {
-  int flowBrineEnergyMain(int argc, char** argv);
+
+  //! \brief Main function used in flow binary.
+  int flowBrineEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles);
+
+  //! \brief Main function used in flow_brine_energy binary.
+  int flowBrineEnergyMainStandalone(int argc, char** argv);
 }
 
 #endif
