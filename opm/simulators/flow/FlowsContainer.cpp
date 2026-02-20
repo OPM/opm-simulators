@@ -383,24 +383,24 @@ outputRestart(data::Solution& sol)
         addEntry<waterCompIdx>(entries, "FLOWAT", UnitSystem::measure::liquid_surface_rate, flows_);
     }
 
-    std::for_each(entries.begin(), entries.end(),
-                  [&doInsert](auto& array)
-                  {
-                      static const auto dirs = std::array{
-                          std::pair{FaceDir::ToIntersectionIndex(Dir::XMinus), "I-"},
-                          std::pair{FaceDir::ToIntersectionIndex(Dir::XPlus), "I+"},
-                          std::pair{FaceDir::ToIntersectionIndex(Dir::YMinus), "J-"},
-                          std::pair{FaceDir::ToIntersectionIndex(Dir::YPlus), "J+"},
-                          std::pair{FaceDir::ToIntersectionIndex(Dir::ZMinus), "K-"},
-                          std::pair{FaceDir::ToIntersectionIndex(Dir::ZPlus), "K+"},
-                      };
-                      const auto& name = std::get<0>(array);
-                      const auto& measure = std::get<1>(array);
-                      auto& value = std::get<2>(array);
-                      for (const auto& [index, postfix] : dirs) {
-                          doInsert(value[index], name + postfix, measure);
-                      }
-                  });
+    std::ranges::for_each(entries,
+                          [&doInsert](auto& array)
+                          {
+                              static const auto dirs = std::array{
+                                  std::pair{FaceDir::ToIntersectionIndex(Dir::XMinus), "I-"},
+                                  std::pair{FaceDir::ToIntersectionIndex(Dir::XPlus), "I+"},
+                                  std::pair{FaceDir::ToIntersectionIndex(Dir::YMinus), "J-"},
+                                  std::pair{FaceDir::ToIntersectionIndex(Dir::YPlus), "J+"},
+                                  std::pair{FaceDir::ToIntersectionIndex(Dir::ZMinus), "K-"},
+                                  std::pair{FaceDir::ToIntersectionIndex(Dir::ZPlus), "K+"},
+                              };
+                              const auto& name = std::get<0>(array);
+                              const auto& measure = std::get<1>(array);
+                              auto& value = std::get<2>(array);
+                              for (const auto& [index, postfix] : dirs) {
+                                  doInsert(value[index], name + postfix, measure);
+                              }
+                          });
 }
 
 template<class T> using FS = BlackOilFluidSystem<T, BlackOilDefaultFluidSystemIndices>;

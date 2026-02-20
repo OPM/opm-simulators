@@ -107,7 +107,8 @@ GlobalPerfContainerFactory(const IndexSet& local_indices,
         comm_.allgatherv(my_pairs.data(), my_pairs.size(), global_pairs.data(), sizes_.data(), displ_.data());
         // Set the the index where we receive
         int count = 0;
-        std::for_each(global_pairs.begin(), global_pairs.end(), [&count](Pair& pair){ pair.second = count++;});
+        std::ranges::for_each(global_pairs,
+                              [&count](Pair& pair) { pair.second = count++; });
         // sort the complete range to get the correct ordering
         std::ranges::sort(global_pairs,
                           [](const Pair& p1, const Pair& p2)

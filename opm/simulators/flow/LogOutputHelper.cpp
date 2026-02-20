@@ -121,9 +121,9 @@ std::string formatBorder(const Array& widths)
 {
     std::string ss;
     ss = " ";
-    std::for_each(widths.begin(), widths.end(),
-                  [&ss](const auto w)
-                  { ss += fmt::format(":{:->{}}", "", w); });
+    std::ranges::for_each(widths,
+                          [&ss](const auto w)
+                          { ss += fmt::format(":{:->{}}", "", w); });
     ss += ':';
 
     return ss;
@@ -134,9 +134,9 @@ std::string formatTextRow(const std::array<int, size>& widths,
                           const std::array<std::string_view, size>& entries)
 {
     std::string ss = " ";
-    std::for_each(widths.begin(), widths.end(),
-                  [&entries, &ss, i = 0](const auto w) mutable
-                  { ss += fmt::format(":{:^{}}", entries[i++], w); });
+    std::ranges::for_each(widths,
+                          [&entries, &ss, i = 0](const auto w) mutable
+                          { ss += fmt::format(":{:^{}}", entries[i++], w); });
     ss += ":\n";
 
     return ss;
@@ -566,9 +566,9 @@ msw(const std::size_t reportStepNum) const
 
     this->beginMSWReport_();
 
-    std::for_each(msWells.begin(), msWells.end(),
-                  [this](const Well& well)
-                  { this->outputMSWReportRecord_(well); });
+    std::ranges::for_each(msWells,
+                          [this](const Well& well)
+                          { this->outputMSWReportRecord_(well); });
 
     this->endMSWReport_();
 }

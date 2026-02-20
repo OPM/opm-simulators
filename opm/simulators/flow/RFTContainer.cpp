@@ -116,18 +116,17 @@ addToWells(data::Wells& wellDatas,
             }
         };
 
-        std::for_each(wellDataPos->second.connections.begin(),
-                      wellDataPos->second.connections.end(),
-                      [&cond_assign, this](auto& connectionData)
-                      {
-                          const auto index = connectionData.index;
-                          cond_assign(connectionData.cell_pressure, index,
-                                      oilConnectionPressures_);
-                          cond_assign(connectionData.cell_saturation_water, index,
-                                      waterConnectionSaturations_);
-                          cond_assign(connectionData.cell_saturation_gas, index,
-                                      gasConnectionSaturations_);
-                       });
+        std::ranges::for_each(wellDataPos->second.connections,
+                              [&cond_assign, this](auto& connectionData)
+                              {
+                                  const auto index = connectionData.index;
+                                  cond_assign(connectionData.cell_pressure, index,
+                                              oilConnectionPressures_);
+                                  cond_assign(connectionData.cell_saturation_water, index,
+                                              waterConnectionSaturations_);
+                                  cond_assign(connectionData.cell_saturation_gas, index,
+                                              gasConnectionSaturations_);
+                              });
     }
 
     oilConnectionPressures_.clear();

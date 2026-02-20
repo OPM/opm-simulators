@@ -45,19 +45,19 @@ allocate(const unsigned bufferSize,
         allocated_ = true;
         freeConcentrations_.resize(tracers.size());
         solConcentrations_.resize(tracers.size());
-        std::for_each(tracers.begin(), tracers.end(),
-                      [idx = 0, bufferSize, this](const auto& tracer) mutable
-                      {
-                          freeConcentrations_[idx].resize(bufferSize, 0.0);
-                          if (((tracer.phase == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
-                               (tracer.phase == Phase::OIL && FluidSystem::enableVaporizedOil())) &&
-                              (tracer.solution_concentration.has_value() ||
-                               tracer.solution_tvdp.has_value()))
-                          {
-                              solConcentrations_[idx].resize(bufferSize, 0.0);
-                          }
-                          ++idx;
-                      });
+        std::ranges::for_each(tracers,
+                              [idx = 0, bufferSize, this](const auto& tracer) mutable
+                              {
+                                  freeConcentrations_[idx].resize(bufferSize, 0.0);
+                                  if (((tracer.phase == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
+                                      (tracer.phase == Phase::OIL && FluidSystem::enableVaporizedOil())) &&
+                                      (tracer.solution_concentration.has_value() ||
+                                      tracer.solution_tvdp.has_value()))
+                                  {
+                                      solConcentrations_[idx].resize(bufferSize, 0.0);
+                                  }
+                                  ++idx;
+                              });
     }
 }
 
@@ -66,14 +66,14 @@ void TracerContainer<FluidSystem>::
 assignFreeConcentrations(const unsigned globalDofIdx,
                          const AssignFunction& concentration)
 {
-    std::for_each(freeConcentrations_.begin(), freeConcentrations_.end(),
-                  [globalDofIdx, idx = 0, &concentration](auto& tracer) mutable
-                  {
-                      if (!tracer.empty()) {
-                          tracer[globalDofIdx] = concentration(idx);
-                      }
-                      ++idx;
-                  });
+    std::ranges::for_each(freeConcentrations_,
+                          [globalDofIdx, idx = 0, &concentration](auto& tracer) mutable
+                          {
+                              if (!tracer.empty()) {
+                                  tracer[globalDofIdx] = concentration(idx);
+                              }
+                              ++idx;
+                          });
 }
 
 template<class FluidSystem>
@@ -81,14 +81,14 @@ void TracerContainer<FluidSystem>::
 assignSolConcentrations(const unsigned globalDofIdx,
                          const AssignFunction& concentration)
 {
-    std::for_each(solConcentrations_.begin(), solConcentrations_.end(),
-                  [globalDofIdx, idx = 0, &concentration](auto& tracer) mutable
-                  {
-                      if (!tracer.empty()) {
-                          tracer[globalDofIdx] = concentration(idx);
-                      }
-                      ++idx;
-                  });
+    std::ranges::for_each(solConcentrations_,
+                          [globalDofIdx, idx = 0, &concentration](auto& tracer) mutable
+                          {
+                              if (!tracer.empty()) {
+                                  tracer[globalDofIdx] = concentration(idx);
+                              }
+                              ++idx;
+                          });
 }
 
 template<class FluidSystem>
@@ -100,22 +100,22 @@ outputRestart(data::Solution& sol,
         return;
     }
 
-    std::for_each(tracers.begin(), tracers.end(),
-                    [idx = 0, &sol, this](const auto& tracer) mutable
-                    {
-                        sol.insert(tracer.fname(),
-                                   UnitSystem::measure::identity,
-                                   std::move(freeConcentrations_[idx]),
-                                   data::TargetType::RESTART_TRACER_SOLUTION);
+    std::ranges::for_each(tracers,
+                          [idx = 0, &sol, this](const auto& tracer) mutable
+                          {
+                                sol.insert(tracer.fname(),
+                                          UnitSystem::measure::identity,
+                                          std::move(freeConcentrations_[idx]),
+                                          data::TargetType::RESTART_TRACER_SOLUTION);
 
-                        if (!solConcentrations_[idx].empty()) {
-                            sol.insert(tracer.sname(),
-                                       UnitSystem::measure::identity,
-                                       std::move(solConcentrations_[idx]),
-                                       data::TargetType::RESTART_TRACER_SOLUTION);
-                        }
-                        ++idx;
-                    });
+                                if (!solConcentrations_[idx].empty()) {
+                                    sol.insert(tracer.sname(),
+                                              UnitSystem::measure::identity,
+                                              std::move(solConcentrations_[idx]),
+                                              data::TargetType::RESTART_TRACER_SOLUTION);
+                                }
+                                ++idx;
+                            });
 
     this->allocated_ = false;
 }

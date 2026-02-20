@@ -539,9 +539,9 @@ setRestart(const data::Solution& sol,
         std::pair{"TEMP",     &temperature_},
     };
 
-    std::for_each(fields.begin(), fields.end(),
-                  [&assign](const auto& p)
-                  { assign(p.first, *p.second); });
+    std::ranges::for_each(fields,
+                          [&assign](const auto& p)
+                          { assign(p.first, *p.second); });
 
     if (this->bioeffectsC_.allocated()) {
         // Biofilms for gas-water systems; MICP only for water systems
@@ -831,7 +831,7 @@ doAllocBuffers(const unsigned bufferSize,
     };
 
     using PhaseArray = std::array<ScalarBuffer,numPhases>;
-    std::for_each(entries.begin(), entries.end(),
+    std::ranges::for_each(entries,
                   [&handleScalarEntry, &getName, &rstKeywords](const auto& entry)
                   {
                       std::visit(VisitorOverloadSet{

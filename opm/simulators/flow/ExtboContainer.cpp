@@ -98,16 +98,16 @@ outputRestart(data::Solution& sol)
         DataEntry{"STD_OIL",  UnitSystem::measure::identity,           mFracOil_},
     };
 
-    std::for_each(solutionArrays.begin(), solutionArrays.end(),
-                  [&sol](auto& entry)
-                  {
-                      if (!std::get<2>(entry).empty()) {
-                          sol.insert(std::get<std::string>(entry),
-                          std::get<UnitSystem::measure>(entry),
-                          std::move(std::get<2>(entry)),
-                          data::TargetType::RESTART_OPM_EXTENDED);
-                      }
-                  });
+    std::ranges::for_each(solutionArrays,
+                          [&sol](auto& entry)
+                          {
+                              if (!std::get<2>(entry).empty()) {
+                                  sol.insert(std::get<std::string>(entry),
+                                  std::get<UnitSystem::measure>(entry),
+                                  std::move(std::get<2>(entry)),
+                                  data::TargetType::RESTART_OPM_EXTENDED);
+                              }
+                          });
 
     this->allocated_ = false;
 }

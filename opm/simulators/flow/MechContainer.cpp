@@ -46,12 +46,12 @@ allocate(const std::size_t bufferSize,
     this->potentialPressForce_.resize(bufferSize, 0.0);
     rstKeywords["PRESPOTF"] = 0;
 
-    std::for_each(disp_.begin(), disp_.end(),
-                  [suffix = "XYZ", is = 0, bufferSize, &rstKeywords](auto& v) mutable
-                  {
-                      v.resize(bufferSize, 0.0);
-                      rstKeywords[std::string{"DISP"} + suffix[is++]] = 0;
-                  });
+    std::ranges::for_each(disp_,
+                          [suffix = "XYZ", is = 0, bufferSize, &rstKeywords](auto& v) mutable
+                          {
+                              v.resize(bufferSize, 0.0);
+                              rstKeywords[std::string{"DISP"} + suffix[is++]] = 0;
+                          });
 
     auto resizeAndRegister =
         [&rstKeywords,bufferSize](auto& tensor,
@@ -171,7 +171,7 @@ outputRestart(data::Solution& sol)
         DataEntry{"TEMPPOTF", UnitSystem::measure::pressure, &potentialTempForce_},
     };
 
-    std::for_each(solutionVectors.begin(), solutionVectors.end(),
+    std::ranges::for_each(solutionVectors,
                   [&doInsert](auto& array)
                   {
                       std::visit(VisitorOverloadSet{

@@ -887,7 +887,7 @@ namespace Opm {
 
             // First loop and check for status changes. This is necessary
             // as wcycle needs the updated open/close times.
-            std::for_each(this->wells_ecl_.begin(), this->wells_ecl_.end(),
+            std::ranges::for_each(this->wells_ecl_,
                           [this, &wg_events = this->report_step_start_events_](const auto& well_ecl)
                           {
                               if (!well_ecl.hasConnections()) {

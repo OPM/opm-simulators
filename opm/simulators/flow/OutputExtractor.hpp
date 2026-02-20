@@ -158,7 +158,7 @@ struct Extractor
     static void process(const Context& ectx,
                         const std::vector<Entry>& extractors)
     {
-        std::for_each(extractors.begin(), extractors.end(),
+        std::ranges::for_each(extractors,
                       [&ectx](const auto& entry)
                       {
                           std::visit(VisitorOverloadSet{
@@ -170,7 +170,7 @@ struct Extractor
                               },
                               [&ectx](const PhaseEntry& v)
                               {
-                                  std::for_each(v.data->begin(), v.data->end(),
+                                  std::ranges::for_each(*v.data,
                                                 [phaseIdx = 0, &ectx, &v](auto& array) mutable
                                                 {
                                                     if (!array.empty()) {
@@ -269,9 +269,8 @@ struct BlockExtractor
 
         ExecMap extractors;
 
-        std::for_each(
-            blockData.begin(),
-            blockData.end(),
+        std::ranges::for_each(
+            blockData,
             [&handlers, &extractors](auto& bd_info)
             {
                 unsigned phase{};
@@ -367,9 +366,9 @@ struct BlockExtractor
     static void process(const std::vector<Exec>& blockExtractors,
                         const Context& ectx)
     {
-        std::for_each(blockExtractors.begin(), blockExtractors.end(),
-                      [&ectx](auto& bdata)
-                      { *bdata.data = bdata.extract(ectx); });
+        std::ranges::for_each(blockExtractors,
+                             [&ectx](auto& bdata)
+                             { *bdata.data = bdata.extract(ectx); });
     }
 };
 
