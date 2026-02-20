@@ -107,6 +107,11 @@ private:
     WellVector mergedWellResidual_;
     std::vector<int> wellDofOffsets_;
 
+    // Owned storage for merged well matrices; SystemMatrix points into these.
+    WRMatrix mergedB_;
+    RWMatrix mergedC_;
+    WWMatrix mergedD_;
+
     SystemMatrix sysMatrix_;
     SystemVector sysX_;
     SystemVector sysRhs_;
@@ -154,8 +159,8 @@ private:
         }
         merger.finalize();
 
-        mergedWellResidual_ = merger.getMergedWellResidual();
-        wellDofOffsets_ = merger.getWellDofOffsets();
+        mergedWellResidual_ = std::move(merger.getMergedWellResidual());
+        wellDofOffsets_ = std::move(merger.getWellDofOffsets());
 
         const size_t newWellDofs = merger.getMergedD().N();
         const bool localNeedRebuild = !sysInitialized_ || (newWellDofs != cachedWellDofs_);
@@ -166,10 +171,13 @@ private:
         const bool needRebuild
             = this->comm_->communicator().max(static_cast<int>(localNeedRebuild)) > 0;
 
-        sysMatrix_[_0][_0] = *Parent::matrix_;
-        sysMatrix_[_0][_1] = merger.getMergedC();
-        sysMatrix_[_1][_0] = merger.getMergedB();
-        sysMatrix_[_1][_1] = merger.getMergedD();
+        mergedB_ = std::move(merger.getMergedB());
+        mergedC_ = std::move(merger.getMergedC());
+        mergedD_ = std::move(merger.getMergedD());
+        sysMatrix_.A = Parent::matrix_;
+        sysMatrix_.B = &mergedB_;
+        sysMatrix_.C = &mergedC_;
+        sysMatrix_.D = &mergedD_;
         cachedWellDofs_ = newWellDofs;
 
         const auto& prm = this->prm_[this->activeSolverNum_];
