@@ -73,6 +73,15 @@ hasMasterInjectionTarget(const std::string& gname, Phase phase) const
 template <class Scalar>
 bool
 ReservoirCouplingSlave<Scalar>::
+hasMasterProductionLimits(const std::string& gname) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->hasMasterProductionLimits(gname);
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
 hasMasterProductionTarget(const std::string& gname) const
 {
     assert(this->report_step_data_);
@@ -111,6 +120,15 @@ masterInjectionTarget(const std::string& gname, Phase phase) const
 {
     assert(this->report_step_data_);
     return this->report_step_data_->masterInjectionTarget(gname, phase);
+}
+
+template <class Scalar>
+const typename ReservoirCouplingSlave<Scalar>::MasterProductionLimits&
+ReservoirCouplingSlave<Scalar>::
+masterProductionLimits(const std::string& gname) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->masterProductionLimits(gname);
 }
 
 template <class Scalar>

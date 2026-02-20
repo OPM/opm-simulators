@@ -74,11 +74,26 @@ public:
     /// @return MPI communicator handle for communication with the master process
     MPI_Comm getSlaveMasterComm() const { return this->slave_.getMasterComm(); }
 
+    /// @brief Per-rate-type production limits received from master hierarchy.
+    /// A value of -1 means no limit defined in the hierarchy for that rate type.
+    struct MasterProductionLimits {
+        Scalar oil_limit{-1};
+        Scalar water_limit{-1};
+        Scalar gas_limit{-1};
+        Scalar liquid_limit{-1};
+        Scalar resv_limit{-1};
+    };
+
     /// @brief Check if a master-imposed injection target exists for a group and phase
     /// @param gname Slave group name
     /// @param phase Injection phase (e.g., Phase::WATER, Phase::GAS)
     /// @return true if the master sent an injection target for this group/phase pair
     bool hasMasterInjectionTarget(const std::string& gname, Phase phase) const;
+
+    /// @brief Check if master-imposed per-rate-type production limits exist for a group
+    /// @param gname Slave group name
+    /// @return true if the master sent per-rate-type limits for this group
+    bool hasMasterProductionLimits(const std::string& gname) const;
 
     /// @brief Check if a master-imposed production target exists for a group
     /// @param gname Slave group name
@@ -102,6 +117,12 @@ public:
     /// @return Pair of (target rate, control mode)
     /// @throws std::out_of_range if no target exists for the given group/phase pair
     std::pair<Scalar, Group::InjectionCMode> masterInjectionTarget(const std::string& gname, Phase phase) const;
+
+    /// @brief Get the master-imposed per-rate-type production limits for a group
+    /// @param gname Slave group name
+    /// @return Reference to the limits struct (-1 = no limit for that rate type)
+    /// @throws std::out_of_range if no limits exist for the given group
+    const MasterProductionLimits& masterProductionLimits(const std::string& gname) const;
 
     /// @brief Get the master-imposed production target and control mode for a group
     /// @param gname Slave group name
@@ -160,6 +181,11 @@ public:
     /// @param cmode Injection control mode dictated by the master
     void setMasterInjectionTarget(const std::string& gname, Phase phase, Scalar target, Group::InjectionCMode cmode);
 
+    /// @brief Store master-imposed per-rate-type production limits for a group
+    /// @param gname Slave group name
+    /// @param limits Per-rate-type limits (-1 = no limit for that rate type)
+    void setMasterProductionLimits(const std::string& gname, const MasterProductionLimits& limits);
+
     /// @brief Store a master-imposed production target for a group
     /// @param gname Slave group name
     /// @param target Target production rate
@@ -205,6 +231,9 @@ private:
     std::map<std::string, std::pair<Scalar, Group::ProductionCMode>> master_production_targets_;
     // Key: (injection phase, slave group name). Value: (target rate, injection control mode).
     std::map<std::pair<Phase, std::string>, std::pair<Scalar, Group::InjectionCMode>> master_injection_targets_;
+    // Per-rate-type production limits from master hierarchy. Key: slave group name.
+    // A limit of -1 means no limit defined in the hierarchy for that rate type.
+    std::map<std::string, MasterProductionLimits> master_production_limits_;
 };
 } // namespace Opm
 #endif // OPM_RESERVOIR_COUPLING_SLAVE_REPORT_STEP_HPP

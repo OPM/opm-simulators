@@ -266,6 +266,26 @@ public:
                                           const std::vector<Scalar>& resv_coeff,
                                           Scalar efficiencyFactor) const;
 
+#ifdef RESERVOIR_COUPLING_ENABLED
+    /// @brief Get the effective production limit for a group and rate type,
+    /// combining master limit, slave-local target, and GRUPSLAV filter flag.
+    ///
+    /// If the master sent a per-rate-type limit for this group and rate type,
+    /// the filter flag determines which value to use:
+    /// - MAST: return master limit
+    /// - BOTH: return min(master limit, slave_local_target)
+    /// - SLAV: return slave_local_target
+    ///
+    /// @param gname Slave group name
+    /// @param rate_type The production rate type to check
+    /// @param slave_local_target The slave's own target from GCONPROD
+    /// @return The effective limit to apply
+    Scalar getEffectiveProductionLimit(
+      const std::string& gname,
+      Group::ProductionCMode rate_type,
+      Scalar slave_local_target) const;
+#endif  // RESERVOIR_COUPLING_ENABLED
+
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
 
     std::optional<GroupTarget> getWellGroupTargetInjector(const std::string& name,

@@ -44,6 +44,7 @@ public:
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
+    using MasterProductionLimits = typename ReservoirCouplingSlaveReportStep<Scalar>::MasterProductionLimits;
     using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
 
     ReservoirCouplingSlave(
@@ -60,6 +61,10 @@ public:
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     bool hasMasterInjectionTarget(const std::string& gname, Phase phase) const;
 
+    /// @brief Check if master-imposed per-rate-type production limits exist for a group
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    bool hasMasterProductionLimits(const std::string& gname) const;
+
     /// @brief Check if a master-imposed production target exists for a group
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     bool hasMasterProductionTarget(const std::string& gname) const;
@@ -71,6 +76,10 @@ public:
     /// @brief Get the master-imposed injection target and control mode for a group and phase
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     std::pair<Scalar, Group::InjectionCMode> masterInjectionTarget(const std::string& gname, Phase phase) const;
+
+    /// @brief Get the master-imposed per-rate-type production limits for a group
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    const MasterProductionLimits& masterProductionLimits(const std::string& gname) const;
 
     /// @brief Get the master-imposed production target and control mode for a group
     /// @details Delegates to ReservoirCouplingSlaveReportStep

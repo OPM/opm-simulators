@@ -59,6 +59,14 @@ hasMasterInjectionTarget(const std::string& gname, Phase phase) const
 template <class Scalar>
 bool
 ReservoirCouplingSlaveReportStep<Scalar>::
+hasMasterProductionLimits(const std::string& gname) const
+{
+    return this->master_production_limits_.count(gname) > 0;
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlaveReportStep<Scalar>::
 hasMasterProductionTarget(const std::string& gname) const
 {
     return this->master_production_targets_.count(gname) > 0;
@@ -70,6 +78,14 @@ ReservoirCouplingSlaveReportStep<Scalar>::
 masterInjectionTarget(const std::string& gname, Phase phase) const
 {
     return this->master_injection_targets_.at({phase, gname});
+}
+
+template <class Scalar>
+const typename ReservoirCouplingSlaveReportStep<Scalar>::MasterProductionLimits&
+ReservoirCouplingSlaveReportStep<Scalar>::
+masterProductionLimits(const std::string& gname) const
+{
+    return this->master_production_limits_.at(gname);
 }
 
 template <class Scalar>
@@ -174,13 +190,21 @@ receiveProductionGroupConstraintsFromMaster(std::size_t num_targets)
     this->comm().broadcast(
         production_constraints.data(), num_targets, /*emitter_rank=*/0
     );
-    // Clear old targets before storing new ones from master
+    // Clear old targets and limits before storing new ones from master
     this->master_production_targets_.clear();
+    this->master_production_limits_.clear();
     for (const auto& target : production_constraints) {
         const auto& group_name = this->slave_.slaveGroupIdxToGroupName(target.group_name_idx);
         this->setMasterProductionTarget(
             group_name, target.target, target.cmode
         );
+        MasterProductionLimits limits;
+        limits.oil_limit = target.oil_limit;
+        limits.water_limit = target.water_limit;
+        limits.gas_limit = target.gas_limit;
+        limits.liquid_limit = target.liquid_limit;
+        limits.resv_limit = target.resv_limit;
+        this->setMasterProductionLimits(group_name, limits);
         this->logger().debug(fmt::format(
             "Stored master production target for group '{}': target={}, cmode={}",
             group_name, target.target, static_cast<int>(target.cmode)
@@ -214,6 +238,14 @@ ReservoirCouplingSlaveReportStep<Scalar>::
 setMasterInjectionTarget(const std::string& gname, Phase phase, Scalar target, Group::InjectionCMode cmode)
 {
     this->master_injection_targets_[{phase, gname}] = {target, cmode};
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+setMasterProductionLimits(const std::string& gname, const MasterProductionLimits& limits)
+{
+    this->master_production_limits_[gname] = limits;
 }
 
 template <class Scalar>
