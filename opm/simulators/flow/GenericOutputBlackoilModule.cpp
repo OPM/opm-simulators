@@ -1050,6 +1050,7 @@ template<class FluidSystem>
 Inplace GenericOutputBlackoilModule<FluidSystem>::
 accumulateRegionSums(const Parallel::Communication& comm)
 {
+    OPM_TIMEBLOCK(GenericOutputBlackoilModule_accumulateRegionSums);
     Inplace inplace;
 
     for (const auto& region : this->regions_) {
@@ -1073,6 +1074,7 @@ updateSummaryRegionValues(const Inplace& inplace,
                           std::map<std::string, double>& miscSummaryData,
                           std::map<std::string, std::vector<double>>& regionData) const
 {
+    OPM_TIMEBLOCK(GenericOutputBlackoilModule_updateSummaryRegionValues);
     // The field summary vectors should only use the FIPNUM based region sum.
     {
         for (const auto& phase : Inplace::phases()) {
