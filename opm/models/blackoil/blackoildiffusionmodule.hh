@@ -126,7 +126,10 @@ public:
      */
     OPM_HOST_DEVICE static void initFromState(const EclipseState& eclState)
     {
-        // use_mole_fraction_ = eclState.getTableManager().diffMoleFraction();
+        // TODO: support use_mole_fraction_ on gpu.
+        #if OPM_IS_INSIDE_HOST_FUNCTION
+        use_mole_fraction_ = eclState.getTableManager().diffMoleFraction();
+        #endif
     }
     #endif
 
@@ -326,10 +329,18 @@ private:
         return rhoW * mMGas / (rhoG * mMWater);
     }
 
-    // TODO: snakk med atgeirr og finn ut av om jeg kan flytte denne over til boeq istedenfor
-    constexpr static bool use_mole_fraction_ = false;
-    // constexpr static bool use_mole_fraction_ = false; // false in spe11c
+    #if OPM_IS_INSIDE_DEVICE_FUNCTION
+    constexpr inline static bool use_mole_fraction_ = false; // false in spe11c
+    #else
+    static bool use_mole_fraction_;
+    #endif
 };
+
+#if OPM_IS_INSIDE_HOST_FUNCTION
+template <typename TypeTag>
+bool
+BlackOilDiffusionModule<TypeTag, true>::use_mole_fraction_;
+#endif
 
 /*!
  * \ingroup Diffusion
