@@ -18,7 +18,7 @@
 */
 #include <config.h>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
-#include <opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp>
+#include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
 
 #include <array>
 #include <string>
@@ -30,11 +30,11 @@
 namespace Opm {
 
 // -------------------------------------------------------
-// Constructor for the RescoupTargetCalculator class
+// Constructor for the RescoupConstraintsCalculator class
 // -------------------------------------------------------
 template <class Scalar, class IndexTraits>
-RescoupTargetCalculator<Scalar, IndexTraits>::
-RescoupTargetCalculator(
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+RescoupConstraintsCalculator(
     GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
     GroupStateHelper<Scalar, IndexTraits>& group_state_helper
 )
@@ -52,7 +52,16 @@ RescoupTargetCalculator(
 {
 }
 
-// Calculates the target of each master group.
+// Calculates the constraints (target and per-rate-type limits) for each master group.
+//
+// A master group defines both an active control-mode target and limits for other rate types
+// (ORAT, WRAT, GRAT, LRAT, RESV). The active target alone is not sufficient for reservoir-coupling slaves:
+// a slave group must know every effective limit so that it can enforce the most restrictive
+// constraint for each rate type independently (the active cmode on the master side may differ
+// from what is binding on the slave side).
+//
+// Details on the target calculation:
+// ----------------------------------
 // - If the group is a production group:
 //  * it is assumed that the action on exceeding the limit (GCONPROD item 7) is "RATE", other
 //    actions are not implemented.
@@ -98,10 +107,22 @@ RescoupTargetCalculator(
 //       injection rates, surface production rates, or voidage production rate as communicated at
 //       the beginning of the time step. See more details in RescoupSendSlaveGroupData.cpp.
 //
+// Details on the per-rate-type limit calculation:
+// -----------------------------------------------
+// For each non-active rate type (ORAT, WRAT, GRAT, LRAT, RESV) that is not the active
+// cmode, the same hierarchy-traversal logic described above is reused with an "explicit
+// cmode" parameter.  The difference is in the recursion stopping criterion:
+//  - Active target: stops at an ancestor whose production_control() != FLD/NONE.
+//  - Per-rate-type limit: stops at an ancestor that has_control(rate_type), i.e. that
+//    defines a GCONPROD limit for that specific rate type.
+// The guide-rate fraction calculation (FractionCalculator) is identical in both cases,
+// since fractions represent proportional capacity allocation independent of rate type.
+// If no ancestor defines a limit for a given rate type, the limit is set to -1 (undefined).
+// See GroupTargetCalculator::groupProductionConstraints() for the implementation.
 template <class Scalar, class IndexTraits>
 void
-RescoupTargetCalculator<Scalar, IndexTraits>::
-calculateMasterGroupTargetsAndSendToSlaves()
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+calculateMasterGroupConstraintsAndSendToSlaves()
 {
     // NOTE: Since this object can only be constructed for a master process, we can be
     //   sure that if we are here, we are running as master
@@ -115,10 +136,10 @@ calculateMasterGroupTargetsAndSendToSlaves()
         auto num_slaves = rescoup_master.numSlaves();
         for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
             if (rescoup_master.slaveIsActivated(slave_idx)) {
-                auto [injection_targets, production_targets] =
-                    this->calculateSlaveGroupTargets_(slave_idx, calculator);
-                this->sendSlaveGroupTargetsToSlave_(
-                    rescoup_master, slave_idx, injection_targets, production_targets
+                auto [injection_targets, production_constraints] =
+                    this->calculateSlaveGroupConstraints_(slave_idx, calculator);
+                this->sendSlaveGroupConstraintsToSlave_(
+                    rescoup_master, slave_idx, injection_targets, production_constraints
                 );
             }
         }
@@ -135,14 +156,14 @@ calculateMasterGroupTargetsAndSendToSlaves()
 // PR to keep this PR scoped to reservoir coupling behavior.
 template <class Scalar, class IndexTraits>
 std::tuple<
-  std::vector<typename RescoupTargetCalculator<Scalar, IndexTraits>::InjectionGroupTarget>,
-  std::vector<typename RescoupTargetCalculator<Scalar, IndexTraits>::ProductionGroupTarget>
+  std::vector<typename RescoupConstraintsCalculator<Scalar, IndexTraits>::InjectionGroupTarget>,
+  std::vector<typename RescoupConstraintsCalculator<Scalar, IndexTraits>::ProductionGroupConstraints>
 >
-RescoupTargetCalculator<Scalar, IndexTraits>::
-calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar, IndexTraits>& calculator) const
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+calculateSlaveGroupConstraints_(std::size_t slave_idx, GroupTargetCalculator<Scalar, IndexTraits>& calculator) const
 {
     std::vector<InjectionGroupTarget> injection_targets;
-    std::vector<ProductionGroupTarget> production_targets;
+    std::vector<ProductionGroupConstraints> production_constraints;
     auto& rescoup_master = this->reservoir_coupling_master_;
     static const std::array<ReservoirCoupling::Phase, 3> phases = {
         ReservoirCoupling::Phase::Water, ReservoirCoupling::Phase::Oil, ReservoirCoupling::Phase::Gas
@@ -164,46 +185,53 @@ calculateSlaveGroupTargets_(std::size_t slave_idx, GroupTargetCalculator<Scalar,
             }
         }
         if (group.isProductionGroup()) {
-            auto target_info = calculator.groupProductionTarget(group);
-            if (target_info.has_value()) {
-                production_targets.push_back(
-                    ProductionGroupTarget{
-                        group_idx, target_info->target, target_info->cmode
+            auto constraints = calculator.groupProductionConstraints(group);
+            if (constraints.has_value()) {
+                production_constraints.push_back(
+                    ProductionGroupConstraints{
+                        group_idx,
+                        constraints->active_target,
+                        constraints->active_cmode,
+                        constraints->oil_limit,
+                        constraints->water_limit,
+                        constraints->gas_limit,
+                        constraints->liquid_limit,
+                        constraints->resv_limit
                     }
                 );
             }
         }
     }
-    return {injection_targets, production_targets};
+    return {injection_targets, production_constraints};
 }
 
 template <class Scalar, class IndexTraits>
 void
-RescoupTargetCalculator<Scalar, IndexTraits>::
-sendSlaveGroupTargetsToSlave_(
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+sendSlaveGroupConstraintsToSlave_(
     const ReservoirCouplingMaster<Scalar>& rescoup_master,
     std::size_t slave_idx,
     const std::vector<InjectionGroupTarget>& injection_targets,
-    const std::vector<ProductionGroupTarget>& production_targets
+    const std::vector<ProductionGroupConstraints>& production_constraints
 ) const
 {
     auto num_injection_targets = injection_targets.size();
-    auto num_production_targets = production_targets.size();
-    // First, send the number of targets such that the slave can know if it can expect none
-    // or more targets.
-    rescoup_master.sendNumGroupTargetsToSlave(slave_idx, num_injection_targets, num_production_targets);
+    auto num_production_constraints = production_constraints.size();
+    // First, send the number of constraints such that the slave can know if it can expect none
+    // or more constraints.
+    rescoup_master.sendNumGroupConstraintsToSlave(slave_idx, num_injection_targets, num_production_constraints);
     if (num_injection_targets > 0) {
         rescoup_master.sendInjectionTargetsToSlave(slave_idx, injection_targets);
     }
-    if (num_production_targets > 0) {
-        rescoup_master.sendProductionTargetsToSlave(slave_idx, production_targets);
+    if (num_production_constraints > 0) {
+        rescoup_master.sendProductionConstraintsToSlave(slave_idx, production_constraints);
     }
 }
 
-template class RescoupTargetCalculator<double, BlackOilDefaultFluidSystemIndices>;
+template class RescoupConstraintsCalculator<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class RescoupTargetCalculator<float, BlackOilDefaultFluidSystemIndices>;
+template class RescoupConstraintsCalculator<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 }// namespace Opm

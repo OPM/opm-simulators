@@ -124,8 +124,6 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
     // If we are here, we are at the topmost group to be visited in the recursion.
     // This is the group containing the control we will check against.
     GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc {*this,
-                                                                             resv_coeff,
-                                                                             group,
                                                                              injection_phase};
 
     GroupStateHelpers::FractionCalculator fcalc {this->schedule_,
@@ -133,7 +131,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
                                                  this->summary_state_,
                                                  this->report_step_,
                                                  &this->guide_rate_,
-                                                 tcalc.guideTargetMode(),
+                                                 this->getInjectionGuideTargetMode(injection_phase),
                                                  /*is_producer=*/false,
                                                  injection_phase};
 
@@ -187,7 +185,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
         return std::make_pair(current_well_rate_available > group_target_rate_available, scale);
     }
 
-    const Scalar orig_target = tcalc.groupTarget();
+    const Scalar orig_target = this->getInjectionGroupTarget(group, injection_phase, resv_coeff);
     const Scalar current_rate_available = tcalc.calcModeRateFromRates(rates);
     const std::size_t local_reduction_level = this->getLocalReductionLevel_(
         chain, /*is_production_group=*/false, injection_phase);
@@ -269,7 +267,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
                                                                       this->summary_state_,
                                                                       this->report_step_,
                                                                       &this->guide_rate_,
-                                                                      tcalc.guideTargetMode(),
+                                                                      this->getProductionGuideTargetMode(group),
                                                                       /*is_producer=*/true,
                                                                       /*injection_phase=*/Phase::OIL};
 
@@ -286,7 +284,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
         return tcalc.calcModeRateFromRates(group_surface_rates);
     };
 
-    const Scalar orig_target = tcalc.groupTarget();
+    const Scalar orig_target = this->getProductionGroupTarget(group);
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
@@ -361,9 +359,21 @@ getInjectionGroupTarget(
     const Phase& injection_phase,
     const std::vector<Scalar>& resv_coeff) const
 {
+    const auto cmode = this->groupState().injection_control(group.name(), injection_phase);
+    return this->getInjectionGroupTargetForMode_(group, injection_phase, resv_coeff, cmode);
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+getInjectionGroupTargetForMode_(
+    const Group& group,
+    const Phase& injection_phase,
+    const std::vector<Scalar>& resv_coeff,
+    Group::InjectionCMode cmode) const
+{
     const auto& pu = this->phaseUsage();
     const int pos = this->phaseToActivePhaseIdx(injection_phase);
-    Group::InjectionCMode cmode = this->groupState().injection_control(group.name(), injection_phase);
     Group::InjectionControls ctrl = group.injectionControls(injection_phase, this->summary_state_);
     bool use_gpmaint = group.has_gpmaint_control(injection_phase, cmode)
                                 && this->groupState().has_gpmaint_target(group.name());
@@ -418,7 +428,7 @@ getInjectionGroupTarget(
     }
     default:
         OPM_DEFLOG_THROW(std::logic_error,
-                         "Invalid Group::InjectionCMode in getInjectionGroupTarget",
+                         "Invalid Group::InjectionCMode in getInjectionGroupTargetForMode_",
                          this->deferredLogger());
         return 0.0;
     }
@@ -436,7 +446,25 @@ Scalar
 GroupStateHelper<Scalar, IndexTraits>::
 getProductionGroupTarget(const Group& group) const
 {
-    Group::ProductionCMode cmode = this->groupState().production_control(group.name());
+    const auto cmode = this->groupState().production_control(group.name());
+    return this->getProductionGroupTargetForMode_(group, cmode);
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+getProductionGroupTargetForMode(const Group& group,
+                                 Group::ProductionCMode cmode) const
+{
+    return this->getProductionGroupTargetForMode_(group, cmode);
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+getProductionGroupTargetForMode_(const Group& group,
+                                  Group::ProductionCMode cmode) const
+{
     Group::ProductionControls ctrl = group.productionControls(this->summary_state_);
     switch (cmode) {
     case Group::ProductionCMode::ORAT:
@@ -467,7 +495,7 @@ getProductionGroupTarget(const Group& group) const
     }
     default:
         OPM_DEFLOG_THROW(std::logic_error,
-                         "Invalid Group::ProductionCMode in getProductionGroupTarget",
+                         "Invalid Group::ProductionCMode in getProductionGroupTargetForMode_",
                          this->deferredLogger());
         return 0.0;
     }
@@ -554,7 +582,7 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
                                                                       this->summary_state_,
                                                                       this->report_step_,
                                                                       &this->guide_rate_,
-                                                                      tcalc.guideTargetMode(),
+                                                                      this->getProductionGuideTargetMode(group),
                                                                       true,
                                                                       Phase::OIL);
 
@@ -568,7 +596,7 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
-    const Scalar orig_target = tcalc.groupTarget();
+    const Scalar orig_target = this->getProductionGroupTarget(group);
     const auto chain = this->groupChainTopBot(bottom_group.name(), group.name());
     const std::size_t local_reduction_level = this->getLocalReductionLevel_(
         chain, /*is_production_group=*/true, Phase::OIL);
@@ -660,8 +688,6 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
     // If we are here, we are at the topmost group to be visited in the recursion.
     // This is the group containing the control we will check against.
     GroupStateHelpers::InjectionTargetCalculator<Scalar, IndexTraits> tcalc{*this,
-                                                                             resv_coeff,
-                                                                             group,
                                                                              injection_phase};
 
     GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
@@ -669,7 +695,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
                                                                       this->summary_state_,
                                                                       this->report_step_,
                                                                       &this->guide_rate_,
-                                                                      tcalc.guideTargetMode(),
+                                                                      this->getInjectionGuideTargetMode(injection_phase),
                                                                       /*is_producer=*/false,
                                                                       injection_phase};
 
@@ -687,7 +713,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
         return fcalc.localFraction(child, always_included);
     };
 
-    const Scalar orig_target = tcalc.groupTarget();
+    const Scalar orig_target = this->getInjectionGroupTarget(group, injection_phase, resv_coeff);
     const Scalar current_rate_available = tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
 
@@ -764,7 +790,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
                                                                       this->summary_state_,
                                                                       this->report_step_,
                                                                       &this->guide_rate_,
-                                                                      tcalc.guideTargetMode(),
+                                                                      this->getProductionGuideTargetMode(group),
                                                                       /*is_producer=*/true,
                                                                       /*injection_phase=*/Phase::OIL};
 
@@ -782,7 +808,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
         return fcalc.localFraction(child, always_included);
     };
 
-    const Scalar orig_target = tcalc.groupTarget();
+    const Scalar orig_target = this->getProductionGroupTarget(group);
     // Switch sign since 'rates' are negative for producers.
     const Scalar current_rate_available = -tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
@@ -1719,7 +1745,7 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
     GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                    resv_coeff,
                                                                    control_group};
-    const auto& control_group_target = tcalc.groupTarget();
+    const Scalar control_group_target = this->getProductionGroupTarget(control_group);
 
     // Sum guide rates of the control group's FLD children. The control group's
     // own guide rate (from GCONPROD) is NOT used here — it governs the control
@@ -1731,7 +1757,7 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
             || child_ctrl == Group::ProductionCMode::NONE) {
             if (this->guide_rate_.has(child)) {
                 control_group_guide_rate += this->guide_rate_.get(
-                    child, tcalc.guideTargetMode(),
+                    child, this->getProductionGuideTargetMode(control_group),
                     this->getProductionGroupRateVector(child));
             }
         }
