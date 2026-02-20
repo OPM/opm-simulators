@@ -412,7 +412,7 @@ communicateAbove(Scalar first_above,
         if (above.size() > 1)
         {
             // No comunication needed, just copy.
-            std::copy(current, current + (above.size() - 1), above.begin()+1);
+            std::copy_n(current, above.size() - 1, above.begin() + 1);
         }
     }
     return above;
@@ -442,7 +442,7 @@ communicateBelow(Scalar last_below,
         if (below.size() > 1)
         {
             // No comunication needed, just copy.
-            std::copy(current+1, current + below.size(), below.begin());
+            std::copy_n(current + 1, below.size() - 1, below.begin());
         }
     }
     return below;

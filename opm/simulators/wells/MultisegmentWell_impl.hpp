@@ -2345,7 +2345,7 @@ namespace Opm
         std::array<Scalar, num_eq> tmp;
         for (int ii = 0; ii < num_seg; ++ii) {
             const auto start = it + ii * num_eq;
-            std::copy(start, start + num_eq, tmp.begin());
+            std::copy_n(start, num_eq, tmp.begin());
             this->primary_variables_.setValue(ii, tmp);
         }
         return num_seg * num_eq;

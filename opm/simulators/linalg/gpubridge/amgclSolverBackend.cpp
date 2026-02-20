@@ -324,7 +324,7 @@ solve_system(Scalar* b, GpuResult& res)
                 // actually solve
                 std::tie(iters, error) = solve(*B, *X);
 
-                std::copy(&(*X)[0], &(*X)[0] + N, x.begin());
+                std::copy_n(&(*X)[0], N, x.begin());
             } else {
                 // create matrix object
                 auto A = amgcl::adapter::block_matrix<dmat_type>(Atmp);
