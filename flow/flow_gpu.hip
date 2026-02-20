@@ -60,6 +60,8 @@ struct to_gpu_type<FlowGasWaterEnergyProblemGPU, Storage> {
 };
 }
 
+template<class TypeTag>
+struct RunAssemblyOnGpu<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { static constexpr bool value = true; };
 
 template<class TypeTag>
 struct Scalar<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> { using type = double; };

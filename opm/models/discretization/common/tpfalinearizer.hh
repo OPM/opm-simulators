@@ -1073,7 +1073,7 @@ private:
         // Make sure we have can have the domain on the GPU.
         if constexpr (std::is_same_v<SubDomainType, FullDomain<>>) {
 
-            const bool run_assembly_on_gpu = true;
+            constexpr bool run_assembly_on_gpu = getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
 
             auto enter_function = std::chrono::high_resolution_clock::now();
             /*
