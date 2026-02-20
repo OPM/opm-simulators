@@ -108,7 +108,7 @@ calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
     const int   io = phaseIdx<FluidSystem>(FluidSystem::oilPhaseIdx);
     const int   ig = phaseIdx<FluidSystem>(FluidSystem::gasPhaseIdx);
 
-    std::fill(& coeff[0], & coeff[0] + FluidSystem::numActivePhases(), 0.0);
+    std::fill_n(&coeff[0], FluidSystem::numActivePhases(), 0.0);
 
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
         // q[w]_r = q[w]_s / bw
@@ -184,7 +184,7 @@ calcCoeff(const int pvtRegionIdx,
     const int   io = phaseIdx<FluidSystem>(FluidSystem::oilPhaseIdx);
     const int   ig = phaseIdx<FluidSystem>(FluidSystem::gasPhaseIdx);
 
-    std::fill(& coeff[0], & coeff[0] + FluidSystem::numActivePhases(), 0.0);
+    std::fill_n(&coeff[0], FluidSystem::numActivePhases(), 0.0);
 
     // Determinant of 'R' matrix
     const Scalar detRw = 1.0 - (Rsw * Rvw);

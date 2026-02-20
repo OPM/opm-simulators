@@ -138,7 +138,7 @@ void csrPatternToCsc(const int* CSRColIndices,
     int nnz = CSRRowPointers[Nb];
 
     // compute number of nnzs per column
-    std::fill(CSCColPointers, CSCColPointers + Nb, 0);
+    std::fill_n(CSCColPointers, Nb, 0);
 
     for (int n = 0; n < nnz; ++n) {
         CSCColPointers[CSRColIndices[n]]++;
