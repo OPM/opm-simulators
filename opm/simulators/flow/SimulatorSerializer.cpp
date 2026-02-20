@@ -219,9 +219,8 @@ void SimulatorSerializer::checkSerializedCmdLine(const std::string& current,
     stored_strings = filter_strings(stored_strings);
 
     std::vector<std::string> difference;
-    std::set_symmetric_difference(stored_strings.begin(), stored_strings.end(),
-                                  curr_strings.begin(), curr_strings.end(),
-                                  std::back_inserter(difference));
+    std::ranges::set_symmetric_difference(stored_strings, curr_strings,
+                                          std::back_inserter(difference));
 
     if (!difference.empty()) {
         std::vector<std::string> only_stored, only_curr;
