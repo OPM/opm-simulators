@@ -154,10 +154,12 @@ public:
     }
 
     // must be called after water storage is computed
-    template <class LhsEval, class StorageType>
+    template <class StorageType>
     OPM_HOST_DEVICE static void addStorage(StorageType& storage,
-                           const IntensiveQuantities& intQuants)
+                                           const IntensiveQuantities& intQuants)
     {
+        using LhsEval = typename StorageType::value_type;
+
         if constexpr (enableFullyImplicitThermal) {
             FluidSystem fsys = intQuants.getFluidSystem();
 
@@ -186,9 +188,9 @@ public:
     }
 
     OPM_HOST_DEVICE static void computeFlux([[maybe_unused]] RateVector& flux,
-                            [[maybe_unused]] const ElementContext& elemCtx,
-                            [[maybe_unused]] unsigned scvfIdx,
-                            [[maybe_unused]] unsigned timeIdx)
+                                            [[maybe_unused]] const ElementContext& elemCtx,
+                                            [[maybe_unused]] unsigned scvfIdx,
+                                            [[maybe_unused]] unsigned timeIdx)
     {
         if constexpr (enableFullyImplicitThermal) {
             flux[contiEnergyEqIdx] = 0.0;
@@ -217,7 +219,7 @@ public:
 
     template<class RateVectorT>
     OPM_HOST_DEVICE static void addHeatFlux(RateVectorT& flux,
-                            const Evaluation& heatFlux)
+                                            const Evaluation& heatFlux)
     {
         if constexpr (enableFullyImplicitThermal) {
             // diffusive energy flux

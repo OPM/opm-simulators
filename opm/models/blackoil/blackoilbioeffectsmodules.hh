@@ -175,10 +175,11 @@ public:
     }
 
     // must be called after water storage is computed
-    template <class LhsEval, class StorageType>
+    template <class StorageType>
     OPM_HOST_DEVICE static void addStorage(StorageType& storage,
-                           const IntensiveQuantities& intQuants)
+                                           const IntensiveQuantities& intQuants)
     {
+        using LhsEval = typename StorageType::value_type;
         if constexpr (enableBioeffects) {
             const auto& fs = intQuants.fluidState();
             LhsEval surfaceVolumeWater = Toolbox::template decay<LhsEval>(fs.saturation(waterPhaseIdx)) *

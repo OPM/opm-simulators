@@ -174,25 +174,25 @@ public:
         adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex());
 
         // deal with solvents (if present)
-        SolventModule::template addStorage<LhsEval>(storage, intQuants);
+        SolventModule::addStorage(storage, intQuants);
 
         // deal with zFracton (if present)
-        ExtboModule::template addStorage<LhsEval>(storage, intQuants);
+        ExtboModule::addStorage(storage, intQuants);
 
         // deal with polymer (if present)
-        PolymerModule::template addStorage<LhsEval>(storage, intQuants);
+        PolymerModule::addStorage(storage, intQuants);
 
         // deal with energy (if present)
-        EnergyModule::template addStorage<LhsEval>(storage, intQuants);
+        EnergyModule::addStorage(storage, intQuants);
 
         // deal with foam (if present)
-        FoamModule::template addStorage<LhsEval>(storage, intQuants);
+        FoamModule::addStorage(storage, intQuants);
 
         // deal with salt (if present)
-        BrineModule::template addStorage<LhsEval>(storage, intQuants);
+        BrineModule::addStorage(storage, intQuants);
 
         // deal with bioeffects (if present)
-        BioeffectsModule::template addStorage<LhsEval>(storage, intQuants);
+        BioeffectsModule::addStorage(storage, intQuants);
     }
 
     /*!

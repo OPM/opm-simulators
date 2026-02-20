@@ -132,6 +132,10 @@ struct PrimaryVariables { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct IntensiveQuantities { using type = UndefinedProperty; };
 //! The discretization specific part of the intensive quantities
+
+template<class TypeTag, class MyTypeTag>
+struct RunAssemblyOnGpu { using type = UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
 struct DiscIntensiveQuantities { using type = UndefinedProperty; };
 

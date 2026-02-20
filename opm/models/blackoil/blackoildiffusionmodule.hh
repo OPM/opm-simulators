@@ -83,9 +83,9 @@ public:
       */
     template <class Context>
     OPM_HOST_DEVICE static void addDiffusiveFlux(RateVector&,
-                                 const Context&,
-                                 unsigned,
-                                 unsigned)
+                                                 const Context&,
+                                                 unsigned,
+                                                 unsigned)
     {}
 };
 
@@ -124,9 +124,9 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the diffusion module
      */
-    OPM_HOST_DEVICE static void initFromState(const EclipseState& eclState)
+    static void initFromState(const EclipseState& eclState)
     {
-        // TODO: support use_mole_fraction_ on gpu.
+        // TODO: support use_move_fraction on GPUs
         #if OPM_IS_INSIDE_HOST_FUNCTION
         use_mole_fraction_ = eclState.getTableManager().diffMoleFraction();
         #endif
@@ -136,7 +136,7 @@ public:
     /*!
      * \brief Register all run-time parameters for the diffusion module.
      */
-    OPM_HOST_DEVICE static void registerParameters()
+    static void registerParameters()
     {}
 
     /*!
@@ -163,7 +163,7 @@ public:
      */
     template <class Context>
     OPM_HOST_DEVICE static void addDiffusiveFlux(RateVector& flux, const Context& context,
-                                 unsigned spaceIdx, unsigned timeIdx)
+                                                 unsigned spaceIdx, unsigned timeIdx)
     {
         // Only work if diffusion is enabled run-time by DIFFUSE in the deck
         if (!FluidSystem::enableDiffusion()) {
@@ -184,10 +184,10 @@ public:
 
     template<class IntensiveQuantities,class EvaluationArray, class RateVectorT>
     OPM_HOST_DEVICE static void addDiffusiveFlux(RateVectorT& flux,
-                                 const IntensiveQuantities& inIq,
-                                 const IntensiveQuantities& exIq,
-                                 const Evaluation& diffusivity,
-                                 const EvaluationArray& effectiveDiffusionCoefficient)
+                                                 const IntensiveQuantities& inIq,
+                                                 const IntensiveQuantities& exIq,
+                                                 const Evaluation& diffusivity,
+                                                 const EvaluationArray& effectiveDiffusionCoefficient)
     {
         FluidSystem const* fsysptr = &inIq.getFluidSystem();
 
@@ -274,10 +274,10 @@ public:
 
     template<class IntensiveQuantities,class EvaluationArray>
     OPM_HOST_DEVICE static void addBioDiffFlux(RateVector& flux,
-                                 const IntensiveQuantities& inIq,
-                                 const IntensiveQuantities& exIq,
-                                 const Evaluation& diffusivity,
-                                 const EvaluationArray& effectiveBioDiffCoefficient)
+                                               const IntensiveQuantities& inIq,
+                                               const IntensiveQuantities& exIq,
+                                               const Evaluation& diffusivity,
+                                               const EvaluationArray& effectiveBioDiffCoefficient)
     {
         const auto& inFs = inIq.fluidState();
         const auto& exFs = exIq.fluidState();
@@ -330,7 +330,7 @@ private:
     }
 
     #if OPM_IS_INSIDE_DEVICE_FUNCTION
-    constexpr inline static bool use_mole_fraction_ = false; // false in spe11c
+    constexpr static bool use_mole_fraction_ = false; // currently only false i supported on GPU.
     #else
     static bool use_mole_fraction_;
     #endif
@@ -512,7 +512,7 @@ protected:
      *        mass fluxes.
      */
     template <class FluidState>
-    OPM_HOST_DEVICE void update_(FluidState& fluidState,
+    void update_(FluidState& fluidState,
                  const unsigned regionIdx,
                  const ElementContext& elemCtx,
                  unsigned dofIdx,
@@ -528,7 +528,7 @@ protected:
     }
 
     template<class FluidState>
-    OPM_HOST_DEVICE void update_(FluidState& fluidState,
+    void update_(FluidState& fluidState,
                  const unsigned regionIdx,
                  const IntensiveQuantities& intQuants)
     {
@@ -607,13 +607,13 @@ protected:
      * \brief Update the quantities required to calculate
      *        the diffusive mass fluxes.
      */
-    OPM_HOST_DEVICE void update_(const ElementContext&,
+    void update_(const ElementContext&,
                  unsigned,
                  unsigned)
     {}
 
     template <class Context, class FluidState>
-    OPM_HOST_DEVICE void updateBoundary_(const Context&,
+    void updateBoundary_(const Context&,
                          unsigned,
                          unsigned,
                          const FluidState&)
@@ -672,7 +672,7 @@ protected:
      * \brief Update the quantities required to calculate
      *        the diffusive mass fluxes.
      */
-    OPM_HOST_DEVICE void update_(const ElementContext& elemCtx, unsigned faceIdx, unsigned timeIdx)
+    void update_(const ElementContext& elemCtx, unsigned faceIdx, unsigned timeIdx)
     {
         // Only work if diffusion is enabled run-time by DIFFUSE in the deck
         if (!FluidSystem::enableDiffusion()) {
@@ -696,7 +696,7 @@ protected:
     }
 
 public:
-    OPM_HOST_DEVICE static void update(EvaluationArray& effectiveDiffusionCoefficient,
+    static void update(EvaluationArray& effectiveDiffusionCoefficient,
                        const IntensiveQuantities& intQuantsInside,
                        const IntensiveQuantities& intQuantsOutside)
     {
@@ -722,7 +722,7 @@ public:
         }
     }
 
-    OPM_HOST_DEVICE static void updateBio(std::array<Evaluation, numBioInWat>& effectiveBioDiffCoefficient,
+    static void updateBio(std::array<Evaluation, numBioInWat>& effectiveBioDiffCoefficient,
                           const IntensiveQuantities& intQuantsInside,
                           const IntensiveQuantities& intQuantsOutside) {
 
@@ -736,7 +736,7 @@ public:
 
 protected:
     template <class Context, class FluidState>
-    OPM_HOST_DEVICE void updateBoundary_(const Context&,
+    void updateBoundary_(const Context&,
                          unsigned,
                          unsigned,
                          const FluidState&)
