@@ -42,7 +42,7 @@ public:
     using Potentials = ReservoirCoupling::Potentials<Scalar>;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
-    using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
+    using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
 
     ReservoirCouplingMaster(
         const Parallel::Communication &comm,
@@ -74,7 +74,7 @@ public:
     ///
     /// @note Performance: This method uses O(1) direct vector access when possible,
     ///       falling back to O(log n) map lookup for error handling.
-    /// @see RescoupTargetCalculator::calculateAndSendTargets() for primary usage context
+    /// @see RescoupConstraintsCalculator::calculateAndSendTargets() for primary usage context
     const std::vector<std::string>& getMasterGroupNamesForSlave(std::size_t slave_idx) const;
     /// @brief Get the canonical index of the master group for a given slave name and master group name.
     /// The index is used to map slave group data sent from the slaves, like potentials to the corresponding
@@ -130,14 +130,14 @@ public:
         std::size_t slave_idx,
         const std::vector<InjectionGroupTarget>& injection_targets
     ) const;
-    void sendNumGroupTargetsToSlave(
+    void sendNumGroupConstraintsToSlave(
         std::size_t slave_idx,
         std::size_t num_injection_targets,
-        std::size_t num_production_targets
+        std::size_t num_production_constraints
     ) const;
-    void sendProductionTargetsToSlave(
+    void sendProductionConstraintsToSlave(
         std::size_t slave_idx,
-        const std::vector<ProductionGroupTarget>& production_targets
+        const std::vector<ProductionGroupConstraints>& production_constraints
     ) const;
     void setDeferredLogger(DeferredLogger *deferred_logger) {
          this->logger_.setDeferredLogger(deferred_logger);

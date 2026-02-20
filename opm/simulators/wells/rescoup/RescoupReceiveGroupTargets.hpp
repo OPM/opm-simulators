@@ -21,12 +21,8 @@
 #define OPM_RESCOUP_RECEIVE_GROUP_TARGETS_HPP
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
-#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
-#include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/GuideRateHandler.hpp>
-#include <opm/simulators/wells/WellState.hpp>
 
 namespace Opm {
 
@@ -35,16 +31,12 @@ class RescoupReceiveGroupTargets {
 public:
     RescoupReceiveGroupTargets(
         GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
-        const WellState<Scalar, IndexTraits>& well_state,
-        const GroupState<Scalar>& group_state,
-        const int report_step_idx
+        GroupStateHelper<Scalar, IndexTraits>& group_state_helper
     );
     void receiveGroupTargetsFromMaster();
 private:
     GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler_;
-    const WellState<Scalar, IndexTraits>& well_state_;
-    const GroupState<Scalar>& group_state_;
-    const int report_step_idx_;
+    GroupStateHelper<Scalar, IndexTraits>& group_state_helper_;
     ReservoirCouplingSlave<Scalar>& reservoir_coupling_slave_;
 };
 

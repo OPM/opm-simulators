@@ -252,6 +252,7 @@ private:
     WellContainer<GPMaint::State> gpmaint_state;
     std::map<std::string, std::pair<Scalar, Scalar>> m_gconsump_rates; // Pair with {consumption_rate, import_rate} for each group
     static constexpr std::pair<Scalar, Scalar> zero_pair = {0.0, 0.0};
+
 };
 
 }
