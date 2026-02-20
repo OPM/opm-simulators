@@ -1360,8 +1360,8 @@ namespace Opm
             {
                 const auto& iq = model.intensiveQuantities(cell, /* time_idx = */ 0);
 
-                std::transform(phases.begin(), phases.end(), mob.begin(),
-                               [&iq](const int phase) { return iq.mobility(phase).value(); });
+                std::ranges::transform(phases, mob.begin(),
+                                       [&iq](const int phase) { return iq.mobility(phase).value(); });
             },
 
             // densityInCell: Reservoir condition phase densities in
@@ -1372,8 +1372,8 @@ namespace Opm
             {
                 const auto& fs = model.intensiveQuantities(cell, /* time_idx = */ 0).fluidState();
 
-                std::transform(phases.begin(), phases.end(), rho.begin(),
-                               [&fs](const int phase) { return fs.density(phase).value(); });
+                std::ranges::transform(phases, rho.begin(),
+                                       [&fs](const int phase) { return fs.density(phase).value(); });
             }
         };
 

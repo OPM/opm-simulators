@@ -335,7 +335,7 @@ void FlowGenericVanguard::init()
 
         // transform the result to ALL_UPPERCASE
         caseName_ = rawCaseName;
-        std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
+        std::ranges::transform(caseName_, caseName_.begin(), ::toupper);
     }
 
     // set communicator if not set as in opm flow

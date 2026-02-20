@@ -121,7 +121,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             F::addCreator("amg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
                 std::string smoother = prm.get<std::string>("smoother", "paroverilu0");
                 // Make the smoother type lowercase for internal canonical representation
-                std::transform(smoother.begin(), smoother.end(), smoother.begin(), ::tolower);
+                std::ranges::transform(smoother, smoother.begin(), ::tolower);
                 if (smoother == "ilu0" || smoother == "paroverilu0") {
                     using Smoother = SeqILU<M, V, V>;
                     return AMGHelper<O, C, M, V>::template makeAmgPreconditioner<Smoother>(op, prm);
@@ -150,7 +150,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             F::addCreator("kamg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
                 std::string smoother = prm.get<std::string>("smoother", "paroverilu0");
                 // Make the smoother type lowercase for internal canonical representation
-                std::transform(smoother.begin(), smoother.end(), smoother.begin(), ::tolower);
+                std::ranges::transform(smoother, smoother.begin(), ::tolower);
                 if (smoother == "ilu0" || smoother == "paroverilu0") {
                     using Smoother = SeqILU<M, V, V>;
                     return AMGHelper<O, C, M, V>::template makeAmgPreconditioner<Smoother>(op, prm, true);

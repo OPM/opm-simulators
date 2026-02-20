@@ -191,7 +191,7 @@ struct StandardPreconditioners
                 using PrecPtr = std::shared_ptr<Dune::PreconditionerWithUpdate<V, V>>;
                 std::string smoother = prm.get<std::string>("smoother", "paroverilu0");
                 // Make the smoother type lowercase for internal canonical representation
-                std::transform(smoother.begin(), smoother.end(), smoother.begin(), ::tolower);
+                std::ranges::transform(smoother, smoother.begin(), ::tolower);
                 // TODO: merge this with ILUn, and possibly simplify the factory to only work with ILU?
                 if (smoother == "ilu0" || smoother == "paroverilu0") {
                     using Smoother = ParallelOverlappingILU0<M, V, V, C>;

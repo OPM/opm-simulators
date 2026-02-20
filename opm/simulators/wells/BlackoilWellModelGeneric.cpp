@@ -302,11 +302,10 @@ getLocalWells(const int timeStepIdx) const
 
     w.reserve(wnames.size());
 
-    std::transform(wnames.begin(), wnames.end(),
-                   std::back_inserter(w),
-                   [&st = this->schedule()[timeStepIdx]]
-                   (const std::string& wname)
-                   { return st.wells(wname); });
+    std::ranges::transform(wnames, std::back_inserter(w),
+                           [&st = this->schedule()[timeStepIdx]]
+                           (const std::string& wname)
+                           { return st.wells(wname); });
 
     return w;
 }

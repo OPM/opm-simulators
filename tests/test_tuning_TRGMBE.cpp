@@ -36,7 +36,7 @@ struct Column : public std::vector<std::string>
             return dval;
         };
 
-        std::transform(this->cbegin(), this->cend(), std::back_inserter(vec), conv_func);
+        std::ranges::transform(*this, std::back_inserter(vec), conv_func);
         return vec;
     }
 
@@ -56,7 +56,7 @@ struct Column : public std::vector<std::string>
             return ival;
         };
 
-        std::transform(this->cbegin(), this->cend(), std::back_inserter(vec), conv_func);
+        std::ranges::transform(*this, std::back_inserter(vec), conv_func);
         return vec;
     }
 

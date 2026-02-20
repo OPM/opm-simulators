@@ -726,14 +726,9 @@ private:
             const auto& src = aquNum;
             auto&       dst = *aq.typeData.getMutable<data::AquiferType::Numerical>();
 
-            std::transform(src.initPressure.begin(),
-                           src.initPressure.end(),
-                           dst.initPressure.begin(),
-                           dst.initPressure.begin(),
-                           [](const double p0_1, const double p0_2)
-                           {
-                               return std::max(p0_1, p0_2);
-                           });
+            std::ranges::transform(src.initPressure, dst.initPressure, dst.initPressure.begin(),
+                                   [](const double p0_1, const double p0_2)
+                                   { return std::max(p0_1, p0_2); });
         }
     }
 };

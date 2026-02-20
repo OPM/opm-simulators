@@ -108,13 +108,9 @@ public:
             this->alphai_.assign(this->size(), Scalar{0});
         }
         else {
-            std::transform(this->faceArea_connected_.begin(),
-                           this->faceArea_connected_.end(),
-                           this->alphai_.begin(),
-                           [tfa](const Scalar area)
-                           {
-                               return area / tfa;
-                           });
+            std::ranges::transform(this->faceArea_connected_, this->alphai_.begin(),
+                                   [tfa](const Scalar area)
+                                   { return area / tfa; });
         }
 
         this->area_fraction_ = this->totalFaceArea() / tfa;

@@ -122,9 +122,8 @@ void Opm::ParallelPAvgDynamicSourceData<Scalar>::defineCommunication()
 {
     // 1) Determine origins/owning ranks for all source terms.
     auto ixVec = std::vector<std::size_t>(this->locations_.size());
-    std::transform(this->locations_.begin(), this->locations_.end(),
-                   ixVec.begin(),
-                   [](const auto& location) { return location.ix; });
+    std::ranges::transform(this->locations_, ixVec.begin(),
+                           [](const auto& location) { return location.ix; });
 
     constexpr auto numItems = ParallelPAvgDynamicSourceData<Scalar>::numSpanItems();
 
@@ -136,12 +135,9 @@ void Opm::ParallelPAvgDynamicSourceData<Scalar>::defineCommunication()
     //    basic elements from each rank.  There are 'numItems' basic data
     //    elements for each source term.
     this->startPointers_.resize(allIxStart.size());
-    std::transform(allIxStart.begin(), allIxStart.end(),
-                   this->startPointers_.begin(),
-                   [](const int start)
-                   {
-                       return numItems * start;
-                   });
+    std::ranges::transform(allIxStart, this->startPointers_.begin(),
+                           [](const int start)
+                           { return numItems * start; });
 
     // -----------------------------------------------------------------------
 

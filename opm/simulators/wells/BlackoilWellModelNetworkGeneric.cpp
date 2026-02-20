@@ -412,8 +412,7 @@ computePressures(const Network::ExtNetwork& network,
                     // convention that production rates are negative, so we must
                     // take a copy and flip signs.
                     auto rates = node_inflows[node];
-                    std::transform(
-                        rates.begin(), rates.end(), rates.begin(), [](const auto r) { return -r; });
+                    std::ranges::transform(rates, rates.begin(), [](const auto r) { return -r; });
                     assert(rates.size() == 3);
                     // NB! ALQ in extended network is never implicitly the gas lift rate (GRAT), i.e., the
                     //     gas lift rates only enters the network pressure calculations through the rates

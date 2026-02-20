@@ -121,7 +121,7 @@ namespace
 
         // Respect explicit request if user already set a backend
         std::string requested = prm.get(typeKey, "amg"s);
-        std::transform(requested.begin(), requested.end(), requested.begin(), ::tolower);
+        std::ranges::transform(requested, requested.begin(), ::tolower);
 
         if (requested == "amgx") {
 #if HAVE_AMGX
@@ -205,7 +205,7 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     }
 
     // We use lower case as the internal canonical representation of solver names.
-    std::transform(conf.begin(), conf.end(), conf.begin(), ::tolower);
+    std::ranges::transform(conf, conf.begin(), ::tolower);
 
     // Use CPR configuration.
     if ((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes") || (conf == "cpr_trueimpesanalytic")) {

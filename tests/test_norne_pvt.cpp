@@ -112,12 +112,12 @@ verify_norne_oil_pvt_region1(const Opm::EclipseState& eclState,
 
     {
         // convert the pressures to SI units (bar to Pascal)
-        std::transform(P.begin(), P.end(), P.begin(),
-                       [](const auto value) { return value * Metric::Pressure; });
+        std::ranges::transform(P, P.begin(),
+                               [](const auto value) { return value * Metric::Pressure; });
 
         // convert the gas dissolution factors to SI units
-        std::transform(rs.begin(), rs.end(), rs.begin(),
-                       [](const auto value) { return value * Metric::GasDissolutionFactor; });
+        std::ranges::transform(rs, rs.begin(),
+                               [](const auto value) { return value * Metric::GasDissolutionFactor; });
 
         for (unsigned i = 0; i < P.size(); ++i) {
             double mu;
@@ -213,12 +213,12 @@ verify_norne_oil_pvt_region2(const Opm::EclipseState& eclState,
 
 
     // convert the pressures to SI units (bar to Pascal)
-    std::transform(P.begin(), P.end(), P.begin(),
-                   [](const auto value) { return value * Metric::Pressure; });
+    std::ranges::transform(P, P.begin(),
+                           [](const auto value) { return value * Metric::Pressure; });
 
     // convert the gas dissolution factors to SI units
-    std::transform(rs.begin(), rs.end(), rs.begin(),
-                   [](const auto value) { return value * Metric::GasDissolutionFactor; });
+    std::ranges::transform(rs, rs.begin(),
+                           [](const auto value) { return value * Metric::GasDissolutionFactor; });
 
     for (unsigned i = 0; i < P.size(); ++i) {
         double mu;

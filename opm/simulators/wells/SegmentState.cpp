@@ -38,12 +38,9 @@ std::vector<int> make_segment_number(const Opm::WellSegments& segments)
     std::vector<int> segment_number;
     segment_number.reserve(segments.size());
 
-    std::transform(segments.begin(), segments.end(),
-                   std::back_inserter(segment_number),
-        [](const Opm::Segment& segment)
-    {
-        return segment.segmentNumber();
-    });
+    std::ranges::transform(segments, std::back_inserter(segment_number),
+                           [](const Opm::Segment& segment)
+                           { return segment.segmentNumber(); });
 
     return segment_number;
 }
@@ -116,10 +113,8 @@ void SegmentState<Scalar>::scale_pressure(const Scalar bhp)
 
     const auto pressure_change = bhp - this->pressure[0];
 
-    std::transform(this->pressure.begin(),
-                   this->pressure.end(),
-                   this->pressure.begin(),
-                   [pressure_change] (const Scalar& p) { return p + pressure_change;});
+    std::ranges::transform(this->pressure, this->pressure.begin(),
+                           [pressure_change] (const Scalar& p) { return p + pressure_change; });
 }
 
 template<class Scalar>

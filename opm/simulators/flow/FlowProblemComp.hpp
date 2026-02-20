@@ -196,8 +196,8 @@ public:
         this->readRockParameters_(simulator.vanguard().cellCenterDepths(), [&simulator](const unsigned idx) {
             std::array<int, dim> coords;
             simulator.vanguard().cartesianCoordinate(idx, coords);
-            std::transform(coords.begin(), coords.end(), coords.begin(),
-                           [](const auto c) { return c + 1; });
+            std::ranges::transform(coords, coords.begin(),
+                                   [](const auto c) { return c + 1; });
             return coords;
         });
         FlowProblemType::readMaterialParameters_();

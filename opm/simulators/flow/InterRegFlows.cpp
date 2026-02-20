@@ -37,9 +37,8 @@ InterRegFlowMapSingleFIP(const std::vector<int>& region)
             *std::max_element(region.begin(), region.end());
     }
 
-    std::transform(region.begin(), region.end(),
-                   this->region_.begin(),
-                   [](const int regID) { return regID - 1; });
+    std::ranges::transform(region, this->region_.begin(),
+                           [](const int regID) { return regID - 1; });
 }
 
 void
@@ -190,11 +189,9 @@ Opm::InterRegFlowMap::getInterRegFlows() const
     auto maps = std::vector<data::InterRegFlowMap>{};
     maps.reserve(this->regionMaps_.size());
 
-    std::transform(this->regionMaps_.begin(),
-                   this->regionMaps_.end(),
-                   std::back_inserter(maps),
-                   [](const auto& regionMap)
-                   { return regionMap.getInterRegFlows(); });
+    std::ranges::transform(this->regionMaps_, std::back_inserter(maps),
+                           [](const auto& regionMap)
+                           { return regionMap.getInterRegFlows(); });
 
     return maps;
 }
@@ -205,11 +202,9 @@ Opm::InterRegFlowMap::getLocalMaxRegionID() const
     auto maxLocalRegionID = std::vector<std::size_t>{};
     maxLocalRegionID.reserve(this->regionMaps_.size());
 
-    std::transform(this->regionMaps_.begin(),
-                   this->regionMaps_.end(),
-                   std::back_inserter(maxLocalRegionID),
-                   [](const auto& regionMap)
-                   { return regionMap.getLocalMaxRegionID(); });
+    std::ranges::transform(this->regionMaps_, std::back_inserter(maxLocalRegionID),
+                           [](const auto& regionMap)
+                           { return regionMap.getLocalMaxRegionID(); });
 
     return maxLocalRegionID;
 }
