@@ -272,7 +272,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                 }
             }
         }
-        std::sort(parallelWells.begin(), parallelWells.end());
+        std::ranges::sort(parallelWells);
 
         // Calling Schedule::filterConnections would remove any perforated
         // cells that exist only on other ranks even in the case of

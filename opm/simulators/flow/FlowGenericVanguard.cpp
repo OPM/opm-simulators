@@ -365,7 +365,7 @@ void FlowGenericVanguard::init()
     {
         parallelWells_.emplace_back(well.name(), true);
     }
-    std::sort(parallelWells_.begin(), parallelWells_.end());
+    std::ranges::sort(parallelWells_);
 
     // Check whether allowing distribute wells makes sense
     if (enableDistributedWells() )

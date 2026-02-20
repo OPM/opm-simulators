@@ -589,12 +589,10 @@ sortedPointIndices(const ViolationSample& violation,
 
     std::iota(sortedIdxs.begin(), sortedIdxs.end(), std::size_t{0});
 
-    std::sort(sortedIdxs.begin(), sortedIdxs.end(),
-              [pointIDs = violation.pointID.data() + (checkIx * this->numSamplePoints_)]
-              (const std::size_t i1, const std::size_t i2)
-              {
-                  return pointIDs[i1] < pointIDs[i2];
-              });
+    std::ranges::sort(sortedIdxs,
+                      [pointIDs = violation.pointID.data() + (checkIx * this->numSamplePoints_)]
+                      (const std::size_t i1, const std::size_t i2)
+                      { return pointIDs[i1] < pointIDs[i2]; });
 
     return sortedIdxs;
 }

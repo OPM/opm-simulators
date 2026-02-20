@@ -47,7 +47,7 @@ namespace {
     void reportUnsupportedOptionValuesAndThrow(std::vector<std::string> unsupp,
                                                std::string_view         optionName)
     {
-        std::sort(unsupp.begin(), unsupp.end());
+        std::ranges::sort(unsupp);
         auto u = std::unique(unsupp.begin(), unsupp.end());
 
         const auto pl = (std::distance(unsupp.begin(), u) != 1) ? "s" : "";

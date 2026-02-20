@@ -109,8 +109,9 @@ GlobalPerfContainerFactory(const IndexSet& local_indices,
         int count = 0;
         std::for_each(global_pairs.begin(), global_pairs.end(), [&count](Pair& pair){ pair.second = count++;});
         // sort the complete range to get the correct ordering
-        std::sort(global_pairs.begin(), global_pairs.end(),
-                  [](const Pair& p1, const Pair& p2){ return p1.first < p2.first; } );
+        std::ranges::sort(global_pairs,
+                          [](const Pair& p1, const Pair& p2)
+                          { return p1.first < p2.first; });
         map_received_.resize(global_pairs.size());
         std::ranges::transform(global_pairs, map_received_.begin(),
                                [](const Pair& pair){ return pair.second; });
@@ -348,8 +349,9 @@ void CommunicateAboveBelow<Scalar>::partialSumPerfValues(RAIterator begin, RAIte
         std::vector<Pair> global_pairs(displ.back());
         comm_.allgatherv(my_pairs.data(), my_pairs.size(), global_pairs.data(), sizes.data(), displ.data());
         // sort the complete range to get the correct ordering
-        std::sort(global_pairs.begin(), global_pairs.end(),
-                  [](const Pair& p1, const Pair& p2){ return p1.first < p2.first; } );
+        std::ranges::sort(global_pairs,
+                          [](const Pair& p1, const Pair& p2)
+                          { return p1.first < p2.first; });
         std::vector<Value> sums(global_pairs.size());
         std::ranges::transform(global_pairs, sums.begin(),
                                [](const Pair& p) { return p.second; });

@@ -62,7 +62,7 @@ std::vector<int> HDF5Serializer::reportSteps() const
     std::ranges::transform(entries, result.begin(),
                            [](const std::string& input)
                            { return std::atoi(input.c_str()); });
-    std::sort(result.begin(), result.end());
+    std::ranges::sort(result);
     return result;
 }
 
