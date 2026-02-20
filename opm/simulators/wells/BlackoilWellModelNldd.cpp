@@ -71,8 +71,7 @@ findWellDomains(const std::vector<const SubDomainIndices*>& domains)
         for (const auto& domain : domains) {
             auto cell_present = [domain](const auto cell)
             {
-                return std::binary_search(domain->cells.begin(),
-                                          domain->cells.end(), cell);
+                return std::ranges::binary_search(domain->cells, cell);
             };
 
             if (cell_present(first_well_cell)) {

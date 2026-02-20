@@ -336,7 +336,7 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
                          : std::vector<std::size_t>{}]
         (const std::size_t cellIdx)
     {
-        return std::binary_search(numAquCell.begin(), numAquCell.end(), cellIdx);
+        return std::ranges::binary_search(numAquCell, cellIdx);
     };
 
     for (const auto& elem : elements(globalGridView)) {
@@ -405,7 +405,7 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive,
                          : std::vector<std::size_t>{}]
         (const std::size_t cellIdx)
     {
-        return std::binary_search(numAquCell.begin(), numAquCell.end(), cellIdx);
+        return std::ranges::binary_search(numAquCell, cellIdx);
     };
 
     auto isNumAquConn = [&isNumAquCell](const std::size_t cellIdx1,

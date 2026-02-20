@@ -1651,7 +1651,7 @@ private:
                       if (!flowsC.blockFlows().empty()) {
                           const std::vector<int>& blockIdxs = flowsC.blockFlows();
                           const unsigned cartesianIdx = vanguard.cartesianIndex(ectx.globalDofIdx);
-                          if (std::binary_search(blockIdxs.begin(), blockIdxs.end(), cartesianIdx)) {
+                          if (std::ranges::binary_search(blockIdxs, cartesianIdx)) {
                               const auto compIdxs = std::array{ gasCompIdx, oilCompIdx, waterCompIdx };
                               const auto compEnabled = std::array{ Indices::gasEnabled, Indices::oilEnabled, Indices::waterEnabled };
                               for (const auto& flowsInfo : flowsInfos) {
@@ -1712,7 +1712,7 @@ private:
                     const auto& velocityInfos = velocityInf[ectx.globalDofIdx];
                     const std::vector<int>& blockIdxs = flowsC.blockVelocity();
                     const unsigned cartesianIdx = vanguard.cartesianIndex(ectx.globalDofIdx);
-                    if (std::binary_search(blockIdxs.begin(), blockIdxs.end(), cartesianIdx)) {
+                    if (std::ranges::binary_search(blockIdxs, cartesianIdx)) {
                         const auto compIdxs = std::array{ gasCompIdx, oilCompIdx, waterCompIdx };
                         const auto compEnabled = std::array{ Indices::gasEnabled, Indices::oilEnabled, Indices::waterEnabled };
                         for (const auto& velocityInfo : velocityInfos) {

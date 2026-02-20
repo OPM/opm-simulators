@@ -729,8 +729,8 @@ private:
                 bool blockFlowFound = false;
                 bool blockVelocityFound = false;
                 if (!blockFlows.empty()) {
-                    if (std::binary_search(blockFlows.begin(), blockFlows.end(),
-                                           simulator_().vanguard().cartesianIndex(myIdx))) {
+                    if (std::ranges::binary_search(blockFlows,
+                                                   simulator_().vanguard().cartesianIndex(myIdx))) {
                         blockFlowFound = true;
                     }
                     else {
@@ -741,8 +741,8 @@ private:
                     }
                 }
                 if (!blockVelocity.empty() && !(dispersionActive || enableBioeffects)) {
-                    if (std::binary_search(blockVelocity.begin(), blockVelocity.end(),
-                                           simulator_().vanguard().cartesianIndex(myIdx))) {
+                    if (std::ranges::binary_search(blockVelocity,
+                                                   simulator_().vanguard().cartesianIndex(myIdx))) {
                         blockVelocityFound = true;
                     }
                     else {
@@ -851,8 +851,8 @@ public:
                                                intQuantsEx, nbInfo.res_nbinfo, problem_().moduleParams());
                     adres *= nbInfo.res_nbinfo.faceArea;
                     if (!blockFlows.empty()) {
-                        if (std::binary_search(blockFlows.begin(), blockFlows.end(),
-                                               simulator_().vanguard().cartesianIndex(globI))) {
+                        if (std::ranges::binary_search(blockFlows,
+                                                       simulator_().vanguard().cartesianIndex(globI))) {
                             for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                                 flowsInfo_[globI][loc].flow[eqIdx] = adres[eqIdx].value();
                             }
@@ -956,8 +956,8 @@ private:
                         }
                     }
                     else if (!blockVelocity.empty()) {
-                        if (std::binary_search(blockVelocity.begin(), blockVelocity.end(),
-                                               simulator_().vanguard().cartesianIndex(globI))) {
+                        if (std::ranges::binary_search(blockVelocity,
+                                                       simulator_().vanguard().cartesianIndex(globI))) {
                             for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
                                 velocityInfo_[globI][loc].velocity[phaseIdx] =
                                     darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
