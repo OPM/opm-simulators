@@ -1341,6 +1341,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/diffusion_flash.cpp
   examples/diffusion_ncp.cpp
   examples/diffusion_pvs.cpp
+  examples/dump_grid_for_partitioning.cpp
   examples/groundwater_immiscible.cpp
   examples/infiltration_pvs.cpp
   examples/lens_immiscible_ecfv_ad.cpp
