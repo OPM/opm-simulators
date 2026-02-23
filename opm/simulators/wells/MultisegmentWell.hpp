@@ -181,6 +181,9 @@ namespace Opm {
         // total energy inside the segments at the beginning of the time step
         std::vector<Scalar> segment_initial_energy_;
 
+        // segment fluid state
+        std::vector<SegmentFluidState> segment_fluid_state_;
+
         mutable int debug_cost_counter_ = 0;
 
         // updating the well_state based on well solution dwells
@@ -356,7 +359,7 @@ namespace Opm {
         EvalWell computeSegmentEnergy(int seg) const;
     };
 
-}
+} // namespace Opm
 
 #include "MultisegmentWell_impl.hpp"
 
