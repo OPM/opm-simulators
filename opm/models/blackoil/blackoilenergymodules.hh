@@ -370,16 +370,16 @@ public:
     /*!
         * \brief Construct the energy intensive quantities for the fully implicit thermal module.
         */
-    BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThermal>(Evaluation rockInternalEnergy,
-                                                                                 Evaluation totalThermalConductivity,
-                                                                                 Scalar rockFraction)
+    BlackOilEnergyIntensiveQuantities(Evaluation rockInternalEnergy,
+                                                                                    Evaluation totalThermalConductivity,
+                                                                                    Scalar rockFraction)
         : rockInternalEnergy_(rockInternalEnergy)
         , totalThermalConductivity_(totalThermalConductivity)
         , rockFraction_(rockFraction)
     {
     }
 
-    BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThermal>() = default;
+    BlackOilEnergyIntensiveQuantities() = default;
 
     /*!
      * \brief Update the temperature of the intensive quantity's fluid state
