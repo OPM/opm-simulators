@@ -947,6 +947,19 @@ public:
         }
     }
 
+    /*!
+     * \brief Helper function to convert the mass-related parts of a Dune::FieldVector
+     *        that stores conservation quantities in terms of "surface-volume" to the
+     *        conservation quantities used by the model.
+     *
+     * Depending on the value of the BlackoilConserveSurfaceVolume property, the model
+     * either conserves mass by means of "surface volume" of the components or mass
+     * directly. In the former case, this method is a no-op; in the latter, the values
+     * passed are multiplied by their respective pure component's density at surface
+     * conditions.
+     * This is a copy of the version above that does not use the static fluid system.
+     * This separate copy exists because some calls do not expect the new signature.
+     */
     template <class ScalarVector, class FsysType>
     OPM_HOST_DEVICE static void adaptMassConservationQuantities_(ScalarVector& container,
                                                                  unsigned pvtRegionIdx,
