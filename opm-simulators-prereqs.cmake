@@ -67,7 +67,6 @@ set (opm-simulators_DEPS
   "opm-grid REQUIRED"
   "Damaris 1.9"
   "HDF5"
-  "Tracy"
   "fmt"
   )
 
