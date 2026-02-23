@@ -198,16 +198,16 @@ void SimulatorSerializer::checkSerializedCmdLine(const std::string& current,
     {
         std::vector<std::string> output;
         output.reserve(input.size());
-        std::copy_if(input.begin(), input.end(), std::back_inserter(output),
-                     [](const std::string& line)
-                     {
-                        return line.compare(0, 11, "EclDeckFile") != 0 &&
-                               line.compare(0, 9, "OutputDir") != 0 &&
-                               line.compare(0, 8, "LoadFile") != 0 &&
-                               line.compare(0, 8, "SaveFile") != 0 &&
-                               line.compare(0, 8, "LoadStep") != 0 &&
-                               line.compare(0, 8, "SaveStep") != 0;
-                     });
+        std::ranges::copy_if(input, std::back_inserter(output),
+                             [](const std::string& line)
+                             {
+                                 return line.compare(0, 11, "EclDeckFile") != 0 &&
+                                        line.compare(0, 9, "OutputDir") != 0 &&
+                                        line.compare(0, 8, "LoadFile") != 0 &&
+                                        line.compare(0, 8, "SaveFile") != 0 &&
+                                        line.compare(0, 8, "LoadStep") != 0 &&
+                                        line.compare(0, 8, "SaveStep") != 0;
+                             });
         return output;
     };
 
