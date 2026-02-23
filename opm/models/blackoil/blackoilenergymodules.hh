@@ -458,7 +458,6 @@ public:
     OPM_HOST_DEVICE const Evaluation& totalThermalConductivity() const
     { return totalThermalConductivity_; }
 
-    // Does this value get transferred correctly when called from a gpukernel?
     OPM_HOST_DEVICE Scalar rockFraction() const
     { return rockFraction_; }
 

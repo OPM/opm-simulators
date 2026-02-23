@@ -67,14 +67,14 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the diffusion module
      */
-    OPM_HOST_DEVICE static void initFromState(const EclipseState&)
+    static void initFromState(const EclipseState&)
     {}
     #endif
 
     /*!
      * \brief Register all run-time parameters for the diffusion module.
      */
-    OPM_HOST_DEVICE static void registerParameters()
+    static void registerParameters()
     {}
 
     /*!
@@ -438,7 +438,7 @@ public:
     BlackOilDiffusionIntensiveQuantities& operator=(BlackOilDiffusionIntensiveQuantities&&) noexcept = default;
 
     BlackOilDiffusionIntensiveQuantities(const std::array<Evaluation, numPhases>& tortuosity,
-                                       const std::array<std::array<Evaluation, numComponents>, numPhases>& diffusionCoefficient)
+                                         const std::array<std::array<Evaluation, numComponents>, numPhases>& diffusionCoefficient)
         : tortuosity_(tortuosity)
         , diffusionCoefficient_(diffusionCoefficient)
     {}
@@ -578,8 +578,7 @@ protected:
         }
     }
 
-// private:
-protected:
+private:
     std::array<Evaluation, numPhases> tortuosity_{};
     std::array<std::array<Evaluation, numComponents>, numPhases> diffusionCoefficient_{};
     std::array<Evaluation, numBioInWat> bioDiffCoefficient_{};
@@ -640,7 +639,7 @@ public:
      * \copydoc Doxygen::compIdxParam
      */
     OPM_HOST_DEVICE const Evaluation& effectiveDiffusionCoefficient(unsigned,
-                                                    unsigned) const
+                                                                    unsigned) const
     {
         throw std::logic_error("The method effectiveDiffusionCoefficient() "
                                "does not make sense if diffusion is disabled.");
