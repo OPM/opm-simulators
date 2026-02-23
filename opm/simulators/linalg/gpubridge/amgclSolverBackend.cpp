@@ -312,7 +312,7 @@ solve_system(Scalar* b, GpuResult& res)
                 print(solve);
 
                 // reset x vector
-                std::fill(x.begin(), x.end(), 0.0);
+                std::ranges::fill(x, 0.0);
 
                 std::vector<Scalar> b_(b, b + N);
 
@@ -337,7 +337,7 @@ solve_system(Scalar* b, GpuResult& res)
                 print(solve);
 
                 // reset x vector
-                std::fill(x.begin(), x.end(), 0.0);
+                std::ranges::fill(x, 0.0);
 
                 // create blocked vectors
                 auto b_ptr = reinterpret_cast<dvec_type*>(b);

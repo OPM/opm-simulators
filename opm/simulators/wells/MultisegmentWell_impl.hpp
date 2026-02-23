@@ -1305,8 +1305,8 @@ namespace Opm
         // TODO: not handling solvent related here for now
 
         // initialize all the values to be zero to begin with
-        std::fill(this->ipr_a_.begin(), this->ipr_a_.end(), 0.);
-        std::fill(this->ipr_b_.begin(), this->ipr_b_.end(), 0.);
+        std::ranges::fill(this->ipr_a_, 0.0);
+        std::ranges::fill(this->ipr_b_, 0.0);
 
         const int nseg = this->numberOfSegments();
         std::vector<Scalar> seg_dp(nseg, 0.0);
@@ -1434,8 +1434,8 @@ namespace Opm
             */
         }
 
-        std::fill(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), 0.);
-        std::fill(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), 0.);
+        std::ranges::fill(ws.implicit_ipr_a, 0.0);
+        std::ranges::fill(ws.implicit_ipr_b, 0.0);
         //WellState well_state_copy = well_state;
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);

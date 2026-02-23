@@ -460,7 +460,7 @@ public:
         // initialize the volume of the finite volumes to zero
         const std::size_t numDof = asImp_().numGridDof();
         dofTotalVolume_.resize(numDof);
-        std::fill(dofTotalVolume_.begin(), dofTotalVolume_.end(), 0.0);
+        std::ranges::fill(dofTotalVolume_, 0.0);
 
         ElementContext elemCtx(simulator_);
         gridTotalVolume_ = 0.0;
@@ -718,9 +718,7 @@ public:
         }
 
         if (storeIntensiveQuantities()) {
-            std::fill(intensiveQuantityCacheUpToDate_[timeIdx].begin(),
-                      intensiveQuantityCacheUpToDate_[timeIdx].end(),
-                      /*value=*/0);
+            std::ranges::fill(intensiveQuantityCacheUpToDate_[timeIdx], /*value=*/0);
         }
     }
 
@@ -909,9 +907,7 @@ public:
     void invalidateStorageCache(unsigned timeIdx) const
     {
         if (enableStorageCache_ && timeIdx < historySize) {
-            std::fill(storageCacheUpToDate_[timeIdx].begin(),
-                      storageCacheUpToDate_[timeIdx].end(),
-                      /*value=*/0);
+            std::ranges::fill(storageCacheUpToDate_[timeIdx], /*value=*/0);
         }
     }
 

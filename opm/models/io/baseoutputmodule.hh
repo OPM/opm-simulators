@@ -157,7 +157,7 @@ protected:
     void resizeScalarBuffer_(ScalarBuffer& buffer, BufferType bufferType)
     {
         buffer.resize(this->getBufferSize(bufferType));
-        std::fill(buffer.begin(), buffer.end(), 0.0);
+        std::ranges::fill(buffer, 0.0);
     }
 
     /*!
@@ -167,7 +167,7 @@ protected:
     {
         buffer.resize(this->getBufferSize(bufferType));
         const Tensor nullMatrix(dimWorld, dimWorld, 0.0);
-        std::fill(buffer.begin(), buffer.end(), nullMatrix);
+        std::ranges::fill(buffer, nullMatrix);
     }
 
     void resizeVectorBuffer_(VectorBuffer& buffer, BufferType bufferType)
@@ -175,7 +175,7 @@ protected:
         buffer.resize(this->getBufferSize(bufferType));
         Vector zerovector(dimWorld,0.0);
         zerovector = 0.0;
-        std::fill(buffer.begin(), buffer.end(), zerovector);
+        std::ranges::fill(buffer, zerovector);
     }
 
     /*!
@@ -187,7 +187,7 @@ protected:
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numEq; ++i) {
             buffer[i].resize(n);
-            std::fill(buffer[i].begin(), buffer[i].end(), 0.0);
+            std::ranges::fill(buffer[i], 0.0);
         }
     }
 
@@ -200,7 +200,7 @@ protected:
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numPhases; ++i) {
             buffer[i].resize(n);
-            std::fill(buffer[i].begin(), buffer[i].end(), 0.0);
+            std::ranges::fill(buffer[i], 0.0);
         }
     }
 
@@ -213,7 +213,7 @@ protected:
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numComponents; ++i) {
             buffer[i].resize(n);
-            std::fill(buffer[i].begin(), buffer[i].end(), 0.0);
+            std::ranges::fill(buffer[i], 0.0);
         }
     }
 
@@ -227,7 +227,7 @@ protected:
         for (unsigned i = 0; i < numPhases; ++i) {
             for (unsigned j = 0; j < numComponents; ++j) {
                 buffer[i][j].resize(n);
-                std::fill(buffer[i][j].begin(), buffer[i][j].end(), 0.0);
+                std::ranges::fill(buffer[i][j], 0.0);
             }
         }
     }

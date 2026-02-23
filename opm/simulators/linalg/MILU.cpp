@@ -222,7 +222,7 @@ void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,
     {
         auto& newRow = ILU[ordering[iter.index()]];
         // reset stored generation
-        std::fill(newRow.begin(), newRow.end(), 0);
+        std::ranges::fill(newRow, 0);
 
         // copy row.
         for(auto col = iter->begin(), cend = iter->end(); col != cend; ++col)

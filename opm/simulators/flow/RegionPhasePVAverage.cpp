@@ -110,7 +110,7 @@ value(std::string_view rset, const Phase& p, const Region& r) const
 
 void Opm::RegionPhasePoreVolAverage::prepareAccumulation()
 {
-    std::fill(this->x_.begin(), this->x_.end(), 0.0);
+    std::ranges::fill(this->x_, 0.0);
 }
 
 void Opm::RegionPhasePoreVolAverage::

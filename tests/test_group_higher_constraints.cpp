@@ -268,8 +268,8 @@ private:
             auto well_idx = ws.index("WELL-A");
             BOOST_REQUIRE(well_idx.has_value());
             auto& well = ws.well(well_idx.value());
-            std::fill(well.surface_rates.begin(), well.surface_rates.end(), 0.0);
-            std::fill(well.well_potentials.begin(), well.well_potentials.end(), 0.0);
+            std::ranges::fill(well.surface_rates, 0.0);
+            std::ranges::fill(well.well_potentials, 0.0);
             well.surface_rates[oil_phase_pos_] = wellARateSI();
             well.well_potentials[oil_phase_pos_] = -wellARateSI();  // positive
             well.production_cmode = well_a_control_;
@@ -280,8 +280,8 @@ private:
             auto well_idx = ws.index("WELL-A2");
             BOOST_REQUIRE(well_idx.has_value());
             auto& well = ws.well(well_idx.value());
-            std::fill(well.surface_rates.begin(), well.surface_rates.end(), 0.0);
-            std::fill(well.well_potentials.begin(), well.well_potentials.end(), 0.0);
+            std::ranges::fill(well.surface_rates, 0.0);
+            std::ranges::fill(well.well_potentials, 0.0);
             well.surface_rates[oil_phase_pos_] = wellA2RateSI();
             well.well_potentials[oil_phase_pos_] = -wellA2RateSI();  // positive
             well.production_cmode = well_a2_control_;
@@ -292,8 +292,8 @@ private:
             auto well_idx = ws.index("WELL-B");
             BOOST_REQUIRE(well_idx.has_value());
             auto& well = ws.well(well_idx.value());
-            std::fill(well.surface_rates.begin(), well.surface_rates.end(), 0.0);
-            std::fill(well.well_potentials.begin(), well.well_potentials.end(), 0.0);
+            std::ranges::fill(well.surface_rates, 0.0);
+            std::ranges::fill(well.well_potentials, 0.0);
             well.surface_rates[oil_phase_pos_] = wellBRateSI();
             well.well_potentials[oil_phase_pos_] = -wellBRateSI();  // positive
             well.production_cmode = Opm::Well::ProducerCMode::GRUP;
@@ -304,8 +304,8 @@ private:
             auto well_idx = ws.index("WELL-C");
             BOOST_REQUIRE(well_idx.has_value());
             auto& well = ws.well(well_idx.value());
-            std::fill(well.surface_rates.begin(), well.surface_rates.end(), 0.0);
-            std::fill(well.well_potentials.begin(), well.well_potentials.end(), 0.0);
+            std::ranges::fill(well.surface_rates, 0.0);
+            std::ranges::fill(well.well_potentials, 0.0);
             well.surface_rates[oil_phase_pos_] = wellCRateSI();
             well.well_potentials[oil_phase_pos_] = -wellCRateSI();  // positive
             well.production_cmode = Opm::Well::ProducerCMode::GRUP;
