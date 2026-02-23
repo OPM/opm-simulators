@@ -226,9 +226,8 @@ void SimulatorSerializer::checkSerializedCmdLine(const std::string& current,
     if (!difference.empty()) {
         std::vector<std::string> only_stored, only_curr;
         for (std::size_t i = 0; i < difference.size(); ) {
-            auto stored_it = std::find(stored_strings.begin(),
-                                       stored_strings.end(), difference[i]);
-            auto pos = difference[i].find_first_of('=');
+            const auto stored_it = std::ranges::find(stored_strings, difference[i]);
+            const auto pos = difference[i].find_first_of('=');
             if (i < difference.size() - 1 &&
                 difference[i].compare(0, pos, difference[i+1], 0, pos) == 0) {
                 if (stored_it == stored_strings.end()) {

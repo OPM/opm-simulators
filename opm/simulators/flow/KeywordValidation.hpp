@@ -161,7 +161,7 @@ struct SupportedKeywords {
 
         bool operator()(const T& value) const
         {
-            return std::find(m_allowed_values.begin(), m_allowed_values.end(), value) != m_allowed_values.end();
+            return std::ranges::find(m_allowed_values, value) != m_allowed_values.end();
         }
 
     private:

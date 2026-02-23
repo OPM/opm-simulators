@@ -318,7 +318,7 @@ struct BlockExtractor
                                         }, handler);
 
                             const auto found_handler =
-                                std::find(gen_handlers.begin(), gen_handlers.end(), kw_name);
+                                std::ranges::find(gen_handlers, kw_name);
                             if (found_handler != gen_handlers.end()) {
                                 phase = std::distance(gen_handlers.begin(), found_handler) % numPhases;
                             }
