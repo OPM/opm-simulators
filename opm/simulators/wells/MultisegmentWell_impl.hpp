@@ -74,6 +74,7 @@ namespace Opm
     , regularize_(false)
     , segment_fluid_initial_(this->numberOfSegments(), std::vector<Scalar>(this->num_conservation_quantities_, 0.0))
     , segment_initial_energy_(this->numberOfSegments(), 0.0)
+    , segment_fluid_state_(this->numberOfSegments(), SegmentFluidState{})
     {
         // not handling solvent or polymer for now with multisegment well
         if constexpr (has_solvent) {
@@ -763,6 +764,11 @@ namespace Opm
         auto& deferred_logger = groupStateHelper.deferredLogger();
         updatePrimaryVariables(groupStateHelper);
         computePerfCellPressDiffs(simulator);
+        // TODO: putting into a function
+        for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
+            segment_fluid_state_[seg] = this->createSegmentFluidstate(seg);
+        }
+
         computeInitialSegmentFluids(simulator, deferred_logger);
         if constexpr (enable_energy) {
             computeInitialSegmentEnergy();
@@ -1929,7 +1935,7 @@ namespace Opm
                     const auto& fs = int_quants.fluidState();
                     // segment fluid state for wellbore properties (used for injecting connections)
                     // TODO: this one should be stored somewhere to avoid repeated calculation
-                    const auto seg_fs = this->createSegmentFluidstate(seg);
+                    const auto& seg_fs = this->segment_fluid_state_[seg];
 
                     EvalWell energy_flux(0.0);
                     for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
@@ -2041,6 +2047,31 @@ namespace Opm
                     MultisegmentWellAssemble(*this).
                         assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
                 }
+                if constexpr (Base::has_energy) {
+                    // Energy carried by fluid flowing out of this segment toward its outlet.
+                    // Use upwind segment fluid properties for enthalpy and density.
+                    const auto& upwind_fs = this->segment_fluid_state_[seg_upwind];
+                    EvalWell energy_rate(0.0);
+                    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                        if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                            continue;
+                        }
+                        const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                        const EvalWell segment_rate =
+                            this->primary_variables_.getSegmentRateUpwinding(seg,
+                                                                             seg_upwind,
+                                                                             activeCompIdx) *
+                            this->well_efficiency_factor_;
+                        // Convert surface rate to reservoir volumetric rate using upwind invB,
+                        // then multiply by enthalpy and density to get energy flux
+                        // TODO: we are not considering the effect of dissolution and vaporization yet,
+                        // which needs further investigation.
+                        energy_rate += segment_rate * upwind_fs.enthalpy(phaseIdx) * upwind_fs.density(phaseIdx)
+                                       / upwind_fs.invB(phaseIdx);
+                    }
+                    MultisegmentWellAssemble(*this).
+                        assembleOutflowTerm(seg, seg_upwind, MSWEval::PrimaryVariables::Temperature, energy_rate, this->linSys_);
+                }
             }
 
             // considering the contributions from the inlet segments
@@ -2055,6 +2086,34 @@ namespace Opm
                             this->well_efficiency_factor_;
                         MultisegmentWellAssemble(*this).
                             assembleInflowTerm(seg, inlet, inlet_upwind, comp_idx, inlet_rate, this->linSys_);
+                    }
+                }
+                if constexpr (Base::has_energy) {
+                    for (const int inlet : this->segments_.inlets()[seg]) {
+                        const int inlet_upwind = this->segments_.upwinding_segment(inlet);
+                        // Energy carried by fluid flowing from inlet segment into this segment.
+                        // Use upwind segment fluid properties for enthalpy and density.
+                        const auto& upwind_fs = this->segment_fluid_state_[inlet_upwind];
+                        EvalWell energy_rate(0.0);
+                        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                                continue;
+                            }
+                            const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                            const EvalWell inlet_rate =
+                                this->primary_variables_.getSegmentRateUpwinding(inlet,
+                                                                                 inlet_upwind,
+                                                                                 activeCompIdx) *
+                                this->well_efficiency_factor_;
+                            // Convert surface rate to reservoir volumetric rate using upwind invB,
+                            // then multiply by enthalpy and density to get energy flux
+                            // TODO: not considering the effect of dissolution and vaporization yet,
+                            // which needs further investigation.
+                            energy_rate += inlet_rate * upwind_fs.enthalpy(phaseIdx) * upwind_fs.density(phaseIdx)
+                                           / upwind_fs.invB(phaseIdx);
+                        }
+                        MultisegmentWellAssemble(*this).
+                            assembleInflowTerm(seg, inlet, inlet_upwind, MSWEval::PrimaryVariables::Temperature, energy_rate, this->linSys_);
                     }
                 }
             }
@@ -2601,7 +2660,7 @@ namespace Opm
         std::fill(segment_initial_energy_.begin(), segment_initial_energy_.end(), 0.0);
 
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            const auto segment_fluid_state = createSegmentFluidstate(seg);
+            const auto& segment_fluid_state = this->segment_fluid_state_[seg];
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
@@ -2621,7 +2680,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::computeSegmentEnergy(const int seg) const
     {
         EvalWell result {0.};
-        const auto segment_fluid_state = createSegmentFluidstate(seg);
+        const auto& segment_fluid_state = this->segment_fluid_state_[seg];
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
