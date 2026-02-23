@@ -157,8 +157,8 @@ namespace Opm
     /// \brief return min step length used so far
     double AdaptiveSimulatorTimer::minStepLength () const
     {
-        if( steps_.empty() ) return 0.0;
-        return *(std::min_element( steps_.begin(), steps_.end() ));
+        if (steps_.empty()) return 0.0;
+        return *std::ranges::min_element(steps_);
     }
 
     /// \brief report start and end time as well as used steps so far

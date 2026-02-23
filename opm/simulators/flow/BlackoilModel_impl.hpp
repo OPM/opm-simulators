@@ -477,7 +477,7 @@ solveJacobianSystem(BVector& x)
             }
         }
 
-        int fastest_solver = std::min_element(times.begin(), times.end()) - times.begin();
+        int fastest_solver = std::ranges::min_element(times) - times.begin();
         // Use timing on rank 0 to determine fastest, must be consistent across ranks.
         grid_.comm().broadcast(&fastest_solver, 1, 0);
         linear_solve_setup_time_ = setupTimes[fastest_solver];
