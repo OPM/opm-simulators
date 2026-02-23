@@ -141,10 +141,9 @@ struct Extractor
                                                },
                                                [](const PhaseEntry& v)
                                                {
-                                                   return std::any_of(v.data->begin(),
-                                                                      v.data->end(),
-                                                                      [](const auto& ve)
-                                                                      { return !ve.empty(); });
+                                                   return std::ranges::any_of(*v.data,
+                                                                              [](const auto& ve)
+                                                                              { return !ve.empty(); });
                                                }
                                            }, e.data);
                      });

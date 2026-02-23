@@ -378,8 +378,9 @@ void FlowGenericVanguard::init()
             if (comm.rank() == 0)
             {
                 const auto& wells = this->schedule().getWellsatEnd();
-                hasMsWell = std::any_of(wells.begin(), wells.end(),
-                                        [](const auto& well) { return well.isMultiSegment(); });
+                hasMsWell = std::ranges::any_of(wells,
+                                                [](const auto& well)
+                                                { return well.isMultiSegment(); });
             }
         }
 
@@ -401,12 +402,12 @@ void FlowGenericVanguard::init()
 
 bool FlowGenericVanguard::drsdtconEnabled() const
 {
-    return std::any_of(this->schedule().begin(), this->schedule().end(),
-                       [](const auto& schIt)
-                       {
-                           return schIt.oilvap().getType() ==
-                              OilVaporizationProperties::OilVaporization::DRSDTCON;
-                       });
+    return std::ranges::any_of(this->schedule(),
+                               [](const auto& schIt)
+                               {
+                                   return schIt.oilvap().getType() ==
+                                          OilVaporizationProperties::OilVaporization::DRSDTCON;
+                               });
 }
 
 std::unordered_map<size_t, const NumericalAquiferCell*>

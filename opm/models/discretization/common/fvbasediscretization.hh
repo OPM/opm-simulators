@@ -1765,8 +1765,9 @@ public:
     void prepareOutputFields() const
     {
         const bool needFullContextUpdate =
-            std::any_of(outputModules_.begin(), outputModules_.end(),
-                        [](const auto& mod) { return mod->needExtensiveQuantities(); });
+            std::ranges::any_of(outputModules_,
+                                [](const auto& mod)
+                                { return mod->needExtensiveQuantities(); });
         std::ranges::for_each(outputModules_,
                               [](auto& mod) { mod->allocBuffers(); });
 

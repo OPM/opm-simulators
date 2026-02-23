@@ -217,8 +217,8 @@ void Opm::SatfuncConsistencyChecks<Scalar>::ViolationSample::clear()
 namespace {
     bool anyFailedChecks(const std::vector<std::size_t>& count)
     {
-        return std::any_of(count.begin(), count.end(),
-                           [](const std::size_t n) { return n > 0; });
+        return std::ranges::any_of(count,
+                                   [](const std::size_t n) { return n > 0; });
     }
 }
 

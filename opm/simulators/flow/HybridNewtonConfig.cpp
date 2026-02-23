@@ -69,14 +69,14 @@ HybridNewtonConfig::HybridNewtonConfig(const PropertyTree& model_config)
 
 bool HybridNewtonConfig::hasInputFeature(const std::string& name) const
 {
-    return std::any_of(input_features.begin(), input_features.end(),
-                       [&](const auto& p) { return p.first == name; });
+    return std::ranges::any_of(input_features,
+                               [&name](const auto& p) { return p.first == name; });
 }
 
 bool HybridNewtonConfig::hasOutputFeature(const std::string& name) const
 {
-    return std::any_of(output_features.begin(), output_features.end(),
-                       [&](const auto& p) { return p.first == name; });
+    return std::ranges::any_of(output_features,
+                               [&name](const auto& p) { return p.first == name; });
 }
 
 void HybridNewtonConfig::validateConfig(bool compositionSwitchEnabled) const
