@@ -115,9 +115,7 @@ public:
             aqData != nullptr)
         {
             this->init_pressure_.resize(aqData->initPressure.size());
-            std::copy(aqData->initPressure.begin(),
-                      aqData->initPressure.end(),
-                      this->init_pressure_.begin());
+            std::ranges::copy(aqData->initPressure, this->init_pressure_.begin());
         }
 
         this->solution_set_from_restart_ = true;
@@ -143,9 +141,7 @@ public:
 
         auto* aquNum = data.typeData.template create<data::AquiferType::Numerical>();
         aquNum->initPressure.resize(this->init_pressure_.size());
-        std::copy(this->init_pressure_.begin(),
-                  this->init_pressure_.end(),
-                  aquNum->initPressure.begin());
+        std::ranges::copy(this->init_pressure_, aquNum->initPressure.begin());
 
         return data;
     }

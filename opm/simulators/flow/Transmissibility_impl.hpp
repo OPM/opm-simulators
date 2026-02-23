@@ -683,7 +683,7 @@ extractPorosity_()
         else {
             const auto por = this->lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PORO");
             porosity_.resize(por.size());
-            std::copy(por.begin(), por.end(), porosity_.begin());
+            std::ranges::copy(por, porosity_.begin());
         }
     }
     else {
@@ -707,7 +707,7 @@ extractDispersion_()
     else {
         const auto disp = this->lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"DISPERC");
         dispersion_.resize(disp.size());
-        std::copy(disp.begin(), disp.end(), dispersion_.begin());
+        std::ranges::copy(disp, dispersion_.begin());
     }
 }
 

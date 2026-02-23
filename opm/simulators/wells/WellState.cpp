@@ -1009,7 +1009,7 @@ void WellState<Scalar, IndexTraits>::communicateGroupRates(const Parallel::Commu
                           {
                               const auto& [owner, rates] = input.second;
                               if (owner) {
-                                  std::copy(rates.begin(), rates.end(), pos);
+                                  std::ranges::copy(rates, pos);
                               }
                               pos += rates.size();
                           });
@@ -1024,7 +1024,7 @@ void WellState<Scalar, IndexTraits>::communicateGroupRates(const Parallel::Commu
                           [&pos](auto& input)
                           {
                               auto& rates = input.second.second;
-                              std::copy(pos, pos + rates.size(), rates.begin());
+                              std::copy_n(pos, rates.size(), rates.begin());
                               pos += rates.size();
                           });
     assert(pos == data.end());

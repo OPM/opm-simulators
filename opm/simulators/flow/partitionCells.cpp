@@ -500,7 +500,7 @@ namespace {
             }
 
             const auto& start = cellGroup.startPointers();
-            std::copy(start.begin(), start.end(), startPtr.begin());
+            std::ranges::copy(start, startPtr.begin());
         }
 
         comm.broadcast(startPtr.data(), comm.size() + 1, 0);

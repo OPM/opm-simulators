@@ -157,7 +157,7 @@ void sumDistributedWellEntries(MatrixType& mat,
     auto cols = mat.mat_cols();
     for(auto&& row: mat)
     {
-        std::copy(pos, pos + cols, &(row[0]));
+        std::copy_n(pos, cols, &(row[0]));
         pos += cols;
     }
     assert(std::size_t(allEntries.end() - pos) == vec.size());
