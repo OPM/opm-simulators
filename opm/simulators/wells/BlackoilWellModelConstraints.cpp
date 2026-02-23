@@ -473,7 +473,7 @@ updateGroupIndividualControl(const Group& group,
             const auto currentControl = group_state.injection_control(group.name(), phase);
             if (auto groupPos = switched_inj.find(group.name()); groupPos != switched_inj.end()) {
                 auto& ctrls = groupPos->second[static_cast<std::underlying_type_t<Phase>>(phase)];
-                const int number_of_switches = std::count(ctrls.begin(), ctrls.end(), currentControl);
+                const int number_of_switches = std::ranges::count(ctrls, currentControl);
                 group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
                 if (group_is_oscillating) {
                     const bool output_first_time = (number_of_switches == max_number_of_group_switch);
@@ -521,7 +521,7 @@ updateGroupIndividualControl(const Group& group,
         const Group::ProductionCMode currentControl = group_state.production_control(group.name());
         if (auto groupPos = switched_prod.find(group.name()); groupPos != switched_prod.end()) {
             auto& ctrls = groupPos->second;
-            const int number_of_switches = std::count(ctrls.begin(), ctrls.end(), currentControl);
+            const int number_of_switches = std::ranges::count(ctrls, currentControl);
             const bool group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
             if (group_is_oscillating) {
                 const bool output_first_time = (number_of_switches == max_number_of_group_switch);
