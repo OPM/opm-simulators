@@ -129,6 +129,11 @@ public:
         return resWell_;
     }
 
+    const OffDiagMatWell& getB() const { return duneB_; }
+    const OffDiagMatWell& getC() const { return duneC_; }
+    const DiagMatWell& getD() const { return duneD_; }
+    const std::vector<int>& cells() const { return cells_; }
+
 private:
     friend class StandardWellEquationAccess<Scalar, IndexTraits, numEq>;
 

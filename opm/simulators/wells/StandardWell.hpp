@@ -123,7 +123,10 @@ namespace Opm
 
         using IndexTraits = typename FluidSystem::IndexTraitsType;
         using WellStateType = WellState<Scalar, IndexTraits>;
-
+        using BMatrix = typename Base::BMatrix;
+        using CMatrix = typename Base::CMatrix;
+        using DMatrix = typename Base::DMatrix;
+        using WVector = typename Base::WVector;
         StandardWell(const Well& well,
                      const ParallelWellInfo<Scalar>& pw_info,
                      const int time_step,
@@ -156,6 +159,13 @@ namespace Opm
                                                    const BVector& x,
                                                    const GroupStateHelperType& groupStateHelper,
                                                    WellStateType& well_state) override;
+
+        void updateWellStateFromSystemSolution(const Simulator& simulator,
+                                               const Opm::WellVectorT<Scalar>& mergedWellSolution,
+                                               int wellDofOffset,
+                                               int nWellDofs,
+                                               const GroupStateHelperType& groupStateHelper,
+                                               WellStateType& well_state) override;
 
         /// computing the well potentials for group control
         void computeWellPotentials(const Simulator& simulator,
@@ -248,6 +258,16 @@ namespace Opm
         std::vector<Scalar> getPrimaryVars() const override;
 
         int setPrimaryVars(typename std::vector<Scalar>::const_iterator it) override;
+
+
+        void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                          std::vector<CMatrix>& c_matrices,
+                          std::vector<DMatrix>& d_matrices,
+                          std::vector<std::vector<int>>& wcells,
+                          std::vector<WVector>& residual) const override
+        {
+            StdWellEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells, residual);
+        }
 
     protected:
         bool regularize_;
@@ -352,7 +372,8 @@ namespace Opm
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
                                             WellStateType& well_state,
-                                            const bool solving_with_zero_rate) override;
+                                            const bool solving_with_zero_rate,
+                                            const bool skipLocalInverse) override;
 
         void assembleWellEqWithoutIterationImpl(const Simulator& simulator,
                                                 const GroupStateHelperType& groupStateHelper,
@@ -360,7 +381,8 @@ namespace Opm
                                                 const Well::InjectionControls& inj_controls,
                                                 const Well::ProductionControls& prod_controls,
                                                 WellStateType& well_state,
-                                                const bool solving_with_zero_rate);
+                                                const bool solving_with_zero_rate,
+                                                const bool skipLocalInverse);
 
         void calculateSinglePerf(const Simulator& simulator,
                                  const int perf,

@@ -97,6 +97,13 @@ public:
     using BVector = Dune::BlockVector<VectorBlockType>;
     using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 
+    static constexpr int numResDofs = Indices::numEq;
+    static constexpr int numWellDofs = numResDofs + 1;  // NB will fail for for thermal for now
+    using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+    using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+    using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
+    using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+
     using WellStateType = WellState<Scalar, IndexTraits>;
     using SingleWellStateType = SingleWellState<Scalar, IndexTraits>;
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
@@ -174,7 +181,8 @@ public:
                                         const GroupStateHelperType& groupStateHelper,
                                         const double dt,
                                         WellStateType& well_state,
-                                        const bool solving_with_zero_rate);
+                                        const bool solving_with_zero_rate,
+                                        const bool skipLocalInverse);
 
     // TODO: better name or further refactoring the function to make it more clear
     void prepareWellBeforeAssembling(const Simulator& simulator,
@@ -206,6 +214,15 @@ public:
                                                        const BVector& x,
                                                        const GroupStateHelperType& groupStateHelper,
                                                        WellStateType& well_state) = 0;
+
+    /// Update well state directly from the well solution obtained
+    /// by the coupled system solver (no D^-1 recovery needed).
+    virtual void updateWellStateFromSystemSolution(const Simulator& simulator,
+                                                   const Opm::WellVectorT<Scalar>& mergedWellSolution,
+                                                   int wellDofOffset,
+                                                   int nWellDofs,
+                                                   const GroupStateHelperType& groupStateHelper,
+                                                   WellStateType& well_state) = 0;
 
     /// Ax = Ax - C D^-1 B x
     virtual void apply(const BVector& x, BVector& Ax) const = 0;
@@ -357,6 +374,12 @@ public:
                                    const GroupStateHelperType& groupStateHelper,
                                    WellStateType& well_state) = 0;
 
+    virtual void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+        std::vector<CMatrix>& c_matrices,
+        std::vector<DMatrix>& d_matrices,
+        std::vector<std::vector<int>>& wcells,
+        std::vector<WVector>& residual) const = 0;
+
 protected:
     // simulation parameters
     std::vector<RateVector> connectionRates_;
@@ -397,7 +420,8 @@ protected:
                                                 const WellInjectionControls& inj_controls,
                                                 const WellProductionControls& prod_controls,
                                                 WellStateType& well_state,
-                                                const bool solving_with_zero_rate) = 0;
+                                                const bool solving_with_zero_rate,
+                                                const bool skipLocalInverse) = 0;
 
     // iterate well equations with the specified control until converged
     virtual bool iterateWellEqWithControl(const Simulator& simulator,

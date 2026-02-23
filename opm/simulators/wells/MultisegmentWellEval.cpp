@@ -75,6 +75,63 @@ initMatrixAndVectors(const ParallelWellInfo<Scalar>& parallel_well_info)
     primary_variables_.resize(this->numberOfSegments());
 }
 
+
+template<typename BlockType, typename BlockTypeTransposed>
+Dune::BCRSMatrix<BlockTypeTransposed>
+transposeMatrix(const Dune::BCRSMatrix<BlockType>& A)
+{
+    const size_t rows = A.N();
+    const size_t cols = A.M();
+
+    std::vector<std::vector<int>> rowind(cols);
+    for (size_t i = 0; i < rows; ++i) {
+        for (auto it = A[i].begin(); it != A[i].end(); ++it) {
+            rowind[it.index()].push_back(i);
+        }
+    }
+
+    // Create the transposed matrix
+    Dune::BCRSMatrix<BlockTypeTransposed> AT(cols, rows, A.nonzeroes(),
+                                             Dune::BCRSMatrix<BlockTypeTransposed>::row_wise);
+
+    for (auto row = AT.createbegin(); row != AT.createend(); ++row) {
+        for (int col_idx : rowind[row.index()]) {
+            row.insert(col_idx);
+        }
+    }
+
+    // Fill in the entries
+    for (size_t i = 0; i < rows; ++i) {
+        for (auto it = A[i].begin(); it != A[i].end(); ++it) {
+            size_t j = it.index();
+            AT[j][i] = it->transposed();  // transpose the block
+        }
+    }
+
+    return AT;
+}
+
+template<class FluidSystem, class Indices>
+void
+MultisegmentWellEval<FluidSystem,Indices>::
+addBCDMatrix(std::vector<BMatrix>& b_matrices,
+             std::vector<CMatrix>& c_matrices,
+             std::vector<DMatrix>& d_matrices,
+             std::vector<std::vector<int>>& wcells,
+             std::vector<WVector>& residual) const
+{
+    residual.push_back(linSys_.residual());
+    b_matrices.push_back(linSys_.getB());
+
+    using BlockType = Dune::FieldMatrix<Scalar, PrimaryVariables::numWellEq, Indices::numEq>;
+    using BlockTypeTransposed = typename CMatrix::block_type;
+    CMatrix duneC = transposeMatrix<BlockType, BlockTypeTransposed>(linSys_.getC());
+    c_matrices.push_back(duneC);
+
+    d_matrices.push_back(linSys_.getD());
+    wcells.push_back(linSys_.cells());
+}
+
 template<typename FluidSystem, typename Indices>
 ConvergenceReport
 MultisegmentWellEval<FluidSystem,Indices>::
