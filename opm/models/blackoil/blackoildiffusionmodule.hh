@@ -129,6 +129,8 @@ public:
         // TODO: support use_move_fraction on GPUs
         #if OPM_IS_INSIDE_HOST_FUNCTION
         use_mole_fraction_ = eclState.getTableManager().diffMoleFraction();
+        #else
+        OPM_THROW(std::runtime_error, "Diffusion module: Calling initFromState not expected on GPU.");
         #endif
     }
     #endif
@@ -189,7 +191,7 @@ public:
                                                  const Evaluation& diffusivity,
                                                  const EvaluationArray& effectiveDiffusionCoefficient)
     {
-        FluidSystem const* fsysptr = &inIq.getFluidSystem();
+        const FluidSystem& fsys = inIq.getFluidSystem();
 
         const auto& inFs = inIq.fluidState();
         const auto& exFs = exIq.fluidState();
@@ -197,17 +199,17 @@ public:
         Evaluation diffR = 0.0;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!fsysptr->phaseIsActive(phaseIdx)) {
+            if (!fsys.phaseIsActive(phaseIdx)) {
                 continue;
             }
 
             // no diffusion in water for blackoil models
-            if (!fsysptr->enableDissolvedGasInWater() && fsysptr->waterPhaseIdx == phaseIdx) {
+            if (!fsys.enableDissolvedGasInWater() && fsys.waterPhaseIdx == phaseIdx) {
                 continue;
             }
 
             // no diffusion in gas phase in water + gas system.
-            if (fsysptr->gasPhaseIdx == phaseIdx && !fsysptr->phaseIsActive(fsysptr->oilPhaseIdx)) {
+            if (fsys.gasPhaseIdx == phaseIdx && !fsys.phaseIsActive(fsys.oilPhaseIdx)) {
                 continue;
             }
 
@@ -221,38 +223,38 @@ public:
                 continue;
             }
             Evaluation convFactor = 1.0;
-            if (fsysptr->enableDissolvedGas() &&
-                fsysptr->phaseIsActive(fsysptr->gasPhaseIdx) &&
-                phaseIdx == fsysptr->oilPhaseIdx)
+            if (fsys.enableDissolvedGas() &&
+                fsys.phaseIsActive(fsys.gasPhaseIdx) &&
+                phaseIdx == fsys.oilPhaseIdx)
             {
                 const Evaluation rsAvg = (inFs.Rs() + Toolbox::value(exFs.Rs())) / 2;
-                convFactor = 1.0 / (toFractionGasOil(pvtRegionIndex, fsysptr) + rsAvg);
+                convFactor = 1.0 / (toFractionGasOil(pvtRegionIndex, fsys) + rsAvg);
                 diffR = inFs.Rs() - Toolbox::value(exFs.Rs());
             }
-            if (fsysptr->enableVaporizedOil() &&
-                fsysptr->phaseIsActive(fsysptr->oilPhaseIdx) &&
-                phaseIdx == fsysptr->gasPhaseIdx)
+            if (fsys.enableVaporizedOil() &&
+                fsys.phaseIsActive(fsys.oilPhaseIdx) &&
+                phaseIdx == fsys.gasPhaseIdx)
             {
                 const Evaluation rvAvg = (inFs.Rv() + Toolbox::value(exFs.Rv())) / 2;
-                convFactor = toFractionGasOil(pvtRegionIndex, fsysptr) /
-                             (1.0 + rvAvg * toFractionGasOil(pvtRegionIndex, fsysptr));
+                convFactor = toFractionGasOil(pvtRegionIndex, fsys) /
+                             (1.0 + rvAvg * toFractionGasOil(pvtRegionIndex, fsys));
                 diffR = inFs.Rv() - Toolbox::value(exFs.Rv());
             }
-            if (fsysptr->enableDissolvedGasInWater() && phaseIdx == fsysptr->waterPhaseIdx) {
+            if (fsys.enableDissolvedGasInWater() && phaseIdx == fsys.waterPhaseIdx) {
                 const Evaluation rsAvg = (inFs.Rsw() + Toolbox::value(exFs.Rsw())) / 2;
-                convFactor = 1.0 / (toFractionGasWater(pvtRegionIndex, fsysptr) + rsAvg);
+                convFactor = 1.0 / (toFractionGasWater(pvtRegionIndex, fsys) + rsAvg);
                 diffR = inFs.Rsw() - Toolbox::value(exFs.Rsw());
             }
-            if (fsysptr->enableVaporizedWater() && phaseIdx == fsysptr->gasPhaseIdx) {
+            if (fsys.enableVaporizedWater() && phaseIdx == fsys.gasPhaseIdx) {
                 const Evaluation rvAvg = (inFs.Rvw() + Toolbox::value(exFs.Rvw())) / 2;
-                convFactor = toFractionGasWater(pvtRegionIndex, fsysptr) /
-                             (1.0 + rvAvg * toFractionGasWater(pvtRegionIndex, fsysptr));
+                convFactor = toFractionGasWater(pvtRegionIndex, fsys) /
+                             (1.0 + rvAvg * toFractionGasWater(pvtRegionIndex, fsys));
                 diffR = inFs.Rvw() - Toolbox::value(exFs.Rvw());
             }
 
             // mass flux of solvent component (oil in oil or gas in gas)
-            const unsigned solventCompIdx = fsysptr->solventComponentIndex(phaseIdx);
-            const unsigned activeSolventCompIdx = fsysptr->canonicalToActiveCompIdx(solventCompIdx);
+            const unsigned solventCompIdx = fsys.solventComponentIndex(phaseIdx);
+            const unsigned activeSolventCompIdx = fsys.canonicalToActiveCompIdx(solventCompIdx);
             flux[conti0EqIdx + activeSolventCompIdx] +=
                     -bSAvg *
                     convFactor *
@@ -261,8 +263,8 @@ public:
                     effectiveDiffusionCoefficient[phaseIdx][solventCompIdx];
 
             // mass flux of solute component (gas in oil or oil in gas)
-            const unsigned soluteCompIdx = fsysptr->soluteComponentIndex(phaseIdx);
-            const unsigned activeSoluteCompIdx = fsysptr->canonicalToActiveCompIdx(soluteCompIdx);
+            const unsigned soluteCompIdx = fsys.soluteComponentIndex(phaseIdx);
+            const unsigned activeSoluteCompIdx = fsys.canonicalToActiveCompIdx(soluteCompIdx);
             flux[conti0EqIdx + activeSoluteCompIdx] +=
                     bSAvg *
                     diffR *
@@ -310,22 +312,22 @@ public:
 
 private:
     template<class FluidSystemT>
-    OPM_HOST_DEVICE static Scalar toFractionGasOil (unsigned regionIdx, FluidSystemT* fsys)
+    OPM_HOST_DEVICE static Scalar toFractionGasOil (unsigned regionIdx, const FluidSystemT& fsys)
     {
-        const Scalar mMOil = use_mole_fraction_ ? fsys->molarMass(fsys->oilCompIdx, regionIdx) : 1;
-        const Scalar rhoO = fsys->referenceDensity(fsys->oilPhaseIdx, regionIdx);
-        const Scalar mMGas = use_mole_fraction_ ? fsys->molarMass(fsys->gasCompIdx, regionIdx) : 1;
-        const Scalar rhoG = fsys->referenceDensity(fsys->gasPhaseIdx, regionIdx);
+        const Scalar mMOil = use_mole_fraction_ ? fsys.molarMass(fsys.oilCompIdx, regionIdx) : 1;
+        const Scalar rhoO = fsys.referenceDensity(fsys.oilPhaseIdx, regionIdx);
+        const Scalar mMGas = use_mole_fraction_ ? fsys.molarMass(fsys.gasCompIdx, regionIdx) : 1;
+        const Scalar rhoG = fsys.referenceDensity(fsys.gasPhaseIdx, regionIdx);
         return rhoO * mMGas / (rhoG * mMOil);
     }
 
     template<class FluidSystemT>
-    OPM_HOST_DEVICE static Scalar toFractionGasWater (unsigned regionIdx, FluidSystemT* fsys)
+    OPM_HOST_DEVICE static Scalar toFractionGasWater (unsigned regionIdx, const FluidSystemT& fsys)
     {
-        const Scalar mMWater = use_mole_fraction_ ? fsys->molarMass(fsys->waterCompIdx, regionIdx) : 1;
-        const Scalar rhoW = fsys->referenceDensity(fsys->waterPhaseIdx, regionIdx);
-        const Scalar mMGas = use_mole_fraction_ ? fsys->molarMass(fsys->gasCompIdx, regionIdx) : 1;
-        const Scalar rhoG = fsys->referenceDensity(fsys->gasPhaseIdx, regionIdx);
+        const Scalar mMWater = use_mole_fraction_ ? fsys.molarMass(fsys.waterCompIdx, regionIdx) : 1;
+        const Scalar rhoW = fsys.referenceDensity(fsys.waterPhaseIdx, regionIdx);
+        const Scalar mMGas = use_mole_fraction_ ? fsys.molarMass(fsys.gasCompIdx, regionIdx) : 1;
+        const Scalar rhoG = fsys.referenceDensity(fsys.gasPhaseIdx, regionIdx);
         return rhoW * mMGas / (rhoG * mMWater);
     }
 
