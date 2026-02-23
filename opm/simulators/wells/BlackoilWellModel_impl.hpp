@@ -1135,10 +1135,10 @@ namespace Opm {
                           DeferredLogger& deferred_logger) const
     {
         // Finding the location of the well in wells_ecl
-        const auto it = std::find_if(this->wells_ecl_.begin(),
-                                     this->wells_ecl_.end(),
-                                     [&well_name](const auto& w)
-                                     { return well_name == w.name(); });
+        const auto it =
+            std::ranges::find_if(this->wells_ecl_,
+                                 [&well_name](const auto& w)
+                                 { return well_name == w.name(); });
         // It should be able to find in wells_ecl.
         if (it == this->wells_ecl_.end()) {
             OPM_DEFLOG_THROW(std::logic_error,
@@ -2123,11 +2123,10 @@ namespace Opm {
     getWell(const std::string& well_name) const
     {
         // finding the iterator of the well in wells_ecl
-        auto well = std::find_if(well_container_.begin(),
-                                     well_container_.end(),
-                                     [&well_name](const WellInterfacePtr& elem)->bool {
-                                         return elem->name() == well_name;
-                                     });
+        const auto well =
+            std::ranges::find_if(well_container_,
+                                 [&well_name](const WellInterfacePtr& elem) -> bool
+                                 { return elem->name() == well_name; });
 
         assert(well != well_container_.end());
 
