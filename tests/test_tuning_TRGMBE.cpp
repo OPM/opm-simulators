@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(CheckMassBalanceWithinTRGMBE)
     auto mbw = data["MB_Water"];
     auto mbg = data["MB_Gas"];
 
-    const int num_reports = 1 + *std::max_element(rstep.begin(), rstep.end());
+    const int num_reports = 1 + *std::ranges::max_element(rstep);
     std::vector<double> max_mb;
     max_mb.reserve(num_reports);
 

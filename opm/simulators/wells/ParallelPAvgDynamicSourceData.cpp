@@ -157,7 +157,7 @@ void Opm::ParallelPAvgDynamicSourceData<Scalar>::defineCommunication()
     //    permutation of 0..allIndices.size()-1 and the maximum source
     //    location may exceed size()-1.  Resize the storageIndex_ according
     //    to the largest source location ID.
-    if (auto maxIxPos = std::max_element(allIndices.begin(), allIndices.end());
+    if (const auto maxIxPos = std::ranges::max_element(allIndices);
         maxIxPos != allIndices.end())
     {
         // +1 for zero-based indices.

@@ -980,7 +980,7 @@ int GenericOutputBlackoilModule<FluidSystem>::
 regionMax(const std::vector<int>& region,
           const Parallel::Communication& comm)
 {
-    const auto max_value = region.empty() ? 0 : *std::max_element(region.begin(), region.end());
+    const auto max_value = region.empty() ? 0 : *std::ranges::max_element(region);
     return comm.max(max_value);
 }
 

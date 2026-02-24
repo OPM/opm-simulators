@@ -150,8 +150,8 @@ namespace Opm
     /// \brief return max step length used so far
     double AdaptiveSimulatorTimer::maxStepLength () const
     {
-        if( steps_.empty() ) return 0.0;
-        return *(std::max_element( steps_.begin(), steps_.end() ));
+        if (steps_.empty()) return 0.0;
+        return *std::ranges::max_element(steps_);
     }
 
     /// \brief return min step length used so far

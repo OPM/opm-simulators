@@ -98,8 +98,10 @@ namespace Amg
                 diag_block_transpose.solve(bweights, rhs);
             }
 
-            double abs_max = *std::max_element(
-                bweights.begin(), bweights.end(), [](double a, double b) { return std::fabs(a) < std::fabs(b); });
+            const double abs_max =
+                *std::ranges::max_element(bweights,
+                                          [](double a, double b)
+                                          { return std::fabs(a) < std::fabs(b); });
             bweights /= std::fabs(abs_max);
             weights[row_idx] = bweights;
         }
@@ -208,8 +210,10 @@ namespace Amg
                 }
                 block_transpose.solve(bweights, rhs);
 
-                double abs_max = *std::max_element(
-                    bweights.begin(), bweights.end(), [](double a, double b) { return std::fabs(a) < std::fabs(b); });
+                const double abs_max =
+                    *std::ranges::max_element(bweights,
+                                              [](double a, double b)
+                                              { return std::fabs(a) < std::fabs(b); });
                 // probably a scaling which could give approximately total compressibility would be better
                 bweights /=  std::fabs(abs_max); // given normal densities this scales weights to about 1.
 
