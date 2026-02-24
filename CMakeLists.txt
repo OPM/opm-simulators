@@ -540,8 +540,10 @@ macro(opm-simulators_targets_hook)
     target_link_libraries(opmsimulators PUBLIC roc::hipblas roc::hipsparse)
   endif()
 
-  if(USE_GPU_BRIDGE AND hip_FOUND)
-    target_link_libraries(opmsimulators PUBLIC roc::rocalution)
+  if(USE_GPU_BRIDGE)
+    if(ROCALUTION_FOUND)
+      target_link_libraries(opmsimulators PUBLIC roc::rocalution)
+    endif()
   endif()
 
   if(CUDA_FOUND)
