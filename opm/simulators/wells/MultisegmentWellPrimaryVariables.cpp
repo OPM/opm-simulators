@@ -176,7 +176,7 @@ updateNewton(const BVectorWell& dwells,
              const bool stop_or_zero_rate_target,
              const Scalar max_pressure_change)
 {
-    std::cout << " in the function updateNewton with value_ are " << std::endl;
+    std::cout << " in the function updateNewton for well " << this->well_.name() << " with value_ are " << std::endl;
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         std::cout << " segment " << seg << " value_ : ";
         for (const auto& val : value_[seg]) {
@@ -233,7 +233,10 @@ updateNewton(const BVectorWell& dwells,
         if constexpr (enable_energy) {
             // TODO: how to regularize the tempearture update remains to be investigated
             std::cout << " value of temperature is " << old_primary_variables[seg][Temperature] << " the dwells is " << dwells[seg][Temperature] << std::endl;
-            value_[seg][Temperature] = old_primary_variables[seg][Temperature] - relaxation_factor * dwells[seg][Temperature];
+            const int sign = dwells[seg][Temperature] > 0. ? 1 : -1;
+            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][Temperature]) * relaxation_factor, 2.);
+            value_[seg][Temperature] = std::max(old_primary_variables[seg][Temperature] - dx_limited, Scalar{0.0});
+            // value_[seg][Temperature] = old_primary_variables[seg][Temperature] - relaxation_factor * dwells[seg][Temperature];
         }
     }
 
