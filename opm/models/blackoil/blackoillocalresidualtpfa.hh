@@ -912,53 +912,29 @@ public:
      *        that stores conservation quantities in terms of "surface-volume" to the
      *        conservation quantities used by the model.
      *
-     * Depending on the value of the BlackoilConserveSurfaceVolume property, the model
-     * either conserves mass by means of "surface volume" of the components or mass
-     * directly. In the former case, this method is a no-op; in the latter, the values
-     * passed are multiplied by their respective pure component's density at surface
-     * conditions.
+     * Convenience overload for CPU code that uses the static FluidSystem. Delegates to
+     * the FsysType overload below, constructing a default FluidSystem instance.
      */
     template <class Scalar>
     static void adaptMassConservationQuantities_(Dune::FieldVector<Scalar, numEq>& container,
                                                  unsigned pvtRegionIdx)
     {
-        if constexpr (!blackoilConserveSurfaceVolume) {
-            // convert "surface volume" to mass. this is complicated a bit by the fact that
-            // not all phases are necessarily enabled. (we here assume that if a fluid phase
-            // is disabled, its respective "main" component is not considered as well.)
-
-            if constexpr (waterEnabled) {
-                const unsigned activeWaterCompIdx = FluidSystem::canonicalToActiveCompIdx(waterCompIdx);
-                container[conti0EqIdx + activeWaterCompIdx] *=
-                    FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
-            }
-
-            if constexpr (gasEnabled) {
-                const unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
-                container[conti0EqIdx + activeGasCompIdx] *=
-                    FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
-            }
-
-            if constexpr (oilEnabled) {
-                const unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
-                container[conti0EqIdx + activeOilCompIdx] *=
-                    FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
-            }
-        }
+        adaptMassConservationQuantities_(container, pvtRegionIdx, FluidSystem{});
     }
 
     /*!
-     * \brief Helper function to convert the mass-related parts of a Dune::FieldVector
-     *        that stores conservation quantities in terms of "surface-volume" to the
-     *        conservation quantities used by the model.
+     * \brief Helper function to convert the mass-related parts of a vector that stores
+     *        conservation quantities in terms of "surface-volume" to the conservation
+     *        quantities used by the model.
      *
      * Depending on the value of the BlackoilConserveSurfaceVolume property, the model
      * either conserves mass by means of "surface volume" of the components or mass
      * directly. In the former case, this method is a no-op; in the latter, the values
      * passed are multiplied by their respective pure component's density at surface
      * conditions.
-     * This is a copy of the version above that does not use the static fluid system.
-     * This separate copy exists because some calls do not expect the new signature.
+     *
+     * This overload accepts a fluid system instance, enabling use in GPU kernels and
+     * other contexts where the static fluid system is not accessible.
      */
     template <class ScalarVector, class FsysType>
     OPM_HOST_DEVICE static void adaptMassConservationQuantities_(ScalarVector& container,
