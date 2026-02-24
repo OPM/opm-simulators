@@ -481,6 +481,17 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive,
             || directVerticalNeighbors(*cartDims, cartesianToActive, cellIdx1, cellIdx2);
     };
 
+    auto alreadyAssigned = [&outputNnc = this->outputNnc_]
+        (const std::size_t cellIdx1, const std::size_t cellIdx2)
+    {
+        for (const auto& entry : outputNnc) {
+            if (cellIdx1 == entry.cell1 && cellIdx2 == entry.cell2) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     using GlobalGridView = typename EquilGrid::LeafGridView;
     using GlobElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView>;
     const GlobalGridView& globalGridView = this->equilGrid_->leafGridView();
@@ -515,7 +526,7 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive,
                 c2 = map(c2);
             }
 
-            if (isNumAquConn(cc1, cc2) || ! isDirectNeighbours(cc1, cc2)) {
+            if (isNumAquConn(cc1, cc2) || (! isDirectNeighbours(cc1, cc2) && ! alreadyAssigned(cc1, cc2))) {
                 // We need to check whether an NNC for this face was also
                 // specified via the NNC keyword in the deck.
                 auto t = this->globalTrans().transmissibility(c1, c2);
