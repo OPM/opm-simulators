@@ -144,7 +144,7 @@ public:
                                const int comp_idx) const
     {   
         const auto& blockIdxs = blockVelocityIds_[comp_idx][dir];
-        return std::binary_search(blockIdxs.begin(), blockIdxs.end(), globalDofIdx); 
+        return std::ranges::binary_search(blockIdxs, globalDofIdx);
     }
 
     bool hasBlockFlowValue(const unsigned globalDofIdx,
@@ -152,7 +152,7 @@ public:
                            const int comp_idx) const
     {   
         const auto& blockIdxs = blockFlowsIds_[comp_idx][dir];
-        return std::binary_search(blockIdxs.begin(), blockIdxs.end(), globalDofIdx); 
+        return std::ranges::binary_search(blockIdxs, globalDofIdx);
     }
 
     Scalar getVelocity(const unsigned globalDofIdx,
