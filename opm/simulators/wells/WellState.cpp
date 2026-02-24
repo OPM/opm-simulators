@@ -220,14 +220,14 @@ initSingleInjector(const Well& well,
                    const std::vector<PerforationData<Scalar>>& well_perf_data,
                    const SummaryState& summary_state)
 {
-    const Scalar temp = well.hasInjTemperature() ? well.inj_temperature() : temperature_first_connection;
+    const Scalar temperature = well.hasInjTemperature() ? well.inj_temperature() : temperature_first_connection;
     auto& ws = this->wells_.add(well.name(), SingleWellState<Scalar, IndexTraits>{well.name(),
                                              well_info,
                                              this->phaseUsageInfo(),
                                              false,
                                              pressure_first_connection,
                                              well_perf_data,
-                                             temp});
+                                             temperature});
 
     // the rest of the code needs to executed even if ws.perf_data is empty
     // as this does not say anything for the whole well if it is distributed.
@@ -799,6 +799,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
             const auto& perf_rates = perf_data.phase_rates;
             const auto& perf_press = perf_data.pressure;
+            const auto& perf_temperature = perf_data.temperature;
             // The function calculateSegmentRates as well as the loop filling the segment_pressure work
             // with *global* containers. Now we create global vectors containing the phase_rates and
             // pressures of all processes.
@@ -812,6 +813,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
             std::vector<Scalar> perforation_rates(number_of_global_perfs * np, 0.0);
             std::vector<Scalar> perforation_pressures(number_of_global_perfs, 0.0);
+            std::vector<Scalar> perforation_temperature(number_of_global_perfs, 0.0);
 
             assert(perf_data.size() == perf_press.size());
             assert(perf_data.size() * np == perf_rates.size());
@@ -819,6 +821,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 if (auto candidate = active_perf_index_local_to_global.find(perf); candidate != active_perf_index_local_to_global.end()) {
                     const int global_active_perf_index = candidate->second;
                     perforation_pressures[global_active_perf_index] = perf_press[perf];
+                    perforation_temperature[global_active_perf_index] = perf_temperature[perf];
                     for (int i = 0; i < np; i++) {
                         perforation_rates[global_active_perf_index * np + i] = perf_rates[perf * np + i];
                     }
@@ -857,7 +860,10 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     if (!segment_perforations[seg].empty()) {
                         const int first_perf_global_index = segment_perforations[seg][0];
                         segment_pressure[seg] = perforation_pressures[first_perf_global_index];
-                        segment_temperature[seg] = segment_temperature[first_perf_global_index];
+                        // TODO: the temperature remains to be made to be more consistent
+                        const int outlet_seg = segment_set[seg].outletSegment();
+                        const int outlet_seg_index = segment_set.segmentNumberToIndex(outlet_seg);
+                        segment_temperature[seg] = ws.producer ? perforation_temperature[first_perf_global_index] : segment_temperature[outlet_seg_index];
                         segment_indices.push_back(seg);
                     } else {
                         // seg_press_.push_back(bhp); // may not be a good decision
