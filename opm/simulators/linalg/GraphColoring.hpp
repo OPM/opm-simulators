@@ -65,10 +65,10 @@ std::size_t colorGraphWelshPowell(const Graph& graph,
     }
     // forbidden vertices will be colored next for coloring
     using Vertex = typename Graph::VertexDescriptor;
-    auto newEnd = std::remove_if(orderedVertices.begin(),
-                                 orderedVertices.end(),
-                                 [&forbidden](const Vertex& vertex) { return !forbidden[vertex]; });
-    orderedVertices.resize(newEnd - orderedVertices.begin());
+    std::erase_if(orderedVertices,
+                  [&forbidden](const Vertex& vertex)
+                  { return !forbidden[vertex]; });
+
     return noColored;
 }
 

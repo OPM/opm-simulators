@@ -61,8 +61,8 @@ struct Fixture
 std::string trimString(const std::string& input)
 {
     std::string result(input);
-    result.erase(std::remove(result.begin(), result.end(), ' '), result.end());
-    result.erase(std::remove(result.begin(), result.end(), '\n'), result.end());
+    std::erase(result, ' ');
+    std::erase(result, '\n');
     return result;
 }
 

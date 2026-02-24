@@ -508,14 +508,12 @@ recalculateGradientAndUpdateData_(GradPairItr& grad_itr,
                 updateGradVector_(name, other_grads, grad->grad);
             }
             else {
-                auto new_end = std::remove_if(other_grads.begin(), other_grads.end(), [&name](const GradPair& pair)
-                                                                        {
-                                                                            return (name==pair.first);
-                                                                        }
-                            );
-                if (new_end != other_grads.end()) {
+                const auto orig_size = other_grads.size();
+                std::erase_if(other_grads,
+                              [&name](const GradPair& pair)
+                              { return name == pair.first; });
+                if (orig_size != other_grads.size()) {
                     this->deleteGrad_(name, !increase);
-                    other_grads.erase(new_end, other_grads.end());
                 }
             }
         }

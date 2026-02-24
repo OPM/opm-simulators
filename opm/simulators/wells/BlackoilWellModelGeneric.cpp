@@ -290,9 +290,7 @@ getLocalWells(const int timeStepIdx) const
     auto w = std::vector<Well>{};
 
     auto wnames = this->schedule().wellNames(timeStepIdx);
-    wnames.erase(std::remove_if(wnames.begin(), wnames.end(),
-                                this->not_on_process_),
-                 wnames.end());
+    std::erase_if(wnames, this->not_on_process_);
 
     w.reserve(wnames.size());
 
@@ -1748,10 +1746,7 @@ getMaxWellConnections() const
     auto wellConnections = std::vector<std::vector<int>>{};
 
     auto schedule_wells = this->schedule().wellNames();
-    schedule_wells.erase(std::remove_if(schedule_wells.begin(),
-                                        schedule_wells.end(),
-                                        this->not_on_process_),
-                         schedule_wells.end());
+    std::erase_if(schedule_wells, this->not_on_process_);
 
     wellConnections.reserve(schedule_wells.size());
 
