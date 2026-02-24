@@ -373,7 +373,7 @@ computeLevelCartDimensions_(const Opm::LevelCartesianIndexMapper<EquilGrid>& lev
         };
     }
     else {
-        return [&](int level)
+        return [&]([[maybe_unused]] int level)
         {
             assert(level == 0); // refinement only supported for CpGrid for now
             return equilCartMapp.cartesianDimensions();
@@ -397,7 +397,7 @@ computeLevelCartIdx_(const Opm::LevelCartesianIndexMapper<EquilGrid>& levelCartM
     }
     else {
         return [&](int levelCompressedIdx,
-                   int level)
+                   [[maybe_unused]] int level)
         {
             assert(level == 0); // refinement only supported for CpGrid for now
             return equilCartMapp.cartesianIndex(levelCompressedIdx);
@@ -653,7 +653,10 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                     const OriginIndicesFunction& computeOriginIndices) const
 {
     const auto& nncData = this->eclState_.getInputNNC().input();
+    const auto& nncEdit = this->eclState_.getInputNNC().edit();
+    const auto& nncEditr = this->eclState_.getInputNNC().editr();
     const auto& unitSystem = this->eclState_.getDeckUnitSystem();
+    const auto& transMult = this->eclState_.getTransMult();
 
     // Cartesian index mapper for the serial I/O grid
     const auto& equilCartMapper = *equilCartMapper_;
@@ -662,47 +665,6 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
 
     int maxLevel = this->equilGrid_->maxLevel();
     allocateAllNncs_(maxLevel);
-
-    // The NNC keyword in the deck is defined only for faces in the level-0 grid.
-    // The same limitation applies to aquifer data.
-    for (const auto& entry : nncData) {
-        // Ignore most explicit NNCs between otherwise neighbouring cells.
-        // We keep NNCs that involve cells with numerical aquifers even if
-        // these might be between neighbouring cells in the Cartesian
-        // grid--e.g., between cells (I,J,K) and (I+1,J,K).  All such
-        // connections should be written to NNC output arrays provided the
-        // transmissibility value is sufficiently large.
-        //
-        // The condition cell2 >= cell1 holds by construction of nncData.
-        assert (entry.cell2 >= entry.cell1);
-
-        if (! isCartesianNeighbour_(level0CartDims, entry.cell1, entry.cell2) ||
-            isNumAquConn_(entry.cell1, entry.cell2))
-        {
-            // Pick up transmissibility value from 'globalTrans()' since
-            // multiplier keywords like MULTREGT might have impacted the
-            // values entered in primary sources like NNC/EDITNNC/EDITNNCR.
-            const auto c1 = activeCell_(levelCartToLevelCompressed[/* level */0], entry.cell1);
-            const auto c2 = activeCell_(levelCartToLevelCompressed[/* level */0], entry.cell2);
-
-            if ((c1 < 0) || (c2 < 0)) {
-                // Connection between inactive cells?  Unexpected at this
-                // level.  Might consider 'throw'ing if this happens...
-                continue;
-            }
-
-            const auto trans = this->globalTrans().transmissibility(c1, c2);
-            const auto tt = unitSystem
-                .from_si(UnitSystem::measure::transmissibility, trans);
-
-            // ECLIPSE ignores NNCs (with EDITNNC/EDITNNCR applied) with
-            // small transmissibility values.  Seems like the threshold is
-            // 1.0e-6 in output units.
-            if (std::isnormal(tt) && ! (tt < 1.0e-6)) {
-                this->outputNnc_[0].emplace_back(entry.cell1, entry.cell2, trans);
-            }
-        }
-    }
 
     using GlobalGridView = typename EquilGrid::LeafGridView;
     using GlobElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView>;
@@ -798,22 +760,50 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
 
                 if (isNumAquConn_(originCartIdxIn, originCartIdxOut) ||
                     ! isDirectNeighbours_(levelCartToLevelCompressed[level],
-                                          levelCartDims,
-                                          levelCartIdxIn, levelCartIdxOut)) {
+                                           levelCartDims,
+                                           levelCartIdxIn, levelCartIdxOut)) {
                     // We need to check whether an NNC for this face was also
                     // specified via the NNC keyword in the deck.
+                    auto t = this->globalTrans().transmissibility(c1, c2);
                     auto t = this->globalTrans().transmissibility(c1, c2);
                     
                     if (level == 0) {
                         auto candidate = std::lower_bound(nncData.begin(), nncData.end(),
                                                           NNCdata { originCartIdxIn, originCartIdxOut, 0.0 });
+                        const auto transMlt = transMult.getRegionMultiplierNNC(originCartIdxIn, originCartIdxOut);
+                        bool foundNncEditr = false;
                     
                         while ((candidate != nncData.end()) &&
                                (candidate->cell1 == originCartIdxIn) &&
                                (candidate->cell2 == originCartIdxOut))
                         {
-                            t -= candidate->trans;
+                            auto trans = candidate->trans;
+                            trans *= transMlt;
+                            if (! nncEditr.empty()) {
+                                for (const auto& entryEditr : nncEditr) {
+                                    if (originCartIdxIn == entryEditr.cell1 && originCartIdxOut == entryEditr.cell2) {
+                                        t = transMlt * entryEditr.trans;
+                                        foundNncEditr = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (foundNncEditr) {
+                                break;
+                            }
+                            if (! nncEdit.empty()) {
+                                for (const auto& entryEdit : nncEdit) {
+                                    if (originCartIdxIn == entryEdit.cell1 && originCartIdxOut == entryEdit.cell2) {
+                                        trans *= entryEdit.trans;
+                                        break;
+                                    }
+                                }
+                            }
+                            t -= trans;
                             ++candidate;
+                        }
+                        if (foundNncEditr) {
+                            continue;
                         }
                     }
                     
@@ -829,6 +819,74 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                         this->outputNnc_[level].emplace_back(levelCartIdxIn, levelCartIdxOut, t);
                     }
                 }
+            }
+        }
+    }
+
+    // Do not include the generated NNCs transsmisibilities in the input NNCs
+    const auto generatedNnc = outputNnc_[0];
+    std::size_t loc = 0;
+
+    // The NNC keyword in the deck is defined only for faces in the level-0 grid.
+    // The same limitation applies to aquifer data.
+    for (const auto& entry : nncData) {
+        // Ignore most explicit NNCs between otherwise neighbouring cells.
+        // We keep NNCs that involve cells with numerical aquifers even if
+        // these might be between neighbouring cells in the Cartesian
+        // grid--e.g., between cells (I,J,K) and (I+1,J,K).  All such
+        // connections should be written to NNC output arrays provided the
+        // transmissibility value is sufficiently large.
+        //
+        // The condition cell2 >= cell1 holds by construction of nncData.
+        assert (entry.cell2 >= entry.cell1);
+
+        if (! isCartesianNeighbour_(level0CartDims, entry.cell1, entry.cell2) ||
+            isNumAquConn_(entry.cell1, entry.cell2))
+        {
+            bool foundNncEdit = false;
+            auto trans = entry.trans;
+            if (! nncEdit.empty()) {
+                for (const auto& entryEdit : nncEdit) {
+                    if (entry.cell1 == entryEdit.cell1 && entry.cell2 == entryEdit.cell2) {
+                        trans *= entryEdit.trans;
+                        foundNncEdit = true;
+                        break;
+                    }
+                }
+            }
+            if (! foundNncEdit) {
+                // Pick up transmissibility value from 'globalTrans()' since
+                // multiplier keywords like MULTREGT might have impacted the
+                // values entered in primary sources like NNC/EDITNNC/EDITNNCR.
+                const auto c1 = activeCell_(levelCartToLevelCompressed[/* level */0], entry.cell1);
+                const auto c2 = activeCell_(levelCartToLevelCompressed[/* level */0], entry.cell2);
+
+                if ((c1 < 0) || (c2 < 0)) {
+                    // Connection between inactive cells?  Unexpected at this
+                    // level.  Might consider 'throw'ing if this happens...
+                    continue;
+                }
+
+                trans = this->globalTrans().transmissibility(c1, c2);
+
+                if (! generatedNnc.empty()) {
+                    for (const auto& generated : generatedNnc) {
+                        if (entry.cell1 == generated.cell1 && entry.cell2 == generated.cell2) {
+                            trans -= generated.trans;
+                            break;
+                        }
+                    }
+                }
+            }
+            const auto tt = unitSystem
+                .from_si(UnitSystem::measure::transmissibility, trans);
+
+            // ECLIPSE ignores NNCs (with EDITNNC/EDITNNCR applied) with
+            // small transmissibility values.  Seems like the threshold is
+            // 1.0e-6 in output units.
+            if (std::isnormal(tt) && ! (tt < 1.0e-6)) {
+                this->outputNnc_[0].emplace(outputNnc_[0].begin() + loc, entry.cell1, entry.cell2, trans);
+                loc++;
             }
         }
     }
