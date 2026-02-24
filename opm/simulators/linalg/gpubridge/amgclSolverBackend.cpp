@@ -311,8 +311,13 @@ solve_system(Scalar* b, GpuResult& res)
 
                 print(solve);
 
+                // compatibility with older platforms where code is built as c++-17
                 // reset x vector
+#if __cplusplus >= 202002L
                 std::ranges::fill(x, 0.0);
+#else
+                std::fill(x.begin(), x.end(), 0.0);
+#endif
 
                 std::vector<Scalar> b_(b, b + N);
 
@@ -336,8 +341,13 @@ solve_system(Scalar* b, GpuResult& res)
                 // print solver structure (once)
                 print(solve);
 
+                // compatibility with older platforms where code is built as c++-17
                 // reset x vector
+#if __cplusplus >= 202002L
                 std::ranges::fill(x, 0.0);
+#else
+                std::fill(x.begin(), x.end(), 0.0);
+#endif
 
                 // create blocked vectors
                 auto b_ptr = reinterpret_cast<dvec_type*>(b);
@@ -402,7 +412,12 @@ void amgclSolverBackend<Scalar,block_size>::get_result(Scalar* x_)
 {
     Timer t;
 
+    // compatibility with older platforms where code is built as c++-17
+#if __cplusplus >= 202002L
     std::ranges::copy(x, x_);
+#else
+    std::copy(x.begin(), x.end(), x_);
+#endif
 
     if (verbosity >= 3) {
         std::ostringstream out;
