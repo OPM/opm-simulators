@@ -375,7 +375,7 @@ findTHP(const std::vector<Scalar>& bhp_array,
     Scalar thp = -1e100;
 
     //Check that our thp axis is sorted
-    assert(std::is_sorted(thp_array.begin(), thp_array.end()));
+    assert(std::ranges::is_sorted(thp_array));
 
     /**
      * Our *interpolated* bhp_array will be montonic increasing for increasing
@@ -383,7 +383,7 @@ findTHP(const std::vector<Scalar>& bhp_array,
      * THP values. However, if we have to *extrapolate* along any of the other
      * axes, this guarantee holds no more, and bhp_array may be "random"
      */
-    if (std::is_sorted(bhp_array.begin(), bhp_array.end())) {
+    if (std::ranges::is_sorted(bhp_array)) {
         //Target bhp less than all values in array, extrapolate
         if (bhp <= bhp_array[0]) {
             //TODO: LOG extrapolation

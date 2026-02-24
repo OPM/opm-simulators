@@ -46,7 +46,7 @@ namespace Details
     template <class Matrix>
     Matrix extractMatrix(const Matrix& m, const std::vector<int>& indices)
     {
-        assert(std::is_sorted(indices.begin(), indices.end()));
+        assert(std::ranges::is_sorted(indices));
 
         // Set up reverse index map.
         const std::size_t n = indices.size();

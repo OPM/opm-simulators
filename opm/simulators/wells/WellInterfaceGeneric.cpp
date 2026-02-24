@@ -86,10 +86,9 @@ WellInterfaceGeneric(const Well& well,
       , ipr_b_(num_conservation_quantities)
 {
     assert(well.name()==pw_info.name());
-    assert(std::is_sorted(perf_data.begin(), perf_data.end(),
-                          [](const auto& perf1, const auto& perf2){
-        return perf1.ecl_index < perf2.ecl_index;
-    }));
+    assert(std::ranges::is_sorted(perf_data,
+                                  [](const auto& perf1, const auto& perf2)
+                                  { return perf1.ecl_index < perf2.ecl_index; }));
     if (time_step < 0) {
         OPM_THROW(std::invalid_argument, "Negative time step is used to construct WellInterface");
     }
