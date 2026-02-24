@@ -114,6 +114,9 @@ struct TolerancePressureMsWells { static constexpr Scalar value = 0.01*1e5; };
 template<class Scalar>
 struct MaxPressureChangeMsWells { static constexpr Scalar value = 10*1e5; };
 
+template<class Scalar>
+struct MaxTemperatureChangeMsWells { static constexpr Scalar value = 5.0; }; // Kelvin
+
 struct MaxNewtonIterationsWithInnerWellIterations { static constexpr int value = 99; };
 struct MaxInnerIterMsWells { static constexpr int value = 100; };
 struct MaxInnerIterWells { static constexpr int value = 50; };
@@ -247,6 +250,9 @@ public:
 
     /// Maximum pressure change over an iteratio for ms wells
     Scalar max_pressure_change_ms_wells_;
+
+    /// Maximum temperature change over an iteration for ms wells
+    Scalar max_temperature_change_ms_wells_;
 
     /// Maximum inner iteration number for ms wells
     int max_inner_iter_ms_wells_;

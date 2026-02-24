@@ -60,6 +60,7 @@ SegmentState<Scalar>::SegmentState(int num_phases, const WellSegments& segments)
     , phase_viscosity          (segments.size() * num_phases)
     , phase_density            (segments.size() * (num_phases + 2)) // +2 for mixture with and without exponents
     , pressure                 (segments.size())
+    , temperature              (segments.size())
     , pressure_drop_friction   (segments.size())
     , pressure_drop_hydrostatic(segments.size())
     , pressure_drop_accel      (segments.size())
@@ -79,6 +80,7 @@ SegmentState<Scalar> SegmentState<Scalar>::serializationTestObject()
     result.phase_viscosity = {12.0, 12.5};
     result.phase_density = {13.0, 13.5, 13.6, 13.75};
     result.pressure = {14.0, 15.0};
+    result.temperature = {14.5, 15.5};
     result.pressure_drop_friction = {16.0};
     result.pressure_drop_hydrostatic = {17.0, 18.0};
     result.pressure_drop_accel = {19.0};
@@ -136,6 +138,7 @@ bool SegmentState<Scalar>::operator==(const SegmentState& rhs) const
            this->phase_viscosity == rhs.phase_viscosity &&
            this->phase_density == rhs.phase_density &&
            this->pressure == rhs.pressure &&
+           this->temperature == rhs.temperature &&
            this->pressure_drop_friction == rhs.pressure_drop_friction &&
            this->pressure_drop_hydrostatic == rhs.pressure_drop_hydrostatic &&
            this->pressure_drop_accel == rhs.pressure_drop_accel &&

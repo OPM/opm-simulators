@@ -61,6 +61,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     relaxed_tolerance_flow_well_ = Parameters::Get<Parameters::RelaxedWellFlowTol<Scalar>>();
     relaxed_tolerance_pressure_ms_well_ = Parameters::Get<Parameters::RelaxedPressureTolMsw<Scalar>>();
     max_pressure_change_ms_wells_ = Parameters::Get<Parameters::MaxPressureChangeMsWells<Scalar>>();
+    max_temperature_change_ms_wells_ = Parameters::Get<Parameters::MaxTemperatureChangeMsWells<Scalar>>();
     max_inner_iter_ms_wells_ = Parameters::Get<Parameters::MaxInnerIterMsWells>();
     strict_inner_iter_wells_ = Parameters::Get<Parameters::StrictInnerIterWells>();
     strict_outer_iter_wells_ = Parameters::Get<Parameters::StrictOuterIterWells>();
@@ -196,6 +197,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Relaxed tolerance for the MSW pressure solution");
     Parameters::Register<Parameters::MaxPressureChangeMsWells<Scalar>>
         ("Maximum relative pressure change for a single iteration "
+         "of the multi-segment well model");
+    Parameters::Register<Parameters::MaxTemperatureChangeMsWells<Scalar>>
+        ("Maximum temperature change for a single iteration "
          "of the multi-segment well model");
     Parameters::Register<Parameters::MaxInnerIterMsWells>
         ("Maximum number of inner iterations for multi-segment wells");

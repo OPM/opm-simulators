@@ -59,14 +59,16 @@ public:
 
     static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;
     static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
+    static constexpr bool enable_energy = Indices::enableFullyImplicitThermal;
 
     static constexpr int WQTotal = 0;
     static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
     static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
     static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1;
+    static constexpr int Temperature = enable_energy ? SPres + 1 : -1000;
 
     //  the number of well equations  TODO: it should have a more general strategy for it
-    static constexpr int numWellEq = Indices::numPhases + 1;
+    static constexpr int numWellEq = Indices::numPhases + 1 + enable_energy;
 
     using Scalar = typename FluidSystem::Scalar;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
@@ -91,7 +93,8 @@ public:
                       const Scalar relaxation_factor,
                       const Scalar DFLimit,
                       const bool stop_or_zero_rate_target,
-                      const Scalar max_pressure_change);
+                      const Scalar max_pressure_change,
+                      const Scalar max_temperature_change);
 
     //! \brief Copy values to well state.
     void copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
@@ -120,6 +123,9 @@ public:
 
     //! \brief Get pressure for a segment.
     EvalWell getSegmentPressure(const int seg) const;
+
+    //! \brief Get temperature for a segment.
+    EvalWell getSegmentTemperature(const int seg) const;
 
     //! \brief Get rate for a component in a segment.
     EvalWell getSegmentRate(const int seg,

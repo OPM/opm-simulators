@@ -57,6 +57,7 @@ public:
         serializer(phase_viscosity);
         serializer(phase_density);
         serializer(pressure);
+        serializer(temperature);
         serializer(pressure_drop_friction);
         serializer(pressure_drop_hydrostatic);
         serializer(pressure_drop_accel);
@@ -100,6 +101,7 @@ public:
     std::vector<Scalar> phase_density;
 
     std::vector<Scalar> pressure;
+    std::vector<Scalar> temperature;
     std::vector<Scalar> pressure_drop_friction;
     std::vector<Scalar> pressure_drop_hydrostatic;
     std::vector<Scalar> pressure_drop_accel;

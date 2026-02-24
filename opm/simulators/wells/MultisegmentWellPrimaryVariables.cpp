@@ -157,6 +157,13 @@ update(const WellState<Scalar, IndexTraits>& well_state,
             }
         }
     }
+    // if thermal is active, we set the temperature
+    if constexpr (enable_energy) {
+        const auto& segment_temperature = segments.temperature;
+        for (std::size_t seg = 0; seg < value_.size(); ++seg) {
+            value_[seg][Temperature] = segment_temperature[seg];
+        }
+    }
     setEvaluationsFromValues();
 }
 
@@ -166,7 +173,8 @@ updateNewton(const BVectorWell& dwells,
              const Scalar relaxation_factor,
              const Scalar dFLimit,
              const bool stop_or_zero_rate_target,
-             const Scalar max_pressure_change)
+             const Scalar max_pressure_change,
+             const Scalar max_temperature_change)
 {
     const std::vector<std::array<Scalar, numWellEq>> old_primary_variables = value_;
 
@@ -208,6 +216,13 @@ updateNewton(const BVectorWell& dwells,
                     value_[seg][WQTotal] = std::min(value_[seg][WQTotal], Scalar{0.0});
                 }
             }
+        }
+
+        // update the segment temperature
+        if constexpr (enable_energy) {
+            const int sign = dwells[seg][Temperature] > 0. ? 1 : -1;
+            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][Temperature]) * relaxation_factor, max_temperature_change);
+            value_[seg][Temperature] = std::max(old_primary_variables[seg][Temperature] - dx_limited, Scalar{0.0});
         }
     }
 
@@ -300,13 +315,18 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
         // update the segment pressure
         segment_pressure[seg] = value_[seg][SPres];
 
+        // update the segment temperature
+        if constexpr (enable_energy) {
+            segments.temperature[seg] = value_[seg][Temperature];
+        }
+
         if (seg == 0) { // top segment
             ws.bhp = segment_pressure[seg];
         }
 
         // Calculate other per-phase dynamic quantities.
 
-        const Scalar temperature = 0.0; // Ignore thermal effects
+        const Scalar temperature = enable_energy ? value_[seg][Temperature] : Scalar{0.0};
         const Scalar saltConc = 0.0;    // Ignore salt precipitation
         const Scalar Rvw = 0.0;         // Ignore vaporised water.
 
@@ -646,6 +666,14 @@ MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getSegmentPressure(const int seg) const
 {
     return evaluation_[seg][SPres];
+}
+
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+getSegmentTemperature(const int seg) const
+{
+    return evaluation_[seg][Temperature];
 }
 
 template<class FluidSystem, class Indices>

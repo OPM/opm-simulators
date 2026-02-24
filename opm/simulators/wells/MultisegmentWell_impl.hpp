@@ -728,13 +728,15 @@ namespace Opm
 
         const Scalar dFLimit = this->param_.dwell_fraction_max_;
         const Scalar max_pressure_change = this->param_.max_pressure_change_ms_wells_;
+        const Scalar max_temperature_change = this->param_.max_temperature_change_ms_wells_;
         const bool stop_or_zero_rate_target =
             this->stoppedOrZeroRateTarget(groupStateHelper);
         this->primary_variables_.updateNewton(dwells,
                                               relaxation_factor,
                                               dFLimit,
                                               stop_or_zero_rate_target,
-                                              max_pressure_change);
+                                              max_pressure_change,
+                                              max_temperature_change);
 
         const auto& summary_state = simulator.vanguard().summaryState();
         this->primary_variables_.copyToWellState(*this, getRefDensity(),

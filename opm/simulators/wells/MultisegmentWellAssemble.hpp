@@ -52,7 +52,7 @@ class MultisegmentWellAssemble
     static constexpr int SPres = PrimaryVariables::SPres;
 
 public:
-    static constexpr int numWellEq = Indices::numPhases+1;
+    static constexpr int numWellEq = PrimaryVariables::numWellEq;
     using Scalar = typename FluidSystem::Scalar;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using Equations = MultisegmentWellEquations<Scalar, IndexTraits, numWellEq,Indices::numEq>;
