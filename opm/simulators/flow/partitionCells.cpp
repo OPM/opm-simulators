@@ -603,8 +603,8 @@ namespace {
         OPM_BEGIN_PARALLEL_TRY_CATCH()
 
         const auto allCovered =
-            std::all_of(partition.begin(), partition.end(),
-                        [](const int d) { return d >= 0; });
+            std::ranges::all_of(partition,
+                                [](const int d) { return d >= 0; });
 
         if (! allCovered) {
             throw std::out_of_range {

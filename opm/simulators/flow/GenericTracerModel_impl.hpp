@@ -477,8 +477,7 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
         using TracerScalarProduct = Dune::SeqScalarProduct<TracerVector>;
         using TracerPreconditioner = Dune::SeqILU<TracerMatrix,TracerVector,TracerVector>;
 
-        if (std::all_of(b.begin(), b.end(),
-            [](const auto& v) { return v.infinity_norm() == 0.0; }))
+        if (std::ranges::all_of(b, [](const auto& v) { return v.infinity_norm() == 0.0; }))
         {
             return true;
         }

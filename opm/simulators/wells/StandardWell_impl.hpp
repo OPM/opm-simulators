@@ -2309,7 +2309,7 @@ namespace Opm
 
         if (bhpAtLimit) {
             auto v = frates(*bhpAtLimit);
-            if (std::all_of(v.cbegin(), v.cend(), [](Scalar i){ return i <= 0; }) ) {
+            if (std::ranges::all_of(v, [](Scalar i) { return i <= 0; })) {
                 return bhpAtLimit;
             }
         }
@@ -2339,7 +2339,7 @@ namespace Opm
         if (bhpAtLimit) {
             // should we use fratesIter here since fratesIter is used in computeBhpAtThpLimitProd above?
             auto v = frates(*bhpAtLimit);
-            if (std::all_of(v.cbegin(), v.cend(), [](Scalar i){ return i <= 0; }) ) {
+            if (std::ranges::all_of(v, [](Scalar i) { return i <= 0; })) {
                 return bhpAtLimit;
             }
         }
