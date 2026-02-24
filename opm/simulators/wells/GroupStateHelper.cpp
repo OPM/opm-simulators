@@ -838,7 +838,7 @@ GroupStateHelper<Scalar, IndexTraits>::groupChainTopBot(const std::string& botto
     assert(chain.back() == top);
 
     // Reverse order and return.
-    std::reverse(chain.begin(), chain.end());
+    std::ranges::reverse(chain);
     return chain;
 }
 
