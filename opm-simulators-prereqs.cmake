@@ -60,8 +60,8 @@ set (opm-simulators_DEPS
   # ROCALUTION from ROCM framework
   "rocalution"
   # packages from ROCm framework
-  "rocblas"
-  "rocsparse"
+  "rocblas 3.0"
+  "rocsparse 4.0"
   # OPM dependency
   "opm-common REQUIRED"
   "opm-grid REQUIRED"
