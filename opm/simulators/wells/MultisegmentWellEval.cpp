@@ -143,7 +143,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
             } else if (flux_residual > relaxed_inner_tolerance_flow_ms_well) {
                 report.setWellFailed({CR::WellFailure::Type::MassBalance, CR::Severity::Normal, eq_idx, baseif_.name()});
             }
-        } else { // pressure equation
+        } else if (eq_idx == baseif_.numConservationQuantities()) { // pressure equation
             const Scalar pressure_residual = maximum_residual[eq_idx];
             const int dummy_component = -1;
             if (std::isnan(pressure_residual)) {
@@ -156,6 +156,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                 report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::Normal, dummy_component, baseif_.name()});
             }
         }
+        // TODO: adding the convergence checking for the energy equations
     }
 
     WellConvergence(baseif_).
