@@ -217,14 +217,14 @@ BOOST_FIXTURE_TEST_CASE(Cumulative, LogNoteFixture)
     st.set("FGIT", 7.0e6);
     st.set("FVIT", 8.0e3);
 
-    st.update_group_var("G1", "GOPT",  9.0e3);
-    st.update_group_var("G1", "GWPT", 10.0e3);
-    st.update_group_var("G1", "GGPT", 11.0e6);
-    st.update_group_var("G1", "GVPT", 12.0e3);
-    st.update_group_var("G1", "GOIT", 13.0e3);
-    st.update_group_var("G1", "GWIT", 14.0e3);
-    st.update_group_var("G1", "GGIT", 15.0e6);
-    st.update_group_var("G1", "GVIT", 15.0e3);
+    st.update_group_var("G1", "GOPT", 9.0e3, true);
+    st.update_group_var("G1", "GWPT", 10.0e3, true);
+    st.update_group_var("G1", "GGPT", 11.0e6, true);
+    st.update_group_var("G1", "GVPT", 12.0e3, true);
+    st.update_group_var("G1", "GOIT", 13.0e3, true);
+    st.update_group_var("G1", "GWIT", 14.0e3, true);
+    st.update_group_var("G1", "GGIT", 15.0e6, true);
+    st.update_group_var("G1", "GVIT", 15.0e3, true);
 
     st.update_well_var("PROD", "WOPT", 16.0e3);
     st.update_well_var("PROD", "WWPT", 17.0e3);
@@ -281,14 +281,14 @@ BOOST_FIXTURE_TEST_CASE(CumulativeW2, LogNoteFixture)
     st.set("FGIT", 7.0e6);
     st.set("FVIT", 8.0e3);
 
-    st.update_group_var("G1", "GOPT",  9.0e3);
-    st.update_group_var("G1", "GWPT", 10.0e3);
-    st.update_group_var("G1", "GGPT", 11.0e6);
-    st.update_group_var("G1", "GVPT", 12.0e3);
-    st.update_group_var("G1", "GOIT", 13.0e3);
-    st.update_group_var("G1", "GWIT", 14.0e3);
-    st.update_group_var("G1", "GGIT", 15.0e6);
-    st.update_group_var("G1", "GVIT", 15.0e3);
+    st.update_group_var("G1", "GOPT", 9.0e3, true);
+    st.update_group_var("G1", "GWPT", 10.0e3, true);
+    st.update_group_var("G1", "GGPT", 11.0e6, true);
+    st.update_group_var("G1", "GVPT", 12.0e3, true);
+    st.update_group_var("G1", "GOIT", 13.0e3, true);
+    st.update_group_var("G1", "GWIT", 14.0e3, true);
+    st.update_group_var("G1", "GGIT", 15.0e6, true);
+    st.update_group_var("G1", "GVIT", 15.0e3, true);
 
     st.update_well_var("PROD", "WOPT", 16.0e3);
     st.update_well_var("PROD", "WWPT", 17.0e3);
@@ -308,23 +308,23 @@ BOOST_FIXTURE_TEST_CASE(CumulativeW2, LogNoteFixture)
     st.update_well_var("INJ", "WGIT", 30.0e6);
     st.update_well_var("INJ", "WVIT", 31.0e3);
 
-    st.update_conn_var("INJ", "COPT", 1, 32.0e3);
-    st.update_conn_var("INJ", "CWPT", 1, 33.0e3);
-    st.update_conn_var("INJ", "CGPT", 1, 34.0e6);
-    st.update_conn_var("INJ", "CVPT", 1, 35.0e3);
-    st.update_conn_var("INJ", "COIT", 1, 36.0e3);
-    st.update_conn_var("INJ", "CWIT", 1, 37.0e3);
-    st.update_conn_var("INJ", "CGIT", 1, 38.0e6);
-    st.update_conn_var("INJ", "CVIT", 1, 39.0e3);
+    st.update_conn_var("INJ", "COPT", 1, 32.0e3, true);
+    st.update_conn_var("INJ", "CWPT", 1, 33.0e3, true);
+    st.update_conn_var("INJ", "CGPT", 1, 34.0e6, true);
+    st.update_conn_var("INJ", "CVPT", 1, 35.0e3, true);
+    st.update_conn_var("INJ", "COIT", 1, 36.0e3, true);
+    st.update_conn_var("INJ", "CWIT", 1, 37.0e3, true);
+    st.update_conn_var("INJ", "CGIT", 1, 38.0e6, true);
+    st.update_conn_var("INJ", "CVIT", 1, 39.0e3, true);
 
-    st.update_conn_var("PROD", "COPT", 12, 40.0e3);
-    st.update_conn_var("PROD", "CWPT", 12, 41.0e3);
-    st.update_conn_var("PROD", "CGPT", 12, 42.0e6);
-    st.update_conn_var("PROD", "CVPT", 12, 43.0e3);
-    st.update_conn_var("PROD", "COIT", 12, 44.0e3);
-    st.update_conn_var("PROD", "CWIT", 12, 45.0e3);
-    st.update_conn_var("PROD", "CGIT", 12, 46.0e6);
-    st.update_conn_var("PROD", "CVIT", 12, 47.0e3);
+    st.update_conn_var("PROD", "COPT", 12, 40.0e3, true);
+    st.update_conn_var("PROD", "CWPT", 12, 41.0e3, true);
+    st.update_conn_var("PROD", "CGPT", 12, 42.0e6, true);
+    st.update_conn_var("PROD", "CVPT", 12, 43.0e3, true);
+    st.update_conn_var("PROD", "COIT", 12, 44.0e3, true);
+    st.update_conn_var("PROD", "CWIT", 12, 45.0e3, true);
+    st.update_conn_var("PROD", "CGIT", 12, 46.0e6, true);
+    st.update_conn_var("PROD", "CVIT", 12, 47.0e3, true);
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     helper.cumulative(0, true);
@@ -487,10 +487,10 @@ BOOST_FIXTURE_TEST_CASE(Injection, LogNoteFixture)
     st.set("FGIR", 3.0);
     st.set("FVIR", 4.0);
 
-    st.update_group_var("G1", "GOIR", 5.0);
-    st.update_group_var("G1", "GWIR", 6.0);
-    st.update_group_var("G1", "GGIR", 7.0);
-    st.update_group_var("G1", "GVIR", 8.0);
+    st.update_group_var("G1", "GOIR", 5.0, false);
+    st.update_group_var("G1", "GWIR", 6.0, false);
+    st.update_group_var("G1", "GGIR", 7.0, false);
+    st.update_group_var("G1", "GVIR", 8.0, false);
 
     st.update_well_var("INJ", "WOIR",  9.0);
     st.update_well_var("INJ", "WWIR", 10.0);
@@ -527,10 +527,10 @@ BOOST_FIXTURE_TEST_CASE(InjectionW2, LogNoteFixture)
     st.set("FGIR", 3.0);
     st.set("FVIR", 4.0);
 
-    st.update_group_var("G1", "GOIR", 5.0);
-    st.update_group_var("G1", "GWIR", 6.0);
-    st.update_group_var("G1", "GGIR", 7.0);
-    st.update_group_var("G1", "GVIR", 8.0);
+    st.update_group_var("G1", "GOIR", 5.0, false);
+    st.update_group_var("G1", "GWIR", 6.0, false);
+    st.update_group_var("G1", "GGIR", 7.0, false);
+    st.update_group_var("G1", "GVIR", 8.0, false);
 
     st.update_well_var("INJ", "WOIR",  9.0);
     st.update_well_var("INJ", "WWIR", 10.0);
@@ -539,11 +539,11 @@ BOOST_FIXTURE_TEST_CASE(InjectionW2, LogNoteFixture)
     st.update_well_var("INJ", "WBHP", 13.0);
     st.update_well_var("INJ", "WTHP", 14.0);
 
-    st.update_conn_var("INJ", "COIR", 1, 15.0);
-    st.update_conn_var("INJ", "CWIR", 1, 16.0);
-    st.update_conn_var("INJ", "CGIR", 1, 17.0);
-    st.update_conn_var("INJ", "CVIR", 1, 18.0);
-    st.update_conn_var("INJ", "CPR", 1, 19.0);
+    st.update_conn_var("INJ", "COIR", 1, 15.0, false);
+    st.update_conn_var("INJ", "CWIR", 1, 16.0, false);
+    st.update_conn_var("INJ", "CGIR", 1, 17.0, false);
+    st.update_conn_var("INJ", "CVIR", 1, 18.0, false);
+    st.update_conn_var("INJ", "CPR", 1, 19.0, false);
 
     const auto bprs = std::map<std::pair<std::string,int>,double> {
         {{"BPR", 1}, eclState.getUnits().to_si(Opm::UnitSystem::measure::pressure, 20.0)},
@@ -628,12 +628,12 @@ BOOST_FIXTURE_TEST_CASE(Production, LogNoteFixture)
     st.set("FWCT", 5.0);
     st.set("FGOR", 6.0);
 
-    st.update_group_var("G1", "GOPR",  7.0);
-    st.update_group_var("G1", "GWPR",  8.0);
-    st.update_group_var("G1", "GGPR",  9.0);
-    st.update_group_var("G1", "GVPR", 10.0);
-    st.update_group_var("G1", "GWCT", 11.0);
-    st.update_group_var("G1", "GGOR", 12.0);
+    st.update_group_var("G1", "GOPR", 7.0, false);
+    st.update_group_var("G1", "GWPR", 8.0, false);
+    st.update_group_var("G1", "GGPR", 9.0, false);
+    st.update_group_var("G1", "GVPR", 10.0, false);
+    st.update_group_var("G1", "GWCT", 11.0, false);
+    st.update_group_var("G1", "GGOR", 12.0, false);
 
     st.update_well_var("PROD", "WOPR", 13.0);
     st.update_well_var("PROD", "WWPR", 14.0);
@@ -674,12 +674,12 @@ BOOST_FIXTURE_TEST_CASE(ProductionW2, LogNoteFixture)
     st.set("FWCT", 5.0);
     st.set("FGOR", 6.0);
 
-    st.update_group_var("G1", "GOPR",  7.0);
-    st.update_group_var("G1", "GWPR",  8.0);
-    st.update_group_var("G1", "GGPR",  9.0);
-    st.update_group_var("G1", "GVPR", 10.0);
-    st.update_group_var("G1", "GWCT", 11.0);
-    st.update_group_var("G1", "GGOR", 12.0);
+    st.update_group_var("G1", "GOPR", 7.0, false);
+    st.update_group_var("G1", "GWPR", 8.0, false);
+    st.update_group_var("G1", "GGPR", 9.0, false);
+    st.update_group_var("G1", "GVPR", 10.0, false);
+    st.update_group_var("G1", "GWCT", 11.0, false);
+    st.update_group_var("G1", "GGOR", 12.0, false);
 
     st.update_well_var("PROD", "WOPR", 13.0);
     st.update_well_var("PROD", "WWPR", 14.0);
@@ -690,13 +690,13 @@ BOOST_FIXTURE_TEST_CASE(ProductionW2, LogNoteFixture)
     st.update_well_var("PROD", "WBHP", 19.0);
     st.update_well_var("PROD", "WTHP", 20.0);
 
-    st.update_conn_var("PROD", "COPR", 12, 21.0);
-    st.update_conn_var("PROD", "CWPR", 12, 22.0);
-    st.update_conn_var("PROD", "CGPR", 12, 23.0);
-    st.update_conn_var("PROD", "CVPR", 12, 24.0);
-    st.update_conn_var("PROD", "CWCT", 12, 25.0);
-    st.update_conn_var("PROD", "CGOR", 12, 21.0 / 23.0);
-    st.update_conn_var("PROD", "CPR", 12, 26.0);
+    st.update_conn_var("PROD", "COPR", 12, 21.0, false);
+    st.update_conn_var("PROD", "CWPR", 12, 22.0, false);
+    st.update_conn_var("PROD", "CGPR", 12, 23.0, false);
+    st.update_conn_var("PROD", "CVPR", 12, 24.0, false);
+    st.update_conn_var("PROD", "CWCT", 12, 25.0, false);
+    st.update_conn_var("PROD", "CGOR", 12, 21.0 / 23.0, false);
+    st.update_conn_var("PROD", "CPR", 12, 26.0, false);
 
     const auto bprs = std::map<std::pair<std::string,int>,double> {
         {{"BPR", 12}, eclState.getUnits().to_si(Opm::UnitSystem::measure::pressure, 27.0)},
