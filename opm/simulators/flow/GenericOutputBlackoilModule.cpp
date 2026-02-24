@@ -585,9 +585,7 @@ regionSum(const ScalarBuffer& property,
         totals[regionIdx] += property[j];
     }
 
-    for (std::size_t i = 0; i < maxNumberOfRegions; ++i) {
-        totals[i] = comm.sum(totals[i]);
-    }
+    comm.sum(totals.data(), totals.size());
 
     return totals;
 }
