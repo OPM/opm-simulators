@@ -2658,37 +2658,34 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::computeInitialSegmentEnergy()
     {
-        std::fill(segment_initial_energy_.begin(), segment_initial_energy_.end(), 0.0);
-
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            const auto& segment_fluid_state = this->segment_fluid_state_[seg];
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-                const auto u = getValue(segment_fluid_state.internalEnergy(phaseIdx));
-                const auto s = getValue(segment_fluid_state.saturation(phaseIdx));
-                const auto rho = getValue(segment_fluid_state.density(phaseIdx));
-                const Scalar segment_volume = this->wellEcl().getSegments()[seg].volume();
-                segment_initial_energy_[seg] += segment_volume * u * s * rho;
-            }
+            segment_initial_energy_[seg] = computeSegmentEnergy<Scalar>(seg);
         }
     }
 
 
     template <typename TypeTag>
-    typename MultisegmentWell<TypeTag>::EvalWell
+    template <typename ValueType>
+    ValueType
     MultisegmentWell<TypeTag>::computeSegmentEnergy(const int seg) const
     {
-        EvalWell result {0.};
+        auto obtain = [](const auto& val) {
+            if constexpr (std::is_same_v<ValueType, Scalar>) {
+                return getValue(val);
+            } else {
+                return val;
+            }
+        };
+
+        ValueType result {0.};
         const auto& segment_fluid_state = this->segment_fluid_state_[seg];
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
-            const auto u = segment_fluid_state.internalEnergy(phaseIdx);
-            const auto s = segment_fluid_state.saturation(phaseIdx);
-            const auto rho = segment_fluid_state.density(phaseIdx);
+            const auto u = obtain(segment_fluid_state.internalEnergy(phaseIdx));
+            const auto s = obtain(segment_fluid_state.saturation(phaseIdx));
+            const auto rho = obtain(segment_fluid_state.density(phaseIdx));
             const Scalar segment_volume = this->wellEcl().getSegments()[seg].volume();
             result += segment_volume * u * s * rho;
         }
