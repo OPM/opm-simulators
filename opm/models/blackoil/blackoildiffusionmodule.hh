@@ -701,7 +701,7 @@ public:
                        const IntensiveQuantities& intQuantsInside,
                        const IntensiveQuantities& intQuantsOutside)
     {
-        FluidSystem fsys = intQuantsInside.getFluidSystem();
+        const FluidSystem& fsys = intQuantsInside.getFluidSystem();
 
         // opm-models expects per area flux
         // use the arithmetic average for the effective

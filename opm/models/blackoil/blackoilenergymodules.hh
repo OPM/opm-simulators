@@ -161,7 +161,7 @@ public:
         using LhsEval = typename StorageType::value_type;
 
         if constexpr (enableFullyImplicitThermal) {
-            FluidSystem fsys = intQuants.getFluidSystem();
+            const FluidSystem& fsys = intQuants.getFluidSystem();
 
             const auto& poro = decay<LhsEval>(intQuants.porosity());
 
@@ -371,8 +371,8 @@ public:
         * \brief Construct the energy intensive quantities for the fully implicit thermal module.
         */
     BlackOilEnergyIntensiveQuantities(Evaluation rockInternalEnergy,
-                                                                                    Evaluation totalThermalConductivity,
-                                                                                    Scalar rockFraction)
+                                      Evaluation totalThermalConductivity,
+                                      Scalar rockFraction)
         : rockInternalEnergy_(rockInternalEnergy)
         , totalThermalConductivity_(totalThermalConductivity)
         , rockFraction_(rockFraction)
