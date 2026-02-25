@@ -416,7 +416,6 @@ public:
             simulator_.setEpisodeIndex(-1);
             simulator_.setEpisodeLength(0.0);
             simulator_.setTimeStepSize(0.0);
-            wellModel_().beginReportStep(timer.currentStepNum());
             simulator_.problem().writeOutput(true);
 
             report_.success.output_write_time += perfTimer.stop();
