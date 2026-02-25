@@ -265,6 +265,26 @@ macro(opm-simulators_sources_hook)
   if(HAVE_AVX2_EXTENSION)
     set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_OPTIONS ${AVX2_FLAGS})
   endif()
+
+  # Boost 1.66 used on RHEL8 cannot be built as c++-20
+  if(Boost_VERSION VERSION_LESS 1.67)
+    set_source_files_properties(
+      opm/simulators/linalg/PropertyTree.cpp
+      opm/simulators/utils/SetupPartitioningParams.cpp
+      PROPERTIES
+      COMPILE_OPTIONS
+        -std=c++17
+    )
+    if(amgcl_FOUND AND USE_GPU_BRIDGE)
+      set_source_files_properties(
+        opm/simulators/linalg/gpubridge/amgclSolverBackend.cpp
+        opm/simulators/linalg/gpubridge/GpuBridge.cpp
+        PROPERTIES
+        COMPILE_OPTIONS
+          -std=c++17
+      )
+    endif()
+  endif()
 endmacro()
 
 macro(opm-simulators_config_hook)

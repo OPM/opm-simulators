@@ -117,7 +117,13 @@ PropertyTree::get_child_items_as_vector(const std::string& child) const
     }
 
     items.emplace();
-    std::ranges::transform(*subTree, std::back_inserter(*items),
+    // compatibility with older platforms where code is built as c++-17
+#if __cplusplus>= 202002L
+    std::ranges::transform(*subTree,
+#else
+    std::transform(subTree->begin(), subTree->end(),
+#endif
+                           std::back_inserter(*items),
                            [](const auto& childItem)
                            { return childItem.second.template get_value<T>(); });
 
