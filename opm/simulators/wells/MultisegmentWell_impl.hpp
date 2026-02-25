@@ -1988,13 +1988,14 @@ namespace Opm
                             energy_flux += cq_r_thermal * this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
                         }
                     }
+                    energy_flux *= this->well_efficiency_factor_;
                     // TODO: double check the indices here. Tempeature or contiEnergyEqIdx
                     this->connectionRates_[local_perf_index][Indices::contiEnergyEqIdx]= Base::restrictEval(energy_flux);
 
                     MultisegmentWellAssemble(*this).
                         assemblePerforationEq(seg, local_perf_index,
                                               MSWEval::PrimaryVariables::Temperature,
-                                              energy_flux * this->well_efficiency_factor_,
+                                              energy_flux,
                                               this->linSys_);
                 }
             }
