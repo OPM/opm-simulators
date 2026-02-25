@@ -2067,6 +2067,7 @@ namespace Opm
                         // then multiply by enthalpy and density to get energy flux
                         // TODO: we are not considering the effect of dissolution and vaporization yet,
                         // which needs further investigation.
+                        // TODO: not sure whether the derivatives are messed up here.
                         energy_rate += segment_rate * upwind_fs.enthalpy(phaseIdx) * upwind_fs.density(phaseIdx)
                                        / upwind_fs.invB(phaseIdx);
                     }
@@ -2110,6 +2111,7 @@ namespace Opm
                             // then multiply by enthalpy and density to get energy flux
                             // TODO: not considering the effect of dissolution and vaporization yet,
                             // which needs further investigation.
+                            // TODO: not sure whether the derivatives are messed up here.
                             energy_rate += inlet_rate * upwind_fs.enthalpy(phaseIdx) * upwind_fs.density(phaseIdx)
                                            / upwind_fs.invB(phaseIdx);
                         }
