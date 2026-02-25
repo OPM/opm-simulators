@@ -362,7 +362,7 @@ public:
         const Scalar faceArea = nbInfo.faceArea;
         FaceDir::DirEnum facedir = nbInfo.faceDir;
 
-        FluidSystem fsys = intQuantsIn.getFluidSystem();
+        const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!fsys.phaseIsActive(phaseIdx)) {
@@ -550,7 +550,7 @@ public:
                                                     const IntensiveQuantities& insideIntQuants,
                                                     unsigned globalSpaceIdx)
     {
-#if OPM_IS_INSIDE_DEVICE_FUNCTION
+#if OPM_IS_INSIDE_HOST_FUNCTION
         switch (bdyInfo.type) {
         case BCType::NONE:
             bdyFlux = 0.0;
@@ -567,8 +567,8 @@ public:
             break;
         default:
             throw std::logic_error("Unknown boundary condition type " +
-                                std::to_string(static_cast<int>(bdyInfo.type)) +
-                                " in computeBoundaryFlux()." );
+                                   std::to_string(static_cast<int>(bdyInfo.type)) +
+                                   " in computeBoundaryFlux()." );
         }
 #else // TODO: support all boundary conditions on GPU as well to unify this code
         switch (bdyInfo.type) {
@@ -829,8 +829,7 @@ public:
                                                  const Eval& surfaceVolumeFlux,
                                                  const FluidState& upFs)
     {
-        FluidSystem fsys = upFs.fluidSystem();
-
+        const FluidSystem& fsys = upFs.fluidSystem();
 
         unsigned activeCompIdx =
             fsys.canonicalToActiveCompIdx(fsys.solventComponentIndex(phaseIdx));
