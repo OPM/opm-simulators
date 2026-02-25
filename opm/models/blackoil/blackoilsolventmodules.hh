@@ -31,6 +31,7 @@
 #include <dune/common/fvector.hh>
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
@@ -179,10 +180,12 @@ public:
         return static_cast<Scalar>(1.0);
     }
 
-    template <class LhsEval>
-    static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
-                           const IntensiveQuantities& intQuants)
+    template <class StorageType>
+    OPM_HOST_DEVICE static void addStorage(StorageType& storage,
+                                           const IntensiveQuantities& intQuants)
     {
+        using LhsEval = typename StorageType::value_type;
+
         if constexpr (enableSolvent) {
             if constexpr (blackoilConserveSurfaceVolume) {
                 storage[contiSolventEqIdx] +=

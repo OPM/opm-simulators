@@ -30,6 +30,8 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/common/utility/gpuDecorators.hpp>
+
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
@@ -152,17 +154,21 @@ public:
     }
 
     // must be called after water storage is computed
-    template <class LhsEval>
-    static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
-                           const IntensiveQuantities& intQuants)
+    template <class StorageType>
+    OPM_HOST_DEVICE static void addStorage(StorageType& storage,
+                                           const IntensiveQuantities& intQuants)
     {
+        using LhsEval = typename StorageType::value_type;
+
         if constexpr (enableFullyImplicitThermal) {
+            const FluidSystem& fsys = intQuants.getFluidSystem();
+
             const auto& poro = decay<LhsEval>(intQuants.porosity());
 
             // accumulate the internal energy of the fluids
             const auto& fs = intQuants.fluidState();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                if (!fsys.phaseIsActive(phaseIdx)) {
                     continue;
                 }
 
@@ -181,10 +187,10 @@ public:
         }
     }
 
-    static void computeFlux([[maybe_unused]] RateVector& flux,
-                            [[maybe_unused]] const ElementContext& elemCtx,
-                            [[maybe_unused]] unsigned scvfIdx,
-                            [[maybe_unused]] unsigned timeIdx)
+    OPM_HOST_DEVICE static void computeFlux([[maybe_unused]] RateVector& flux,
+                                            [[maybe_unused]] const ElementContext& elemCtx,
+                                            [[maybe_unused]] unsigned scvfIdx,
+                                            [[maybe_unused]] unsigned timeIdx)
     {
         if constexpr (enableFullyImplicitThermal) {
             flux[contiEnergyEqIdx] = 0.0;
@@ -211,8 +217,9 @@ public:
         }
     }
 
-    static void addHeatFlux(RateVector& flux,
-                            const Evaluation& heatFlux)
+    template<class RateVectorT>
+    OPM_HOST_DEVICE static void addHeatFlux(RateVectorT& flux,
+                                            const Evaluation& heatFlux)
     {
         if constexpr (enableFullyImplicitThermal) {
             // diffusive energy flux
@@ -221,11 +228,11 @@ public:
         }
     }
 
-    template <class UpEval, class Eval, class FluidState>
-    static void addPhaseEnthalpyFluxes_(RateVector& flux,
-                                        unsigned phaseIdx,
-                                        const Eval& volumeFlux,
-                                        const FluidState& upFs)
+    template <class UpEval, class RateVectorT, class Eval, class FluidState>
+    OPM_HOST_DEVICE static void addPhaseEnthalpyFluxes_(RateVectorT& flux,
+                                                        unsigned phaseIdx,
+                                                        const Eval& volumeFlux,
+                                                        const FluidState& upFs)
     {
         flux[contiEnergyEqIdx] +=
             decay<UpEval>(upFs.enthalpy(phaseIdx)) *
@@ -361,6 +368,20 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThe
 
 public:
     /*!
+        * \brief Construct the energy intensive quantities for the fully implicit thermal module.
+        */
+    BlackOilEnergyIntensiveQuantities(Evaluation rockInternalEnergy,
+                                      Evaluation totalThermalConductivity,
+                                      Scalar rockFraction)
+        : rockInternalEnergy_(rockInternalEnergy)
+        , totalThermalConductivity_(totalThermalConductivity)
+        , rockFraction_(rockFraction)
+    {
+    }
+
+    BlackOilEnergyIntensiveQuantities() = default;
+
+    /*!
      * \brief Update the temperature of the intensive quantity's fluid state
      *
      */
@@ -431,13 +452,13 @@ public:
         rockFraction_ = problem.rockFraction(globalSpaceIdx, timeIdx);
     }
 
-    const Evaluation& rockInternalEnergy() const
+    OPM_HOST_DEVICE const Evaluation& rockInternalEnergy() const
     { return rockInternalEnergy_; }
 
-    const Evaluation& totalThermalConductivity() const
+    OPM_HOST_DEVICE const Evaluation& totalThermalConductivity() const
     { return totalThermalConductivity_; }
 
-    Scalar rockFraction() const
+    OPM_HOST_DEVICE Scalar rockFraction() const
     { return rockFraction_; }
 
 protected:
@@ -655,17 +676,17 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::FullyImplicitThe
 
 public:
     template<class Evaluation, class FluidState, class IntensiveQuantities>
-    static void updateEnergy(Evaluation& energyFlux,
-                             const unsigned& focusDofIndex,
-                             const unsigned& inIdx,
-                             const unsigned& exIdx,
-                             const IntensiveQuantities& inIq,
-                             const IntensiveQuantities& exIq,
-                             const FluidState& inFs,
-                             const FluidState& exFs,
-                             const Scalar& inAlpha,
-                             const Scalar& outAlpha,
-                             const Scalar& faceArea)
+    OPM_HOST_DEVICE static void updateEnergy(Evaluation& energyFlux,
+                                             const unsigned& focusDofIndex,
+                                             const unsigned& inIdx,
+                                             const unsigned& exIdx,
+                                             const IntensiveQuantities& inIq,
+                                             const IntensiveQuantities& exIq,
+                                             const FluidState& inFs,
+                                             const FluidState& exFs,
+                                             const Scalar& inAlpha,
+                                             const Scalar& outAlpha,
+                                             const Scalar& faceArea)
     {
         Evaluation deltaT;
         if (focusDofIndex == inIdx) {
@@ -760,12 +781,12 @@ public:
     }
 
     template <class Evaluation, class BoundaryFluidState, class IntensiveQuantities>
-    static void updateEnergyBoundary(Evaluation& energyFlux,
-                                     const IntensiveQuantities& inIq,
-                                     unsigned focusDofIndex,
-                                     unsigned inIdx,
-                                     Scalar alpha,
-                                     const BoundaryFluidState& boundaryFs)
+    OPM_HOST_DEVICE static void updateEnergyBoundary(Evaluation& energyFlux,
+                                                     const IntensiveQuantities& inIq,
+                                                     unsigned focusDofIndex,
+                                                     unsigned inIdx,
+                                                     Scalar alpha,
+                                                     const BoundaryFluidState& boundaryFs)
     {
         const auto& inFs = inIq.fluidState();
         Evaluation deltaT;

@@ -35,6 +35,8 @@
 #include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <opm/common/utility/gpuDecorators.hpp>
+
 #include <array>
 #include <stdexcept>
 
@@ -80,10 +82,10 @@ public:
      *        integration point.
       */
     template <class Context>
-    static void addDiffusiveFlux(RateVector&,
-                                 const Context&,
-                                 unsigned,
-                                 unsigned)
+    OPM_HOST_DEVICE static void addDiffusiveFlux(RateVector&,
+                                                 const Context&,
+                                                 unsigned,
+                                                 unsigned)
     {}
 };
 
@@ -124,7 +126,12 @@ public:
      */
     static void initFromState(const EclipseState& eclState)
     {
+        // TODO: support use_move_fraction on GPUs
+        #if OPM_IS_INSIDE_HOST_FUNCTION
         use_mole_fraction_ = eclState.getTableManager().diffMoleFraction();
+        #else
+        OPM_THROW(std::runtime_error, "Diffusion module: Calling initFromState not expected on GPU.");
+        #endif
     }
     #endif
 
@@ -157,8 +164,8 @@ public:
      *        For mol fraction the convertion factor is given by \f$\frac{1}{R_{sw,ij}+(Mm_g\rho_w)/(Mm_w\rho_g)}\f$
      */
     template <class Context>
-    static void addDiffusiveFlux(RateVector& flux, const Context& context,
-                                 unsigned spaceIdx, unsigned timeIdx)
+    OPM_HOST_DEVICE static void addDiffusiveFlux(RateVector& flux, const Context& context,
+                                                 unsigned spaceIdx, unsigned timeIdx)
     {
         // Only work if diffusion is enabled run-time by DIFFUSE in the deck
         if (!FluidSystem::enableDiffusion()) {
@@ -177,30 +184,32 @@ public:
         }
     }
 
-    template<class IntensiveQuantities,class EvaluationArray>
-    static void addDiffusiveFlux(RateVector& flux,
-                                 const IntensiveQuantities& inIq,
-                                 const IntensiveQuantities& exIq,
-                                 const Evaluation& diffusivity,
-                                 const EvaluationArray& effectiveDiffusionCoefficient)
+    template<class IntensiveQuantities,class EvaluationArray, class RateVectorT>
+    OPM_HOST_DEVICE static void addDiffusiveFlux(RateVectorT& flux,
+                                                 const IntensiveQuantities& inIq,
+                                                 const IntensiveQuantities& exIq,
+                                                 const Evaluation& diffusivity,
+                                                 const EvaluationArray& effectiveDiffusionCoefficient)
     {
+        const FluidSystem& fsys = inIq.getFluidSystem();
+
         const auto& inFs = inIq.fluidState();
         const auto& exFs = exIq.fluidState();
         unsigned pvtRegionIndex = inFs.pvtRegionIndex();
         Evaluation diffR = 0.0;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+            if (!fsys.phaseIsActive(phaseIdx)) {
                 continue;
             }
 
             // no diffusion in water for blackoil models
-            if (!FluidSystem::enableDissolvedGasInWater() && FluidSystem::waterPhaseIdx == phaseIdx) {
+            if (!fsys.enableDissolvedGasInWater() && fsys.waterPhaseIdx == phaseIdx) {
                 continue;
             }
 
             // no diffusion in gas phase in water + gas system.
-            if (FluidSystem::gasPhaseIdx == phaseIdx && !FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            if (fsys.gasPhaseIdx == phaseIdx && !fsys.phaseIsActive(fsys.oilPhaseIdx)) {
                 continue;
             }
 
@@ -214,38 +223,38 @@ public:
                 continue;
             }
             Evaluation convFactor = 1.0;
-            if (FluidSystem::enableDissolvedGas() &&
-                FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
-                phaseIdx == FluidSystem::oilPhaseIdx)
+            if (fsys.enableDissolvedGas() &&
+                fsys.phaseIsActive(fsys.gasPhaseIdx) &&
+                phaseIdx == fsys.oilPhaseIdx)
             {
                 const Evaluation rsAvg = (inFs.Rs() + Toolbox::value(exFs.Rs())) / 2;
-                convFactor = 1.0 / (toFractionGasOil(pvtRegionIndex) + rsAvg);
+                convFactor = 1.0 / (toFractionGasOil(pvtRegionIndex, fsys) + rsAvg);
                 diffR = inFs.Rs() - Toolbox::value(exFs.Rs());
             }
-            if (FluidSystem::enableVaporizedOil() &&
-                FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                phaseIdx == FluidSystem::gasPhaseIdx)
+            if (fsys.enableVaporizedOil() &&
+                fsys.phaseIsActive(fsys.oilPhaseIdx) &&
+                phaseIdx == fsys.gasPhaseIdx)
             {
                 const Evaluation rvAvg = (inFs.Rv() + Toolbox::value(exFs.Rv())) / 2;
-                convFactor = toFractionGasOil(pvtRegionIndex) /
-                             (1.0 + rvAvg * toFractionGasOil(pvtRegionIndex));
+                convFactor = toFractionGasOil(pvtRegionIndex, fsys) /
+                             (1.0 + rvAvg * toFractionGasOil(pvtRegionIndex, fsys));
                 diffR = inFs.Rv() - Toolbox::value(exFs.Rv());
             }
-            if (FluidSystem::enableDissolvedGasInWater() && phaseIdx == FluidSystem::waterPhaseIdx) {
+            if (fsys.enableDissolvedGasInWater() && phaseIdx == fsys.waterPhaseIdx) {
                 const Evaluation rsAvg = (inFs.Rsw() + Toolbox::value(exFs.Rsw())) / 2;
-                convFactor = 1.0 / (toFractionGasWater(pvtRegionIndex) + rsAvg);
+                convFactor = 1.0 / (toFractionGasWater(pvtRegionIndex, fsys) + rsAvg);
                 diffR = inFs.Rsw() - Toolbox::value(exFs.Rsw());
             }
-            if (FluidSystem::enableVaporizedWater() && phaseIdx == FluidSystem::gasPhaseIdx) {
+            if (fsys.enableVaporizedWater() && phaseIdx == fsys.gasPhaseIdx) {
                 const Evaluation rvAvg = (inFs.Rvw() + Toolbox::value(exFs.Rvw())) / 2;
-                convFactor = toFractionGasWater(pvtRegionIndex) /
-                             (1.0 + rvAvg * toFractionGasWater(pvtRegionIndex));
+                convFactor = toFractionGasWater(pvtRegionIndex, fsys) /
+                             (1.0 + rvAvg * toFractionGasWater(pvtRegionIndex, fsys));
                 diffR = inFs.Rvw() - Toolbox::value(exFs.Rvw());
             }
 
             // mass flux of solvent component (oil in oil or gas in gas)
-            const unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-            const unsigned activeSolventCompIdx = FluidSystem::canonicalToActiveCompIdx(solventCompIdx);
+            const unsigned solventCompIdx = fsys.solventComponentIndex(phaseIdx);
+            const unsigned activeSolventCompIdx = fsys.canonicalToActiveCompIdx(solventCompIdx);
             flux[conti0EqIdx + activeSolventCompIdx] +=
                     -bSAvg *
                     convFactor *
@@ -254,8 +263,8 @@ public:
                     effectiveDiffusionCoefficient[phaseIdx][solventCompIdx];
 
             // mass flux of solute component (gas in oil or oil in gas)
-            const unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
-            const unsigned activeSoluteCompIdx = FluidSystem::canonicalToActiveCompIdx(soluteCompIdx);
+            const unsigned soluteCompIdx = fsys.soluteComponentIndex(phaseIdx);
+            const unsigned activeSoluteCompIdx = fsys.canonicalToActiveCompIdx(soluteCompIdx);
             flux[conti0EqIdx + activeSoluteCompIdx] +=
                     bSAvg *
                     diffR *
@@ -266,11 +275,11 @@ public:
     }
 
     template<class IntensiveQuantities,class EvaluationArray>
-    static void addBioDiffFlux(RateVector& flux,
-                                 const IntensiveQuantities& inIq,
-                                 const IntensiveQuantities& exIq,
-                                 const Evaluation& diffusivity,
-                                 const EvaluationArray& effectiveBioDiffCoefficient)
+    OPM_HOST_DEVICE static void addBioDiffFlux(RateVector& flux,
+                                               const IntensiveQuantities& inIq,
+                                               const IntensiveQuantities& exIq,
+                                               const Evaluation& diffusivity,
+                                               const EvaluationArray& effectiveBioDiffCoefficient)
     {
         const auto& inFs = inIq.fluidState();
         const auto& exFs = exIq.fluidState();
@@ -302,30 +311,38 @@ public:
     }
 
 private:
-    static Scalar toFractionGasOil (unsigned regionIdx)
+    template<class FluidSystemT>
+    OPM_HOST_DEVICE static Scalar toFractionGasOil (unsigned regionIdx, const FluidSystemT& fsys)
     {
-        const Scalar mMOil = use_mole_fraction_ ? FluidSystem::molarMass(FluidSystem::oilCompIdx, regionIdx) : 1;
-        const Scalar rhoO = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, regionIdx);
-        const Scalar mMGas = use_mole_fraction_ ? FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx) : 1;
-        const Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
+        const Scalar mMOil = use_mole_fraction_ ? fsys.molarMass(fsys.oilCompIdx, regionIdx) : 1;
+        const Scalar rhoO = fsys.referenceDensity(fsys.oilPhaseIdx, regionIdx);
+        const Scalar mMGas = use_mole_fraction_ ? fsys.molarMass(fsys.gasCompIdx, regionIdx) : 1;
+        const Scalar rhoG = fsys.referenceDensity(fsys.gasPhaseIdx, regionIdx);
         return rhoO * mMGas / (rhoG * mMOil);
     }
 
-    static Scalar toFractionGasWater (unsigned regionIdx)
+    template<class FluidSystemT>
+    OPM_HOST_DEVICE static Scalar toFractionGasWater (unsigned regionIdx, const FluidSystemT& fsys)
     {
-        const Scalar mMWater = use_mole_fraction_ ? FluidSystem::molarMass(FluidSystem::waterCompIdx, regionIdx) : 1;
-        const Scalar rhoW = FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, regionIdx);
-        const Scalar mMGas = use_mole_fraction_ ? FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx) : 1;
-        const Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
+        const Scalar mMWater = use_mole_fraction_ ? fsys.molarMass(fsys.waterCompIdx, regionIdx) : 1;
+        const Scalar rhoW = fsys.referenceDensity(fsys.waterPhaseIdx, regionIdx);
+        const Scalar mMGas = use_mole_fraction_ ? fsys.molarMass(fsys.gasCompIdx, regionIdx) : 1;
+        const Scalar rhoG = fsys.referenceDensity(fsys.gasPhaseIdx, regionIdx);
         return rhoW * mMGas / (rhoG * mMWater);
     }
 
+    #if OPM_IS_INSIDE_DEVICE_FUNCTION
+    constexpr static bool use_mole_fraction_ = false; // currently only false i supported on GPU.
+    #else
     static bool use_mole_fraction_;
+    #endif
 };
 
+#if OPM_IS_INSIDE_HOST_FUNCTION
 template <typename TypeTag>
 bool
 BlackOilDiffusionModule<TypeTag, true>::use_mole_fraction_;
+#endif
 
 /*!
  * \ingroup Diffusion
@@ -351,7 +368,7 @@ public:
      * \brief Returns the tortuousity of the sub-domain of a fluid
      *        phase in the porous medium.
      */
-    Scalar tortuosity(unsigned) const
+    OPM_HOST_DEVICE Scalar tortuosity(unsigned) const
     {
         throw std::logic_error("Method tortuosity() does not make sense "
                                "if diffusion is disabled");
@@ -361,7 +378,7 @@ public:
      * \brief Returns the molecular diffusion coefficient for a
      *        component in a phase.
      */
-    Scalar diffusionCoefficient(unsigned, unsigned) const
+    OPM_HOST_DEVICE Scalar diffusionCoefficient(unsigned, unsigned) const
     {
         throw std::logic_error("Method diffusionCoefficient() does not "
                                "make sense if diffusion is disabled");
@@ -371,7 +388,7 @@ public:
      * \brief Returns the effective molecular diffusion coefficient of
      *        the porous medium for a component in a phase.
      */
-    Scalar effectiveDiffusionCoefficient(unsigned, unsigned) const
+    OPM_HOST_DEVICE Scalar effectiveDiffusionCoefficient(unsigned, unsigned) const
     {
         throw std::logic_error("Method effectiveDiffusionCoefficient() "
                                "does not make sense if diffusion is disabled");
@@ -420,6 +437,12 @@ public:
 
     BlackOilDiffusionIntensiveQuantities& operator=(BlackOilDiffusionIntensiveQuantities&&) noexcept = default;
 
+    BlackOilDiffusionIntensiveQuantities(const std::array<Evaluation, numPhases>& tortuosity,
+                                         const std::array<std::array<Evaluation, numComponents>, numPhases>& diffusionCoefficient)
+        : tortuosity_(tortuosity)
+        , diffusionCoefficient_(diffusionCoefficient)
+    {}
+
     BlackOilDiffusionIntensiveQuantities&
     operator=(const BlackOilDiffusionIntensiveQuantities& rhs)
     {
@@ -438,21 +461,21 @@ public:
      * \brief Returns the molecular diffusion coefficient for a
      *        component in a phase.
      */
-    Evaluation diffusionCoefficient(unsigned phaseIdx, unsigned compIdx) const
+    OPM_HOST_DEVICE Evaluation diffusionCoefficient(unsigned phaseIdx, unsigned compIdx) const
     { return diffusionCoefficient_[phaseIdx][compIdx]; }
 
     /*!
      * \brief Returns the tortuousity of the sub-domain of a fluid
      *        phase in the porous medium.
      */
-    Evaluation tortuosity(unsigned phaseIdx) const
+    OPM_HOST_DEVICE Evaluation tortuosity(unsigned phaseIdx) const
     { return tortuosity_[phaseIdx]; }
 
     /*!
      * \brief Returns the effective molecular diffusion coefficient of
      *        the porous medium for a component in a phase.
      */
-    Evaluation effectiveDiffusionCoefficient(unsigned phaseIdx, unsigned compIdx) const
+    OPM_HOST_DEVICE Evaluation effectiveDiffusionCoefficient(unsigned phaseIdx, unsigned compIdx) const
     {
         // For the blackoil model tortuosity is disabled.
         // TODO add a run-time parameter to enable tortuosity
@@ -468,14 +491,14 @@ public:
      * \brief Returns the molecular diffusion coefficient for a
      *        biocomponent in the water phase.
      */
-    Evaluation bioDiffCoefficient(unsigned compIdx) const
+    OPM_HOST_DEVICE Evaluation bioDiffCoefficient(unsigned compIdx) const
     { return bioDiffCoefficient_[compIdx]; }
 
     /*!
      * \brief Returns the effective molecular diffusion coefficient of
      *        the porous medium for a biocomponent in the water phase.
      */
-    Evaluation effectiveBioDiffCoefficient(unsigned compIdx) const
+    OPM_HOST_DEVICE Evaluation effectiveBioDiffCoefficient(unsigned compIdx) const
     {
         // TODO add a run-time parameter to enable tortuosity
         static bool enableTortuosity = false;
@@ -602,7 +625,7 @@ public:
      * \brief The diffusivity the face.
      *
      */
-    Scalar diffusivity() const
+    OPM_HOST_DEVICE Scalar diffusivity() const
     {
         throw std::logic_error("The method diffusivity() does not "
                                "make sense if diffusion is disabled.");
@@ -615,8 +638,8 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    const Evaluation& effectiveDiffusionCoefficient(unsigned,
-                                                    unsigned) const
+    OPM_HOST_DEVICE const Evaluation& effectiveDiffusionCoefficient(unsigned,
+                                                                    unsigned) const
     {
         throw std::logic_error("The method effectiveDiffusionCoefficient() "
                                "does not make sense if diffusion is disabled.");
@@ -678,15 +701,17 @@ public:
                        const IntensiveQuantities& intQuantsInside,
                        const IntensiveQuantities& intQuantsOutside)
     {
+        const FluidSystem& fsys = intQuantsInside.getFluidSystem();
+
         // opm-models expects per area flux
         // use the arithmetic average for the effective
         // diffusion coefficients.
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+            if (!fsys.phaseIsActive(phaseIdx)) {
                 continue;
             }
             // no diffusion in water for blackoil models
-            if (!FluidSystem::enableDissolvedGasInWater() && FluidSystem::waterPhaseIdx == phaseIdx) {
+            if (!fsys.enableDissolvedGasInWater() && fsys.waterPhaseIdx == phaseIdx) {
                 continue;
             }
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
@@ -727,7 +752,7 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    Scalar diffusivity() const
+    OPM_HOST_DEVICE Scalar diffusivity() const
     { return diffusivity_; }
 
     /*!
@@ -737,16 +762,16 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    const Evaluation& effectiveDiffusionCoefficient(unsigned phaseIdx, unsigned compIdx) const
+    OPM_HOST_DEVICE const Evaluation& effectiveDiffusionCoefficient(unsigned phaseIdx, unsigned compIdx) const
     { return effectiveDiffusionCoefficient_[phaseIdx][compIdx]; }
 
-    const auto& effectiveDiffusionCoefficient() const
+    OPM_HOST_DEVICE const auto& effectiveDiffusionCoefficient() const
     { return effectiveDiffusionCoefficient_; }
 
-    const Evaluation& effectiveBioDiffCoefficient(unsigned compIdx) const
+    OPM_HOST_DEVICE const Evaluation& effectiveBioDiffCoefficient(unsigned compIdx) const
     { return effectiveBioDiffCoefficient_[compIdx]; }
 
-    const auto& effectiveBioDiffCoefficient() const{
+    OPM_HOST_DEVICE const auto& effectiveBioDiffCoefficient() const{
         return effectiveBioDiffCoefficient_;
     }
 
