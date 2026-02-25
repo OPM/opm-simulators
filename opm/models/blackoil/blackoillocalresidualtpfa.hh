@@ -171,7 +171,6 @@ public:
         storage = 0.0;
 
         const FluidSystem& fsys = intQuants.getFluidSystem();
-        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!fsys.phaseIsActive(phaseIdx)) {
