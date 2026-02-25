@@ -1791,6 +1791,9 @@ namespace Opm
             try{
                 const BVectorWell dx_well = this->linSys_.solve();
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
+                for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
+                    segment_fluid_state_[seg] = this->createSegmentFluidstate(seg);
+                }
             }
             catch(const NumericalProblem& exp) {
                 // Add information about the well and log to deferred logger
