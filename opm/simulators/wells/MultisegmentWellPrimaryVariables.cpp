@@ -271,6 +271,7 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
     auto& disgas = segments.dissolved_gas_rate;
     auto& vapoil = segments.vaporized_oil_rate;
     auto& segment_pressure = segments.pressure;
+    auto& segment_temperature = segments.temperature;
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         std::vector<Scalar> fractions(well_.numPhases(), 0.0);
 
@@ -328,6 +329,14 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
 
         // update the segment pressure
         segment_pressure[seg] = value_[seg][SPres];
+
+        // update the segment temperature if thermal is active
+        if (enable_energy) {
+            segment_temperature[seg] = value_[seg][Temperature];
+            if (seg == 0) {
+                ws.temperature = segment_temperature[seg];
+            }
+        }
 
         if (seg == 0) { // top segment
             ws.bhp = segment_pressure[seg];
