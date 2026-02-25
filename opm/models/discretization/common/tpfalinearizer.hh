@@ -981,7 +981,7 @@ private:
             adres = 0.0;
             {
                 OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
-                LocalResidual::computeStorage(adres, intQuantsIn);
+                LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
             }
             setResAndJacobi(res, bMat, adres);
             // Either use cached storage term, or compute it on the fly.
@@ -1006,7 +1006,7 @@ private:
                     else {
                         Dune::FieldVector<Scalar, numEq> tmp;
                         const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                        LocalResidual::computeStorage(tmp, intQuantOld);
+                        LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
                         model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
                     }
                 }
@@ -1016,7 +1016,7 @@ private:
                 OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
                 Dune::FieldVector<Scalar, numEq> tmp;
                 const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                LocalResidual::computeStorage(tmp, intQuantOld);
+                LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
                 // assume volume do not change
                 res -= tmp;
             }
