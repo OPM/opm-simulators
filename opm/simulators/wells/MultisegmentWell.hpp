@@ -356,7 +356,8 @@ namespace Opm {
 
         void computeInitialSegmentEnergy();
 
-        EvalWell computeSegmentEnergy(int seg) const;
+        template <typename ValueType = EvalWell>
+        ValueType computeSegmentEnergy(int seg) const;
     };
 
 } // namespace Opm
