@@ -189,7 +189,7 @@ public:
     }
 
     template <class SubDomainType>
-    void linearizeDomain(const SubDomainType& domain, bool isNlddLocalSolve = false)
+    void linearizeDomain(const SubDomainType& domain)
     {
         OPM_TIMEBLOCK(linearizeDomain);
         // we defer the initialization of the Jacobian matrix until here because the
@@ -200,7 +200,7 @@ public:
         }
 
         // Called here because it is no longer called from linearize_().
-        if (isNlddLocalSolve) {
+        if (problem_().iterationContext().inLocalSolve()) {
             resetSystem_(domain);
         }
         else {

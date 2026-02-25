@@ -341,10 +341,9 @@ public:
      * represented by the model object.
      *
      * \param domain The subdomain to linearize.
-     * \param isNlddLocalSolve If true, indicates this is an NLDD local solve.
      */
     template <class SubDomainType>
-    void linearizeDomain(const SubDomainType& domain, const bool isNlddLocalSolve = false)
+    void linearizeDomain(const SubDomainType& domain)
     {
         OPM_TIMEBLOCK(linearizeDomain);
         // we defer the initialization of the Jacobian matrix until here because the
@@ -355,14 +354,14 @@ public:
         }
 
         // Called here because it is no longer called from linearize_().
-        if (isNlddLocalSolve) {
+        if (problem_().iterationContext().inLocalSolve()) {
             resetSystem_(domain);
         }
         else {
             resetSystem_();
         }
 
-        linearize_(domain, isNlddLocalSolve);
+        linearize_(domain);
     }
 
     void finalize()
@@ -897,7 +896,7 @@ public:
 
 private:
     template <class SubDomainType>
-    void linearize_(const SubDomainType& domain, bool isNlddLocalSolve)
+    void linearize_(const SubDomainType& domain)
     {
         // This check should be removed once this is addressed by
         // for example storing the previous timesteps' values for
@@ -996,7 +995,7 @@ private:
                 // but the starting state may not be identical to the start-of-step state.
                 // Note that a full assembly must be done before local solves
                 // otherwise this will be left un-updated.
-                if (problem_().iterationContext().isFirstGlobalIteration() && !isNlddLocalSolve) {
+                if (problem_().iterationContext().isFirstGlobalIteration()) {
                     // Need to update the storage cache.
                     if (problem_().recycleFirstIterationStorage()) {
                         // Assumes nothing have changed in the system which
