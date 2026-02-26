@@ -164,7 +164,8 @@ update_relaxation_factor(const std::vector<Scalar>& measure_history, Scalar& rel
     if (!oscillate)
         return false;
 
-    const Scalar min_relaxation_factor = 0.6;
+//    const Scalar min_relaxation_factor = 0.6;
+    const Scalar min_relaxation_factor = 0.1;
     std::ostringstream sstr;
     if (relaxation_factor == min_relaxation_factor) {
         sstr << " well " << baseif_.name() << " observes severe oscillation. Terminates after " << it << "iterations.\n";

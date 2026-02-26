@@ -74,7 +74,7 @@ namespace Opm
     , regularize_(false)
     , segment_fluid_initial_(this->numberOfSegments(), std::vector<Scalar>(this->num_conservation_quantities_, 0.0))
     , segment_initial_energy_(this->numberOfSegments(), 0.0)
-    , segment_fluid_state_(this->numberOfSegments(), SegmentFluidState{})
+    , segment_fluid_state_(this->numberOfSegments(), SegmentFluidState<EvalWell>{})
     {
         // not handling solvent or polymer for now with multisegment well
         if constexpr (has_solvent) {
@@ -1785,7 +1785,7 @@ namespace Opm
                 bool min_relaxation_reached = this->update_relaxation_factor(measure_history, relaxation_factor, this->regularize_, deferred_logger);
                 if (min_relaxation_reached || this->repeatedStagnation(measure_history, this->regularize_, deferred_logger)) {
                     converged = false;
-                    break;
+//                    break;
                 }
             }
             try{
@@ -1806,6 +1806,7 @@ namespace Opm
         }
 
         if (converged) {
+            std::cout << " well " << this->name() << " CONVERGED in " << it << " inner iterations with " << switch_count << " control/status switches and " << status_switch_count << " status switches.\n";
             if (allow_switching){
                 // update operability if status change
                 const bool is_stopped = this->wellIsStopped();
@@ -1824,6 +1825,7 @@ namespace Opm
             }
             deferred_logger.debug(message, OpmLog::defaultDebugVerbosityLevel + ((it == 0) && (switch_count == 0)));
         } else {
+            std::cout << " well " << this->name() << " DID NOT CONVERGE in " << it << " inner iterations with " << switch_count << " control/status switches and " << status_switch_count << " status switches.\n";
             this->wellStatus_ = well_status_orig;
             this->operability_status_ = operability_orig;
             const std::string message = fmt::format("   Well {} did not converge in {} inner iterations ("
@@ -2013,6 +2015,10 @@ namespace Opm
             // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
             this->linSys_.sumDistributed(this->parallel_well_info_.communication());
         }
+
+        // prepare for the injecting calculation
+        this->updateWellHeadCondtion(simulator);
+
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term
             // TODO: without considering the efficiency factor for now
@@ -2052,9 +2058,15 @@ namespace Opm
                         assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
                 }
                 if constexpr (Base::has_energy) {
+                    std::cout << " well " << this->name() << " assembling outflow term for energy equation for segment " << seg << " upwind segment " << seg_upwind << "\n";
+                    const bool top_injecting_segment = (seg == 0) && this->isInjector();
+
                     // Energy carried by fluid flowing out of this segment toward its outlet.
                     // Use upwind segment fluid properties for enthalpy and density.
-                    const auto& upwind_fs = this->segment_fluid_state_[seg_upwind];
+                    const auto& upwind_fs = top_injecting_segment ? this->wellhead_fluid_state_ : this->segment_fluid_state_[seg_upwind];
+
+                    assert((top_injecting_segment && seg_upwind == 0) || !top_injecting_segment);
+
                     EvalWell energy_rate(0.0);
                     for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
                         if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2073,6 +2085,13 @@ namespace Opm
                         // TODO: not sure whether the derivatives are messed up here.
                         energy_rate += segment_rate * upwind_fs.enthalpy(phaseIdx) * upwind_fs.density(phaseIdx)
                                        / upwind_fs.invB(phaseIdx);
+//                      auto temp  = segment_rate * upwind_fs.enthalpy(phaseIdx) * upwind_fs.density(phaseIdx)
+//                                       / upwind_fs.invB(phaseIdx);
+//                        energy_rate += temp;
+//                        std::cout << " segment " << seg << " upwind segment " << seg_upwind << " phase " << phaseIdx
+//                                  << " segment_rate " << segment_rate.value() << " enthalpy " << upwind_fs.enthalpy(phaseIdx).value()
+//                                  << " density " << upwind_fs.density(phaseIdx).value() << " invB " << upwind_fs.invB(phaseIdx).value() << " temperature " << upwind_fs.temperature(phaseIdx).value()
+//                                  << " energy_rate contribution " << getValue(temp) << std::endl;
                     }
                     MultisegmentWellAssemble(*this).
                         assembleOutflowTerm(seg, seg_upwind, MSWEval::PrimaryVariables::Temperature, energy_rate, this->linSys_);
@@ -2096,6 +2115,7 @@ namespace Opm
                 if constexpr (Base::has_energy) {
                     for (const int inlet : this->segments_.inlets()[seg]) {
                         const int inlet_upwind = this->segments_.upwinding_segment(inlet);
+                        std::cout << " well " << this->name() << " assembling inflow term for energy equation for segment " << seg << " inlet segment " << inlet << " upwinding seg " << inlet_upwind << "\n";
                         // Energy carried by fluid flowing from inlet segment into this segment.
                         // Use upwind segment fluid properties for enthalpy and density.
                         const auto& upwind_fs = this->segment_fluid_state_[inlet_upwind];
@@ -2117,6 +2137,14 @@ namespace Opm
                             // TODO: not sure whether the derivatives are messed up here.
                             energy_rate += inlet_rate * upwind_fs.enthalpy(phaseIdx) * upwind_fs.density(phaseIdx)
                                            / upwind_fs.invB(phaseIdx);
+//                            auto temp = inlet_rate * upwind_fs.enthalpy(phaseIdx) * upwind_fs.density(phaseIdx)
+//                                           / upwind_fs.invB(phaseIdx);
+//                            energy_rate += temp;
+
+//                            std::cout << " inlet " << inlet << " upwind segment " << inlet_upwind << " phase " << phaseIdx
+//                                      << " inlet_rate " << inlet_rate.value() << " enthalpy " << upwind_fs.enthalpy(phaseIdx).value()
+//                                      << " density " << upwind_fs.density(phaseIdx).value() << " invB " << upwind_fs.invB(phaseIdx).value() << " temperature " << upwind_fs.temperature(phaseIdx).value()
+//                                      << " energy_rate contribution " << getValue(temp) << std::endl;
                         }
                         MultisegmentWellAssemble(*this).
                             assembleInflowTerm(seg, inlet, inlet_upwind, MSWEval::PrimaryVariables::Temperature, energy_rate, this->linSys_);
@@ -2523,13 +2551,14 @@ namespace Opm
     }
 
     template <typename TypeTag>
-    typename MultisegmentWell<TypeTag>::SegmentFluidState
+    template <typename ValueType>
+    MultisegmentWell<TypeTag>::SegmentFluidState<ValueType>
     MultisegmentWell<TypeTag>::
-    createFluidState(const std::vector<EvalWell>& fluid_composition,
-                     const EvalWell& pressure,
-                     const EvalWell& temperature) const
+    createFluidState(const std::vector<ValueType>& fluid_composition,
+                     const ValueType& pressure,
+                     const ValueType& temperature) const
     {
-        SegmentFluidState fluid_state;
+        SegmentFluidState<ValueType> fluid_state;
         fluid_state.setTemperature(temperature);
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2542,7 +2571,7 @@ namespace Opm
 
         const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
 
-        const EvalWell zero_eval_well {0.};
+        const ValueType zero_value {0.};
         // let us handle the dissolution first
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2553,25 +2582,25 @@ namespace Opm
             switch (phaseIdx) {
                 case FluidSystem::oilPhaseIdx: {
                     if (FluidSystem::enableDissolvedGas() && both_oil_gas) {
-                        const EvalWell saturated_rs = FluidSystem::saturatedDissolutionFactor(fluid_state, phaseIdx,  fluid_state.pvtRegionIndex());
+                        const ValueType saturated_rs = FluidSystem::saturatedDissolutionFactor(fluid_state, phaseIdx,  fluid_state.pvtRegionIndex());
                         const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
-                        const EvalWell max_possible_rs = fluid_composition[gasCompIdx] / fluid_composition[activeCompIdx];
-                        const EvalWell rs = std::min(saturated_rs, max_possible_rs);
+                        const ValueType max_possible_rs = fluid_composition[gasCompIdx] / fluid_composition[activeCompIdx];
+                        const ValueType rs = std::min(saturated_rs, max_possible_rs);
                         fluid_state.setRs(rs);
                     } else {
-                        fluid_state.setRs(zero_eval_well);
+                        fluid_state.setRs(zero_value);
                     }
                     break;
                 }
                 case FluidSystem::gasPhaseIdx: {
                     if (FluidSystem::enableVaporizedOil() && both_oil_gas) {
-                        const EvalWell saturated_rv = FluidSystem::saturatedVaporizationFactor(fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
+                        const ValueType saturated_rv = FluidSystem::saturatedVaporizationFactor(fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
                         const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
-                        const EvalWell max_possible_rv = fluid_composition[oilCompIdx] / fluid_composition[activeCompIdx];
-                        const EvalWell rv = std::min(saturated_rv, max_possible_rv);
+                        const ValueType max_possible_rv = fluid_composition[oilCompIdx] / fluid_composition[activeCompIdx];
+                        const ValueType rv = std::min(saturated_rv, max_possible_rv);
                         fluid_state.setRv(rv);
                     } else {
-                        fluid_state.setRv(zero_eval_well);
+                        fluid_state.setRv(zero_value);
                     }
                     break;
                 }
@@ -2587,8 +2616,8 @@ namespace Opm
             fluid_state.setInvB(phaseIdx, inv_b);
         }
 
-        std::vector<EvalWell> saturations (FluidSystem::numPhases, zero_eval_well);
-        EvalWell total_saturation {0.0};
+        std::vector<ValueType> saturations (FluidSystem::numPhases, zero_value);
+        ValueType total_saturation {0.0};
         // calculate the saturation for all the phases
         // let us handle the dissolution first
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
@@ -2606,7 +2635,7 @@ namespace Opm
                 // q_gs = q_gr * g_g + rs * q_or * b_o
                 // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
                 // d = 1.0 - rs * rv
-                const EvalWell d = 1.0 - fluid_state.Rv() * fluid_state.Rs();
+                const ValueType d = 1.0 - fluid_state.Rv() * fluid_state.Rs();
                 if (d <= 0.0) {
                     throw std::logic_error(fmt::format("Problematic d value {} obtained for well {}"
                                                        " during createFluidState with rs {}"
@@ -2633,7 +2662,7 @@ namespace Opm
             }
             fluid_state.setSaturation(phaseIdx, saturations[phaseIdx] / total_saturation);
 
-            typename FluidSystem::template ParameterCache<EvalWell> paramCache;
+            typename FluidSystem::template ParameterCache<ValueType> paramCache;
             paramCache.setRegionIndex(fluid_state.pvtRegionIndex());
             paramCache.updatePhase(fluid_state, phaseIdx);
             fluid_state.setDensity(phaseIdx, FluidSystem::density(fluid_state, paramCache, phaseIdx));
@@ -2644,7 +2673,7 @@ namespace Opm
 
     // it looks like these functions should go to MultisegmentWellSegments class
     template <typename TypeTag>
-    typename MultisegmentWell<TypeTag>::SegmentFluidState
+    MultisegmentWell<TypeTag>::SegmentFluidState<typename MultisegmentWell<TypeTag>::EvalWell>
     MultisegmentWell<TypeTag>::createSegmentFluidstate(const int seg) const
     {
         const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
@@ -2666,6 +2695,41 @@ namespace Opm
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             segment_initial_energy_[seg] = computeSegmentEnergy<Scalar>(seg);
         }
+    }
+
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::updateWellHeadCondtion(const Simulator& simulator)
+    {
+        if (!this->well_ecl_.isInjector()) return;
+
+        std::vector<EvalWell> fluid_composition(FluidSystem::numPhases, 0.0);
+
+        // tempeature should be the injecting temperature
+        // pressure should be the BHP
+        const EvalWell bhp = this->primary_variables_.getSegmentPressure(0);
+        const EvalWell inj_temperature = this->well_ecl_.inj_temperature();
+
+        const auto controls = this->well_ecl_.injectionControls(simulator.vanguard().summaryState());
+        switch (controls.injector_type) {
+            case InjectorType::OIL: {
+                fluid_composition[FluidSystem::oilPhaseIdx] = 1.0;
+                break;
+            }
+            case InjectorType::GAS: {
+                fluid_composition[FluidSystem::gasPhaseIdx] = 1.0;
+                break;
+            }
+            case InjectorType::WATER: {
+                fluid_composition[FluidSystem::waterPhaseIdx] = 1.0;
+                break;
+            }
+            default: {
+                throw std::logic_error("Unsupported injection type " + std::to_string(static_cast<int>(controls.injector_type)));
+            }
+        }
+
+        this->wellhead_fluid_state_ = createFluidState(fluid_composition, bhp, inj_temperature);
     }
 
 
@@ -2694,6 +2758,7 @@ namespace Opm
             const Scalar segment_volume = this->wellEcl().getSegments()[seg].volume();
             result += segment_volume * u * s * rho;
         }
+//        std::cout << " well " << this->name() << " segment " << seg << "  Energy is " << getValue(result) << " initial energy is " << this->segment_initial_energy_[seg] << std::endl;
         return result;
     }
 
