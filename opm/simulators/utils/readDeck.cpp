@@ -349,6 +349,7 @@ namespace {
                       const bool                           slaveMode)
     {
         OPM_TIMEBLOCK(readDeck);
+
         if (((schedule == nullptr) || (summaryConfig == nullptr)) &&
             (parseContext == nullptr))
         {
@@ -357,9 +358,11 @@ namespace {
                       "or summaryConfig are not initialized");
         }
 
-        auto parser = Opm::Parser{};
-        const auto deck = readDeckFile(deckFilename, checkDeck, parser,
-                                       *parseContext, treatCriticalAsNonCritical, errorGuard);
+        auto parser = Opm::Parser { python };
+        const auto deck = readDeckFile(deckFilename, checkDeck,
+                                       parser, *parseContext,
+                                       treatCriticalAsNonCritical,
+                                       errorGuard);
 
         if (eclipseState == nullptr) {
             OPM_TIMEBLOCK(createEclState);
