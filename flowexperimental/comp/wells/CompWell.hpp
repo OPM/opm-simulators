@@ -181,7 +181,7 @@ private:
 
     template <typename T>
     void
-    updateSurfanceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_state);
+    updateSurfaceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_state);
 
     template <typename T>
     void
