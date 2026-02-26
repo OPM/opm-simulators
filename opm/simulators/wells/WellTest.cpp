@@ -92,8 +92,8 @@ checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
         }
     } // end of for (const auto& completion : completions_)
 
-    auto local_max_ratio_completion = max_ratio_completion;
-    well_.parallelWellInfo().communication().max(max_ratio_completion);
+    const Scalar local_max_ratio_completion = max_ratio_completion;
+    max_ratio_completion = well_.parallelWellInfo().communication().max(max_ratio_completion);
     const Scalar violation_extent = max_ratio_completion / max_ratio_limit;
 
     if (violation_extent > report.violation_extent) {
@@ -101,7 +101,7 @@ checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
             // well is distributed, communicate the worst-offending completion
             if (local_max_ratio_completion != max_ratio_completion)
                 worst_offending_completion = std::numeric_limits<int>::min();
-            well_.parallelWellInfo().communication().max(worst_offending_completion);
+            worst_offending_completion = well_.parallelWellInfo().communication().max(worst_offending_completion);
         }
 
         report.worst_offending_completion = worst_offending_completion;
