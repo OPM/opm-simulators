@@ -159,11 +159,11 @@ public:
         // Read initial conditions and set material state
         readInitalConditionsTPSA_();
 
-        // Set equation weights
-        computeAndSetEqWeights_();
-
         // Calculate face properties
         faceProps_.finishInit();
+
+        // Set equation weights
+        computeAndSetEqWeights_();
 
         // Initialize the TPSA model
         geoMechModel_.finishInit();
@@ -225,7 +225,7 @@ public:
         for(const auto& elem: elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            avgSmodulus += this->lame(elemIdx);
+            avgSmodulus += this->shearModulus(elemIdx);
         }
         std::size_t numDof = this->model().numGridDof();
         const auto& comm = this->simulator().vanguard().grid().comm();

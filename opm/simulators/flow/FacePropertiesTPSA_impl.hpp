@@ -118,6 +118,9 @@ update()
     // of how large the final map will be (the rough idea is a conforming Cartesian grid).
     const int num_threads = ThreadManager::maxThreads();
     weightsAvg_.clear();
+    weightsProd_.clear();
+    distance_.clear();
+    faceNormal_.clear();
     if (num_threads == 1) {
         weightsAvg_.reserve(numElements * 3 * 1.05);
         weightsProd_.reserve(numElements * 3 * 1.05);
@@ -245,6 +248,9 @@ update()
             }
         }
     }
+
+    // Clear centroid cache
+    centroids_cache_.clear();
 
 #ifdef _OPENMP
 #pragma omp parallel sections
