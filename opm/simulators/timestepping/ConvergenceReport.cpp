@@ -76,6 +76,8 @@ namespace Opm
             return "MassBalance";
         case T::Pressure:
             return "Pressure";
+        case T::Energy:
+            return "Energy";
         case T::ControlBHP:
             return "ControlBHP";
         case T::ControlTHP:
