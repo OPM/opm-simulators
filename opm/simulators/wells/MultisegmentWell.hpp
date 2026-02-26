@@ -149,6 +149,8 @@ namespace Opm {
                                       const bool use_well_weights,
                                       const WellStateType& well_state) const override;
 
+        void addWellOverlapConnectionsToPressureEquations(PressureMatrix& mat,
+                                                          const int cell_number) const override;
         std::vector<Scalar>
         computeCurrentWellRates(const Simulator& simulator,
                                 DeferredLogger& deferred_logger) const override;

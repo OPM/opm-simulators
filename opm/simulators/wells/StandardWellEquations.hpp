@@ -117,6 +117,13 @@ public:
                                   const int bhp_var_index,
                                   const WellState<Scalar, IndexTraits>& well_state) const;
 
+    //! \brief Add overlap connections of wells to CPR pressure matrix.
+    template<class PressureMatrix>
+    void addOverlapConnectionsToPressureMatrix(PressureMatrix& jacobian,
+                                               const int number_cells,
+                                               const WellInterfaceGeneric<Scalar, IndexTraits>& well) const;
+
+
     //! \brief Get the number of blocks of the C and B matrices.
     unsigned int getNumBlocks() const;
 

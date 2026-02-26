@@ -1242,7 +1242,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                 if (this->groupState().has_injection_control(gr_name, phase)) {
                     if (this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP ||
                         this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::REIN) {
-		        OPM_TIMEBLOCK(extraIterationsAfterNupcol);
+                        OPM_TIMEBLOCK(extraIterationsAfterNupcol);
                         const bool is_vrep = this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP;
                         const Group& group = schedule().getGroup(gr_name, reportStepIdx);
                         const int np = this->wellState().numPhases();
@@ -1662,6 +1662,54 @@ getCellsForConnections(const Well& well) const
 }
 
 template<typename Scalar, typename IndexTraits>
+std::vector<int> BlackoilWellModelGeneric<Scalar, IndexTraits>::
+getCellsForConnectionsWithOverlap(const Well& well) const
+{
+    std::vector<int> wellCells;
+    // All possible connections of the well
+    const auto& connectionSet = well.getConnections();
+    wellCells.reserve(connectionSet.size());
+
+    for (const auto& connection : connectionSet)
+    {
+        // TODO: there is no method for LGR and overlap
+        int compressed_idx = well.is_lgr_well()
+            ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
+            : this->compressedIndexForInteriorOrOverlap(connection.global_index());
+
+        if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+            wellCells.push_back(compressed_idx);
+        }
+    }
+
+    return wellCells;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::vector<int> BlackoilWellModelGeneric<Scalar, IndexTraits>::
+getCellsForConnectionsOnOverlap(const Well& well) const
+{
+    std::vector<int> wellCells;
+    // All possible connections of the well
+    const auto& connectionSet = well.getConnections();
+    wellCells.reserve(connectionSet.size());
+
+    for (const auto& connection : connectionSet)
+    {
+        // TODO: there is no method for LGR and overlap
+        int compressed_idx = well.is_lgr_well()
+            ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
+            : this->compressedIndexForOverlap(connection.global_index());
+
+        if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+            wellCells.push_back(compressed_idx);
+        }
+    }
+
+    return wellCells;
+}
+
+template<typename Scalar, typename IndexTraits>
 std::vector<std::string> BlackoilWellModelGeneric<Scalar, IndexTraits>::
 getWellsForTesting(const int timeStepIdx,
                    const double simulationTime)
@@ -1761,12 +1809,12 @@ getMaxWellConnections() const
     // initialize the additional cell connections introduced by wells.
     for (const auto& well : schedule_wells) {
         auto& compressed_well_perforations = wellConnections.emplace_back
-            (this->getCellsForConnections(this->schedule().back().wells(well)));
+            (this->getCellsForConnectionsWithOverlap(this->schedule().back().wells(well)));
 
         const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well);
         if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
             for (const auto& global_index : possibleFutureConnectionSetIt->second) {
-                const int compressed_idx = compressedIndexForInterior(global_index);
+                const int compressed_idx = compressedIndexForInteriorOrOverlap(global_index);
                 if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
                     compressed_well_perforations.push_back(compressed_idx);
                 }

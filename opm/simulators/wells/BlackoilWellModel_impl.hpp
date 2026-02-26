@@ -1183,7 +1183,7 @@ namespace Opm {
         }
 
         if (iterationIdx == 0 && this->wellsActive()) {
-	    OPM_TIMEBLOCK(firstIterationAssmble);
+        OPM_TIMEBLOCK(firstIterationAssmble);
             // try-catch is needed here as updateWellControls
             // contains global communication and has either to
             // be reached by all processes or all need to abort
@@ -1483,6 +1483,15 @@ namespace Opm {
                                            pressureVarIndex,
                                            use_well_weights,
                                            this->wellState());
+
+            auto getOverlap = [this](const WellInterfaceGeneric<Scalar, IndexTraits>& well_) -> std::vector<int> {
+                return this->getCellsForConnectionsOnOverlap(this->schedule().back().wells(well_.name()));
+            };
+            auto getInterior = [this](const WellInterfaceGeneric<Scalar, IndexTraits>& well_) -> std::vector<int> {
+                return this->getCellsForConnections(this->schedule().back().wells(well_.name()));
+            };
+            well->initOverlapConnections(getOverlap, getInterior, this->simulator_.vanguard().globalCell());
+            well->addWellOverlapConnectionsToPressureEquations(jacobian, weights.size());
         }
     }
 
