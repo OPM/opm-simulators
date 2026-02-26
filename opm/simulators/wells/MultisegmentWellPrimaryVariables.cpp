@@ -176,18 +176,18 @@ updateNewton(const BVectorWell& dwells,
              const bool stop_or_zero_rate_target,
              const Scalar max_pressure_change)
 {
-    std::cout << " in the function updateNewton for well " << this->well_.name() << " with value_ are " << std::endl;
-    for (std::size_t seg = 0; seg < value_.size(); ++seg) {
-        std::cout << " segment " << seg << " value_ : ";
-        for (const auto& val : value_[seg]) {
-            std::cout << val << " ";
-        }
-        std::cout << " and dwells are : ";
-        for (const auto& dwell : dwells[seg]) {
-            std::cout << dwell << " ";
-        }
-        std::cout << std::endl;
-    }
+    // std::cout << " in the function updateNewton for well " << this->well_.name() << " with value_ are " << std::endl;
+    // for (std::size_t seg = 0; seg < value_.size(); ++seg) {
+    //     std::cout << " segment " << seg << " value_ : ";
+    //     for (const auto& val : value_[seg]) {
+    //         std::cout << val << " ";
+    //     }
+    //     std::cout << " and dwells are : ";
+    //     for (const auto& dwell : dwells[seg]) {
+    //         std::cout << dwell << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
     const std::vector<std::array<Scalar, numWellEq>> old_primary_variables = value_;
 
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
@@ -244,6 +244,14 @@ updateNewton(const BVectorWell& dwells,
         value_[0][WQTotal] = 0.;
     }
     setEvaluationsFromValues();
+    // std::cout << " after the update in the function updateNewton for well " << this->well_.name() << " with value_ are " << std::endl;
+    // for (std::size_t seg = 0; seg < value_.size(); ++seg) {
+    //     std::cout << " segment " << seg << " value_ : ";
+    //     for (const auto& val : value_[seg]) {
+    //         std::cout << val << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
 }
 
 template<class FluidSystem, class Indices>
