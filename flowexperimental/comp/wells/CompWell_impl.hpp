@@ -147,11 +147,11 @@ updateSurfaceQuantities(const Simulator& simulator)
         for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
             fluid_state.setMoleFraction(comp_idx, std::max(inj_composition[comp_idx], 1.e-10));
         }
-        updateSurfanceCondition_(surface_cond, fluid_state);
+        updateSurfaceCondition_(surface_cond, fluid_state);
     } else { // the composition will be from the wellbore
         // here, it will use the composition from the wellbore and the pressure and temperature from the surface condition
         auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
-        updateSurfanceCondition_(surface_cond, fluid_state);
+        updateSurfaceCondition_(surface_cond, fluid_state);
      }
 }
 
@@ -597,9 +597,9 @@ template <typename TypeTag>
 template <typename T>
 void
 CompWell<TypeTag>::
-updateSurfanceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_state)
+updateSurfaceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_state)
 {
-    static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWell::updateSurfanceCondition_");
+    static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWell::updateSurfaceCondition_");
 
     fluid_state.setTemperature(surface_cond.temperature);
     fluid_state.setPressure(FluidSystem::oilPhaseIdx, surface_cond.pressure);
