@@ -175,9 +175,15 @@ public:
         grid().loadBalance(*dataHandle);
 
         // communicate non-interior cells values
-        grid().communicate(*dataHandle,
-                           Dune::InteriorBorder_All_Interface,
-                           Dune::ForwardCommunication );
+        // TODO: This causes an infinite loop within fixedSize()
+        // on dune-alugrid 2.11. Since this application has never really
+        // worked in parallel, simply workaround by not calling
+        // in a sequential run for now.
+        if (grid().comm().size() > 1) {
+            grid().communicate(*dataHandle,
+                               Dune::InteriorBorder_All_Interface,
+                               Dune::ForwardCommunication );
+        }
 
        if (grid().size(0))
        {
