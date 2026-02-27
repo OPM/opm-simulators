@@ -79,11 +79,11 @@ testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, con
 
 BOOST_AUTO_TEST_CASE(TestFlexibleSolver)
 {
-    // Read parameters.
-    Opm::PropertyTree prm("options_flexiblesolver.json");
-
     // Test with 1x1 block solvers.
     {
+        // Read parameters.
+        Opm::PropertyTree prm("options_flexiblesolver_1x1.json");
+
         const int bz = 1;
         auto sol = testSolver<bz>(prm, "matr33.txt", "rhs3.txt");
         Dune::BlockVector<Dune::FieldVector<double, bz>> expected {-1.62493,
@@ -105,6 +105,9 @@ BOOST_AUTO_TEST_CASE(TestFlexibleSolver)
 
     // Test with 3x3 block solvers.
     {
+        // Read parameters.
+        Opm::PropertyTree prm("options_flexiblesolver_3x3.json");
+
         const int bz = 3;
         auto sol = testSolver<bz>(prm, "matr33.txt", "rhs3.txt");
         Dune::BlockVector<Dune::FieldVector<double, bz>> expected {{-1.62493, -1.76435e-06, 1.86991e-10},

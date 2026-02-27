@@ -1,0 +1,9 @@
+{
+    "tol": "0.5",
+    "maxiter": "20",
+    "preconditioner": {
+        "type": "ilu0"
+    },
+    "verbosity": "10",
+    "solver": "bicgstab"
+}
