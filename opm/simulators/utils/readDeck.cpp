@@ -182,7 +182,7 @@ namespace {
                                         const Opm::EclipseState&             eclipseState,
                                         const Opm::ParseContext&             parseContext,
                                         const bool                           lowActionParsingStrictness,
-                                        const bool                           keepKeywords,
+                                        const bool                           ,//keepKeywords,
                                         std::shared_ptr<Opm::Python>         python,
                                         std::shared_ptr<Opm::Schedule>&      schedule,
                                         std::unique_ptr<Opm::UDQState>&      udqState,
@@ -194,7 +194,7 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext,
-                 errorGuard, std::move(python), lowActionParsingStrictness, slaveMode, keepKeywords);
+                 errorGuard, std::move(python), lowActionParsingStrictness, slaveMode, true);
         }
         udqState = std::make_unique<Opm::UDQState>
             ((*schedule)[0].udq().params().undefinedValue());
