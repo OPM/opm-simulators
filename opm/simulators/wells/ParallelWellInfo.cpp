@@ -16,12 +16,16 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #include <config.h>
+
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+
 #include <opm/material/densead/Evaluation.hpp>
 
 #if HAVE_MPI
@@ -29,6 +33,7 @@
 #endif
 
 #include <fmt/format.h>
+
 #include <cassert>
 #include <iterator>
 #include <numeric>
@@ -784,34 +789,37 @@ connectionFound(std::size_t i)
 }
 
 template<class Scalar>
-bool CheckDistributedWellConnections<Scalar>::
+std::pair<bool, std::string>
+CheckDistributedWellConnections<Scalar>::
 checkAllConnectionsFound()
 {
     // Ecl does not hold any information of remote connections.
     assert(pwinfo_.communication().max(foundConnections_.size()) == foundConnections_.size());
+
     pwinfo_.communication().sum(foundConnections_.data(),
                                 foundConnections_.size());
 
-    std::string msg = std::string("Cells with these i,j,k indices were not found ")
-        + "in grid (well = " + pwinfo_.name() + "):";
+    auto msg = fmt::format("Cells with these i,j,k indices "
+                           "were not found in grid (well = {}):",
+                           pwinfo_.name());
+
     bool missingCells = false;
-    auto start = foundConnections_.begin();
-    for(auto conFound = start; conFound != foundConnections_.end(); ++conFound)
-    {
-        if (*conFound == 0)
-        {
-            const auto& completion = well_.getConnections()[conFound - start];
-            msg = msg + " " + std::to_string(completion.getI()) + "," +
-                std::to_string(completion.getJ()) + ","
-                + std::to_string(completion.getK()) + " ";
+
+    auto conn = this->well_.getConnections().begin();
+    for (const auto& connFound : this->foundConnections_) {
+        if (connFound == 0) {
+            msg += fmt::format(" {},{},{}",
+                               conn->getI() + 1,
+                               conn->getJ() + 1,
+                               conn->getK() + 1);
+
             missingCells = true;
         }
+
+        ++conn;
     }
-    if (missingCells && pwinfo_.isOwner())
-    {
-        OPM_THROW(std::runtime_error, msg);
-    }
-    return !missingCells;
+
+    return { !missingCells, missingCells ? std::move(msg) : std::string{} };
 }
 
 template<class Scalar> using dIter = typename std::vector<Scalar>::iterator;

@@ -40,6 +40,8 @@ struct ConnFiltrateData {
         serializer(poro);
         serializer(radius);
         serializer(area_of_flow);
+        serializer(flow_factor);
+        serializer(fracture_rate);
     }
 
     static ConnFiltrateData serializationTestObject();
@@ -54,8 +56,10 @@ struct ConnFiltrateData {
     std::vector<Scalar> poro;
     std::vector<Scalar> radius;
     std::vector<Scalar> area_of_flow;
+    std::vector<Scalar> flow_factor;
+    std::vector<Scalar> fracture_rate;
 };
 
-}
+} // namespace Opm
 
 #endif // OPM_CONNFILTRATEDATA_HPP

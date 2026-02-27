@@ -35,6 +35,15 @@
 
 namespace Opm
 {
+struct WellIndexFracture{
+    double ctf;
+    double pressure;
+    double ref_ctf;
+    double ref_pressure;
+    template<class T>
+    T wellIndex(T p) const;
+};
+    
 
 class DeferredLogger;
 class GuideRate;
@@ -209,7 +218,8 @@ public:
     virtual Scalar connectionDensity(const int globalConnIdx,
                                      const int openConnIdx) const = 0;
 
-    void addPerforations(const std::vector<RuntimePerforation>& perfs);
+    void addFracturePerforations(const std::vector<RuntimePerforation>& perfs);
+    const std::vector<WellIndexFracture>& wellIndexFracture() const { return well_index_fracture_; }
 
 protected:
     bool getAllowCrossFlow() const;
@@ -336,6 +346,7 @@ protected:
 
     // well index for each perforation
     std::vector<Scalar> well_index_;
+    std::vector<WellIndexFracture> well_index_fracture_;
 
     // number of the perforations for this well on this process
     int number_of_local_perforations_;

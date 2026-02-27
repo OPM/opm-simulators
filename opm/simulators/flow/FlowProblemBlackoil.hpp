@@ -718,16 +718,21 @@ public:
      * \brief Calculate the transmissibility multiplier due to porosity reduction.
      */
     template <class LhsEval, class Callback>
-    LhsEval permFactTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx, Callback& obtain) const
+    LhsEval permFactTransMultiplier(const IntensiveQuantities& intQuants,
+                                    const unsigned elementIdx,
+                                    Callback&& obtain) const
     {
         OPM_TIMEBLOCK_LOCAL(permFactTransMultiplier, Subsystem::PvtProps);
+
         if constexpr (enableSaltPrecipitation) {
-            const auto& fs = intQuants.fluidState();
-            unsigned tableIdx = this->simulator().problem().satnumRegionIndex(elementIdx);
-            LhsEval porosityFactor = obtain(1. - fs.saltSaturation());
-            porosityFactor = min(porosityFactor, 1.0);
-            const auto& permfactTable = BrineModule::permfactTable(tableIdx);
-            return permfactTable.eval(porosityFactor, /*extrapolation=*/true);
+            LhsEval porosityFactor = obtain(1 - intQuants.fluidState().saltSaturation());
+            porosityFactor = min(porosityFactor, 1);
+
+            const unsigned tableIdx = this->simulator().problem()
+                .satnumRegionIndex(elementIdx);
+
+            return BrineModule::permfactTable(tableIdx)
+                .eval(porosityFactor, /*extrapolation=*/true);
         }
         else if constexpr (enableBioeffects) {
             return obtain(intQuants.permFactor());

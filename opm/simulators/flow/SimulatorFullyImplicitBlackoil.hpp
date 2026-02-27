@@ -57,9 +57,11 @@
 #endif
 
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -452,32 +454,57 @@ public:
         // \Note: The sub stepping will require a copy of the state variables
         if (adaptiveTimeStepping_) {
             auto tuningUpdater = [enableTUNING, this,
-                                  reportStep = timer.currentStepNum()](const double curr_time,
-                                                                       double dt, const int timeStep)
+                                  reportStep = timer.currentStepNum()]
+                (const double curr_time, double dt, const int timeStep)
             {
-                auto& schedule = this->simulator_.vanguard().schedule();
-                auto& events = this->schedule()[reportStep].events();
+                auto max_next_tstep = this->simulator_.problem().maxNextTimeStepSize();
 
-                bool result = false;
-                if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
+                using Scalar = std::remove_cv_t<std::remove_reference_t
+                                                <decltype(max_next_tstep)>>;
+
+                // assume no other max is already set
+                auto result = max_next_tstep < std::numeric_limits<Scalar>::max();
+                if (result) {
+                    // maybe updated later
+                    this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
+                }
+
+                auto& schedule = this->simulator_.vanguard().schedule();
+
+                if (schedule[reportStep].events().hasEvent(ScheduleEvents::TUNING_CHANGE)) {
                     // Unset the event to not trigger it again on the next sub step
                     schedule.clear_event(ScheduleEvents::TUNING_CHANGE, reportStep);
-                    const auto& sched_state = schedule[reportStep];
-                    const auto& max_next_tstep = sched_state.max_next_tstep(enableTUNING);
-                    const auto& tuning = sched_state.tuning();
+
+                    if (const auto tuning_max_next_tstep = schedule[reportStep].max_next_tstep(enableTUNING);
+                        tuning_max_next_tstep > max_next_tstep)
+                    {
+                        max_next_tstep = tuning_max_next_tstep;
+                    }    
 
                     if (enableTUNING) {
+                        const auto& tuning = schedule[reportStep].tuning();
+
                         adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning);
-                        // \Note: Assumes TUNING is only used with adaptive time-stepping
-                        // \Note: Need to update both solver (model) and simulator since solver is re-created each report step.
+
+                        // \Note: Assumes TUNING is only used with adaptive
+                        // time-stepping.
+                        //
+                        // \Note: Need to update both solver (model) and
+                        // simulator since solver is re-created each report
+                        // step.
                         solver_->model().updateTUNING(tuning);
                         this->updateTUNING(tuning);
+
                         dt = this->adaptiveTimeStepping_->suggestedNextStep();
-                    } else {
-                        dt = max_next_tstep;
-                        this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
                     }
-                    result = max_next_tstep > 0;
+                    else {
+                        dt = max_next_tstep;
+                        if (max_next_tstep < std::numeric_limits<Scalar>::max()) {
+                            this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
+                        }
+                    }
+
+                    result = max_next_tstep < std::numeric_limits<Scalar>::max();
                 }
 
                 if (events.hasEvent(ScheduleEvents::TUNINGDP_CHANGE)) {

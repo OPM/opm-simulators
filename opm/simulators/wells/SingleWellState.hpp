@@ -76,6 +76,7 @@ public:
         serializer(surface_rates);
         serializer(reservoir_rates);
         serializer(prev_surface_rates);
+        serializer(frac_rate);
         serializer(trivial_group_target);
         serializer(segments);
         serializer(events);
@@ -140,6 +141,7 @@ public:
     std::vector<Scalar> surface_rates;
     std::vector<Scalar> reservoir_rates;
     std::vector<Scalar> prev_surface_rates;
+    Scalar frac_rate{0.0};
     PerfData<Scalar> perf_data;
     bool trivial_group_target;
     std::optional<GroupTarget> group_target;

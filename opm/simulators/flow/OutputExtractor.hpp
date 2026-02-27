@@ -29,6 +29,7 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/Visitor.hpp>
+#include <opm/common/utility/VoigtArray.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 
@@ -40,7 +41,6 @@
 #include <algorithm>
 #include <array>
 #include <unordered_map>
-#include <set>
 #include <variant>
 #include <vector>
 
@@ -221,6 +221,10 @@ struct BlockExtractor
     /// Returns value to store in buffer for requested phase
     using PhaseFunc = std::function<Scalar(const unsigned /*phase*/, const Context&)>;
 
+    /// Callback for extractors assigned to a tensor component
+    /// Returns value to store in buffer for requested index
+    using TensorFunc = std::function<Scalar(const VoigtIndex idx, const Context&)>;
+
     struct ScalarEntry
     {
         /// A single name or a list of names for the keyword
@@ -240,8 +244,16 @@ struct BlockExtractor
         PhaseFunc extract;
     };
 
+    struct TensorEntry
+    {
+        /// A single name for the kw, postfixed by "XX", "XY", etc
+        std::string_view kw;
+        /// Associated extraction lambda
+        TensorFunc extract;
+    };
+
     //! \brief Descriptor for extractors
-    using Entry = std::variant<ScalarEntry, PhaseEntry>;
+    using Entry = std::variant<ScalarEntry, PhaseEntry, TensorEntry>;
 
     //! \brief Descriptor for extractor execution.
     struct Exec
@@ -259,12 +271,12 @@ struct BlockExtractor
     using ExecMap = std::unordered_map<int, std::vector<Exec>>;
 
     //! \brief Setup an extractor executor map from a map of evaluations to perform.
-    template<std::size_t size>
     static ExecMap setupExecMap(std::map<std::pair<std::string, int>, double>& blockData,
-                                const std::array<Entry,size>& handlers)
+                                const std::vector<Entry>& handlers)
     {
         using PhaseViewArray = std::array<std::string_view, numPhases>;
         using StringViewVec = std::vector<std::string_view>;
+        using StringVec = std::vector<std::string>;
 
         ExecMap extractors;
 
@@ -273,11 +285,12 @@ struct BlockExtractor
             [&handlers, &extractors](auto& bd_info)
             {
                 unsigned phase{};
+                int modulus = numPhases;
                 const auto& [key, cell] = bd_info.first;
                 const auto& handler_info =
                     std::ranges::find_if(
                         handlers,
-                        [&kw_name = bd_info.first.first, &phase](const auto& handler)
+                        [&kw_name = bd_info.first.first, &phase, &modulus](const auto& handler)
                         {
                            // Extract list of keyword names from handler
                            const auto gen_handlers =
@@ -285,12 +298,10 @@ struct BlockExtractor
                                             [](const ScalarEntry& entry)
                                             {
                                                 return std::visit(VisitorOverloadSet{
-                                                                      [](const std::string_view& kw) -> StringViewVec
-                                                                      {
-                                                                          return {kw};
-                                                                      },
-                                                                      [](const StringViewVec& kws) -> StringViewVec
-                                                                      { return kws; }
+                                                                      [](const std::string_view& kw)
+                                                                      { return StringVec{std::string(kw)}; },
+                                                                      [](const StringViewVec& kws)
+                                                                      { return StringVec(kws.begin(), kws.end()); }
                                                                   }, entry.kw);
                                             },
                                             [](const PhaseEntry& entry)
@@ -298,11 +309,11 @@ struct BlockExtractor
                                                 return std::visit(VisitorOverloadSet{
                                                                       [](const PhaseViewArray& data)
                                                                       {
-                                                                          return StringViewVec{data.begin(), data.end()};
+                                                                          return StringVec{data.begin(), data.end()};
                                                                       },
                                                                       [](const std::array<PhaseViewArray,2>& data)
                                                                       {
-                                                                          StringViewVec res;
+                                                                          StringVec res;
                                                                           res.reserve(2*numPhases);
                                                                           res.insert(res.end(),
                                                                                      data[0].begin(),
@@ -313,13 +324,23 @@ struct BlockExtractor
                                                                           return res;
                                                                       }
                                                                   }, entry.kw);
-                                            }
+                                            },
+                                            [&modulus](const TensorEntry& entry)
+                                            {
+                                                modulus = 6;
+                                                const auto pf = std::array{"XX", "YY", "ZZ",
+                                                                           "YZ", "XZ", "XY"};
+                                                StringVec res(6);
+                                                std::transform(pf.begin(), pf.end(), res.begin(),
+                                                               [kw = std::string(entry.kw)](const auto p) { return kw + p; });
+                                                return res;
+                                            },
                                         }, handler);
 
                             const auto found_handler =
                                 std::ranges::find(gen_handlers, kw_name);
                             if (found_handler != gen_handlers.end()) {
-                                phase = std::distance(gen_handlers.begin(), found_handler) % numPhases;
+                                phase = std::distance(gen_handlers.begin(), found_handler) % modulus;
                             }
                             return found_handler != gen_handlers.end();
                         }
@@ -344,6 +365,14 @@ struct BlockExtractor
                                                           gasPhaseIdx,
                                                       };
                                                       return extract(phaseMap[phase], ectx);
+                                                  };
+                                       },
+                                       [phase](const TensorEntry& e) -> ScalarFunc
+                                       {
+                                           return [phase, extract = e.extract]
+                                                  (const Context& ectx)
+                                                  {
+                                                      return extract(static_cast<VoigtIndex>(phase), ectx);
                                                   };
                                        }
                                    }, *handler_info)

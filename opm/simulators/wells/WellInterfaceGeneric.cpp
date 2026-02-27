@@ -89,6 +89,7 @@ WellInterfaceGeneric(const Well& well,
     assert(std::ranges::is_sorted(perf_data,
                                   [](const auto& perf1, const auto& perf2)
                                   { return perf1.ecl_index < perf2.ecl_index; }));
+
     if (time_step < 0) {
         OPM_THROW(std::invalid_argument, "Negative time step is used to construct WellInterface");
     }
@@ -104,7 +105,14 @@ WellInterfaceGeneric(const Well& well,
     {
         well_cells_.resize(number_of_local_perforations_);
         well_index_.resize(number_of_local_perforations_);
+
+        // Initialize to zero can be changed by fracture code
+        WellIndexFracture wfzero{};
+        wfzero.ctf = 0.0;
+        well_index_fracture_.resize(number_of_local_perforations_, wfzero);
+
         saturation_table_number_.resize(number_of_local_perforations_);
+
         int perf = 0;
         for (const auto& pd : perf_data) {
             well_cells_[perf] = pd.cell_index;
@@ -411,6 +419,9 @@ closeCompletions(const WellTestState& wellTestState)
         if (connection.state() == Connection::State::OPEN) {
             if (wellTestState.completion_is_closed(name(), connection.complnum())) {
                 this->well_index_[perfIdx] = 0.0;
+                // NB: also close fracture connection need test
+                this->well_index_fracture_[perfIdx].ctf = 0.0;
+                this->well_index_fracture_[perfIdx].ref_ctf = 0.0;
             }
             perfIdx++;
         }
@@ -689,31 +700,27 @@ void WellInterfaceGeneric<Scalar, IndexTraits>::resetWellOperability()
 }
 
 template<typename Scalar, typename IndexTraits>
-void WellInterfaceGeneric<Scalar, IndexTraits>::addPerforations(const std::vector<RuntimePerforation>& perfs)
+void WellInterfaceGeneric<Scalar, IndexTraits>::
+addFracturePerforations(const std::vector<RuntimePerforation>& perfs)
 {
     for (const auto& perf : perfs) {
         const auto it = std::ranges::find(well_cells_, perf.cell);
         if (it != this->well_cells_.end()) {
             // If perforation to cell already exists, just add contribution.
+            // assume uniqe well_fracture index
+
             const auto ind = std::distance(this->well_cells_.begin(), it);
-            this->well_index_[ind] += static_cast<Scalar>(perf.ctf);
+
+            // NB assume only one fracture cross a cell
+            this->well_index_fracture_[ind].ctf = perf.ctf;
+            this->well_index_fracture_[ind].pressure = perf.pressure;
+            this->well_index_fracture_[ind].ref_pressure = perf.ref_pressure;
+            this->well_index_fracture_[ind].ref_ctf = perf.ref_ctf;
         }
         else {
-            this->well_cells_.push_back(perf.cell);
-            this->well_index_.push_back(static_cast<Scalar>(perf.ctf));
-            this->perf_depth_.push_back(static_cast<Scalar>(perf.depth));
-
-            // Not strictly needed.
-            const double nan = std::nan("1");
-            this->perf_rep_radius_.push_back(nan);
-            this->perf_length_.push_back(nan);
-            this->bore_diameters_.push_back(nan);
-
-            // For now use the saturation table for the first cell.
-            this->saturation_table_number_
-                .push_back(this->saturation_table_number_.front());
-
-            ++this->number_of_local_perforations_;
+            std::cout << "Perforation to cell " << perf.cell
+                      << " does not exist in well " << this->name()
+                      << ", skip it. TimeStep cuts do to error in fracture solve?" << std::endl;
         }
     }
 }
@@ -953,11 +960,30 @@ onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
     }
 }
 
+template <typename T>
+T WellIndexFracture::wellIndex(T p) const
+{
+    return static_cast<T>(ctf); //NB NB early exit for testing
+
+    // Linear interpolation between (pressure,ctf) and (ref_pressure, ref_ctf)
+    if (std::abs(ref_pressure - pressure) < 1e-10) {
+        return ctf;
+    }
+
+    const auto val = (ref_ctf - ctf)*(p - pressure)/(ref_pressure-pressure) + ctf;
+
+    const auto low  = static_cast<T>(std::min(ctf, ref_ctf));
+    const auto high = static_cast<T>(std::max(ctf, ref_ctf));
+
+    return std::clamp(static_cast<T>(val), low, high);
+}
 
 template class WellInterfaceGeneric<double, BlackOilDefaultFluidSystemIndices>;
+template double WellIndexFracture::wellIndex(double p) const;
 
 #if FLOW_INSTANTIATE_FLOAT
 template class WellInterfaceGeneric<float, BlackOilDefaultFluidSystemIndices>;
+template float WellIndexFracture::wellIndex(float p) const;
 #endif
 
 } // namespace Opm

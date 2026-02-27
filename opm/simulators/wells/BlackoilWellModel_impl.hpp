@@ -263,7 +263,7 @@ namespace Opm {
         // scope a bit.
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         {
-            this->initializeWellPerfData();
+            this->initializeWellPerfData(reportStepIdx);
             this->initializeWellState(reportStepIdx);
             this->wbp_.initializeWBPCalculationService();
 
@@ -741,6 +741,83 @@ namespace Opm {
         }
 
         if (Indices::waterEnabled) {
+            //  update need quantities from simulator
+            //  need to know fraction of flow in fracture and perforation
+            //  which depend on dynamic well index
+            auto& well_state = this->wellState();
+
+            for (auto& well : this->well_container_) {
+                if (! well->isInjector()) {
+                    continue;
+                }
+
+                const auto& wellstate_nupcol = simulator_.problem().wellModel()
+                    .nupcolWellState().well(well->indexOfWell());
+
+                const auto& well_indices_fracture = well->wellIndexFracture();
+
+                auto& perf_data = well_state.well(well->indexOfWell()).perf_data;
+
+                auto& filtrate_data = perf_data.filtrate_data;
+                auto& fracture_data = perf_data.fracture_data;
+
+                const auto nperf = well->numLocalPerfs();
+
+                assert(well_indices_fracture.size() == nperf);
+
+                double total_flow_fracture = 0.0;
+                for (auto perf = 0*nperf; perf < nperf; ++perf) {
+                    const auto cell_idx = well->perforationData()[perf].cell_index;
+                    const auto& intQuants = this->simulator_.model()
+                        .intensiveQuantities(cell_idx, /*timeIdx=*/0);
+
+                    const auto trans_mult = this->simulator_.problem()
+                        .template wellTransMultiplier<Scalar>
+                        (intQuants, cell_idx, [](const auto& val) { return getValue(val); });
+
+                    auto wi = std::vector<Scalar>(well->numConservationQuantities(),
+                                                  well->wellIndex()[perf] * trans_mult);
+
+                    well->getTw(wi, perf, intQuants, trans_mult, wellstate_nupcol);
+
+                    const auto effective_well_index = wi[FluidSystem::waterPhaseIdx];
+
+                    // NB we should maybe store effective_well_index;
+                    // not sure why nupcol is used here..
+                    const Scalar perf_pressure = wellstate_nupcol.perf_data.pressure[perf];
+                    const Scalar well_index_fracture = well_indices_fracture[perf]
+                        .wellIndex(perf_pressure);
+
+                    auto& fracture_rate = fracture_data.water_rate[perf];
+
+                    assert(effective_well_index >= well_index_fracture);
+
+                    if (effective_well_index > 0) {
+                        // NB! this change the well state for this value
+                        const auto con_fac =
+                            filtrate_data.flow_factor[perf] =
+                            (effective_well_index - well_index_fracture)
+                             / effective_well_index;
+
+                        const auto frac_fac = 1.0 - con_fac;
+
+                        const auto np = well_state.numPhases();
+
+                        fracture_rate = frac_fac *
+                            perf_data.phase_rates[perf*np + FluidSystem::waterPhaseIdx];
+
+                        total_flow_fracture += frac_fac * perf_data
+                            .phase_rates[perf*np + FluidSystem::waterPhaseIdx];
+                    }
+                    else {
+                        filtrate_data.flow_factor[perf] = 0.0;
+                        fracture_rate = 0.0;
+                    }
+                }
+
+                well_state.well(well->indexOfWell()).frac_rate = total_flow_fracture;
+            }
+
             this->updateFiltrationModelsPostStep(dt, FluidSystem::waterPhaseIdx, local_deferredLogger);
         }
 
