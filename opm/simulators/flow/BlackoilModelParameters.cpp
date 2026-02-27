@@ -120,6 +120,17 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     monitor_params_.cutoff_ = Parameters::Get<Parameters::ConvergenceMonitoringCutOff>();
     monitor_params_.decay_factor_ = Parameters::Get<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>();
 
+    const auto version = Parameters::Get<Parameters::RelativeChangeApproach>();
+    if (version == "pressure") {
+        relative_change_version_ = RelativeChangeApproaches::Pressure;
+    } else if (version == "saturation") {
+        relative_change_version_ = RelativeChangeApproaches::Saturation;
+    } else if (version == "pressure+saturation") {
+        relative_change_version_ = RelativeChangeApproaches::PressureSaturation;
+    } else {
+        throw std::runtime_error("Unsupported relative change version: " + version);
+    }
+
     nupcol_group_rate_tolerance_ = Parameters::Get<Parameters::NupcolGroupRateTolerance<Scalar>>();
     well_group_constraints_max_iterations_ = Parameters::Get<Parameters::WellGroupConstraintsMaxIterations>();
 }
@@ -307,6 +318,12 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Cut off limit for convergence monitoring");
     Parameters::Register<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>
         ("Decay factor for convergence monitoring");
+    
+    Parameters::Register<Parameters::RelativeChangeApproach>
+        ("Version of relative change used in time step control. Allowed values are "
+         "'pressure', "
+         "'saturation', "
+         "'pressure+saturation'.");
 
     Parameters::Register<Parameters::NupcolGroupRateTolerance<Scalar>>
         ("Tolerance for acceptable changes in VREP/RAIN group rates");
