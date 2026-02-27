@@ -234,7 +234,7 @@ updateNewton(const BVectorWell& dwells,
             // TODO: how to regularize the tempearture update remains to be investigated
             std::cout << " value of temperature is " << old_primary_variables[seg][Temperature] << " the dwells is " << dwells[seg][Temperature] << std::endl;
             const int sign = dwells[seg][Temperature] > 0. ? 1 : -1;
-            constexpr Scalar max_temperature_change = 2.0;
+            constexpr Scalar max_temperature_change = 5.0;
             const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][Temperature]) * relaxation_factor, max_temperature_change);
             value_[seg][Temperature] = std::max(old_primary_variables[seg][Temperature] - dx_limited, Scalar{0.0});
             // value_[seg][Temperature] = old_primary_variables[seg][Temperature] - relaxation_factor * dwells[seg][Temperature];

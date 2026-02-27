@@ -1784,7 +1784,7 @@ namespace Opm
                 bool min_relaxation_reached = this->update_relaxation_factor(measure_history, relaxation_factor, this->regularize_, deferred_logger);
                 if (min_relaxation_reached || this->repeatedStagnation(measure_history, this->regularize_, deferred_logger)) {
                     converged = false;
-//                    break;
+                    break;
                 }
             }
             try{
@@ -1803,7 +1803,7 @@ namespace Opm
         }
 
         if (converged) {
-            std::cout << " well " << this->name() << " CONVERGED in " << it << " inner iterations with " << switch_count << " control/status switches and " << status_switch_count << " status switches.\n";
+            std::cout << " well " << this->name() << " CONVERGED in " << it << " inner iterations " << std::endl;
             if (allow_switching){
                 // update operability if status change
                 const bool is_stopped = this->wellIsStopped();
@@ -1822,7 +1822,7 @@ namespace Opm
             }
             deferred_logger.debug(message, OpmLog::defaultDebugVerbosityLevel + ((it == 0) && (switch_count == 0)));
         } else {
-            std::cout << " well " << this->name() << " DID NOT CONVERGE in " << it << " inner iterations with " << switch_count << " control/status switches and " << status_switch_count << " status switches.\n";
+            std::cout << " well " << this->name() << " DID NOT CONVERGE in " << it << " inner iterations " << std::endl;
             this->wellStatus_ = well_status_orig;
             this->operability_status_ = operability_orig;
             const std::string message = fmt::format("   Well {} did not converge in {} inner iterations ("
@@ -1993,12 +1993,15 @@ namespace Opm
                     energy_flux *= this->well_efficiency_factor_;
                     // TODO: double check the indices here. Tempeature or contiEnergyEqIdx
                     this->connectionRates_[local_perf_index][Indices::contiEnergyEqIdx]= Base::restrictEval(energy_flux);
+//                    this->linSys_.printSystem("before energy assembly for perf " + std::to_string(perf) + " with energy flux " + std::to_string(energy_flux.value()), std::cout);
 
                     MultisegmentWellAssemble(*this).
                         assemblePerforationEq(seg, local_perf_index,
                                               MSWEval::PrimaryVariables::Temperature,
                                               energy_flux,
                                               this->linSys_);
+//                    this->linSys_.printSystem("after energy assembly for perf " + std::to_string(perf) + " with energy flux " + std::to_string(energy_flux.value()), std::cout);
+ //                   std::cout << std::endl;
                 }
             }
         }
@@ -2036,10 +2039,13 @@ namespace Opm
                 }
 
                 if constexpr (Base::has_energy) {
+                    // this->linSys_.printSystem("before energy assembly for accmulation term for seg " + std::to_string(seg), std::cout);
                     const EvalWell segment_energy = this->computeSegmentEnergy(seg);
                     const EvalWell accumulation_term_energy = regularization_factor * (segment_energy - segment_initial_energy_[seg]) / dt;
                         MultisegmentWellAssemble(*this).
                                 assembleAccumulationTerm(seg, MSWEval::PrimaryVariables::Temperature, accumulation_term_energy, this->linSys_);
+                    // this->linSys_.printSystem("after energy assembly for accmulation term for seg " + std::to_string(seg), std::cout);
+                    // std::cout << std::endl;
                 }
             }
             // considering the contributions due to flowing out from the segment
@@ -2055,7 +2061,7 @@ namespace Opm
                         assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
                 }
                 if constexpr (Base::has_energy) {
-                    std::cout << " well " << this->name() << " assembling outflow term for energy equation for segment " << seg << " upwind segment " << seg_upwind << "\n";
+                    // std::cout << " well " << this->name() << " assembling outflow term for energy equation for segment " << seg << " upwind segment " << seg_upwind << "\n";
                     const bool top_injecting_segment = (seg == 0) && this->isInjector();
 
                     // Energy carried by fluid flowing out of this segment toward its outlet.
@@ -2090,8 +2096,11 @@ namespace Opm
 //                                  << " density " << upwind_fs.density(phaseIdx).value() << " invB " << upwind_fs.invB(phaseIdx).value() << " temperature " << upwind_fs.temperature(phaseIdx).value()
 //                                  << " energy_rate contribution " << getValue(temp) << std::endl;
                     }
+                    // this->linSys_.printSystem("before energy assembly for assembleOutflowTerm term for seg " + std::to_string(seg), std::cout);
                     MultisegmentWellAssemble(*this).
                         assembleOutflowTerm(seg, seg_upwind, MSWEval::PrimaryVariables::Temperature, energy_rate, this->linSys_);
+                    // this->linSys_.printSystem("after energy assembly for assembleOutflowTerm term for seg " + std::to_string(seg), std::cout);
+                    // std::cout << std::endl;
                 }
             }
 
@@ -2112,7 +2121,7 @@ namespace Opm
                 if constexpr (Base::has_energy) {
                     for (const int inlet : this->segments_.inlets()[seg]) {
                         const int inlet_upwind = this->segments_.upwinding_segment(inlet);
-                        std::cout << " well " << this->name() << " assembling inflow term for energy equation for segment " << seg << " inlet segment " << inlet << " upwinding seg " << inlet_upwind << "\n";
+                        // std::cout << " well " << this->name() << " assembling inflow term for energy equation for segment " << seg << " inlet segment " << inlet << " upwinding seg " << inlet_upwind << "\n";
                         // Energy carried by fluid flowing from inlet segment into this segment.
                         // Use upwind segment fluid properties for enthalpy and density.
                         const auto& upwind_fs = this->segment_fluid_state_[inlet_upwind];
@@ -2143,8 +2152,11 @@ namespace Opm
 //                                      << " density " << upwind_fs.density(phaseIdx).value() << " invB " << upwind_fs.invB(phaseIdx).value() << " temperature " << upwind_fs.temperature(phaseIdx).value()
 //                                      << " energy_rate contribution " << getValue(temp) << std::endl;
                         }
+                        // this->linSys_.printSystem("before energy assembly for assembleInflowTerm term for seg " + std::to_string(seg), std::cout);
                         MultisegmentWellAssemble(*this).
                             assembleInflowTerm(seg, inlet, inlet_upwind, MSWEval::PrimaryVariables::Temperature, energy_rate, this->linSys_);
+                        // this->linSys_.printSystem("after energy assembly for assembleInflowTerm term for seg " + std::to_string(seg), std::cout);
+                        // std::cout << std::endl;
                     }
                 }
             }
@@ -2181,6 +2193,8 @@ namespace Opm
 
         this->parallel_well_info_.communication().sum(this->ipr_a_.data(), this->ipr_a_.size());
         this->linSys_.createSolver();
+        // this->linSys_.printSystem(this->name(), std::cout);
+        // std::cout << std::endl;
     }
 
 

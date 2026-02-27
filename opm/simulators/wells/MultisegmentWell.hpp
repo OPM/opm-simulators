@@ -361,9 +361,6 @@ namespace Opm {
 
         // this function can potentially be shared between multisegment wells and standard wells
         // TODO: this function largely overlaps with calculatePhaseProperties(), some refactoring/unificaition should be done
-        // NOTE: did not manage due to compilation errors related to fluid state
-        // TODO: this function is probably can be done with the computeInitialSegmentFluids()
-        // together
         template <typename ValueType = EvalWell>
         SegmentFluidState<ValueType>
         createFluidState(const std::vector<ValueType>& fluid_composition,

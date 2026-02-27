@@ -159,8 +159,8 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
             const Scalar energy_residual = maximum_residual[eq_idx];
             // TODO: possible the dummy_component should be something else
             const int dummy_component = -1;
-            const Scalar tolerance_energy_wells = 1.0; // TODO: need to determine a reasonable value for this
-            const Scalar relaxed_tolerance_energy_wells = 10.0; // TODO: need to determine a reasonable value for this
+            const Scalar tolerance_energy_wells = 1.e-5; // TODO: need to determine a reasonable value for this
+            const Scalar relaxed_tolerance_energy_wells = 1.e-4; // TODO: need to determine a reasonable value for this
             if (std::isnan(energy_residual)) {
                 report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::NotANumber, dummy_component, baseif_.name()});
             } else if (std::isinf(energy_residual)) {
