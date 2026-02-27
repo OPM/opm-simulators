@@ -674,7 +674,8 @@ list (APPEND TEST_DATA_FILES
   tests/rhs3.txt
   tests/matr33rep.txt
   tests/rhs3rep.txt
-  tests/options_flexiblesolver.json
+  tests/options_flexiblesolver_1x1.json
+  tests/options_flexiblesolver_3x3.json
   tests/options_flexiblesolver_simple.json
   tests/GCONSUMP.DATA
   tests/GCONSUMP_COMPLEX.DATA

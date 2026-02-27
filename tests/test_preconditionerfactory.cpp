@@ -148,14 +148,21 @@ void test3(const Opm::PropertyTree& prm)
 
 BOOST_AUTO_TEST_CASE(TestDefaultPreconditionerFactory)
 {
-    // Read parameters.
-    Opm::PropertyTree prm("options_flexiblesolver.json");
+    {
+        // Read parameters.
+        Opm::PropertyTree prm("options_flexiblesolver_1x1.json");
 
-    // Test with 1x1 block solvers.
-    test1(prm);
+        // Test with 1x1 block solvers.
+        test1(prm);
+    }
 
-    // Test with 3x3 block solvers.
-    test3(prm);
+    {
+        // Read parameters.
+        Opm::PropertyTree prm("options_flexiblesolver_3x3.json");
+
+        // Test with 3x3 block solvers.
+        test3(prm);
+    }
 }
 
 
