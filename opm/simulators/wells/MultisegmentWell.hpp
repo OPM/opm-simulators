@@ -380,6 +380,8 @@ namespace Opm {
 
         void updateWellHeadCondtion(const Simulator& simulator);
 
+        void updateSegmentFluidState();
+
         template <typename ValueType = EvalWell>
         ValueType computeSegmentEnergy(int seg) const;
     };
