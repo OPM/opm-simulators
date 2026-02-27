@@ -31,6 +31,8 @@
 #include <dune/istl/bvector.hh>
 
 #include <memory>
+#include <ostream>
+#include <string>
 #include <type_traits>
 
 namespace Dune {
@@ -125,6 +127,11 @@ public:
                                   const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                                   const int seg_pressure_var_ind,
                                   const WellState<Scalar, IndexTraits>& well_state) const;
+
+    //! \brief Print the D matrix and residual for debugging.
+    //! \param name Well name for identification in output
+    //! \param out Output stream (defaults to std::cout)
+    void printSystem(const std::string& name, std::ostream& out) const;
 
     //! \brief Sum with off-process contribution.
     void sumDistributed(Parallel::Communication comm);
