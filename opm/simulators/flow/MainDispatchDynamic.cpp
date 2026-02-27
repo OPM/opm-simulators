@@ -212,8 +212,7 @@ int Opm::Main::runTwoPhase(const Phases& phases)
                 return flowGasWaterDissolutionDiffuseMain(argc_, argv_,
                                                           outputCout_,
                                                           outputFiles_);
-            }
-            else if (rspec.tpsa().active()) {
+            } else if (rspec.mechSolver().tpsa()) {
                 return flowGasWaterDissolutionTpsaMain(argc_, argv_, outputCout_, outputFiles_);
             }
 
@@ -305,7 +304,7 @@ int Opm::Main::runWaterOnly(const Phases& phases)
         return EXIT_FAILURE;
     }
 
-    if (rspec.tpsa().active()) {
+    if (rspec.mechSolver().tpsa()) {
         return flowWaterOnlyTpsaMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
@@ -446,7 +445,7 @@ int Opm::Main::runBlackOil()
         return flowBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
     }
     if (this->eclipseState_->runspec().hysterPar().active()) {
-        if (this->eclipseState_->runspec().tpsa().active()) {
+        if (this->eclipseState_->runspec().mechSolver().tpsa()) {
             // Blackoil + TPSA geomechanics
             return flowBlackoilTpsaMain(argc_, argv_, outputCout_, outputFiles_);
         }

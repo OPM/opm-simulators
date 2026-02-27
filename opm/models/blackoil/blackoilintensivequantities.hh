@@ -592,7 +592,7 @@ public:
         // Geomechanical updates to porosity/pore volume
         if constexpr (enableMech) {
             // TPSA calculations
-            if (problem.simulator().vanguard().eclState().runspec().tpsa().active()) {
+            if (problem.simulator().vanguard().eclState().runspec().mechSolver().tpsa()) {
                 // TPSA compressibility term
                 const Scalar rockBiot = problem.rockBiotComp(globalSpaceIdx);
                 if (rockBiot > 0.0) {

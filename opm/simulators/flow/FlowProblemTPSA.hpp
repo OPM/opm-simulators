@@ -114,8 +114,8 @@ public:
             this->model().addOutputModule(std::make_unique<VtkTpsaModule<TypeTag>>(simulator));
 
             // Sanity check
-            const auto& tpsa = simulator.vanguard().eclState().runspec().tpsa();
-            if (!tpsa.active()) {
+            const auto& mechSolver = simulator.vanguard().eclState().runspec().mechSolver();
+            if (!mechSolver.tpsa()) {
                 std::string msg = "Simulator with Tpsa-geomechanics enabled compile time, but deck does not contain "
                                   "TPSA keyword!";
                 OpmLog::error(msg);
@@ -124,8 +124,8 @@ public:
         }
         else {
             // Sanity check
-            const auto& tpsa = simulator.vanguard().eclState().runspec().tpsa();
-            if (tpsa.active()) {
+            const auto& mechSolver = simulator.vanguard().eclState().runspec().mechSolver();
+            if (mechSolver.tpsa()) {
                 std::string msg = "TPSA keyword in deck, but Tpsa-geomechanics disabled compile-time!";
                 OpmLog::error(msg);
                 throw std::runtime_error(msg);
@@ -451,8 +451,8 @@ public:
     */
     bool laggedScheme() const
     {
-        const auto& tpsa = this->simulator().vanguard().eclState().runspec().tpsa();
-        return tpsa.laggedScheme();
+        const auto& mechSolver = this->simulator().vanguard().eclState().runspec().mechSolver();
+        return mechSolver.laggedScheme();
     }
 
     /*!
@@ -462,8 +462,8 @@ public:
     */
     bool fixedStressScheme() const
     {
-        const auto& tpsa = this->simulator().vanguard().eclState().runspec().tpsa();
-        return tpsa.fixedStressScheme();
+        const auto& mechSolver = this->simulator().vanguard().eclState().runspec().mechSolver();
+        return mechSolver.fixedStressScheme();
     }
 
     /*!
@@ -493,8 +493,8 @@ public:
     */
     std::pair<int, int> fixedStressParameters() const
     {
-        const auto& tpsa = this->simulator().vanguard().eclState().runspec().tpsa();
-        return std::make_pair(tpsa.fixedStressMinIter(), tpsa.fixedStressMaxIter());
+        const auto& mechSolver = this->simulator().vanguard().eclState().runspec().mechSolver();
+        return std::make_pair(mechSolver.fixedStressMinIter(), mechSolver.fixedStressMaxIter());
     }
 
 protected:
