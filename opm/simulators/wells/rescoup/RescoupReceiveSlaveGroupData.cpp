@@ -32,7 +32,7 @@
 namespace Opm {
 
 // -------------------------------------------------------
-// Constructor for the RescoupTargetCalculator class
+// Constructor for the RescoupReceiveSlaveGroupData class
 // -------------------------------------------------------
 template <class Scalar, class IndexTraits>
 RescoupReceiveSlaveGroupData<Scalar, IndexTraits>::

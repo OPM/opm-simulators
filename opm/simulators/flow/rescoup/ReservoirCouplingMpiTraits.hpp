@@ -216,15 +216,20 @@ struct MPITraits<
         &::Opm::ReservoirCoupling::InjectionGroupTarget<Scalar>::cmode,
         &::Opm::ReservoirCoupling::InjectionGroupTarget<Scalar>::phase>  { };
 
-// Trait for ProductionGroupTarget
+// Trait for ProductionGroupConstraints
 template<class Scalar>
 struct MPITraits<
-        ::Opm::ReservoirCoupling::ProductionGroupTarget<Scalar>>
+        ::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>>
   : detail::StructMPITraits<
-        ::Opm::ReservoirCoupling::ProductionGroupTarget<Scalar>,
-        &::Opm::ReservoirCoupling::ProductionGroupTarget<Scalar>::group_name_idx,
-        &::Opm::ReservoirCoupling::ProductionGroupTarget<Scalar>::target,
-        &::Opm::ReservoirCoupling::ProductionGroupTarget<Scalar>::cmode> { };
+        ::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>,
+        &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::group_name_idx,
+        &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::target,
+        &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::cmode,
+        &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::oil_limit,
+        &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::water_limit,
+        &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::gas_limit,
+        &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::liquid_limit,
+        &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::resv_limit> { };
 
 /// @brief MPI datatype trait for SlaveGroupProductionData structure
 ///

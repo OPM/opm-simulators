@@ -52,7 +52,7 @@
 #include <opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
 #include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
-#include <opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp>
+#include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
 #endif
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -472,7 +472,7 @@ namespace Opm {
         if (this->isReservoirCouplingSlave()) {
             if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
                 this->sendSlaveGroupDataToMaster();
-                this->receiveGroupTargetsFromMaster(reportStepIdx);
+                this->receiveGroupTargetsFromMaster();
             }
         }
 #endif
@@ -535,7 +535,7 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingMaster()) {
             if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
-                this->sendMasterGroupTargetsToSlaves();
+                this->sendMasterGroupConstraintsToSlaves();
             }
         }
 #endif
@@ -604,26 +604,24 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    sendMasterGroupTargetsToSlaves()
+    sendMasterGroupConstraintsToSlaves()
     {
-        // This function is called by the master process to send the group targets to the slaves.
-        RescoupTargetCalculator<Scalar, IndexTraits> target_calculator{
+        // This function is called by the master process to send the group constraints to the slaves.
+        RescoupConstraintsCalculator<Scalar, IndexTraits> constraints_calculator{
             this->guide_rate_handler_,
             this->groupStateHelper()
         };
-        target_calculator.calculateMasterGroupTargetsAndSendToSlaves();
+        constraints_calculator.calculateMasterGroupConstraintsAndSendToSlaves();
     }
 
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    receiveGroupTargetsFromMaster(int reportStepIdx)
+    receiveGroupTargetsFromMaster()
     {
         RescoupReceiveGroupTargets<Scalar, IndexTraits> target_receiver{
             this->guide_rate_handler_,
-            this->wellState(),
-            this->groupState(),
-            reportStepIdx
+            this->groupStateHelper()
         };
         target_receiver.receiveGroupTargetsFromMaster();
     }
