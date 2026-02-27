@@ -782,6 +782,14 @@ add_test_compareECLFiles(CASENAME nonnc
                          REL_TOL ${rel_tol}
                          DIR editnnc)
 
+add_test_compareECLFiles(CASENAME editnnc_multregt
+                         FILENAME EDITNNC_AND_MULTREGT
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR editnnc
+                         TEST_ARGS --solver-max-time-step-in-days=0.1)
+
 add_test_compareECLFiles(CASENAME spe1_foam
                          FILENAME SPE1FOAM
                          SIMULATOR flow
