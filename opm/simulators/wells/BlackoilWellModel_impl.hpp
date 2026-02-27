@@ -455,19 +455,19 @@ namespace Opm {
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
         }
-        try {
-            this->updateWellPotentials(reportStepIdx,
-                                       /*onlyAfterEvent*/true,
-                                       simulator_.vanguard().summaryConfig(),
-                                       local_deferredLogger);
-        } catch ( std::runtime_error& e ) {
-            const std::string msg = "A zero well potential is returned for output purposes. ";
-            local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
-        }
-        //update guide rates
-        this->guide_rate_handler_.updateGuideRates(
-            reportStepIdx, simulationTime, this->wellState(), this->groupState()
-        );
+        // try {
+        //     this->updateWellPotentials(reportStepIdx,
+        //                                /*onlyAfterEvent*/true,
+        //                                simulator_.vanguard().summaryConfig(),
+        //                                local_deferredLogger);
+        // } catch ( std::runtime_error& e ) {
+        //     const std::string msg = "A zero well potential is returned for output purposes. ";
+        //     local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
+        // }
+        // //update guide rates
+        // this->guide_rate_handler_.updateGuideRates(
+        //     reportStepIdx, simulationTime, this->wellState(), this->groupState()
+        // );
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingSlave()) {
             if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
@@ -2100,6 +2100,9 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>::numConservationQuantities() const
     {
+        // TODO: when the energy equation joins, here should be the start
+        // of the refactoring related to the the usage of the numConservationQuantities()
+
         // The numPhases() functions returns 1-3, depending on which
         // of the (oil, water, gas) phases are active. For each of those phases,
         // if the phase is active the corresponding component is present and

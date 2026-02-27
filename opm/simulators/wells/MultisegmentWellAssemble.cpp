@@ -224,6 +224,8 @@ assembleAccelerationTerm(const int seg_target,
     if constexpr (has_gfrac_variable) {
         eqns.D()[seg_target][seg_upwind][SPres][GFrac] -= accelerationTerm.derivative(GFrac + Indices::numEq);
     }
+    assert(std::abs(accelerationTerm.derivative(Temperature + Indices::numEq)) < 1.e-14);
+    // TODO: should the derivative of the temperature comes here?
 }
 
 template<class FluidSystem, class Indices>
@@ -286,6 +288,7 @@ assemblePressureEq(const int seg,
     if constexpr (has_gfrac_variable) {
         eqns.D()[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
     }
+    assert(std::abs(pressure_equation.derivative(Temperature + Indices::numEq)) < 1.e-14);
 
     // contribution from the outlet segment
     eqns.residual()[seg][SPres] -= outlet_pressure.value();
@@ -352,6 +355,11 @@ assembleOutflowTerm(const int seg,
         eqns.D()[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
     }
     // pressure derivative should be zero
+    // TODO: things changes when energy equation joins, energy_rate might depend on the pressure
+    if constexpr (has_temperature) {
+        eqns.D()[seg][seg_upwind][comp_idx][SPres] -= segment_rate.derivative(SPres + Indices::numEq);
+        eqns.D()[seg][seg_upwind][comp_idx][Temperature] -= segment_rate.derivative(Temperature + Indices::numEq);
+    }
 }
 
 template<class FluidSystem, class Indices>
@@ -376,6 +384,13 @@ assembleInflowTerm(const int seg,
     if constexpr (has_gfrac_variable) {
         eqns.D()[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
     }
+
+    // energy flow might have a derivative of the pressure
+    if constexpr (has_temperature) {
+        eqns.D()[seg][inlet_upwind][comp_idx][SPres] += inlet_rate.derivative(SPres + Indices::numEq);
+        eqns.D()[seg][inlet_upwind][comp_idx][Temperature] += inlet_rate.derivative(Temperature + Indices::numEq);
+    }
+    // TODO: with the energy equation join, there will be more derivatives and we need to consider them as well
     // pressure derivative should be zero
 }
 

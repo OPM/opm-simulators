@@ -312,6 +312,8 @@ protected:
     // We assume a well to not penetrate more than one pvt region.
     const int pvtRegionIdx_;
 
+    // TODO: with energy conservation joins, we probably should change this to be num_mass_conservation_quantities_
+    // or something like that. Energy term calculate somehow differently from the mass term
     const int num_conservation_quantities_;
 
     // number of phases

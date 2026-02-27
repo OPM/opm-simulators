@@ -57,6 +57,7 @@ public:
     {
         serializer(injector);
         serializer(pressure);
+        serializer(temperature);
         serializer(rates);
         serializer(phase_rates);
         serializer(phase_mixing_rates);
@@ -91,6 +92,7 @@ public:
     // result, e.g., a flow rate, then please update try_assign() as well.
 
     std::vector<Scalar> pressure{};
+    std::vector<Scalar> temperature{};
     std::vector<Scalar> rates{};
     std::vector<Scalar> phase_rates{};
     std::vector<std::array<Scalar,4>> phase_mixing_rates{};

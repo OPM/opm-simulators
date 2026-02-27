@@ -157,6 +157,14 @@ update(const WellState<Scalar, IndexTraits>& well_state,
             }
         }
     }
+
+    // if thermal is active, we set the temperature
+    if constexpr (enable_energy) {
+        const auto& segment_temperature = segments.temperature;
+        for (std::size_t seg = 0; seg < value_.size(); ++seg) {
+            value_[seg][Temperature] = segment_temperature[seg];
+        }
+    }
     setEvaluationsFromValues();
 }
 
@@ -168,6 +176,18 @@ updateNewton(const BVectorWell& dwells,
              const bool stop_or_zero_rate_target,
              const Scalar max_pressure_change)
 {
+    // std::cout << " in the function updateNewton for well " << this->well_.name() << " with value_ are " << std::endl;
+    // for (std::size_t seg = 0; seg < value_.size(); ++seg) {
+    //     std::cout << " segment " << seg << " value_ : ";
+    //     for (const auto& val : value_[seg]) {
+    //         std::cout << val << " ";
+    //     }
+    //     std::cout << " and dwells are : ";
+    //     for (const auto& dwell : dwells[seg]) {
+    //         std::cout << dwell << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
     const std::vector<std::array<Scalar, numWellEq>> old_primary_variables = value_;
 
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
@@ -209,12 +229,30 @@ updateNewton(const BVectorWell& dwells,
                 }
             }
         }
+
+        if constexpr (enable_energy) {
+            // TODO: how to regularize the tempearture update remains to be investigated
+            std::cout << " value of temperature is " << old_primary_variables[seg][Temperature] << " the dwells is " << dwells[seg][Temperature] << std::endl;
+            const int sign = dwells[seg][Temperature] > 0. ? 1 : -1;
+            constexpr Scalar max_temperature_change = 5.0;
+            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][Temperature]) * relaxation_factor, max_temperature_change);
+            value_[seg][Temperature] = std::max(old_primary_variables[seg][Temperature] - dx_limited, Scalar{0.0});
+            // value_[seg][Temperature] = old_primary_variables[seg][Temperature] - relaxation_factor * dwells[seg][Temperature];
+        }
     }
 
     if (stop_or_zero_rate_target) {
         value_[0][WQTotal] = 0.;
     }
     setEvaluationsFromValues();
+    // std::cout << " after the update in the function updateNewton for well " << this->well_.name() << " with value_ are " << std::endl;
+    // for (std::size_t seg = 0; seg < value_.size(); ++seg) {
+    //     std::cout << " segment " << seg << " value_ : ";
+    //     for (const auto& val : value_[seg]) {
+    //         std::cout << val << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
 }
 
 template<class FluidSystem, class Indices>
@@ -242,6 +280,7 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
     auto& disgas = segments.dissolved_gas_rate;
     auto& vapoil = segments.vaporized_oil_rate;
     auto& segment_pressure = segments.pressure;
+    auto& segment_temperature = segments.temperature;
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         std::vector<Scalar> fractions(well_.numPhases(), 0.0);
 
@@ -299,6 +338,14 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
 
         // update the segment pressure
         segment_pressure[seg] = value_[seg][SPres];
+
+        // update the segment temperature if thermal is active
+        if (enable_energy) {
+            segment_temperature[seg] = value_[seg][Temperature];
+            if (seg == 0) {
+                ws.temperature = segment_temperature[seg];
+            }
+        }
 
         if (seg == 0) { // top segment
             ws.bhp = segment_pressure[seg];
@@ -646,6 +693,14 @@ MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getSegmentPressure(const int seg) const
 {
     return evaluation_[seg][SPres];
+}
+
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+getSegmentTemperature(const int seg) const
+{
+    return evaluation_[seg][Temperature];
 }
 
 template<class FluidSystem, class Indices>

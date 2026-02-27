@@ -54,6 +54,9 @@ protected:
     static constexpr int SPres = PrimaryVariables::SPres;
     static constexpr int WQTotal = PrimaryVariables::WQTotal;
 
+    static constexpr bool enable_energy = PrimaryVariables::enable_energy;
+    static constexpr int Temperature = PrimaryVariables::Temperature;
+
     using Equations = MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, Indices::numEq>;
     using MSWSegments = MultisegmentWellSegments<FluidSystem,Indices>;
 

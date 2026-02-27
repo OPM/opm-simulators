@@ -89,7 +89,9 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                    const bool relax_tolerance,
                    const bool well_is_stopped) const
 {
-    assert(int(B_avg.size()) == baseif_.numConservationQuantities());
+    // TODO: some more sophiscated approach should be used for the enery situation
+    // the current is just to make sure the assertion does not fail here.
+    assert(int(B_avg.size()) == baseif_.numConservationQuantities() || PrimaryVariables::enable_energy);
 
     // checking if any residual is NaN or too large. The two large one is only handled for the well flux
     std::vector<std::vector<Scalar>> abs_residual(this->numberOfSegments(),
@@ -104,6 +106,8 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
 
     ConvergenceReport report;
     // TODO: the following is a little complicated, maybe can be simplified in some way?
+    // TODO: the energy equation should not have a B_avg here to use.
+    // TODO: since we put the energy equation after the pressure equation, we need to do something below
     for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             if (eq_idx < baseif_.numConservationQuantities()) { // phase or component mass equations
@@ -139,7 +143,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
             } else if (flux_residual > relaxed_inner_tolerance_flow_ms_well) {
                 report.setWellFailed({CR::WellFailure::Type::MassBalance, CR::Severity::Normal, eq_idx, baseif_.name()});
             }
-        } else { // pressure equation
+        } else if (eq_idx == baseif_.numConservationQuantities()) { // pressure equation
             const Scalar pressure_residual = maximum_residual[eq_idx];
             const int dummy_component = -1;
             if (std::isnan(pressure_residual)) {
@@ -150,6 +154,21 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                 report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::Normal, dummy_component, baseif_.name()});
             } else if (pressure_residual > relaxed_inner_tolerance_pressure_ms_well) {
                 report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::Normal, dummy_component, baseif_.name()});
+            }
+        } else if (enable_energy && eq_idx == Temperature) {
+            const Scalar energy_residual = maximum_residual[eq_idx];
+            // TODO: possible the dummy_component should be something else
+            const int dummy_component = -1;
+            const Scalar tolerance_energy_wells = 1.e-5; // TODO: need to determine a reasonable value for this
+            const Scalar relaxed_tolerance_energy_wells = 1.e-4; // TODO: need to determine a reasonable value for this
+            if (std::isnan(energy_residual)) {
+                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::NotANumber, dummy_component, baseif_.name()});
+            } else if (std::isinf(energy_residual)) {
+                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::TooLarge, dummy_component, baseif_.name()});
+            } else if (!relax_tolerance && energy_residual > tolerance_energy_wells) {
+                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_component, baseif_.name()});
+            } else if (energy_residual > relaxed_tolerance_energy_wells) {
+                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_component, baseif_.name()});
             }
         }
     }
