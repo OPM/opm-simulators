@@ -168,6 +168,12 @@ public:
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,
                              const WellState* prev_well_state);
 
+    void setSegmentPressuresFromPerforations(const std::vector<std::vector<int>>& segment_inlets,
+                                             const std::vector<std::vector<int>>& segment_perforations,
+                                             const std::vector<Scalar>& perforation_pressures,
+                                             const Scalar& well_bhp,
+                                             std::vector<Scalar>& segment_pressures);
+
     static void calculateSegmentRates(const ParallelWellInfo<Scalar>&      pw_info,
                                       const std::vector<std::vector<int>>& segment_inlets,
                                       const std::vector<std::vector<int>>& segment_perforations,
@@ -175,7 +181,6 @@ public:
                                       const int                            np,
                                       const int                            segment,
                                       std::vector<Scalar>&                 segment_rates);
-
 
     void communicateGroupRates(const Parallel::Communication& comm);
 
@@ -409,6 +414,15 @@ private:
                                                const int                            np,
                                                const int                            segment,
                                                std::vector<Scalar>&                 segment_rates);
+
+    void setSegmentPressuresFromInlets(std::vector<Scalar>& segment_pressures,
+                                       const std::vector<std::vector<int>>& segment_inlets,
+                                       const int segment);
+
+    void setSegmentPressuresFromOutlets(std::vector<Scalar>& segment_pressures,
+                                        const std::vector<std::vector<int>>& segment_outlets,
+                                        const int segment,
+                                        const int outlet_segment);
 
     void reportConnectionFactors(const std::size_t well_index,
                                  std::vector<data::Connection>& connections) const;
