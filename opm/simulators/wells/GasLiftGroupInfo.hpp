@@ -20,6 +20,7 @@
 #ifndef OPM_GASLIFT_GROUP_INFO_HEADER_INCLUDED
 #define OPM_GASLIFT_GROUP_INFO_HEADER_INCLUDED
 
+#include <opm/simulators/flow/NewtonIterationContext.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 
 #include <map>
@@ -66,7 +67,7 @@ public:
                      const Schedule& schedule,
                      const SummaryState& summary_state,
                      const int report_step_idx,
-                     const int iteration_idx,
+                     const NewtonIterationContext& iterCtx,
                      DeferredLogger& deferred_logger,
                      WellState<Scalar, IndexTraits>& well_state,
                      const GroupState<Scalar>& group_state,
@@ -234,7 +235,7 @@ protected:
     const Schedule& schedule_;
     const SummaryState& summary_state_;
     const int report_step_idx_;
-    const int iteration_idx_;
+    const NewtonIterationContext& iterCtx_;
     const PhaseUsageInfo<IndexTraits>& phase_usage_;
     const GasLiftOpt& glo_;
     GroupRateMap group_rate_map_;

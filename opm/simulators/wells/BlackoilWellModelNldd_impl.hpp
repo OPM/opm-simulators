@@ -36,15 +36,58 @@ namespace Opm {
 template<typename TypeTag>
 void
 BlackoilWellModelNldd<TypeTag>::
-assemble(const int /*iterationIdx*/,
-         const double dt,
+assemble(const double dt,
          const Domain& domain)
 {
     OPM_TIMEBLOCK(assemble);
-    // We assume that calculateExplicitQuantities() and
-    // prepareTimeStep() have been called already for the entire
-    // well model, so we do not need to do it here (when
-    // iterationIdx is 0).
+    // NLDD domain well assembly for local solves.
+    //
+    // Call chain:  BlackoilWellModelNldd::assemble()
+    //                -> BlackoilWellModelNldd::assembleWellEq(dt, domain)
+    //                   -> WellInterface::assembleWellEq()
+    //                      -> WellInterface::prepareWellBeforeAssembling()
+    //                      -> WellInterface::assembleWellEqWithoutIteration()
+    //
+    // Key assumptions and design decisions:
+    //
+    // 1. Global well initialization (BlackoilWellModel::prepareTimeStep, including the
+    //    optional initial well solve) has already been called via
+    //    BlackoilWellModel::assemble() during the initial global linearization.
+    //    This is ensured by NewtonIterationContext::needsTimestepInit().
+    //
+    // 2. Inner well iterations (BlackoilWellModel::iterateWellEquations) are skipped
+    //    during local solves via NewtonIterationContext::shouldRunInnerWellIterations()
+    //    (inLocalSolve=true).
+    //    The NLDD local Newton loop already iterates wells to convergence.
+    //
+    // 3. No MPI collective operations (do_mpi_gather=false).
+    //
+    // 4. Only individual well constraints are checked (see
+    //    BlackoilWellModelNldd::updateWellControls).
+    //    Group controls, network balancing, gas lift, and NUPCOL/VREP updates
+    //    are NOT performed during domain solves. This means:
+    //    - Wells can switch between individual controls (BHP, THP, rate limits)
+    //      to respect physical safety constraints.
+    //    - Wells cannot be switched to/from GRUP control.  Individual constraint
+    //      checks (WellInterface::checkIndividualConstraints) never produce GRUP
+    //      as a result; only WellInterface::checkGroupConstraints can do that,
+    //      and it is not called here.
+    //    - Group production targets and VREP/REIN injection targets use stale
+    //      group state from the last global assembly.
+    //    - Well control switches during domain solves are not logged to
+    //      well_control_log_ (gated by inLocalSolve), preventing local
+    //      oscillations from exhausting the global oscillation budget.
+    //
+    // The final Newton step after NLDD domain solves re-synchronizes everything
+    // via a global BlackoilWellModel::assemble() which performs the full control
+    // update pipeline: BlackoilWellModelGeneric::updateAndCommunicateGroupData,
+    // BlackoilWellModelGeneric::updateGroupControls,
+    // group+individual well constraint checks, network balancing, and gas lift.
+    // Importantly, the global step also checks individual constraints (after
+    // group constraints), so if a domain solve switched a well to e.g. BHP
+    // because of a genuine BHP limit violation, the global step will reach
+    // the same conclusion -- the two levels are consistent for individual
+    // constraints.
 
     // Use do_mpi_gather=false to avoid MPI collective operations in domain solves.
     auto loggerGuard = wellModel_.groupStateHelper().pushLogger(/*do_mpi_gather=*/false);
@@ -132,8 +175,8 @@ getWellConvergence(const Domain& domain,
                    const std::vector<Scalar>& B_avg,
                    DeferredLogger& local_deferredLogger) const
 {
-    const int iterationIdx = wellModel_.simulator().model().newtonMethod().numIterations();
-    const bool relax_tolerance = iterationIdx > wellModel_.numStrictIterations();
+    const auto& iterCtx = wellModel_.simulator().problem().iterationContext();
+    const bool relax_tolerance = iterCtx.shouldRelax(wellModel_.numStrictIterations());
 
     ConvergenceReport report;
     {
@@ -184,10 +227,15 @@ updateWellControls(const Domain& domain)
         return;
     }
 
-    // TODO: decide on and implement an approach to handling of
-    // group controls, network and similar for domain solves.
-
-    // Check only individual well constraints and communicate.
+    // Only individual well constraints (BHP, THP, rate limits) are checked.
+    // Group constraints, network balancing, and NUPCOL/VREP updates require
+    // MPI collectives and consistent global group state, which are not
+    // available during domain-local solves. The final global Newton step
+    // handles all group-level control decisions.
+    //
+    // Individual constraints are physical safety limits that are essential
+    // for well convergence (e.g., BHP minimum prevents infeasible operating
+    // points). Skipping them would cause domain convergence failures.
     for (const auto& well : wellModel_.localNonshutWells()) {
         if (this->well_domain().at(well->name()) == domain.index) {
             constexpr auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;

@@ -156,8 +156,7 @@ template<class Scalar> class WellContributions;
             void beginIteration()
             {
                 OPM_TIMEBLOCK(beginIteration);
-                assemble(simulator_.model().newtonMethod().numIterations(),
-                         simulator_.timeStepSize());
+                assemble(simulator_.timeStepSize());
             }
 
             void endIteration()
@@ -263,26 +262,23 @@ template<class Scalar> class WellContributions;
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
 
-            // it should be able to go to prepareTimeStep(), however, the updateWellControls()
-            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above function
-            // twice at the beginning of the time step
-            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
-            /// at the beginning of the time step and no derivatives are included in these quantities
+            /// Calculating the explicit quantities used in the well calculation. By explicit, we mean they are calculated
+            /// at the beginning of the time step and no derivatives are included in these quantities.
+            /// Called from assemble() when needsTimestepInit() returns true.
             void calculateExplicitQuantities() const;
-            // some preparation work, mostly related to group control and RESV,
-            // at the beginning of each time step (Not report step)
+
+            /// One-time initialization at the start of each timestep.
+            /// Called once per timestep from assemble() when needsTimestepInit() returns true.
             void prepareTimeStep(DeferredLogger& deferred_logger);
 
             bool
             updateWellControls(DeferredLogger& deferred_logger);
 
-            void updateAndCommunicate(const int reportStepIdx,
-                                      const int iterationIdx);
+            void updateAndCommunicate(const int reportStepIdx);
 
             bool updateGroupControls(const Group& group,
                                     DeferredLogger& deferred_logger,
-                                    const int reportStepIdx,
-                                    const int iterationIdx);
+                                    const int reportStepIdx);
 
             const WellInterface<TypeTag>& getWell(const std::string& well_name) const;
 
@@ -535,8 +531,7 @@ template<class Scalar> class WellContributions;
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
-            void assemble(const int iterationIdx,
-                          const double dt);
+            void assemble(const double dt);
 
             // well controls and network pressures affect each other and are solved in an iterative manner.
             // the function handles one iteration of updating well controls and network pressures.

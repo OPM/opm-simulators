@@ -192,7 +192,7 @@ protected:
 
         // do not become grossly unphysical in a single iteration for the first few
         // iterations of a time step
-        if (this->numIterations_ < 3) {
+        if (this->problem().iterationContext().iteration() < 3) {
             // fugacities
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 Scalar& val = nextValue[fugacity0Idx + compIdx];

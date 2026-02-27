@@ -78,7 +78,8 @@ BOOST_AUTO_TEST_CASE(G1)
     simulator->setEpisodeLength(0.0);
     simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
     simulator->setTimeStepSize(43200);  // 12 hours
-    simulator->model().newtonMethod().setIterationIndex(0);
+    // Reset iteration context so code using problem().iterationContext() sees first iteration
+    simulator->problem().resetIterationForNewTimestep();
     WellModel& well_model = simulator->problem().wellModel();
 
     // we tests 4 different setups given in the .DATA file
@@ -117,14 +118,14 @@ BOOST_AUTO_TEST_CASE(G1)
         GLiftEclWells ecl_well_map;
         Opm::BlackoilWellModelGasLift<TypeTag>::
             initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
-        const int iteration_idx = simulator->model().newtonMethod().numIterations();
+        const auto& iterCtx = simulator->problem().iterationContext();
         const auto& comm = simulator->vanguard().grid().comm();
         GasLiftGroupInfo group_info {
             ecl_well_map,
             schedule,
             summary_state,
             simulator->episodeIndex(),
-            iteration_idx,
+            iterCtx,
             deferred_logger,
             well_state,
             group_state,
@@ -139,7 +140,7 @@ BOOST_AUTO_TEST_CASE(G1)
         };
         group_info.initialize();
         const auto& controls = well.productionControls(summary_state);
-        auto state = glift.runOptimize(iteration_idx);
+        auto state = glift.runOptimize(iterCtx.iteration());
         auto pot = well_state[well.name()].well_potentials;
 
         const auto& glo = schedule.glo(report_step_idx);
@@ -230,7 +231,8 @@ BOOST_AUTO_TEST_CASE(G2)
     simulator->setEpisodeLength(0.0);
     simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
     simulator->setTimeStepSize(43200);  // 12 hours
-    simulator->model().newtonMethod().setIterationIndex(0);
+    // Reset iteration context so code using problem().iterationContext() sees first iteration
+    simulator->problem().resetIterationForNewTimestep();
     WellModel& well_model = simulator->problem().wellModel();
 
     const auto& comm = simulator->vanguard().grid().comm();
@@ -257,7 +259,7 @@ BOOST_AUTO_TEST_CASE(G2)
         GLiftEclWells ecl_well_map;
         Opm::BlackoilWellModelGasLift<TypeTag>::
             initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
-        const int iteration_idx = simulator->model().newtonMethod().numIterations();
+        const auto& iterCtx = simulator->problem().iterationContext();
         WellState& well_state = well_model.wellState();
         const auto& group_state = well_model.groupState();
         GasLiftGroupInfo group_info {
@@ -265,7 +267,7 @@ BOOST_AUTO_TEST_CASE(G2)
             schedule,
             summary_state,
             report_step_idx,
-            iteration_idx,
+            iterCtx,
             deferred_logger,
             well_state,
             group_state,
@@ -280,7 +282,7 @@ BOOST_AUTO_TEST_CASE(G2)
                     deferred_logger, well_state, group_state, group_info, sync_groups,
                     comm, /*glift_debug=*/false
                 );
-                auto state = glift->runOptimize(iteration_idx);
+                auto state = glift->runOptimize(iterCtx.iteration());
                 if (state) {
                     state_map.emplace(well->name(), std::move(state));
                     glift_wells.emplace(well->name(), std::move(glift));

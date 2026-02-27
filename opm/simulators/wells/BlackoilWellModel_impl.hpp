@@ -388,8 +388,9 @@ namespace Opm {
 
             // we need to update the group data after the well is created
             // to make sure we get the correct mapping.
+            const auto& iterCtx = simulator_.problem().iterationContext();
             this->updateAndCommunicateGroupData(reportStepIdx,
-                                    simulator_.model().newtonMethod().numIterations(),
+                                    iterCtx,
                                     param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false);
 
             // Wells are active if they are active wells on at least one process.
@@ -492,10 +493,13 @@ namespace Opm {
             OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
         }
 
-        this->updateAndCommunicateGroupData(reportStepIdx,
-                                    simulator_.model().newtonMethod().numIterations(),
-                                    param_.nupcol_group_rate_tolerance_,
-                                    /*update_wellgrouptarget*/ true);
+        {
+            const auto& iterCtx = simulator_.problem().iterationContext();
+            this->updateAndCommunicateGroupData(reportStepIdx,
+                                        iterCtx,
+                                        param_.nupcol_group_rate_tolerance_,
+                                        /*update_wellgrouptarget*/ true);
+        }
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -1155,17 +1159,18 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assemble(const int iterationIdx,
-             const double dt)
+    assemble(const double dt)
     {
         OPM_TIMEFUNCTION();
         auto logger_guard = this->groupStateHelper().pushLogger();
         auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
+        const auto& iterCtx = simulator_.problem().iterationContext();
+
         if constexpr (BlackoilWellModelGasLift<TypeTag>::glift_debug) {
             if (gaslift_.terminalOutput()) {
                 const std::string msg =
-                    fmt::format(fmt::runtime("assemble() : iteration {}"), iterationIdx);
+                    fmt::format(fmt::runtime("assemble() : iteration {}"), iterCtx.iteration());
                 gaslift_.gliftDebug(msg, local_deferredLogger);
             }
         }
@@ -1182,8 +1187,9 @@ namespace Opm {
             }
         }
 
-        if (iterationIdx == 0 && this->wellsActive()) {
-	    OPM_TIMEBLOCK(firstIterationAssmble);
+        // Timestep initialization: should run once at the start of each timestep.
+        if (iterCtx.needsTimestepInit() && this->wellsActive()) {
+            OPM_TIMEBLOCK(firstIterationAssemble);
             // try-catch is needed here as updateWellControls
             // contains global communication and has either to
             // be reached by all processes or all need to abort
@@ -1194,7 +1200,7 @@ namespace Opm {
                 prepareTimeStep(local_deferredLogger);
             }
             OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
-                                           "assemble() failed (It=0): ",
+                                           "assemble() failed during well initialization: ",
                                            this->terminal_output_, grid().comm());
         }
 
@@ -1241,8 +1247,8 @@ namespace Opm {
             if (network_update_iteration >= max_iteration ) {
                 // only output to terminal if we at the last newton iterations where we try to balance the network.
                 const int episodeIdx = simulator_.episodeIndex();
-                const int iterationIdx = simulator_.model().newtonMethod().numIterations();
-                if (this->network_.shouldBalance(episodeIdx, iterationIdx + 1)) {
+                const auto& iterCtx = simulator_.problem().iterationContext();
+                if (this->network_.shouldBalance(episodeIdx, iterCtx)) {
                     if (this->terminal_output_) {
                         const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update, \n"
                             "and try again after the next Newton iteration (imbalance = {:.2e} bar)",
@@ -1288,9 +1294,9 @@ namespace Opm {
                                           DeferredLogger& local_deferredLogger)
     {
         OPM_TIMEFUNCTION();
-        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
+        const auto& iterCtx = simulator_.problem().iterationContext();
         const int reportStepIdx = simulator_.episodeIndex();
-        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx,
+        this->updateAndCommunicateGroupData(reportStepIdx, iterCtx,
             param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ true);
         // We need to call updateWellControls before we update the network as
         // network updates are only done on thp controlled wells.
@@ -1308,7 +1314,7 @@ namespace Opm {
             if (optimize_gas_lift) {
                 // we need to update the potentials if the thp limit as been modified by
                 // the network balancing
-                const bool updatePotentials = (this->network_.shouldBalance(reportStepIdx, iterationIdx) ||
+                const bool updatePotentials = (this->network_.shouldBalance(reportStepIdx, iterCtx) ||
                                                mandatory_network_balance);
                 alq_updated = gaslift_.maybeDoGasLiftOptimize(simulator_,
                                                           well_container_,
@@ -1337,7 +1343,7 @@ namespace Opm {
         }
         // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
         // the inner iterations are did not converge
-        const bool more_network_update = this->network_.shouldBalance(reportStepIdx, iterationIdx) &&
+        const bool more_network_update = this->network_.shouldBalance(reportStepIdx, iterCtx) &&
                     (more_inner_network_update || alq_updated);
         return {well_group_control_changed, more_network_update, network_imbalance};
     }
@@ -1582,14 +1588,15 @@ namespace Opm {
     {
         // Get global (from all processes) convergence report.
         ConvergenceReport local_report;
-        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
+        const auto& iterCtx = simulator_.problem().iterationContext();
+        const bool relaxTolerance = iterCtx.shouldRelax(param_.strict_outer_iter_wells_);
         {
             auto logger_guard = this->groupStateHelper().pushLogger();
             for (const auto& well : well_container_) {
                 if (well->isOperableAndSolvable() || well->wellIsStopped()) {
                     local_report += well->getWellConvergence(
                             this->groupStateHelper(), B_avg,
-                            iterationIdx > param_.strict_outer_iter_wells_);
+                            relaxTolerance);
                 } else {
                     ConvergenceReport report;
                     using CR = ConvergenceReport;
@@ -1650,7 +1657,6 @@ namespace Opm {
             return false;
         }
         const int episodeIdx = simulator_.episodeIndex();
-        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const auto& comm = simulator_.vanguard().grid().comm();
         size_t iter = 0;
         bool changed_well_group = false;
@@ -1659,7 +1665,7 @@ namespace Opm {
         // iterate a few times to make sure all constraints are honored
         const std::size_t max_iter = param_.well_group_constraints_max_iterations_;
         while(!changed_well_group && iter < max_iter) {
-            changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
+            changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx);
 
             // Check wells' group constraints and communicate.
             bool changed_well_to_group = false;
@@ -1683,7 +1689,7 @@ namespace Opm {
 
             changed_well_to_group = comm.sum(static_cast<int>(changed_well_to_group));
             if (changed_well_to_group) {
-                updateAndCommunicate(episodeIdx, iterationIdx);
+                updateAndCommunicate(episodeIdx);
                 changed_well_group = true;
             }
 
@@ -1708,7 +1714,7 @@ namespace Opm {
 
             changed_well_individual = comm.sum(static_cast<int>(changed_well_individual));
             if (changed_well_individual) {
-                updateAndCommunicate(episodeIdx, iterationIdx);
+                updateAndCommunicate(episodeIdx);
                 changed_well_group = true;
             }
             iter++;
@@ -1724,11 +1730,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateAndCommunicate(const int reportStepIdx,
-                         const int iterationIdx)
+    updateAndCommunicate(const int reportStepIdx)
     {
+        const auto& iterCtx = simulator_.problem().iterationContext();
         this->updateAndCommunicateGroupData(reportStepIdx,
-                                            iterationIdx,
+                                            iterCtx,
                                             param_.nupcol_group_rate_tolerance_,
                                             /*update_wellgrouptarget*/ true);
 
@@ -1750,7 +1756,7 @@ namespace Opm {
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAndCommunicate failed: ",
                                    simulator_.gridView().comm())
         this->updateAndCommunicateGroupData(reportStepIdx,
-                                            iterationIdx,
+                                            iterCtx,
                                             param_.nupcol_group_rate_tolerance_,
                                             /*update_wellgrouptarget*/ true);
     }
@@ -1760,19 +1766,19 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateGroupControls(const Group& group,
                         DeferredLogger& deferred_logger,
-                        const int reportStepIdx,
-                        const int iterationIdx)
+                        const int reportStepIdx)
     {
         OPM_TIMEFUNCTION();
+        const auto& iterCtx = simulator_.problem().iterationContext();
         bool changed = false;
         // restrict the number of group switches but only after nupcol iterations.
         const int nupcol = this->schedule()[reportStepIdx].nupcol();
         const int max_number_of_group_switches = param_.max_number_of_group_switches_;
-        const bool update_group_switching_log = iterationIdx >= nupcol;
+        const bool update_group_switching_log = !iterCtx.withinNupcol(nupcol);
         const bool changed_hc = this->checkGroupHigherConstraints(group, deferred_logger, reportStepIdx, max_number_of_group_switches, update_group_switching_log);
         if (changed_hc) {
             changed = true;
-            updateAndCommunicate(reportStepIdx, iterationIdx);
+            updateAndCommunicate(reportStepIdx);
         }
 
         bool changed_individual =
@@ -1790,11 +1796,11 @@ namespace Opm {
 
         if (changed_individual) {
             changed = true;
-            updateAndCommunicate(reportStepIdx, iterationIdx);
+            updateAndCommunicate(reportStepIdx);
         }
         // call recursively down the group hierarchy
         for (const std::string& groupName : group.groups()) {
-            bool changed_this = updateGroupControls( this->schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx,iterationIdx);
+            bool changed_this = updateGroupControls(this->schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx);
             changed = changed || changed_this;
         }
         return changed;

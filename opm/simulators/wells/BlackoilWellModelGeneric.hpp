@@ -31,6 +31,7 @@
 #include <opm/input/eclipse/Schedule/Well/PAvgCalculatorCollection.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
+#include <opm/simulators/flow/NewtonIterationContext.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModelWBP.hpp>
 #include <opm/simulators/wells/ConnectionIndexMap.hpp>
@@ -304,7 +305,7 @@ public:
     }
 
     void updateAndCommunicateGroupData(const int reportStepIdx,
-                                       const int iterationIdx,
+                                       const NewtonIterationContext& iterCtx,
                                        const Scalar tol_nupcol,
                                        // we only want to update the wellgroup target
                                        // after the groups have found their controls

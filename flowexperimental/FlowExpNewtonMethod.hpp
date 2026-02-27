@@ -135,10 +135,9 @@ public:
      */
     bool converged() const
     {
-        if (errorPvFraction_ < relaxedMaxPvFraction_) {
-            return (this->error_ < relaxedTolerance_ && errorSum_ < sumTolerance_) ;
-        } else if (this->numIterations() > numStrictIterations_) {
-            return (this->error_ < relaxedTolerance_ && errorSum_ < sumTolerance_) ;
+        if (errorPvFraction_ < relaxedMaxPvFraction_
+            || this->problem().iterationContext().shouldRelax(numStrictIterations_)) {
+            return (this->error_ < relaxedTolerance_ && errorSum_ < sumTolerance_);
         }
 
         return this->error_ <= this->tolerance() && errorSum_ <= sumTolerance_;
@@ -257,7 +256,7 @@ public:
                        const SolutionVector& currentSolution)
     {
         ParentType::endIteration_(nextSolution, currentSolution);
-        OpmLog::debug( "Newton iteration " + std::to_string(this->numIterations_) + ""
+        OpmLog::debug( "Newton iteration " + std::to_string(this->problem().iterationContext().iteration()) + ""
                   + " error: " + std::to_string(double(this->error_))
                   + this->endIterMsg().str());
         this->endIterMsg().str("");

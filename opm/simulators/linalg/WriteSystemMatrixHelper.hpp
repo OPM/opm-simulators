@@ -73,10 +73,11 @@ namespace Opm::Helper {
             }
 
             // Combine and return.
+            const auto& iterCtx = simulator.problem().iterationContext();
             std::ostringstream oss;
             oss << "prob_"  << simulator.episodeIndex()
                 << "_time_" << std::setprecision(15) << std::setw(12) << std::setfill('0') << simulator.time()
-                << "_nit_"  << simulator.model().newtonMethod().numIterations()
+                << "_nit_"  << iterCtx.iteration()
                 << '_'      << objName << "_istl";
 
             const auto filename = (output_dir / oss.str()).generic_string();

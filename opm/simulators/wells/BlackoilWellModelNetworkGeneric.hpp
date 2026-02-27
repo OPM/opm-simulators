@@ -27,6 +27,7 @@
 
 #include <opm/output/data/Groups.hpp>
 
+#include <opm/simulators/flow/NewtonIterationContext.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <map>
@@ -80,7 +81,7 @@ public:
     bool needPreStepRebalance(const int report_step) const;
 
     bool shouldBalance(const int reportStepIndex,
-                       const int iterationIdx) const;
+                       const NewtonIterationContext& iterCtx) const;
 
     Scalar updatePressures(const int reportStepIdx,
                            const Scalar damping_factor,
