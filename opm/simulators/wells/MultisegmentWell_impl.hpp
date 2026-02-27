@@ -764,10 +764,9 @@ namespace Opm
         auto& deferred_logger = groupStateHelper.deferredLogger();
         updatePrimaryVariables(groupStateHelper);
         computePerfCellPressDiffs(simulator);
-        // TODO: putting into a function
-        for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            segment_fluid_state_[seg] = this->createSegmentFluidstate(seg);
-        }
+
+        // TODO: not sure whether should put here
+        updateSegmentFluidState();
 
         computeInitialSegmentFluids(simulator, deferred_logger);
         if constexpr (enable_energy) {
@@ -1791,9 +1790,7 @@ namespace Opm
             try{
                 const BVectorWell dx_well = this->linSys_.solve();
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
-                for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-                    segment_fluid_state_[seg] = this->createSegmentFluidstate(seg);
-                }
+                updateSegmentFluidState();
             }
             catch(const NumericalProblem& exp) {
                 // Add information about the well and log to deferred logger
@@ -2760,6 +2757,16 @@ namespace Opm
         }
 //        std::cout << " well " << this->name() << " segment " << seg << "  Energy is " << getValue(result) << " initial energy is " << this->segment_initial_energy_[seg] << std::endl;
         return result;
+    }
+
+
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::updateSegmentFluidState()
+    {
+        for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
+            segment_fluid_state_[seg] = this->createSegmentFluidstate(seg);
+        }
     }
 
 } // namespace Opm
