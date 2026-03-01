@@ -349,7 +349,8 @@ assignToSolution(data::Solution& sol)
         addEntry(baseSolutionVector,
                                  "1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, invB_[waterPhaseIdx],                                            waterPhaseIdx);
     }
-    addEntry(baseSolutionVector, "FOAM",     UnitSystem::measure::identity,                              cFoam_);
+
+    addEntry(baseSolutionVector, "FOAM",     UnitSystem::measure::foamdensity,                           cFoam_);
     addEntry(baseSolutionVector, "GASKR",    UnitSystem::measure::identity,                              relativePermeability_[gasPhaseIdx],                              gasPhaseIdx);
     addEntry(baseSolutionVector, "GAS_DEN",  UnitSystem::measure::density,                               density_[gasPhaseIdx],                                           gasPhaseIdx);
     addEntry(baseSolutionVector, "GAS_VISC", UnitSystem::measure::viscosity,                             viscosity_[gasPhaseIdx],                                         gasPhaseIdx);
