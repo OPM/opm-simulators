@@ -1318,6 +1318,10 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     this->wellState().communicateGroupRates(comm_);
     this->groupState().communicate_rates(comm_);
 
+    if (iterCtx.isFirstGlobalIteration()) {
+        group_state_helper.updatePreviousGroupProductionRates(fieldGroup);
+    }
+
     if (update_wellgrouptarget) {
         for (const auto& well : well_container_generic_) {
             const auto& ws = this->wellState().well(well->indexOfWell());
@@ -1333,8 +1337,11 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
             auto& group_target = this->wellState().well(well->indexOfWell()).group_target;
+            if (!group_target.has_value()) { // any need for group_target to be optional?
+                group_target.emplace();
+            }
             if (well->isProducer()) {
-                group_target = group_state_helper.getWellGroupTargetProducer(
+                const auto target = group_state_helper.getWellGroupTargetProducer(
                     well->name(),
                     well->wellEcl().groupName(),
                     group,
@@ -1342,12 +1349,43 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     efficiencyFactor,
                     resv_coeff
                 );
-                if (!group_target.has_value() && ws.production_cmode == Well::ProducerCMode::GRUP) {
+                if (target.has_value()) {
+                    group_target->target_value = target->first;
+                    const auto cnt_group_name = target->second;
+                    const auto cmode_current =  this->groupState().production_control(cnt_group_name);
+                    group_target->group_name = cnt_group_name;
+                    group_target->production_cmode = this->groupState().production_control(cnt_group_name);
+                    // If current group cmode is different from the one given in schedule, we also
+                    // compute the target corresponding to original cmode in case current mode is not feasible
+                    const auto cnt_group = this->schedule().getGroup(cnt_group_name, reportStepIdx);
+                    const auto cmode_orig = cnt_group.productionControls(summaryState_).cmode;
+                    if (cmode_orig != cmode_current &&
+                        cmode_orig != Group::ProductionCMode::FLD &&
+                        cmode_orig != Group::ProductionCMode::NONE) {
+                        const auto target_orig_cmode = group_state_helper.getWellGroupTargetProducer(
+                            well->name(),
+                            well->wellEcl().groupName(),
+                            group,
+                            ws.surface_rates.data(),
+                            efficiencyFactor,
+                            resv_coeff,
+                            cmode_orig
+                        );
+                        if (target_orig_cmode.has_value()) {
+                            group_target->target_value_fallback = target_orig_cmode->first;
+                            group_target->production_cmode_fallback = cmode_orig;
+                        }
+                    } else {
+                        // No fallback control mode available
+                        group_target->production_cmode_fallback = Group::ProductionCMode::NONE;
+                    }
+                }
+                if (!target.has_value() && ws.production_cmode == Well::ProducerCMode::GRUP) {
                     const std::string msg = fmt::format("Well {} is under GRUP control but no valid group target "
                         "could be determined. Switching the well to under BHP control.", well->name());
                     group_state_helper.deferredLogger().debug(msg);
                     this->wellState().well(well->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
-                }
+                } 
             } else {
                 const auto& well_controls = well->wellEcl().injectionControls(summaryState_);
                 auto injectorType = well_controls.injector_type;
@@ -1371,7 +1409,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                 default:
                     throw std::logic_error("MULTI-phase injection is not supported, but was requested for well " + well->name());
                 }
-                group_target = group_state_helper.getWellGroupTargetInjector(
+                const auto target = group_state_helper.getWellGroupTargetInjector(
                     well->name(),
                     well->wellEcl().groupName(),
                     group,
@@ -1380,6 +1418,10 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     efficiencyFactor,
                     resv_coeff
                 );
+                if (target.has_value()) {
+                    group_target->target_value = target->first;
+                    group_target->group_name = target->second;
+                }
             }
         }
     }
