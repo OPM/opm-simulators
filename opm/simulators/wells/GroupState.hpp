@@ -40,6 +40,21 @@ namespace Opm {
 template<class Scalar>
 class GroupState {
 public:
+    /// Flags indicating which rate vectors have been modified since last communication.
+    /// Used by communicate_rates() to selectively communicate only modified data.
+    enum class Modification : uint32_t {
+        NONE                    = 0,
+        PRODUCTION_RATES        = 1 << 0,  // m_production_rates
+        NETWORK_RATES           = 1 << 1,  // m_network_leaf_node_production_rates
+        PROD_REDUCTION_RATES    = 1 << 2,  // prod_red_rates
+        INJ_REDUCTION_RATES     = 1 << 3,  // inj_red_rates
+        INJ_RESV_RATES          = 1 << 4,  // inj_resv_rates
+        INJ_REIN_RATES          = 1 << 5,  // inj_rein_rates
+        INJ_SURFACE_RATES       = 1 << 6,  // inj_surface_rates
+        INJ_VREP_RATE           = 1 << 7,  // inj_vrep_rate
+        ALL                     = 0xFF
+    };
+
     GroupState() = default;
     explicit GroupState(std::size_t num_phases);
 
@@ -135,11 +150,16 @@ public:
 
     GPMaint::State& gpmaint(const std::string& gname);
 
+    /// Check if a modification flag is set (for testing/debugging)
+    bool is_modified(Modification mod) const {
+        return (modifications_ & static_cast<uint32_t>(mod)) != 0;
+    }
+
     template<class Comm>
     void communicate_rates(const Comm& comm)
     {
         // Note that injection_group_vrep_rates is handled separate from
-        // the forAllGroupData() function, since it contains single doubles,
+        // the forModifiedData() function, since it contains single doubles,
         // not vectors.
 
         // Create a function that calls some function
@@ -151,24 +171,37 @@ public:
             }
         };
 
-
-        auto forAllGroupData = [&](auto& func) {
-            iterateContainer(m_production_rates, func);
-            iterateContainer(m_network_leaf_node_production_rates, func);
-            iterateContainer(prod_red_rates, func);
-            iterateContainer(inj_red_rates, func);
-            iterateContainer(inj_resv_rates, func);
-            iterateContainer(inj_rein_rates, func);
-            iterateContainer(inj_surface_rates, func);
+        // Only include modified vectors in communication
+        auto forModifiedData = [&](auto& func) {
+            if (is_modified(Modification::PRODUCTION_RATES))
+                iterateContainer(m_production_rates, func);
+            if (is_modified(Modification::NETWORK_RATES))
+                iterateContainer(m_network_leaf_node_production_rates, func);
+            if (is_modified(Modification::PROD_REDUCTION_RATES))
+                iterateContainer(prod_red_rates, func);
+            if (is_modified(Modification::INJ_REDUCTION_RATES))
+                iterateContainer(inj_red_rates, func);
+            if (is_modified(Modification::INJ_RESV_RATES))
+                iterateContainer(inj_resv_rates, func);
+            if (is_modified(Modification::INJ_REIN_RATES))
+                iterateContainer(inj_rein_rates, func);
+            if (is_modified(Modification::INJ_SURFACE_RATES))
+                iterateContainer(inj_surface_rates, func);
         };
 
-        // Compute the size of the data.
+        // Compute the size of the modified data.
         std::size_t sz = 0;
         auto computeSize = [&sz](const auto& v) {
             sz += v.size();
         };
-        forAllGroupData(computeSize);
-        sz += this->inj_vrep_rate.size();
+        forModifiedData(computeSize);
+        if (is_modified(Modification::INJ_VREP_RATE))
+            sz += this->inj_vrep_rate.size();
+
+        // Early exit if nothing to communicate
+        if (sz == 0) {
+            return;
+        }
 
         // Make a vector and collect all data into it.
         std::vector<Scalar> data(sz);
@@ -182,9 +215,12 @@ public:
                 x = -1;
             }
         };
-        forAllGroupData(doCollect);
-        for (const auto& x : this->inj_vrep_rate) {
-            data[pos++] = x.second;
+        forModifiedData(doCollect);
+        if (is_modified(Modification::INJ_VREP_RATE)) {
+            for (auto& x : this->inj_vrep_rate) {
+                data[pos++] = x.second;
+                x.second = -1;
+            }
         }
         if (pos != sz)
             throw std::logic_error("Internal size mismatch when collecting groupData");
@@ -198,12 +234,17 @@ public:
             std::copy_n(data.begin() + pos, v.size(), v.begin());
             pos += v.size();
         };
-        forAllGroupData(doDistribute);
-        for (auto& x : this->inj_vrep_rate) {
-            x.second = data[pos++];
+        forModifiedData(doDistribute);
+        if (is_modified(Modification::INJ_VREP_RATE)) {
+            for (auto& x : this->inj_vrep_rate) {
+                x.second = data[pos++];
+            }
         }
         if (pos != sz)
             throw std::logic_error("Internal size mismatch when distributing groupData");
+
+        // Clear modification flags after successful communication
+        clear_modifications();
     }
 
     template<class Serializer>
@@ -252,6 +293,19 @@ private:
     WellContainer<GPMaint::State> gpmaint_state;
     std::map<std::string, std::pair<Scalar, Scalar>> m_gconsump_rates; // Pair with {consumption_rate, import_rate} for each group
     static constexpr std::pair<Scalar, Scalar> zero_pair = {0.0, 0.0};
+
+    /// Bitmask tracking which rate vectors have been modified since last communication
+    uint32_t modifications_ = 0;
+
+    /// Mark a vector type as modified (called by update_*() methods)
+    void mark_modified(Modification mod) {
+        modifications_ |= static_cast<uint32_t>(mod);
+    }
+
+    /// Clear all modification flags (called after successful communication)
+    void clear_modifications() {
+        modifications_ = 0;
+    }
 };
 
 }
