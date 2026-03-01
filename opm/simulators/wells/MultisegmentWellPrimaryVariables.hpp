@@ -146,6 +146,10 @@ public:
     //! output the segments with pressure close to lower pressure limit for debugging purpose
     void outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const;
 
+    //! \brief get scaled fractions of top segment.
+    void scaledWellFractions(std::vector<Scalar>& fractions, 
+                             const std::vector<Scalar>& scaling) const;
+
 private:
     //! \brief Initialize evaluations from values.
     void setEvaluationsFromValues();

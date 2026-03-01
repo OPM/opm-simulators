@@ -39,8 +39,9 @@ template<typename Scalar, typename IndexTraits>
 TargetCalculator<Scalar, IndexTraits>::
 TargetCalculator(const Opm::GroupStateHelper<Scalar, IndexTraits>& groupStateHelper,
                  const std::vector<Scalar>& resv_coeff,
-                 const Group& group)
-    : cmode_{groupStateHelper.groupState().production_control(group.name())}
+                 const Group& group,
+                 std::optional<Group::ProductionCMode> cmode_opt)
+    : cmode_{cmode_opt.value_or(groupStateHelper.groupState().production_control(group.name()))}
     , groupStateHelper_{groupStateHelper}
     , resv_coeff_{resv_coeff}
     , group_{group}
@@ -94,9 +95,10 @@ RateType TargetCalculator<Scalar, IndexTraits>::calcModeRateFromRates(const Rate
 template<typename Scalar, typename IndexTraits>
 Scalar
 TargetCalculator<Scalar, IndexTraits>::
-groupTarget() const
+groupTarget(std::optional<Group::ProductionCMode> cmode_opt) const
 {
-    return this->groupStateHelper_.getProductionGroupTarget(this->group_);
+    const auto cmode = cmode_opt.value_or(this->cmode_);
+    return this->groupStateHelper_.getProductionGroupTarget(this->group_, cmode);
 }
 
 template<typename Scalar, typename IndexTraits>

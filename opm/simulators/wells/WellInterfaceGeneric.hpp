@@ -249,6 +249,9 @@ protected:
         std::ranges::fill(this->inj_multiplier_damp_factor_, 1.0);
     }
 
+    void ensureGroupControlFeasibility(WellState<Scalar, IndexTraits>& well_state,
+                                       const std::vector<Scalar>& scaled_well_fractions) const;
+
     // definition of the struct OperabilityStatus
     struct OperabilityStatus
     {
