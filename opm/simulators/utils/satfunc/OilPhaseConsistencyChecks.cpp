@@ -40,8 +40,8 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    const auto low = this->sogcr_ < Scalar{0};
-    const auto high = ! (this->sogcr_ < Scalar{1});
+    const auto low = this->sogcr_ < Scalar{0} - this->epsilon_;
+    const auto high = !(this->sogcr_ < Scalar{1} + this->epsilon_);
 
     if (low || high) {
         this->setViolated();
@@ -67,7 +67,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    if (this->swl_ + this->sgu_ > Scalar{1}) {
+    if (this->swl_ + this->sgu_ > Scalar{1} + this->epsilon_) {
         this->setViolated();
     }
 }
@@ -92,7 +92,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    if (! (this->sogcr_ < Scalar{1} - this->swl_ - this->sgl_)) {
+    if (! (this->sogcr_ < Scalar{1} - this->swl_ - this->sgl_ + this->epsilon_)) {
         this->setViolated();
     }
 }
@@ -117,7 +117,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    if (! (this->sogcr_ < Scalar{1} - this->swl_ - this->sgcr_)) {
+    if (! (this->sogcr_ < Scalar{1} - this->swl_ - this->sgcr_ + this->epsilon_)) {
         this->setViolated();
     }
 }
@@ -137,8 +137,8 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    const auto low = this->sowcr_ < Scalar{0};
-    const auto high = ! (this->sowcr_ < Scalar{1});
+    const auto low = this->sowcr_ < Scalar{0} - this->epsilon_;
+    const auto high = ! (this->sowcr_ < Scalar{1} + this->epsilon_);
 
     if (low || high) {
         this->setViolated();
@@ -164,7 +164,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    if (this->sgl_ + this->swu_ > Scalar{1}) {
+    if (this->sgl_ + this->swu_ > Scalar{1} + this->epsilon_) {
         this->setViolated();
     }
 }
@@ -189,7 +189,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    if (! (this->sowcr_ < Scalar{1} - this->swl_ - this->sgl_)) {
+    if (! (this->sowcr_ < Scalar{1} - this->swl_ - this->sgl_ + this->epsilon_)) {
         this->setViolated();
     }
 }
@@ -214,7 +214,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    if (! (this->sowcr_ < Scalar{1} - this->swcr_ - this->sgl_)) {
+    if (! (this->sowcr_ < Scalar{1} - this->swcr_ - this->sgl_ + this->epsilon_)) {
         this->setViolated();
     }
 }
