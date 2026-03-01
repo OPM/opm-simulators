@@ -22,6 +22,7 @@
 #include <opm/simulators/wells/rescoup/RescoupProxy.hpp>
 
 #include <opm/common/TimingMacros.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/GrupSlav.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
 #include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
@@ -192,6 +193,8 @@ public:
         bool do_mpi_gather_{true};         // Whether to gather messages across MPI ranks
     };
 
+    using GroupTarget = typename SingleWellState<Scalar, IndexTraits>::GroupTarget;
+
     GroupStateHelper(WellState<Scalar, IndexTraits>& well_state,
                     GroupState<Scalar>& group_state,
                     const Schedule& schedule,
@@ -220,6 +223,9 @@ public:
                                                       const std::vector<Scalar>& resv_coeff,
                                                       const bool check_guide_rate) const;
 
+    std::pair<Group::ProductionCMode, Scalar>
+    checkGroupProductionConstraints(const Group& group) const;
+
     const Parallel::Communication& comm() const { return this->comm_; }
 
     /// @brief Get the deferred logger
@@ -245,6 +251,10 @@ public:
 
     Scalar getProductionGroupTarget(const Group& group) const;
 
+    /// Get the production target for a specific control mode (not necessarily the active one).
+    Scalar getProductionGroupTargetForMode(const Group& group,
+                                           Group::ProductionCMode cmode) const;
+
     /// @brief Get the guide rate target mode for a production group
     /// @param group The production group
     /// @return The GuideRateModel::Target based on the group's production control mode
@@ -256,9 +266,27 @@ public:
                                           const std::vector<Scalar>& resv_coeff,
                                           Scalar efficiencyFactor) const;
 
-    GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
+#ifdef RESERVOIR_COUPLING_ENABLED
+    /// @brief Get the effective production limit for a group and rate type,
+    /// combining master limit, slave-local target, and GRUPSLAV filter flag.
+    ///
+    /// If the master sent a per-rate-type limit for this group and rate type,
+    /// the filter flag determines which value to use:
+    /// - MAST: return master limit
+    /// - BOTH: return min(master limit, slave_local_target)
+    /// - SLAV: return slave_local_target
+    ///
+    /// @param gname Slave group name
+    /// @param rate_type The production rate type to check
+    /// @param slave_local_target The slave's own target from GCONPROD
+    /// @return The effective limit to apply
+    Scalar getEffectiveProductionLimit(
+      const std::string& gname,
+      Group::ProductionCMode rate_type,
+      Scalar slave_local_target) const;
+#endif  // RESERVOIR_COUPLING_ENABLED
 
-    using GroupTarget = typename SingleWellState<Scalar, IndexTraits>::GroupTarget;
+    GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
 
     std::optional<GroupTarget> getWellGroupTargetInjector(const std::string& name,
                                                           const std::string& parent,
@@ -446,6 +474,19 @@ public:
 
     void updateReservoirRatesInjectionGroups(const Group& group);
 
+#ifdef RESERVOIR_COUPLING_ENABLED
+    /// @brief Update the slave's GroupState cmodes from the master's active cmodes.
+    ///
+    /// For each slave group with a master-imposed target, sets the GroupState
+    /// production/injection control mode to match the master's cmode. This ensures
+    /// that all downstream consumers (constraint checks, guide rate fractions,
+    /// well equation assembly) evaluate the correct rate type.
+    ///
+    /// The update is skipped when the GRUPSLAV filter flag is SLAV, meaning
+    /// the slave ignores the master's control for that rate type.
+    void updateSlaveGroupCmodesFromMaster();
+#endif
+
     void updateState(WellState<Scalar, IndexTraits>& well_state, GroupState<Scalar>& group_state);
 
     void updateSurfaceRatesInjectionGroups(const Group& group);
@@ -512,6 +553,13 @@ private:
                                         FractionLambda&& local_fraction_lambda,
                                         bool do_addback) const;
 
+    std::pair<Group::ProductionCMode, Scalar>
+    checkProductionRateConstraint_(const Group& group,
+                                   Group::ProductionCMode cmode,
+                                   Group::ProductionCMode currentControl,
+                                   Scalar target,
+                                   Scalar current_rate) const;
+
     //! \brief Compute partial efficiency factor for addback calculation.
     //!
     //! The addback in constraint checking must use the partial efficiency factor
@@ -529,6 +577,11 @@ private:
 
     GuideRate::RateVector getGuideRateVector_(const std::vector<Scalar>& rates) const;
 
+    Scalar getInjectionGroupTargetForMode_(const Group& group,
+        const Phase& injection_phase,
+        const std::vector<Scalar>& resv_coeff,
+        Group::InjectionCMode cmode) const;
+
     //! \brief Find the local reduction level in a group chain.
     //!
     //! The local reduction level is the deepest level in the chain (starting from level 1)
@@ -544,15 +597,29 @@ private:
         Phase injection_phase) const;
 
 #ifdef RESERVOIR_COUPLING_ENABLED
+    ReservoirCoupling::GrupSlav::FilterFlag getInjectionFilterFlag_(const std::string& group_name,
+                                                                    Phase injection_phase) const;
+
+    ReservoirCoupling::GrupSlav::FilterFlag getProductionFilterFlag_(
+        const std::string& group_name,
+        Group::ProductionCMode cmode) const;
+
     Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
                                                 const int phase_pos,
                                                 ReservoirCoupling::RateKind kind) const;
 #endif
 
+    Scalar getProductionConstraintTarget_(const Group& group,
+                                          Group::ProductionCMode cmode,
+                                          const Group::ProductionControls& controls) const;
+
+    Scalar getProductionGroupTargetForMode_(const Group& group, Group::ProductionCMode cmode) const;
+
     Scalar getSatelliteRate_(const Group& group,
         const int phase_pos,
         const bool res_rates,
         const bool is_injector) const;
+
 
     /// Check if a production auto choke group is underperforming its target rate.
     /// Returns true if the group's current rate is below its allocated target,
@@ -575,6 +642,8 @@ private:
                                     bool res_rates) const;
 
     std::optional<GSatProd::GSatProdGroupProp::Rate> selectRateComponent_(const int phase_pos) const;
+
+    Scalar sumProductionRate_(const Group& group, Group::ProductionCMode cmode) const;
 
     int updateGroupControlledWellsRecursive_(const std::string& group_name,
                                              const bool is_production_group,

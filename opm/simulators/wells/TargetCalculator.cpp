@@ -43,7 +43,17 @@ TargetCalculator(const Opm::GroupStateHelper<Scalar, IndexTraits>& groupStateHel
     : cmode_{groupStateHelper.groupState().production_control(group.name())}
     , groupStateHelper_{groupStateHelper}
     , resv_coeff_{resv_coeff}
-    , group_{group}
+{
+}
+
+template<typename Scalar, typename IndexTraits>
+TargetCalculator<Scalar, IndexTraits>::
+TargetCalculator(const Opm::GroupStateHelper<Scalar, IndexTraits>& groupStateHelper,
+                 const std::vector<Scalar>& resv_coeff,
+                 Group::ProductionCMode cmode)
+    : cmode_{cmode}
+    , groupStateHelper_{groupStateHelper}
+    , resv_coeff_{resv_coeff}
 {
 }
 
@@ -92,84 +102,22 @@ RateType TargetCalculator<Scalar, IndexTraits>::calcModeRateFromRates(const Rate
 }
 
 template<typename Scalar, typename IndexTraits>
-Scalar
-TargetCalculator<Scalar, IndexTraits>::
-groupTarget() const
-{
-    return this->groupStateHelper_.getProductionGroupTarget(this->group_);
-}
-
-template<typename Scalar, typename IndexTraits>
-GuideRateModel::Target
-TargetCalculator<Scalar, IndexTraits>::guideTargetMode() const
-{
-    switch (this->cmode_) {
-    case Group::ProductionCMode::ORAT:
-        return GuideRateModel::Target::OIL;
-    case Group::ProductionCMode::WRAT:
-        return GuideRateModel::Target::WAT;
-    case Group::ProductionCMode::GRAT:
-        return GuideRateModel::Target::GAS;
-    case Group::ProductionCMode::LRAT:
-        return GuideRateModel::Target::LIQ;
-    case Group::ProductionCMode::RESV:
-        return GuideRateModel::Target::RES;
-    default:
-        // Should never be here.
-        assert(false);
-        return GuideRateModel::Target::NONE;
-    }
-}
-
-template<typename Scalar, typename IndexTraits>
 InjectionTargetCalculator<Scalar, IndexTraits>::
 InjectionTargetCalculator(const GroupStateHelperType& groupStateHelper,
-                          const std::vector<Scalar>& resv_coeff,
-                          const Group& group,
                           const Phase& injection_phase)
-    : groupStateHelper_{groupStateHelper}
-    , resv_coeff_{resv_coeff}
-    , group_{group}
-    , injection_phase_{injection_phase}
-    , cmode_{groupStateHelper.groupState().injection_control(group.name(), injection_phase)}
 {
-    pos_ = this->groupStateHelper_.phaseToActivePhaseIdx(injection_phase);
-    // initialize to avoid warning
-    target_ = GuideRateModel::Target::WAT;
+    pos_ = groupStateHelper.phaseToActivePhaseIdx(injection_phase);
 
     switch (injection_phase) {
-    case Phase::WATER: {
-        target_ = GuideRateModel::Target::WAT;
+    case Phase::WATER:
+    case Phase::OIL:
+    case Phase::GAS:
         break;
-    }
-    case Phase::OIL: {
-        target_ = GuideRateModel::Target::OIL;
-        break;
-    }
-    case Phase::GAS: {
-        target_ = GuideRateModel::Target::GAS;
-        break;
-    }
     default:
         OPM_DEFLOG_THROW(std::logic_error,
                          "Invalid injection phase in InjectionTargetCalculator",
-                         this->deferredLogger());
+                         groupStateHelper.deferredLogger());
     }
-}
-
-template<typename Scalar, typename IndexTraits>
-Scalar
-InjectionTargetCalculator<Scalar, IndexTraits>::
-groupTarget() const
-{
-    return this->groupStateHelper_.getInjectionGroupTarget(this->group_, this->injection_phase_, this->resv_coeff_);
-}
-
-template<typename Scalar, typename IndexTraits>
-GuideRateModel::Target
-InjectionTargetCalculator<Scalar, IndexTraits>::guideTargetMode() const
-{
-    return this->target_;
 }
 
 #define INSTANTIATE_TARGET_CALCULATOR(T,...) \

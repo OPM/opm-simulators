@@ -89,8 +89,7 @@ private:
 
     //! \brief Check and return value and type of constraints for a production well group.
     std::pair<Group::ProductionCMode, Scalar>
-    checkGroupProductionConstraints(const Group& group,
-                                    DeferredLogger& deferred_logger) const;
+    checkGroupProductionConstraints(const Group& group) const;
 
     const GroupStateHelperType& groupStateHelper() const { return wellModel_.groupStateHelper(); }
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_; //!< Reference to well model
