@@ -48,7 +48,8 @@ public:
 
     TargetCalculator(const GroupStateHelperType& groupStateHelper,
                      const std::vector<Scalar>& resv_coeff,
-                     const Group& group);
+                     const Group& group,
+                     std::optional<Group::ProductionCMode> cmode_opt = std::nullopt);
 
     template <typename RateType>
     RateType calcModeRateFromRates(const std::vector<RateType>& rates) const
@@ -59,7 +60,7 @@ public:
     template <typename RateType>
     RateType calcModeRateFromRates(const RateType* rates) const;
 
-    Scalar groupTarget() const;
+    Scalar groupTarget(std::optional<Group::ProductionCMode> cmode_opt = std::nullopt) const;
 
     GuideRateModel::Target guideTargetMode() const;
 

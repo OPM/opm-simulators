@@ -25,6 +25,7 @@
 
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 #include <opm/input/eclipse/Schedule/Events.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 
 #include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 
@@ -121,15 +122,25 @@ public:
     struct GroupTarget {
         std::string group_name;
         Scalar target_value;
+        Group::ProductionCMode production_cmode {Group::ProductionCMode::NONE};
+        Scalar target_value_fallback;
+        Group::ProductionCMode production_cmode_fallback {Group::ProductionCMode::NONE};
 
         bool operator==(const GroupTarget& other) const {
-            return group_name == other.group_name && target_value == other.target_value;
+            return (group_name == other.group_name 
+                 && target_value == other.target_value 
+                 && production_cmode == other.production_cmode 
+                 && target_value_fallback == other.target_value_fallback 
+                 && production_cmode_fallback == other.production_cmode_fallback);
         }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer) {
             serializer(group_name);
             serializer(target_value);
+            serializer(production_cmode);
+            serializer(target_value_fallback);
+            serializer(production_cmode_fallback);
         }
     };
 
