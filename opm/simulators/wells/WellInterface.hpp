@@ -40,6 +40,7 @@ namespace Opm {
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
 
 #include <opm/simulators/linalg/linalgproperties.hh>
 
@@ -62,6 +63,8 @@ namespace Opm {
 
 #include <opm/material/densead/Evaluation.hpp>
 
+
+#include <utility>
 #include <vector>
 
 namespace Opm
@@ -100,6 +103,7 @@ public:
     using WellStateType = WellState<Scalar, IndexTraits>;
     using SingleWellStateType = SingleWellState<Scalar, IndexTraits>;
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
+    using FSInfo = std::pair<Scalar, typename std::decay<decltype(std::declval<decltype(std::declval<const Simulator&>().model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type>;
 
     using RateConverterType =
     typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;
@@ -109,6 +113,7 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Water;
 
     using ModelParameters = typename Base::ModelParameters;
+    using SolventModule = BlackOilSolventModule<TypeTag>;
 
     static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
@@ -489,6 +494,8 @@ protected:
     Scalar computeConnectionDFactor(const int perf,
                                     const IntensiveQuantities& intQuants,
                                     const SingleWellStateType& ws) const;
+
+   FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
 };
 
 } // namespace Opm
