@@ -580,14 +580,16 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView
                                                                                  const int lgrsSize,
                                                                                  Dune::CpGrid& grid)
 {
-    std::vector<std::array<int,3>> cells_per_dim_vec;
-    std::vector<std::array<int,3>> startIJK_vec;
-    std::vector<std::array<int,3>> endIJK_vec;
-    std::vector<std::string> lgrName_vec;
+    std::vector<std::array<int,3>> cells_per_dim_vec{};
+    std::vector<std::array<int,3>> startIJK_vec{};
+    std::vector<std::array<int,3>> endIJK_vec{};
+    std::vector<std::string> lgrName_vec{};
+    std::vector<std::string> parentName_vec{};
     cells_per_dim_vec.reserve(lgrsSize);
     startIJK_vec.reserve(lgrsSize);
     endIJK_vec.reserve(lgrsSize);
     lgrName_vec.reserve(lgrsSize);
+    parentName_vec.reserve(lgrsSize);
     for (int lgr = 0; lgr < lgrsSize; ++lgr)
     {
         const auto lgrCarfin = lgrCollection.getLgr(lgr);
@@ -596,8 +598,9 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView
         startIJK_vec.push_back({lgrCarfin.I1(), lgrCarfin.J1(), lgrCarfin.K1()});
         endIJK_vec.push_back({lgrCarfin.I2()+1, lgrCarfin.J2()+1, lgrCarfin.K2()+1});
         lgrName_vec.emplace_back(lgrCarfin.NAME());
+        parentName_vec.emplace_back(lgrCarfin.PARENT_NAME());
     }
-    grid.addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgrName_vec);
+    grid.addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgrName_vec, parentName_vec);
 };
 
 template<class ElementMapper, class GridView, class Scalar>
