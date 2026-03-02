@@ -499,6 +499,7 @@ add_test_runSimulator(CASENAME tuning_tsinit_nextstep
                       TEST_ARGS --enable-tuning=true
                       POST_COMMAND $<TARGET_FILE:test_tuning_tsinit_nextstep>)
 
+get_property(opm-common_EMBEDDED_PYTHON TARGET opmcommon PROPERTY EMBEDDED_PYTHON)
 if (opm-common_EMBEDDED_PYTHON)
   include (${CMAKE_CURRENT_SOURCE_DIR}/pyactionActionXComparisons.cmake)
 endif ()
