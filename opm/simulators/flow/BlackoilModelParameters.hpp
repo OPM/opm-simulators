@@ -101,7 +101,7 @@ struct MaxSinglePrecisionDays { static constexpr Scalar value = 20.0; };
 struct MinStrictCnvIter { static constexpr int value = -1; };
 struct MinStrictMbIter { static constexpr int value = -1; };
 struct SolveWelleqInitially { static constexpr bool value = true; };
-struct PreSolveNetwork { static constexpr bool value = true; };
+struct PreSolveNetwork { static constexpr bool value = false; };
 struct UpdateEquationsScaling { static constexpr bool value = false; };
 struct UseUpdateStabilization { static constexpr bool value = true; };
 struct MatrixAddWellContributions { static constexpr bool value = false; };
@@ -146,8 +146,8 @@ struct CheckGroupConstraintsInnerWellIterations { static constexpr bool value = 
 
 // Network solver parameters
 struct NetworkMaxStrictOuterIterations { static constexpr int value = 10; };
-struct NetworkMaxOuterIterations { static constexpr int value = 10; };
-struct NetworkMaxSubIterations { static constexpr int value = 20; };
+struct NetworkMaxOuterIterations { static constexpr int value = 3; };
+struct NetworkMaxSubIterations { static constexpr int value = 100; };
 template<class Scalar>
 struct NetworkPressureUpdateDampingFactor { static constexpr Scalar value = 0.1; };
 template<class Scalar>
