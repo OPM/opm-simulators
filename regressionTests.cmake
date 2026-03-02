@@ -631,7 +631,8 @@ add_test_compareECLFiles(CASENAME ppcwmax
                          REL_TOL ${rel_tol}
                          DIR ppcwmax)
 
-if (opm-common_EMBEDDED_PYTHON)
+get_property(opm-common_EMBEDDED_PYTHON TARGET opmcommon PROPERTY EMBEDDED_PYTHON)
+if(opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
                            FILENAME PYACTION_WCONPROD
                            SIMULATOR flow
