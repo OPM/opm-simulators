@@ -359,9 +359,21 @@ getInjectionGroupTarget(
     const Phase& injection_phase,
     const std::vector<Scalar>& resv_coeff) const
 {
+    const auto cmode = this->groupState().injection_control(group.name(), injection_phase);
+    return this->getInjectionGroupTargetForMode_(group, injection_phase, resv_coeff, cmode);
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+getInjectionGroupTargetForMode_(
+    const Group& group,
+    const Phase& injection_phase,
+    const std::vector<Scalar>& resv_coeff,
+    Group::InjectionCMode cmode) const
+{
     const auto& pu = this->phaseUsage();
     const int pos = this->phaseToActivePhaseIdx(injection_phase);
-    Group::InjectionCMode cmode = this->groupState().injection_control(group.name(), injection_phase);
     Group::InjectionControls ctrl = group.injectionControls(injection_phase, this->summary_state_);
     bool use_gpmaint = group.has_gpmaint_control(injection_phase, cmode)
                                 && this->groupState().has_gpmaint_target(group.name());
@@ -416,7 +428,7 @@ getInjectionGroupTarget(
     }
     default:
         OPM_DEFLOG_THROW(std::logic_error,
-                         "Invalid Group::InjectionCMode in getInjectionGroupTarget",
+                         "Invalid Group::InjectionCMode in getInjectionGroupTargetForMode_",
                          this->deferredLogger());
         return 0.0;
     }
@@ -434,7 +446,25 @@ Scalar
 GroupStateHelper<Scalar, IndexTraits>::
 getProductionGroupTarget(const Group& group) const
 {
-    Group::ProductionCMode cmode = this->groupState().production_control(group.name());
+    const auto cmode = this->groupState().production_control(group.name());
+    return this->getProductionGroupTargetForMode_(group, cmode);
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+getProductionGroupTargetForMode(const Group& group,
+                                 Group::ProductionCMode cmode) const
+{
+    return this->getProductionGroupTargetForMode_(group, cmode);
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+getProductionGroupTargetForMode_(const Group& group,
+                                  Group::ProductionCMode cmode) const
+{
     Group::ProductionControls ctrl = group.productionControls(this->summary_state_);
     switch (cmode) {
     case Group::ProductionCMode::ORAT:
@@ -465,7 +495,7 @@ getProductionGroupTarget(const Group& group) const
     }
     default:
         OPM_DEFLOG_THROW(std::logic_error,
-                         "Invalid Group::ProductionCMode in getProductionGroupTarget",
+                         "Invalid Group::ProductionCMode in getProductionGroupTargetForMode_",
                          this->deferredLogger());
         return 0.0;
     }

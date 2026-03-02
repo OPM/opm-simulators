@@ -87,6 +87,77 @@ groupProductionTarget(const Group& group) {
     );
 }
 
+template<class Scalar, class IndexTraits>
+std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::ProductionConstraintsInfo>
+GroupTargetCalculator<Scalar, IndexTraits>::
+groupProductionConstraints(const Group& group)
+{
+    // First, compute the active target using the existing method.
+    auto active_target = this->groupProductionTarget(group);
+    if (!active_target) {
+        return std::nullopt;
+    }
+
+    ProductionConstraintsInfo constraints;
+    constraints.active_target = active_target->target;
+    constraints.active_cmode = active_target->cmode;
+
+    // Store the active target in the corresponding limit field as well.
+    switch (constraints.active_cmode) {
+    case Group::ProductionCMode::ORAT:
+        constraints.oil_limit = constraints.active_target; break;
+    case Group::ProductionCMode::WRAT:
+        constraints.water_limit = constraints.active_target; break;
+    case Group::ProductionCMode::GRAT:
+        constraints.gas_limit = constraints.active_target; break;
+    case Group::ProductionCMode::LRAT:
+        constraints.liquid_limit = constraints.active_target; break;
+    case Group::ProductionCMode::RESV:
+        constraints.resv_limit = constraints.active_target; break;
+    default:
+        break;
+    }
+
+    // For each non-active rate type, compute the effective limit
+    // by running the hierarchy traversal with an explicit cmode.
+    static const std::array<Group::ProductionCMode, 5> all_modes = {
+        Group::ProductionCMode::ORAT,
+        Group::ProductionCMode::WRAT,
+        Group::ProductionCMode::GRAT,
+        Group::ProductionCMode::LRAT,
+        Group::ProductionCMode::RESV
+    };
+
+    for (const auto mode : all_modes) {
+        if (mode == constraints.active_cmode) {
+            continue; // Already computed as the active target
+        }
+        // Check if any group in the hierarchy has a limit for this rate type.
+        // We do this by creating a GeneralCalculator with the explicit cmode.
+        // The recursion will walk up until it finds a group with has_control(mode).
+        GeneralCalculator general_calculator{*this, group, mode};
+        auto limit_info = general_calculator.calculateGroupTarget();
+        if (limit_info) {
+            switch (mode) {
+            case Group::ProductionCMode::ORAT:
+                constraints.oil_limit = limit_info->target; break;
+            case Group::ProductionCMode::WRAT:
+                constraints.water_limit = limit_info->target; break;
+            case Group::ProductionCMode::GRAT:
+                constraints.gas_limit = limit_info->target; break;
+            case Group::ProductionCMode::LRAT:
+                constraints.liquid_limit = limit_info->target; break;
+            case Group::ProductionCMode::RESV:
+                constraints.resv_limit = limit_info->target; break;
+            default:
+                break;
+            }
+        }
+    }
+
+    return constraints;
+}
+
 // ----------------------------------------------------
 // Constructor for inner class GeneralCalculator
 // ----------------------------------------------------
@@ -102,6 +173,28 @@ GeneralCalculator(
     parent_calculator_{parent_calculator},
     original_group_{original_group},
     injection_phase_{injection_phase},
+    resv_coeffs_prod_(this->phaseUsage().numPhases, 0.0)
+{
+    this->wellModel().calcResvCoeff(
+        this->fipnum(),
+        this->pvtreg(),
+        this->groupState().production_rates(original_group.name()),
+        this->resv_coeffs_prod_
+    );
+}
+
+template<class Scalar, class IndexTraits>
+GroupTargetCalculator<Scalar, IndexTraits>::
+GeneralCalculator::
+GeneralCalculator(
+    GroupTargetCalculator<Scalar, IndexTraits>& parent_calculator,
+    const Group& original_group,
+    Group::ProductionCMode explicit_cmode
+) :
+    parent_calculator_{parent_calculator},
+    original_group_{original_group},
+    injection_phase_{std::nullopt},
+    explicit_prod_cmode_{explicit_cmode},
     resv_coeffs_prod_(this->phaseUsage().numPhases, 0.0)
 {
     this->wellModel().calcResvCoeff(
@@ -133,11 +226,36 @@ calculateGroupTarget()
             return std::nullopt;
         }
     }
-    if (group.is_field() || !this->parentGroupControlAvailable_(group)) {
+    if (group.is_field()) {
+        if (this->explicit_prod_cmode_) {
+            // For explicit cmode: check if FIELD has a limit for this rate type
+            if (group.has_control(*this->explicit_prod_cmode_)) {
+                return this->getGroupTargetNoGuideRate(group);
+            }
+            return std::nullopt; // No limit found anywhere in hierarchy
+        }
+        return this->getGroupTargetNoGuideRate(group);
+    }
+    if (!this->parentGroupControlAvailable_(group)) {
+        if (this->explicit_prod_cmode_) {
+            // No parent control available. Check if the group itself has a limit.
+            if (group.has_control(*this->explicit_prod_cmode_)) {
+                return this->getGroupTargetNoGuideRate(group);
+            }
+            return std::nullopt;
+        }
         return this->getGroupTargetNoGuideRate(group);
     }
     assert(this->parentGroupControlAvailable_(group));
     if (!this->hasGuideRate(group)) {
+        if (this->explicit_prod_cmode_) {
+            // For explicit cmode with no guide rate: if the group has a limit, use it directly.
+            // Otherwise, no limit can be distributed.
+            if (group.has_control(*this->explicit_prod_cmode_)) {
+                return this->getGroupTargetNoGuideRate(group);
+            }
+            return std::nullopt;
+        }
         if (this->hasFldOrNoneControl(group)) {
             // Parent control is available, but no guide rate is defined. This is illegal for a master group
             // under FLD or NONE control.
@@ -225,6 +343,12 @@ getGroupTargetNoGuideRate(const Group& group)
             control_mode
         };
     }
+    else if (this->explicit_prod_cmode_) {
+        return TargetInfo{
+            this->groupStateHelper().getProductionGroupTargetForMode(group, *this->explicit_prod_cmode_),
+            *this->explicit_prod_cmode_
+        };
+    }
     else {
         const auto& control_mode = this->groupState().production_control(group.name());
         return TargetInfo{
@@ -246,6 +370,11 @@ hasFldOrNoneControl(const Group& group)
     if (this->targetType() == TargetType::Injection) {
         return this->groupState().has_field_or_none_control(name, this->injectionPhase_());
     }
+    else if (this->explicit_prod_cmode_) {
+        // For explicit cmode (per-rate-type limit computation): recurse up if the group
+        // does NOT define a limit for this rate type.
+        return !group.has_control(*this->explicit_prod_cmode_);
+    }
     else {
         return this->groupState().has_field_or_none_control(name);
     }
@@ -256,7 +385,7 @@ hasFldOrNoneControl(const Group& group)
 // Private methods for the GeneralCalculator class
 // -------------------------------------------------------
 
-// See comments above RescoupTargetCalculator::calculateMasterGroupTargetsAndSendToSlaves() about how
+// See comments above RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves() about how
 // the target is calculated.
 template<class Scalar, class IndexTraits>
 std::optional<typename GroupTargetCalculator<Scalar, IndexTraits>::TargetInfo>
@@ -564,7 +693,11 @@ getToplevelControlMode_() const
         return this->groupState().injection_control(this->top_group_.name(), this->injectionPhase_());
     }
     else {
-        return this->groupState().production_control(this->top_group_.name());
+        const auto explicit_cmode = this->parent_calculator_.explicitProdCmode();
+        if (explicit_cmode) {
+            return ControlMode{*explicit_cmode};
+        }
+        return ControlMode{this->groupState().production_control(this->top_group_.name())};
     }
 }
 
@@ -579,6 +712,11 @@ getTopLevelTarget_()
             this->top_group_, this->injectionPhase_(), this->resvCoeffsInj());
     }
     else {
+        const auto explicit_cmode = this->parent_calculator_.explicitProdCmode();
+        if (explicit_cmode) {
+            return this->groupStateHelper().getProductionGroupTargetForMode(
+                this->top_group_, *explicit_cmode);
+        }
         return this->groupStateHelper().getProductionGroupTarget(this->top_group_);
     }
 }
@@ -626,11 +764,22 @@ GroupTargetCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForProducer_()
 {
-    this->target_calculator_.template emplace<TargetCalculator>(
-        this->groupStateHelper(),
-        this->resvCoeffsProd(),
-        this->top_group_
-    );
+    const auto explicit_cmode = this->parent_calculator_.explicitProdCmode();
+    if (explicit_cmode) {
+        // Use the explicit cmode for per-rate-type limit computation
+        this->target_calculator_.template emplace<TargetCalculator>(
+            this->groupStateHelper(),
+            this->resvCoeffsProd(),
+            *explicit_cmode
+        );
+    }
+    else {
+        this->target_calculator_.template emplace<TargetCalculator>(
+            this->groupStateHelper(),
+            this->resvCoeffsProd(),
+            this->top_group_
+        );
+    }
     const auto guide_target_mode = this->groupStateHelper().getProductionGuideTargetMode(this->top_group_);
     const auto dummy_phase = Phase::OIL; // Dummy phase, not used for producers.
     this->fraction_calculator_.emplace(
@@ -652,6 +801,10 @@ TopToBottomCalculator::
 isProducerAndRESVControl_(const Group& group) const
 {
     if (this->targetType() == TargetType::Production) {
+        const auto explicit_cmode = this->parent_calculator_.explicitProdCmode();
+        if (explicit_cmode) {
+            return *explicit_cmode == Group::ProductionCMode::RESV;
+        }
         return this->groupState().production_control(group.name()) == Group::ProductionCMode::RESV;
     }
     else {

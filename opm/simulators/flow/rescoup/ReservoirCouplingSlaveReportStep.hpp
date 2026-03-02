@@ -49,7 +49,7 @@ template <class Scalar>
 class ReservoirCouplingSlaveReportStep {
 public:
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
-    using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
+    using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
     using MessageTag = ReservoirCoupling::MessageTag;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
@@ -110,9 +110,9 @@ public:
     /// @brief Get the name of this slave process
     /// @return Reference to the name string for this slave
     const std::string& slaveName() const { return this->slave_.getSlaveName(); }
-    std::pair<std::size_t, std::size_t> receiveNumGroupTargetsFromMaster() const;
+    std::pair<std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
     void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets) const;
-    void receiveProductionGroupTargetsFromMaster(std::size_t num_targets) const;
+    void receiveProductionGroupConstraintsFromMaster(std::size_t num_targets) const;
 
 private:
     /// @brief Generic helper method for sending data to the master process via MPI
