@@ -234,8 +234,6 @@ public:
                                                         const Eval& volumeFlux,
                                                         const FluidState& upFs)
     {
-        // std::cout << " in addPhaseEnthalpyFluxes_ for phase " << phaseIdx << " with volume flux " << getValue(volumeFlux) << std::endl;
-        // std::cout << " the enthalpy is " << getValue(upFs.enthalpy(phaseIdx)) << " the density is " << getValue(upFs.density(phaseIdx)) << std::endl;
         flux[contiEnergyEqIdx] +=
             decay<UpEval>(upFs.enthalpy(phaseIdx)) *
             decay<UpEval>(upFs.density(phaseIdx)) *
