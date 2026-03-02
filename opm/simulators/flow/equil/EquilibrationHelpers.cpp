@@ -51,7 +51,8 @@ template<class Scalar> using FS = BlackOilFluidSystem<Scalar>;
     template class Miscibility::RvSatAtContact<FS<T>>; \
     template class Miscibility::RvwSatAtContact<FS<T>>; \
     template class Miscibility::RvVD<FS<T>>; \
-    template class Miscibility::RvwVD<FS<T>>;
+    template class Miscibility::RvwVD<FS<T>>;\
+    template class Miscibility::RsConst<FS<T>>;
 
 #define INSTANTIATE_TYPE(T, ML1, ML2) \
 INSTANTIATE_TYPE1(T, ML1) \
