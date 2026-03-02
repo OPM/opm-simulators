@@ -221,6 +221,10 @@ struct EnableConvectiveMixing<TypeTag, TTag::BlackOilModel>
 { static constexpr bool value = false; };
 
 template<class TypeTag>
+struct EnableMech<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
 struct RunAssemblyOnGpu<TypeTag, TTag::BlackOilModel>
 { static constexpr bool value = false; };
 

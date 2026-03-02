@@ -38,7 +38,8 @@ namespace Opm
  * \brief ISTLSolverRuntimeOptionProxy selects the appropriate ISTLSolver runtime based on CLI options
  */
 template <class TypeTag>
-class ISTLSolverRuntimeOptionProxy : public AbstractISTLSolver<TypeTag>
+class ISTLSolverRuntimeOptionProxy : public AbstractISTLSolver<GetPropType<TypeTag, Properties::SparseMatrixAdapter>,
+                                                               GetPropType<TypeTag, Properties::GlobalEqVector>>
 {
 public:
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
@@ -141,7 +142,7 @@ public:
     }
 
 private:
-    std::unique_ptr<AbstractISTLSolver<TypeTag>> istlSolver_;
+    std::unique_ptr<AbstractISTLSolver<SparseMatrixAdapter, Vector>> istlSolver_;
 
 
     template <class... Args>

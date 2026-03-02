@@ -140,6 +140,66 @@ public:
     { return 0.0; }
 
     /*!
+     * \brief Returns the porosity (i.e., pore volume) change due to geomechanics
+     */
+    template <class Context>
+    Scalar rockMechPoroChange(const Context&,
+                              unsigned,
+                              unsigned) const
+    { return 0.0; }
+
+    /*!
+     * \brief Returns the porosity (i.e., pore volume) change due to geomechanics
+     */
+    Scalar rockMechPoroChange(unsigned) const
+    { return 0.0; }
+
+    /*!
+     * \brief Returns the additional compressibility of a cell due to poroelasticity
+     */
+    template <class Context>
+    Scalar rockBiotComp(const Context&,
+                        unsigned,
+                        unsigned) const
+    { return 0.0; }
+
+    /*!
+     * \brief Returns the additional compressibility of a cell due to poroelasticity
+     */
+    Scalar rockBiotComp(unsigned) const
+    { return 0.0; }
+
+    /*!
+     * \brief Returns Lame's first parameter of a cell
+     */
+    template <class Context>
+    Scalar lame(const Context&,
+                unsigned,
+                unsigned) const
+    { return 0.0; }
+
+    /*!
+     * \brief Returns Lame's first parameter of a cell
+     */
+    Scalar lame(unsigned) const
+    { return 0.0; }
+
+    /*!
+     * \brief Returns Biot coefficient of a cell
+     */
+    template <class Context>
+    Scalar biotCoeff(const Context&,
+                     unsigned,
+                     unsigned) const
+    { return 0.0; }
+
+    /*!
+     * \brief Returns Biot coefficient of a cell
+     */
+    Scalar biotCoeff(unsigned) const
+    { return 0.0; }
+
+    /*!
      * \brief Returns the reference pressure for rock the compressibility of a cell
      */
     template <class Context>

@@ -111,10 +111,12 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/io/vtkprimaryvarsparams.cpp
   opm/models/io/vtkptflashparams.cpp
   opm/models/io/vtktemperatureparams.cpp
+  opm/models/io/vtktpsaparams.cpp
   opm/models/io/restart.cpp
   opm/models/nonlinear/newtonmethodparams.cpp
   opm/models/parallel/tasklets.cpp
   opm/models/parallel/threadmanager.cpp
+  opm/models/tpsa/tpsanewtonmethodparams.cpp
   opm/models/utils/parametersystem.cpp
   opm/models/utils/simulatorutils.cpp
   opm/models/utils/terminal.cpp
@@ -131,6 +133,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/EclGenericWriter.cpp
   opm/simulators/flow/ExtboContainer.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
+  opm/simulators/flow/FacePropertiesTPSA.cpp
   opm/simulators/flow/FIPContainer.cpp
   opm/simulators/flow/FlowGenericProblem.cpp
   opm/simulators/flow/FlowGenericVanguard.cpp
@@ -187,6 +190,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/PreconditionerFactory7.cpp
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
+  opm/simulators/linalg/TPSALinearSolverParameters.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeStepping.cpp
   opm/simulators/timestepping/ConvergenceReport.cpp
@@ -512,6 +516,9 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_rstconv.cpp
   tests/test_stoppedwells.cpp
   tests/test_timer.cpp
+  tests/test_tpsa_face_properties.cpp
+  tests/test_tpsa_localresidual.cpp
+  tests/test_tpsa_primaryvariables.cpp
   tests/test_vfpproperties.cpp
   tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
@@ -657,6 +664,7 @@ list (APPEND TEST_DATA_FILES
   tests/equil_humidwetgas.DATA
   tests/equil_rsvd_and_rvvd.DATA
   tests/equil_rsvd_and_rvvd_and_rvwvd.DATA
+  tests/tpsa_ex.data
   tests/wetgas.DATA
   tests/satfuncEPS_B.DATA
   tests/wells_manager_data.data
@@ -806,6 +814,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/discretization/common/linearizationtype.hh
   opm/models/discretization/common/restrictprolong.hh
   opm/models/discretization/common/tpfalinearizer.hh
+  opm/models/discretization/common/tpsalinearizer.hpp
   opm/models/discretization/ecfv/ecfvbaseoutputmodule.hh
   opm/models/discretization/ecfv/ecfvdiscretization.hh
   opm/models/discretization/ecfv/ecfvgridcommhandlefactory.hh
@@ -876,6 +885,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/vtktemperaturemodule.hpp
   opm/models/io/vtktemperatureparams.hpp
   opm/models/io/vtktensorfunction.hh
+  opm/models/io/vtktpsamodule.hpp
+  opm/models/io/vtktpsaparams.hpp
   opm/models/io/vtkvectorfunction.hh
   opm/models/ncp/ncpboundaryratevector.hh
   opm/models/ncp/ncpextensivequantities.hh
@@ -923,6 +934,13 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/richards/richardsprimaryvariables.hh
   opm/models/richards/richardsproperties.hh
   opm/models/richards/richardsratevector.hh
+  opm/models/tpsa/elasticityindices.hpp
+  opm/models/tpsa/elasticitylocalresidualtpsa.hpp
+  opm/models/tpsa/elasticityprimaryvariables.hpp
+  opm/models/tpsa/tpsabaseproperties.hpp
+  opm/models/tpsa/tpsamodel.hpp
+  opm/models/tpsa/tpsanewtonmethod.hpp
+  opm/models/tpsa/tpsanewtonmethodparams.hpp
   opm/models/utils/alignedallocator.hh
   opm/models/utils/basicparameters.hh
   opm/models/utils/basicproperties.hh
@@ -952,6 +970,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/BlackoilModelNldd.hpp
   opm/simulators/flow/BlackoilModelParameters.hpp
   opm/simulators/flow/BlackoilModelProperties.hpp
+  opm/simulators/flow/BlackoilModelTPSA.hpp
   opm/simulators/flow/CO2H2Container.hpp
   opm/simulators/flow/CollectDataOnIORank.hpp
   opm/simulators/flow/CollectDataOnIORank_impl.hpp
@@ -966,6 +985,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/EquilInitializer.hpp
   opm/simulators/flow/ExtboContainer.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
+  opm/simulators/flow/FacePropertiesTPSA.hpp
+  opm/simulators/flow/FacePropertiesTPSA_impl.hpp
   opm/simulators/flow/FemCpGridCompat.hpp
   opm/simulators/flow/FIBlackoilModel.hpp
   opm/simulators/flow/FIPContainer.hpp
@@ -981,6 +1002,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowProblemComp.hpp
   opm/simulators/flow/FlowProblemCompProperties.hpp
   opm/simulators/flow/FlowProblemParameters.hpp
+  opm/simulators/flow/FlowProblemTPSA.hpp
   opm/simulators/flow/FlowsContainer.hpp
   opm/simulators/flow/FlowUtils.hpp
   opm/simulators/flow/FlowsData.hpp
@@ -1020,6 +1042,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/SolutionContainers.hpp
   opm/simulators/flow/SubDomain.hpp
   opm/simulators/flow/TTagFlowProblemTPFA.hpp
+  opm/simulators/flow/TTagFlowProblemTPSA.hpp
   opm/simulators/flow/TTagFlowProblemGasWater.hpp
   opm/simulators/flow/TTagFlowProblemOnePhase.hpp
   opm/simulators/flow/TracerContainer.hpp
@@ -1071,6 +1094,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/is_gpu_operator.hpp
   opm/simulators/linalg/ISTLSolver.hpp
   opm/simulators/linalg/ISTLSolverRuntimeOptionProxy.hpp
+  opm/simulators/linalg/ISTLSolverTPSA.hpp
   opm/simulators/linalg/istlpreconditionerwrappers.hh
   opm/simulators/linalg/istlsolverwrappers.hh
   opm/simulators/linalg/istlsparsematrixadapter.hh
@@ -1115,6 +1139,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/SmallDenseMatrixUtils.hpp
   opm/simulators/linalg/setupPropertyTree.hpp
   opm/simulators/linalg/superlubackend.hh
+  opm/simulators/linalg/TPSALinearSolverParameters.hpp
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/vertexborderlistfromgrid.hh
   opm/simulators/linalg/weightedresidreductioncriterion.hh

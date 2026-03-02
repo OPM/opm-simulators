@@ -624,6 +624,21 @@ add_multiple_tests(
   TEST_ARGS --tolerance-cnv-relaxed=0.01
 )
 
+set(_tpsa_cases
+  TPSA_LAGGED
+  TPSA_FIXEDSTRESS
+)
+
+add_multiple_tests(
+  _tpsa_cases
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR tpsa
+  TEST_ARGS --enable-opm-rst-file=1
+)
+
 add_test_compareECLFiles(CASENAME ppcwmax
                          FILENAME PPCWMAX-01
                          SIMULATOR flow

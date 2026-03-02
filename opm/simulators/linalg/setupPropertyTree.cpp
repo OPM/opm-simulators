@@ -28,6 +28,7 @@
 
 #include <filesystem>
 #include <boost/version.hpp>
+#include <fmt/format.h>
 
 namespace Opm
 {
@@ -181,7 +182,8 @@ namespace
 PropertyTree
 setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters to potentially override.
                   bool linearSolverMaxIterSet,
-                  bool linearSolverReductionSet)
+                  bool linearSolverReductionSet,
+                  bool tpsaSetup)
 {
     std::string conf = p.linsolver_;
 
@@ -208,28 +210,30 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     std::ranges::transform(conf, conf.begin(), ::tolower);
 
     // Use CPR configuration.
-    if ((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes") || (conf == "cpr_trueimpesanalytic")) {
-        if (!linearSolverMaxIterSet) {
-            // Use our own default unless it was explicitly overridden by user.
-            p.linear_solver_maxiter_ = 20;
+    if (!tpsaSetup) {
+        if ((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes") || (conf == "cpr_trueimpesanalytic")) {
+            if (!linearSolverMaxIterSet) {
+                // Use our own default unless it was explicitly overridden by user.
+                p.linear_solver_maxiter_ = 20;
+            }
+            if (!linearSolverReductionSet) {
+                // Use our own default unless it was explicitly overridden by user.
+                p.linear_solver_reduction_ = 0.005;
+            }
+            return setupCPR(conf, p);
         }
-        if (!linearSolverReductionSet) {
-            // Use our own default unless it was explicitly overridden by user.
-            p.linear_solver_reduction_ = 0.005;
-        }
-        return setupCPR(conf, p);
-    }
 
-    if ((conf == "cpr") || (conf == "cprw")) {
-        if (!linearSolverMaxIterSet) {
-            // Use our own default unless it was explicitly overridden by user.
-            p.linear_solver_maxiter_ = 20;
+        if ((conf == "cpr") || (conf == "cprw")) {
+            if (!linearSolverMaxIterSet) {
+                // Use our own default unless it was explicitly overridden by user.
+                p.linear_solver_maxiter_ = 20;
+            }
+            if (!linearSolverReductionSet) {
+                // Use our own default unless it was explicitly overridden by user.
+                p.linear_solver_reduction_ = 0.005;
+            }
+            return setupCPRW(conf, p);
         }
-        if (!linearSolverReductionSet) {
-            // Use our own default unless it was explicitly overridden by user.
-            p.linear_solver_reduction_ = 0.005;
-        }
-        return setupCPRW(conf, p);
     }
 
     if (conf == "amg") {
@@ -268,9 +272,16 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     }
 
     // No valid configuration option found.
-    OPM_THROW(std::invalid_argument,
-              conf + " is not a valid setting for --linear-solver-configuration."
-              " Please use ilu0, dilu, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic or isai");
+    if (tpsaSetup) {
+        OPM_THROW(std::invalid_argument,
+                  fmt::format("No valid settings found for --tpsa-linear-solver={}! "
+                              "Valid preset options are: ilu0, dilu, amg, or umfpack.", conf));
+    }
+    else {
+        OPM_THROW(std::invalid_argument,
+                conf + " is not a valid setting for --linear-solver-configuration."
+                " Please use ilu0, dilu, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic or isai");
+    }
 }
 
 std::string getSolverString(const FlowLinearSolverParameters& p)

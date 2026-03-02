@@ -640,6 +640,7 @@ macro(opm-simulators_targets_hook)
   target_sources(test_group_higher_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_tpsa_localresidual PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   if(MPI_FOUND)
     target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   endif()
@@ -649,6 +650,7 @@ macro(opm-simulators_targets_hook)
     blackoil_legacyassembly
     blackoil_nohyst
     blackoil_temp
+    blackoil_tpsa
     biofilm
     brine
     brine_energy
@@ -664,6 +666,7 @@ macro(opm-simulators_targets_hook)
     gaswater_brine
     gaswater_dissolution
     gaswater_dissolution_diffuse
+    gaswater_dissolution_tpsa
     gaswater_energy
     gaswater_saltprec_energy
     gaswater_saltprec_vapwat
@@ -675,6 +678,7 @@ macro(opm-simulators_targets_hook)
     oilwater_polymer_injectivity
     onephase
     onephase_energy
+    onephase_tpsa
     polymer
     solvent
     solvent_foam
