@@ -766,6 +766,7 @@ namespace Opm
         computePerfCellPressDiffs(simulator);
 
         // TODO: not sure whether should put here
+        // this should be done for each iteration
         updateSegmentFluidState();
 
         computeInitialSegmentFluids(simulator, deferred_logger);
@@ -1992,6 +1993,7 @@ namespace Opm
                     }
                     energy_flux *= this->well_efficiency_factor_;
                     // TODO: double check the indices here. Tempeature or contiEnergyEqIdx
+                    std::cout << " Temperature " << MSWEval::PrimaryVariables::Temperature << " contiEnergyEqIdx " << Indices::contiEnergyEqIdx << std::endl;
                     this->connectionRates_[local_perf_index][Indices::contiEnergyEqIdx]= Base::restrictEval(energy_flux);
 //                    this->linSys_.printSystem("before energy assembly for perf " + std::to_string(perf) + " with energy flux " + std::to_string(energy_flux.value()), std::cout);
 

@@ -2150,7 +2150,7 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>::numConservationQuantities() const
     {
-        // TODO: when the energy equation joins, here should be the start
+        // TODO: when the energy equation joins, here should we start
         // of the refactoring related to the the usage of the numConservationQuantities()
 
         // The numPhases() functions returns 1-3, depending on which
