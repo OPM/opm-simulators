@@ -356,8 +356,9 @@ assembleOutflowTerm(const int seg,
         eqns.D()[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
     }
     // pressure derivative should be zero
-    // TODO: things changes when energy equation joins, energy_rate might depend on the pressure
-    if constexpr (has_temperature) {
+
+    if constexpr (enable_energy) {
+       // energy flux depends on the pressure
         eqns.D()[seg][seg_upwind][comp_idx][SPres] -= segment_rate.derivative(SPres + Indices::numEq);
         eqns.D()[seg][seg_upwind][comp_idx][Temperature] -= segment_rate.derivative(Temperature + Indices::numEq);
     }
@@ -385,10 +386,10 @@ assembleInflowTerm(const int seg,
     if constexpr (has_gfrac_variable) {
         eqns.D()[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
     }
+    // pressure derivative should be zero
 
-    // energy flow might have a derivative of the pressure
-    // TODO: with the energy equation join, there will be more derivatives and we need to consider them as well
-    if constexpr (has_temperature) {
+    if constexpr (enable_energy) {
+       // energy flux depends on the pressure
         eqns.D()[seg][inlet_upwind][comp_idx][SPres] += inlet_rate.derivative(SPres + Indices::numEq);
         eqns.D()[seg][inlet_upwind][comp_idx][Temperature] += inlet_rate.derivative(Temperature + Indices::numEq);
     }
@@ -411,12 +412,11 @@ assemblePerforationEq(const int seg,
     MultisegmentWellEquationAccess<Scalar,IndexTraits,numWellEq,Indices::numEq> eqns(eqns1);
     // subtract sum of phase fluxes in the well equations.
     eqns.residual()[seg][comp_idx] += cq_s_effective.value();
-    const int adjust = (comp_idx < Indices::numEq) ? 0 : -1;
 
     // assemble the jacobians
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
         // also need to consider the efficiency factor when manipulating the jacobians.
-        eqns.C()[seg][local_perf_index][pv_idx][comp_idx + adjust] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
+        eqns.C()[seg][local_perf_index][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
 
         // the index name for the D should be eq_idx / pv_idx
         eqns.D()[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + Indices::numEq);

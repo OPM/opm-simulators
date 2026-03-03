@@ -2152,6 +2152,9 @@ namespace Opm {
     {
         // TODO: when the energy equation joins, here should we start
         // of the refactoring related to the the usage of the numConservationQuantities()
+        // since energy equation is also a conservation equation
+        // at the current stage, we only have energy equations for MSW, so we should not
+        // refactor at this stage.
 
         // The numPhases() functions returns 1-3, depending on which
         // of the (oil, water, gas) phases are active. For each of those phases,

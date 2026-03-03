@@ -89,8 +89,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                    const bool relax_tolerance,
                    const bool well_is_stopped) const
 {
-    // TODO: some more sophiscated approach should be used for the energy situation
-    // the current is just to make sure the assertion does not fail here.
+    // TODO: numConservationQuantities() should be refactored to incorporate th energy equation
     assert(int(B_avg.size()) == baseif_.numConservationQuantities() || enable_energy);
 
     // checking if any residual is NaN or too large. The two large one is only handled for the well flux
@@ -105,13 +104,10 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
     std::vector<Scalar> maximum_residual(numWellEq, 0.0);
 
     ConvergenceReport report;
-    // TODO: the following is a little complicated, maybe can be simplified in some way?
-    // TODO: the energy equation should not have a B_avg here to use.
-    // TODO: since we put the energy equation after the pressure equation, we need to do something below
+    // TODO: the energy equation should not have a B_avg here to use, maybe we can use 1 for it
     for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            if (eq_idx < baseif_.numConservationQuantities()) {
-                // phase or component mass equations
+            if (eq_idx < baseif_.numConservationQuantities()) { // phase or component mass equations
                 const Scalar flux_residual = B_avg[eq_idx] * abs_residual[seg][eq_idx];
                 if (flux_residual > maximum_residual[eq_idx]) {
                     maximum_residual[eq_idx] = flux_residual;
