@@ -341,6 +341,70 @@ porosity(unsigned globalSpaceIdx, unsigned timeIdx) const
 }
 
 template<class GridView, class FluidSystem>
+typename FlowGenericProblem<GridView,FluidSystem>::Scalar
+FlowGenericProblem<GridView,FluidSystem>::
+rockBiotComp(unsigned elementIdx) const
+{
+    // Additional compressibility of the rock due to Biot poroelasticity
+    auto biot = biotCoeff(elementIdx);
+    auto lameParam = lame(elementIdx);
+    return biot * biot / lameParam;
+}
+
+template<class GridView, class FluidSystem>
+typename FlowGenericProblem<GridView,FluidSystem>::Scalar
+FlowGenericProblem<GridView,FluidSystem>::
+lame(unsigned elementIdx) const
+{
+    Scalar lameParam;
+    const auto& fp = eclState_.fieldProps();
+    if (fp.has_double("LAME")) {
+        lameParam = this->lookUpData_.fieldPropDouble(this->eclState_.fieldProps(), "LAME", elementIdx);
+    }
+    else if (fp.has_double("YMODULE") && fp.has_double("SMODULUS")) {
+        const auto& yModulus = this->lookUpData_.fieldPropDouble(this->eclState_.fieldProps(), "YMODULE", elementIdx);
+        const auto& sModulus = this->lookUpData_.fieldPropDouble(this->eclState_.fieldProps(), "SMODULUS", elementIdx);
+        lameParam = sModulus * (yModulus - 2 * sModulus) / (3 * sModulus - yModulus);
+    }
+    else if (fp.has_double("YMODULE") && fp.has_double("PRATIO")) {
+        const auto& yModulus = this->lookUpData_.fieldPropDouble(this->eclState_.fieldProps(), "YMODULE", elementIdx);
+        const auto& pRatio = this->lookUpData_.fieldPropDouble(this->eclState_.fieldProps(), "PRATIO", elementIdx);
+        lameParam = yModulus * pRatio / ((1 + pRatio) * (1 - 2 * pRatio));
+    }
+    else if (fp.has_double("SMODULUS") && fp.has_double("PRATIO")) {
+        const auto& sModulus = this->lookUpData_.fieldPropDouble(this->eclState_.fieldProps(), "SMODULUS", elementIdx);
+        const auto& pRatio = this->lookUpData_.fieldPropDouble(this->eclState_.fieldProps(), "PRATIO", elementIdx);
+        lameParam = 2 * sModulus * pRatio / (1 - 2 * pRatio);
+    }
+    else {
+        return 0.0;
+    }
+    return lameParam;
+}
+
+template<class GridView, class FluidSystem>
+typename FlowGenericProblem<GridView,FluidSystem>::Scalar
+FlowGenericProblem<GridView,FluidSystem>::
+biotCoeff(unsigned elementIdx) const
+{
+    Scalar biotC;
+    const auto& fp = eclState_.fieldProps();
+    if (fp.has_double("BIOTCOEF")) {
+        biotC = this->lookUpData_.fieldPropDouble(this->eclState_.fieldProps(), "BIOTCOEF", elementIdx);
+    }
+    else if (fp.has_double("POELCOEF") && fp.has_double("PRATIO")) {
+        const auto& poelC = this->lookUpData_.fieldPropDouble(this->eclState_.fieldProps(), "POELCOEF", elementIdx);
+        const auto& pRatio = this->lookUpData_.fieldPropDouble(this->eclState_.fieldProps(), "PRATIO", elementIdx);
+        biotC = poelC * (1 - pRatio) / (1 - 2 * pRatio);
+    }
+    else {
+        return 0.0;
+    }
+    return biotC;
+}
+
+
+template<class GridView, class FluidSystem>
 template<class T>
 void FlowGenericProblem<GridView,FluidSystem>::
 updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regions)
