@@ -2538,7 +2538,9 @@ namespace Opm
                      const ValueType& temperature) const
     {
         SegmentFluidState<ValueType> fluid_state;
-        fluid_state.setTemperature(temperature);
+        if constexpr (has_energy) {
+            fluid_state.setTemperature(temperature);
+        }
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -2645,7 +2647,9 @@ namespace Opm
             paramCache.setRegionIndex(fluid_state.pvtRegionIndex());
             paramCache.updatePhase(fluid_state, phaseIdx);
             fluid_state.setDensity(phaseIdx, FluidSystem::density(fluid_state, paramCache, phaseIdx));
-            fluid_state.setEnthalpy(phaseIdx, FluidSystem::enthalpy(fluid_state, paramCache, phaseIdx));
+            if constexpr (has_energy) {
+                fluid_state.setEnthalpy(phaseIdx, FluidSystem::enthalpy(fluid_state, paramCache, phaseIdx));
+            }
         }
         return fluid_state;
     }
