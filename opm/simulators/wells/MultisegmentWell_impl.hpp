@@ -2576,26 +2576,32 @@ namespace Opm
             const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
             switch (phaseIdx) {
                 case FluidSystem::oilPhaseIdx: {
-                    if (FluidSystem::enableDissolvedGas() && both_oil_gas) {
-                        const ValueType saturated_rs = FluidSystem::saturatedDissolutionFactor(fluid_state, phaseIdx,  fluid_state.pvtRegionIndex());
-                        const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
-                        const ValueType max_possible_rs = fluid_composition[gasCompIdx] / fluid_composition[activeCompIdx];
-                        const ValueType rs = std::min(saturated_rs, max_possible_rs);
-                        fluid_state.setRs(rs);
-                    } else {
-                        fluid_state.setRs(zero_value);
+                    // TODO: we should use something else
+                    if constexpr (Indices::compositionSwitchIdx >= 0) {
+                        if (both_oil_gas) {
+                            const ValueType saturated_rs = FluidSystem::saturatedDissolutionFactor(fluid_state, phaseIdx,  fluid_state.pvtRegionIndex());
+                            const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
+                            const ValueType max_possible_rs = fluid_composition[gasCompIdx] / fluid_composition[activeCompIdx];
+                            const ValueType rs = std::min(saturated_rs, max_possible_rs);
+                            fluid_state.setRs(rs);
+                        } else {
+                            fluid_state.setRs(zero_value);
+                        }
                     }
                     break;
                 }
                 case FluidSystem::gasPhaseIdx: {
-                    if (FluidSystem::enableVaporizedOil() && both_oil_gas) {
+                    // TODO: we should use something else
+                    if constexpr (Indices::compositionSwitchIdx >= 0) {
+                        if (both_oil_gas) {
                         const ValueType saturated_rv = FluidSystem::saturatedVaporizationFactor(fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
                         const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
                         const ValueType max_possible_rv = fluid_composition[oilCompIdx] / fluid_composition[activeCompIdx];
                         const ValueType rv = std::min(saturated_rv, max_possible_rv);
                         fluid_state.setRv(rv);
-                    } else {
-                        fluid_state.setRv(zero_value);
+                        } else {
+                            fluid_state.setRv(zero_value);
+                        }
                     }
                     break;
                 }
