@@ -51,11 +51,13 @@ public:
 
     // Table showing the primary variable indices, depending on what phases are present:
     //
-    //         WOG     OG     WG     WO    W/O/G (single phase)
-    // WQTotal   0      0      0      0                       0
-    // WFrac     1  -1000  -1000      1                   -1000
-    // GFrac     2      1      1  -1000                   -1000
-    // Spres     3      2      2      2                       1
+    // WQTotal          0      0      0      0                       0
+    // WFrac            1  -1000  -1000      1                   -1000
+    // GFrac            2      1      1  -1000                   -1000
+    // Temperature(*)   3      2      2      2                       1
+    // SPres          3/4    2/3    2/3    2/3                     1/2
+    // (*) Temperature is only present when energy is enabled;
+    //     SPres shifts by one when Temperature is present.
 
     static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;
     static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
@@ -64,8 +66,10 @@ public:
     static constexpr int WQTotal = 0;
     static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
     static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
-    static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1;
-    static constexpr int Temperature = enable_energy ? SPres + 1 : -1000; // for the tempearture
+    // Temperature comes before SPres: it is a conservation equation consistent
+    // with reservoir equations, while SPres is well-specific.
+    static constexpr int Temperature = enable_energy ? has_wfrac_variable + has_gfrac_variable + 1 : -1000;
+    static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1 + enable_energy;
 
     //  the number of well equations  TODO: it should have a more general strategy for it
     static constexpr int numWellEq = Indices::numPhases + 1 + enable_energy;
