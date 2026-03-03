@@ -118,6 +118,7 @@ protected:
     void doWriteOutput(const int                          reportStepNum,
                        const std::optional<int>           timeStepNum,
                        const bool                         isSubStep,
+                       const bool                         forcedSimulationFinished,
                        data::Solution&&                   localCellData,
                        data::Wells&&                      localWellData,
                        data::GroupAndNetworkValues&&      localGroupAndNetworkData,
