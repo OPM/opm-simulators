@@ -292,7 +292,9 @@ public:
         if (!isSubStep || Parameters::Get<Parameters::EnableWriteAllSolutions>()) {
             auto localCellData = data::Solution {};
 
-            this->eclWriter_->writeOutput(std::move(localCellData), isSubStep);
+            this->eclWriter_->writeOutput(std::move(localCellData), isSubStep,
+                                          this->simulator().vanguard().schedule()
+                                         .exitStatus().has_value());
         }
     }
 
