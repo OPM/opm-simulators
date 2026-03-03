@@ -161,7 +161,7 @@ public:
             }
             return this->guideRate().has(name);
         }
-        bool hasHigherLevelControlOrLimit(const Group& group);
+        bool hasHigherLevelControlOrNoLimit(const Group& group);
         Phase injectionPhase_() const;
         bool isInjectionConstraint() const { return this->injection_phase_.has_value(); }
         bool isProductionConstraint() const { return !this->injection_phase_.has_value(); }
@@ -271,8 +271,8 @@ public:
         }
         ControlMode getToplevelControlMode_() const;
         Scalar getTopLevelTargetOrLimit_();
-        bool hasHigherLevelControlOrLimit(const Group& group) {
-            return this->parent_calculator_.hasHigherLevelControlOrLimit(group);
+        bool hasHigherLevelControlOrNoLimit(const Group& group) {
+            return this->parent_calculator_.hasHigherLevelControlOrNoLimit(group);
         }
         bool hasFLDControl_(const Group& group) const;
         bool hasGuideRate_(const std::string& name) const {

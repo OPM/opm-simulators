@@ -258,7 +258,7 @@ calculateGroupConstraint()
     }
     assert(this->parentGroupControlAvailable_(group));
     if (!this->hasGuideRate(group)) {
-        if (this->hasHigherLevelControlOrLimit(group)) {
+        if (this->hasHigherLevelControlOrNoLimit(group)) {
             // Parent control is available, but no guide rate is defined. This is illegal for a master group
             // under higher level control or limit.
             OPM_DEFLOG_THROW(
@@ -395,7 +395,7 @@ template<class Scalar, class IndexTraits>
 bool
 GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
-hasHigherLevelControlOrLimit(const Group& group)
+hasHigherLevelControlOrNoLimit(const Group& group)
 {
     // Check if the group (constrained to production or injection) has control FLD or NONE.
     // For example, a pure injection group will have production control NONE.
@@ -429,7 +429,7 @@ GroupConstraintCalculator<Scalar, IndexTraits>::
 GeneralCalculator::
 calculateGroupConstraintRecursive_(const Group& group, const Scalar efficiency_factor)
 {
-    if (this->hasHigherLevelControlOrLimit(group)) {
+    if (this->hasHigherLevelControlOrNoLimit(group)) {
         // NOTE: A pure injection group is assumed to have production control NONE and
         //   a pure production group is assumed to have injection control NONE, see
         //   GroupStateHelper.cpp::setCmodeGroup() for details.
@@ -456,7 +456,7 @@ calculateGroupConstraintRecursive_(const Group& group, const Scalar efficiency_f
         // This should never happen, since any group that is not an injector should have injection
         // control NONE. And any group that is not a producer should have production control NONE.
         // See GroupStateHelper.cpp::setCmodeGroup() for details.
-        // .. and therefore should be caught by the hasHigherLevelControlOrLimit() check above.
+        // .. and therefore should be caught by the hasHigherLevelControlOrNoLimit() check above.
         OPM_DEFLOG_THROW(
             std::runtime_error,
             fmt::format("Controlling group that is not of the type we are interested in: {}", group.name()),
@@ -621,7 +621,7 @@ GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 bottomGroupHasIndividualControl_()
 {
-    return !this->hasHigherLevelControlOrLimit(this->bottom_group_);
+    return !this->hasHigherLevelControlOrNoLimit(this->bottom_group_);
 }
 
 template <class Scalar, class IndexTraits>
