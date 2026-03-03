@@ -47,11 +47,12 @@ class MultisegmentWellAssemble
     static constexpr int WQTotal = PrimaryVariables::WQTotal;
     static constexpr bool has_wfrac_variable = PrimaryVariables::has_wfrac_variable;
     static constexpr bool has_gfrac_variable = PrimaryVariables::has_gfrac_variable;
+    // TODO: has_temperature might should be enable_energy
     static constexpr bool has_temperature = Indices::enableFullyImplicitThermal;
     static constexpr int WFrac = PrimaryVariables::WFrac;
     static constexpr int GFrac = PrimaryVariables::GFrac;
+    static constexpr int Temperature = PrimaryVariables::Temperature;
     static constexpr int SPres = PrimaryVariables::SPres;
-    static constexpr int Temperature = SPres + 1; // for the tempearture
 
 public:
     static constexpr int numWellEq = Indices::numPhases + 1 + has_temperature;
