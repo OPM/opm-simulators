@@ -2683,8 +2683,8 @@ namespace Opm
         const EvalWell seg_temperature = this->primary_variables_.getSegmentTemperature(seg);
 
         // TODO: with the energy equation joins, the num_conservation_quantities will be challenged
-        std::vector<EvalWell> fluid_composition(FluidSystem::numPhases, 0.0);
-        for (std::size_t idx = 0; idx < FluidSystem::numPhases; ++idx) {
+        std::vector<EvalWell> fluid_composition(this->numConservationQuantities(), 0.0);
+        for (int idx = 0; idx < this->numConservationQuantities(); ++idx) {
             fluid_composition[idx] = this->primary_variables_.surfaceVolumeFraction(seg, idx);
         }
 
