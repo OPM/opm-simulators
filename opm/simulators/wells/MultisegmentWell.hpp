@@ -56,9 +56,7 @@ namespace Opm {
 
         using Base::has_solvent;
         using Base::has_polymer;
-        static constexpr bool enable_energy = MSWEval::PrimaryVariables::enable_energy;
-        // TODO: primary variable has temperature, while the conservation quantity is energy
-        // TODO: the temperature vs energy distinction should be investigated/resolved
+        using Base::has_energy;
         using Base::Water;
         using Base::Oil;
         using Base::Gas;
@@ -79,12 +77,14 @@ namespace Opm {
         // a fluid state to calculate the properties inside the wellbore for each segment
         // it will be probably used for more things, but at the moment, it is for the enthaply
         // calculation in the wellbore
-
+        // templated on Value type because we want to use it for surface condition calculation injection
+        // while we shifted to use the bottom-hole/well-head condition instead, so there is only EvalWell type
+        // used here for now.
         template <typename Value>
         using SegmentFluidState = BlackOilFluidState<Value,
                                                      FluidSystem,
-                                                     enable_energy,
-                                                     enable_energy,
+                                                     has_energy,
+                                                     has_energy,
                                                      Indices::compositionSwitchIdx >= 0,
                                                      /*has_watVapor*/ false,
                                                      /*has_brine*/ false,
