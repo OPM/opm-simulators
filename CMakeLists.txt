@@ -629,6 +629,7 @@ macro(opm-simulators_targets_hook)
   add_dependencies(moduleVersion opmsimulators)
 
   add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
+  target_link_libraries(MainDispatchDynamic PRIVATE opmcommon)
   simulators_add_target_options(TARGET MainDispatchDynamic)
 
   target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
@@ -678,6 +679,7 @@ macro(opm-simulators_targets_hook)
 
   foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
     add_library(flow_lib${OBJ} OBJECT flow/flow_${OBJ}.cpp)
+    target_link_libraries(flow_lib${OBJ} PRIVATE opmcommon)
     simulators_add_target_options(TARGET flow_lib${OBJ})
     list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
     list(APPEND FLOWMODELS_PREFIXED flow_${OBJ})
