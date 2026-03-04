@@ -24,11 +24,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <boost/version.hpp>
-
-#if BOOST_VERSION / 100 % 1000 > 48
 #include <boost/property_tree/json_parser.hpp>
-#endif
 
 #include <filesystem>
 #include <map>
@@ -40,8 +36,6 @@
 #include <fmt/format.h>
 
 namespace {
-
-#if BOOST_VERSION / 100 % 1000 > 48
 
     std::map<std::string, std::string>
     jsonConfiguration(const std::string&    conf,
@@ -71,21 +65,6 @@ namespace {
 
         return result;
     }
-
-#else // ! Boost.PTree has JSON support.
-
-    [[noreturn]] std::map<std::string, std::string>
-    jsonConfiguration(const std::string& conf,
-                      std::string_view   paramName)
-    {
-        OPM_THROW(std::invalid_argument,
-                  fmt::format("{}=file.json ({}) is not supported in "
-                              "current Boost version (1.{}). "
-                              "Need Boost version 1.49 or later.",
-                              paramName, conf, (BOOST_VERSION / 100) % 1000));
-    }
-
-#endif // Boost.PTree has JSON support.
 
     bool isJsonConfiguration(const std::string& conf)
     {
