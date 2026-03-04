@@ -44,11 +44,7 @@
 
 #include <opm/common/utility/gpuistl_if_available.hpp>
 
-#if HAVE_ECL_INPUT
 #include <cstddef>
-#endif
-
-#include <vector>
 
 namespace Opm {
 
@@ -115,14 +111,11 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/false>
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
 public:
-
-    #if HAVE_ECL_INPUT
     static void beginEpisode(const EclipseState&,
                              const Schedule&,
                              const int,
                              ConvectiveMixingModuleParam<Scalar>&)
     {}
-    #endif
 
     template <class Context>
     static bool active(const Context&)
@@ -179,7 +172,6 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
 public:
-    #if HAVE_ECL_INPUT
     static void beginEpisode(const EclipseState& eclState,
                              const Schedule& schedule,
                              const int episodeIdx,
@@ -201,7 +193,6 @@ public:
             }
         }
     }
-    #endif
 
     template <class CMMParam>
     OPM_HOST_DEVICE static void modifyAvgDensity(Evaluation& rhoAvg,

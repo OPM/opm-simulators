@@ -30,12 +30,14 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/common/utility/gpuDecorators.hpp>
+
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+
 #include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
-
-#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <array>
 #include <stdexcept>
@@ -63,13 +65,11 @@ class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/false>
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
 public:
-    #if HAVE_ECL_INPUT
     /*!
      * \brief Initialize all internal data structures needed by the diffusion module
      */
     static void initFromState(const EclipseState&)
     {}
-    #endif
 
     /*!
      * \brief Register all run-time parameters for the diffusion module.
@@ -120,7 +120,6 @@ class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/true>
 public:
     using ExtensiveQuantities = BlackOilDiffusionExtensiveQuantities<TypeTag,true>;
 
-    #if HAVE_ECL_INPUT
     /*!
      * \brief Initialize all internal data structures needed by the diffusion module
      */
@@ -133,7 +132,6 @@ public:
         OPM_THROW(std::runtime_error, "Diffusion module: Calling initFromState not expected on GPU.");
         #endif
     }
-    #endif
 
     /*!
      * \brief Register all run-time parameters for the diffusion module.

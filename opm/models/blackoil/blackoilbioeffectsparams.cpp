@@ -24,7 +24,6 @@
 #include <config.h>
 #include <opm/models/blackoil/blackoilbioeffectsparams.hpp>
 
-#if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/BiofilmTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/DiffMICPTable.hpp>
@@ -32,15 +31,11 @@
 #include <opm/input/eclipse/EclipseState/Tables/PermfactTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
-#endif
 
-#include <algorithm>
 #include <stdexcept>
-#include <type_traits>
 
 namespace Opm {
 
-#if HAVE_ECL_INPUT
 template<class Scalar>
 template<bool enableBioeffects , bool enableMICP>
 void BlackOilBioeffectsParams<Scalar>::
@@ -165,7 +160,6 @@ initFromState(const EclipseState& eclState)
         permfactTable_[i].setXYContainers(permfactTable.getPorosityChangeColumn(), permfactTable.getPermeabilityMultiplierColumn());
     }
 }
-#endif
 
 #define INSTANTIATE_TYPE(T)                                                               \
     template struct BlackOilBioeffectsParams<T>;                                                \

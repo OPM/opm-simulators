@@ -36,9 +36,7 @@
 
 namespace Opm {
 
-#if HAVE_ECL_INPUT
 class EclipseState;
-#endif
 
 //! \brief Struct holding the parameters for the BlackOilPolymerModule class.
 template<class Scalar>
@@ -48,10 +46,8 @@ struct BlackOilPolymerParams {
 
     enum AdsorptionBehaviour { Desorption = 1, NoDesorption = 2 };
 
-#if HAVE_ECL_INPUT
     template<bool enablePolymer, bool enablePolymerMolarWeight>
     void initFromState(const EclipseState& eclState);
-#endif
 
     /*!
      * \brief Specify the number of satuation regions.
