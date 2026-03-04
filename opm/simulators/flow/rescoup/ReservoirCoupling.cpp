@@ -45,7 +45,7 @@ Phase convertPhaseToReservoirCouplingPhase(::Opm::Phase phase)
     }
 }
 
-::Opm::Phase convertToOpmPhase(Phase phase)
+::Opm::Phase convertToOpmPhase(const Phase phase)
 {
     switch (phase) {
     case Phase::Oil:

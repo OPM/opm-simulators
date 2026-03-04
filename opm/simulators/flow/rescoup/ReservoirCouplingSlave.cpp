@@ -65,7 +65,7 @@ ReservoirCouplingSlave(
 template <class Scalar>
 bool
 ReservoirCouplingSlave<Scalar>::
-hasMasterInjectionTarget(const std::string& gname, Phase phase) const
+hasMasterInjectionTarget(const std::string& gname, const Phase phase) const
 {
     assert(this->report_step_data_);
     return this->report_step_data_->hasMasterInjectionTarget(gname, phase);
@@ -108,7 +108,7 @@ isSlaveGroup(const std::string& group_name) const {
 template <class Scalar>
 std::pair<Scalar, Group::InjectionCMode>
 ReservoirCouplingSlave<Scalar>::
-masterInjectionTarget(const std::string& gname, Phase phase) const
+masterInjectionTarget(const std::string& gname, const Phase phase) const
 {
     assert(this->report_step_data_);
     return this->report_step_data_->masterInjectionTarget(gname, phase);

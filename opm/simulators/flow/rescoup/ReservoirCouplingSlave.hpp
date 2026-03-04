@@ -58,7 +58,7 @@ public:
         return slave_to_master_group_map_; }
     /// @brief Check if a master-imposed injection target exists for a group and phase
     /// @details Delegates to ReservoirCouplingSlaveReportStep
-    bool hasMasterInjectionTarget(const std::string& gname, Phase phase) const;
+    bool hasMasterInjectionTarget(const std::string& gname, const Phase phase) const;
 
     /// @brief Check if a master-imposed production target exists for a group
     /// @details Delegates to ReservoirCouplingSlaveReportStep
@@ -70,7 +70,8 @@ public:
     ReservoirCoupling::Logger& logger() const { return this->logger_; }
     /// @brief Get the master-imposed injection target and control mode for a group and phase
     /// @details Delegates to ReservoirCouplingSlaveReportStep
-    std::pair<Scalar, Group::InjectionCMode> masterInjectionTarget(const std::string& gname, Phase phase) const;
+    std::pair<Scalar, Group::InjectionCMode> masterInjectionTarget(
+        const std::string& gname, const Phase phase) const;
 
     /// @brief Get the master-imposed production target and control mode for a group
     /// @details Delegates to ReservoirCouplingSlaveReportStep

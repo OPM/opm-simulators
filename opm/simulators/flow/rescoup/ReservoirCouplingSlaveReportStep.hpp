@@ -78,7 +78,7 @@ public:
     /// @param gname Slave group name
     /// @param phase Injection phase (e.g., Phase::WATER, Phase::GAS)
     /// @return true if the master sent an injection target for this group/phase pair
-    bool hasMasterInjectionTarget(const std::string& gname, Phase phase) const;
+    bool hasMasterInjectionTarget(const std::string& gname, const Phase phase) const;
 
     /// @brief Check if a master-imposed production target exists for a group
     /// @param gname Slave group name
@@ -101,7 +101,8 @@ public:
     /// @param phase Injection phase
     /// @return Pair of (target rate, control mode)
     /// @throws std::out_of_range if no target exists for the given group/phase pair
-    std::pair<Scalar, Group::InjectionCMode> masterInjectionTarget(const std::string& gname, Phase phase) const;
+    std::pair<Scalar, Group::InjectionCMode> masterInjectionTarget(
+        const std::string& gname, const Phase phase) const;
 
     /// @brief Get the master-imposed production target and control mode for a group
     /// @param gname Slave group name
@@ -158,13 +159,14 @@ public:
     /// @param phase Injection phase
     /// @param target Target injection rate
     /// @param cmode Injection control mode dictated by the master
-    void setMasterInjectionTarget(const std::string& gname, Phase phase, Scalar target, Group::InjectionCMode cmode);
+    void setMasterInjectionTarget(
+        const std::string& gname, const Phase phase, const Scalar target, const Group::InjectionCMode cmode);
 
     /// @brief Store a master-imposed production target for a group
     /// @param gname Slave group name
     /// @param target Target production rate
     /// @param cmode Production control mode dictated by the master
-    void setMasterProductionTarget(const std::string& gname, Scalar target, Group::ProductionCMode cmode);
+    void setMasterProductionTarget(const std::string& gname, const Scalar target, const Group::ProductionCMode cmode);
 
 
 private:

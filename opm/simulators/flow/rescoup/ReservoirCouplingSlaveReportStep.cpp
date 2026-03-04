@@ -52,7 +52,7 @@ ReservoirCouplingSlaveReportStep(
 template <class Scalar>
 bool
 ReservoirCouplingSlaveReportStep<Scalar>::
-hasMasterInjectionTarget(const std::string& gname, Phase phase) const
+hasMasterInjectionTarget(const std::string& gname, const Phase phase) const
 {
     return this->master_injection_targets_.count({phase, gname}) > 0;
 }
@@ -68,7 +68,7 @@ hasMasterProductionTarget(const std::string& gname) const
 template <class Scalar>
 std::pair<Scalar, Group::InjectionCMode>
 ReservoirCouplingSlaveReportStep<Scalar>::
-masterInjectionTarget(const std::string& gname, Phase phase) const
+masterInjectionTarget(const std::string& gname, const Phase phase) const
 {
     return this->master_injection_targets_.at({phase, gname});
 }
@@ -212,7 +212,9 @@ sendProductionDataToMaster(
 template <class Scalar>
 void
 ReservoirCouplingSlaveReportStep<Scalar>::
-setMasterInjectionTarget(const std::string& gname, Phase phase, Scalar target, Group::InjectionCMode cmode)
+setMasterInjectionTarget(
+    const std::string& gname, const Phase phase, const Scalar target, const Group::InjectionCMode cmode
+)
 {
     this->master_injection_targets_[{phase, gname}] = {target, cmode};
 }
@@ -220,7 +222,7 @@ setMasterInjectionTarget(const std::string& gname, Phase phase, Scalar target, G
 template <class Scalar>
 void
 ReservoirCouplingSlaveReportStep<Scalar>::
-setMasterProductionTarget(const std::string& gname, Scalar target, Group::ProductionCMode cmode)
+setMasterProductionTarget(const std::string& gname, const Scalar target, const Group::ProductionCMode cmode)
 {
     this->master_production_targets_[gname] = {target, cmode};
 }

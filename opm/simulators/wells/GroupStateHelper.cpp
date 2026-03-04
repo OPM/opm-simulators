@@ -393,7 +393,7 @@ getInjectionGroupTargetForMode_(
     const Group& group,
     const Phase& injection_phase,
     const std::vector<Scalar>& resv_coeff,
-    Group::InjectionCMode cmode) const
+    const Group::InjectionCMode cmode) const
 {
     const auto& pu = this->phaseUsage();
     const int pos = this->phaseToActivePhaseIdx(injection_phase);
@@ -498,7 +498,7 @@ template<typename Scalar, typename IndexTraits>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::
 getProductionGroupTargetForMode(const Group& group,
-                                 Group::ProductionCMode cmode) const
+                                const Group::ProductionCMode cmode) const
 {
     return this->getProductionGroupTargetForMode_(group, cmode);
 }
@@ -1706,7 +1706,7 @@ template <typename Scalar, typename IndexTraits>
 ReservoirCoupling::GrupSlav::FilterFlag
 GroupStateHelper<Scalar, IndexTraits>::
 getInjectionFilterFlag_(const std::string& group_name,
-                        Phase injection_phase) const
+                        const Phase injection_phase) const
 {
     const auto& rescoup_info = this->schedule_[this->report_step_].rescoup();
     if (!rescoup_info.hasGrupSlav(group_name)) {
@@ -1729,7 +1729,7 @@ template <typename Scalar, typename IndexTraits>
 ReservoirCoupling::GrupSlav::FilterFlag
 GroupStateHelper<Scalar, IndexTraits>::
 getProductionFilterFlag_(const std::string& group_name,
-                         Group::ProductionCMode cmode) const
+                         const Group::ProductionCMode cmode) const
 {
     const auto& rescoup_info = this->schedule_[this->report_step_].rescoup();
     if (!rescoup_info.hasGrupSlav(group_name)) {
@@ -1756,7 +1756,7 @@ template<typename Scalar, typename IndexTraits>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::
 getProductionGroupTargetForMode_(const Group& group,
-                                  Group::ProductionCMode cmode) const
+                                 const Group::ProductionCMode cmode) const
 {
     Group::ProductionControls ctrl = group.productionControls(this->summary_state_);
     switch (cmode) {
@@ -1800,7 +1800,7 @@ Scalar
 GroupStateHelper<Scalar, IndexTraits>::
 getReservoirCouplingMasterGroupRate_(const Group& group,
                                      const int phase_pos,
-                                     ReservoirCoupling::RateKind kind) const
+                                     const ReservoirCoupling::RateKind kind) const
 {
     if (this->isReservoirCouplingMaster()) {
         ReservoirCoupling::Phase rescoup_phase = this->activePhaseIdxToRescoupPhase_(phase_pos);

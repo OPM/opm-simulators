@@ -248,7 +248,7 @@ public:
 
     /// Get the production target for a specific control mode (not necessarily the active one).
     Scalar getProductionGroupTargetForMode(const Group& group,
-                                           Group::ProductionCMode cmode) const;
+                                           const Group::ProductionCMode cmode) const;
 
     /// @brief Get the guide rate target mode for a production group
     /// @param group The production group
@@ -550,7 +550,7 @@ private:
     Scalar getInjectionGroupTargetForMode_(const Group& group,
         const Phase& injection_phase,
         const std::vector<Scalar>& resv_coeff,
-        Group::InjectionCMode cmode) const;
+        const Group::InjectionCMode cmode) const;
 
     //! \brief Find the local reduction level in a group chain.
     //!
@@ -568,17 +568,17 @@ private:
 
 #ifdef RESERVOIR_COUPLING_ENABLED
     ReservoirCoupling::GrupSlav::FilterFlag getInjectionFilterFlag_(const std::string& group_name,
-                                                                    Phase injection_phase) const;
+                                                                    const Phase injection_phase) const;
 
     ReservoirCoupling::GrupSlav::FilterFlag getProductionFilterFlag_(const std::string& group_name,
-                                                                     Group::ProductionCMode cmode) const;
+                                                                     const Group::ProductionCMode cmode) const;
 
     Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
                                                 const int phase_pos,
-                                                ReservoirCoupling::RateKind kind) const;
+                                                const ReservoirCoupling::RateKind kind) const;
 #endif
 
-    Scalar getProductionGroupTargetForMode_(const Group& group, Group::ProductionCMode cmode) const;
+    Scalar getProductionGroupTargetForMode_(const Group& group, const Group::ProductionCMode cmode) const;
 
     Scalar getSatelliteRate_(const Group& group,
                              const int phase_pos,
