@@ -1388,11 +1388,11 @@ if(MPI_FOUND)
     opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.cpp
     opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.cpp
     opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.cpp
-    opm/simulators/wells/GroupTargetCalculator.cpp
+    opm/simulators/wells/GroupConstraintCalculator.cpp
     opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.cpp
     opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.cpp
     opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.cpp
-    opm/simulators/wells/rescoup/RescoupTargetCalculator.cpp
+    opm/simulators/wells/rescoup/RescoupConstraintsCalculator.cpp
   )
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/flow/rescoup/ReservoirCoupling.hpp
@@ -1405,12 +1405,12 @@ if(MPI_FOUND)
     opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.hpp
-    opm/simulators/wells/GroupTargetCalculator.hpp
+    opm/simulators/wells/GroupConstraintCalculator.hpp
     opm/simulators/wells/rescoup/RescoupProxy.hpp
     opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp
     opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp
     opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp
-    opm/simulators/wells/rescoup/RescoupTargetCalculator.hpp
+    opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp
     )
   list (APPEND TEST_SOURCE_FILES
     tests/rescoup/test_chopstep.cpp

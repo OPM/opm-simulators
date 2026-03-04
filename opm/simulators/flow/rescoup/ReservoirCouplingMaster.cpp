@@ -408,22 +408,22 @@ sendInjectionTargetsToSlave(std::size_t slave_idx,
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
-sendNumGroupTargetsToSlave(std::size_t slave_idx,
+sendNumGroupConstraintsToSlave(std::size_t slave_idx,
                            std::size_t num_injection_targets,
-                           std::size_t num_production_targets) const
+                           std::size_t num_production_constraints) const
 {
     assert(this->report_step_data_);
-    this->report_step_data_->sendNumGroupTargetsToSlave(slave_idx, num_injection_targets, num_production_targets);
+    this->report_step_data_->sendNumGroupConstraintsToSlave(slave_idx, num_injection_targets, num_production_constraints);
 }
 
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
-sendProductionTargetsToSlave(std::size_t slave_idx,
-                             const std::vector<ProductionGroupTarget>& production_targets) const
+sendProductionConstraintsToSlave(std::size_t slave_idx,
+                             const std::vector<ProductionGroupConstraints>& production_constraints) const
 {
     assert(this->report_step_data_);
-    this->report_step_data_->sendProductionTargetsToSlave(slave_idx, production_targets);
+    this->report_step_data_->sendProductionConstraintsToSlave(slave_idx, production_constraints);
 }
 
 template <class Scalar>

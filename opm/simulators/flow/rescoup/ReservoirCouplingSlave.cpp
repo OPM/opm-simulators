@@ -175,9 +175,9 @@ receiveNextTimeStepFromMaster() {
 template <class Scalar>
 std::pair<std::size_t, std::size_t>
 ReservoirCouplingSlave<Scalar>::
-receiveNumGroupTargetsFromMaster() const {
+receiveNumGroupConstraintsFromMaster() const {
     assert(this->report_step_data_);
-    return this->report_step_data_->receiveNumGroupTargetsFromMaster();
+    return this->report_step_data_->receiveNumGroupConstraintsFromMaster();
 }
 
 template <class Scalar>
@@ -192,10 +192,10 @@ receiveInjectionGroupTargetsFromMaster(std::size_t num_targets) const
 template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
-receiveProductionGroupTargetsFromMaster(std::size_t num_targets) const
+receiveProductionGroupConstraintsFromMaster(std::size_t num_targets) const
 {
     assert(this->report_step_data_);
-    this->report_step_data_->receiveProductionGroupTargetsFromMaster(num_targets);
+    this->report_step_data_->receiveProductionGroupConstraintsFromMaster(num_targets);
 }
 
 template <class Scalar>
