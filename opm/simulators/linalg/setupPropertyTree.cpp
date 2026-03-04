@@ -27,7 +27,6 @@
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 
 #include <filesystem>
-#include <boost/version.hpp>
 
 namespace Opm
 {
@@ -187,7 +186,6 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
 
     // Get configuration from file.
     if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") { // the ends_with() method is not available until C++20
-#if BOOST_VERSION / 100 % 1000 > 48
         if ( !std::filesystem::exists(conf) ) {
             OPM_THROW(std::invalid_argument, "JSON file " + conf + " does not exist.");
         }
@@ -197,11 +195,6 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         catch (...) {
             OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " + conf);
         }
-#else
-        OPM_THROW(std::invalid_argument,
-                  "--linear-solver-configuration=file.json not supported with "
-                  "boost version. Needs version > 1.48.");
-#endif
     }
 
     // We use lower case as the internal canonical representation of solver names.
