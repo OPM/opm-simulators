@@ -132,7 +132,8 @@ public:
     static constexpr bool has_micp = Indices::enableMICP;
 
     // For the conversion between the surface volume rate and reservoir voidage rate
-    using FluidState = BlackOilFluidState<Eval,
+    template <typename ValueType>
+    using FluidState = BlackOilFluidState<ValueType,
                                           FluidSystem,
                                           energyModuleType != EnergyModules::NoTemperature,
                                           energyModuleType == EnergyModules::FullyImplicitThermal,
@@ -143,6 +144,9 @@ public:
                                           has_disgas_in_water,
                                           has_solvent,
                                           Indices::numPhases >;
+
+    using ReservoirFluidState = FluidState<Eval>;
+
     /// Constructor
     WellInterface(const Well& well,
                   const ParallelWellInfo<Scalar>& pw_info,
@@ -455,7 +459,7 @@ protected:
                                                                 GLiftEclWells& ecl_well_map,
                                                                 DeferredLogger& deferred_logger);
 
-    Eval getPerfCellPressure(const FluidState& fs) const;
+    Eval getPerfCellPressure(const ReservoirFluidState& fs) const;
 
     // get the transmissibility multiplier for specific perforation
     template<class Value, class Callback>
@@ -480,12 +484,12 @@ protected:
                      Callback& extendEval,
                      [[maybe_unused]] DeferredLogger& deferred_logger) const;
 
-    void computeConnLevelProdInd(const FluidState& fs,
+    void computeConnLevelProdInd(const ReservoirFluidState& fs,
                                  const std::function<Scalar(const Scalar)>& connPICalc,
                                  const std::vector<Scalar>& mobility,
                                  Scalar* connPI) const;
 
-    void computeConnLevelInjInd(const FluidState& fs,
+    void computeConnLevelInjInd(const ReservoirFluidState& fs,
                                 const Phase preferred_phase,
                                 const std::function<Scalar(const Scalar)>& connIICalc,
                                 const std::vector<Scalar>& mobility,
@@ -497,6 +501,12 @@ protected:
                                     const SingleWellStateType& ws) const;
 
    FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
+
+   template <typename ValueType>
+   FluidState<ValueType>
+   createFluidState(const std::vector<ValueType>& fluid_composition,
+                    const ValueType& pressure,
+                    const ValueType& temperature) const;
 };
 
 } // namespace Opm
