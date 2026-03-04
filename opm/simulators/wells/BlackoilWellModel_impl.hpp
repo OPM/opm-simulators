@@ -49,7 +49,7 @@
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp>
+#include <opm/simulators/wells/rescoup/RescoupReceiveGroupConstraints.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
 #include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
 #include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
@@ -620,11 +620,11 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     receiveGroupConstraintsFromMaster()
     {
-        RescoupReceiveGroupTargets<Scalar, IndexTraits> target_receiver{
+        RescoupReceiveGroupConstraints<Scalar, IndexTraits> constraint_receiver{
             this->guide_rate_handler_,
             this->groupStateHelper()
         };
-        target_receiver.receiveGroupConstraintsFromMaster();
+        constraint_receiver.receiveGroupConstraintsFromMaster();
     }
 
 #endif // RESERVOIR_COUPLING_ENABLED

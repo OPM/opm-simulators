@@ -18,15 +18,15 @@
 */
 #include <config.h>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
-#include <opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp>
+#include <opm/simulators/wells/rescoup/RescoupReceiveGroupConstraints.hpp>
 
 #include <fmt/format.h>
 
 namespace Opm {
 
 template <class Scalar, class IndexTraits>
-RescoupReceiveGroupTargets<Scalar, IndexTraits>::
-RescoupReceiveGroupTargets(
+RescoupReceiveGroupConstraints<Scalar, IndexTraits>::
+RescoupReceiveGroupConstraints(
     GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
     GroupStateHelper<Scalar, IndexTraits>& group_state_helper
 )
@@ -38,7 +38,7 @@ RescoupReceiveGroupTargets(
 
 template <class Scalar, class IndexTraits>
 void
-RescoupReceiveGroupTargets<Scalar, IndexTraits>::
+RescoupReceiveGroupConstraints<Scalar, IndexTraits>::
 receiveGroupConstraintsFromMaster()
 {
     // NOTE: All ranks must call these functions because they contain broadcasts.
@@ -53,10 +53,10 @@ receiveGroupConstraintsFromMaster()
     }
 }
 
-template class RescoupReceiveGroupTargets<double, BlackOilDefaultFluidSystemIndices>;
+template class RescoupReceiveGroupConstraints<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT
-template class RescoupReceiveGroupTargets<float, BlackOilDefaultFluidSystemIndices>;
+template class RescoupReceiveGroupConstraints<float, BlackOilDefaultFluidSystemIndices>;
 #endif
 
 } // namespace Opm

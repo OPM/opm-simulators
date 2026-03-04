@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_RESCOUP_RECEIVE_GROUP_TARGETS_HPP
-#define OPM_RESCOUP_RECEIVE_GROUP_TARGETS_HPP
+#ifndef OPM_RESCOUP_RECEIVE_GROUP_CONSTRAINTS_HPP
+#define OPM_RESCOUP_RECEIVE_GROUP_CONSTRAINTS_HPP
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
@@ -27,9 +27,9 @@
 namespace Opm {
 
 template<class Scalar, class IndexTraits>
-class RescoupReceiveGroupTargets {
+class RescoupReceiveGroupConstraints {
 public:
-    RescoupReceiveGroupTargets(
+    RescoupReceiveGroupConstraints(
         GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
         GroupStateHelper<Scalar, IndexTraits>& group_state_helper
     );
@@ -42,4 +42,4 @@ private:
 
 } // namespace Opm
 
-#endif // OPM_RESCOUP_RECEIVE_GROUP_TARGETS_HPP
+#endif // OPM_RESCOUP_RECEIVE_GROUP_CONSTRAINTS_HPP
