@@ -253,7 +253,6 @@ extract(SparseMatrixAdapter& jacobian) const
     // B and C have 1 row, nc colums and nonzero
     // at (0,j) only if this well has a perforation at cell j.
     typename SparseMatrixAdapter::MatrixBlock tmpMat;
-    Dune::DynamicMatrix<Scalar> tmp;
     for (auto colC = duneC_[0].begin(),
               endC = duneC_[0].end(); colC != endC; ++colC)
     {
@@ -265,7 +264,7 @@ extract(SparseMatrixAdapter& jacobian) const
         {
             // map the well perforated cell index to global cell index
             const auto col_index = this->cells_[colB.index()];
-            detail::multMatrix(invDuneD_[0][0], (*colB), tmp);
+            const auto tmp = detail::multMatrix(invDuneD_[0][0], (*colB));
             detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
             jacobian.addToBlock(row_index, col_index, tmpMat);
         }

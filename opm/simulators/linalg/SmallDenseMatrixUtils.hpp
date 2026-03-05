@@ -111,9 +111,10 @@ namespace detail
 
     //! calculates ret = A * B
     template< class K>
-    static inline void multMatrix(const Dune::DynamicMatrix<K>& A,
-                                  const Dune::DynamicMatrix<K>& B,
-                                  Dune::DynamicMatrix<K>& ret )
+    static inline
+    Dune::DynamicMatrix<K>
+    multMatrix(const Dune::DynamicMatrix<K>& A,
+               const Dune::DynamicMatrix<K>& B)
     {
         using size_type = typename Dune::DynamicMatrix<K> :: size_type;
 
@@ -124,7 +125,7 @@ namespace detail
 
         const size_type p = B.cols();
 
-        ret.resize(m, p);
+        Dune::DynamicMatrix<K> ret(m, p);
 
         for( size_type i = 0; i < m; ++i )
         {
@@ -135,6 +136,8 @@ namespace detail
                     ret[ i ][ j ] += A[ i ][ k ] * B[ k ][ j ];
             }
         }
+
+        return ret;
     }
 
 } // namespace detail
