@@ -259,8 +259,7 @@ public:
     void applyscaleadd(field_type alpha, const Vec& x, Vec& y) const override
     {
         Vec temp1 = x;
-        Vec temp2 = x; // For size.
-        temp2 = 0.0;
+        Vec temp2(x.size());
         for (int rr = 0; rr < repeats_; ++rr) {
             // mv below means: temp2 = matrix_ * temp1;
             matrix_.mv(temp1, temp2);
