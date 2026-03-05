@@ -382,7 +382,7 @@ checkGroupProductionConstraints(const Group& group) const
             const auto& pu = this->phaseUsage();
             Scalar water_rate = this->sumWellSurfaceRates(group,
                 pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx),
-                false);
+                /*injector=*/false);
             water_rate = this->comm().sum(water_rate);
             if (std::abs(water_rate) < 1e-12) {
                 this->deferredLogger().debug(
@@ -2152,29 +2152,29 @@ sumProductionRate_(const Group& group,
     switch (cmode) {
     case Group::ProductionCMode::ORAT:
         rate = this->sumWellSurfaceRates(group,
-            pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), false);
+            pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), /*injector=*/false);
         break;
     case Group::ProductionCMode::WRAT:
         rate = this->sumWellSurfaceRates(group,
-            pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), false);
+            pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), /*injector=*/false);
         break;
     case Group::ProductionCMode::GRAT:
         rate = this->sumWellSurfaceRates(group,
-            pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx), false);
+            pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx), /*injector=*/false);
         break;
     case Group::ProductionCMode::LRAT:
         rate = this->sumWellSurfaceRates(group,
-            pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), false);
+            pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), /*injector=*/false);
         rate += this->sumWellSurfaceRates(group,
-            pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), false);
+            pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), /*injector=*/false);
         break;
     case Group::ProductionCMode::RESV:
         rate = this->sumWellResRates(group,
-            pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), false);
+            pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), /*injector=*/false);
         rate += this->sumWellResRates(group,
-            pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), false);
+            pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), /*injector=*/false);
         rate += this->sumWellResRates(group,
-            pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx), false);
+            pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx), /*injector=*/false);
         break;
     default:
         break;
