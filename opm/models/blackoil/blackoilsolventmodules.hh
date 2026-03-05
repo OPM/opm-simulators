@@ -96,6 +96,7 @@ class BlackOilSolventModule
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
 public:
+    static constexpr double cutOff = 1e-12;
     //! \brief Set parameters.
     static void setParams(BlackOilSolventParams<Scalar>&& params)
     { params_ = params; }
@@ -398,6 +399,16 @@ public:
         return params_.ssfnKrs_[satnumRegionIdx];
     }
 
+    static const TabulatedFunction& ssfnKrg(const unsigned satnumRegionIdx)
+    {
+        return params_.ssfnKrg_[satnumRegionIdx];
+    }
+
+    static const TabulatedFunction& ssfnKrs(const unsigned satnumRegionIdx)
+    {
+        return params_.ssfnKrs_[satnumRegionIdx];
+    }
+
     template <class ElemContext>
     static const TabulatedFunction& sof2Krn(const ElemContext& elemCtx,
                                             unsigned scvIdx,
@@ -569,9 +580,10 @@ class BlackOilSolventIntensiveQuantities<TypeTag, /*enableSolventV=*/true>
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
-    static constexpr double cutOff = 1e-12;
+    static constexpr double cutOff = SolventModule::cutOff;
 
 public:
+
     /*!
      * \brief Called before the saturation functions are doing their magic
      *

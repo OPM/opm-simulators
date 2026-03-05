@@ -2131,9 +2131,16 @@ namespace Opm
                 mob[activeCompIdx] = extendEval(relativePerms[phaseIdx] / intQuants.fluidState().viscosity(phaseIdx));
             }
 
-            // this may not work if viscosity and relperms has been modified?
             if constexpr (has_solvent) {
-                OPM_DEFLOG_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent", deferred_logger);
+                const auto Fsolgas = intQuants.solventSaturation() / (intQuants.solventSaturation() + intQuants.fluidState().saturation(FluidSystem::gasPhaseIdx));
+                using SolventModule = BlackOilSolventModule<TypeTag>;
+                if (Fsolgas > SolventModule::cutOff) { // same cutoff as in the solvent model to avoid division by zero
+                    const unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
+                    const auto& ssfnKrg = SolventModule::ssfnKrg(satid);
+                    const auto& ssfnKrs = SolventModule::ssfnKrs(satid);
+                    mob[activeGasCompIdx] *= extendEval(ssfnKrg.eval(1-Fsolgas, /*extrapolate=*/true));
+                    mob[Indices::contiSolventEqIdx] = extendEval(ssfnKrs.eval(Fsolgas, /*extrapolate=*/true) * relativePerms[activeGasCompIdx] / intQuants.solventViscosity());
+                }
             }
         }
 
