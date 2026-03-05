@@ -33,13 +33,13 @@ using MatType = Opm::gpuistl::MiniMatrix<double, 3>;
 
 __global__ void doNothingKernel(MatType m)
 {
-    auto idx = threadIdx.x;
+    [[maybe_unused]] auto idx = threadIdx.x;
     return;
 }
 
 BOOST_AUTO_TEST_CASE(TestPassingMatrixToKernel)
 {
-    MatType m;
+    MatType m{};
     doNothingKernel<<<1, 1>>>(m);
     std::ignore = cudaDeviceSynchronize();
     cudaError_t err = cudaGetLastError();
