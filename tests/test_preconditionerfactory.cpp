@@ -44,20 +44,20 @@ template <class X>
 class NothingPreconditioner : public Dune::Preconditioner<X, X>
 {
 public:
-    virtual void pre(X&, X&) override
+    void pre(X&, X&) override
     {
     }
 
-    virtual void apply(X& v, const X& d) override
+    void apply(X& v, const X& d) override
     {
         v = d;
     }
 
-    virtual void post(X&) override
+    void post(X&) override
     {
     }
 
-    virtual Dune::SolverCategory::Category category() const override
+    Dune::SolverCategory::Category category() const override
     {
         return Dune::SolverCategory::sequential;
     }
@@ -249,14 +249,14 @@ public:
     }
 
     // y = A*x;
-    virtual void apply(const Vec& x, Vec& y) const override
+    void apply(const Vec& x, Vec& y) const override
     {
         y = 0;
         applyscaleadd(1.0, x, y);
     }
 
     // y += \alpha * A * x
-    virtual void applyscaleadd(field_type alpha, const Vec& x, Vec& y) const override
+    void applyscaleadd(field_type alpha, const Vec& x, Vec& y) const override
     {
         Vec temp1 = x;
         Vec temp2 = x; // For size.
@@ -270,7 +270,7 @@ public:
         y += temp2;
     }
 
-    virtual const matrix_type& getmat() const override
+    const matrix_type& getmat() const override
     {
         return matrix_;
     }
