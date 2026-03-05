@@ -371,7 +371,7 @@ checkGroupProductionConstraints(const Group& group) const
             continue;
         }
 
-        Scalar current_rate = this->sumProductionRate_(group, cmode);
+        Scalar current_rate = this->sumProductionRateForControlMode_(group, cmode);
         Scalar target = this->getProductionConstraintTarget_(group, cmode, controls);
 
         // LRAT skip heuristic: if liquid and oil targets are equal
@@ -472,6 +472,14 @@ getProductionGroupTarget(const Group& group) const
     {
         auto [master_target, master_cmode] =
             this->reservoirCouplingSlave().masterProductionTarget(group.name());
+        // Slave group's cmode should already be updated to the master cmode,
+        // see updateSlaveGroupCmodesFromMaster()
+        if (cmode != master_cmode) {
+            OPM_DEFLOG_THROW(std::runtime_error,
+                "Group " + group.name()
+                + " cmode mismatch between slave and master",
+                this->deferredLogger());
+        }
         auto filter = this->getProductionFilterFlag_(group.name(), master_cmode);
         using FilterFlag = ReservoirCoupling::GrupSlav::FilterFlag;
         if (filter == FilterFlag::MAST) {
@@ -1836,7 +1844,7 @@ getProductionGroupTargetForMode_(const Group& group,
 template<typename Scalar, typename IndexTraits>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::
-sumProductionRate_(const Group& group,
+sumProductionRateForControlMode_(const Group& group,
                     Group::ProductionCMode cmode) const
 {
     const auto& pu = this->phaseUsage();
@@ -1980,11 +1988,9 @@ activePhaseIdxToRescoupPhase_(int phase_pos) const
         phase_pos == pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)) {
         return ReservoirCoupling::Phase::Water;
     }
-    // TODO: We would like to use OPM_DEFLOG_THROW() here, but it is requires the deferred logger to be passed
-    //   as an argument to all the sumWellPhaseRates() calls, which is a major refactoring effort.
-    //   Alternatively, we could store a reference to the deferred logger in the GroupStateHelper class,
-    //   which would also require a major refactoring effort.
-    throw std::logic_error("Invalid phase_pos in activePhaseIdxToRescoupPhase");
+    OPM_DEFLOG_THROW(std::logic_error,
+                     "Invalid phase_pos in activePhaseIdxToRescoupPhase",
+                     this->deferredLogger());
     return ReservoirCoupling::Phase::Oil; // just to avoid warning
 }
 

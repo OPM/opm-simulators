@@ -640,7 +640,7 @@ private:
 
     std::optional<GSatProd::GSatProdGroupProp::Rate> selectRateComponent_(const int phase_pos) const;
 
-    Scalar sumProductionRate_(const Group& group, Group::ProductionCMode cmode) const;
+    Scalar sumProductionRateForControlMode_(const Group& group, Group::ProductionCMode cmode) const;
 
     int updateGroupControlledWellsRecursive_(const std::string& group_name,
                                              const bool is_production_group,
