@@ -75,7 +75,6 @@ namespace Opm
         using typename Base::Indices;
         using typename Base::RateConverterType;
         using typename Base::SparseMatrixAdapter;
-        using typename Base::FluidState;
         using typename Base::RateVector;
         using typename Base::GroupStateHelperType;
         using typename Base::SolventModule;
@@ -93,6 +92,9 @@ namespace Opm
         using PolymerModule =  BlackOilPolymerModule<TypeTag>;
         using FoamModule = BlackOilFoamModule<TypeTag>;
         using typename Base::PressureMatrix;
+
+        template <typename ValueType>
+        using FluidState = Base::template FluidState<ValueType>;
 
         // number of the conservation equations
         static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
@@ -474,8 +476,16 @@ namespace Opm
         std::vector<Scalar> fluids_initial_;
 
         // computing the accumulation term for later use in conservation equations for wells
-        void computeAccumWell(const Simulator& simulator,
-                              DeferredLogger& deferred_logger);
+        void computeInitialFluids();
+
+        template <typename ValueType>
+        FluidState<ValueType> createWellFluidState() const;
+
+        // this function can be static or to helper class
+        template <typename ValueType>
+        ValueType wellboreComponentSurfaceVolume(const FluidState<ValueType>& fs,
+                                                 unsigned compIdx,
+                                                 ValueType wellboreVolume) const;
     };
 
 }

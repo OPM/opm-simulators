@@ -1443,8 +1443,7 @@ namespace Opm
     {
         updatePrimaryVariables(groupStateHelper);
         computeWellConnectionPressures(simulator, groupStateHelper);
-        auto& deferred_logger = groupStateHelper.deferredLogger();
-        this->computeAccumWell(simulator, deferred_logger);
+        this->computeInitialFluids();
     }
 
 
@@ -1601,7 +1600,7 @@ namespace Opm
                     = sign * ws.well_potentials[phase];
         }
         well_copy.updatePrimaryVariables(groupStateHelper_copy);
-        well_copy.computeAccumWell(simulator, deferred_logger);
+        well_copy.computeInitialFluids();
 
         const double dt = simulator.timeStepSize();
         const bool converged = well_copy.iterateWellEqWithControl(
@@ -2865,14 +2864,64 @@ namespace Opm
 
     template <typename TypeTag>
     void
-    StandardWell<TypeTag>::computeAccumWell(const Simulator& simulator,
-                                            DeferredLogger& deferred_logger)
+    StandardWell<TypeTag>::
+    computeInitialFluids()
     {
-        const Scalar wb_surface_volume = this->getWellBoreSurfaceVolume(simulator, deferred_logger).value();
-        for (std::size_t eq_idx = 0; eq_idx < fluids_initial_.size(); ++eq_idx) {
-            fluids_initial_[eq_idx]
-                = this->primary_variables_.surfaceVolumeFraction(eq_idx).value() * wb_surface_volume;
+        const FluidState<Scalar> wellbore_fluid_state = createWellFluidState<Scalar>();
+        // TODO: with this approach, it might be better to use mass balancing instead of surface volume balancing.
+        for (int comp_idx = 0; comp_idx < this->numConservationQuantities(); ++comp_idx) {
+            fluids_initial_[comp_idx] = wellboreComponentSurfaceVolume(wellbore_fluid_state, comp_idx, wellbore_volume);
         }
+    }
+
+
+    template <typename TypeTag>
+    template <typename ValueType>
+    StandardWell<TypeTag>::FluidState<ValueType>
+    StandardWell<TypeTag>::createWellFluidState() const
+    {
+        auto obtain = [](const auto& val) {
+            if constexpr (std::is_same_v<ValueType, Scalar>) {
+                return getValue(val);
+            } else {
+                return val;
+            }
+        };
+
+        const ValueType pressure = obtain(this->primary_variables_.eval(Bhp));
+        const ValueType temperature = 293.15;
+        // TODO: when adding the energy equation, the temperature is from the primary variable
+
+        std::vector<ValueType> fluid_fractions(this->numConservationQuantities(), 0.0);
+        for (int comp_idx = 0; comp_idx < this->numConservationQuantities(); ++comp_idx) {
+            fluid_fractions[comp_idx] = obtain(this->primary_variables_.surfaceVolumeFraction(comp_idx));
+        }
+
+        return Base::createFluidState(fluid_fractions, pressure, temperature);
+    }
+
+
+    template <typename TypeTag>
+    template <typename ValueType>
+    ValueType
+    StandardWell<TypeTag>::wellboreComponentSurfaceVolume(const FluidState<ValueType>& fs,
+                                                          unsigned compIdx,
+                                                          ValueType wellboreVolume) const
+    {
+        ValueType mass = 0.0;
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (!fs.phaseIsActive(phaseIdx))
+                continue;
+            // massFraction() handles Rs (dissolved gas in oil) and Rv (vaporized oil in gas)
+            mass += fs.saturation(phaseIdx) * fs.density(phaseIdx)
+                * fs.massFraction(phaseIdx, compIdx);
+        }
+
+        // Divide by reference density to convert mass [kg] -> surface volume [m³]
+        const auto pvtRegionIdx = fs.pvtRegionIndex();
+        const ValueType refDensity = FluidSystem::referenceDensity(compIdx, pvtRegionIdx);
+
+        return mass * wellboreVolume / refDensity;
     }
 
 
