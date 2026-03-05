@@ -502,11 +502,14 @@ protected:
 
    FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
 
+   // \Note: at the current stage, the function is only used for well calculation
+   //  it is possible to make it a function in FluidState
    template <typename ValueType>
    FluidState<ValueType>
    createFluidState(const std::vector<ValueType>& fluid_composition,
                     const ValueType& pressure,
-                    const ValueType& temperature) const;
+                    const ValueType& temperature,
+                    const Scalar saltConcentration = 0.0) const;
 };
 
 } // namespace Opm
