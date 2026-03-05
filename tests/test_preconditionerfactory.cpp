@@ -44,20 +44,20 @@ template <class X>
 class NothingPreconditioner : public Dune::Preconditioner<X, X>
 {
 public:
-    virtual void pre(X&, X&) override
+    void pre(X&, X&) override
     {
     }
 
-    virtual void apply(X& v, const X& d) override
+    void apply(X& v, const X& d) override
     {
         v = d;
     }
 
-    virtual void post(X&) override
+    void post(X&) override
     {
     }
 
-    virtual Dune::SolverCategory::Category category() const override
+    Dune::SolverCategory::Category category() const override
     {
         return Dune::SolverCategory::sequential;
     }
@@ -92,13 +92,17 @@ testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const
     using PrecFactory = Opm::PreconditionerFactory<Operator,Dune::Amg::SequentialInformation>;
     bool transpose = false;
 
-    if(prm.get<std::string>("preconditioner.type") == "cprt"){
+    if (prm.get<std::string>("preconditioner.type") == "cprt") {
         transpose = true;
     }
-    std::function<Vector()> wc = [&matrix, transpose]()
-    {
-        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, 1, transpose, false);
-    };
+
+    std::function<Vector()> wc{};
+    if constexpr (bz > 1) {
+        wc = [&matrix, transpose]()
+        {
+            return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, 1, transpose, false);
+        };
+    }
 
     auto prec = PrecFactory::create(op, prm.get_child("preconditioner"), wc, 1);
     Dune::BiCGSTABSolver<Vector> solver(op, *prec, prm.get<double>("tol"), prm.get<int>("maxiter"), prm.get<int>("verbosity"));
@@ -245,18 +249,17 @@ public:
     }
 
     // y = A*x;
-    virtual void apply(const Vec& x, Vec& y) const override
+    void apply(const Vec& x, Vec& y) const override
     {
         y = 0;
         applyscaleadd(1.0, x, y);
     }
 
     // y += \alpha * A * x
-    virtual void applyscaleadd(field_type alpha, const Vec& x, Vec& y) const override
+    void applyscaleadd(field_type alpha, const Vec& x, Vec& y) const override
     {
         Vec temp1 = x;
-        Vec temp2 = x; // For size.
-        temp2 = 0.0;
+        Vec temp2(x.size());
         for (int rr = 0; rr < repeats_; ++rr) {
             // mv below means: temp2 = matrix_ * temp1;
             matrix_.mv(temp1, temp2);
@@ -266,7 +269,7 @@ public:
         y += temp2;
     }
 
-    virtual const matrix_type& getmat() const override
+    const matrix_type& getmat() const override
     {
         return matrix_;
     }
