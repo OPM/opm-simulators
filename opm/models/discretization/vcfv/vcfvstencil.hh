@@ -42,6 +42,7 @@
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 
 #include <array>
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <stdexcept>
@@ -853,6 +854,9 @@ public:
         const Geometry& geometry = e.geometry();
         geometryType_ = geometry.type();
         const auto& referenceElement = Dune::ReferenceElements<CoordScalar,dim>::general(geometryType_);
+        // should be the same, but let's let the compiler know to quell (false) diagnostics
+        assert(numVertices == static_cast<unsigned>(referenceElement.size(dim)));
+        numVertices = std::min(numVertices, static_cast<unsigned>(referenceElement.size(dim)));
         for (unsigned vertexIdx = 0; vertexIdx < numVertices; ++vertexIdx) {
             subContVol[vertexIdx].local = referenceElement.position(static_cast<int>(vertexIdx), dim);
             subContVol[vertexIdx].global = geometry.corner(static_cast<int>(vertexIdx));
