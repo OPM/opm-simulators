@@ -2922,7 +2922,7 @@ namespace Opm
             fluid_fractions[comp_idx] = obtain(this->primary_variables_.surfaceVolumeFraction(comp_idx));
         }
 
-        return Base::createFluidState(fluid_fractions, pressure, temperature);
+        return Base::createFluidState(fluid_fractions, pressure, temperature, this->wsalt());
     }
 
 
