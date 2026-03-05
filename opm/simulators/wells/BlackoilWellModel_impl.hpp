@@ -49,7 +49,7 @@
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/wells/rescoup/RescoupReceiveGroupTargets.hpp>
+#include <opm/simulators/wells/rescoup/RescoupReceiveGroupConstraints.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
 #include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
 #include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
@@ -472,7 +472,8 @@ namespace Opm {
         if (this->isReservoirCouplingSlave()) {
             if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
                 this->sendSlaveGroupDataToMaster();
-                this->receiveGroupTargetsFromMaster(reportStepIdx);
+                this->receiveGroupConstraintsFromMaster();
+                this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
             }
         }
 #endif
@@ -617,15 +618,13 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    receiveGroupTargetsFromMaster(int reportStepIdx)
+    receiveGroupConstraintsFromMaster()
     {
-        RescoupReceiveGroupTargets<Scalar, IndexTraits> target_receiver{
+        RescoupReceiveGroupConstraints<Scalar, IndexTraits> constraint_receiver{
             this->guide_rate_handler_,
-            this->wellState(),
-            this->groupState(),
-            reportStepIdx
+            this->groupStateHelper()
         };
-        target_receiver.receiveGroupTargetsFromMaster();
+        constraint_receiver.receiveGroupConstraintsFromMaster();
     }
 
 #endif // RESERVOIR_COUPLING_ENABLED

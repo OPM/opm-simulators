@@ -17,37 +17,29 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_RESCOUP_RECEIVE_GROUP_TARGETS_HPP
-#define OPM_RESCOUP_RECEIVE_GROUP_TARGETS_HPP
+#ifndef OPM_RESCOUP_RECEIVE_GROUP_CONSTRAINTS_HPP
+#define OPM_RESCOUP_RECEIVE_GROUP_CONSTRAINTS_HPP
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
-#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
-#include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/GuideRateHandler.hpp>
-#include <opm/simulators/wells/WellState.hpp>
 
 namespace Opm {
 
 template<class Scalar, class IndexTraits>
-class RescoupReceiveGroupTargets {
+class RescoupReceiveGroupConstraints {
 public:
-    RescoupReceiveGroupTargets(
+    RescoupReceiveGroupConstraints(
         GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
-        const WellState<Scalar, IndexTraits>& well_state,
-        const GroupState<Scalar>& group_state,
-        const int report_step_idx
+        GroupStateHelper<Scalar, IndexTraits>& group_state_helper
     );
-    void receiveGroupTargetsFromMaster();
+    void receiveGroupConstraintsFromMaster();
 private:
     GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler_;
-    const WellState<Scalar, IndexTraits>& well_state_;
-    const GroupState<Scalar>& group_state_;
-    const int report_step_idx_;
+    GroupStateHelper<Scalar, IndexTraits>& group_state_helper_;
     ReservoirCouplingSlave<Scalar>& reservoir_coupling_slave_;
 };
 
 } // namespace Opm
 
-#endif // OPM_RESCOUP_RECEIVE_GROUP_TARGETS_HPP
+#endif // OPM_RESCOUP_RECEIVE_GROUP_CONSTRAINTS_HPP
