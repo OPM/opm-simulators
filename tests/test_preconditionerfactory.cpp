@@ -92,7 +92,7 @@ testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const
     using PrecFactory = Opm::PreconditionerFactory<Operator,Dune::Amg::SequentialInformation>;
     bool transpose = false;
 
-    if(prm.get<std::string>("preconditioner.type") == "cprt"){
+    if (prm.get<std::string>("preconditioner.type") == "cprt") {
         transpose = true;
     }
 

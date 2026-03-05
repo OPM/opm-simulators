@@ -60,7 +60,7 @@ testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, con
     }
     bool transpose = false;
 
-    if(prm.get<std::string>("preconditioner.type") == "cprt"){
+    if (prm.get<std::string>("preconditioner.type") == "cprt") {
         transpose = true;
     }
     std::function<Vector()> wc{};
