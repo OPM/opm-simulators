@@ -28,7 +28,11 @@
 #ifndef OPM_FLOW_PROBLEM_PARAMETERS_HPP
 #define OPM_FLOW_PROBLEM_PARAMETERS_HPP
 
+// This header is generated from opm-common and is not available in GPU
+// compilation units. Guard it so the GPU compiler never sees it.
+#if !defined(__HIPCC__) && !defined(__CUDACC__)
 #include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
+#endif
 
 namespace Opm::Parameters {
 
@@ -52,7 +56,11 @@ struct NumSatfuncConsistencySamplePoints { static constexpr int value = 5; };
 
 // Parameterize equilibration accuracy
 struct NumPressurePointsEquil
+#if !defined(__HIPCC__) && !defined(__CUDACC__)
 { static constexpr int value = ParserKeywords::EQLDIMS::DEPTH_NODES_P::defaultValue; };
+#else
+{ static constexpr int value = 2000; }; // EQLDIMS::DEPTH_NODES_P::defaultValue (generated header unavailable for GPU)
+#endif
 
 struct OutputMode { static constexpr auto value = "all"; };
 

@@ -53,15 +53,10 @@
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/common/utility/gpuistl_if_available.hpp>
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/utility/gpuDecorators.hpp>
-
 #include <array>
 #include <cassert>
 #include <stdexcept>
 #include <string>
-
-#include <opm/common/utility/gpuistl_if_available.hpp>
 
 namespace Opm {
 /*!
@@ -553,9 +548,8 @@ public:
                                     const IntensiveQuantities& insideIntQuants,
                                     unsigned globalSpaceIdx)
     {
-        bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
-        if constexpr (usesStaticFluidSystem)
-        {
+#if OPM_IS_INSIDE_HOST_FUNCTION
+    // if constexpr (std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
             switch (bdyInfo.type) {
             case BCType::NONE:
                 bdyFlux = 0.0;
@@ -575,7 +569,8 @@ public:
                                     std::to_string(static_cast<int>(bdyInfo.type)) +
                                     " in computeBoundaryFlux()." );
             }
-        } else {
+        // }
+#else
             switch (bdyInfo.type) {
             case BCType::NONE:
                 bdyFlux = 0.0;
@@ -586,7 +581,7 @@ public:
             default:
                 OPM_THROW(std::logic_error, "Only THERMAL BC supported when FluidSystem is non-static.");
             }
-        }
+#endif
     }
 
     template <class BoundaryConditionData>
@@ -722,16 +717,17 @@ public:
         if constexpr (enableFullyImplicitThermal) {
             Evaluation heatFlux;
             // avoid overload of functions with same numeber of elements in eclproblem
-
             Scalar alpha;
-            if constexpr (runAssemblyOnGpu)
-            {
-                // This path is currently only intended for the SimplifiedBlackoilModel for GPUs which currently
-                // does not aim to reproduce the full problem object on the GPU.
-                alpha = problem.getAlpha(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
-            } else {
-                alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
-            }
+#if OPM_IS_INSIDE_DEVICE_FUNCTION
+            // Device pass: ProblemLocal is SimplifiedGpuBlackOilModel which has getAlpha()
+
+                if constexpr (!std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
+            alpha = problem.getAlpha(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+                }
+#else
+    // Host pass: ProblemLocal is FlowProblemBlackoil
+    alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+#endif
 
             unsigned inIdx = 0;//dummy
             // always calculated with derivatives of this cell
@@ -911,21 +907,6 @@ public:
     }
 
     /*!
-     * \brief Helper function to convert the mass-related parts of a Dune::FieldVector
-     *        that stores conservation quantities in terms of "surface-volume" to the
-     *        conservation quantities used by the model.
-     *
-     * Convenience overload for CPU code that uses the static FluidSystem. Delegates to
-     * the FsysType overload below, constructing a default FluidSystem instance.
-     */
-    template <class Scalar>
-    static void adaptMassConservationQuantities_(Dune::FieldVector<Scalar, numEq>& container,
-                                                 unsigned pvtRegionIdx)
-    {
-        adaptMassConservationQuantities_(container, pvtRegionIdx, FluidSystem{});
-    }
-
-    /*!
      * \brief Helper function to convert the mass-related parts of a vector that stores
      *        conservation quantities in terms of "surface-volume" to the conservation
      *        quantities used by the model.
@@ -939,10 +920,9 @@ public:
      * This overload accepts a fluid system instance, enabling use in GPU kernels and
      * other contexts where the static fluid system is not accessible.
      */
-    template <class ScalarVector, class FsysType>
+    template <class ScalarVector>
     OPM_HOST_DEVICE static void adaptMassConservationQuantities_(ScalarVector& container,
-                                                                 unsigned pvtRegionIdx,
-                                                                 const FsysType& fsys)
+                                                                 unsigned pvtRegionIdx)
     {
         // Delegate to the generic overload using a default-constructed static FluidSystem
         // instance. Valid because the static FluidSystem is stateless (std::is_empty_v).

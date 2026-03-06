@@ -148,9 +148,6 @@ template<class TypeTag, class MyTypeTag>
 struct RunAssemblyOnGpu { using type = UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
-struct RunAssemblyOnGpu { using type = UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
 struct DiscIntensiveQuantities { using type = UndefinedProperty; };
 
 //! The secondary variables of all degrees of freedom in an element's stencil

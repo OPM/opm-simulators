@@ -1123,7 +1123,7 @@ private:
             const unsigned int numCells = domain.cells.size();
             const bool on_full_domain = (numCells == model_().numTotalDof());
 
-            if (run_assembly_on_gpu) {
+            if constexpr (run_assembly_on_gpu) {
                 hipDeviceSynchronize();
                 auto prep_domain_start = std::chrono::high_resolution_clock::now();
                 auto domain_buffer = copy_to_gpu(domain);
@@ -1324,44 +1324,6 @@ private:
 
                 std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
             }
-
-            {
-                // TODO: optimize the source term thing, why do we go over every cell to ask (am I a source) when we typically have 0 to a few sources?
-                #pragma omp parallel for
-                for (unsigned ii = 0; ii < numCells; ++ii) {
-
-                    OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
-                    const unsigned globI = domain.cells[ii];
-                    const auto& nbInfos = neighborInfo_[globI];
-
-                    VectorBlock res(0.0);
-                    MatrixBlock bMat(0.0);
-                    ADVectorBlock adres(0.0);
-                    ADVectorBlock darcyFlux(0.0);
-
-                    const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-                    const Scalar volume = model_().dofTotalVolume(globI);
-                    res = 0.0;
-                    bMat = 0.0;
-                    adres = 0.0;
-                    if (separateSparseSourceTerms_) {
-                        LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
-                    }
-                    else {
-                        LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
-                    }
-                    adres *= -volume;
-                    setResAndJacobi(res, bMat, adres);
-                    residual_[globI] += res;
-                    //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-                    *diagMatAddress_[globI] += bMat;
-                }
-
-                // Add sparse source terms. For now only wells.
-                if (separateSparseSourceTerms_) {
-                    problem_().wellModel().addReservoirSourceTerms(residual_, diagMatAddress_);
-                }
-            }
         }
         else {
             assert(false && "Only FullDomain is supported on GPU");
@@ -1381,12 +1343,12 @@ private:
         LocalModelClass& localModel,
         Scalar locDT,
         bool dispersionActive,
-        bool enableBioeffects,
+        bool enableBioeffectsArg,
         bool onFullDomain,
         const gpuistl::GpuView<Scalar>& localVolumes = gpuistl::GpuView<Scalar>())
     {
         if constexpr (useGPU) {
-            assert(!enableBioeffects && "Bioeffects not yet supported on GPU");
+            assert(!enableBioeffectsArg && "Bioeffects not yet supported on GPU");
             assert(!dispersionActive && "Dispersion not yet supported on GPU");
             int constexpr blockSize = 256;
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
@@ -1399,7 +1361,7 @@ private:
                 localModel,
                 locDT,
                 dispersionActive,
-                enableBioeffects,
+                enableBioeffectsArg,
                 onFullDomain,
                 localVolumes);
 #else
@@ -1559,7 +1521,7 @@ private:
                 // but the starting state may not be identical to the start-of-step state.
                 // Note that a full assembly must be done before local solves
                 // otherwise this will be left un-updated.
-                if (localModel.newtonMethod().numIterations() == 0 /*&& !isNlddLocalSolve this was added in rebase, resolve! */) {
+                if (localProblem.iterationContext().isFirstGlobalIteration()) {
                     // Need to update the storage cache.
                     if (localProblem.recycleFirstIterationStorage()) {
                         // Assumes nothing have changed in the system which
@@ -1615,6 +1577,7 @@ private:
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 
+    
     template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class GpuResidualView, class GpuBoundaryInfoView, class GpuProblem>
     __global__ static void linearize_kernel_bc(
         DiagPtrType GPU_LOCAL_diagMatAddress,
@@ -1638,7 +1601,9 @@ private:
                 ADVectorBlockType adres(0.0);
                 const unsigned globI = GPU_LOCAL_boundaryInfo[ii].cell;
                 const LocalIntensiveQuantities& insideIntQuants = localModel.intensiveQuantities(globI, /*timeIdx*/ 0);
-                LocalResidualKernel::computeBoundaryFlux(adres, gpuProblem, GPU_LOCAL_boundaryInfo[ii].bcdata, insideIntQuants, globI);
+                if constexpr (!std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
+                    LocalResidualKernel::computeBoundaryFlux(adres, gpuProblem, GPU_LOCAL_boundaryInfo[ii].bcdata, insideIntQuants, globI);
+                }
                 adres *= GPU_LOCAL_boundaryInfo[ii].bcdata.faceArea;
                 setResAndJacobi(res, bMat, adres);
                 // GPU_LOCAL_residualView[globI] += res;

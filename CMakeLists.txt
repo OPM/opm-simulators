@@ -685,6 +685,7 @@ macro(opm-simulators_targets_hook)
     endif()
     
     add_library(flow_lib${OBJ} OBJECT ${SOURCE_FILE})
+    target_link_libraries(flow_lib${OBJ} PRIVATE opmcommon)
     simulators_add_target_options(TARGET flow_lib${OBJ})
     list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
     list(APPEND FLOWMODELS_PREFIXED flow_${OBJ})

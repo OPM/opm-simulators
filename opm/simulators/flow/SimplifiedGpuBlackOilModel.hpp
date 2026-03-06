@@ -128,8 +128,6 @@ namespace gpuistl {
         // 2) Ensure that the FluidSystem pointer inside each IntensiveQuantities points to a GPU FluidSystem
         //    The pointer should be set before we move the entire thing to the GPU.
 
-        using IntQuantsType = decltype(cpuModel.cachedIntensiveQuantities0_[0]);
-
         // Here I have to declare the new type of BOIQ that I want?
         // Because I cannot use the existing boiq and just set another type of poiner
         // in the fluid state.
@@ -138,7 +136,6 @@ namespace gpuistl {
         // what type of fluidstate I am using (template it on the gpufluidsystem!)
 
         // set pointers
-        using CorrectTypeTag = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, GpuBuffer>;
         using CorrectTypeTagView = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, GpuView>;
         using CorrectBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
         using SimplifiedGpuBufferModel = SimplifiedGpuFIBlackOilModel<CorrectTypeTagView, GpuBuffer>;
