@@ -48,6 +48,7 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
           ${cuda_file_path}
           ${hip_file_path}
           $<TARGET_FILE:hipify-perl>
+          ${SUPPRESS_HIPIFY_WARNINGS}
         DEPENDS
           ${cuda_file_path}
         COMMENT
