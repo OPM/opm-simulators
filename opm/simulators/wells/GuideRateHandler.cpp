@@ -38,6 +38,7 @@
 #include <array>
 #include <cstddef>
 #include <optional>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -601,6 +602,9 @@ updateGuideRatesForWells_()
     constexpr auto npot = w_ix + 1;
 
     const auto& wnames = this->schedule()[this->report_step_idx_].well_order();
+    if (std::ranges::empty(wnames)) {
+        return;
+    }
 
     auto all_well_pot = std::vector<double>(npot * wnames.size());
     auto well_pot = all_well_pot.begin();
