@@ -37,9 +37,9 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/utility/ElementChunks.hpp>
 
-#include <opm/models/parallel/threadmanager.hpp>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
+#include <opm/models/parallel/threadmanager.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
@@ -56,7 +56,8 @@
     To start with this means just being able to access intensiveQuantities
 */
 
-namespace Opm {
+namespace Opm
+{
 
 template <typename TypeTag, template <class> class Storage = Opm::VectorWithDefaultAllocator>
 class SimplifiedGpuFIBlackOilModel
@@ -69,30 +70,48 @@ public:
 
     OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(unsigned int nCells)
         : cachedIntensiveQuantities0_(nCells)
-    {}
+    {
+    }
 
     // TODO: copy for now, but should be move!
     OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(
-        Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities0, Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities1, ModuleParams moduleParams)
+        Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities0,
+        Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities1,
+        ModuleParams moduleParams)
         : cachedIntensiveQuantities0_(cachedIntensiveQuantities0)
         , cachedIntensiveQuantities1_(cachedIntensiveQuantities1)
         , moduleParams_(moduleParams)
     {
     }
 
-    OPM_HOST_DEVICE ModuleParams& moduleParams() {
+    OPM_HOST_DEVICE ModuleParams& moduleParams()
+    {
         return moduleParams_;
     }
 
     OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel() = default;
 
-    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const {}
-    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const {}
+    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const
+    {
+    }
+    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const
+    {
+    }
     template <class GridSubDomain>
-    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */, const GridSubDomain& /* gridSubDomain */) const {}
-    OPM_HOST_DEVICE void updateFailed() {}
-    OPM_HOST_DEVICE const auto& intensiveQuantities(unsigned int globalIdx, unsigned int timeIdx) const {
-        assert(timeIdx == 0 || timeIdx == 1); // TODO: do not use assert for this because it can be run in GPU kernel...
+    OPM_HOST_DEVICE void
+    invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */,
+                                           const GridSubDomain& /* gridSubDomain */) const
+    {
+    }
+    OPM_HOST_DEVICE void updateFailed()
+    {
+    }
+    OPM_HOST_DEVICE const auto& intensiveQuantities(unsigned int globalIdx,
+                                                    unsigned int timeIdx) const
+    {
+        assert(timeIdx == 0
+               || timeIdx
+                   == 1); // TODO: do not use assert for this because it can be run in GPU kernel...
         if (timeIdx == 0) {
             return cachedIntensiveQuantities0_[globalIdx];
         } else {
@@ -101,31 +120,44 @@ public:
     }
 
 protected:
-    OPM_HOST_DEVICE void updateCachedIntQuants(const unsigned /* timeIdx */) const {}
+    OPM_HOST_DEVICE void updateCachedIntQuants(const unsigned /* timeIdx */) const
+    {
+    }
     template <class EMDArg>
-    OPM_HOST_DEVICE void updateCachedIntQuants1(const unsigned /* timeIdx */) const {}
-    template <class ...Args>
-    OPM_HOST_DEVICE void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const {}
-    template <class ...Args>
-    OPM_HOST_DEVICE void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */, const unsigned /* timeIdx */) const {}
+    OPM_HOST_DEVICE void updateCachedIntQuants1(const unsigned /* timeIdx */) const
+    {
+    }
+    template <class... Args>
+    OPM_HOST_DEVICE void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const
+    {
+    }
+    template <class... Args>
+    OPM_HOST_DEVICE void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */,
+                                                             const unsigned /* timeIdx */) const
+    {
+    }
 
 public:
-    // assumes --enable-storage-cache=false so that we need not worry about updating cpu-caches from gpu kernels
+    // assumes --enable-storage-cache=false so that we need not worry about updating cpu-caches from
+    // gpu kernels
     Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities0_;
     Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities1_;
     ModuleParams moduleParams_;
 };
 
-namespace gpuistl {
-    // For now we make a copy of the simplified CPU model because we need to set the fluid system pointer
-    // without breaking copy semantics
+namespace gpuistl
+{
+    // For now we make a copy of the simplified CPU model because we need to set the fluid system
+    // pointer without breaking copy semantics
     template <class TypeTag, typename CpuSimplifiedGpuFIBlackOilModel, typename GpuFluidSystem>
-    auto copy_to_gpu_just_find_me(CpuSimplifiedGpuFIBlackOilModel cpuModel, const GpuFluidSystem& fsys)
+    auto copy_to_gpu_just_find_me(CpuSimplifiedGpuFIBlackOilModel cpuModel,
+                                  const GpuFluidSystem& fsys)
     {
         using Scalar = typename CpuSimplifiedGpuFIBlackOilModel::Scalar;
         // In this copy_to_gpu we need to take care of two things:
-        // 1) Copy the cachedIntensiveQuantities_ to GPU (go from vector to GpuBuffer to allocate things on GPU)
-        // 2) Ensure that the FluidSystem pointer inside each IntensiveQuantities points to a GPU FluidSystem
+        // 1) Copy the cachedIntensiveQuantities_ to GPU (go from vector to GpuBuffer to allocate
+        // things on GPU) 2) Ensure that the FluidSystem pointer inside each IntensiveQuantities
+        // points to a GPU FluidSystem
         //    The pointer should be set before we move the entire thing to the GPU.
 
         // Here I have to declare the new type of BOIQ that I want?
@@ -136,28 +168,32 @@ namespace gpuistl {
         // what type of fluidstate I am using (template it on the gpufluidsystem!)
 
         // set pointers
-        using CorrectTypeTagView = typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, GpuView>;
+        using CorrectTypeTagView =
+            typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, GpuView>;
         using CorrectBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
-        using SimplifiedGpuBufferModel = SimplifiedGpuFIBlackOilModel<CorrectTypeTagView, GpuBuffer>;
+        using SimplifiedGpuBufferModel
+            = SimplifiedGpuFIBlackOilModel<CorrectTypeTagView, GpuBuffer>;
 
         std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr0;
         for (auto& iq : cpuModel.cachedIntensiveQuantities0_) {
-            cpuIntQuantsWithGpuPtr0.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(fsys));
+            cpuIntQuantsWithGpuPtr0.push_back(
+                iq.template withOtherFluidSystem<CorrectTypeTagView>(fsys));
         }
 
         std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr1;
         for (auto& iq : cpuModel.cachedIntensiveQuantities1_) {
-            cpuIntQuantsWithGpuPtr1.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(fsys));
+            cpuIntQuantsWithGpuPtr1.push_back(
+                iq.template withOtherFluidSystem<CorrectTypeTagView>(fsys));
         }
 
         using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, GpuBuffer>>;
         ModuleParams moduleParams {
-            gpuistl::copy_to_gpu(cpuModel.moduleParams_.convectiveMixingModuleParam)
-        };
+            gpuistl::copy_to_gpu(cpuModel.moduleParams_.convectiveMixingModuleParam)};
 
         // create new blackoil model providing a gpubuffer allocated version of the intQuants
-        return SimplifiedGpuBufferModel(GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr0), GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr1), moduleParams);
-
+        return SimplifiedGpuBufferModel(GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr0),
+                                        GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr1),
+                                        moduleParams);
     }
 
     template <typename GpuSimplifiedGpuFIBlackOilModel>
@@ -166,14 +202,12 @@ namespace gpuistl {
         using Scalar = typename GpuSimplifiedGpuFIBlackOilModel::Scalar;
         using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, GpuView>>;
 
-        return SimplifiedGpuFIBlackOilModel<
-            typename GpuSimplifiedGpuFIBlackOilModel::TypeTagPublic,
-            gpuistl::GpuView>
-            (make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities0_),
-             make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities1_),
-             ModuleParams{
-                 make_view(gpuSimplifiedGpuFIBlackOilModel.moduleParams_.convectiveMixingModuleParam)
-             });
+        return SimplifiedGpuFIBlackOilModel<typename GpuSimplifiedGpuFIBlackOilModel::TypeTagPublic,
+                                            gpuistl::GpuView>(
+            make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities0_),
+            make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities1_),
+            ModuleParams {make_view(
+                gpuSimplifiedGpuFIBlackOilModel.moduleParams_.convectiveMixingModuleParam)});
     }
 } // namespace gpuistl
 

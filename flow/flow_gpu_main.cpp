@@ -18,7 +18,8 @@
 #include <flow/flow_gpu.hpp>
 
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
     return Opm::flowGasWaterEnergyMainGPUStandalone(argc, argv);
 }

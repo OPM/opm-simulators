@@ -17,7 +17,8 @@
 #ifndef FLOW_GPU_HIP_HPP
 #define FLOW_GPU_HIP_HPP
 
-namespace Opm {
+namespace Opm
+{
 
 //! \brief Main function used in flow binary.
 int flowGasWaterEnergyMainGPU(int argc, char** argv, bool outputCout, bool outputFiles);
@@ -25,6 +26,6 @@ int flowGasWaterEnergyMainGPU(int argc, char** argv, bool outputCout, bool outpu
 //! \brief Main function used in flow_gaswater binary.
 int flowGasWaterEnergyMainGPUStandalone(int argc, char** argv);
 
-}
+} // namespace Opm
 
 #endif // FLOW_GPU_HIP_HPP

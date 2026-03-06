@@ -548,8 +548,7 @@ public:
                                     const IntensiveQuantities& insideIntQuants,
                                     unsigned globalSpaceIdx)
     {
-#if OPM_IS_INSIDE_HOST_FUNCTION
-    // if constexpr (std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
+    if constexpr (std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
             switch (bdyInfo.type) {
             case BCType::NONE:
                 bdyFlux = 0.0;
@@ -569,8 +568,7 @@ public:
                                     std::to_string(static_cast<int>(bdyInfo.type)) +
                                     " in computeBoundaryFlux()." );
             }
-        // }
-#else
+        } else {
             switch (bdyInfo.type) {
             case BCType::NONE:
                 bdyFlux = 0.0;
@@ -581,7 +579,7 @@ public:
             default:
                 OPM_THROW(std::logic_error, "Only THERMAL BC supported when FluidSystem is non-static.");
             }
-#endif
+        }
     }
 
     template <class BoundaryConditionData>
@@ -717,17 +715,13 @@ public:
         if constexpr (enableFullyImplicitThermal) {
             Evaluation heatFlux;
             // avoid overload of functions with same numeber of elements in eclproblem
-            Scalar alpha;
-#if OPM_IS_INSIDE_DEVICE_FUNCTION
-            // Device pass: ProblemLocal is SimplifiedGpuBlackOilModel which has getAlpha()
 
-                if constexpr (!std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
-            alpha = problem.getAlpha(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
-                }
-#else
-    // Host pass: ProblemLocal is FlowProblemBlackoil
-    alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
-#endif
+            Scalar alpha;
+            if constexpr (!std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
+                alpha = problem.getAlpha(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+            } else {
+                alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+            }
 
             unsigned inIdx = 0;//dummy
             // always calculated with derivatives of this cell
