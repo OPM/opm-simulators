@@ -912,10 +912,5 @@ find_package(opm-common REQUIRED)
 # the build starts, so it makes sense to keep the data there then.
 include (OpmInit)
 
-# list of prerequisites for this particular project; this is in a
-# separate file (in cmake/Modules sub-directory) because it is shared
-# with the find module
-include ("${project}-prereqs")
-
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
