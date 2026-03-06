@@ -270,7 +270,7 @@ writeInit()
             integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
         }
 
-        eclIO_->writeInitial(this->outputTrans_->front(),
+        eclIO_->writeInitial(*(this->outputTrans_),
                              integerVectors,
                              this->outputNnc_);
         this->outputTrans_.reset();
