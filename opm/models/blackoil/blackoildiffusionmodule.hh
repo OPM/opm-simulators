@@ -450,6 +450,9 @@ public:
             return *this;
         }
 
+        // TODO: Cannot really access the non-static enableDiffusion bool here
+        // Doing it this way seems wrong as well because it should be runtime-dependent,
+        // not sure yet what is the best solution.
         if constexpr (getPropValue<TypeTag, Properties::EnableDiffusion>()) {
             tortuosity_ = rhs.tortuosity_;
             diffusionCoefficient_ = rhs.diffusionCoefficient_;
