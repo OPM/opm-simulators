@@ -581,9 +581,6 @@ EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 allocateAllNncs_(int maxLevel) const
 {
     this->outputNnc_.resize(maxLevel+1); // level 0,1,..., maxLevel
-    for (int i = 0; i < maxLevel+1; ++i) {
-        this->outputNnc_[i].reserve(this->equilGrid_->size(0));
-    }
 
     if (maxLevel) {
         // NNCs between main (level zero) grid and LGRs: level 1, ...., maxLevel.
@@ -592,10 +589,6 @@ allocateAllNncs_(int maxLevel) const
         //          outputNncGlobalLocal_[1] -> NNCs between level 0 and level 2
         //          outputAmalgamatedNnc_[2] -> NNCs between level 0 and level 3
         this->outputNncGlobalLocal_.resize(maxLevel);
-        for (int i = 0; i < maxLevel; ++i) { // 1 <= level(= i+1) <= maxLevel
-
-            this->outputNncGlobalLocal_[i].reserve(this->equilGrid_->size(0));
-        }
 
         // NNCs between different refined level grids: (level1, level2)
         // with 0 < level1 < level2 <= maxLevel
@@ -606,9 +599,6 @@ allocateAllNncs_(int maxLevel) const
         this->outputAmalgamatedNnc_.resize(maxLevel-1); 
         for (int i = 0; i < maxLevel-1; ++i) {
             this->outputAmalgamatedNnc_[i].resize(maxLevel-1-i);
-            for (int ii = 0; ii < maxLevel-1-i; ++ii) {
-                this->outputAmalgamatedNnc_[i][ii].reserve(this->equilGrid_->size(0));
-            }
         }
     }
 }
