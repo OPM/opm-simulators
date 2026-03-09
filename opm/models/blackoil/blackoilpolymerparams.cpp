@@ -24,14 +24,12 @@ copyright holders.
 #include <config.h>
 #include <opm/models/blackoil/blackoilpolymerparams.hpp>
 
-#if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PlyadsTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PlymaxTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PlyrockTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PlyviscTable.hpp>
-#endif
 
 #include <cassert>
 #include <cstddef>
@@ -57,7 +55,6 @@ convertVecToVec(const std::vector<std::vector<From>>& input)
 
 namespace Opm {
 
-#if HAVE_ECL_INPUT
 template<class Scalar>
 template<bool enablePolymer, bool enablePolymerMolarWeight>
 void BlackOilPolymerParams<Scalar>::
@@ -344,7 +341,6 @@ initFromState(const EclipseState& eclState)
         }
     }
 }
-#endif // HAVE_ECL_INPUT
 
 template<class Scalar>
 void BlackOilPolymerParams<Scalar>::

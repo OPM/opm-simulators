@@ -24,7 +24,6 @@
 #include <config.h>
 #include <opm/models/blackoil/blackoilsolventparams.hpp>
 
-#if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SsfnTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/Sof2Table.hpp>
@@ -34,11 +33,9 @@
 #include <opm/input/eclipse/EclipseState/Tables/SorwmisTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SgcwmisTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TlpmixpaTable.hpp>
-#endif
 
 namespace Opm {
 
-#if HAVE_ECL_INPUT
 template<class Scalar>
 template<bool enableSolvent>
 void BlackOilSolventParams<Scalar>::
@@ -300,7 +297,6 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
         }
     }
 }
-#endif
 
 template<class Scalar>
 void BlackOilSolventParams<Scalar>::

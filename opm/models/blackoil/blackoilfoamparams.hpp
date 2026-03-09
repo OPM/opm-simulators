@@ -36,9 +36,7 @@ namespace Opm {
 
 enum class Phase;
 
-#if HAVE_ECL_INPUT
 class EclipseState;
-#endif
 
 //! \brief Struct holding the parameters for the BlackoilFoamModule class.
 template<class Scalar>
@@ -46,10 +44,8 @@ struct BlackOilFoamParams
 {
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
-#if HAVE_ECL_INPUT
     template<bool enableFoam>
     void initFromState(const EclipseState& eclState);
-#endif
 
     /*!
      * \brief Specify the number of saturation regions.

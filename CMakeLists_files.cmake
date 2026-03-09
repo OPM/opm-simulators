@@ -209,7 +209,16 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/compressPartition.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
   opm/simulators/utils/readDeck.cpp
+  opm/simulators/utils/satfunc/GasPhaseConsistencyChecks.cpp
+  opm/simulators/utils/satfunc/OilPhaseConsistencyChecks.cpp
+  opm/simulators/utils/satfunc/PhaseCheckBase.cpp
   opm/simulators/utils/satfunc/RelpermDiagnostics.cpp
+  opm/simulators/utils/satfunc/SatfuncConsistencyCheckManager.cpp
+  opm/simulators/utils/satfunc/SatfuncConsistencyChecks.cpp
+  opm/simulators/utils/satfunc/ScaledSatfuncCheckPoint.cpp
+  opm/simulators/utils/satfunc/ThreePointHorizontalConsistencyChecks.cpp
+  opm/simulators/utils/satfunc/UnscaledSatfuncCheckPoint.cpp
+  opm/simulators/utils/satfunc/WaterPhaseConsistencyChecks.cpp
   opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/BlackoilWellModelConstraints.cpp
   opm/simulators/wells/BlackoilWellModelGasLift.cpp
@@ -279,20 +288,6 @@ if (HAVE_AVX2_EXTENSION)
     opm/simulators/linalg/mixed/bslv.c)
   list (APPEND MAIN_SOURCE_FILES
     ${AVX2_SOURCE_FILES})
-endif()
-
-if (HAVE_ECL_INPUT)
-  list (APPEND MAIN_SOURCE_FILES
-    opm/simulators/utils/satfunc/GasPhaseConsistencyChecks.cpp
-    opm/simulators/utils/satfunc/OilPhaseConsistencyChecks.cpp
-    opm/simulators/utils/satfunc/PhaseCheckBase.cpp
-    opm/simulators/utils/satfunc/SatfuncConsistencyCheckManager.cpp
-    opm/simulators/utils/satfunc/SatfuncConsistencyChecks.cpp
-    opm/simulators/utils/satfunc/ScaledSatfuncCheckPoint.cpp
-    opm/simulators/utils/satfunc/ThreePointHorizontalConsistencyChecks.cpp
-    opm/simulators/utils/satfunc/UnscaledSatfuncCheckPoint.cpp
-    opm/simulators/utils/satfunc/WaterPhaseConsistencyChecks.cpp
-  )
 endif()
 
 if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
@@ -485,6 +480,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_equil.cpp
   tests/test_extractMatrix.cpp
   tests/test_flexiblesolver.cpp
+  tests/test_GasSatfuncConsistencyChecks.cpp
   tests/test_gconsump.cpp
   tests/test_glift1.cpp
   tests/test_graphcoloring.cpp
@@ -495,7 +491,9 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_LogOutputHelper.cpp
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
+  tests/test_nonnc.cpp
   tests/test_norne_pvt.cpp
+  tests/test_OilSatfuncConsistencyChecks.cpp
   tests/test_outputdir.cpp
   tests/test_parametersystem.cpp
   tests/test_parallel_wbp_sourcevalues.cpp
@@ -510,27 +508,19 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_rftcontainer.cpp
   tests/test_RunningStatistics.cpp
   tests/test_rstconv.cpp
+  tests/test_SatfuncCheckPoint.cpp
+  tests/test_SatfuncConsistencyChecks.cpp
+  tests/test_SatfuncConsistencyChecks_parallel.cpp
+  tests/test_SatfuncConsistencyCheckManager.cpp
   tests/test_stoppedwells.cpp
+  tests/test_ThreePointHorizontalSatfuncConsistencyChecks.cpp
   tests/test_timer.cpp
   tests/test_vfpproperties.cpp
+  tests/test_WaterSatfuncConsistencyChecks.cpp
   tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
   tests/test_wellstate.cpp
-  )
-
-if (HAVE_ECL_INPUT)
-  list(APPEND TEST_SOURCE_FILES
-    tests/test_nonnc.cpp
-    tests/test_GasSatfuncConsistencyChecks.cpp
-    tests/test_OilSatfuncConsistencyChecks.cpp
-    tests/test_SatfuncCheckPoint.cpp
-    tests/test_SatfuncConsistencyCheckManager.cpp
-    tests/test_SatfuncConsistencyChecks.cpp
-    tests/test_SatfuncConsistencyChecks_parallel.cpp
-    tests/test_ThreePointHorizontalSatfuncConsistencyChecks.cpp
-    tests/test_WaterSatfuncConsistencyChecks.cpp
-  )
-endif()
+)
 
 if(MPI_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_ghostlastmatrixadapter.cpp
@@ -1148,7 +1138,17 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/ParallelCommunication.hpp
   opm/simulators/utils/ParallelSerialization.hpp
   opm/simulators/utils/readDeck.hpp
+  opm/simulators/utils/satfunc/GasPhaseConsistencyChecks.hpp
+  opm/simulators/utils/satfunc/OilPhaseConsistencyChecks.hpp
+  opm/simulators/utils/satfunc/PhaseCheckBase.hpp
   opm/simulators/utils/satfunc/RelpermDiagnostics.hpp
+  opm/simulators/utils/satfunc/SatfuncCheckPointInterface.hpp
+  opm/simulators/utils/satfunc/SatfuncConsistencyCheckManager.hpp
+  opm/simulators/utils/satfunc/SatfuncConsistencyChecks.hpp
+  opm/simulators/utils/satfunc/ScaledSatfuncCheckPoint.hpp
+  opm/simulators/utils/satfunc/ThreePointHorizontalConsistencyChecks.hpp
+  opm/simulators/utils/satfunc/UnscaledSatfuncCheckPoint.hpp
+  opm/simulators/utils/satfunc/WaterPhaseConsistencyChecks.hpp
   opm/simulators/wells/ALQState.hpp
   opm/simulators/wells/BlackoilWellModel.hpp
   opm/simulators/wells/BlackoilWellModel_impl.hpp
@@ -1269,21 +1269,6 @@ if (USE_GPU_BRIDGE)
     opm/simulators/linalg/gpubridge/rocm/rocsparseMatrix.hpp
     opm/simulators/linalg/gpubridge/WellContributions.hpp
     opm/simulators/linalg/ISTLSolverGpuBridge.hpp
-  )
-endif()
-
-if (HAVE_ECL_INPUT)
-  list (APPEND PUBLIC_HEADER_FILES
-    opm/simulators/utils/satfunc/GasPhaseConsistencyChecks.hpp
-    opm/simulators/utils/satfunc/OilPhaseConsistencyChecks.hpp
-    opm/simulators/utils/satfunc/PhaseCheckBase.hpp
-    opm/simulators/utils/satfunc/SatfuncCheckPointInterface.hpp
-    opm/simulators/utils/satfunc/SatfuncConsistencyCheckManager.hpp
-    opm/simulators/utils/satfunc/SatfuncConsistencyChecks.hpp
-    opm/simulators/utils/satfunc/ScaledSatfuncCheckPoint.hpp
-    opm/simulators/utils/satfunc/ThreePointHorizontalConsistencyChecks.hpp
-    opm/simulators/utils/satfunc/UnscaledSatfuncCheckPoint.hpp
-    opm/simulators/utils/satfunc/WaterPhaseConsistencyChecks.hpp
   )
 endif()
 

@@ -24,18 +24,15 @@
 #include <config.h>
 #include <opm/models/blackoil/blackoilfoamparams.hpp>
 
-#if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/FoamadsTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/FoammobTable.hpp>
-#endif
 
 #include <cstddef>
 #include <stdexcept>
 
 namespace Opm {
 
-#if HAVE_ECL_INPUT
 template<class Scalar>
 template<bool enableFoam>
 void BlackOilFoamParams<Scalar>::
@@ -125,7 +122,6 @@ initFromState(const EclipseState& eclState)
         gasMobilityMultiplierTable_[pvtReg].setXYContainers(conc, mobMult);
     }
 }
-#endif
 
 template<class Scalar>
 void BlackOilFoamParams<Scalar>::setNumSatRegions(unsigned numRegions)

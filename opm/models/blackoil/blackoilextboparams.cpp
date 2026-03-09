@@ -24,7 +24,6 @@
 #include <config.h>
 #include <opm/models/blackoil/blackoilextboparams.hpp>
 
-#if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SsfnTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/Sof2Table.hpp>
@@ -34,14 +33,12 @@
 #include <opm/input/eclipse/EclipseState/Tables/SorwmisTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SgcwmisTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TlpmixpaTable.hpp>
-#endif
 
 #include <cstddef>
 #include <stdexcept>
 
 namespace Opm {
 
-#if HAVE_ECL_INPUT
 template<class Scalar>
 template<bool enableExtbo>
 void BlackOilExtboParams<Scalar>::
@@ -204,7 +201,6 @@ initFromState(const EclipseState& eclState)
     else
         throw std::runtime_error("Extbo:  kw SDENSITY is missing or not aligned with NTPVT\n");
 }
-#endif
 
 #define INSTANTIATE_TYPE(T)                                                          \
     template struct BlackOilExtboParams<T>;                                          \

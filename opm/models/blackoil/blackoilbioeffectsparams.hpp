@@ -34,18 +34,14 @@
 
 namespace Opm {
 
-#if HAVE_ECL_INPUT
 class EclipseState;
-#endif
 
 //! \brief Struct holding the parameters for the BlackOilBioeffectsModule class.
 template<class Scalar>
 struct BlackOilBioeffectsParams
 {
-#if HAVE_ECL_INPUT
     template<bool enableBioeffects , bool enableMICP>
     void initFromState(const EclipseState& eclState);
-#endif
 
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 

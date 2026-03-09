@@ -38,10 +38,8 @@
 
 namespace Opm {
 
-#if HAVE_ECL_INPUT
 class EclipseState;
 class Schedule;
-#endif
 
 //! \brief Struct holding the parameters for the BlackOilSolventModule class.
 template<class Scalar>
@@ -54,10 +52,8 @@ struct BlackOilSolventParams
     using SolventPvt = ::Opm::SolventPvt<Scalar>;
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
-#if HAVE_ECL_INPUT
     template<bool enableSolvent>
     void initFromState(const EclipseState& eclState, const Schedule& schedule);
-#endif
 
     BrineCo2Pvt brineCo2Pvt_{};
     BrineH2Pvt brineH2Pvt_{};

@@ -37,10 +37,8 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#endif
 
 #include <array>
 #include <cmath>
@@ -75,10 +73,8 @@ class BlackOilDispersionModule<TypeTag, /*enableDispersion=*/false>
 public:
     using ExtensiveQuantities = BlackOilDispersionExtensiveQuantities<TypeTag,false>;
 
-#if HAVE_ECL_INPUT
     static void initFromState(const EclipseState&)
     {}
-#endif
 
     /*!
      * \brief Adds the dispersive flux to the flux vector over a flux
@@ -134,7 +130,6 @@ class BlackOilDispersionModule<TypeTag, /*enableDispersion=*/true>
 public:
     using ExtensiveQuantities = BlackOilDispersionExtensiveQuantities<TypeTag,true>;
 
-#if HAVE_ECL_INPUT
     static void initFromState(const EclipseState& eclState)
     {
         if (!eclState.getSimulationConfig().rock_config().dispersion()) {
@@ -147,7 +142,6 @@ public:
                             "gas phase is ignored.");
         }
     }
-#endif
 
     /*!
      * \brief Adds the mass flux due to dispersion to the flux vector over the

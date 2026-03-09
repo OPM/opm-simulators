@@ -24,7 +24,6 @@
 #include <config.h>
 #include <opm/models/blackoil/blackoilbrineparams.hpp>
 
-#if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PvtwsaltTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PcfactTable.hpp>
@@ -32,7 +31,6 @@
 #include <opm/input/eclipse/EclipseState/Tables/SaltSolubilityTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SimpleTable.hpp>
-#endif
 
 #include <cassert>
 #include <cstddef>
@@ -40,7 +38,6 @@
 
 namespace Opm {
 
-#if HAVE_ECL_INPUT
 template<class Scalar>
 template<bool enableBrine, bool enableSaltPrecipitation>
 void BlackOilBrineParams<Scalar>::
@@ -116,7 +113,6 @@ initFromState(const EclipseState& eclState)
         }
    }
 }
-#endif
 
 #define INSTANTIATE_TYPE(T)                                                                \
     template struct BlackOilBrineParams<T>;                                                \
