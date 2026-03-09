@@ -44,9 +44,7 @@
 
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 
-#include <chrono>
 #include <cstddef>
-#include <iostream>
 #include <stdexcept>
 #include <type_traits>
 
@@ -56,10 +54,10 @@
 
 /*
     This file implements a simplified version of the FIBlackOilModel
-    which can easily be used in a GPU environment.
-    This is developed wihle parallelizing the tpfa matrix assembly, so
+    which can be used in a GPU environment.
+    This is developed while parallelizing the tpfa matrix assembly, so
     only functionality needed there is implemented.
-    To start with this means just being able to access intensiveQuantities
+    To start with this means just being able to access intensiveQuantities.
 */
 
 namespace Opm
@@ -180,13 +178,6 @@ namespace gpuistl
         // points to a GPU FluidSystem
         //    The pointer should be set before we move the entire thing to the GPU.
 
-        // Here I have to declare the new type of BOIQ that I want?
-        // Because I cannot use the existing boiq and just set another type of poiner
-        // in the fluid state.
-        // the BOIQ is currently just defined from the TypeTag, so I should
-        // probably add another template argument such that I can adjust
-        // what type of fluidstate I am using (template it on the gpufluidsystem!)
-
         // set pointers
         using CorrectTypeTagView =
             typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, GpuView>;
@@ -194,14 +185,8 @@ namespace gpuistl
         using SimplifiedGpuBufferModel
             = SimplifiedGpuFIBlackOilModel<CorrectTypeTagView, GpuBuffer>;
 
-        using Clock = std::chrono::high_resolution_clock;
-        auto ms = [](auto a, auto b) {
-            return std::chrono::duration_cast<std::chrono::microseconds>(b - a).count() / 1000.0;
-        };
-
-        auto t0 = Clock::now();
-        const std::size_t nCells0 = cpuModel.cachedIntensiveQuantities0_.size();
-        const std::size_t nCells1 = cpuModel.cachedIntensiveQuantities1_.size();
+        std::size_t nCells0 = cpuModel.cachedIntensiveQuantities0_.size();
+        std::size_t nCells1 = cpuModel.cachedIntensiveQuantities1_.size();
 
         // CorrectBOIQ is not default-constructible (non-static FluidSystem requires a pointer at
         // construction time). To enable parallel fill, we create a prototype from the first element
@@ -219,7 +204,6 @@ namespace gpuistl
                     cpuModel.cachedIntensiveQuantities0_[i].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
             }
         }
-        auto t1 = Clock::now();
 
         std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr1;
         if (nCells1 > 0) {
@@ -232,30 +216,16 @@ namespace gpuistl
                     cpuModel.cachedIntensiveQuantities1_[i].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
             }
         }
-        auto t2 = Clock::now();
 
         using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, GpuBuffer>>;
         ModuleParams moduleParams {
             gpuistl::copy_to_gpu(cpuModel.moduleParams_.convectiveMixingModuleParam)};
-        auto t3 = Clock::now();
 
         GpuBuffer<CorrectBOIQ> gpuBuf0(cpuIntQuantsWithGpuPtr0);
-        auto t4 = Clock::now();
-
         GpuBuffer<CorrectBOIQ> gpuBuf1(cpuIntQuantsWithGpuPtr1);
-        auto t5 = Clock::now();
 
         // create new blackoil model providing a gpubuffer allocated version of the intQuants
         auto result = SimplifiedGpuBufferModel(std::move(gpuBuf0), std::move(gpuBuf1), moduleParams);
-        auto t6 = Clock::now();
-
-        std::cout << "[copy_to_gpu] withOtherFluidSystem intQuants0: " << ms(t0, t1) << " ms\n"
-                  << "[copy_to_gpu] withOtherFluidSystem intQuants1: " << ms(t1, t2) << " ms\n"
-                  << "[copy_to_gpu] copy moduleParams to GPU:         " << ms(t2, t3) << " ms\n"
-                  << "[copy_to_gpu] GpuBuffer upload intQuants0:      " << ms(t3, t4) << " ms\n"
-                  << "[copy_to_gpu] GpuBuffer upload intQuants1:      " << ms(t4, t5) << " ms\n"
-                  << "[copy_to_gpu] SimplifiedGpuBufferModel ctor:    " << ms(t5, t6) << " ms\n"
-                  << "[copy_to_gpu] Total:                            " << ms(t0, t6) << " ms\n";
 
         return result;
     }

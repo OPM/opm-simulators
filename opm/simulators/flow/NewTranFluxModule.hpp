@@ -35,6 +35,7 @@
 #include <dune/common/fmatrix.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
@@ -47,9 +48,6 @@
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 
-#include <opm/common/utility/gpuDecorators.hpp>
-
-#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <array>
 
