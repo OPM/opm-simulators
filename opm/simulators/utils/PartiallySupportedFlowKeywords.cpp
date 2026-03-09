@@ -343,7 +343,6 @@ partiallySupported()
             "EHYSTR",
             {
                {2,{true, allow_values<int> {0, 1, 2, 3, 4}, "EHYSTR(HYSTMOD): only Carlson or Killough Hysteresis Models supported (0,1 or 2,3,4)"}}, // relative_perm_hyst
-               {13,{true, allow_values<int> {0}, "EHYSTR(HYSWETRP): Killough’s option not supported and should be defaulted"}}, // FLAG_SOMETHING
             },
          },
          {
