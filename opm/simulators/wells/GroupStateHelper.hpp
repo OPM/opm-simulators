@@ -640,6 +640,21 @@ private:
 
     std::optional<GSatProd::GSatProdGroupProp::Rate> selectRateComponent_(const int phase_pos) const;
 
+    //! \brief Subtract other-phase reservoir injection rates from a base rate.
+    //!
+    //! For multi-phase injection groups under RESV or VREP control, the total
+    //! reservoir volume target must be reduced by the reservoir volumes already
+    //! injected by other phases, leaving only this phase's share.
+    //!
+    //! \param injection_phase The controlled injection phase
+    //! \param base_reservoir_rate The total reservoir rate target before subtraction
+    //! \param group_injection_reservoir_rates Per-phase reservoir injection rates
+    //! \return The base rate minus other phases' reservoir injection contributions
+    Scalar subtractOtherPhaseResvInjection_(
+        Phase injection_phase,
+        Scalar base_reservoir_rate,
+        const std::vector<Scalar>& group_injection_reservoir_rates) const;
+
     Scalar sumProductionRateForControlMode_(const Group& group, Group::ProductionCMode cmode) const;
 
     int updateGroupControlledWellsRecursive_(const std::string& group_name,
