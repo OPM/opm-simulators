@@ -68,16 +68,16 @@ public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, Storage>>;
 
-    OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(unsigned int nCells)
+    SimplifiedGpuFIBlackOilModel(unsigned int nCells)
         : cachedIntensiveQuantities0_(nCells)
     {
     }
 
     // TODO: copy for now, but should be move!
-    OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel(
-        Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities0,
-        Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities1,
-        ModuleParams moduleParams)
+    SimplifiedGpuFIBlackOilModel(
+        const Storage<BlackOilIntensiveQuantities<TypeTag>>& cachedIntensiveQuantities0,
+        const Storage<BlackOilIntensiveQuantities<TypeTag>>& cachedIntensiveQuantities1,
+        const ModuleParams& moduleParams)
         : cachedIntensiveQuantities0_(cachedIntensiveQuantities0)
         , cachedIntensiveQuantities1_(cachedIntensiveQuantities1)
         , moduleParams_(moduleParams)
@@ -89,23 +89,31 @@ public:
         return moduleParams_;
     }
 
-    OPM_HOST_DEVICE SimplifiedGpuFIBlackOilModel() = default;
+    SimplifiedGpuFIBlackOilModel() = default;
 
-    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const
+    void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const
     {
+        OPM_THROW(std::logic_error, "invalidateAndUpdateIntensiveQuantities should not be called in SimplifiedGpuFIBlackOilModel");
     }
-    OPM_HOST_DEVICE void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const
+
+    void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const
     {
+        OPM_THROW(std::logic_error, "invalidateAndUpdateIntensiveQuantitiesOverlap should not be called in SimplifiedGpuFIBlackOilModel");
     }
+
     template <class GridSubDomain>
-    OPM_HOST_DEVICE void
+    void
     invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */,
                                            const GridSubDomain& /* gridSubDomain */) const
     {
+        OPM_THROW(std::logic_error, "invalidateAndUpdateIntensiveQuantities with GridSubDomain should not be called in SimplifiedGpuFIBlackOilModel");
     }
-    OPM_HOST_DEVICE void updateFailed()
+
+    void updateFailed()
     {
+        OPM_THROW(std::logic_error, "updateFailed should not be called in SimplifiedGpuFIBlackOilModel");
     }
+
     OPM_HOST_DEVICE const auto& intensiveQuantities(unsigned int globalIdx,
                                                     unsigned int timeIdx) const
     {
@@ -120,21 +128,28 @@ public:
     }
 
 protected:
-    OPM_HOST_DEVICE void updateCachedIntQuants(const unsigned /* timeIdx */) const
+    void updateCachedIntQuants(const unsigned /* timeIdx */) const
     {
+        OPM_THROW(std::logic_error, "updateCachedIntQuants should not be called in SimplifiedGpuFIBlackOilModel");
     }
+
     template <class EMDArg>
-    OPM_HOST_DEVICE void updateCachedIntQuants1(const unsigned /* timeIdx */) const
+    void updateCachedIntQuants1(const unsigned /* timeIdx */) const
     {
+        OPM_THROW(std::logic_error, "updateCachedIntQuants1 should not be called in SimplifiedGpuFIBlackOilModel");
     }
+
     template <class... Args>
-    OPM_HOST_DEVICE void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const
+    void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const
     {
+        OPM_THROW(std::logic_error, "updateCachedIntQuantsLoop should not be called in SimplifiedGpuFIBlackOilModel");
     }
+
     template <class... Args>
-    OPM_HOST_DEVICE void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */,
-                                                             const unsigned /* timeIdx */) const
+    void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */,
+                                             const unsigned /* timeIdx */) const
     {
+        OPM_THROW(std::logic_error, "updateSingleCachedIntQuantUnchecked should not be called in SimplifiedGpuFIBlackOilModel");
     }
 
 public:
@@ -149,11 +164,10 @@ namespace gpuistl
 {
     // For now we make a copy of the simplified CPU model because we need to set the fluid system
     // pointer without breaking copy semantics
-    template <class TypeTag, typename CpuSimplifiedGpuFIBlackOilModel, typename GpuFluidSystem>
-    auto copy_to_gpu_just_find_me(CpuSimplifiedGpuFIBlackOilModel cpuModel,
-                                  const GpuFluidSystem& fsys)
+    template <class TypeTag, typename GpuFluidSystem>
+    auto copy_to_gpu(const SimplifiedGpuFIBlackOilModel<TypeTag>& cpuModel, const GpuFluidSystem& fsys)
     {
-        using Scalar = typename CpuSimplifiedGpuFIBlackOilModel::Scalar;
+        using Scalar = typename SimplifiedGpuFIBlackOilModel<TypeTag>::Scalar;
         // In this copy_to_gpu we need to take care of two things:
         // 1) Copy the cachedIntensiveQuantities_ to GPU (go from vector to GpuBuffer to allocate
         // things on GPU) 2) Ensure that the FluidSystem pointer inside each IntensiveQuantities
@@ -196,14 +210,14 @@ namespace gpuistl
                                         moduleParams);
     }
 
-    template <typename GpuSimplifiedGpuFIBlackOilModel>
-    auto make_view_just_find_me(GpuSimplifiedGpuFIBlackOilModel& gpuSimplifiedGpuFIBlackOilModel)
+    template <typename LocalTypeTag>
+    auto make_view(SimplifiedGpuFIBlackOilModel<LocalTypeTag, GpuBuffer>& gpuSimplifiedGpuFIBlackOilModel)
     {
-        using Scalar = typename GpuSimplifiedGpuFIBlackOilModel::Scalar;
+        using InputSimplifiedGpuFIBlackOilModel = SimplifiedGpuFIBlackOilModel<LocalTypeTag, GpuBuffer>;
+        using Scalar = typename InputSimplifiedGpuFIBlackOilModel::Scalar;
         using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, GpuView>>;
 
-        return SimplifiedGpuFIBlackOilModel<typename GpuSimplifiedGpuFIBlackOilModel::TypeTagPublic,
-                                            gpuistl::GpuView>(
+        return SimplifiedGpuFIBlackOilModel<LocalTypeTag, gpuistl::GpuView>(
             make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities0_),
             make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities1_),
             ModuleParams {make_view(

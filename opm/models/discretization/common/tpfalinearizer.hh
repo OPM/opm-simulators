@@ -1205,8 +1205,8 @@ private:
                 auto prep_model_start = std::chrono::high_resolution_clock::now();
                 using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
                 GpuModel gpuModel(model_().allIntensiveQuantities0(), model_().allIntensiveQuantities1(), problem_().moduleParams());
-                auto gpuModelBuffer = gpuistl::copy_to_gpu_just_find_me<TypeTag>(gpuModel, *dynamicGpuFluidSystemPtr);
-                auto gpuModelView = gpuistl::make_view_just_find_me(gpuModelBuffer);
+                auto gpuModelBuffer = gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr);
+                auto gpuModelView = gpuistl::make_view(gpuModelBuffer);
                 auto prep_model_end = std::chrono::high_resolution_clock::now();
                 auto prep_model_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_model_end - prep_model_start);
                 std::cout << "GPU model prep time: " << prep_model_duration.count() << " microseconds" << std::endl;
