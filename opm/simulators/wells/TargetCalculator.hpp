@@ -42,8 +42,7 @@ public:
 
     TargetCalculator(const GroupStateHelperType& groupStateHelper,
                      const std::vector<Scalar>& resv_coeff,
-                     const Group& group,
-                     std::optional<Group::ProductionCMode> cmode_opt = std::nullopt);
+                     const Group& group);
 
     /// Construct with an explicit production control mode (not read from group state).
     /// Used when computing targets/limits for non-active rate types.

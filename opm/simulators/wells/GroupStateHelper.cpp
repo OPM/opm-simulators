@@ -760,6 +760,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
     // of the child of group.
     OPM_TIMEFUNCTION();
     const Group::ProductionCMode& current_group_control = this->groupState().production_control(group.name());
+    const Group::ProductionCMode target_group_control = target_cmode.has_value() ? target_cmode.value() : current_group_control;
 
     if (current_group_control == Group::ProductionCMode::FLD
         || current_group_control == Group::ProductionCMode::NONE) {
@@ -789,8 +790,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
 
     GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                     resv_coeff,
-                                                                    group,
-                                                                    target_cmode};
+                                                                    target_group_control};
 
     GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
                                                                       *this,
@@ -822,9 +822,8 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
         // translate orig_target to target_cmode using "previous" group rate fractions
         const auto& prev_rates = this->groupState().prev_production_rates(group.name());
         GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc_current{*this,
-                                               resv_coeff,
-                                               group,
-                                               current_group_control};
+                                                                               resv_coeff,
+                                                                               current_group_control};
         const Scalar prev_rate_current = tcalc_current.calcModeRateFromRates(prev_rates);
         const Scalar prev_rate_target = tcalc.calcModeRateFromRates(prev_rates);
         // shouldn't happen that prev_rate_current is zero since that is the controlled rate, but ...

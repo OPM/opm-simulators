@@ -1337,9 +1337,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
             auto& group_target = this->wellState().well(well->indexOfWell()).group_target;
-            if (!group_target.has_value()) { // any need for group_target to be optional?
-                group_target.emplace();
-            }
             if (well->isProducer()) {
                 const auto target = group_state_helper.getWellGroupTargetProducer(
                     well->name(),
@@ -1350,13 +1347,21 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     resv_coeff
                 );
                 if (target.has_value()) {
+                    // reset group_target modes to NONE, values to 0.0
+                    group_target.emplace();
                     group_target->target_value = target->first;
                     const auto cnt_group_name = target->second;
                     const auto cmode_current =  this->groupState().production_control(cnt_group_name);
                     group_target->group_name = cnt_group_name;
-                    group_target->production_cmode = this->groupState().production_control(cnt_group_name);
+                    group_target->production_cmode = cmode_current;
                     // If current group cmode is different from the one given in schedule, we also
-                    // compute the target corresponding to original cmode in case current mode is not feasible
+                    // compute the target corresponding to original cmode in case current mode is not feasible.
+                    // We handle the following cases two potential issues related to this:
+                    // 1. If the well fraction of current cmode is approximately zero at the begining of the 
+                    //    time-step, the correponding guide-rate will approximately zero. In this case we
+                    //    convert the group-target back to the groups original cmode
+                    // 2. Otherwise, if the well during solve experiences approximately zero fraction of current cmode,
+                    //    it will switch back to original cmode using target_mode_fallback/target_value_fallback.
                     const auto cnt_group = this->schedule().getGroup(cnt_group_name, reportStepIdx);
                     const auto cmode_orig = cnt_group.productionControls(summaryState_).cmode;
                     if (cmode_orig != cmode_current &&
@@ -1372,20 +1377,33 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                             cmode_orig
                         );
                         if (target_orig_cmode.has_value()) {
-                            group_target->target_value_fallback = target_orig_cmode->first;
-                            group_target->production_cmode_fallback = cmode_orig;
+                            // First check if the target value of current cmode is approximately zero by comparing it
+                            // with the groups target
+                            const Scalar target_fraction = group_target->target_value / group_state_helper.getProductionGroupTarget(cnt_group);
+                            if (std::abs(target_fraction) < 1e-7) {
+                                // revert back to original mode
+                                group_target->target_value = target_orig_cmode->first;
+                                group_target->production_cmode = cmode_orig;
+                                const std::string msg = fmt::format("Well {} gets approximately zero target of current group control mode {}."
+                                    "Convert target back to original group control mode {}.",
+                                    well->name(), Group::ProductionCMode2String(cmode_current), Group::ProductionCMode2String(cmode_orig));
+                                group_state_helper.deferredLogger().info(msg);
+                            } else {
+                                // keep for potential later use
+                                group_target->target_value_fallback = target_orig_cmode->first;
+                                group_target->production_cmode_fallback = cmode_orig;
+                            }
                         }
-                    } else {
-                        // No fallback control mode available
-                        group_target->production_cmode_fallback = Group::ProductionCMode::NONE;
                     }
+                } else {
+                    group_target = std::nullopt;
                 }
                 if (!target.has_value() && ws.production_cmode == Well::ProducerCMode::GRUP) {
                     const std::string msg = fmt::format("Well {} is under GRUP control but no valid group target "
                         "could be determined. Switching the well to under BHP control.", well->name());
                     group_state_helper.deferredLogger().debug(msg);
                     this->wellState().well(well->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
-                } 
+                }
             } else {
                 const auto& well_controls = well->wellEcl().injectionControls(summaryState_);
                 auto injectorType = well_controls.injector_type;
@@ -1419,8 +1437,11 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     resv_coeff
                 );
                 if (target.has_value()) {
+                    group_target.emplace();
                     group_target->target_value = target->first;
                     group_target->group_name = target->second;
+                } else {
+                    group_target = std::nullopt;
                 }
             }
         }

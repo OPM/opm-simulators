@@ -250,7 +250,8 @@ protected:
     }
 
     void ensureGroupControlFeasibility(WellState<Scalar, IndexTraits>& well_state,
-                                       const std::vector<Scalar>& scaled_well_fractions) const;
+                                       const std::vector<Scalar>& scaled_well_fractions,
+                                       DeferredLogger& deferred_logger) const;
 
     // definition of the struct OperabilityStatus
     struct OperabilityStatus

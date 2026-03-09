@@ -121,9 +121,9 @@ public:
 
     struct GroupTarget {
         std::string group_name;
-        Scalar target_value;
+        Scalar target_value{0.0};
         Group::ProductionCMode production_cmode {Group::ProductionCMode::NONE};
-        Scalar target_value_fallback;
+        Scalar target_value_fallback{0.0};
         Group::ProductionCMode production_cmode_fallback {Group::ProductionCMode::NONE};
 
         bool operator==(const GroupTarget& other) const {
