@@ -179,8 +179,8 @@ public:
     friend class BlackOilIntensiveQuantities;
 
     template<class OtherTypeTag>
-    OPM_HOST_DEVICE explicit BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem* fluidSystemPtr)
-        : fluidState_(other.fluidState_.withOtherFluidSystem(*fluidSystemPtr))
+    OPM_HOST_DEVICE explicit BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fluidSystemPtr)
+        : fluidState_(other.fluidState_.withOtherFluidSystem(fluidSystemPtr))
         , referencePorosity_(other.referencePorosity_)
         , porosity_(other.porosity_)
         , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
@@ -205,7 +205,7 @@ public:
     template<class OtherTypeTag>
     auto withOtherFluidSystem(const GetPropType<OtherTypeTag, Properties::FluidSystem>& other) const
     {
-        BlackOilIntensiveQuantities<OtherTypeTag> newIntQuants(*this, &other);
+        BlackOilIntensiveQuantities<OtherTypeTag> newIntQuants(*this, other);
         return newIntQuants;
     }
 
