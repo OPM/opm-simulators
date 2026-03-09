@@ -70,69 +70,10 @@ function(simulators_add_target_options)
   endif()
 endfunction()
 
-macro(opm-simulators_prereqs_hook)
-  if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
-    message(
-      WARNING
-        "When building parallel OPM flow we need a "
-        "parallel version of hdf5, but found only a serial one. "
-        "Please install a parallel hdf5 library for MPI "
-        "(e.g with apt-get install libhdf5-mpi-dev) and do a clean "
-        "rebuild (build after \"make clean\"). Continuing with "
-        "only normal restart without hdf5 file support."
-    )
-    set(HDF5_FOUND OFF)
-    unset(HAVE_HDF5)
-  endif()
-
-  if(NOT fmt_FOUND)
-    include(DownloadFmt)
-  endif()
-
-  if (OPM_ENABLE_PYTHON)
-    # Be backwards compatible.
-    if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
-      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
-    endif()
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
-    if(Python3_VERSION_MINOR LESS 3)
-      # Python native namespace packages requires python >= 3.3
-      message(SEND_ERROR "OPM requires python >= 3.3 but only version ${Python3_VERSION} was found")
-    endif()
-
-    find_package(pybind11 CONFIG)
-    if(NOT pybind11_FOUND)
-      include(DownloadPyBind11)
-    endif()
-  endif()
-
+macro(opm-simulators_language_hook)
   if(CONVERT_CUDA_TO_HIP)
     message("CUDA code will be hipified")
     enable_language(HIP)
-    find_package(hip REQUIRED)
-    find_package(hipsparse REQUIRED)
-    find_package(hipblas REQUIRED)
-    find_program(HIPIFY_PERL_COMMAND
-                 NAMES hipify-perl
-                 HINTS
-                  PATH /opt/rocm/bin
-    )
-    if(HIPIFY_PERL_COMMAND)
-      add_executable(hipify-perl IMPORTED GLOBAL)
-      set_target_properties(hipify-perl
-                            PROPERTIES IMPORTED_LOCATION ${HIPIFY_PERL_COMMAND}
-      )
-    else()
-      message(FATAL_ERROR "hipify-perl, required to convert CUDA to HIP, not found")
-    endif()
-  endif()
-
-  if(USE_GPU_BRIDGE AND rocsparse_FOUND AND NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA)
-    message(WARNING
-      "GPU bridge: Using CUDA and ROCm at the same time is not allowed. "
-      "Since rocsparse was found, CUDA will be disabled. "
-      "Use -DCMAKE_DISABLE_FIND_PACKAGE_rocsparse=ON to instead use CUDA.")
-    set(CMAKE_DISABLE_FIND_PACKAGE_CUDA ON)
   endif()
 
   # Make sure we are using the same compiler underneath
@@ -171,6 +112,76 @@ macro(opm-simulators_prereqs_hook)
         " Found only CUDA version ${CUDA_VERSION}."
       )
     endif()
+  endif()
+endmacro()
+
+macro(opm-simulators_prereqs_hook)
+  if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
+    message(
+      WARNING
+        "When building parallel OPM flow we need a "
+        "parallel version of hdf5, but found only a serial one. "
+        "Please install a parallel hdf5 library for MPI "
+        "(e.g with apt-get install libhdf5-mpi-dev) and do a clean "
+        "rebuild (build after \"make clean\"). Continuing with "
+        "only normal restart without hdf5 file support."
+    )
+    set(HDF5_FOUND OFF)
+    unset(HAVE_HDF5)
+  endif()
+
+  if(NOT fmt_FOUND)
+    include(DownloadFmt)
+  endif()
+
+  if (OPM_ENABLE_PYTHON)
+    # Be backwards compatible.
+    if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
+      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+    endif()
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+    if(Python3_VERSION_MINOR LESS 3)
+      # Python native namespace packages requires python >= 3.3
+      message(SEND_ERROR "OPM requires python >= 3.3 but only version ${Python3_VERSION} was found")
+    endif()
+
+    find_package(pybind11 CONFIG)
+    if(NOT pybind11_FOUND)
+      include(DownloadPyBind11)
+    endif()
+  endif()
+
+  if(CONVERT_CUDA_TO_HIP)
+    find_package(hip REQUIRED)
+    find_package(hipsparse REQUIRED)
+    find_package(hipblas REQUIRED)
+    find_program(HIPIFY_PERL_COMMAND
+                 NAMES hipify-perl
+                 HINTS
+                  PATH /opt/rocm/bin
+    )
+    if(HIPIFY_PERL_COMMAND)
+      add_executable(hipify-perl IMPORTED GLOBAL)
+      set_target_properties(hipify-perl
+                            PROPERTIES IMPORTED_LOCATION ${HIPIFY_PERL_COMMAND}
+      )
+    else()
+      message(FATAL_ERROR "hipify-perl, required to convert CUDA to HIP, not found")
+    endif()
+  endif()
+
+  if(USE_GPU_BRIDGE AND rocsparse_FOUND AND NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA)
+    message(WARNING
+      "GPU bridge: Using CUDA and ROCm at the same time is not allowed. "
+      "Since rocsparse was found, CUDA will be disabled. "
+      "Use -DCMAKE_DISABLE_FIND_PACKAGE_rocsparse=ON to instead use CUDA.")
+    set(CMAKE_DISABLE_FIND_PACKAGE_CUDA ON)
+  endif()
+
+  # Make sure we are using the same compiler underneath
+  # NVCC as for the rest. In the case that NVCC does not support
+  # that compiler it will error out.
+  if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND NOT CONVERT_CUDA_TO_HIP)
     if(CUDA_FOUND)
       find_package(CUDAToolkit REQUIRED)
     endif()
