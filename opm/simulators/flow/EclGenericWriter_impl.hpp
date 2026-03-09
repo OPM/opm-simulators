@@ -638,9 +638,9 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
         //
         // The condition cell2 >= cell1 holds by construction of nncData.
         assert (entry.cell2 >= entry.cell1);
-        
+
         if (! isCartesianNeighbour_(level0CartDims, entry.cell1, entry.cell2) ||
-            isNumAquConn_(entry.cell1, entry.cell2)) 
+            isNumAquConn_(entry.cell1, entry.cell2))
         {
             // Pick up transmissibility value from 'globalTrans()' since
             // multiplier keywords like MULTREGT might have impacted the
@@ -698,17 +698,14 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                 auto levelCartIdxOut = computeLevelCartIdx(levelOutIdx, levelOut);
 
                 // To store correctly and only once the corresponding NNC
-                int smallerLevel = std::min(levelIn, levelOut);
-                int largerLevel = std::max(levelIn, levelOut);
+                std::pair<int,int> smallerPair = {levelIn, levelCartIdxIn},
+                    largerPair = {levelOut, levelCartIdxOut};
+                if (smallerPair.first > largerPair.first) {
+                    std::swap(smallerPair, largerPair);
+                }
 
-                // This is not the smaller Cartesian index!! It's the level Cartesian index
-                // of the cell belonging to the smallerLevel grid, so that we store the NNC once.
-                auto smallerLevelCartIdx = (smallerLevel == levelIn)? levelCartIdxIn : levelCartIdxOut;
-                auto largerLevelCartIdx = (largerLevel == levelIn)? levelCartIdxIn : levelCartIdxOut;
-
-                assert(smallerLevel < maxLevel);
-                assert(largerLevel > smallerLevel);
-                assert(largerLevel <= maxLevel);
+                const auto& [smallerLevel, smallerLevelCartIdx] = smallerPair;
+                const auto& [largerLevel, largerLevelCartIdx] = largerPair;
 
                 /** Is it necessary to check if origin/parent cells have aquifer connections
                     and/or are direct Cartesian neighbours at this point?
