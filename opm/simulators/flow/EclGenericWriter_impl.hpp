@@ -410,15 +410,19 @@ computeLevelIndices_() const
 {
     if constexpr (equilGridIsCpGrid) {
         return [](const auto& intersection,
-                  int& intersectionInsideLeafIdx,
-                  int& intersectionOutsideLeafIdx)
+                  const auto&,
+                  const auto&)
         {
-            intersectionInsideLeafIdx = intersection.inside().getLevelElem().index();
-            intersectionOutsideLeafIdx = intersection.outside().getLevelElem().index();
+            return std::pair{intersection.inside().getLevelElem().index(), intersection.outside().getLevelElem().index()};
         };
     }
     else {
-        return [](const auto&, int&, int&){};
+        return [](const auto&,
+                  const auto& intersectionInsideLeafIdx,
+                  const auto& intersectionOutsideLeafIdx)
+        {
+            return std::pair{intersectionInsideLeafIdx, intersectionOutsideLeafIdx};
+        };
     }
 }
 
@@ -487,10 +491,8 @@ computeTrans_(const std::vector<std::unordered_map<int,int>>&  levelCartToLevelC
 
             int level = is.inside().level();
 
-            // Intentional copy since for CpGrid with LGRs, level*Idx and c* do not coincide.
-            int levelInIdx = c1;
-            int levelOutIdx = c2;
-            computeLevelIndices(is, levelInIdx, levelOutIdx);
+            // For CpGrid with LGRs, level*Idx and c* do not coincide.
+            const auto& [levelInIdx, levelOutIdx] = computeLevelIndices(is, c1, c2);
 
             const int levelCartIdxIn = computeLevelCartIdx(levelInIdx, level);
             const int levelCartIdxOut = computeLevelCartIdx(levelOutIdx, level);
@@ -696,10 +698,8 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                 continue; // we only need to handle each connection once, thank you.
 
             if ( is.inside().level() != is.outside().level() ) { // TRANGL   and TRANLL
-                // Intentional copy since for CpGrid with LGRs, level*Idx and c* do not coincide.
-                int levelInIdx = c1;
-                int levelOutIdx = c2;
-                computeLevelIndices(is, levelInIdx, levelOutIdx);
+                // For CpGrid with LGRs, level*Idx and c* do not coincide.
+                const auto& [levelInIdx, levelOutIdx] = computeLevelIndices(is, c1, c2);
 
                 const int levelIn = is.inside().level();
                 const int levelOut = is.outside().level();
@@ -760,10 +760,8 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                 std::size_t cc1 = equilCartMapper.cartesianIndex( c1 ); // origin/parent cell Cartesian idx in level 0 grid
                 std::size_t cc2 = equilCartMapper.cartesianIndex( c2 ); // origin/parent cell Cartesian idx in level 0 grid
 
-                // Intentional copy since for CpGrid with LGRs, level*Idx and c* do not coincide.
-                int levelInIdx = c1;
-                int levelOutIdx = c2;
-                computeLevelIndices(is, levelInIdx, levelOutIdx);
+                // For CpGrid with LGRs, level*Idx and c* do not coincide.
+                const auto& [levelInIdx, levelOutIdx] = computeLevelIndices(is, c1, c2);
 
                 auto levelCartIdxIn = computeLevelCartIdx(levelInIdx, level);
                 auto levelCartIdxOut = computeLevelCartIdx(levelOutIdx, level);
