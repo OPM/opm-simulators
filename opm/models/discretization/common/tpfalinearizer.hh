@@ -1192,24 +1192,49 @@ private:
                 // We need to have a pointer to the fluidysystem that can be used inside a GPU kernel
                 // Having a pointer to the view is not good enough as the view exists on the host, so
                 // allocat a view on the GPU with a pointer to it via the make_gpu_shared_ptr function
+                auto fluid_sys_ptr_start = std::chrono::high_resolution_clock::now();
                 auto dynamicGpuFluidSystemPtr = gpuistl::make_gpu_shared_ptr(dynamicGpuFluidSystemView);
-
+                auto fluid_sys_ptr_end = std::chrono::high_resolution_clock::now();
+                auto fluid_sys_ptr_duration = std::chrono::duration_cast<std::chrono::microseconds>(fluid_sys_ptr_end - fluid_sys_ptr_start);
+                std::cout << "GPU fluid system ptr creation time: " << fluid_sys_ptr_duration.count() << " microseconds" << std::endl;
 
                 using GpuScalarFluidState = typename GPUBOIQ::ScalarFluidState;
                 using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, GpuScalarFluidState>;
                 using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
+                
                 // Copy boundary info to GPU
+                auto boundary_info_start = std::chrono::high_resolution_clock::now();
                 gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfo_buffer = gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(boundaryInfo_, dynamicGpuFluidSystemPtr.get());
+                auto boundary_info_end = std::chrono::high_resolution_clock::now();
+                auto boundary_info_duration = std::chrono::duration_cast<std::chrono::microseconds>(boundary_info_end - boundary_info_start);
+                std::cout << "GPU boundary info copy time: " << boundary_info_duration.count() << " microseconds" << std::endl;
+                
                 auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
 
                 auto prep_model_start = std::chrono::high_resolution_clock::now();
                 using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
+                
+                auto model_construct_start = std::chrono::high_resolution_clock::now();
                 GpuModel gpuModel(model_().allIntensiveQuantities0(), model_().allIntensiveQuantities1(), problem_().moduleParams());
+                auto model_construct_end = std::chrono::high_resolution_clock::now();
+                auto model_construct_duration = std::chrono::duration_cast<std::chrono::microseconds>(model_construct_end - model_construct_start);
+                std::cout << "GPU model construction time: " << model_construct_duration.count() << " microseconds" << std::endl;
+                
+                auto model_copy_start = std::chrono::high_resolution_clock::now();
                 auto gpuModelBuffer = gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr);
+                auto model_copy_end = std::chrono::high_resolution_clock::now();
+                auto model_copy_duration = std::chrono::duration_cast<std::chrono::microseconds>(model_copy_end - model_copy_start);
+                std::cout << "GPU model copy_to_gpu time: " << model_copy_duration.count() << " microseconds" << std::endl;
+                
+                auto model_view_start = std::chrono::high_resolution_clock::now();
                 auto gpuModelView = gpuistl::make_view(gpuModelBuffer);
+                auto model_view_end = std::chrono::high_resolution_clock::now();
+                auto model_view_duration = std::chrono::duration_cast<std::chrono::microseconds>(model_view_end - model_view_start);
+                std::cout << "GPU model make_view time: " << model_view_duration.count() << " microseconds" << std::endl;
+                
                 auto prep_model_end = std::chrono::high_resolution_clock::now();
                 auto prep_model_duration = std::chrono::duration_cast<std::chrono::microseconds>(prep_model_end - prep_model_start);
-                std::cout << "GPU model prep time: " << prep_model_duration.count() << " microseconds" << std::endl;
+                std::cout << "GPU model prep time (total): " << prep_model_duration.count() << " microseconds" << std::endl;
 
 
                 // This is terrible, we are probably catching a very large amount of exceptions here, how to support a map on the GPU?

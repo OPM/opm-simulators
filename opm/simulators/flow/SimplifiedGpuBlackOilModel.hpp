@@ -44,9 +44,15 @@
 
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 
+#include <chrono>
 #include <cstddef>
+#include <iostream>
 #include <stdexcept>
 #include <type_traits>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 /*
     This file implements a simplified version of the FIBlackOilModel
@@ -188,26 +194,70 @@ namespace gpuistl
         using SimplifiedGpuBufferModel
             = SimplifiedGpuFIBlackOilModel<CorrectTypeTagView, GpuBuffer>;
 
+        using Clock = std::chrono::high_resolution_clock;
+        auto ms = [](auto a, auto b) {
+            return std::chrono::duration_cast<std::chrono::microseconds>(b - a).count() / 1000.0;
+        };
+
+        auto t0 = Clock::now();
+        const std::size_t nCells0 = cpuModel.cachedIntensiveQuantities0_.size();
+        const std::size_t nCells1 = cpuModel.cachedIntensiveQuantities1_.size();
+
+        // CorrectBOIQ is not default-constructible (non-static FluidSystem requires a pointer at
+        // construction time). To enable parallel fill, we create a prototype from the first element
+        // and use it to pre-size the vector with valid objects, then overwrite in parallel.
+        // Assumption: all cells share the same fsys pointer, so the prototype object is a valid
+        // stand-in until it is overwritten.
         std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr0;
-        for (auto& iq : cpuModel.cachedIntensiveQuantities0_) {
-            cpuIntQuantsWithGpuPtr0.push_back(
-                iq.template withOtherFluidSystem<CorrectTypeTagView>(fsys));
+        if (nCells0 > 0) {
+            CorrectBOIQ proto0 =
+                cpuModel.cachedIntensiveQuantities0_[0].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
+            cpuIntQuantsWithGpuPtr0.resize(nCells0, proto0);
+#pragma omp parallel for schedule(static)
+            for (std::size_t i = 1; i < nCells0; ++i) {
+                cpuIntQuantsWithGpuPtr0[i] =
+                    cpuModel.cachedIntensiveQuantities0_[i].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
+            }
         }
+        auto t1 = Clock::now();
 
         std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr1;
-        for (auto& iq : cpuModel.cachedIntensiveQuantities1_) {
-            cpuIntQuantsWithGpuPtr1.push_back(
-                iq.template withOtherFluidSystem<CorrectTypeTagView>(fsys));
+        if (nCells1 > 0) {
+            CorrectBOIQ proto1 =
+                cpuModel.cachedIntensiveQuantities1_[0].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
+            cpuIntQuantsWithGpuPtr1.resize(nCells1, proto1);
+#pragma omp parallel for schedule(static)
+            for (std::size_t i = 1; i < nCells1; ++i) {
+                cpuIntQuantsWithGpuPtr1[i] =
+                    cpuModel.cachedIntensiveQuantities1_[i].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
+            }
         }
+        auto t2 = Clock::now();
 
         using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, GpuBuffer>>;
         ModuleParams moduleParams {
             gpuistl::copy_to_gpu(cpuModel.moduleParams_.convectiveMixingModuleParam)};
+        auto t3 = Clock::now();
+
+        GpuBuffer<CorrectBOIQ> gpuBuf0(cpuIntQuantsWithGpuPtr0);
+        auto t4 = Clock::now();
+
+        GpuBuffer<CorrectBOIQ> gpuBuf1(cpuIntQuantsWithGpuPtr1);
+        auto t5 = Clock::now();
 
         // create new blackoil model providing a gpubuffer allocated version of the intQuants
-        return SimplifiedGpuBufferModel(GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr0),
-                                        GpuBuffer<CorrectBOIQ>(cpuIntQuantsWithGpuPtr1),
-                                        moduleParams);
+        auto result = SimplifiedGpuBufferModel(std::move(gpuBuf0), std::move(gpuBuf1), moduleParams);
+        auto t6 = Clock::now();
+
+        std::cout << "[copy_to_gpu] withOtherFluidSystem intQuants0: " << ms(t0, t1) << " ms\n"
+                  << "[copy_to_gpu] withOtherFluidSystem intQuants1: " << ms(t1, t2) << " ms\n"
+                  << "[copy_to_gpu] copy moduleParams to GPU:         " << ms(t2, t3) << " ms\n"
+                  << "[copy_to_gpu] GpuBuffer upload intQuants0:      " << ms(t3, t4) << " ms\n"
+                  << "[copy_to_gpu] GpuBuffer upload intQuants1:      " << ms(t4, t5) << " ms\n"
+                  << "[copy_to_gpu] SimplifiedGpuBufferModel ctor:    " << ms(t5, t6) << " ms\n"
+                  << "[copy_to_gpu] Total:                            " << ms(t0, t6) << " ms\n";
+
+        return result;
     }
 
     template <typename LocalTypeTag>
