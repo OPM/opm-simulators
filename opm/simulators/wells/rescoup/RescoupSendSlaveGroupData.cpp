@@ -118,11 +118,8 @@ void
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
 sendSlaveGroupDataToMaster()
 {
-    auto& rescoup_slave = this->reservoir_coupling_slave_;
-    if (rescoup_slave.getComm().rank() == 0) {
-        this->sendSlaveGroupProductionDataToMaster_();
-        this->sendSlaveGroupInjectionDataToMaster_();
-    }
+    this->sendSlaveGroupProductionDataToMaster_();
+    this->sendSlaveGroupInjectionDataToMaster_();
 }
 
 
