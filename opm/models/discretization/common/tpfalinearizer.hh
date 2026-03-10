@@ -1327,7 +1327,7 @@ private:
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
     template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
-    __global__ static void gpu_parallelize_linearization_kernel(
+    __global__ __launch_bounds__(256) static void gpu_parallelize_linearization_kernel(
         const unsigned int numCells,
         const DomainType GPU_LOCAL_domain,
         const NeighborSparseTable GPU_LOCAL_neighborInfo,
