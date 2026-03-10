@@ -30,11 +30,6 @@ set (opm-simulators_CONFIG_VAR
   OPM_COMPILE_COMPONENTS_TEMPLATE_LIST
 )
 
-# CMake 3.30.0 requires to find Boost in CONFIG mode
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.30.0)
-	set(_Boost_CONFIG_MODE CONFIG)
-endif()
-
 include(CheckAVX2)
 check_for_avx2()
 
@@ -42,7 +37,7 @@ check_for_avx2()
 set (opm-simulators_DEPS
   # Various runtime library enhancements
   "Boost 1.44.0
-    COMPONENTS date_time REQUIRED ${_Boost_CONFIG_MODE}"
+    COMPONENTS date_time REQUIRED"
   # DUNE prerequisites
   "dune-common REQUIRED"
   "dune-istl REQUIRED"
