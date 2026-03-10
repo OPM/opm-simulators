@@ -122,10 +122,11 @@ struct FlowLinearSolverParameters
     bool gpu_aware_mpi_;
     bool verify_gpu_aware_mpi_;
     bool cpr_weights_thread_parallel_;
+    bool cprw_use_analytic_weights_;
 
     FlowLinearSolverParameters() { reset(); }
 
-    void init(bool cprRequestedInDataFile);
+    void init(bool cprRequestedInDataFile, bool cprwUseAnalyticWeights = true);
 
     static void registerParameters();
 
