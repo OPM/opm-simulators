@@ -689,7 +689,7 @@ private:
             return;
         }
         const auto& model = model_();
-        const auto& nncOutput = simulator_().problem().eclWriter().getOutputNnc();
+        const auto& nncOutput = simulator_().problem().eclWriter().getOutputNnc().front();
         Stencil stencil(gridView_(), model_().dofMapper());
         const unsigned numCells = model.numTotalDof();
         std::unordered_multimap<int, std::pair<int, int>> nncIndices;

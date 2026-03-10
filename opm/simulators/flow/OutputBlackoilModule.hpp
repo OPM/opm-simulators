@@ -215,7 +215,7 @@ public:
                              log,
                              isRestart,
                              &problem.materialLawManager()->hysteresisConfig(),
-                             problem.eclWriter().getOutputNnc().size());
+                             problem.eclWriter().getOutputNnc().front().size());
     }
 
     //! \brief Setup list of active element-level data extractors
