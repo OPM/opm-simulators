@@ -130,8 +130,9 @@ macro(opm-simulators_prereqs_hook)
     unset(HAVE_HDF5)
   endif()
 
-  if(NOT fmt_FOUND)
+  if(NOT TARGET fmt::fmt)
     include(DownloadFmt)
+    DownloadFmt(opmsimulators)
   endif()
 
   if (OPM_ENABLE_PYTHON)
