@@ -35,6 +35,7 @@
 #include <dune/common/fmatrix.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
@@ -47,7 +48,6 @@
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 
-#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <array>
 
@@ -309,7 +309,7 @@ public:
         }
     }
 
-    template<class EvalType>
+    template<class EvalType, class ModuleParamsT = ModuleParams>
     OPM_HOST_DEVICE static void calculatePhasePressureDiff_(short& upIdx,
                                             short& dnIdx,
                                             EvalType& pressureDifference,
@@ -324,7 +324,7 @@ public:
                                             const unsigned globalIndexEx,
                                             const Scalar distZg,
                                             const Scalar thpres,
-                                            const ModuleParams& moduleParams)
+                                            const ModuleParamsT& moduleParams)
     {
 
         // check shortcut: if the mobility of the phase is zero in the interior as
