@@ -293,6 +293,34 @@ macro(opm-simulators_sources_hook)
       )
     endif()
   endif()
+
+  if(CUDA_FOUND)
+    # cuda warns when constxpr functions are used in kernels.
+    # since the entire stl is constexpr ..., we enable relaxed flag
+    set_source_files_properties(
+      tests/gpuistl/test_blackoilfluidstategpu.cu
+      tests/gpuistl/test_gpu_ad.cu
+      tests/gpuistl/test_gpu_linear_two_phase_material.cu
+      tests/gpuistl/test_gpuPvt.cu
+      tests/gpuistl/test_gpuBlackOilFluidSystem.cu
+      tests/gpuistl/test_GpuSparseMatrix.cu
+      tests/gpuistl/test_GpuSparseTable.cu
+      tests/gpuistl/test_MiniMatrix.cu
+      tests/gpuistl/test_MiniVector.cu
+      PROPERTIES
+      COMPILE_OPTIONS
+        --expt-relaxed-constexpr
+    )
+
+    # Certain structures in OPM requires the -fpermissive flag to compile with nvcc,
+    # this enables this for the specific files
+    set_source_files_properties(
+      tests/gpuistl/test_primary_variables_gpu.cu
+      PROPERTIES
+      COMPILE_OPTIONS
+        "-fpermissive;-Xcompiler=-fpermissive;--expt-relaxed-constexpr"
+    )
+  endif()
 endmacro()
 
 macro(opm-simulators_config_hook)
