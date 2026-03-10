@@ -189,19 +189,21 @@ protected:
     mutable std::unique_ptr<std::vector<data::Solution>> outputTrans_;
 
 private:
-    template<typename LevelIndicesFunction>
+    template<typename LevelIndicesFunction, typename OriginIndicesFunction>
     void computeTrans_(const std::vector<std::unordered_map<int,int>>& levelCartToLevelCompressed,
                        const std::function<unsigned int(unsigned int)>& map,
                        const LevelIndicesFunction& computeLevelIndices,
                        const std::function<int(int, int)>& computeLevelCartIdx,
-                       const std::function<std::array<int,3>(int)>& computeLevelCartDimensions) const;
+                       const std::function<std::array<int,3>(int)>& computeLevelCartDimensions,
+                       const OriginIndicesFunction& computeOriginIndices) const;
 
-    template<typename LevelIndicesFunction>
-    std::vector<NNCdata> exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToLevelCompressed,
-                                             const std::function<unsigned int(unsigned int)>& map,
-                                             const LevelIndicesFunction& computeLevelIndices,
-                                             const std::function<int(int, int)>& computeLevelCartIdx,
-                                             const std::function<std::array<int,3>(int)>& computeLevelCartDimensions) const;
+    template<typename LevelIndicesFunction, typename OriginIndicesFunction>
+    std::vector<std::vector<NNCdata>> exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToLevelCompressed,
+                                                          const std::function<unsigned int(unsigned int)>& map,
+                                                          const LevelIndicesFunction& computeLevelIndices,
+                                                          const std::function<int(int, int)>& computeLevelCartIdx,
+                                                          const std::function<std::array<int,3>(int)>& computeLevelCartDimensions,
+                                                          const OriginIndicesFunction& computeOriginIndices) const;
 
     /// Returns true if cells (belonging to the same level grid) are (level) Cartesian neighbors (share a face)
     bool isCartesianNeighbour_(const std::array<int,3>& levelCartDims,
@@ -268,6 +270,13 @@ private:
     ///                           (std::is_same_v<EquilGrid, Dune::CpGrid>).
     template <bool equilGridIsCpGrid>
     auto computeLevelIndices_() const;
+
+    /// Return function to compute origin indices of the cells adjacent to an intersection.
+    ///
+    /// @tparam equilGridIsCpGrid Compile-time flag indicating whether the equilGrid_ is a Dune::CpGrid
+    ///                           (std::is_same_v<EquilGrid, Dune::CpGrid>).
+    template <bool equilGridIsCpGrid>
+    auto computeOriginIndices_() const;
 
     /// Creates/allocates CellData for TRANX/Y/Z for level grids.
     /// Only for CpGrid. Other grid types do not support refinement yet.
