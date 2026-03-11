@@ -338,8 +338,6 @@ macro(opm-simulators_sources_hook)
 endmacro()
 
 macro(opm-simulators_config_hook)
-  opm_need_version_of ("dune-common")
-  opm_need_version_of ("dune-istl")
   if(dune-fem_FOUND)
       opm_need_version_of ("dune-fem")
   endif()
