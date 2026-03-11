@@ -249,11 +249,25 @@ macro(opm-simulators_sources_hook)
     else()
       set(qm_defs HAVE_QUAD=1)
     endif()
-    set_source_files_properties(opm/models/nonlinear/newtonmethodparams.cpp
-                                opm/models/utils/parametersystem.cpp
-                                opm/models/utils/simulatorutils.cpp
-                                PROPERTIES COMPILE_DEFINITIONS "${qm_defs}"
-                                COMPILE_OPTIONS "${qm_options}")
+    foreach(source opm/models/nonlinear/newtonmethodparams.cpp
+                   opm/models/utils/parametersystem.cpp
+                   opm/models/utils/simulatorutils.cpp
+    )
+      set_property(
+        SOURCE
+          ${source}
+        APPEND PROPERTY
+        COMPILE_DEFINITIONS
+          ${qm_defs}
+      )
+      set_property(
+        SOURCE
+          ${source}
+        APPEND PROPERTY
+        COMPILE_OPTIONS
+          ${qm_options}
+      )
+    endforeach()
   endif()
 
   if(HYPRE_FOUND)
@@ -346,9 +360,14 @@ macro(opm-simulators_config_hook)
     CXX_STANDARD 17
   )
 
-  unset(HAVE_FLOATING_POINT_FROM_CHARS)
   if(have_float_from_chars)
-    set(HAVE_FLOATING_POINT_FROM_CHARS 1)
+    set_property(
+      SOURCE
+        opm/models/utils/parametersystem.cpp
+      APPEND PROPERTY
+      COMPILE_DEFINITIONS
+        HAVE_FLOATING_POINT_FROM_CHARS=1
+    )
   endif()
 
   if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
