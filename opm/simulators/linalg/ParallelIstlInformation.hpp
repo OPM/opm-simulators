@@ -23,7 +23,7 @@
 
 #include <vector>
 
-#if HAVE_MPI && HAVE_DUNE_ISTL
+#if HAVE_MPI
 
 #include <algorithm>
 #include <limits>
