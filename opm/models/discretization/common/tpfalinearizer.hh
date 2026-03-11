@@ -1098,7 +1098,7 @@ private:
             }
         }
 
-        const double dt = simulator_().timeStepSize();
+        const double invDt = 1.0 / simulator_().timeStepSize();
 
         OPM_TIMEBLOCK(linearize);
 
@@ -1118,7 +1118,7 @@ private:
                 diagMatAddress_,
                 residual_,
                 model_(),
-                dt,
+                invDt,
                 dispersionActive,
                 enableBioeffects,
                 on_full_domain);
@@ -1230,7 +1230,7 @@ private:
                     diagMatAddressView,
                     gpuResidualView,
                     gpuModelView,
-                    dt,
+                    invDt,
                     dispersionActive,
                     enableBioeffects,
                     on_full_domain,
@@ -1278,7 +1278,7 @@ private:
         DiagPtrType& localDiagMatAddress,
         ResidualType& localResidual,
         LocalModelClass& localModel,
-        Scalar locDT,
+        Scalar invLocDT,
         bool dispersionActive,
         bool enableBioeffectsArg,
         bool onFullDomain,
@@ -1296,7 +1296,7 @@ private:
                 localDiagMatAddress,
                 localResidual,
                 localModel,
-                locDT,
+                invLocDT,
                 dispersionActive,
                 enableBioeffectsArg,
                 onFullDomain,
@@ -1316,7 +1316,7 @@ private:
                 localResidual,
                 localModel,
                 velocityInfo_,
-                locDT,
+                invLocDT,
                 problem_(),
                 dispersionActive,
                 enableBioeffects,
@@ -1334,7 +1334,7 @@ private:
         DiagPtrType GPU_LOCAL_diagMatAddress,
         GpuResidualView GPU_LOCAL_residualView,
         LocalModelClass localModel,
-        Scalar locDT,
+        Scalar invLocDT,
         bool dispersionActive,
         bool enableBioeffects,
         bool onFullDomain,
@@ -1352,7 +1352,7 @@ private:
                 GPU_LOCAL_residualView,
                 localModel,
                 0/*dummy for velocity info*/,
-                locDT,
+                invLocDT,
                 0/*dummy for problem type*/,
                 dispersionActive,
                 enableBioeffects,
@@ -1378,7 +1378,7 @@ private:
         ArgType<GpuResidualView, useGPU> GPU_LOCAL_residualView,
         ArgType<LocalModelClass, useGPU> localModel,
         ArgType<VelocityInfoType, useGPU> localVelocityInfo,
-        Scalar locDT,
+        Scalar invLocDT,
         const ConstArgType<ProblemType, useGPU> localProblem,
         bool dispersionActive,
         bool enableBioeffects,
@@ -1504,7 +1504,7 @@ private:
         } else {
             volume = localModel.dofTotalVolume(globI);
         }
-        const Scalar storefac = volume / locDT;//volume / dt;
+        const Scalar storefac = volume * invLocDT;//volume / dt;
         res *= storefac;
         bMat *= storefac;
         GPU_LOCAL_residualView[globI] += res;
