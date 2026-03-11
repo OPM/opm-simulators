@@ -26,9 +26,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
 
-#if HAVE_DUNE_COMMON
 #include <dune/common/fvector.hh>
-#endif
 
 /**
  * @brief A small, fixed‑dimension MiniVector class backed by std::array that can be
