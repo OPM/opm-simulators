@@ -1958,16 +1958,34 @@ private:
             Entry{ScalarEntry{"BWPC",
                               [](const Context& ectx)
                               {
-                                  return getValue(ectx.fs.pressure(oilPhaseIdx)) -
+                                  if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                                        return getValue(ectx.fs.pressure(oilPhaseIdx)) -
+                                               getValue(ectx.fs.pressure(waterPhaseIdx));
+                                  }
+                                  else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                                        return getValue(ectx.fs.pressure(gasPhaseIdx)) -
                                          getValue(ectx.fs.pressure(waterPhaseIdx));
+                                  }
+                                  else {
+                                      return Scalar(0.0);
+                                  }
                               }
                   }
             },
             Entry{ScalarEntry{"BGPC",
                               [](const Context& ectx)
                               {
-                                  return getValue(ectx.fs.pressure(gasPhaseIdx)) -
-                                         getValue(ectx.fs.pressure(oilPhaseIdx));
+                                  if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                                        return getValue(ectx.fs.pressure(gasPhaseIdx)) -
+                                               getValue(ectx.fs.pressure(oilPhaseIdx));
+                                  }
+                                  else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                                        return getValue(ectx.fs.pressure(gasPhaseIdx)) -
+                                         getValue(ectx.fs.pressure(waterPhaseIdx));
+                                  }
+                                  else {
+                                      return Scalar(0.0);
+                                  }
                               }
                   }
             },
