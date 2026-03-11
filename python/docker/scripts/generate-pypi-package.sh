@@ -53,7 +53,8 @@ else
     libext="so"
 fi
 
-export CMAKE_GENERATOR=Ninja
+# Ninja 1.8 is too old to support Fortran, and opm-grid requires Fortran
+#export CMAKE_GENERATOR=Ninja
 
 # TODO: These version mappings could also be read from docker/python_versions.json in the future
 # NOTE: These version mappings should match python_versions.json - run sync_versions.sh after JSON changes
