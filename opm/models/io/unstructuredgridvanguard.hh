@@ -30,10 +30,8 @@
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
-#ifdef HAVE_OPM_GRID
 #include <opm/grid/UnstructuredGrid.h>
 #include <string>
-#endif
 
 namespace Opm {
 
@@ -70,7 +68,6 @@ public:
     explicit UnstructuredGridVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
-#ifdef HAVE_OPM_GRID
         const std::string gridFileName = Parameters::Get<Parameters::GridFile>();
         const int numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
 
@@ -86,7 +83,6 @@ public:
             gridPtr_->globalRefine(numRefinments);
         }
         this->finalizeInit_();
-#endif
     }
 
     /*!

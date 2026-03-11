@@ -26,7 +26,6 @@
 
  namespace Opm
 {
-#if defined(HAVE_OPM_GRID)
 #if defined(HAVE_MPI) && defined(HAVE_DUNE_ISTL)
 // Extracts the information about the data decomposition from the grid for dune-istl
 void extractParallelGridInformationToISTL(const Dune::CpGrid& grid, std::any& anyComm)
@@ -47,5 +46,4 @@ void extractParallelGridInformationToISTL(const Dune::CpGrid& grid, std::any& an
 void extractParallelGridInformationToISTL(const Dune::CpGrid&, std::any&)
 {}
 #endif //defined(HAVE_MPI) && defined(HAVE_DUNE_ISTL)
-#endif //defined(HAVE_OPM_GRID)
 } // end namespace Opm

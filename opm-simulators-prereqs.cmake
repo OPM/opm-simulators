@@ -1,6 +1,5 @@
 # defines that must be present in config.h for our headers
 set (opm-simulators_CONFIG_VAR
-  HAVE_OPM_GRID
   HAVE_MPI
   COMPILE_GPU_BRIDGE
   HAVE_AVX2_EXTENSION
