@@ -1588,7 +1588,7 @@ namespace Opm {
         // Get global (from all processes) convergence report.
         ConvergenceReport local_report;
         const auto& iterCtx = simulator_.problem().iterationContext();
-        const bool relaxTolerance = iterCtx.shouldRelax(param_.strict_outer_iter_wells_);
+        const bool relaxTolerance = iterCtx.shouldRelax(param_.strict_outer_iter_wells_ + 1);
         {
             auto logger_guard = this->groupStateHelper().pushLogger();
             for (const auto& well : well_container_) {
