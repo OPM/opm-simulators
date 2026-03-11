@@ -21,6 +21,7 @@
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 
 #include <opm/common/TimingMacros.hpp>
+#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupSatelliteInjection.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
@@ -30,10 +31,13 @@
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
+#include <fmt/format.h>
+
 #include <array>
 #include <cstddef>
 #include <stack>
 #include <set>
+#include <unordered_set>
 
 namespace Opm
 {
@@ -1200,6 +1204,77 @@ GroupStateHelper<Scalar, IndexTraits>::updateNetworkLeafNodeProductionRates()
 
 template <typename Scalar, typename IndexTraits>
 void
+GroupStateHelper<Scalar, IndexTraits>::
+updateNONEProductionGroups()
+{
+    auto& group_state = this->groupState();
+    const auto& prod_group_controls = group_state.get_production_controls();
+    if (prod_group_controls.empty()) {
+        return;
+    }
+
+    const auto targeted = this->collectTargetedProductionGroups_();
+
+    const std::size_t num_gpc = prod_group_controls.size();
+    std::vector<std::string> gnames;
+    gnames.reserve(num_gpc);
+    std::vector<int> production_control_used;
+    production_control_used.reserve(num_gpc);
+
+    for (const auto& [name, _] : prod_group_controls) {
+        gnames.emplace_back(name);
+        const bool is_used = targeted.count(name) > 0;
+        production_control_used.emplace_back(is_used ? 1 : 0);
+    }
+
+    // Synchronize across all MPI ranks
+    if (this->comm_.size() > 1) {
+        this->comm_.sum(production_control_used.data(),
+                        static_cast<int>(num_gpc));
+    }
+
+    const auto& glo = this->schedule_.glo(this->report_step_);
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+    // Collect RC master hierarchy groups (master groups + ancestors up to FIELD).
+    // These groups actively distribute targets to slave groups and must retain
+    // their scheduled production control.
+    const auto rc_hierarchy = this->isReservoirCouplingMaster()
+        ? this->collectMasterGroupHierarchy_()
+        : std::unordered_set<std::string>{};
+#endif
+
+    for (std::size_t i = 0; i < num_gpc; ++i) {
+        if (production_control_used[i] > 0) {
+            continue;
+        }
+        const auto& gname = gnames[i];
+        if (group_state.production_control(gname) == Group::ProductionCMode::NONE ||
+            group_state.production_control(gname) == Group::ProductionCMode::FLD) {
+            continue;
+        }
+        // Gas lift optimization requires non-NONE/FLD control mode
+        if (glo.active() && glo.has_group(gname)) {
+            continue;
+        }
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // RC master hierarchy groups distribute targets to slaves —
+        // do not reset their production control to NONE
+        if (rc_hierarchy.count(gname) > 0) {
+            continue;
+        }
+#endif
+        if (this->comm_.rank() == 0) {
+            this->deferredLogger().info(
+                "Production group " + gname
+                + " has no constraints active, setting control mode to NONE");
+        }
+        group_state.production_control(gname, Group::ProductionCMode::NONE);
+    }
+}
+
+template <typename Scalar, typename IndexTraits>
+void
 GroupStateHelper<Scalar, IndexTraits>::updateREINForGroups(const Group& group,
                                                           bool sum_rank)
 {
@@ -1539,7 +1614,8 @@ GroupStateHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
 //   Called from: checkGroupConstraintsInj(), checkGroupConstraintsProd(),
 //               checkGroupProductionConstraints()
 //   Also from:  getAutoChokeGroupProductionTargetRate(),
-//               getWellGroupTargetInjector(), getWellGroupTargetProducer()
+//               getWellGroupTargetInjector(), getWellGroupTargetProducer(),
+//               updateNONEProductionGroups()
 // ============================================================================
 
 // Called from checkGroupConstraintsInj(), checkGroupConstraintsProd(), checkGroupProductionConstraints(),
@@ -1588,6 +1664,36 @@ GroupStateHelper<Scalar, IndexTraits>::applyReductionsAndFractions_(const std::v
         target *= local_fraction_lambda(chain[ii + 1]);
     }
     return target;
+}
+
+// Called from updateNONEProductionGroups().
+// - Scans all wells on this rank and collects the names of groups that are
+//   actively targeted by at least one open producer with GRUP control.
+template <typename Scalar, typename IndexTraits>
+std::unordered_set<std::string>
+GroupStateHelper<Scalar, IndexTraits>::
+collectTargetedProductionGroups_() const
+{
+    std::unordered_set<std::string> targeted;
+    const auto& well_state = this->wellState();
+    targeted.reserve(well_state.size());
+    for (std::size_t w = 0; w < well_state.size(); ++w) {
+        const auto& ws = well_state.well(w);
+        if (ws.producer
+            && ws.production_cmode == WellProducerCMode::GRUP
+            && ws.status == Well::Status::OPEN)
+        {
+            if (ws.group_target.has_value()) {
+                targeted.insert(ws.group_target->group_name);
+            } else {
+                OPM_DEFLOG_THROW(std::runtime_error,
+                    fmt::format("Well {} is on GRUP control but has no "
+                                "group target assigned.", ws.name),
+                    this->deferredLogger());
+            }
+        }
+    }
+    return targeted;
 }
 
 // Called from checkGroupProductionConstraints() which is called during well model assemble to check
@@ -1985,7 +2091,7 @@ GroupStateHelper<Scalar, IndexTraits>::isInGroupChainTopBot_(const std::string& 
 // ============================================================================
 // Private: Reservoir coupling helpers
 //   Called from: getInjectionGroupTarget(), getProductionConstraintTarget_(),
-//               sumWellPhaseRates()
+//               sumWellPhaseRates(), updateNONEProductionGroups()
 // ============================================================================
 
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -2015,6 +2121,41 @@ activePhaseIdxToRescoupPhase_(int phase_pos) const
                      "Invalid phase_pos in activePhaseIdxToRescoupPhase",
                      this->deferredLogger());
     return ReservoirCoupling::Phase::Oil; // just to avoid warning
+}
+
+// Called from updateNONEProductionGroups().
+// - Collects master groups (from GRUPMAST) and all their ancestors up to FIELD.
+// - These groups participate in the guide-rate distribution hierarchy and must
+//   retain their scheduled production control.
+// TODO: To determine if a master group's constraint is truly active would require the slave
+//    to communicate back its well activity status to the master, this would require additional
+//    MPI communication.
+template <typename Scalar, typename IndexTraits>
+std::unordered_set<std::string>
+GroupStateHelper<Scalar, IndexTraits>::
+collectMasterGroupHierarchy_() const
+{
+    std::unordered_set<std::string> hierarchy_groups;
+    const auto& rescoup_master = this->reservoirCouplingMaster();
+    const auto num_slaves = rescoup_master.numSlaves();
+    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+        const auto& master_groups =
+            rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+        for (const auto& mgname : master_groups) {
+            // Walk from master group up to FIELD
+            auto gname = mgname;
+            while (true) {
+                hierarchy_groups.insert(gname);
+                const auto& group = this->schedule_.getGroup(
+                    gname, this->report_step_);
+                if (group.is_field()) {
+                    break;
+                }
+                gname = group.parent();
+            }
+        }
+    }
+    return hierarchy_groups;
 }
 
 // Called from getProductionConstraintTarget_().
