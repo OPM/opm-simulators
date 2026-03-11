@@ -19,7 +19,6 @@
 */
 #ifndef OPM_EXTRACTPARALLELGRIDINFORMATIONTOISTL_HEADER_INCLUDED
 #define OPM_EXTRACTPARALLELGRIDINFORMATIONTOISTL_HEADER_INCLUDED
-#ifdef HAVE_OPM_GRID
 
 #include <any>
 
@@ -46,5 +45,5 @@ void extractParallelGridInformationToISTL(const Grid&, std::any&)
 {}
 
 } // end namespace Opm
-#endif //defined(HAVE_OPM_GRID)
+
 #endif // OPM_EXTRACTPARALLELGRIDINFORMATIONTOISTL_HEADER_INCLUDED

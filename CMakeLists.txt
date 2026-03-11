@@ -249,11 +249,25 @@ macro(opm-simulators_sources_hook)
     else()
       set(qm_defs HAVE_QUAD=1)
     endif()
-    set_source_files_properties(opm/models/nonlinear/newtonmethodparams.cpp
-                                opm/models/utils/parametersystem.cpp
-                                opm/models/utils/simulatorutils.cpp
-                                PROPERTIES COMPILE_DEFINITIONS "${qm_defs}"
-                                COMPILE_OPTIONS "${qm_options}")
+    foreach(source opm/models/nonlinear/newtonmethodparams.cpp
+                   opm/models/utils/parametersystem.cpp
+                   opm/models/utils/simulatorutils.cpp
+    )
+      set_property(
+        SOURCE
+          ${source}
+        APPEND PROPERTY
+        COMPILE_DEFINITIONS
+          ${qm_defs}
+      )
+      set_property(
+        SOURCE
+          ${source}
+        APPEND PROPERTY
+        COMPILE_OPTIONS
+          ${qm_options}
+      )
+    endforeach()
   endif()
 
   if(HYPRE_FOUND)
@@ -324,8 +338,6 @@ macro(opm-simulators_sources_hook)
 endmacro()
 
 macro(opm-simulators_config_hook)
-  opm_need_version_of ("dune-common")
-  opm_need_version_of ("dune-istl")
   if(dune-fem_FOUND)
       opm_need_version_of ("dune-fem")
   endif()
@@ -346,9 +358,14 @@ macro(opm-simulators_config_hook)
     CXX_STANDARD 17
   )
 
-  unset(HAVE_FLOATING_POINT_FROM_CHARS)
   if(have_float_from_chars)
-    set(HAVE_FLOATING_POINT_FROM_CHARS 1)
+    set_property(
+      SOURCE
+        opm/models/utils/parametersystem.cpp
+      APPEND PROPERTY
+      COMPILE_DEFINITIONS
+        HAVE_FLOATING_POINT_FROM_CHARS=1
+    )
   endif()
 
   if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
@@ -780,11 +797,16 @@ macro(opm-simulators_targets_hook)
   endif()
 
   # We now specify the files we actually want to compile
+
   set(FLOWEXP_COMPONENTS_SOURCES)
   foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
     list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}.cpp)
     list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}_2p.cpp)
   endforeach()
+
+  # Make a string we can use in the code
+  # this will be used in a template argument pack.
+  string(REPLACE ";" "," OPM_COMPILE_COMPONENTS_TEMPLATE_LIST "${OPM_COMPILE_COMPONENTS}")
 
   opm_add_test(flowexp_comp
     ONLY_COMPILE
@@ -797,6 +819,10 @@ macro(opm-simulators_targets_hook)
       flowexperimental/comp/flowexp_comp.cpp
       ${FLOWEXP_COMPONENTS_SOURCES}
       $<TARGET_OBJECTS:moduleVersion>
+  )
+  target_compile_definitions(flowexp_comp
+    PRIVATE
+      OPM_COMPILE_COMPONENTS_TEMPLATE_LIST=${OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}
   )
 
   if(BUILD_FLOW_FLOAT_VARIANTS)
@@ -900,9 +926,6 @@ foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
 endforeach()
 # Check for duplicates in OPM_COMPILE_COMPONENTS
 list(REMOVE_DUPLICATES OPM_COMPILE_COMPONENTS)
-# Make a string we can use in the code
-# this will be used in a template argument pack.
-string(REPLACE ";" "," OPM_COMPILE_COMPONENTS_TEMPLATE_LIST "${OPM_COMPILE_COMPONENTS}")
 
 if(CONVERT_CUDA_TO_HIP)
   set(USE_GPU_BRIDGE OFF)

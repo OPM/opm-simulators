@@ -21,7 +21,7 @@
 
 #include <config.h>
 
-#if HAVE_MPI && HAVE_DUNE_ISTL
+#if HAVE_MPI
 
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 
@@ -353,4 +353,4 @@ INSTANCE(std::size_t)
 
 } // namespace Opm
 
-#endif // HAVE_MPI && HAVE_DUNE_ISTL
+#endif // HAVE_MPI
