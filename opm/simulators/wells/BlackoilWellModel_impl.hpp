@@ -1247,7 +1247,7 @@ namespace Opm {
                 // only output to terminal if we at the last newton iterations where we try to balance the network.
                 const int episodeIdx = simulator_.episodeIndex();
                 const auto& iterCtx = simulator_.problem().iterationContext();
-                if (this->network_.shouldBalance(episodeIdx, iterCtx)) {
+                if (this->network_.willBalanceOnNextIteration(episodeIdx, iterCtx)) {
                     if (this->terminal_output_) {
                         const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update, \n"
                             "and try again after the next Newton iteration (imbalance = {:.2e} bar)",
