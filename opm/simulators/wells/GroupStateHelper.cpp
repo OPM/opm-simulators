@@ -30,6 +30,8 @@
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
+#include <fmt/format.h>
+
 #include <array>
 #include <cstddef>
 #include <stack>
@@ -37,6 +39,30 @@
 
 namespace Opm
 {
+
+namespace {
+
+bool hasInjectionTopupControl(const Group::GroupInjectionProperties& injection)
+{
+    return (injection.injection_controls & static_cast<int>(Group::InjectionCMode::RESV)) != 0
+        || (injection.injection_controls & static_cast<int>(Group::InjectionCMode::VREP)) != 0;
+}
+
+std::string phaseName(const Phase phase)
+{
+    switch (phase) {
+    case Phase::WATER:
+        return "WATER";
+    case Phase::OIL:
+        return "OIL";
+    case Phase::GAS:
+        return "GAS";
+    default:
+        return fmt::format("UNKNOWN({})", static_cast<int>(phase));
+    }
+}
+
+} // namespace
 
 template <typename Scalar, typename IndexTraits>
 GroupStateHelper<Scalar, IndexTraits>::GroupStateHelper(WellState<Scalar, IndexTraits>& well_state,
@@ -927,6 +953,9 @@ template <typename Scalar, typename IndexTraits>
 void
 GroupStateHelper<Scalar, IndexTraits>::setCmodeGroup(const Group& group)
 {
+    if (group.name() == "FIELD") {
+        this->validateInjectionTopupPhases_(group);
+    }
 
     for (const std::string& group_name : group.groups()) {
         this->setCmodeGroup(this->schedule_.getGroup(group_name, this->report_step_));
@@ -1531,8 +1560,72 @@ GroupStateHelper<Scalar, IndexTraits>::worstOffendingWell(const Group& group,
 }
 
 // ============================================================================
-// Private methods
+// Private: Input validation helpers
+//   Called from: setCmodeGroup()
 // ============================================================================
+
+// Called from setCmodeGroup() for the FIELD group.
+// - Entry point for top-up phase validation across the group hierarchy.
+template <typename Scalar, typename IndexTraits>
+void
+GroupStateHelper<Scalar, IndexTraits>::validateInjectionTopupPhases_(const Group& group) const
+{
+    this->validateInjectionTopupPhasesRecursive_(group, std::nullopt, "");
+}
+
+// Called from validateInjectionTopupPhases_().
+// - Walks the group tree and throws if a group has multiple RESV/VREP phases
+//   or conflicts with an ancestor's top-up phase on the same path.
+template <typename Scalar, typename IndexTraits>
+void
+GroupStateHelper<Scalar, IndexTraits>::validateInjectionTopupPhasesRecursive_(
+    const Group& group,
+    std::optional<Phase> inherited_topup_phase,
+    const std::string& inherited_topup_group) const
+{
+    std::vector<Phase> group_topup_phases;
+    for (const auto& [phase, injection] : group.injectionProperties()) {
+        if (hasInjectionTopupControl(injection)) {
+            group_topup_phases.push_back(phase);
+        }
+    }
+
+    if (group_topup_phases.size() > 1) {
+        throw std::runtime_error(fmt::format(
+            "Invalid GCONINJE top-up phase configuration: group {} defines more than one "
+            "top-up phase ({} and {})",
+            group.name(),
+            phaseName(group_topup_phases[0]),
+            phaseName(group_topup_phases[1])));
+    }
+
+    const auto group_topup_phase = group.topup_phase();
+
+    auto current_topup_phase = inherited_topup_phase;
+    auto current_topup_group = inherited_topup_group;
+    if (group_topup_phase.has_value()) {
+        const auto phase = group_topup_phase.value();
+        if (inherited_topup_phase.has_value() && phase != inherited_topup_phase.value()) {
+            throw std::runtime_error(fmt::format(
+                "Invalid GCONINJE top-up phase configuration: group {} uses {} top-up, "
+                "but ancestor group {} uses {} top-up on the same group path",
+                group.name(),
+                phaseName(phase),
+                inherited_topup_group,
+                phaseName(inherited_topup_phase.value())));
+        }
+
+        current_topup_phase = phase;
+        current_topup_group = group.name();
+    }
+
+    for (const auto& child_group_name : group.groups()) {
+        this->validateInjectionTopupPhasesRecursive_(
+            this->schedule_.getGroup(child_group_name, this->report_step_),
+            current_topup_phase,
+            current_topup_group);
+    }
+}
 
 // ============================================================================
 // Private: Constraint checking helpers

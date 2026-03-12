@@ -665,6 +665,15 @@ private:
                                               const bool is_injector,
                                               std::vector<Scalar>& group_target_reduction);
 
+    // Validate that GCONINJE top-up phases (RESV/VREP) are consistent
+    // across the group hierarchy. Called once from setCmodeGroup() for FIELD.
+    void validateInjectionTopupPhases_(const Group& group) const;
+
+    // Recursive helper for validateInjectionTopupPhases_()
+    void validateInjectionTopupPhasesRecursive_(const Group& group,
+                                                std::optional<Phase> inherited_topup_phase,
+                                                const std::string& inherited_topup_group) const;
+
     const WellState<Scalar, IndexTraits>* well_state_ {nullptr};
     GroupState<Scalar>* group_state_ {nullptr};
     const Schedule& schedule_;
