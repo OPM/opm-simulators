@@ -20,7 +20,15 @@
 #ifndef OPM_GPUISTL_KERNEL_ENUMS_HPP
 #define OPM_GPUISTL_KERNEL_ENUMS_HPP
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <cuda_runtime.h>
+
+#if CUDA_VERSION >= 12100
+#include <fmt/core.h>
+#else
+#include <sstream>
+#endif
 
 /*
     This file organizes a growing amount of different mixed precision options for the preconditioners.
@@ -40,6 +48,7 @@ namespace Opm::gpuistl {
 
     inline MatrixStorageMPScheme makeMatrixStorageMPScheme(int scheme) {
         if (!detail::isValidMatrixStorageMPScheme(scheme)) {
+#if CUDA_VERSION >= 12100
             OPM_THROW(std::invalid_argument,
                       fmt::format(fmt::runtime("Invalid matrix storage mixed precision scheme chosen: {}.\n"
                                   "Valid Schemes:\n"
@@ -47,6 +56,15 @@ namespace Opm::gpuistl {
                                   "\t1: FLOAT_DIAG_FLOAT_OFFDIAG\n"
                                   "\t2: DOUBLE_DIAG_FLOAT_OFFDIAG"),
                                   scheme));
+#else
+            std::stringstream str;
+            str << "Invalid matrix storage mixed precision scheme chosen: " << scheme << ".\n"
+                << "Valid Schemes:\n"
+                   "\t0: DOUBLE_DIAG_DOUBLE_OFFDIAG\n"
+                   "\t1: FLOAT_DIAG_FLOAT_OFFDIAG\n"
+                   "\t2: DOUBLE_DIAG_FLOAT_OFFDIAG";
+            OPM_THROW(std::invalid_argument, str.str());
+#endif
         }
         return static_cast<MatrixStorageMPScheme>(scheme);
     }
