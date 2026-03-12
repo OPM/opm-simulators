@@ -34,6 +34,10 @@
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/start.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/StreamLog.hpp>
+#include <opm/common/OpmLog/LogUtil.hpp>
+
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
@@ -52,6 +56,7 @@
 #include <boost/test/tools/floating_point_comparison.hpp>
 #endif
 
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -74,6 +79,12 @@ struct SimulatorFixture
         Dune::MPIHelper::instance(argc, argv);
 #endif
         FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
+
+        // Register OpmLog backend so parser errors are visible in test output
+        if (!OpmLog::hasBackend("STDERR_LOGGER")) {
+            auto streamLog = std::make_shared<StreamLog>(std::cerr, Log::DefaultMessageTypes);
+            OpmLog::addBackend("STDERR_LOGGER", streamLog);
+        }
     }
 };
 
@@ -116,7 +127,7 @@ initSimulator(const char* filename,
                               /*handleHelp=*/true,
                               /*myRank=*/0);
 
-    FlowGenericVanguard::readDeck(filename);
+    FlowGenericVanguard::readDeck(filename, /*throwOnError=*/true);
     return std::make_unique<Simulator>();
 }
 
