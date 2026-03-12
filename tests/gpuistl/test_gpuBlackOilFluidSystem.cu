@@ -31,8 +31,6 @@
  * This test requires the presence of opm-parser.
  */
 #include "config.h"
-#include <fmt/format.h>
-#include <iostream>
 
 #include <boost/mpl/list.hpp>
 
@@ -55,8 +53,8 @@
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
-#include <type_traits>
 #include <cmath>
+#include <string>
 
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
