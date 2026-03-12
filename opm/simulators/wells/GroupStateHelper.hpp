@@ -508,14 +508,6 @@ public:
 
 private:
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-    /// @brief Convert active phase index to ReservoirCoupling::Phase enum
-    /// @param phase_pos Active phase index (0, 1, or 2 in a 3-phase model)
-    /// @return The corresponding ReservoirCoupling::Phase enum value
-    /// @note This uses the canonical phase ordering (Oil=0, Gas=1, Water=2)
-    ReservoirCoupling::Phase activePhaseIdxToRescoupPhase_(int phase_pos) const;
-#endif
-
     //! \brief Calculate group target by applying local rate adjustments and guide rate fractions through group hierarchy.
     //!
     //! This method encapsulates the core algorithm for calculating the portion of a top-level
@@ -555,18 +547,6 @@ private:
                                    Scalar target,
                                    Scalar current_rate) const;
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-    /// @brief Collect all groups in the RC master group hierarchy.
-    ///
-    /// Starting from each master group (identified via GRUPMAST), walks up
-    /// via group.parent() to FIELD, adding all groups along the path.
-    /// These groups actively distribute targets to slave groups and must
-    /// not have their production control reset to NONE.
-    ///
-    /// @return Set of group names in the master group hierarchy
-    std::unordered_set<std::string> collectMasterGroupHierarchy_() const;
-#endif
-
     /// @brief Collect groups that provide production targets to open wells.
     ///
     /// Scans all wells on this rank: for each open producer with GRUP control,
@@ -591,25 +571,6 @@ private:
 
     std::string controlGroup_(const Group& group) const;
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-    /// @brief Get the effective production limit for a group and rate type,
-    /// combining master limit, slave-local target, and GRUPSLAV filter flag.
-    ///
-    /// If the master sent a per-rate-type limit for this group and rate type,
-    /// the filter flag determines which value to use:
-    /// - MAST: return master limit
-    /// - BOTH: return min(master limit, slave_local_target)
-    /// - SLAV: return slave_local_target
-    ///
-    /// @param gname Slave group name
-    /// @param rate_type The production rate type to check
-    /// @param slave_local_target The slave's own target from GCONPROD
-    /// @return The effective limit to apply
-    Scalar getEffectiveProductionLimit_(const std::string& gname,
-                                        Group::ProductionCMode rate_type,
-                                        Scalar slave_local_target) const;
-#endif  // RESERVOIR_COUPLING_ENABLED
-
     GuideRate::RateVector getGuideRateVector_(const std::vector<Scalar>& rates) const;
 
     Scalar getInjectionGroupTargetForMode_(const Group& group,
@@ -630,18 +591,6 @@ private:
     std::size_t getLocalReductionLevel_(const std::vector<std::string>& chain,
         bool is_production_group,
         Phase injection_phase) const;
-
-#ifdef RESERVOIR_COUPLING_ENABLED
-    ReservoirCoupling::GrupSlav::FilterFlag getInjectionFilterFlag_(const std::string& group_name,
-                                                                    const Phase injection_phase) const;
-
-    ReservoirCoupling::GrupSlav::FilterFlag getProductionFilterFlag_(const std::string& group_name,
-                                                                     const Group::ProductionCMode cmode) const;
-
-    Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
-                                                const int phase_pos,
-                                                const ReservoirCoupling::RateKind kind) const;
-#endif
 
     Scalar getProductionConstraintTarget_(const Group& group,
                                           Group::ProductionCMode cmode,
@@ -700,6 +649,52 @@ private:
     void updateGroupTargetReductionRecursive_(const Group& group,
                                               const bool is_injector,
                                               std::vector<Scalar>& group_target_reduction);
+
+    // --- Reservoir coupling private methods ---
+#ifdef RESERVOIR_COUPLING_ENABLED
+    /// @brief Convert active phase index to ReservoirCoupling::Phase enum
+    /// @param phase_pos Active phase index (0, 1, or 2 in a 3-phase model)
+    /// @return The corresponding ReservoirCoupling::Phase enum value
+    /// @note This uses the canonical phase ordering (Oil=0, Gas=1, Water=2)
+    ReservoirCoupling::Phase activePhaseIdxToRescoupPhase_(int phase_pos) const;
+
+    /// @brief Collect all groups in the RC master group hierarchy.
+    ///
+    /// Starting from each master group (identified via GRUPMAST), walks up
+    /// via group.parent() to FIELD, adding all groups along the path.
+    /// These groups actively distribute targets to slave groups and must
+    /// not have their production control reset to NONE.
+    ///
+    /// @return Set of group names in the master group hierarchy
+    std::unordered_set<std::string> collectMasterGroupHierarchy_() const;
+
+    /// @brief Get the effective production limit for a group and rate type,
+    /// combining master limit, slave-local target, and GRUPSLAV filter flag.
+    ///
+    /// If the master sent a per-rate-type limit for this group and rate type,
+    /// the filter flag determines which value to use:
+    /// - MAST: return master limit
+    /// - BOTH: return min(master limit, slave_local_target)
+    /// - SLAV: return slave_local_target
+    ///
+    /// @param gname Slave group name
+    /// @param rate_type The production rate type to check
+    /// @param slave_local_target The slave's own target from GCONPROD
+    /// @return The effective limit to apply
+    Scalar getEffectiveProductionLimit_(const std::string& gname,
+                                        Group::ProductionCMode rate_type,
+                                        Scalar slave_local_target) const;
+
+    ReservoirCoupling::GrupSlav::FilterFlag getInjectionFilterFlag_(const std::string& group_name,
+                                                                    const Phase injection_phase) const;
+
+    ReservoirCoupling::GrupSlav::FilterFlag getProductionFilterFlag_(const std::string& group_name,
+                                                                     const Group::ProductionCMode cmode) const;
+
+    Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
+                                                const int phase_pos,
+                                                const ReservoirCoupling::RateKind kind) const;
+#endif  // RESERVOIR_COUPLING_ENABLED
 
     const WellState<Scalar, IndexTraits>* well_state_ {nullptr};
     GroupState<Scalar>* group_state_ {nullptr};
