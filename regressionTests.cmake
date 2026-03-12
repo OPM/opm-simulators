@@ -416,6 +416,20 @@ add_test_compareECLFiles(CASENAME gconinje_resv_gas_01
                          REL_TOL ${rel_tol}
                          DIR resv_ctrl)
 
+add_test_compareECLFiles(CASENAME gconinje_resv1
+                         FILENAME GCONINJE-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR gconinje)
+
+add_test_compareECLFiles(CASENAME gconinje_resv2
+                         FILENAME GCONINJE-02
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR gconinje)
+
 set(_gconprod_cases
   T1L
   T1W
