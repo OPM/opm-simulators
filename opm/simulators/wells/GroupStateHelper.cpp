@@ -1705,34 +1705,30 @@ getInjectionGroupTargetForMode_(
             return this->groupState().gpmaint_target(group.name());
         }
         return ctrl.surface_max_rate;
-    case Group::InjectionCMode::RESV:
+    case Group::InjectionCMode::RESV: {
+        // GPMAINT targets (WINJ/GINJ/OINJ) are already per-phase RESV rates,
+        // so no other-phase subtraction is needed.
         if (use_gpmaint)
             return this->groupState().gpmaint_target(group.name()) / resv_coeff[pos];
 
-        return ctrl.resv_max_rate / resv_coeff[pos];
+        // GCONINJE RESV (Item 5) is a total group reservoir volume target;
+        // subtract other phases' reservoir injection to get this phase's share.
+        const std::vector<Scalar>& group_injection_reservoir_rates =
+            this->groupState().injection_reservoir_rates(group.name());
+        return this->subtractOtherPhaseResvInjection_(
+            injection_phase, ctrl.resv_max_rate, group_injection_reservoir_rates) / resv_coeff[pos];
+    }
     case Group::InjectionCMode::REIN: {
         Scalar production_rate = this->groupState().injection_rein_rates(ctrl.reinj_group)[pos];
         return ctrl.target_reinj_fraction * production_rate;
     }
     case Group::InjectionCMode::VREP: {
-        // We use the injection_reservoir_rates directly instead of the reduction rates here to account for the
-        // possibility that the group in question has both a VREP control and another injection control for a different phase.
         const std::vector<Scalar>& group_injection_reservoir_rates =
-                                this->groupState().injection_reservoir_rates(group.name());
-        Scalar voidage_rate = this->groupState().injection_vrep_rate(ctrl.voidage_group) * ctrl.target_void_fraction;
-        if (ctrl.phase != Phase::WATER && pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
-            const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-            voidage_rate -= group_injection_reservoir_rates[water_pos];
-        }
-        if (ctrl.phase != Phase::OIL && pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
-            const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-            voidage_rate -= group_injection_reservoir_rates[oil_pos];
-        }
-        if (ctrl.phase != Phase::GAS && pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-            const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-            voidage_rate -= group_injection_reservoir_rates[gas_pos];
-        }
-        return voidage_rate / resv_coeff[pos];
+            this->groupState().injection_reservoir_rates(group.name());
+        Scalar voidage_rate = this->groupState().injection_vrep_rate(ctrl.voidage_group)
+            * ctrl.target_void_fraction;
+        return this->subtractOtherPhaseResvInjection_(
+            injection_phase, voidage_rate, group_injection_reservoir_rates) / resv_coeff[pos];
     }
     case Group::InjectionCMode::SALE: {
         assert(pos == pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx) );
@@ -1836,6 +1832,33 @@ getProductionGroupTargetForMode_(const Group& group,
                          this->deferredLogger());
         return 0.0;
     }
+}
+
+// Called from getInjectionGroupTargetForMode_() for RESV and VREP control modes.
+// - Subtracts other-phase reservoir injection rates from the base reservoir rate target,
+//   so that only the injection phase's share of the total reservoir volume remains.
+template<typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+subtractOtherPhaseResvInjection_(
+    const Phase injection_phase,
+    Scalar base_reservoir_rate,
+    const std::vector<Scalar>& group_injection_reservoir_rates) const
+{
+    const auto& pu = this->phaseUsage();
+    if (injection_phase != Phase::WATER && pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+        base_reservoir_rate -= group_injection_reservoir_rates[
+            pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
+    }
+    if (injection_phase != Phase::OIL && pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+        base_reservoir_rate -= group_injection_reservoir_rates[
+            pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)];
+    }
+    if (injection_phase != Phase::GAS && pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+        base_reservoir_rate -= group_injection_reservoir_rates[
+            pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)];
+    }
+    return base_reservoir_rate;
 }
 
 // Called from checkGroupProductionConstraints().
