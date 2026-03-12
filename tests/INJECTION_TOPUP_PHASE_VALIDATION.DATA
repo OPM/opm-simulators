@@ -1,0 +1,207 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Test case for GCONINJE top-up phase validation across the group hierarchy.
+
+-- Group hierarchy:
+--
+--                            FIELD
+--                     /    |      |      \
+--                    /     |      |       \
+--               SAME   PARENT  DISCON-G  DISCON-W
+--              (INJ2)    |      (INJ3)    (PROD1)
+--                      CHILD
+--                      (INJ1)
+--
+-- Report step 1: SAME has WATER RESV + GAS RESV  → same-group conflict
+-- Report step 2: PARENT has WATER VREP, CHILD has GAS RESV → ancestor conflict
+-- Report step 3: DISCON-G has GAS RESV, DISCON-W has WATER VREP → allowed (disconnected)
+--
+RUNSPEC
+
+TITLE
+INJECTION_TOPUP_PHASE_VALIDATION
+
+DIMENS
+  3 3 1 /
+
+OIL
+WATER
+GAS
+DISGAS
+
+METRIC
+
+START
+ 1 'JAN' 2020 /
+
+WELLDIMS
+  4 2 8 5 /
+
+TABDIMS
+/
+
+EQLDIMS
+/
+
+UNIFIN
+UNIFOUT
+
+GRID
+
+DXV
+3*100.0 /
+
+DYV
+3*100.0 /
+
+DZV
+1*10.0 /
+
+TOPS
+9*2000 /
+
+PORO
+9*0.25 /
+
+PERMX
+9*500 /
+
+COPY
+  PERMX PERMY /
+  PERMX PERMZ /
+/
+
+MULTIPLY
+  PERMZ 0.1 /
+/
+
+PROPS
+
+PVTW
+  250.0 1.02 4.0E-05 0.5 0.0 /
+
+ROCK
+  250.0 4.0E-05 /
+
+DENSITY
+  850 1014 1.0 /
+
+PVDO
+  100.0 1.05 2.0
+  250.0 1.02 2.5
+  400.0 1.00 3.0 /
+
+PVDG
+  100.0 0.010 0.015
+  250.0 0.005 0.020
+  400.0 0.003 0.025 /
+
+SWOF
+  0.2 0.0 1.0 0.0
+  0.3 0.05 0.6 0.0
+  0.5 0.15 0.3 0.0
+  0.7 0.35 0.1 0.0
+  0.8 0.5 0.0 0.0 /
+
+SGOF
+  0.0 0.0 1.0 0.0
+  0.1 0.02 0.6 0.0
+  0.3 0.10 0.3 0.0
+  0.5 0.25 0.1 0.0
+  0.7 0.5 0.0 0.0 /
+
+SOLUTION
+
+EQUIL
+  2000 250.0 2100 0.0 1900 0.0 1 0 0 /
+
+RSVD
+  1900 100.0
+  2100 100.0 /
+
+SCHEDULE
+
+-- FIELD
+-- ├── SAME (INJ2)
+-- ├── PARENT
+-- │   └── CHILD (INJ1)
+-- ├── DISCON-G (INJ3)
+-- └── DISCON-W (PROD1)
+--
+GRUPTREE
+  'SAME'     'FIELD'  /
+  'PARENT'   'FIELD'  /
+  'CHILD'    'PARENT' /
+  'DISCON-G' 'FIELD'  /
+  'DISCON-W' 'FIELD'  /
+/
+
+WELSPECS
+  'INJ1'  'CHILD'    1 1 2000 'GAS' /
+  'INJ2'  'SAME'     2 1 2000 'GAS' /
+  'INJ3'  'DISCON-G' 1 3 2000 'GAS' /
+  'PROD1' 'DISCON-W' 3 3 2000 'OIL' /
+/
+
+COMPDAT
+  'INJ1'  1 1 1 1 'OPEN' 1 10.6092 0.5 /
+  'INJ2'  2 1 1 1 'OPEN' 1 10.6092 0.5 /
+  'INJ3'  1 3 1 1 'OPEN' 1 10.6092 0.5 /
+  'PROD1' 3 3 1 1 'OPEN' 0 10.6092 0.5 /
+/
+
+WCONINJE
+  'INJ1'  'GAS' 'OPEN' 'RATE' 100 1* 400 /
+  'INJ2'  'GAS' 'OPEN' 'RATE' 100 1* 400 /
+  'INJ3'  'GAS' 'OPEN' 'RATE' 100 1* 400 /
+/
+
+WCONPROD
+  'PROD1' 'OPEN' 'ORAT' 100 4* /
+/
+
+-- Report step 0: No top-up controls (RATE only)
+GCONINJE
+  'SAME' 'WATER' 'RATE' 100 /
+  'SAME' 'GAS'   'RATE' 100 /
+/
+
+TSTEP
+  1 /
+
+-- Report step 1: Same group (SAME) has both WATER RESV and GAS RESV
+GCONINJE
+  'SAME'   'WATER' 'RESV' 1* 1000 /
+  'SAME'   'GAS'   'RESV' 1* 1000 /
+  'PARENT' 'WATER' 'RATE' 100 /
+  'CHILD'  'GAS'   'RATE' 100 /
+/
+
+TSTEP
+  1 /
+
+-- Report step 2: Ancestor (PARENT WATER VREP) vs descendant (CHILD GAS RESV) conflict
+GCONINJE
+  'SAME'     'WATER' 'RATE' 100 /
+  'SAME'     'GAS'   'RATE' 100 /
+  'PARENT'   'WATER' 'VREP' 3* 1.0 /
+  'CHILD'    'GAS'   'RESV' 1* 1000 /
+  'DISCON-G' 'GAS'   'RATE' 100 /
+  'DISCON-W' 'WATER' 'RATE' 100 /
+/
+
+TSTEP
+  1 /
+
+-- Report step 3: Disconnected branches with different top-up phases (allowed)
+GCONINJE
+  'PARENT'   'WATER' 'RATE' 100 /
+  'CHILD'    'GAS'   'RATE' 100 /
+  'DISCON-G' 'GAS'   'RESV' 1* 1000 /
+  'DISCON-W' 'WATER' 'VREP' 3* 1.0 /
+/
+
+END
