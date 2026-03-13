@@ -201,6 +201,12 @@ wellTestALQ()
     auto cur_alq = temp_alq;
     Scalar cur_bhp = this->well_state_.well(this->well_name_).bhp;
     auto init_rates = computeLimitedWellRatesWithALQ_(temp_alq, cur_bhp);
+    if (!init_rates) {
+        this->displayDebugMessage_(fmt::format(
+            "wellTestALQ: failed to compute initial rates for ALQ = {}, bhp = {}",
+            temp_alq, cur_bhp));
+        return {cur_alq, false};
+    }
     LimitedRatesAndBhp new_rates = *init_rates;
     std::optional<LimitedRatesAndBhp> rates;
     Scalar old_gradient = 0.0;
@@ -223,7 +229,7 @@ wellTestALQ()
         rates = new_rates;
         auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq, (*rates).bhp);
         if (!temp_rates)
-            temp_rates->oil = 0.0;
+            break;
         if (temp_rates->bhp_is_limited)
             state.stop_iteration = true;
 

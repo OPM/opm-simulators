@@ -136,7 +136,7 @@ public:
     bool converged() const
     {
         if (errorPvFraction_ < relaxedMaxPvFraction_
-            || this->problem().iterationContext().shouldRelax(numStrictIterations_)) {
+            || this->problem().iterationContext().shouldRelax(numStrictIterations_ + 1)) {
             return (this->error_ < relaxedTolerance_ && errorSum_ < sumTolerance_);
         }
 

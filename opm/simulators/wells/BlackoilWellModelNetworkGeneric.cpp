@@ -129,6 +129,26 @@ shouldBalance(const int reportStepIdx, const NewtonIterationContext& iterCtx) co
 }
 
 template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+willBalanceOnNextIteration(const int reportStepIdx, const NewtonIterationContext& iterCtx) const
+{
+    // if network is not active, we do not need to balance the network
+    const auto& schedule_state = well_model_.schedule()[reportStepIdx];
+    if (!schedule_state.network().active()) {
+        return false;
+    }
+
+    if (schedule_state.network_balance().mode() == Network::Balance::CalcMode::NUPCOL) {
+        const int nupcol = schedule_state.nupcol();
+        return iterCtx.withinNupcol(nupcol - 1); // Note the -1 here!
+    } else {
+        // Any other rebalancing mode will only rebalance
+        // at the start of the timestep.
+        return false;
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
 Scalar
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 updatePressures(const int reportStepIdx,

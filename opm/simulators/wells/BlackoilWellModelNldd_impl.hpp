@@ -176,7 +176,7 @@ getWellConvergence(const Domain& domain,
                    DeferredLogger& local_deferredLogger) const
 {
     const auto& iterCtx = wellModel_.simulator().problem().iterationContext();
-    const bool relax_tolerance = iterCtx.shouldRelax(wellModel_.numStrictIterations());
+    const bool relax_tolerance = iterCtx.shouldRelax(wellModel_.numStrictIterations() + 1);
 
     ConvergenceReport report;
     {
