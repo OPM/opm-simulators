@@ -21,6 +21,9 @@
 
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
+
+#include <fmt/core.h>
+
 #if HAVE_CUDA
 #include <cuda_runtime.h>
 #include <cuda.h>
