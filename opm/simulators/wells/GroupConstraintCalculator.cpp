@@ -607,8 +607,15 @@ calculateGroupConstraint()
             return ConstraintInfo{full_target, toplevel_control_mode};
         }
     }
-    // Return the bottom group's constraint as is.
-    return this->getGroupConstraintNoGuideRate_(this->bottom_group_);
+    // Return the more restrictive of the top-level distributed target and the
+    // bottom group's own target. This prevents the slave group from overshooting the
+    // top-level budget
+    auto bottom_constraint = this->getGroupConstraintNoGuideRate_(this->bottom_group_);
+    if (bottom_constraint.has_value() && full_target < bottom_constraint->constraint) {
+        const auto toplevel_control_mode = this->getToplevelControlMode_();
+        return ConstraintInfo{full_target, toplevel_control_mode};
+    }
+    return bottom_constraint;
 }
 
 // -------------------------------------------------------
@@ -748,6 +755,12 @@ TopToBottomCalculator::
 getTopLevelTargetOrLimit_()
 {
     if (this->isInjectionConstraint()) {
+        // NOTE: For VREP mode and (and also for multi-phase injection with RESV mode),
+        //   getInjectionGroupTarget() converts from reservoir to surface rate using the master's resv_coeff.
+        //   If the top level group has subordinate groups connected to slave reservoirs, and
+        //   possibly also combined with subordinate well groups in the master reservoir
+        //   with different PVT properties, the conversion will be inaccurate.
+        // TODO: Implement a more accurate approach.
         return this->groupStateHelper().getInjectionGroupTarget(
             this->top_group_, this->injectionPhase_(), this->resvCoeffsInj());
     }

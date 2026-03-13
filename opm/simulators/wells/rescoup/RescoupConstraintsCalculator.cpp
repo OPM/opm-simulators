@@ -176,9 +176,15 @@ calculateSlaveGroupConstraints_(std::size_t slave_idx, GroupConstraintCalculator
             for (ReservoirCoupling::Phase phase : phases) {
                 auto target_info = calculator.groupInjectionTarget(group, phase);
                 if (target_info.has_value()) {
+                    // Always send injection targets as RATE. The numeric value is
+                    // already a surface rate for all modes (RATE, REIN, RESV, VREP),
+                    // and the slave cannot evaluate derived modes (REIN, VREP, RESV)
+                    // because it lacks the master's schedule data (reinj_group,
+                    // voidage_group, GCONSUMP, resv_coeff, etc.).
                     injection_targets.push_back(
                         InjectionGroupTarget{
-                            group_idx, target_info->constraint, target_info->cmode, phase
+                            group_idx, target_info->constraint,
+                            Group::InjectionCMode::RATE, phase
                         }
                     );
                 }
