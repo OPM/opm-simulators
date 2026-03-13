@@ -699,7 +699,8 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    const bool                      checkDeck,
                    const bool                      keepKeywords,
                    const std::optional<int>&       outputInterval,
-                   const bool                      slaveMode)
+                   const bool                      slaveMode,
+                   const bool                      throwOnError)
 {
     auto errorGuard = std::make_unique<ErrorGuard>();
     int parseSuccess = 1; // > 0 is success
@@ -785,6 +786,13 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     if (! parseSuccess) {
         if (comm.rank() == 0) {
             OpmLog::error(fmt::format("Unrecoverable errors while loading input:\n{}", failureMessage));
+        }
+
+        // Note: failureMessage is only populated on rank 0.
+        // This is fine since throwOnError is only used in single-process
+        // unit tests. Under MPI the existing std::exit() path applies.
+        if (throwOnError) {
+            throw std::runtime_error(failureMessage);
         }
 
 #if HAVE_MPI

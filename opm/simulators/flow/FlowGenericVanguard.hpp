@@ -155,7 +155,8 @@ public:
      * \brief Read a deck.
      * \param filename file to read
      */
-    static void readDeck(const std::string& filename);
+    static void readDeck(const std::string& filename,
+                         bool throwOnError = false);
 
     /*!
      * \brief Set the simulation configuration objects.

@@ -46,6 +46,10 @@
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/StreamLog.hpp>
+#include <opm/common/OpmLog/LogUtil.hpp>
+
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
@@ -129,7 +133,7 @@ initSimulator(const char *filename)
                                    /*handleHelp*/true,
                                    /*myRank*/0);
 
-    Opm::FlowGenericVanguard::readDeck(filename);
+    Opm::FlowGenericVanguard::readDeck(filename, /*throwOnError=*/true);
 
     return std::make_unique<Simulator>();
 }
@@ -246,6 +250,12 @@ struct EquilFixture {
 #endif
         using namespace Opm;
         FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+
+        // Register OpmLog backend so parser errors are visible in test output
+        if (!OpmLog::hasBackend("STDERR_LOGGER")) {
+            auto streamLog = std::make_shared<StreamLog>(std::cerr, Log::DefaultMessageTypes);
+            OpmLog::addBackend("STDERR_LOGGER", streamLog);
+        }
         Opm::ThreadManager::registerParameters();
         // Since this parameter is registered in opm/models/nonlinear/newtonmethodparams.cpp but not accessed here
         Parameters::Register<Parameters::NewtonMaxIterations>("The maximum number of Newton iterations per time step");

@@ -36,6 +36,10 @@
 
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/StreamLog.hpp>
+#include <opm/common/OpmLog/LogUtil.hpp>
+
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
@@ -58,6 +62,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>
+#include <iostream>
 
 namespace Opm::Properties {
     namespace TTag {
@@ -538,6 +543,12 @@ struct AquiferFixture {
         Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
         setupParameters_<TT>(2, argv, /*registerParams=*/true, false, true, 0);
         Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+
+        // Register OpmLog backend so parser errors are visible in test output
+        if (!Opm::OpmLog::hasBackend("STDERR_LOGGER")) {
+            auto streamLog = std::make_shared<Opm::StreamLog>(std::cerr, Opm::Log::DefaultMessageTypes);
+            Opm::OpmLog::addBackend("STDERR_LOGGER", streamLog);
+        }
     }
 };
 
@@ -549,7 +560,7 @@ BOOST_GLOBAL_FIXTURE(AquiferFixture);
 BOOST_AUTO_TEST_CASE(TYPE) \
 { \
     using TT = Opm::Properties::TTag::TestRestartTypeTag; \
-    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA"); \
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA", /*throwOnError=*/true); \
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>; \
     Simulator sim; \
     auto data_out = Opm::TYPE<TT>::serializationTestObject(sim); \
@@ -570,7 +581,7 @@ TEST_FOR_AQUIFER(AquiferFetkovich)
 BOOST_AUTO_TEST_CASE(AquiferNumerical)
 {
     using TT = Opm::Properties::TTag::TestRestartTypeTag;
-    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA");
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA", /*throwOnError=*/true);
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
     Simulator sim;
     auto data_out = Opm::AquiferNumerical<TT>::serializationTestObject(sim);
@@ -588,7 +599,7 @@ BOOST_AUTO_TEST_CASE(AquiferNumerical)
 BOOST_AUTO_TEST_CASE(AquiferConstantFlux)
 {
     using TT = Opm::Properties::TTag::TestRestartTypeTag;
-    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA");
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA", /*throwOnError=*/true);
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
     Simulator sim;
     auto data_out = Opm::AquiferConstantFlux<TT>::serializationTestObject(sim);
