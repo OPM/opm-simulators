@@ -150,6 +150,8 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     double secondsElapsed_;
     std::vector<Opm::RestartValue> restartValue_;
     bool writeDoublePrecision_;
+    /// \brief True if there was an EXIT keyword in ACTIONX causing a simulation end
+    bool forcedSimulationFinished_;
 
     explicit EclWriteTasklet(const Opm::Action::State& actionState,
                              const Opm::WellTestState& wtestState,
@@ -161,7 +163,8 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                              bool isSubStep,
                              double secondsElapsed,
                              std::vector<Opm::RestartValue> restartValue,
-                             bool writeDoublePrecision)
+                             bool writeDoublePrecision,
+                             bool forcedSimulationFinished)
         : actionState_(actionState)
         , wtestState_(wtestState)
         , summaryState_(summaryState)
@@ -173,6 +176,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
         , secondsElapsed_(secondsElapsed)
         , restartValue_(std::move(restartValue))
         , writeDoublePrecision_(writeDoublePrecision)
+        , forcedSimulationFinished_(forcedSimulationFinished)
     {}
 
     // callback to eclIO serial writeTimeStep method
@@ -188,7 +192,8 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                                        this->secondsElapsed_,
                                        std::move(this->restartValue_.back()),
                                        this->writeDoublePrecision_,
-                                       this->timeStepNum_);
+                                       this->timeStepNum_,
+                                       forcedSimulationFinished_);
         }
         else{
             this->eclIO_.writeTimeStep(this->actionState_,
@@ -200,7 +205,8 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                                        this->secondsElapsed_,
                                        std::move(this->restartValue_),
                                        this->writeDoublePrecision_,
-                                       this->timeStepNum_);
+                                       this->timeStepNum_,
+                                       forcedSimulationFinished_);
         }
     }
 };
@@ -836,6 +842,7 @@ void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 doWriteOutput(const int                          reportStepNum,
               const std::optional<int>           timeStepNum,
               const bool                         isSubStep,
+              const bool                         isForcedFinalOutput,
               data::Solution&&                   localCellData,
               data::Wells&&                      localWellData,
               data::GroupAndNetworkValues&&      localGroupAndNetworkData,
@@ -933,7 +940,8 @@ doWriteOutput(const int                          reportStepNum,
         actionState,
         isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
         summaryState, udqState, *this->eclIO_,
-        reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValues), doublePrecision);
+        reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValues), doublePrecision,
+        isForcedFinalOutput);
 
     // finally, start a new output writing job
     this->taskletRunner_->dispatch(std::move(eclWriteTasklet));
