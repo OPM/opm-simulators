@@ -172,8 +172,7 @@ namespace Dune
         const int verbosity = is_iorank ? prm.get<int>("verbosity", 0) : 0;
         const std::string solver_type = prm.get<std::string>("solver", "bicgstab");
 
-
-        // make sure it is nullptr at the start (used for error checking in the end).
+        // make sure it is nullptr at the start (used for error checking in the end). 
         // while the linSolver_ is initalized as a nullptr, we want to make sure it is reset here,
         // simply because we will check if it is at the end of this function and need to keep this invariant
         // (that it is nullptr at the start of this function).
@@ -203,6 +202,11 @@ namespace Dune
                                                                         );
             }
 #endif
+        } else if (solver_type == "cg") {
+            this->linsolver_ = std::make_shared<Dune::CGSolver<VectorType>>
+                (*linearoperator_for_solver_, *scalarproduct_, *preconditioner_,
+                 /* desired residual reduction factor = */ tol,
+                 /* maximum number of iterations = */ maxiter, verbosity);
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
                                                                         *scalarproduct_,

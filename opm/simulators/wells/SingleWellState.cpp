@@ -401,6 +401,7 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
            this->surface_rates == rhs.surface_rates &&
            this->reservoir_rates == rhs.reservoir_rates &&
            this->prev_surface_rates == rhs.prev_surface_rates &&
+           this->frac_rate == rhs.frac_rate &&
            this->perf_data == rhs.perf_data &&
            this->filtrate_conc == rhs.filtrate_conc &&
            this->trivial_group_target == rhs.trivial_group_target &&
