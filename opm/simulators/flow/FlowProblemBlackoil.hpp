@@ -802,7 +802,6 @@ public:
                     case BCComponent::NONE:
                         throw std::logic_error("you need to specify a valid component (OIL, WATER or GAS) when DIRICHLET type is set in BC");
                 }
-                fluidState.setTotalSaturation(1.0);
                 double pressure = initialFluidStates_[globalDofIdx].pressure(this->refPressurePhaseIdx_());
                 const auto pressure_input = bc.pressure;
                 if (pressure_input) {
