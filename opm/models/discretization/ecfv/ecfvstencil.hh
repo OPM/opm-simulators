@@ -114,13 +114,13 @@ public:
         /*!
          * \brief The global position associated with the sub-control volume
          */
-        decltype(auto) globalPos() const
+        WorldVector globalPos() const
         { return element_.geometry().center(); }
 
         /*!
          * \brief The center of the sub-control volume
          */
-        decltype(auto) center() const
+        WorldVector center() const
         { return element_.geometry().center(); }
 
         /*!
@@ -132,13 +132,13 @@ public:
         /*!
          * \brief The geometry of the sub-control volume.
          */
-        const LocalGeometry geometry() const
+        LocalGeometry geometry() const
         { return element_.geometry(); }
 
         /*!
          * \brief Geometry of the sub-control volume relative to parent.
          */
-        const LocalGeometry localGeometry() const
+        LocalGeometry localGeometry() const
         { return element_.geometryInFather(); }
 
     private:
