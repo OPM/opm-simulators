@@ -319,7 +319,10 @@ protected:
                            Opm::compileTimestamp());
             setupTime_ = externalSetupTimer.elapsed();
         }
-        catch (const std::invalid_argument& e)
+        // Catch std::exception (not a subclass) because readDeck()
+        // may throw std::runtime_error on parse failure while other
+        // initialization code may throw std::invalid_argument.
+        catch (const std::exception& e)
         {
             if (outputCout_) {
                 std::cerr << "Failed to create valid EclipseState object." << std::endl;
