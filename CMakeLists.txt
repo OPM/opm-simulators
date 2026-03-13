@@ -413,6 +413,11 @@ macro(opm-simulators_config_hook)
 
   if(rocsparse_FOUND AND rocblas_FOUND)
     set(HAVE_ROCSPARSE 1)
+  else()
+    # the OpmFind macros set these, unset them
+    # remove when we no longer use those macros
+    unset(HAVE_ROCSPARSE)
+    unset(HAVE_ROCBLAS)
   endif()
 
   if(ROCALUTION_FOUND)
