@@ -787,11 +787,11 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
             OpmLog::error(fmt::format("Unrecoverable errors while loading input:\n{}", failureMessage));
         }
 
-#if HAVE_MPI
-        MPI_Finalize();
-#endif
-
-        std::exit(EXIT_FAILURE);
+        // Throw instead of std::exit() so that callers can handle the
+        // error. In production, Main::initialize_() catches this and
+        // calls MPI_Abort(). In unit tests, Boost.Test catches it and
+        // reports a proper test failure instead of a silent exit.
+        throw std::runtime_error(failureMessage);
     }
 }
 
