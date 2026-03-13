@@ -17,6 +17,22 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_SINGLE_COMP_WELL_STATE_IMPL_HPP
+#define OPM_SINGLE_COMP_WELL_STATE_IMPL_HPP
+
+// Improve IDE experience
+#ifndef OPM_SINGLE_COMP_WELL_STATE_HPP
+#include <config.h>
+#include <flowexperimental/comp/wells/SingleCompWellState.hpp>
+#endif
+
+#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+
+#include <cassert>
+#include <cstddef>
+#include <numeric>
+
 namespace Opm {
 
 template <class Scalar>
@@ -31,9 +47,7 @@ CompConnectionData(std::size_t num_connection,
   , transmissibility_factor(num_connection)
   , satnum_id(num_connection)
   , ecl_index(num_connection)
-{
-}
-
+{}
 
 template <class Scalar>
 CompConnectionData<Scalar>::
@@ -64,8 +78,7 @@ SingleCompWellState(const std::string& well_name,
    , reservoir_phase_rates(FluidSystem::numPhases)
    , total_molar_fractions(comp_config.numComps())
    , connection_data(connections, FluidSystem::numPhases, comp_config)
-{
-}
+{}
 
 template <typename FluidSystem>
 void SingleCompWellState<FluidSystem>::
@@ -153,5 +166,6 @@ get_total_surface_rate() const
     return std::accumulate(surface_phase_rates.begin(), surface_phase_rates.end(), Scalar(0));
 }
 
-
 } // namespace Opm
+
+#endif // OPM_SINGLE_COMP_WELL_STATE_IMPL_HPP
