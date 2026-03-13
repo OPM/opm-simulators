@@ -67,6 +67,7 @@ bool GroupState<Scalar>::operator==(const GroupState& other) const
            this->m_network_leaf_node_production_rates == other.m_network_leaf_node_production_rates &&
            this->production_controls == other.production_controls &&
            this->prod_red_rates == other.prod_red_rates &&
+           this->m_prev_production_rates == other.m_prev_production_rates &&
            this->inj_red_rates == other.inj_red_rates &&
            this->inj_resv_rates == other.inj_resv_rates &&
            this->inj_rein_rates == other.inj_rein_rates &&
@@ -118,6 +119,27 @@ GroupState<Scalar>::production_rates(const std::string& gname) const
         throw std::logic_error("No such group");
 
     return group_iter->second;
+}
+
+template<class Scalar>
+const std::vector<Scalar>&
+GroupState<Scalar>::prev_production_rates(const std::string& gname) const
+{
+    auto group_iter = this->m_prev_production_rates.find(gname);
+    if (group_iter == this->m_prev_production_rates.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+void GroupState<Scalar>::update_prev_production_rates(const std::string& gname,
+                                                      const std::vector<Scalar>& rates)
+{
+    if (rates.size() != this->num_phases)
+        throw std::logic_error("Wrong number of phases");
+
+    this->m_prev_production_rates[gname] = rates;
 }
 
 template<class Scalar>

@@ -953,6 +953,66 @@ onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
     }
 }
 
+template<typename Scalar, typename IndexTraits>
+void WellInterfaceGeneric<Scalar, IndexTraits>::ensureGroupControlFeasibility(WellState<Scalar, IndexTraits>& well_state,
+                                                                              const std::vector<Scalar>& scaled_well_fractions,
+                                                                              DeferredLogger& deferred_logger) const
+    {
+    auto& ws = well_state.well(this->index_of_well_);
+    if (!wellUnderGroupControl(ws) || this->isInjector() || !ws.group_target.has_value())
+    {
+        return;
+    }
+    auto& group_target = ws.group_target;
+    if (group_target->production_cmode_fallback == Group::ProductionCMode::NONE || 
+        group_target->production_cmode == group_target->production_cmode_fallback)
+    {
+        return;
+    }
+    // We only need to check modes that can result in small fractions
+    // i.e. ORAT, WRAT, GRAT, LRAT
+    const auto cmode = group_target->production_cmode;
+    const bool do_check = (cmode == Group::ProductionCMode::ORAT ||
+                           cmode == Group::ProductionCMode::WRAT ||
+                           cmode == Group::ProductionCMode::GRAT ||
+                           cmode == Group::ProductionCMode::LRAT);
+    if (!do_check) {
+        return;
+    }
+    // check whether fraction of production_cmode is too small, if so, switch to original control mode
+    Scalar cmode_frac = 0.0;
+    const auto& pu = this->phaseUsage();
+    if (cmode == Group::ProductionCMode::ORAT || cmode == Group::ProductionCMode::LRAT) {
+        if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+            const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+            cmode_frac += scaled_well_fractions[oil_pos];
+        }
+    }
+    if (cmode == Group::ProductionCMode::WRAT || cmode == Group::ProductionCMode::LRAT) {
+        if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+            const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+            cmode_frac += scaled_well_fractions[water_pos];
+        }
+    }
+    if (cmode == Group::ProductionCMode::GRAT) {
+        if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+            const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+            cmode_frac += scaled_well_fractions[gas_pos];
+        }
+    }
+    // Somewhat arbitrary threshold for small scaled fraction. Ideally should be related to
+    // convergence tollerances for well equations, but these are absolute (not relative)
+    const Scalar tol = 1e-5;
+    if (cmode_frac < tol) {
+        // switch back to original control mode
+        const std::string current = Group::ProductionCMode2String(cmode);
+        const std::string fallback = Group::ProductionCMode2String(group_target->production_cmode_fallback);
+        group_target->production_cmode = group_target->production_cmode_fallback;
+        group_target->target_value = group_target->target_value_fallback;
+        deferred_logger.info(fmt::format("Well {} fraction for current group control {} is too small, switching back to original control mode {}",
+                                         name(), current, fallback));
+    }
+}
 
 template class WellInterfaceGeneric<double, BlackOilDefaultFluidSystemIndices>;
 

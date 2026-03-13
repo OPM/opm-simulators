@@ -255,14 +255,13 @@ getGroupProductionControl(const Group& group,
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     // gconsale may adjust the grat target.
-    // the adjusted rates is send to the targetCalculator
 
-    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{groupStateHelper, resv_coeff, group};
-
-    const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
-    if (target_rate) {
+    const auto group_target = well_state.well(well_.indexOfWell()).group_target;
+    if (group_target) {
+        // the adjusted rates is sent to the targetCalculator
+        GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{groupStateHelper, resv_coeff, group_target->production_cmode};
         const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-        control_eq = current_rate - target_rate->target_value;
+        control_eq = current_rate - group_target->target_value;
     } else {
         const auto& controls = well.productionControls(summaryState);
         control_eq = bhp - controls.bhp_limit;
