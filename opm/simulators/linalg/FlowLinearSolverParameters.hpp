@@ -126,7 +126,7 @@ struct FlowLinearSolverParameters
 
     FlowLinearSolverParameters() { reset(); }
 
-    void init(bool cprRequestedInDataFile, bool cprwUseAnalyticWeights = true);
+    void init(bool cprRequestedInDataFile, bool cprwUseAnalyticWeights);
 
     static void registerParameters();
 
