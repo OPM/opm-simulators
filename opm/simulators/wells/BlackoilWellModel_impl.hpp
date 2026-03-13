@@ -370,6 +370,7 @@ namespace Opm {
         this->wellState().gliftTimeStepInit();
 
         const double simulationTime = simulator_.time();
+        const auto& iterCtx = simulator_.problem().iterationContext();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             // test wells
@@ -388,7 +389,6 @@ namespace Opm {
 
             // we need to update the group data after the well is created
             // to make sure we get the correct mapping.
-            const auto& iterCtx = simulator_.problem().iterationContext();
             this->updateAndCommunicateGroupData(reportStepIdx,
                                     iterCtx,
                                     param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false);
@@ -468,12 +468,14 @@ namespace Opm {
         this->guide_rate_handler_.updateGuideRates(
             reportStepIdx, simulationTime, this->wellState(), this->groupState()
         );
+        bool slave_needs_well_solution = false;
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingSlave()) {
             if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
                 this->sendSlaveGroupDataToMaster();
                 this->receiveGroupConstraintsFromMaster();
                 this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
+                slave_needs_well_solution = true;
             }
         }
 #endif
@@ -494,13 +496,10 @@ namespace Opm {
             OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
         }
 
-        {
-            const auto& iterCtx = simulator_.problem().iterationContext();
-            this->updateAndCommunicateGroupData(reportStepIdx,
-                                        iterCtx,
-                                        param_.nupcol_group_rate_tolerance_,
-                                        /*update_wellgrouptarget*/ true);
-        }
+        this->updateAndCommunicateGroupData(reportStepIdx,
+                                    iterCtx,
+                                    param_.nupcol_group_rate_tolerance_,
+                                    /*update_wellgrouptarget*/ true);
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -514,7 +513,7 @@ namespace Opm {
                 const bool dyn_status_change = this->wellState().well(well->name()).status
                         != this->prevWellState().well(well->name()).status;
 
-                if (event || dyn_status_change) {
+                if (event || dyn_status_change || slave_needs_well_solution) {
                     try {
                         well->scaleSegmentRatesAndPressure(this->wellState());
                         well->calculateExplicitQuantities(simulator_, this->groupStateHelper());
@@ -534,9 +533,22 @@ namespace Opm {
         OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
 
 #ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isReservoirCouplingSlave()) {
+            if (slave_needs_well_solution) {
+                this->updateAndCommunicateGroupData(reportStepIdx,
+                                            iterCtx,
+                                            param_.nupcol_group_rate_tolerance_,
+                                            /*update_wellgrouptarget*/ false);
+                this->sendSlaveGroupDataToMaster();
+            }
+        }
+#endif
+
+#ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingMaster()) {
             if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
                 this->sendMasterGroupConstraintsToSlaves();
+                this->receiveSlaveGroupData();
             }
         }
 #endif
@@ -780,8 +792,7 @@ namespace Opm {
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
-        const auto& glo = this->schedule().glo(reportStepIdx);
-        this->updateNONEProductionGroups(glo, local_deferredLogger);
+        this->groupStateHelper().updateNONEProductionGroups();
 
         this->commitWGState();
 
