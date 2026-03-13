@@ -205,12 +205,19 @@ template<class Scalar> class WellContributions;
 
             data::Wells wellData() const
             {
+            
+                // Extract RSCONST info from FluidSystem
+               Opm::RsConstInfo rsConstInfo;
+               rsConstInfo.enabled = FluidSystem::enableConstantRs();
+               rsConstInfo.value = FluidSystem::oilPvt().saturatedGasDissolutionFactor(/*regionIdx=*/0, 
+                                                                                                                          /*temperature=*/0.0, 
+                                                                                                                          /*pressure=*/0.0);
                 auto wsrpt = this->wellState()
                     .report(this->simulator_.vanguard().globalCell().data(),
                             [this](const int well_index)
                 {
                     return this->wasDynamicallyShutThisTimeStep(well_index);
-                });
+                }, rsConstInfo);
 
                 BlackoilWellModelGuideRates(*this)
                     .assignWellGuideRates(wsrpt, this->reportStepIndex());

@@ -31,6 +31,7 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/RsvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/RsconstTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/RvvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/RvwvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PbvdTable.hpp>
@@ -449,7 +450,7 @@ density(const Scalar depth,
 {
     const Scalar temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
     Scalar rs = 0.0;
-    if (FluidSystem::enableDissolvedGas())
+    if (FluidSystem::enableDissolvedGas() || FluidSystem::enableConstantRs())
         rs = rs_(depth, press, temp);
 
     Scalar bOil = 0.0;
@@ -460,7 +461,7 @@ density(const Scalar depth,
         bOil = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, rs);
     }
     Scalar rho = bOil * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_);
-    if (FluidSystem::enableDissolvedGas()) {
+    if (FluidSystem::enableDissolvedGas() || FluidSystem::enableConstantRs()) {
         rho += rs * bOil * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
     }
 
@@ -1574,9 +1575,36 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
         }
     }
     else {
-        for (std::size_t i = 0; i < rec.size(); ++i) {
-            rsFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
-        }
+            bool useConstantRs = false;
+            Scalar rsConstValue = 0.0;
+            Scalar pbConstValue = 0.0;
+
+            if (FluidSystem::enableConstantRs()) {
+                const TableContainer& rsconstTables = tables.getRsconstTables();
+                if (!rsconstTables.empty()) {
+                    const RsconstTable& rsconstTable = rsconstTables.getTable<RsconstTable>(0);
+                    const auto& rsColumn = rsconstTable.getRsColumn();
+                    const auto& pbColumn = rsconstTable.getPbubColumn();
+                    rsConstValue = rsColumn[0];
+                    pbConstValue = pbColumn[0];
+                    useConstantRs = true;
+                }
+                OpmLog::info(fmt::format("Using RSCONST keyword: Rs = {}, Pb = {}",
+                                                                  rsConstValue, pbConstValue));
+            }
+
+            // Use RSCONST for dead oil initialization
+            if (useConstantRs) {
+                // Initialize for each region
+                for (std::size_t i = 0; i < rec.size(); ++i) {
+                       rsFunc_.push_back(std::make_shared<Miscibility::RsConst<FluidSystem>>(rsConstValue,
+                                                                                      pbConstValue));
+                }
+            }
+            else {
+                  // Normal dead oil (no dissolved gas and rsconst)
+                  rsFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
+            }
     }
 
     rvFunc_.reserve(rec.size());
