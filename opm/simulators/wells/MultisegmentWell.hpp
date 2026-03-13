@@ -327,8 +327,6 @@ namespace Opm {
         // updating the inflow based on the current reservoir condition
         void updateIPR(const Simulator& ebos_simulator,
                        DeferredLogger& deferred_logger) const override;
-
-        FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
     };
 
 }
