@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <numbers>
 
 #include <fmt/format.h>
 
@@ -1943,7 +1944,7 @@ namespace Opm
             computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf, cq_s,
                             perf_rates, deferred_logger);
             // TODO: make area a member
-            const Scalar area = 2 * M_PI * this->perf_rep_radius_[perf] * this->perf_length_[perf];
+            const Scalar area = 2 * std::numbers::pi_v<Scalar> * this->perf_rep_radius_[perf] * this->perf_length_[perf];
             const auto& material_law_manager = simulator.problem().materialLawManager();
             const auto& scaled_drainage_info =
                         material_law_manager->oilWaterScaledEpsInfoDrainage(cell_idx);
@@ -2141,7 +2142,7 @@ namespace Opm
         const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
         const auto& fs = int_quants.fluidState();
         const EvalWell b_w = this->extendEval(fs.invB(FluidSystem::waterPhaseIdx));
-        const Scalar area = M_PI * this->bore_diameters_[perf] * this->perf_length_[perf];
+        const Scalar area = std::numbers::pi_v<Scalar> * this->bore_diameters_[perf] * this->perf_length_[perf];
         const int wat_vel_index = Bhp + 1 + perf;
         const unsigned water_comp_idx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
 
@@ -2167,7 +2168,7 @@ namespace Opm
         const auto& fs = int_quants.fluidState();
         const EvalWell b_w = this->extendEval(fs.invB(FluidSystem::waterPhaseIdx));
         const EvalWell water_flux_r = water_flux_s / b_w;
-        const Scalar area = M_PI * this->bore_diameters_[perf] * this->perf_length_[perf];
+        const Scalar area = std::numbers::pi_v<Scalar> * this->bore_diameters_[perf] * this->perf_length_[perf];
         const EvalWell water_velocity = water_flux_r / area;
         const int wat_vel_index = Bhp + 1 + perf;
 

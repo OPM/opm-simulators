@@ -45,6 +45,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <numbers>
 #include <utility>
 
 #include <fmt/format.h>
@@ -1908,7 +1909,7 @@ namespace Opm
         // If more than one solution, pick the one corresponding to lowest absolute rate (smallest skin).
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
         const Scalar Kh = connection.Kh();
-        const Scalar scaling = 3.141592653589 * Kh * connection.wpimult();
+        const Scalar scaling = std::numbers::pi * Kh * connection.wpimult();
         const unsigned gas_comp_idx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
 
         const Scalar connection_pressure = ws.perf_data.pressure[perf];

@@ -51,9 +51,10 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <limits>
-#include <cmath>
+#include <numbers>
 #include <stdexcept>
 
 namespace Opm {
@@ -233,13 +234,13 @@ void computeBlockDip(const CellCornerData<Scalar>& cellCorners,
         if (std::abs(nx) > 1e-10 || std::abs(ny) > 1e-10) {
             dipAzimuth = std::atan2(ny, nx);
             // Convert to 0-2π range
-            dipAzimuth = std::fmod(dipAzimuth + 2*M_PI, 2*M_PI);
+            dipAzimuth = std::fmod(dipAzimuth + 2*std::numbers::pi_v<Scalar>, 2*std::numbers::pi_v<Scalar>);
         } else {
             dipAzimuth = 0.0; // Vertical cell
         }
 
         // Clamp dip angle to reasonable values
-        const Scalar maxDip = M_PI/2 - 1e-6;
+        const Scalar maxDip = std::numbers::pi_v<Scalar>/2 - static_cast<Scalar>(1e-6);
         dipAngle = std::min(dipAngle, maxDip);
     } else {
         // Degenerate cell - assume horizontal
