@@ -46,6 +46,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace Opm
@@ -450,6 +451,19 @@ public:
 
     void updateNetworkLeafNodeProductionRates();
 
+    /// @brief Set production control to NONE for groups not targeting any well.
+    ///
+    /// For each group in the production controls map, checks whether any open
+    /// producer well has GRUP control with that group as its target. If not,
+    /// the group's production control is set to NONE. This is needed to get correct summary
+    /// output for GMCTP/FMCTP, see https://github.com/OPM/opm-simulators/pull/6596 for more details.
+    ///
+    /// Exceptions (groups excluded from the NONE reset):
+    /// - Groups specified for gas lift optimization (GLO)
+    /// - RC master hierarchy groups (master groups + ancestors up to FIELD),
+    ///   which actively distribute targets to slave groups
+    void updateNONEProductionGroups();
+
     void updateREINForGroups(const Group& group, bool sum_rank);
 
     void updateReservoirRatesInjectionGroups(const Group& group);
@@ -493,6 +507,7 @@ public:
                        const Group::ProductionCMode& offended_control) const;
 
 private:
+
 #ifdef RESERVOIR_COUPLING_ENABLED
     /// @brief Convert active phase index to ReservoirCoupling::Phase enum
     /// @param phase_pos Active phase index (0, 1, or 2 in a 3-phase model)
@@ -540,6 +555,27 @@ private:
                                    Scalar target,
                                    Scalar current_rate) const;
 
+#ifdef RESERVOIR_COUPLING_ENABLED
+    /// @brief Collect all groups in the RC master group hierarchy.
+    ///
+    /// Starting from each master group (identified via GRUPMAST), walks up
+    /// via group.parent() to FIELD, adding all groups along the path.
+    /// These groups actively distribute targets to slave groups and must
+    /// not have their production control reset to NONE.
+    ///
+    /// @return Set of group names in the master group hierarchy
+    std::unordered_set<std::string> collectMasterGroupHierarchy_() const;
+#endif
+
+    /// @brief Collect groups that provide production targets to open wells.
+    ///
+    /// Scans all wells on this rank: for each open producer with GRUP control,
+    /// adds its group_target to the set. The result is rank-local and must be
+    /// synchronized via MPI before use.
+    ///
+    /// @return Set of group names targeted by wells on this rank
+    std::unordered_set<std::string> collectTargetedProductionGroups_() const;
+
     //! \brief Compute partial efficiency factor for addback calculation.
     //!
     //! The addback in constraint checking must use the partial efficiency factor
@@ -555,7 +591,7 @@ private:
 
     std::string controlGroup_(const Group& group) const;
 
-    #ifdef RESERVOIR_COUPLING_ENABLED
+#ifdef RESERVOIR_COUPLING_ENABLED
     /// @brief Get the effective production limit for a group and rate type,
     /// combining master limit, slave-local target, and GRUPSLAV filter flag.
     ///
