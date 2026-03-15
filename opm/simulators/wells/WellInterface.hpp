@@ -136,6 +136,7 @@ public:
                                           has_brine,
                                           has_saltPrecip,
                                           has_disgas_in_water,
+                                          has_solvent,
                                           Indices::numPhases >;
     /// Constructor
     WellInterface(const Well& well,

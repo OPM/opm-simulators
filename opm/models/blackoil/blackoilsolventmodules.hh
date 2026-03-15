@@ -603,10 +603,12 @@ public:
                                   const LinearizationType linearizationType)
     {
         auto& fs = asImp_().fluidState_;
-        solventSaturation_ = 0.0;
+        Evaluation solventSat{0.0};
         if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
-            solventSaturation_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx, linearizationType);
+            solventSat = priVars.makeEvaluation(solventSaturationIdx, timeIdx, linearizationType);
         }
+
+        fs.setSolventSaturation(solventSat);
 
         hydrocarbonSaturation_ = fs.saturation(gasPhaseIdx);
 
@@ -615,9 +617,10 @@ public:
             return;
         }
 
+        // TODO: with the solvent saturation added to fluid state, we might need to do differently here
         // make the saturation of the gas phase which is used by the saturation functions
         // the sum of the solvent "saturation" and the saturation the hydrocarbon gas.
-        fs.setSaturation(gasPhaseIdx, hydrocarbonSaturation_ + solventSaturation_);
+        fs.setSaturation(gasPhaseIdx, hydrocarbonSaturation_ + solventSaturation());
     }
 
     /*!
@@ -663,15 +666,17 @@ public:
         fs.setSaturation(gasPhaseIdx, hydrocarbonSaturation_);
 
         // update rsSolw. This needs to be done after the pressure is defined in the fluid state.
-        rsSolw_ = 0.0;
+        Evaluation rsSolwValue{0.0};
         if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
-            rsSolw_ = SolventModule::solubilityLimit(asImp_().pvtRegionIndex(),
+            rsSolwValue = SolventModule::solubilityLimit(asImp_().pvtRegionIndex(),
                                                      fs.temperature(waterPhaseIdx),
                                                      fs.pressure(waterPhaseIdx),
                                                      fs.saltConcentration());
         } else if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Rsolw) {
-            rsSolw_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx, linearizationType);
+            rsSolwValue = priVars.makeEvaluation(solventSaturationIdx, timeIdx, linearizationType);
         }
+
+        fs.setRsSolw(rsSolwValue);
 
         solventMobility_ = 0.0;
 
@@ -714,14 +719,14 @@ public:
            fs.setPressure(gasPhaseIdx, pmisc * pgMisc + (1.0 - pmisc) * pgImisc);
         }
 
-        const Evaluation gasSolventSat = hydrocarbonSaturation_ + solventSaturation_;
+        const Evaluation gasSolventSat = hydrocarbonSaturation_ + solventSaturation();
 
         if (gasSolventSat.value() < cutOff) { // avoid division by zero
             return;
         }
 
         const Evaluation Fhydgas = hydrocarbonSaturation_ / gasSolventSat;
-        const Evaluation Fsolgas = solventSaturation_ / gasSolventSat;
+        const Evaluation Fsolgas = solventSaturation() / gasSolventSat;
 
         // account for miscibility of oil and solvent
         if (SolventModule::isMiscible() && FluidSystem::phaseIsActive(oilPhaseIdx)) {
@@ -808,22 +813,23 @@ public:
                            unsigned timeIdx)
     {
         const auto& iq = asImp_();
+        auto& fs = asImp_().fluidState_;
         const unsigned pvtRegionIdx = iq.pvtRegionIndex();
         const Evaluation& T = iq.fluidState().temperature(gasPhaseIdx);
         const Evaluation& p = iq.fluidState().pressure(gasPhaseIdx);
 
+        Evaluation solventInvB;
         const Evaluation rv = 0.0;
         const Evaluation rvw = 0.0;
         if (SolventModule::isCO2Sol() || SolventModule::isH2Sol() ){
             if (SolventModule::isCO2Sol()) {
                 const auto& co2gasPvt = SolventModule::co2GasPvt();
-                solventInvFormationVolumeFactor_ =
+                solventInvB =
                     co2gasPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p, rv, rvw);
                 solventRefDensity_ = co2gasPvt.gasReferenceDensity(pvtRegionIdx);
                 solventViscosity_ = co2gasPvt.viscosity(pvtRegionIdx, T, p, rv, rvw);
 
                 const auto& brineCo2Pvt = SolventModule::brineCo2Pvt();
-                auto& fs = asImp_().fluidState_;
                 const auto& bw = brineCo2Pvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p, rsSolw());
 
                 const auto denw = bw * brineCo2Pvt.waterReferenceDensity(pvtRegionIdx) +
@@ -836,13 +842,12 @@ public:
                 mobw *= muWat / muWatEff;
             } else {
                 const auto& h2gasPvt = SolventModule::h2GasPvt();
-                solventInvFormationVolumeFactor_ =
+                solventInvB =
                     h2gasPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p, rv, rvw);
                 solventRefDensity_ = h2gasPvt.gasReferenceDensity(pvtRegionIdx);
                 solventViscosity_ = h2gasPvt.viscosity(pvtRegionIdx, T, p, rv, rvw);
 
                 const auto& brineH2Pvt = SolventModule::brineH2Pvt();
-                auto& fs = asImp_().fluidState_;
                 const auto& bw = brineH2Pvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p, rsSolw());
 
                 const auto denw = bw * brineH2Pvt.waterReferenceDensity(pvtRegionIdx) +
@@ -856,25 +861,28 @@ public:
             }
         } else {
             const auto& solventPvt = SolventModule::solventPvt();
-            solventInvFormationVolumeFactor_ = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+            solventInvB = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
             solventRefDensity_ = solventPvt.referenceDensity(pvtRegionIdx);
             solventViscosity_ = solventPvt.viscosity(pvtRegionIdx, T, p);
         }
 
-        solventDensity_ = solventInvFormationVolumeFactor_*solventRefDensity_;
+        // store solvent PVT properties on the fluid state before effectiveProperties
+        fs.setSolventInvB(solventInvB);
+        fs.setSolventDensity(solventInvB * solventRefDensity_);
+
         effectiveProperties(elemCtx, scvIdx, timeIdx);
 
         solventMobility_ /= solventViscosity_;
     }
 
-    const Evaluation& solventSaturation() const
-    { return solventSaturation_; }
+    Evaluation solventSaturation() const
+    { return asImp_().fluidState_.solventSaturation(); }
 
-    const Evaluation& rsSolw() const
-    { return rsSolw_; }
+    Evaluation rsSolw() const
+    { return asImp_().fluidState_.rsSolw(); }
 
-    const Evaluation& solventDensity() const
-    { return solventDensity_; }
+    Evaluation solventDensity() const
+    { return asImp_().fluidState_.solventDensity(); }
 
     const Evaluation& solventViscosity() const
     { return solventViscosity_; }
@@ -882,8 +890,8 @@ public:
     const Evaluation& solventMobility() const
     { return solventMobility_; }
 
-    const Evaluation& solventInverseFormationVolumeFactor() const
-    { return solventInvFormationVolumeFactor_; }
+    Evaluation solventInverseFormationVolumeFactor() const
+    { return asImp_().fluidState_.solventInvB(); }
 
     // This could be stored pr pvtRegion instead
     Scalar solventRefDensity() const
@@ -998,7 +1006,8 @@ private:
             rhoOil = fs.density(oilPhaseIdx);
         }
 
-        const Evaluation& rhoSolvent = solventDensity_;
+        // TODO: enableSolvent should always be true here, it should be able to get a reference.
+        const Evaluation rhoSolvent = solventDensity();
 
         // Mixing parameter for density
         // The pressureMixingParameter represent the miscibility of the
@@ -1084,7 +1093,7 @@ private:
             fs.setDensity(gasPhaseIdx,
                           bg_eff * FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx));
         }
-        solventDensity_ = bs_eff * solventRefDensity();
+        fs.setSolventDensity(bs_eff * solventRefDensity());
 
         // set the mobility
         Evaluation& mobg = asImp_().mobility_[gasPhaseIdx];
@@ -1125,13 +1134,12 @@ protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
+    const Implementation& asImp_() const
+    { return *static_cast<const Implementation*>(this); }
+
     Evaluation hydrocarbonSaturation_;
-    Evaluation solventSaturation_;
-    Evaluation rsSolw_;
-    Evaluation solventDensity_;
     Evaluation solventViscosity_;
     Evaluation solventMobility_;
-    Evaluation solventInvFormationVolumeFactor_;
 
     Scalar solventRefDensity_;
 };
@@ -1347,9 +1355,9 @@ public:
         const Scalar zEx = elemCtx.problem().dofCenterDepth(elemCtx, exteriorDofIdx, timeIdx);
         const Scalar distZ = zIn - zEx;
 
-        const Evaluation& rhoIn = intQuantsIn.solventDensity();
+        const Evaluation rhoIn = intQuantsIn.solventDensity();
         const Scalar rhoEx = Toolbox::value(intQuantsEx.solventDensity());
-        const Evaluation& rhoAvg = rhoIn * 0.5 + rhoEx * 0.5;
+        const Evaluation rhoAvg = rhoIn * 0.5 + rhoEx * 0.5;
 
         const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(gasPhaseIdx);
         Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(gasPhaseIdx));
