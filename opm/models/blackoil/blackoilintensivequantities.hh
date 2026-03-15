@@ -144,6 +144,7 @@ public:
                                           enableBrine,
                                           enableSaltPrecipitation,
                                           enableDisgasInWater,
+                                          enableSolvent,
                                           Indices::numPhases>;
     using ScalarFluidState = BlackOilFluidState<Scalar,
                                                 FluidSystem,
@@ -154,6 +155,7 @@ public:
                                                 enableBrine,
                                                 enableSaltPrecipitation,
                                                 enableDisgasInWater,
+                                                enableSolvent,
                                                 Indices::numPhases>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
