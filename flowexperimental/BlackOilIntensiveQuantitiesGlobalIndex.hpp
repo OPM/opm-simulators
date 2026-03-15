@@ -140,6 +140,7 @@ public:
                                           enableBrine,
                                           enableSaltPrecipitation,
                                           false,
+                                          enableSolvent,
                                           Indices::numPhases>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
