@@ -136,7 +136,8 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                             bool enableBrine,
                             bool enableSaltPrecipitation,
                             bool enableExtbo,
-                            bool enableBioeffects)
+                            bool enableBioeffects,
+                            bool enableGeochemistry)
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryState_(summaryState)
@@ -155,6 +156,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableBioeffects_(enableBioeffects)
+    , enableGeochemistry_(enableGeochemistry)
     , flowsC_(schedule, summaryConfig, isInterior)
     , rftC_(eclState_, schedule_,
             [this](const std::string& wname) { return this->isOwnedByCurrentRank(wname); },
@@ -471,6 +473,9 @@ assignToSolution(data::Solution& sol)
 
     // Tracers
     this->tracerC_.outputRestart(sol, eclState_.tracer());
+
+    // Geochemistry
+    this->geochemC_.outputRestart(sol, eclState_.species(), eclState_.mineral());
 }
 
 template<class FluidSystem>
@@ -916,6 +921,11 @@ doAllocBuffers(const unsigned bufferSize,
 
     if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
         this->CO2H2C_.allocate(bufferSize, eclState_.runspec().co2Storage());
+    }
+
+    // geochemical species output
+    if (enableGeochemistry_) {
+        this->geochemC_.allocate(bufferSize, eclState_.species(), eclState_.mineral());
     }
 
     // tracers
