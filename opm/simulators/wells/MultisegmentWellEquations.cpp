@@ -44,6 +44,7 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <cstddef>
+#include <iomanip>
 #include <numeric>
 #include <stdexcept>
 
@@ -457,6 +458,56 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
 
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
+printSystem(const std::string& name, std::ostream& out) const
+{
+    const int nSeg = well_.numberOfSegments();
+    const int fullSize = nSeg * numWellEq;
+
+    out << "\n===== Well: " << name << " =====\n";
+
+    // Print the duneD_ matrix as a dense (fullSize x fullSize) matrix.
+    // duneD_ is a BCRSMatrix of (numWellEq x numWellEq) blocks, size nSeg x nSeg.
+    out << "\nduneD_ (" << fullSize << " x " << fullSize << "):\n";
+    out.precision(5);
+
+    const auto printVal = [&out](const Scalar v) {
+        if (v == static_cast<Scalar>(0)) {
+            out << std::setw(14) << "0";
+        } else {
+            out << std::scientific << std::setw(14) << v;
+        }
+    };
+
+    for (int rowSeg = 0; rowSeg < nSeg; ++rowSeg) {
+        for (int rowLocal = 0; rowLocal < numWellEq; ++rowLocal) {
+            for (int colSeg = 0; colSeg < nSeg; ++colSeg) {
+                // Check if this block exists in the sparse matrix
+                auto it = duneD_[rowSeg].find(colSeg);
+                for (int colLocal = 0; colLocal < numWellEq; ++colLocal) {
+                    if (it != duneD_[rowSeg].end()) {
+                        printVal((*it)[rowLocal][colLocal]);
+                    } else {
+                        out << std::setw(14) << "0";
+                    }
+                }
+            }
+            out << "\n";
+        }
+    }
+
+    // Print resWell_
+    out << "\nresWell_ (" << fullSize << " x 1):\n";
+    for (int seg = 0; seg < nSeg; ++seg) {
+        for (int i = 0; i < numWellEq; ++i) {
+            printVal(resWell_[seg][i]);
+            out << "\n";
+        }
+    }
+    out << std::endl;
+}
+
+template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
 sumDistributed(Parallel::Communication comm)
 {
     // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
@@ -487,8 +538,11 @@ sumDistributed(Parallel::Communication comm)
     INSTANTIATE(T,3,4)      \
     INSTANTIATE(T,4,3)      \
     INSTANTIATE(T,4,4)      \
-    INSTANTIATE(T,4,5)
+    INSTANTIATE(T,4,5)      \
+    INSTANTIATE(T,5,4)      \
+    INSTANTIATE(T,5,5)
 
+// TODO: some combinations above likely needs to be cleaned up some
 INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT

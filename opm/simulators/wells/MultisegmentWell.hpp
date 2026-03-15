@@ -56,6 +56,7 @@ namespace Opm {
 
         using Base::has_solvent;
         using Base::has_polymer;
+        using Base::has_energy;
         using Base::Water;
         using Base::Oil;
         using Base::Gas;
@@ -72,6 +73,24 @@ namespace Opm {
         using MSWEval::SPres;
         using typename Base::PressureMatrix;
         using FSInfo = std::tuple<Scalar,typename std::decay<decltype(std::declval<decltype(std::declval<const Simulator&>().model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type>;
+
+        // a fluid state to calculate the properties inside the wellbore for each segment
+        // it will be probably used for more things, but at the moment, it is for the enthaply
+        // calculation in the wellbore
+        // templated on Value type because we want to use it for surface condition calculation injection
+        // while we shifted to use the bottom-hole/well-head condition instead, so there is only EvalWell type
+        // used here for now.
+        template <typename Value>
+        using SegmentFluidState = BlackOilFluidState<Value,
+                                                     FluidSystem,
+                                                     has_energy,
+                                                     has_energy,
+                                                     Indices::compositionSwitchIdx >= 0,
+                                                     /*has_watVapor*/ false,
+                                                     /*has_brine*/ false,
+                                                     /*has_saltPrecip*/ false,
+                                                     /*has_disgas_in_water*/ false,
+                                                     Indices::numPhases>;
 
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo<Scalar>& pw_info,
@@ -170,6 +189,16 @@ namespace Opm {
 
         // the intial amount of fluids in each segment under surface condition
         std::vector<std::vector<Scalar> > segment_fluid_initial_;
+        // total energy inside the segments at the beginning of the time step
+        std::vector<Scalar> segment_initial_energy_;
+
+        // segment fluid state
+        std::vector<SegmentFluidState<EvalWell>> segment_fluid_state_;
+
+        // fluid state under the wellhead condition, it is used to calculate the enthalpy
+        // under operation condition for energy injection
+        // because BHP will be involved, we use EvalWell type here
+        SegmentFluidState<EvalWell> wellhead_fluid_state_;
 
         mutable int debug_cost_counter_ = 0;
 
@@ -329,9 +358,29 @@ namespace Opm {
                        DeferredLogger& deferred_logger) const override;
 
         FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
+
+        // this function can potentially be shared between multisegment wells and standard wells
+        // TODO: this function largely overlaps with calculatePhaseProperties(), some refactoring/unificaition should be done
+        template <typename ValueType = EvalWell>
+        SegmentFluidState<ValueType>
+        createFluidState(const std::vector<ValueType>& fluid_composition,
+                         const ValueType& pressure,
+                         const ValueType& temperature) const;
+
+        SegmentFluidState<EvalWell>
+        createSegmentFluidstate(int seg) const;
+
+        void computeInitialSegmentEnergy();
+
+        void updateWellHeadCondtion(const Simulator& simulator);
+
+        void updateSegmentFluidState();
+
+        template <typename ValueType = EvalWell>
+        ValueType computeSegmentEnergy(int seg) const;
     };
 
-}
+} // namespace Opm
 
 #include "MultisegmentWell_impl.hpp"
 
