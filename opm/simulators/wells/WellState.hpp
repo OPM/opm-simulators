@@ -54,8 +54,8 @@ namespace Opm
 {
 
 struct RsConstInfo {
-    bool enabled = false;
-    double value = 0.0;
+    bool enabled = false; // True when RSCONST-based reporting should be applied.
+    double value = 0.0;   // Constant Rs value (surface gas volume per surface oil volume).
 
     // Constructors
     RsConstInfo() = default;
