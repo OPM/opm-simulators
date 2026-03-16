@@ -70,6 +70,7 @@ add_multiple_tests(
 set(_spe1_brine_tests
   SPE1CASE1_BRINE
   SPE1CASE2_BRINE_GASWATER
+  SPE1CASE1_BRINE_THERMAL
 )
 
 add_multiple_tests(
