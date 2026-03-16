@@ -431,7 +431,7 @@ if(USE_GPU_BRIDGE)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclSolverBackend.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclWellContributions.cpp)
   endif()
-  if(ROCALUTION_FOUND)
+  if(rocalution_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/rocm/rocalutionSolverBackend.cpp)
   endif()
   if(rocsparse_FOUND AND rocblas_FOUND)
@@ -593,7 +593,7 @@ if(USE_GPU_BRIDGE)
     list(APPEND TEST_SOURCE_FILES tests/test_solvetransposed3x3.cpp)
   list(APPEND TEST_SOURCE_FILES tests/test_csrToCscOffsetMap.cpp)
   endif()
-  if(ROCALUTION_FOUND)
+  if(rocalution_FOUND)
     list(APPEND TEST_SOURCE_FILES tests/test_rocalutionSolver.cpp)
   endif()
   if(rocsparse_FOUND AND rocblas_FOUND)
@@ -1244,6 +1244,7 @@ if (USE_GPU_BRIDGE)
     opm/simulators/linalg/gpubridge/opencl/openclBISAI.hpp
     opm/simulators/linalg/gpubridge/Reorder.hpp
     opm/simulators/linalg/gpubridge/opencl/opencl.hpp
+    opm/simulators/linalg/gpubridge/opencl/openclKernels.hpp
     opm/simulators/linalg/gpubridge/opencl/OpenclMatrix.hpp
     opm/simulators/linalg/gpubridge/opencl/openclPreconditioner.hpp
     opm/simulators/linalg/gpubridge/opencl/openclSolverBackend.hpp
@@ -1257,9 +1258,6 @@ if (USE_GPU_BRIDGE)
     opm/simulators/linalg/gpubridge/rocm/rocsparseSolverBackend.hpp
     opm/simulators/linalg/gpubridge/rocm/rocsparseWellContributions.hpp
     opm/simulators/linalg/gpubridge/rocm/rocsparseMatrix.hpp
-  )
-  list(APPEND PRIVATE_HEADER_FILES
-    opm/simulators/linalg/gpubridge/opencl/openclKernels.hpp
   )
 endif()
 

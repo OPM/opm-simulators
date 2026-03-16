@@ -35,8 +35,8 @@ option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
 option(USE_OPENCL "Enable OpenCL support?" ON)
 
-# Wrapper for opm_add_target_options that also adds some (optional)
-# common links and dependencies
+# Wrapper for opm_add_target_options that also adds
+# compile definitions and target links from the library
 function(simulators_add_target_options)
   cmake_parse_arguments(PARAM "" "TARGET" "" ${ARGN})
   if(NOT PARAM_TARGET)
@@ -44,9 +44,11 @@ function(simulators_add_target_options)
   endif()
 
   opm_add_target_options(TARGET ${PARAM_TARGET})
-  if(TARGET fmt::fmt)
-    target_link_libraries(${PARAM_TARGET} PRIVATE fmt::fmt)
-  endif()
+  get_property(defs TARGET opmsimulators PROPERTY INTERFACE_COMPILE_DEFINITIONS)
+  target_compile_definitions(${PARAM_TARGET} PRIVATE ${defs})
+  get_property(libs TARGET opmsimulators PROPERTY INTERFACE_LINK_LIBRARIES)
+  target_compile_definitions(${PARAM_TARGET} PRIVATE ${defs})
+  target_link_libraries(${PARAM_TARGET} PRIVATE ${libs})
 
   if(TARGET opmcommon)
     add_dependencies(${PARAM_TARGET} opmcommon)
@@ -58,16 +60,6 @@ function(simulators_add_target_options)
   # anything in gpuistl, say.
   if (CONVERT_CUDA_TO_HIP)
     add_dependencies(${PARAM_TARGET} hipified_headers)
-    target_link_libraries(${PARAM_TARGET} PRIVATE roc::hipblas roc::hipsparse)
-  endif()
-
-  if(CUDA_FOUND)
-    target_link_libraries(${PARAM_TARGET}
-      PUBLIC
-        CUDA::cusparse
-        CUDA::cublas
-        CUDA::nvptxcompiler_static
-    )
   endif()
 endfunction()
 
@@ -97,12 +89,29 @@ macro(opm-simulators_prereqs_hook)
         "only normal restart without hdf5 file support."
     )
     set(HDF5_FOUND OFF)
-    unset(HAVE_HDF5)
   endif()
 
-  if(NOT TARGET fmt::fmt)
+  target_link_libraries(opmsimulators
+    PUBLIC
+      opmcommon
+      opmgrid
+      SuiteSparse::UMFPACK
+  )
+
+  if(MPI_FOUND)
+    target_link_libraries(opmsimulators PUBLIC MPI::MPI_C MPI::MPI_CXX)
+  endif()
+
+  if (TARGET fmt::fmt)
+    target_link_libraries(opmsimulators PUBLIC fmt::fmt)
+  else()
     include(DownloadFmt)
     DownloadFmt(opmsimulators)
+  endif()
+
+  if(HDF5_FOUND)
+    target_link_libraries(opmsimulators PUBLIC HDF5::HDF5)
+    target_compile_definitions(opmsimulators PUBLIC HAVE_HDF5=1)
   endif()
 
   if (OPM_ENABLE_PYTHON)
@@ -139,6 +148,30 @@ macro(opm-simulators_prereqs_hook)
     else()
       message(FATAL_ERROR "hipify-perl, required to convert CUDA to HIP, not found")
     endif()
+    target_link_libraries(opmsimulators PUBLIC roc::hipblas roc::hipsparse)
+  endif()
+
+  if(USE_GPU_BRIDGE)
+    if(NOT CMAKE_DISABLE_FIND_PACKAGE_rocsparse)
+      find_package(rocalution)
+      find_package(rocblas)
+      find_package(rocsparse)
+    endif()
+    find_package(amgcl)
+    if(amgcl_FOUND)
+      target_compile_definitions(amgcl::amgcl INTERFACE HAVE_AMGCL=1)
+      target_link_libraries(opmsimulators PRIVATE amgcl::amgcl)
+    endif()
+    if(rocalution_FOUND)
+      target_compile_definitions(roc::rocalution INTERFACE HAVE_ROCALUTION=1)
+      target_link_libraries(opmsimulators PRIVATE roc::rocalution)
+    endif()
+    if(rocblas_FOUND AND rocsparse_FOUND)
+      target_compile_definitions(roc::rocblas INTERFACE HAVE_ROCBLAS=1)
+      target_compile_definitions(roc::rocsparse INTERFACE HAVE_ROCSPARSE=1)
+      target_link_libraries(opmsimulators PRIVATE roc::rocblas)
+      target_link_libraries(opmsimulators PRIVATE roc::rocsparse)
+    endif()
   endif()
 
   if(USE_GPU_BRIDGE AND rocsparse_FOUND AND NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA)
@@ -155,28 +188,34 @@ macro(opm-simulators_prereqs_hook)
   if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND NOT CONVERT_CUDA_TO_HIP)
     if(CUDA_FOUND)
       find_package(CUDAToolkit REQUIRED)
+      target_link_libraries(opmsimulators
+        PUBLIC
+          CUDA::cusparse
+          CUDA::cublas
+          CUDA::nvptxcompiler_static
+      )
     endif()
   endif()
 
   # Find AMGX
   if(USE_AMGX)
     find_package(AMGX)
-    if(NOT AMGX_FOUND)
+    if(AMGX_FOUND)
+      target_link_libraries(opmsimulators PRIVATE AMGX::AMGX)
+    else()
       message(WARNING "AMGX requested but not found. Continuing without AMGX support.")
-      set(USE_AMGX OFF)
     endif()
   endif()
 
   if(USE_HYPRE AND USE_MPI)
     find_package(HYPRE)
-    if(NOT HYPRE_FOUND)
+    if(HYPRE_FOUND)
+      target_link_libraries(opmsimulators PUBLIC HYPRE::HYPRE)
+    else()
       message(WARNING "Hypre requested but not found. Continuing without Hypre support.")
-      set(USE_HYPRE OFF)
     endif()
   elseif(USE_HYPRE)
     message(WARNING "Hypre requested but MPI not activated. Continuing without Hypre support.")
-    set(USE_HYPRE OFF)
-    set(HYPRE_FOUND OFF)
   endif()
 
   if(USE_OPENCL AND USE_GPU_BRIDGE)
@@ -192,17 +231,45 @@ macro(opm-simulators_prereqs_hook)
           "which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL"
         )
         set(OpenCL_FOUND OFF)
-        set(OPENCL_FOUND OFF)
+      else()
+        target_compile_definitions(OpenCL::OpenCL INTERFACE HAVE_OPENCL=1)
+        find_file(OPENCL_HPP CL/opencl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
+        if(OPENCL_HPP)
+          target_compile_definitions(OpenCL::OpenCL INTERFACE HAVE_OPENCL_HPP=1)
+        endif()
+        target_link_libraries(opmsimulators PRIVATE OpenCL::OpenCL)
       endif()
     elseif(USE_CHOW_PATEL_ILU)
       message(FATAL_ERROR " CHOW_PATEL_ILU only works for openclSolver, but OpenCL was not found")
     endif()
     find_package(VexCL)
+    if(VexCL_FOUND)
+      # VexCL sets c++ specific flags. Remove so we don't get warnings in .c sources
+      get_target_property(compile_opts VexCL::Common INTERFACE_COMPILE_OPTIONS)
+      list(FILTER compile_opts EXCLUDE REGEX .*-Wno-catch-value.*)
+      set_property(TARGET VexCL::Common PROPERTY INTERFACE_COMPILE_OPTIONS ${compile_opts})
+      target_compile_definitions(VexCL::Common INTERFACE HAVE_VEXCL=1)
+      target_link_libraries(opmsimulators PRIVATE VexCL::Common VexCL::OpenCL)
+    endif()
   endif()
 
-  if(USE_GPU_BRIDGE)
-    find_package(amgcl)
+  if(TARGET dunealugrid)
+    target_link_libraries(opmsimulators PUBLIC dunealugrid)
   endif()
+
+  if(TARGET dunefem)
+    target_link_libraries(opmsimulators PUBLIC dunefem)
+  endif()
+
+  if(USE_DAMARIS_LIB AND MPI_FOUND)
+    find_package(Damaris 1.9)
+    if (Damaris_FOUND)
+      target_link_libraries(opmsimulators PUBLIC damaris)
+    endif()
+  endif()
+
+  include(CheckAVX2)
+  check_for_avx2()
 endmacro()
 
 macro(opm-simulators_sources_hook)
@@ -308,12 +375,6 @@ macro(opm-simulators_sources_hook)
 endmacro()
 
 macro(opm-simulators_config_hook)
-  if(dune-fem_FOUND)
-      opm_need_version_of ("dune-fem")
-  endif()
-
-  include_directories(${EXTRA_INCLUDES})
-
   if(BUILD_FLOW_FLOAT_VARIANTS)
     target_compile_definitions(opmsimulators
       PRIVATE
@@ -342,47 +403,34 @@ macro(opm-simulators_config_hook)
   endif()
 
   if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
-    set(HAVE_DAMARIS 1)
-  else()
-    unset(HAVE_DAMARIS) # Required until we no longer use find_package_deps()
+    target_compile_definitions(opmsimulators PUBLIC HAVE_DAMARIS=1)
   endif()
 
   if(CONVERT_CUDA_TO_HIP)
-    set(HAVE_CUDA 1) # we still need this defined so that the preprocessor does not remove the code
-    set(USE_HIP 1)
+    target_compile_definitions(opmsimulators
+      PUBLIC
+        HAVE_CUDA=1
+        USE_HIP=1
+    )
   endif()
 
   if(CUDA_FOUND)
-    set(HAVE_CUDA 1)
-  endif()
-
-  if(AMGX_FOUND)
-    set(HAVE_AMGX 1)
-  endif()
-
-  if(HYPRE_FOUND)
-    set(HAVE_HYPRE 1)
-  endif()
-
-  if(OpenCL_FOUND)
-    target_compile_definitions(OpenCL::OpenCL INTERFACE HAVE_OPENCL=1)
-    find_file(OPENCL_HPP CL/opencl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
-    if(OPENCL_HPP)
-      target_compile_definitions(OpenCL::OpenCL INTERFACE HAVE_OPENCL_HPP=1)
-    endif()
+    target_compile_definitions(opmsimulators PUBLIC HAVE_CUDA=1)
   endif()
 
   if(USE_GPU_BRIDGE)
-    set(COMPILE_GPU_BRIDGE 1)
+    target_compile_definitions(opmsimulators PUBLIC COMPILE_GPU_BRIDGE=1)
   endif()
 
-  if(rocsparse_FOUND AND rocblas_FOUND)
-    set(HAVE_ROCSPARSE 1)
-  else()
-    # the OpmFind macros set these, unset them
-    # remove when we no longer use those macros
-    unset(HAVE_ROCSPARSE)
-    unset(HAVE_ROCBLAS)
+  if(OpenCL_FOUND)
+    if( USE_CHOW_PATEL_ILU)
+      target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL=1)
+    elseif(USE_CHOW_PATEL_ILU_GPU)
+      target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU=1)
+      if(USE_CHOW_PATEL_ILU_GPU_PARALLEL)
+        target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=1)
+      endif()
+    endif()
   endif()
 endmacro()
 
@@ -408,7 +456,7 @@ macro(opm-simulators_tests_hook)
   if(CUDA_FOUND OR hip_FOUND)
     # CUISTL
     set(gpu_label "gpu_cuda")
-    if(USE_HIP)
+    if(CONVERT_CUDA_TO_HIP)
       set(gpu_label "gpu_hip")
     endif()
 
@@ -475,12 +523,14 @@ macro(opm-simulators_tests_hook)
       )
     endif()
 
-    if(ROCALUTION_FOUND)
+    if(rocalution_FOUND)
       set_tests_properties(rocalutionSolver PROPERTIES LABELS gpu_rocm)
+      target_link_libraries(test_rocalutionSolver PRIVATE roc::rocalution)
     endif()
 
     if(rocsparse_FOUND AND rocblas_FOUND)
       set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
+      target_link_libraries(test_rocsparseSolver PRIVATE roc::rocsparse roc::rocblas)
     endif()
   endif()
 
@@ -571,30 +621,7 @@ macro(opm-simulators_targets_hook)
     endforeach()
   endif()
 
-  if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
-    target_link_libraries(opmsimulators PUBLIC damaris)
-  endif()
-
-  if(CONVERT_CUDA_TO_HIP)
-    target_link_libraries(opmsimulators PUBLIC roc::hipblas roc::hipsparse)
-  endif()
-
-  if(USE_GPU_BRIDGE)
-    if(ROCALUTION_FOUND)
-      target_compile_definitions(roc::rocalution INTERFACE HAVE_ROCALUTION=1)
-      target_link_libraries(opmsimulators PRIVATE roc::rocalution)
-      target_link_libraries(test_rocalutionSolver PRIVATE roc::rocalution)
-    endif()
-  endif()
-
   if(CUDA_FOUND)
-    target_link_libraries(opmsimulators
-      PUBLIC
-        CUDA::cusparse
-        CUDA::cublas
-        CUDA::nvptxcompiler_static
-    )
-
     foreach(tgt
         test_gpu_safe_call
         test_cuda_check_last_error
@@ -604,53 +631,9 @@ macro(opm-simulators_targets_hook)
     endforeach()
   endif()
 
-  if(AMGX_FOUND)
-    target_link_libraries(opmsimulators PRIVATE AMGX::AMGX)
-  endif()
-
-  if(HYPRE_FOUND)
-    target_link_libraries(opmsimulators PUBLIC HYPRE::HYPRE)
-  endif()
-
   if(OpenCL_FOUND)
-    foreach(tgt opmsimulators test_solvetransposed3x3 test_csrToCscOffsetMap)
-      target_link_libraries(${tgt}
-        PRIVATE
-          OpenCL::OpenCL
-      )
-    endforeach()
-  endif()
-
-  if(USE_CHOW_PATEL_ILU)
-    target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL=1)
-    if(USE_CHOW_PATEL_ILU_GPU)
-      target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU=1)
-      if(USE_CHOW_PATEL_ILU_GPU_PARALLEL)
-        target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=1)
-      else()
-        target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=0)
-      endif()
-    else()
-      target_compile_definitions(opmsimulators
-        PRIVATE
-          CHOW_PATEL_GPU=0
-          CHOW_PATEL_GPU_PARALLEL=0
-      )
-    endif()
-  endif()
-
-  if(amgcl_FOUND)
-    target_compile_definitions(amgcl::amgcl INTERFACE HAVE_AMGCL=1)
-    target_link_libraries(opmsimulators PRIVATE amgcl::amgcl)
-  endif()
-
-  if(VexCL_FOUND)
-    # VexCL sets c++ specific flags. Remove so we don't get warnings in .c sources
-    get_target_property(compile_opts VexCL::Common INTERFACE_COMPILE_OPTIONS)
-    list(FILTER compile_opts EXCLUDE REGEX .*-Wno-catch-value.*)
-    set_property(TARGET VexCL::Common PROPERTY INTERFACE_COMPILE_OPTIONS ${compile_opts})
-    target_compile_definitions(VexCL::Common INTERFACE HAVE_VEXCL=1)
-    target_link_libraries(opmsimulators PRIVATE VexCL::Common VexCL::OpenCL)
+    target_link_libraries(test_solvetransposed3x3 PRIVATE OpenCL::OpenCL)
+    target_link_libraries(test_csrToCscOffsetMap PRIVATE OpenCL::OpenCL)
   endif()
 
   add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
@@ -661,7 +644,6 @@ macro(opm-simulators_targets_hook)
   add_dependencies(moduleVersion opmsimulators)
 
   add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
-  target_link_libraries(MainDispatchDynamic PRIVATE opmcommon)
   simulators_add_target_options(TARGET MainDispatchDynamic)
 
   target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
@@ -915,15 +897,19 @@ if(SIBLING_SEARCH AND NOT opm-common_DIR)
   get_filename_component(_modules_dir ${_parent_full_dir} DIRECTORY)
   if(IS_DIRECTORY ${_modules_dir}/opm-common/${_leaf_dir_name})
     set(opm-common_DIR ${_modules_dir}/opm-common/${_leaf_dir_name})
+    set(opm-grid_DIR ${_modules_dir}/opm-grid/${_leaf_dir_name})
   else()
     string(REPLACE ${PROJECT_NAME} opm-common _opm_common_leaf ${_leaf_dir_name})
     if(NOT _leaf_dir_name STREQUAL _opm_common_leaf
         AND IS_DIRECTORY ${_parent_full_dir}/${_opm_common_leaf})
       # We are using build directories named <prefix><module-name><postfix>
       set(opm-common_DIR ${_parent_full_dir}/${_opm_common_leaf})
+      string(REPLACE ${PROJECT_NAME} opm-grid _opm_grid_leaf ${_leaf_dir_name})
+      set(opm-grid_DIR ${_parent_full_dir}/${_opm_grid_leaf})
     elseif(IS_DIRECTORY ${_parent_full_dir}/opm-common)
       # All modules are in a common build dir
       set(opm-common_DIR "${_parent_full_dir}/opm-common")
+      set(opm-grid_DIR "${_parent_full_dir}/opm-grid")
     endif()
   endif()
 endif()
