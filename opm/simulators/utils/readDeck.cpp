@@ -780,6 +780,10 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
         errorGuard->clear();
     }
 
+    // Synchronize parse status across all ranks. This serves two purposes:
+    // 1. Propagate rank 0 failure to all ranks (parsing only happens on rank 0)
+    // 2. Ensure all ranks throw together, enabling cooperative shutdown
+    //    via Main::~Main() destructor calling MPI_Finalize()
     parseSuccess = comm.min(parseSuccess);
 
     if (! parseSuccess) {
@@ -789,8 +793,8 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
         // Throw instead of std::exit() so that callers can handle the
         // error. In production, Main::initialize_() catches this and
-        // calls MPI_Abort(). In unit tests, Boost.Test catches it and
-        // reports a proper test failure instead of a silent exit.
+        // returns false for cooperative shutdown. In unit tests,
+        // Boost.Test catches it and reports a proper test failure.
         throw std::runtime_error(failureMessage);
     }
 }

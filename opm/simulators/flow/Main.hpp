@@ -322,15 +322,16 @@ protected:
         // Catch std::exception (not a subclass) because readDeck()
         // may throw std::runtime_error on parse failure while other
         // initialization code may throw std::invalid_argument.
+        // All exceptions here are synchronized across MPI ranks (rank-0-only
+        // exceptions are caught inside readDeck() and converted to a
+        // synchronized throw via comm.min()). Returning false lets
+        // Main::~Main() call MPI_Finalize() for cooperative shutdown.
         catch (const std::exception& e)
         {
             if (outputCout_) {
                 std::cerr << "Failed to create valid EclipseState object." << std::endl;
                 std::cerr << "Exception caught: " << e.what() << std::endl;
             }
-#if HAVE_MPI
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-#endif
             exitCode = EXIT_FAILURE;
             return false;
         }
