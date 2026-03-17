@@ -794,8 +794,7 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                 const auto& levelCartDims = computeLevelCartDims(level);
 
                 // Check there are no refined aquifer connections
-                if (isNumAquConn_(originCartIdxIn, originCartIdxOut)) 
-                    assert(level == 0);
+                assert(!isNumAquConn_(originCartIdxIn, originCartIdxOut) || level == 0);
 
                 if (isNumAquConn_(originCartIdxIn, originCartIdxOut) ||
                     ! isDirectNeighbours_(levelCartToLevelCompressed[level],
