@@ -383,10 +383,6 @@ macro(opm-simulators_config_hook)
     unset(HAVE_ROCSPARSE)
     unset(HAVE_ROCBLAS)
   endif()
-
-  if(ROCALUTION_FOUND)
-    set(HAVE_ROCALUTION 1)
-  endif()
 endmacro()
 
 macro(opm-simulators_tests_hook)
@@ -584,7 +580,9 @@ macro(opm-simulators_targets_hook)
 
   if(USE_GPU_BRIDGE)
     if(ROCALUTION_FOUND)
-      target_link_libraries(opmsimulators PUBLIC roc::rocalution)
+      target_compile_definitions(roc::rocalution INTERFACE HAVE_ROCALUTION=1)
+      target_link_libraries(opmsimulators PRIVATE roc::rocalution)
+      target_link_libraries(test_rocalutionSolver PRIVATE roc::rocalution)
     endif()
   endif()
 
