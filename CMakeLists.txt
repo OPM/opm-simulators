@@ -207,7 +207,7 @@ endmacro()
 macro(opm-simulators_sources_hook)
   if(OPENCL_FOUND)
     include(opencl-source-provider)
-    list(APPEND opm-simulators_SOURCES ${PROJECT_BINARY_DIR}/clSources.cpp)
+    target_sources(opmsimulators PRIVATE ${PROJECT_BINARY_DIR}/clSources.cpp)
   endif()
 
   if(QuadMath_FOUND)
@@ -364,10 +364,10 @@ macro(opm-simulators_config_hook)
   endif()
 
   if(OpenCL_FOUND)
-    set(HAVE_OPENCL 1)
+    target_compile_definitions(OpenCL::OpenCL INTERFACE HAVE_OPENCL=1)
     find_file(OPENCL_HPP CL/opencl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
     if(OPENCL_HPP)
-      set(HAVE_OPENCL_HPP 1)
+      target_compile_definitions(OpenCL::OpenCL INTERFACE HAVE_OPENCL_HPP=1)
     endif()
   endif()
 
@@ -622,20 +622,25 @@ macro(opm-simulators_targets_hook)
   endif()
 
   if(OpenCL_FOUND)
-    target_link_libraries(opmsimulators PUBLIC OpenCL::OpenCL)
+    foreach(tgt opmsimulators test_solvetransposed3x3 test_csrToCscOffsetMap)
+      target_link_libraries(${tgt}
+        PRIVATE
+          OpenCL::OpenCL
+      )
+    endforeach()
   endif()
 
   if(USE_CHOW_PATEL_ILU)
-    target_compile_options(opmsimulators PRIVATE CHOW_PATEL=1)
+    target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL=1)
     if(USE_CHOW_PATEL_ILU_GPU)
-      target_compile_options(opmsimulators PRIVATE CHOW_PATEL_GPU=1)
+      target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU=1)
       if(USE_CHOW_PATEL_ILU_GPU_PARALLEL)
-        target_compile_options(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=1)
+        target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=1)
       else()
-        target_compile_options(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=0)
+        target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=0)
       endif()
     else()
-      target_compile_options(opmsimulators
+      target_compile_definitions(opmsimulators
         PRIVATE
           CHOW_PATEL_GPU=0
           CHOW_PATEL_GPU_PARALLEL=0
