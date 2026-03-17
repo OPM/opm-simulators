@@ -1220,6 +1220,11 @@ list (APPEND PUBLIC_HEADER_FILES
 )
 if (USE_GPU_BRIDGE)
   list (APPEND PUBLIC_HEADER_FILES
+    opm/simulators/linalg/ISTLSolverGpuBridge.hpp
+    opm/simulators/linalg/gpubridge/MultisegmentWellContribution.hpp
+    opm/simulators/linalg/gpubridge/WellContributions.hpp
+  )
+  list(APPEND PRIVATE_HEADER_FILES
     opm/simulators/linalg/gpubridge/amgclSolverBackend.hpp
     opm/simulators/linalg/gpubridge/GpuBridge.hpp
     opm/simulators/linalg/gpubridge/GpuResult.hpp
@@ -1241,7 +1246,6 @@ if (USE_GPU_BRIDGE)
     opm/simulators/linalg/gpubridge/opencl/openclSolverBackend.hpp
     opm/simulators/linalg/gpubridge/opencl/openclWellContributions.hpp
     opm/simulators/linalg/gpubridge/Matrix.hpp
-    opm/simulators/linalg/gpubridge/MultisegmentWellContribution.hpp
     opm/simulators/linalg/gpubridge/rocm/hipKernels.hpp
     opm/simulators/linalg/gpubridge/rocm/rocalutionSolverBackend.hpp
     opm/simulators/linalg/gpubridge/rocm/rocsparseBILU0.hpp
@@ -1250,8 +1254,6 @@ if (USE_GPU_BRIDGE)
     opm/simulators/linalg/gpubridge/rocm/rocsparseSolverBackend.hpp
     opm/simulators/linalg/gpubridge/rocm/rocsparseWellContributions.hpp
     opm/simulators/linalg/gpubridge/rocm/rocsparseMatrix.hpp
-    opm/simulators/linalg/gpubridge/WellContributions.hpp
-    opm/simulators/linalg/ISTLSolverGpuBridge.hpp
   )
   list(APPEND PRIVATE_HEADER_FILES
     opm/simulators/linalg/gpubridge/opencl/openclKernels.hpp
