@@ -314,7 +314,10 @@ macro(opm-simulators_config_hook)
   include_directories(${EXTRA_INCLUDES})
 
   if(BUILD_FLOW_FLOAT_VARIANTS)
-    set(FLOW_INSTANTIATE_FLOAT 1)
+    target_compile_definitions(opmsimulators
+      PRIVATE
+        FLOW_INSTANTIATE_FLOAT=1
+    )
   endif()
 
   # The parameter system can leverage std::from_chars() for

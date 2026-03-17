@@ -20,7 +20,6 @@ set (opm-simulators_CONFIG_VAR
   HAVE_DUNE_ALUGRID
   HAVE_DUNE_FEM
   USE_HIP
-  FLOW_INSTANTIATE_FLOAT
 )
 
 include(CheckAVX2)
