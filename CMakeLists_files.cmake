@@ -970,6 +970,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/MechContainer.hpp
   opm/simulators/flow/MixingRateControls.hpp
   opm/simulators/flow/NewTranFluxModule.hpp
+  opm/simulators/flow/NewtonIterationContext.hpp
   opm/simulators/flow/NlddReporting.hpp
   opm/simulators/flow/NonlinearSolver.hpp
   opm/simulators/flow/OutputBlackoilModule.hpp
