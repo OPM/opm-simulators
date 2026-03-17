@@ -1002,6 +1002,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/equil/EquilibrationHelpers_impl.hpp
   opm/simulators/flow/equil/InitStateEquil.hpp
   opm/simulators/flow/equil/InitStateEquil_impl.hpp
+  opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp
   opm/simulators/wells/SegmentState.hpp
   opm/simulators/wells/WellContainer.hpp
   opm/simulators/aquifers/AquiferAnalytical.hpp
@@ -1212,6 +1213,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellTest.hpp
   opm/simulators/wells/WellTracerRate.hpp
   opm/simulators/wells/WGState.hpp
+  opm/simulators/wells/rescoup/RescoupProxy.hpp
 )
 if (USE_GPU_BRIDGE)
   list (APPEND PUBLIC_HEADER_FILES
@@ -1360,7 +1362,6 @@ if(MPI_FOUND)
   )
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/flow/rescoup/ReservoirCoupling.hpp
-    opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingErrorMacros.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp
@@ -1370,7 +1371,6 @@ if(MPI_FOUND)
     opm/simulators/flow/rescoup/ReservoirCouplingSpawnSlaves.hpp
     opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.hpp
     opm/simulators/wells/GroupConstraintCalculator.hpp
-    opm/simulators/wells/rescoup/RescoupProxy.hpp
     opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp
     opm/simulators/wells/rescoup/RescoupReceiveGroupConstraints.hpp
     opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp
