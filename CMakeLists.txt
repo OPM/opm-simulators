@@ -371,10 +371,6 @@ macro(opm-simulators_config_hook)
     endif()
   endif()
 
-  if(amgcl_FOUND)
-    set(HAVE_AMGCL 1)
-  endif()
-
   if(USE_GPU_BRIDGE)
     set(COMPILE_GPU_BRIDGE 1)
   endif()
@@ -645,7 +641,8 @@ macro(opm-simulators_targets_hook)
   endif()
 
   if(amgcl_FOUND)
-    target_link_libraries(opmsimulators PUBLIC amgcl::amgcl)
+    target_compile_definitions(amgcl::amgcl INTERFACE HAVE_AMGCL=1)
+    target_link_libraries(opmsimulators PRIVATE amgcl::amgcl)
   endif()
 
   if(VexCL_FOUND)
