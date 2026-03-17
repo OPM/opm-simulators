@@ -199,7 +199,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/ComponentName.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/FullySupportedFlowKeywords.cpp
-  opm/simulators/utils/InstantiationIndicesMacros.hpp
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
@@ -279,7 +278,11 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WellState.cpp
   opm/simulators/wells/WellTest.cpp
   opm/simulators/wells/WGState.cpp
-  )
+)
+
+list(APPEND PRIVATE_HEADER_FILES
+  opm/simulators/utils/InstantiationIndicesMacros.hpp
+)
 
 if (HAVE_AVX2_EXTENSION)
   set (AVX2_SOURCE_FILES
@@ -1230,7 +1233,6 @@ if (USE_GPU_BRIDGE)
     opm/simulators/linalg/gpubridge/opencl/openclBISAI.hpp
     opm/simulators/linalg/gpubridge/Reorder.hpp
     opm/simulators/linalg/gpubridge/opencl/opencl.hpp
-    opm/simulators/linalg/gpubridge/opencl/openclKernels.hpp
     opm/simulators/linalg/gpubridge/opencl/OpenclMatrix.hpp
     opm/simulators/linalg/gpubridge/opencl/openclPreconditioner.hpp
     opm/simulators/linalg/gpubridge/opencl/openclSolverBackend.hpp
@@ -1247,6 +1249,9 @@ if (USE_GPU_BRIDGE)
     opm/simulators/linalg/gpubridge/rocm/rocsparseMatrix.hpp
     opm/simulators/linalg/gpubridge/WellContributions.hpp
     opm/simulators/linalg/ISTLSolverGpuBridge.hpp
+  )
+  list(APPEND PRIVATE_HEADER_FILES
+    opm/simulators/linalg/gpubridge/opencl/openclKernels.hpp
   )
 endif()
 
