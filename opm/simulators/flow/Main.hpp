@@ -319,19 +319,31 @@ protected:
                            Opm::compileTimestamp());
             setupTime_ = externalSetupTimer.elapsed();
         }
-        // Catch std::exception (not a subclass) because readDeck()
-        // may throw std::runtime_error on parse failure while other
-        // initialization code may throw std::invalid_argument.
-        // All exceptions here are synchronized across MPI ranks (rank-0-only
-        // exceptions are caught inside readDeck() and converted to a
-        // synchronized throw via comm.min()). Returning false lets
-        // Main::~Main() call MPI_Finalize() for cooperative shutdown.
-        catch (const std::exception& e)
+        // readDeck() may throw std::runtime_error on parse failure.
+        // These exceptions are synchronized across MPI ranks via comm.min()
+        // inside readDeck(), so cooperative shutdown is safe — returning false
+        // lets Main::~Main() call MPI_Finalize().
+        catch (const std::runtime_error& e)
         {
             if (outputCout_) {
                 std::cerr << "Failed to create valid EclipseState object." << std::endl;
+                std::cerr << e.what() << std::endl;
+            }
+            exitCode = EXIT_FAILURE;
+            return false;
+        }
+        // Other exceptions (e.g., std::bad_alloc, std::invalid_argument)
+        // may not be synchronized across ranks. Use MPI_Abort() to prevent
+        // deadlocks from unsynchronized failures.
+        catch (const std::exception& e)
+        {
+            if (outputCout_) {
+                std::cerr << "Unexpected error during initialization." << std::endl;
                 std::cerr << "Exception caught: " << e.what() << std::endl;
             }
+#if HAVE_MPI
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#endif
             exitCode = EXIT_FAILURE;
             return false;
         }
