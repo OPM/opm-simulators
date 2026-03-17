@@ -56,7 +56,9 @@
 #endif
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#if HAVE_MPI
 #include <opm/simulators/utils/MPIPacker.hpp>
+#endif
 
 #if COMPILE_GPU_BRIDGE
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
