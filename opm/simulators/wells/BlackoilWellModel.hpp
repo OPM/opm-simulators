@@ -123,6 +123,7 @@ template<class Scalar> class WellContributions;
             static constexpr EnergyModules energyModuleType_ = getPropValue<TypeTag, Properties::EnergyModuleType>();
             static constexpr bool has_energy_ = (energyModuleType_ == EnergyModules::FullyImplicitThermal);
             static constexpr bool has_micp_ = Indices::enableMICP;
+            static constexpr bool has_geochem_ = getPropValue<TypeTag, Properties::EnableGeochemistry>();
 
             // TODO: where we should put these types, WellInterface or Well Model?
             // or there is some other strategy, like TypeTag
@@ -216,6 +217,10 @@ template<class Scalar> class WellContributions;
                     .assignWellGuideRates(wsrpt, this->reportStepIndex());
 
                 this->assignWellTracerRates(wsrpt);
+
+                if constexpr (has_geochem_) {
+                    this->assignWellSpeciesRates(wsrpt);
+                }
 
                 if (const auto& rspec = eclState().runspec();
                     rspec.co2Storage() || rspec.h2Storage())
@@ -626,6 +631,7 @@ template<class Scalar> class WellContributions;
             std::map<int, RateVector> cellRates_;
 
             void assignWellTracerRates(data::Wells& wsrpt) const;
+            void assignWellSpeciesRates(data::Wells& wsrpt) const;
         };
 
 } // namespace Opm

@@ -211,6 +211,10 @@ template<class TypeTag>
 struct EnableMech<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
+template<class TypeTag>
+struct EnableGeochemistry<TypeTag, TTag::FlowBaseProblem>
+{ static constexpr bool value = false; };
+
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
 template<class TypeTag>

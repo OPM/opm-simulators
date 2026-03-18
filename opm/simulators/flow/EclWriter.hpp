@@ -132,6 +132,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
            getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal };
     enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    enum { enableGeochemistry = getPropValue<TypeTag, Properties::EnableGeochemistry>() };
 
 public:
 
