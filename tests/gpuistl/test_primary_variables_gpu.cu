@@ -27,17 +27,9 @@
 #define HAVE_DUNE_FEM 0
 
 // Suppress enum conversion warnings from Boost.Test on ROCm platform
-#ifdef __HIP_PLATFORM_AMD__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
-#endif
 #define BOOST_TEST_MODULE TestPrimaryVariablesGPU
 
 #include <boost/test/unit_test.hpp>
-
-#ifdef __HIP_PLATFORM_AMD__
-#pragma clang diagnostic pop
-#endif
 
 #include <boost/test/unit_test.hpp>
 
