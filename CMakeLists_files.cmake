@@ -308,7 +308,7 @@ endif()
 
 # add these files if we should compile the hip code
 if(CUDA_FOUND OR hip_FOUND)
-  list(APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpuistl/device_management.hpp) # should not be hipified to make main independant of library
+  list(APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/gpuistl/device_management.hpp) # should not be hipified to make main independent of library
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg device_management.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/CuBlasHandle.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/gpusparse_matrix_operations.cu)
