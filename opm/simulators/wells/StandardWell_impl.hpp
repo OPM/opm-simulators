@@ -2704,8 +2704,8 @@ namespace Opm
                 // only handles single phase injection now
                 assert(this->well_ecl_.injectorType() != InjectorType::MULTI);
                 fs.setTemperature(this->well_ecl_.inj_temperature());
-                typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
-                typename FluidSystem::template ParameterCache<FsScalar> paramCache;
+                typedef typename std::decay<decltype(fs)>::type::ValueType FsValueType;
+                typename FluidSystem::template ParameterCache<FsValueType> paramCache;
                 const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
                 paramCache.setRegionIndex(pvtRegionIdx);
                 paramCache.updatePhase(fs, phaseIdx);

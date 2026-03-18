@@ -188,8 +188,8 @@ public:
             if (this->Ta0_.has_value() && this->Qai_[idx] > 0)
             {
                 fs.setTemperature(this->Ta0_.value());
-                typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
-                typename FluidSystem::template ParameterCache<FsScalar> paramCache;
+                typedef typename std::decay<decltype(fs)>::type::ValueType FsValueType;
+                typename FluidSystem::template ParameterCache<FsValueType> paramCache;
                 const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
                 paramCache.setRegionIndex(pvtRegionIdx);
                 paramCache.updatePhase(fs, this->phaseIdx_());

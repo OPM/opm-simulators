@@ -273,7 +273,7 @@ public:
     template <class FluidState>
     void assignNaive(const FluidState& fluidState)
     {
-        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::ValueType>;
 
         // assign the phase temperatures. this is out-sourced to
         // the energy module

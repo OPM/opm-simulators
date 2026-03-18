@@ -319,7 +319,7 @@ public:
     template <class FluidState>
     OPM_HOST_DEVICE void assignNaive(const FluidState& fluidState)
     {
-        using ConstEvaluation = std::remove_reference_t<typename FluidState::Scalar>;
+        using ConstEvaluation = std::remove_reference_t<typename FluidState::ValueType>;
         using FsEvaluation = std::remove_const_t<ConstEvaluation>;
         using FsToolbox = MathToolbox<FsEvaluation>;
 
