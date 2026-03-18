@@ -760,11 +760,10 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
 
                 if (isNumAquConn_(originCartIdxIn, originCartIdxOut) ||
                     ! isDirectNeighbours_(levelCartToLevelCompressed[level],
-                                           levelCartDims,
-                                           levelCartIdxIn, levelCartIdxOut)) {
+                                          levelCartDims,
+                                          levelCartIdxIn, levelCartIdxOut)) {
                     // We need to check whether an NNC for this face was also
                     // specified via the NNC keyword in the deck.
-                    auto t = this->globalTrans().transmissibility(c1, c2);
                     auto t = this->globalTrans().transmissibility(c1, c2);
                     
                     if (level == 0) {
@@ -780,29 +779,26 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                             auto trans = candidate->trans;
                             trans *= transMlt;
                             if (! nncEditr.empty()) {
-                                for (const auto& entryEditr : nncEditr) {
-                                    if (originCartIdxIn == entryEditr.cell1 && originCartIdxOut == entryEditr.cell2) {
-                                        t = transMlt * entryEditr.trans;
-                                        foundNncEditr = true;
-                                        break;
-                                    }
-                                }
+                                auto it = std::lower_bound(nncEditr.begin(), nncEditr.end(),
+                                                           NNCdata { originCartIdxIn, originCartIdxOut, 0.0 });
+                                foundNncEditr = it != nncEditr.end() && it->cell1 == originCartIdxIn && it->cell2 == originCartIdxOut;
                             }
                             if (foundNncEditr) {
+                                // Only write one value for EDITNNCR, then skip it here and add it on the second loop below
                                 break;
                             }
                             if (! nncEdit.empty()) {
-                                for (const auto& entryEdit : nncEdit) {
-                                    if (originCartIdxIn == entryEdit.cell1 && originCartIdxOut == entryEdit.cell2) {
-                                        trans *= entryEdit.trans;
-                                        break;
-                                    }
+                                auto it = std::lower_bound(nncEdit.begin(), nncEdit.end(),
+                                                           NNCdata { originCartIdxIn, originCartIdxOut, 0.0 });
+                                if (it != nncEdit.end() && it->cell1 == originCartIdxIn && it->cell2 == originCartIdxOut) {
+                                    trans *= it->trans;
                                 }
                             }
                             t -= trans;
                             ++candidate;
                         }
                         if (foundNncEditr) {
+                            // Only write one value for EDITNNCR, then skip it here and add it on the second loop below
                             continue;
                         }
                     }
@@ -824,8 +820,8 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
     }
 
     // Do not include the generated NNCs transsmisibilities in the input NNCs
+    std::vector<NNCdata> inputedNnc{};
     const auto generatedNnc = outputNnc_[0];
-    std::size_t loc = 0;
 
     // The NNC keyword in the deck is defined only for faces in the level-0 grid.
     // The same limitation applies to aquifer data.
@@ -846,12 +842,11 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
             bool foundNncEdit = false;
             auto trans = entry.trans;
             if (! nncEdit.empty()) {
-                for (const auto& entryEdit : nncEdit) {
-                    if (entry.cell1 == entryEdit.cell1 && entry.cell2 == entryEdit.cell2) {
-                        trans *= entryEdit.trans;
-                        foundNncEdit = true;
-                        break;
-                    }
+                auto it = std::lower_bound(nncEdit.begin(), nncEdit.end(),
+                                           NNCdata {entry.cell1, entry.cell2, 0.0 });
+                if (it != nncEdit.end() && it->cell1 == entry.cell1 && it->cell2 == entry.cell2) {
+                    trans *= it->trans;
+                    foundNncEdit = true;
                 }
             }
             if (! foundNncEdit) {
@@ -885,12 +880,12 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
             // small transmissibility values.  Seems like the threshold is
             // 1.0e-6 in output units.
             if (std::isnormal(tt) && ! (tt < 1.0e-6)) {
-                this->outputNnc_[0].emplace(outputNnc_[0].begin() + loc, entry.cell1, entry.cell2, trans);
-                loc++;
+                inputedNnc.emplace_back(entry.cell1, entry.cell2, trans);
             }
         }
     }
-
+    // Write first the inputed NNCs and after the internally computed NNCs
+    this->outputNnc_[0].insert(this->outputNnc_[0].begin(), inputedNnc.begin(), inputedNnc.end());
     return this->outputNnc_;
 }
 

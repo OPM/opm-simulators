@@ -485,12 +485,9 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 bool foundInputNNC = false;
                 if (! nnc_input.empty()) {
                     // Skip region multipliers for overlapping input NNCs (they are handled later)
-                    for (const auto& entry : nnc_input) {
-                        if (entry.cell1 == inside.cartElemIdx && entry.cell2 == outside.cartElemIdx) {
-                            foundInputNNC = true;
-                            break;
-                        }
-                    }
+                    auto it = std::lower_bound(nnc_input.begin(), nnc_input.end(),
+                                               NNCdata { inside.cartElemIdx, outside.cartElemIdx, 0.0 });
+                    foundInputNNC = it != nnc_input.end() && it->cell1 == inside.cartElemIdx && it->cell2 == outside.cartElemIdx;
                 }
                 if (! foundInputNNC) {
                     // apply the region multipliers (cf. the MULTREGT keyword)
