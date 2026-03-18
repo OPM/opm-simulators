@@ -536,6 +536,8 @@ computeTrans_(const std::vector<std::unordered_map<int,int>>&  levelCartToLevelC
 
             // For level-zero grid, level Cartesian indices coincide with the grid Cartesian indices.
             if (isNumAquCell_(originCartIdxIn) || isNumAquCell_(originCartIdxOut)) {
+                // Check there are no refined aquifer cells. 
+                assert(level == 0);
                 // Connections involving numerical aquifers are always NNCs
                 // for the purpose of file output.  This holds even for
                 // connections between cells like (I,J,K) and (I+1,J,K)
@@ -791,28 +793,31 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
 
                 const auto& levelCartDims = computeLevelCartDims(level);
 
-                 if (isNumAquConn_(originCartIdxIn, originCartIdxOut) ||
-                     ! isDirectNeighbours_(levelCartToLevelCompressed[level],
-                                           levelCartDims,
-                                           levelCartIdxIn, levelCartIdxOut)) {
+                // Check there are no refined aquifer connections
+                assert(!isNumAquConn_(originCartIdxIn, originCartIdxOut) || level == 0);
+
+                if (isNumAquConn_(originCartIdxIn, originCartIdxOut) ||
+                    ! isDirectNeighbours_(levelCartToLevelCompressed[level],
+                                          levelCartDims,
+                                          levelCartIdxIn, levelCartIdxOut)) {
                     // We need to check whether an NNC for this face was also
                     // specified via the NNC keyword in the deck.
-                     auto t = this->globalTrans().transmissibility(c1, c2);
+                    auto t = this->globalTrans().transmissibility(c1, c2);
                     
-                     if (level == 0) {
-                         auto candidate = std::lower_bound(nncData.begin(), nncData.end(),
-                                                           NNCdata { originCartIdxIn, originCartIdxOut, 0.0 });
+                    if (level == 0) {
+                        auto candidate = std::lower_bound(nncData.begin(), nncData.end(),
+                                                          NNCdata { originCartIdxIn, originCartIdxOut, 0.0 });
                     
-                         while ((candidate != nncData.end()) &&
-                                (candidate->cell1 == originCartIdxIn) &&
-                                (candidate->cell2 == originCartIdxOut))
-                         {
-                             t -= candidate->trans;
-                             ++candidate;
-                         }
-                     }
+                        while ((candidate != nncData.end()) &&
+                               (candidate->cell1 == originCartIdxIn) &&
+                               (candidate->cell2 == originCartIdxOut))
+                        {
+                            t -= candidate->trans;
+                            ++candidate;
+                        }
+                    }
                     
-                     // ECLIPSE ignores NNCs with zero transmissibility
+                    // ECLIPSE ignores NNCs with zero transmissibility
                     // (different threshold than for NNC with corresponding
                     // EDITNNC above).  In addition we do set small
                     // transmissibilities to zero when setting up the simulator.
