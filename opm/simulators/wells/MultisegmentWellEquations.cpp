@@ -267,13 +267,10 @@ extract(WellContributions<Scalar>& wellContribs) const
     unsigned int DnumBlocks = duneD_.nonzeroes();
 
     // duneC
-    std::vector<unsigned int> Ccols;
     std::vector<double> Cvals;
-    Ccols.reserve(BnumBlocks);
     Cvals.reserve(BnumBlocks * numEq * numWellEq);
     for (auto rowC = duneC_.begin(); rowC != duneC_.end(); ++rowC) {
         for (auto colC = rowC->begin(), endC = rowC->end(); colC != endC; ++colC) {
-            Ccols.emplace_back(cells_[colC.index()]);
             for (int i = 0; i < numWellEq; ++i) {
                 for (int j = 0; j < numEq; ++j) {
                     Cvals.emplace_back((*colC)[i][j]);
