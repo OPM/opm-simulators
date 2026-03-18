@@ -457,11 +457,13 @@ endif()
 if(MPI_FOUND)
   list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/MPIPacker.cpp
                                 opm/simulators/utils/ParallelEclipseState.cpp
-                                opm/simulators/utils/ParallelNLDDPartitioningZoltan.cpp
                                 opm/simulators/utils/ParallelSerialization.cpp
                                 opm/simulators/utils/SetupPartitioningParams.cpp)
   list(APPEND PUBLIC_HEADER_FILES opm/simulators/utils/MPIPacker.hpp
                                   opm/simulators/utils/MPISerializer.hpp)
+  if(ZOLTAN_FOUND)
+    list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/ParallelNLDDPartitioningZoltan.cpp)
+  endif()
 endif()
 if(HDF5_FOUND)
   list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/HDF5File.cpp)
