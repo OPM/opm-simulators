@@ -207,7 +207,7 @@ endmacro()
 macro(opm-simulators_sources_hook)
   if(OPENCL_FOUND)
     include(opencl-source-provider)
-    list(APPEND opm-simulators_SOURCES ${PROJECT_BINARY_DIR}/clSources.cpp)
+    target_sources(opmsimulators PRIVATE ${PROJECT_BINARY_DIR}/clSources.cpp)
   endif()
 
   if(QuadMath_FOUND)
@@ -364,19 +364,11 @@ macro(opm-simulators_config_hook)
   endif()
 
   if(OpenCL_FOUND)
-    set(HAVE_OPENCL 1)
+    target_compile_definitions(OpenCL::OpenCL INTERFACE HAVE_OPENCL=1)
     find_file(OPENCL_HPP CL/opencl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
     if(OPENCL_HPP)
-      set(HAVE_OPENCL_HPP 1)
+      target_compile_definitions(OpenCL::OpenCL INTERFACE HAVE_OPENCL_HPP=1)
     endif()
-  endif()
-
-  if(amgcl_FOUND)
-    set(HAVE_AMGCL 1)
-  endif()
-
-  if(VexCL_FOUND)
-    set(HAVE_VEXCL 1)
   endif()
 
   if(USE_GPU_BRIDGE)
@@ -390,10 +382,6 @@ macro(opm-simulators_config_hook)
     # remove when we no longer use those macros
     unset(HAVE_ROCSPARSE)
     unset(HAVE_ROCBLAS)
-  endif()
-
-  if(ROCALUTION_FOUND)
-    set(HAVE_ROCALUTION 1)
   endif()
 endmacro()
 
@@ -592,7 +580,9 @@ macro(opm-simulators_targets_hook)
 
   if(USE_GPU_BRIDGE)
     if(ROCALUTION_FOUND)
-      target_link_libraries(opmsimulators PUBLIC roc::rocalution)
+      target_compile_definitions(roc::rocalution INTERFACE HAVE_ROCALUTION=1)
+      target_link_libraries(opmsimulators PRIVATE roc::rocalution)
+      target_link_libraries(test_rocalutionSolver PRIVATE roc::rocalution)
     endif()
   endif()
 
@@ -622,20 +612,25 @@ macro(opm-simulators_targets_hook)
   endif()
 
   if(OpenCL_FOUND)
-    target_link_libraries(opmsimulators PUBLIC OpenCL::OpenCL)
+    foreach(tgt opmsimulators test_solvetransposed3x3 test_csrToCscOffsetMap)
+      target_link_libraries(${tgt}
+        PRIVATE
+          OpenCL::OpenCL
+      )
+    endforeach()
   endif()
 
   if(USE_CHOW_PATEL_ILU)
-    target_compile_options(opmsimulators PRIVATE CHOW_PATEL=1)
+    target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL=1)
     if(USE_CHOW_PATEL_ILU_GPU)
-      target_compile_options(opmsimulators PRIVATE CHOW_PATEL_GPU=1)
+      target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU=1)
       if(USE_CHOW_PATEL_ILU_GPU_PARALLEL)
-        target_compile_options(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=1)
+        target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=1)
       else()
-        target_compile_options(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=0)
+        target_compile_definitions(opmsimulators PRIVATE CHOW_PATEL_GPU_PARALLEL=0)
       endif()
     else()
-      target_compile_options(opmsimulators
+      target_compile_definitions(opmsimulators
         PRIVATE
           CHOW_PATEL_GPU=0
           CHOW_PATEL_GPU_PARALLEL=0
@@ -644,7 +639,8 @@ macro(opm-simulators_targets_hook)
   endif()
 
   if(amgcl_FOUND)
-    target_link_libraries(opmsimulators PUBLIC amgcl::amgcl)
+    target_compile_definitions(amgcl::amgcl INTERFACE HAVE_AMGCL=1)
+    target_link_libraries(opmsimulators PRIVATE amgcl::amgcl)
   endif()
 
   if(VexCL_FOUND)
@@ -652,7 +648,8 @@ macro(opm-simulators_targets_hook)
     get_target_property(compile_opts VexCL::Common INTERFACE_COMPILE_OPTIONS)
     list(FILTER compile_opts EXCLUDE REGEX .*-Wno-catch-value.*)
     set_property(TARGET VexCL::Common PROPERTY INTERFACE_COMPILE_OPTIONS ${compile_opts})
-    target_link_libraries(opmsimulators PUBLIC VexCL::Common VexCL::OpenCL)
+    target_compile_definitions(VexCL::Common INTERFACE HAVE_VEXCL=1)
+    target_link_libraries(opmsimulators PRIVATE VexCL::Common VexCL::OpenCL)
   endif()
 
   add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
