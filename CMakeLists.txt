@@ -243,7 +243,7 @@ macro(opm-simulators_prereqs_hook)
       message(FATAL_ERROR " CHOW_PATEL_ILU only works for openclSolver, but OpenCL was not found")
     endif()
     find_package(VexCL)
-    if(VexCL_FOUND)
+    if(VexCL_FOUND AND OpenCL_FOUND)
       # VexCL sets c++ specific flags. Remove so we don't get warnings in .c sources
       get_target_property(compile_opts VexCL::Common INTERFACE_COMPILE_OPTIONS)
       list(FILTER compile_opts EXCLUDE REGEX .*-Wno-catch-value.*)
