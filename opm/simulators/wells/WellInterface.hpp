@@ -113,9 +113,9 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Water;
 
     using ModelParameters = typename Base::ModelParameters;
-    using SolventModule = BlackOilSolventModule<TypeTag>;
 
     static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
+    using SolventModule = BlackOilSolventModule<TypeTag, has_solvent>;
     static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool has_polymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
