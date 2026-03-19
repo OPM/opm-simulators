@@ -2139,7 +2139,6 @@ namespace Opm
 
             if constexpr (has_solvent) {
                 const auto Fsolgas = intQuants.solventSaturation() / (intQuants.solventSaturation() + intQuants.fluidState().saturation(FluidSystem::gasPhaseIdx));
-                using SolventModule = BlackOilSolventModule<TypeTag>;
                 if (Fsolgas > SolventModule::cutOff) { // same cutoff as in the solvent model to avoid division by zero
                     const unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
                     const auto& ssfnKrg = SolventModule::ssfnKrg(satid);
@@ -2487,8 +2486,9 @@ namespace Opm
 
         const bool gas_water_mixing = both_water_gas && (has_disgas_in_water || has_watVapor);
 
-        std::vector<ValueType> saturation(FluidSystem::numPhases, zero_value);
-        ValueType total_saturation {0.0};
+        std::vector<ValueType> volumes(FluidSystem::numPhases, zero_value);
+        // total volume per 1 unit of surface volume
+        ValueType total_volume {0.0};
         // calculate the saturation for all the phases
         // let us handle the dissolution first
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
@@ -2519,18 +2519,18 @@ namespace Opm
                                                        fluid_state.Rvw()));
                 }
                 if (FluidSystem::gasPhaseIdx == phaseIdx) {
-                    saturation[phaseIdx] = (fluid_composition[gasCompIdx]
+                    volumes[phaseIdx] = (fluid_composition[gasCompIdx]
                                             - fluid_state.Rsw() * fluid_composition[waterCompIdx])
                         / (d * fluid_state.invB(phaseIdx));
                 } else { // waterPhaseIdx
-                    saturation[phaseIdx] = (fluid_composition[waterCompIdx]
+                    volumes[phaseIdx] = (fluid_composition[waterCompIdx]
                                             - fluid_state.Rvw() * fluid_composition[gasCompIdx])
                         / (d * fluid_state.invB(phaseIdx));
                 }
             } else if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
                 const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
                     FluidSystem::solventComponentIndex(phaseIdx));
-                saturation[phaseIdx]
+                volumes[phaseIdx]
                     = fluid_composition[activeCompIdx] / fluid_state.invB(phaseIdx);
             } else {
                 // remove dissolved gas and vaporized oil
@@ -2555,23 +2555,23 @@ namespace Opm
                                     fluid_state.Rv()));
                 }
                 if (FluidSystem::gasPhaseIdx == phaseIdx) {
-                    saturation[phaseIdx] = (fluid_composition[gasCompIdx]
+                    volumes[phaseIdx] = (fluid_composition[gasCompIdx]
                                             - fluid_state.Rs() * fluid_composition[oilCompIdx])
                         / (d * fluid_state.invB(phaseIdx));
                 } else if (FluidSystem::oilPhaseIdx == phaseIdx) {
-                    saturation[phaseIdx] = (fluid_composition[oilCompIdx]
+                    volumes[phaseIdx] = (fluid_composition[oilCompIdx]
                                             - fluid_state.Rv() * fluid_composition[gasCompIdx])
                         / (d * fluid_state.invB(phaseIdx));
                 }
             }
-            total_saturation += saturation[phaseIdx];
+            total_volume += volumes[phaseIdx];
         }
 
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
-            fluid_state.setSaturation(phaseIdx, saturation[phaseIdx] / total_saturation);
+            fluid_state.setSaturation(phaseIdx, volumes[phaseIdx] / total_volume);
 
             typename FluidSystem::template ParameterCache<ValueType> paramCache;
             paramCache.setRegionIndex(fluid_state.pvtRegionIndex());
