@@ -636,17 +636,28 @@ macro(opm-simulators_targets_hook)
     target_link_libraries(test_csrToCscOffsetMap PRIVATE OpenCL::OpenCL)
   endif()
 
-  add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
-  opm_add_target_options(TARGET moduleVersion)
-  target_include_directories(moduleVersion BEFORE PRIVATE ${PROJECT_BINARY_DIR})
+  opm_add_library(
+    TARGET
+      moduleVersion
+    TYPE
+      OBJECT
+    SOURCES
+      opm/simulators/utils/moduleVersion.cpp
+  )
 
   # Strictly we only depend on the update-version target,
   # but this is not exposed in a super-build.
   add_dependencies(moduleVersion opmsimulators)
 
-  add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
+  opm_add_library(
+    TARGET
+      MainDispatchDynamic
+    TYPE
+      OBJECT
+    SOURCES
+      opm/simulators/flow/MainDispatchDynamic.cpp
+  )
   simulators_add_target_options(TARGET MainDispatchDynamic)
-  target_include_directories(MainDispatchDynamic BEFORE PRIVATE ${PROJECT_BINARY_DIR})
 
   target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
@@ -694,9 +705,14 @@ macro(opm-simulators_targets_hook)
   )
 
   foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
-    add_library(flow_lib${OBJ} OBJECT flow/flow_${OBJ}.cpp)
-    target_link_libraries(flow_lib${OBJ} PRIVATE opmcommon)
-    target_include_directories(flow_lib${OBJ} BEFORE PRIVATE ${PROJECT_BINARY_DIR})
+    opm_add_library(
+      TARGET
+        flow_lib${OBJ}
+      TYPE
+        OBJECT
+      SOURCES
+        flow/flow_${OBJ}.cpp
+    )
     simulators_add_target_options(TARGET flow_lib${OBJ})
     list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
     list(APPEND FLOWMODELS_PREFIXED flow_${OBJ})
