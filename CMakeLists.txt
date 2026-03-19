@@ -448,6 +448,7 @@ macro(opm-simulators_tests_hook)
 
   if(MPI_FOUND)
     include(${CMAKE_CURRENT_SOURCE_DIR}/parallelUnitTests.cmake)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/rescoupTests.cmake)
   endif()
 
   if(OPM_ENABLE_PYTHON)
