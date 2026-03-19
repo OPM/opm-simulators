@@ -1,55 +1,71 @@
-# defines that must be present in config.h for our headers
-set (opm-simulators_CONFIG_VAR
-  HAVE_MPI
-  COMPILE_GPU_BRIDGE
-  HAVE_AVX2_EXTENSION
-  HAVE_CUDA
-  HAVE_AMGX
-  HAVE_ROCSPARSE
-  HAVE_SUITESPARSE_UMFPACK
-  HAVE_DAMARIS
-  HAVE_HDF5
-  HAVE_HYPRE
-  HAVE_DUNE_ISTL
-  HAVE_DUNE_COMMON
-  HAVE_DUNE_ALUGRID
-  HAVE_DUNE_FEM
-  USE_HIP
-)
+find_package(Boost COMPONENTS date_time REQUIRED)
+find_package(dune-common REQUIRED)
+find_package(dune-istl REQUIRED)
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+find_package(SuiteSparse COMPONENTS UMFPACK REQUIRED)
+find_package(opm-grid REQUIRED)
 
-include(CheckAVX2)
-check_for_avx2()
+if(TARGET opmsimulators)
+  get_property(opm-simulators_libs TARGET opmsimulators PROPERTY INTERFACE_LINK_LIBRARIES)
+  get_property(opm-simulators_def TARGET opmsimulators PROPERTY INTERFACE_COMPILE_DEFINITIONS)
+  if(opm-simulators_def MATCHES USE_HIP)
+    enable_language(HIP)
+  elseif(opm-simulators_def MATCHES HAVE_CUDA)
+    include(UseCUDA)
+    find_package(CUDAToolkit REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES OpenCL::OpenCL)
+    find_package(OpenCL REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES VexCL::Common)
+    find_package(VexCL REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES amgcl::amgcl)
+    find_package(amgcl REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES HDF5::HDF5)
+    find_package(HDF5 REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES roc::rocsparse)
+    find_package(rocsparse REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES roc::rocblas)
+    find_package(rocblas REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES roc::rocalution)
+    find_package(rocalution REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES roc::hipblas)
+    find_package(hipblas REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES roc::hipsparse)
+    find_package(hipsparse REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES HYPRE::HYPRE)
+    find_package(HYPRE REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES AMGX::AMGX)
+    find_package(AMGX REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES damaris)
+    find_package(Damaris 1.9 REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES dunealugrid)
+    find_package(dune-alugrid REQUIRED)
+  endif()
+  if(opm-simulators_libs MATCHES dunefem)
+    find_package(dune-fem REQUIRED)
+  endif()
+else()
+  find_package(fmt)
+  find_package(HDF5)
+  find_package(MPI)
 
-# dependencies
-set (opm-simulators_DEPS
-  # Various runtime library enhancements
-  "Boost 1.44.0
-    COMPONENTS date_time REQUIRED"
-  # DUNE prerequisites
-  "dune-common REQUIRED"
-  "dune-istl REQUIRED"
-  "dune-alugrid"
-  "dune-fem"
-  # matrix library
-  "BLAS REQUIRED"
-  "LAPACK REQUIRED"
-  # Look for MPI support
-  "MPI"
-  # Tim Davis' SuiteSparse archive
-  "SuiteSparse REQUIRED COMPONENTS UMFPACK"
-  # SuperLU direct solver
-  "SuperLU"
-  # ROCALUTION from ROCM framework
-  "rocalution"
-  # packages from ROCm framework
-  "rocblas"
-  "rocsparse"
-  # OPM dependency
-  "opm-common REQUIRED"
-  "opm-grid REQUIRED"
-  "Damaris 1.9"
-  "HDF5"
-  "fmt"
-)
-
-find_package_deps(opm-simulators)
+  # Note: have to look for alugrid before dune-fem.
+  # If not dune-fem finds alugrid, but does not use
+  # the opm find-module which means the HAVE_DUNE_ALUGRID
+  # define will be missing.
+  find_package(dune-alugrid)
+  find_package(dune-fem)
+endif()
