@@ -850,6 +850,22 @@ add_test_compareECLFiles(CASENAME spe1_gaswater_solvent
                          REL_TOL ${rel_tol}
                          DIR spe1_solvent)
 
+add_test_compareECLFiles(CASENAME spe1_co2sol
+                         FILENAME SPE1CASE2_CO2SOL
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1_solvent
+                         TEST_ARGS --enable-opm-rst-file=1)
+
+add_test_compareECLFiles(CASENAME spe1_h2sol
+                         FILENAME SPE1CASE2_H2SOL
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1_solvent
+                         TEST_ARGS --enable-opm-rst-file=1)
+
 add_test_compareECLFiles(CASENAME bc_lab
                          FILENAME BC_LAB
                          SIMULATOR flow
