@@ -146,8 +146,8 @@ struct CheckGroupConstraintsInnerWellIterations { static constexpr bool value = 
 
 // Network solver parameters
 struct NetworkMaxStrictOuterIterations { static constexpr int value = 10; };
-struct NetworkMaxOuterIterations { static constexpr int value = 10; };
-struct NetworkMaxSubIterations { static constexpr int value = 20; };
+struct NetworkMaxOuterIterations { static constexpr int value = 3; };
+struct NetworkMaxSubIterations { static constexpr int value = 100; };
 template<class Scalar>
 struct NetworkPressureUpdateDampingFactor { static constexpr Scalar value = 0.1; };
 template<class Scalar>
