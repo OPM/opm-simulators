@@ -96,6 +96,7 @@ macro(opm-simulators_prereqs_hook)
       opmcommon
       opmgrid
       SuiteSparse::UMFPACK
+      Boost::date_time
   )
 
   if(MPI_FOUND)
