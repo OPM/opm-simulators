@@ -465,9 +465,8 @@ update()
                     // have changed, so we must copy all elements.
                     for (std::size_t row = 0; row < A_->N(); ++row) {
                         const auto& Arow = (*A_)[row];
-                        auto& ILUrow = (*ILU_)[row];
                         auto Ait = Arow.begin();
-                        auto Iit = ILUrow.begin();
+                        auto Iit = (*ILU_)[row].begin();
                         for (; Ait != Arow.end(); ++Ait, ++Iit) {
                             *Iit = *Ait;
                         }
@@ -484,7 +483,8 @@ update()
                                                 A_->nonzeroes(), Matrix::row_wise);
                 auto& newA = *ILU_;
                 // Create sparsity pattern
-                for (auto iter = newA.createbegin(), iend = newA.createend(); iter != iend; ++iter)
+                auto endcreateA = newA.createend();
+                for (auto iter = newA.createbegin(); iter != endcreateA; ++iter)
                 {
                     const auto& row = (*A_)[inverseOrdering[iter.index()]];
                     for (auto col = row.begin(), cend = row.end(); col != cend; ++col)
@@ -493,12 +493,12 @@ update()
                     }
                 }
                 // Copy values
-                for (auto iter = A_->begin(), iend = A_->end(); iter != iend; ++iter)
+                for (auto iter = A_->begin(); iter != A_->end(); ++iter)
                 {
-                    auto& newRow = newA[ordering_[iter.index()]];
-                    for (auto col = iter->begin(), cend = iter->end(); col != cend; ++col)
+                    auto newRow = newA.begin() + ordering_[iter.index()];
+                    for (auto&& [A_ij, j] : sparseRange(*newRow))
                     {
-                        newRow[ordering_[col.index()]] = *col;
+                        (*newRow)[ordering_[j]] = A_ij;
                     }
                 }
             }

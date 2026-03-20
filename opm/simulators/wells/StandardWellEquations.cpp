@@ -66,16 +66,16 @@ init(const int numWellEq,
     duneB_.setSize(1, numPerfs, numPerfs);
     duneC_.setSize(1, numPerfs, numPerfs);
 
-    for (auto row = duneD_.createbegin(),
-              end = duneD_.createend(); row != end; ++row) {
+    auto endD = duneD_.createend();
+    for (auto row = duneD_.createbegin(); row != endD; ++row) {
         // Add nonzeros for diagonal
         row.insert(row.index());
     }
       // the block size is run-time determined now
     duneD_[0][0].resize(numWellEq, numWellEq);
 
-    for (auto row = duneB_.createbegin(),
-              end = duneB_.createend(); row != end; ++row) {
+    auto endB = duneB_.createend();
+    for (auto row = duneB_.createbegin(); row != endB; ++row) {
         for (int perf = 0 ; perf < numPerfs; ++perf) {
             row.insert(perf);
         }
@@ -87,8 +87,8 @@ init(const int numWellEq,
     }
 
          // make the C^T matrix
-    for (auto row = duneC_.createbegin(),
-              end = duneC_.createend(); row != end; ++row) {
+    auto endC = duneC_.createend();
+    for (auto row = duneC_.createbegin(); row != endC; ++row) {
         for (int perf = 0; perf < numPerfs; ++perf) {
             row.insert(perf);
         }

@@ -41,14 +41,14 @@ init(const int num_conn,  const std::vector<std::size_t>& cells)
     duneB_.setSize(1, num_conn, num_conn);
     duneC_.setSize(1, num_conn, num_conn);
 
-    for (auto row = duneD_.createbegin(),
-              end = duneD_.createend(); row != end; ++row) {
+    auto endD = duneD_.createend();
+    for (auto row = duneD_.createbegin(); row != endD; ++row) {
         // Add nonzeros for diagonal
         row.insert(row.index());
     }
 
-    for (auto row = duneB_.createbegin(),
-                 end = duneB_.createend(); row != end; ++row) {
+    auto endB = duneB_.createend();
+    for (auto row = duneB_.createbegin(); row != endB; ++row) {
         for (int con = 0 ; con < num_conn; ++con) {
             row.insert(con);
         }
@@ -56,8 +56,8 @@ init(const int num_conn,  const std::vector<std::size_t>& cells)
 
     // make the C^T matrix
     // TODO: let us see whether we should change the naming of DuneC_
-    for (auto row = duneC_.createbegin(),
-                 end = duneC_.createend(); row != end; ++row) {
+    auto endC = duneC_.createend();
+    for (auto row = duneC_.createbegin(); row != endC; ++row) {
         for (int con = 0; con < num_conn; ++con) {
             row.insert(con);
         }
