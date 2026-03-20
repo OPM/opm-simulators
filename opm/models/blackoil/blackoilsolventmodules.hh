@@ -560,6 +560,19 @@ public:
         return solventPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, pressure);
     }
 
+    static Scalar
+    solventReferenceDensity(const int pvt_region_index)
+    {
+        if (isCO2Sol()) {
+            return co2GasPvt().gasReferenceDensity(pvt_region_index);
+        }
+
+        if (isH2Sol()) {
+            return h2GasPvt().gasReferenceDensity(pvt_region_index);
+        }
+        return solventPvt().referenceDensity(pvt_region_index);
+    }
+
 private:
     static BlackOilSolventParams<Scalar> params_; // the krg(Fs) column of the SSFN table
 };

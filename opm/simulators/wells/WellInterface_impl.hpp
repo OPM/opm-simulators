@@ -2484,6 +2484,49 @@ namespace Opm
             fluid_state.setInvB(phaseIdx, inv_b);
         }
 
+        if constexpr (has_solvent) {
+            const unsigned pvtRegionIdx = fluid_state.pvtRegionIndex();
+            ValueType solventInvB;
+            Scalar solventRefDensity;
+            const ValueType rv(0.0);
+            const ValueType rvw(0.0);
+            if (SolventModule::isCO2Sol() || SolventModule::isH2Sol()) {
+                if (SolventModule::isCO2Sol()) {
+                    const auto& co2gasPvt = SolventModule::co2GasPvt();
+                    solventInvB = co2gasPvt.inverseFormationVolumeFactor(pvtRegionIdx, temperature, pressure, rv, rvw);
+                    solventRefDensity = co2gasPvt.gasReferenceDensity(pvtRegionIdx);
+                } else {
+                    const auto& h2gasPvt = SolventModule::h2GasPvt();
+                    solventInvB = h2gasPvt.inverseFormationVolumeFactor(pvtRegionIdx, temperature, pressure, rv, rvw);
+                    solventRefDensity = h2gasPvt.gasReferenceDensity(pvtRegionIdx);
+                }
+
+                // compute and set dissolved solvent in water (rsSolw)
+                const auto rsSolw = SolventModule::solubilityLimit(pvtRegionIdx, temperature, pressure,
+                                                                    ValueType(saltConcentration));
+                fluid_state.setRsSolw(rsSolw);
+
+                // update water phase invB using brine PVT, matching solventPvtUpdate_()
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    if (SolventModule::isCO2Sol()) {
+                        const auto& brineCo2Pvt = SolventModule::brineCo2Pvt();
+                        const auto bw = brineCo2Pvt.inverseFormationVolumeFactor(pvtRegionIdx, temperature, pressure, rsSolw);
+                        fluid_state.setInvB(FluidSystem::waterPhaseIdx, bw);
+                    } else {
+                        const auto& brineH2Pvt = SolventModule::brineH2Pvt();
+                        const auto bw = brineH2Pvt.inverseFormationVolumeFactor(pvtRegionIdx, temperature, pressure, rsSolw);
+                        fluid_state.setInvB(FluidSystem::waterPhaseIdx, bw);
+                    }
+                }
+            } else {
+                const auto& solventPvt = SolventModule::solventPvt();
+                solventInvB = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, temperature, pressure);
+                solventRefDensity = solventPvt.referenceDensity(pvtRegionIdx);
+            }
+            fluid_state.setSolventInvB(solventInvB);
+            fluid_state.setSolventDensity(solventInvB * solventRefDensity);
+        }
+
         const bool gas_water_mixing = both_water_gas && (has_disgas_in_water || has_watVapor);
 
         std::vector<ValueType> volumes(FluidSystem::numPhases, zero_value);
@@ -2567,6 +2610,12 @@ namespace Opm
             total_volume += volumes[phaseIdx];
         }
 
+        [[maybe_unused]] ValueType solvent_volume {0.0};
+        if constexpr (has_solvent) {
+            solvent_volume = fluid_composition[Indices::contiSolventEqIdx] / fluid_state.solventInvB();
+            total_volume += solvent_volume;
+        }
+
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -2583,6 +2632,36 @@ namespace Opm
                                         FluidSystem::enthalpy(fluid_state, paramCache, phaseIdx));
             }
         }
+
+        // For CO2/H2 solvents, override the water density with the brine PVT computation
+        // since FluidSystem::density() in the loop above doesn't account for dissolved solvent.
+        // This matches the behavior in solventPvtUpdate_().
+        if constexpr (has_solvent) {
+            if ((SolventModule::isCO2Sol() || SolventModule::isH2Sol())
+                && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const unsigned pvtRegionIdx = fluid_state.pvtRegionIndex();
+                const auto rsSolw = fluid_state.rsSolw();
+                const auto bw = fluid_state.invB(FluidSystem::waterPhaseIdx);
+                if (SolventModule::isCO2Sol()) {
+                    const auto& brineCo2Pvt = SolventModule::brineCo2Pvt();
+                    fluid_state.setDensity(FluidSystem::waterPhaseIdx,
+                                           bw * brineCo2Pvt.waterReferenceDensity(pvtRegionIdx)
+                                               + rsSolw * bw * brineCo2Pvt.gasReferenceDensity(pvtRegionIdx));
+                } else {
+                    const auto& brineH2Pvt = SolventModule::brineH2Pvt();
+                    fluid_state.setDensity(FluidSystem::waterPhaseIdx,
+                                           bw * brineH2Pvt.waterReferenceDensity(pvtRegionIdx)
+                                               + rsSolw * bw * brineH2Pvt.gasReferenceDensity(pvtRegionIdx));
+                }
+            }
+        }
+
+        if constexpr (has_solvent) {
+            fluid_state.setSolventSaturation(solvent_volume / total_volume);
+        }
+
+        fluid_state.setVolumeRatio(total_volume);
+
         return fluid_state;
     }
 
