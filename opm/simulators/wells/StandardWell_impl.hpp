@@ -456,7 +456,7 @@ namespace Opm
             EvalWell resWell_loc(0.0);
             if (FluidSystem::numActivePhases() > 1) {
                 assert(dt > 0);
-                const auto wellbore_surface_volume = this->getWellBoreSurfaceVolume(simulator, deferred_logger);
+                const auto wellbore_surface_volume = wellbore_volume / well_fluid_state_.volumeRatio();
                 resWell_loc += (this->primary_variables_.surfaceVolumeFraction(componentIdx) * wellbore_surface_volume -
                                 this->fluids_initial_[componentIdx]) * regularization_factor / dt;
             }
@@ -776,6 +776,7 @@ namespace Opm
         const bool isThermal = simulator.vanguard().eclState().getSimulationConfig().isThermal();
         const bool co2store = simulator.vanguard().eclState().runspec().co2Storage();
         Base::calculateReservoirRates( (isThermal || co2store), well_state.well(this->index_of_well_));
+        updateWellFluidState<EvalWell>();
     }
 
 
@@ -1443,6 +1444,8 @@ namespace Opm
     {
         updatePrimaryVariables(groupStateHelper);
         computeWellConnectionPressures(simulator, groupStateHelper);
+        // TODO: EvalWell might not be necessary
+        updateWellFluidState<EvalWell>();
         this->computeInitialFluids();
     }
 
@@ -2867,18 +2870,17 @@ namespace Opm
     StandardWell<TypeTag>::
     computeInitialFluids()
     {
-        const FluidState<Scalar> wellbore_fluid_state = createWellFluidState<Scalar>();
-        // TODO: with this approach, it might be better to use mass balancing instead of surface volume balancing.
-        for (int comp_idx = 0; comp_idx < this->numConservationQuantities(); ++comp_idx) {
-            fluids_initial_[comp_idx] = wellboreComponentSurfaceVolume(wellbore_fluid_state, comp_idx, wellbore_volume);
+        const Scalar wellbore_surace_volume = wellbore_volume / getValue(well_fluid_state_.volumeRatio());
+        for (int  eq_idx = 0;  eq_idx < this->numConservationQuantities(); ++ eq_idx) {
+            fluids_initial_[ eq_idx] = wellbore_surace_volume * getValue(this->primary_variables_.surfaceVolumeFraction( eq_idx));
         }
     }
 
 
     template <typename TypeTag>
     template <typename ValueType>
-    StandardWell<TypeTag>::FluidState<ValueType>
-    StandardWell<TypeTag>::createWellFluidState() const
+    void
+    StandardWell<TypeTag>::updateWellFluidState()
     {
         auto obtain = [](const auto& val) {
             if constexpr (std::is_same_v<ValueType, Scalar>) {
@@ -2897,7 +2899,7 @@ namespace Opm
             fluid_fractions[comp_idx] = obtain(this->primary_variables_.surfaceVolumeFraction(comp_idx));
         }
 
-        return Base::createFluidState(fluid_fractions, pressure, temperature, this->wsalt());
+        this->well_fluid_state_ = Base::createFluidState(fluid_fractions, pressure, temperature, this->wsalt());
     }
 
 

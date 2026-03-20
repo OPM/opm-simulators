@@ -475,11 +475,14 @@ namespace Opm
         // at the beginning of the time step
         std::vector<Scalar> fluids_initial_;
 
+        FluidState<EvalWell> well_fluid_state_;
+
         // computing the accumulation term for later use in conservation equations for wells
         void computeInitialFluids();
 
+        // we might not need to have the ValueType template parameter
         template <typename ValueType>
-        FluidState<ValueType> createWellFluidState() const;
+        void updateWellFluidState();
 
         // this function can be static or to helper class
         template <typename ValueType>

@@ -2473,8 +2473,8 @@ namespace Opm
                     } else {
                         fluid_state.setRsw(zero_value);
                     }
-                    break;
                 }
+                break;
             }
             default:
                 throw std::logic_error("Unhandled phase index " + std::to_string(phaseIdx));
