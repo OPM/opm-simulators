@@ -10,7 +10,8 @@
 # whose DATA file has a deliberate parse error (missing INCLUDE file).
 #
 # Expected behavior depends on the MPI implementation:
-#   Custom MPICH (v4.3.2): hydra kills master immediately (exit code 9)
+#   OpenMPI       (v4.1.6): detects slave exit, terminates master (exit code 1)
+#   Custom MPICH  (v4.3.2): hydra kills master immediately (exit code 9)
 #   System MPICH  (v4.2.1): master hangs until timeout (exit code 124)
 #   OpenMPI       (v5.0.8): master hangs until timeout (exit code 124)
 #
