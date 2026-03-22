@@ -1021,6 +1021,9 @@ namespace Opm
                                                     "and the well is therefore kept stopped.",
                                                      this->name(), number_of_well_reopenings_);
                     deferred_logger.debug(msg);
+                    changed_to_stopped_this_step_ = old_well_operable;
+                } else {
+                    changed_to_stopped_this_step_ = false;
                 }
                 this->stopWell();
                 changed_to_stopped_this_step_ = true;
@@ -1029,6 +1032,9 @@ namespace Opm
                 );
                 if (this->param_.shut_unsolvable_wells_ && !converged_zero_rate ) {
                     this->operability_status_.solvable = false;
+                } else {
+                    this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+                    this->operability_status_.obey_thp_limit_under_bhp_limit = false;
                 }
                 // we increse the number of reopenings to avoid output in the next iteration
                 number_of_well_reopenings_++;
