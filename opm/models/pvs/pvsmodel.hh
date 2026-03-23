@@ -618,7 +618,7 @@ public:
                               short oldPhasePresence,
                               const PrimaryVariables& newPv) const
     {
-        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::ValueType>;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             const bool oldPhasePresent = (oldPhasePresence & (1 << phaseIdx)) > 0;

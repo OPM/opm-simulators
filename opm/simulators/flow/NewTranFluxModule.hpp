@@ -556,7 +556,7 @@ public:
                 // compute the phase mobility using the material law parameters of the
                 // interior element. TODO: this could probably be done more efficiently
                 const auto& matParams = problem.materialLawParams(globalSpaceIdx);
-                std::array<typename FluidState::Scalar,numPhases> kr;
+                std::array<typename FluidState::ValueType,numPhases> kr;
                 MaterialLaw::relativePermeabilities(kr, matParams, exFluidState);
 
                 const auto& mob = kr[phaseIdx]/exFluidState.viscosity(phaseIdx);

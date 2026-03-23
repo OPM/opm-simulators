@@ -138,10 +138,10 @@ class BoundaryPressureCallback
 
     using IQRawFluidState = decltype(std::declval<IntensiveQuantities>().fluidState());
     using IQFluidState = std::remove_const_t<std::remove_reference_t<IQRawFluidState>>;
-    using IQScalar = typename IQFluidState::Scalar;
+    using IQValueType = std::decay_t<decltype(std::declval<IQFluidState>().pressure(0))>;
 
 public:
-    using ResultType = IQScalar;
+    using ResultType = IQValueType;
 
     BoundaryPressureCallback(const ElementContext& elemCtx, const FluidState& boundaryFs)
         : elemCtx_(elemCtx)
@@ -173,7 +173,7 @@ public:
         return elemCtx_.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState().pressure(phaseIdx_);
     }
 
-    IQScalar boundaryValue() const
+    IQValueType boundaryValue() const
     {
         Valgrind::CheckDefined(phaseIdx_);
         return boundaryFs_.pressure(phaseIdx_);

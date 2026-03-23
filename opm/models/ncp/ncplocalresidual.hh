@@ -240,7 +240,7 @@ private:
     template <class FluidState, class LhsEval>
     LhsEval phasePresentIneq_(const FluidState& fluidState, unsigned phaseIdx) const
     {
-        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::ValueType>;
         return FsToolbox::template decay<LhsEval>(fluidState.saturation(phaseIdx));
     }
 
@@ -251,7 +251,7 @@ private:
     template <class FluidState, class LhsEval>
     LhsEval phaseNotPresentIneq_(const FluidState& fluidState, unsigned phaseIdx) const
     {
-        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::ValueType>;
 
         // difference of sum of mole fractions in the phase from 100%
         LhsEval a = 1.0;

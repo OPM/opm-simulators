@@ -97,7 +97,7 @@ public:
                                 const MaterialLawParams& matParams,
                                 bool isInEquilibrium = false)
     {
-        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::ValueType>;
 
 #ifndef NDEBUG
         // make sure the temperature is the same in all fluid phases
@@ -155,7 +155,7 @@ public:
     template <class FluidState>
     void assignNaive(const FluidState& fluidState, unsigned refPhaseIdx = 0)
     {
-        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::ValueType>;
 
         // assign the phase temperatures. this is out-sourced to
         // the energy module

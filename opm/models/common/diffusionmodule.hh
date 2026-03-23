@@ -190,7 +190,7 @@ protected:
      */
     template <class FluidState>
     void update_(FluidState&,
-                 typename FluidSystem::template ParameterCache<typename FluidState::Scalar>&,
+                 typename FluidSystem::template ParameterCache<typename FluidState::ValueType>&,
                  const ElementContext&,
                  unsigned,
                  unsigned)
@@ -240,7 +240,7 @@ protected:
      */
     template <class FluidState>
     void update_(FluidState& fluidState,
-                 typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
+                 typename FluidSystem::template ParameterCache<typename FluidState::ValueType>& paramCache,
                  const ElementContext& elemCtx,
                  unsigned dofIdx,
                  unsigned timeIdx)
