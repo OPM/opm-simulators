@@ -38,12 +38,12 @@ add_custom_target(test_rc_slave_parsing_err
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/include
     ${CMAKE_CURRENT_BINARY_DIR}/tests/include
   COMMENT "Copying slave_parse_error test data to build tree"
-  DEPENDS flow
+  DEPENDS flow_blackoil
 )
 add_test(NAME rc_slave_parsing_err
   COMMAND
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/rescoup/slave_parse_error/run_ctest.sh
-    $<TARGET_FILE:flow>
+    $<TARGET_FILE:flow_blackoil>
     ${_rescoup_mpiexec}
   WORKING_DIRECTORY
     ${CMAKE_CURRENT_BINARY_DIR}/tests/rescoup/slave_parse_error

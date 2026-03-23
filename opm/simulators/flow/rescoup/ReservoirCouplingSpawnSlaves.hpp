@@ -59,6 +59,14 @@ private:
         std::string &log_filename) const;
     void receiveActivationDateFromSlaves_();
     void receiveSimulationStartDateFromSlaves_();
+    /// @brief Receive initialization status from each slave process.
+    /// @details After spawning, each slave sends a status code (0 = OK, non-zero = failed).
+    ///   If any slave reports failure, disconnects all slave communicators and throws
+    ///   std::runtime_error to prevent the master from hanging on subsequent MPI calls.
+    /// @note Currently only covers failures during readDeck() (parse errors). Exceptions
+    ///   between readDeck() and SimulatorFullyImplicitBlackoil::init() (where the slave
+    ///   sends its OK status) are not yet caught.
+    void receiveSlaveStatus_();
     void sendMasterGroupNamesToSlaves_();
     void sendSlaveNamesToSlaves_();
     void spawnSlaveProcesses_();

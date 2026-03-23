@@ -1,15 +1,10 @@
 #!/bin/bash
 # CTest wrapper for the reservoir coupling slave parse error test.
-# Exits 0 on expected (currently unfixed) behavior, 1 on unexpected behavior.
 #
-# The slave deck has a deliberate parse error. The master should never
-# complete successfully (exit 0). Expected outcomes depending on MPI:
-#   - exit 1:   MPI runtime detected slave exit (OpenMPI 4.1.6)
-#   - exit 9:   MPI runtime killed master when slave exited (custom MPICH v4.3.2)
-#   - exit 124: master hung on MPI_Recv until timeout (OpenMPI 5.0.8, system MPICH v4.2.1)
-#
-# Any non-zero exit code is treated as PASS. Only exit 0 (master completed
-# despite slave parse error) is treated as FAIL.
+# The slave deck has a deliberate parse error. The slave notifies the master
+# of the failure via MPI, and the master exits with code 1 on all MPI
+# implementations. Exit 0 (master completed despite slave parse error)
+# is treated as FAIL.
 #
 # Known issue — OpenMPI 5.x BTL TCP IPv6 bug (observed with Ubuntu package):
 #   On systems where a network interface has both IPv4 and IPv6 addresses
@@ -50,8 +45,7 @@ echo "MPI launcher: $MPI_LAUNCHER"
 echo "Working dir:  $(pwd)"
 echo ""
 
-# Run with a timeout as a safety net. Some MPI implementations detect the
-# slave exit immediately (exit 1 or 9), others hang until the timeout (exit 124).
+# Run with a timeout as a safety net in case of regression (master hanging).
 timeout 10 \
     "$MPI_LAUNCHER" -np 1 "$FLOW_BINARY" \
     RC_MASTER.DATA \
@@ -61,10 +55,13 @@ timeout 10 \
 
 EXIT_CODE=$?
 
-if [ $EXIT_CODE -eq 0 ]; then
+if [ $EXIT_CODE -eq 1 ]; then
+    echo "PASS: Master detected slave failure (exit code 1)"
+    exit 0
+elif [ $EXIT_CODE -eq 0 ]; then
     echo "FAIL: Master completed successfully — unexpected for slave parse error"
     exit 1
 else
-    echo "PASS: Master did not complete (exit code $EXIT_CODE)"
-    exit 0
+    echo "FAIL: Unexpected exit code $EXIT_CODE (expected 1)"
+    exit 1
 fi
