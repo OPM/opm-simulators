@@ -63,15 +63,13 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <omp.h>
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
 #include <fmt/format.h>
-#include <chrono>
-
-#include <omp.h>
 
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/common/utility/pointerArithmetic.hpp>
@@ -84,7 +82,6 @@
 #include <opm/simulators/linalg/gpuistl_hip/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniVector.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/detail/preconditionerKernels/ILU_variants_helper_kernels.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/detail/gpusparse_matrix_operations.hpp>
 #else
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
@@ -93,7 +90,6 @@
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/ILU_variants_helper_kernels.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #endif
 #endif
@@ -1110,8 +1106,7 @@ private:
         const bool on_full_domain = (numCells == model_().numTotalDof());
 
         if constexpr (!run_assembly_on_gpu) {
-            auto start_cpu = std::chrono::high_resolution_clock::now();
-            linearize_parallelization_wrapper<false, IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
+            linearize_parallelization_wrapper<run_assembly_on_gpu, IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
                 numCells/*numCells*/,
                 domain,
                 neighborInfo_,
@@ -1127,16 +1122,11 @@ private:
                 diagMatAddress_,
                 residual_,
                 boundaryInfo_);
-            auto end_cpu = std::chrono::high_resolution_clock::now();
-            auto cpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu);
-
-            std::cout << "CPU kernel time: " << cpu_duration.count() << " microseconds" << std::endl;
         } else {
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
             // Make sure we have can have the domain on the GPU.
             if constexpr (std::is_same_v<SubDomainType, FullDomain<>>) {
 
-                hipDeviceSynchronize();
                 auto domain_buffer = copy_to_gpu(domain);
                 auto domain_view = make_view(domain_buffer);
 
@@ -1219,12 +1209,8 @@ private:
                 using GpuProblem = decltype(gpuFlowProblemVerySimpleView);
 
                 int constexpr blockSize = 256;
-
-                hipDeviceSynchronize();
-                auto start_gpu = std::chrono::high_resolution_clock::now();
-                bool constexpr use_gpu = true;
-                linearize_parallelization_wrapper<use_gpu, GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU>(
-                    numCells/*numCells*/,
+                linearize_parallelization_wrapper<run_assembly_on_gpu, GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU>(
+                    numCells,
                     domain_view,
                     neighborInfo_view,
                     diagMatAddressView,
@@ -1244,23 +1230,17 @@ private:
                         gpuFlowProblemVerySimpleView);
                 }
 
-                hipDeviceSynchronize();
-                auto end_gpu = std::chrono::high_resolution_clock::now();
-                auto gpu_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu);
-                std::cout << "GPU kernel time: " << gpu_duration.count() << " microseconds" << std::endl;
-
                 // Now move the gpu residual into the cpu residual
                 auto cpuResidualFromGpu = gpuResidualBuffer.asStdVector();
                 std::memcpy(residual_.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
-                {
-                    auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
-                    auto& cpuJacobian = jacobian_->istlMatrix();
 
-                    // Copy GPU jacobian back to CPU jacobian as a single contiguous operation
-                    const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
-                    std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(),
-                            totalMatrixSize * sizeof(Scalar));
-                }
+                // move computed jacobian from GPU to CPU
+                auto gpuJacobianNonZeroes = gpuJacobian_->getNonZeroValues().asStdVector();
+                auto& cpuJacobian = jacobian_->istlMatrix();
+                const size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
+
+                std::memcpy(&(cpuJacobian[0][0][0][0]), gpuJacobianNonZeroes.data(),
+                        totalMatrixSize * sizeof(Scalar));
             } else {
                 assert(false && "Only FullDomain is supported on GPU");
             }
@@ -1326,7 +1306,16 @@ private:
     }
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
-    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
+    template<class LocalIntensiveQuantities,
+             class LocalModelClass,
+             class LocalResidualKernel,
+             class VectorBlockType,
+             class MatrixBlockType,
+             class ADVectorBlockType,
+             class DiagPtrType,
+             class DomainType,
+             class NeighborSparseTable,
+             class GpuResidualView>
     __global__ __launch_bounds__(256) static void gpu_parallelize_linearization_kernel(
         const unsigned int numCells,
         const DomainType GPU_LOCAL_domain,
@@ -1344,16 +1333,28 @@ private:
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
 
         if (ii < numCells) {
-            linearize_kernel<true, int, int, LocalIntensiveQuantities, LocalModelClass, LocalResidualKernel, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, GpuResidualView>(
+            linearize_kernel<true,
+            std::nullptr_t, /* no problem type on GPU for now */
+            std::nullptr_t, /* no velocity info on GPU for now */
+            LocalIntensiveQuantities,
+            LocalModelClass,
+            LocalResidualKernel,
+            VectorBlockType,
+            MatrixBlockType,
+            ADVectorBlockType,
+            DiagPtrType,
+            DomainType,
+            NeighborSparseTable,
+            GpuResidualView>(
                 ii,
                 GPU_LOCAL_domain,
                 GPU_LOCAL_neighborInfo,
                 GPU_LOCAL_diagMatAddress,
                 GPU_LOCAL_residualView,
                 localModel,
-                0/*dummy for velocity info*/,
+                nullptr, /*dummy for velocity info*/
                 invLocDT,
-                0/*dummy for problem type*/,
+                nullptr, /*dummy for problem type*/
                 dispersionActive,
                 enableBioeffects,
                 onFullDomain,
@@ -1363,13 +1364,27 @@ private:
     }
 #endif
 
+    // Some helper structs so we can wrap arguments and use references or const values in the same signature
+    // based on whether or not we are instantiating the function for GPU or CPU.
     template<typename T, bool useGPU>
     using ArgType = std::conditional_t<useGPU, T, T&>;
 
     template<typename T, bool useGPU>
     using ConstArgType = std::conditional_t<useGPU, T, const T&>;
 
-    template<bool useGPU, class ProblemType, class VelocityInfoType, class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class GpuResidualView>
+    template<bool useGPU,
+             class ProblemType,
+             class VelocityInfoType,
+             class LocalIntensiveQuantities,
+             class LocalModelClass,
+             class LocalResidualKernel,
+             class VectorBlockType,
+             class MatrixBlockType,
+             class ADVectorBlockType,
+             class DiagPtrType,
+             class DomainType,
+             class NeighborSparseTable,
+             class GpuResidualView>
     OPM_HOST_DEVICE static void linearize_kernel(
         const unsigned int ii,
         const ConstArgType<DomainType, useGPU> GPU_LOCAL_domain,
@@ -1514,8 +1529,16 @@ private:
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 
-    
-    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class GpuResidualView, class GpuBoundaryInfoView, class GpuProblem>
+    template<class LocalIntensiveQuantities,
+             class LocalModelClass,
+             class LocalResidualKernel,
+             class VectorBlockType,
+             class MatrixBlockType,
+             class ADVectorBlockType,
+             class DiagPtrType,
+             class GpuResidualView,
+             class GpuBoundaryInfoView,
+             class GpuProblem>
     __global__ static void linearize_kernel_bc(
         DiagPtrType GPU_LOCAL_diagMatAddress,
         GpuResidualView GPU_LOCAL_residualView,
@@ -1563,7 +1586,15 @@ private:
     }
 #endif
 
-    template<class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class GpuResidualView, class GpuBoundaryInfoView>
+    template<class LocalIntensiveQuantities,
+             class LocalModelClass,
+             class LocalResidualKernel,
+             class VectorBlockType,
+             class MatrixBlockType,
+             class ADVectorBlockType,
+             class DiagPtrType,
+             class GpuResidualView,
+             class GpuBoundaryInfoView>
     void linearize_kernel_CPU_boundary(
         DiagPtrType& GPU_LOCAL_diagMatAddress,
         GpuResidualView& GPU_LOCAL_residualView,
