@@ -9,14 +9,8 @@
 # This test runs a reservoir coupling master that spawns a slave process
 # whose DATA file has a deliberate parse error (missing INCLUDE file).
 #
-# Expected behavior depends on the MPI implementation:
-#   OpenMPI       (v4.1.6): detects slave exit, terminates master (exit code 1)
-#   Custom MPICH  (v4.3.2): hydra kills master immediately (exit code 9)
-#   System MPICH  (v4.2.1): master hangs until timeout (exit code 124)
-#   OpenMPI       (v5.0.8): master hangs until timeout (exit code 124)
-#
-# Future goal: the slave communicates its parse failure to the master,
-# allowing cooperative shutdown without a hang (exit code 1 on all impls).
+# For expected behavior per MPI implementation and known OpenMPI 5.x issues,
+# see the comments in run_ctest.sh.
 #
 # Usage:
 #   run_test.sh <flow_binary_path> [mpi_launcher] [timeout_seconds]
