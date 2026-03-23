@@ -174,14 +174,18 @@ template<class Scalar, template <class> class Storage = Opm::VectorWithDefaultAl
 class GpuFlowProblemVerySimple
 {
 public:
+    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, Storage>>;
+
     GpuFlowProblemVerySimple() = default;
 
     GpuFlowProblemVerySimple(Storage<Scalar> alpha0,
                              Storage<Scalar> alpha1,
-                             Storage<Scalar> alpha2)
+                             Storage<Scalar> alpha2,
+                             ModuleParams moduleParams)
         : alpha0_(alpha0)
         , alpha1_(alpha1)
         , alpha2_(alpha2)
+        , moduleParams_(moduleParams)
     {}
 
     OPM_HOST_DEVICE Scalar getAlpha(unsigned globalIndex, unsigned boundaryFaceIndex) const
@@ -197,6 +201,9 @@ public:
     }
 
     OPM_HOST_DEVICE Scalar getAlpha2() const { return 1.0;}
+
+    OPM_HOST_DEVICE const ModuleParams& moduleParams() const { return moduleParams_; }
+    OPM_HOST_DEVICE ModuleParams& moduleParams() { return moduleParams_; }
 
     Storage<Scalar>& alpha0() {
         return alpha0_;
@@ -214,6 +221,7 @@ private:
     Storage<Scalar> alpha0_;
     Storage<Scalar> alpha1_;
     Storage<Scalar> alpha2_;
+    ModuleParams moduleParams_;
 };
 
 namespace gpuistl {
@@ -221,10 +229,12 @@ namespace gpuistl {
     GpuFlowProblemVerySimple<Scalar, gpuistl::GpuBuffer>
     copy_to_gpu(GpuFlowProblemVerySimple<Scalar, Opm::VectorWithDefaultAllocator>& cpuProblem)
     {
+        using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, gpuistl::GpuBuffer>>;
         return GpuFlowProblemVerySimple<Scalar, gpuistl::GpuBuffer>(
             gpuistl::GpuBuffer<Scalar>(cpuProblem.alpha0()),
             gpuistl::GpuBuffer<Scalar>(cpuProblem.alpha1()),
-            gpuistl::GpuBuffer<Scalar>(cpuProblem.alpha2())
+            gpuistl::GpuBuffer<Scalar>(cpuProblem.alpha2()),
+            ModuleParams { gpuistl::copy_to_gpu(cpuProblem.moduleParams().convectiveMixingModuleParam) }
         );
     }
     
@@ -232,10 +242,12 @@ namespace gpuistl {
     GpuFlowProblemVerySimple<Scalar, gpuistl::GpuView>
     make_view(GpuFlowProblemVerySimple<Scalar, gpuistl::GpuBuffer>& buffer)
     {
+        using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, gpuistl::GpuView>>;
         return GpuFlowProblemVerySimple<Scalar, gpuistl::GpuView>(
             gpuistl::make_view(buffer.alpha0()),
             gpuistl::make_view(buffer.alpha1()),
-            gpuistl::make_view(buffer.alpha2())
+            gpuistl::make_view(buffer.alpha2()),
+            ModuleParams { make_view(buffer.moduleParams().convectiveMixingModuleParam) }
         );
     }
 } // namespace gpuistl
@@ -1116,7 +1128,8 @@ private:
                 invDt,
                 dispersionActive,
                 enableBioeffects,
-                on_full_domain);
+                on_full_domain,
+                problem_());
 
             linearize_kernel_CPU_boundary<IntensiveQuantities, Model, LocalResidual, VectorBlock, MatrixBlock, ADVectorBlock>(
                 diagMatAddress_,
@@ -1176,7 +1189,7 @@ private:
                 auto boundaryInfo_view = gpuistl::make_view(boundaryInfo_buffer);
 
                 using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
-                GpuModel gpuModel(model_().allIntensiveQuantities0(), model_().allIntensiveQuantities1(), problem_().moduleParams());
+                GpuModel gpuModel(model_().allIntensiveQuantities0(), model_().allIntensiveQuantities1());
 
                 auto gpuModelBuffer = gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr);
                 auto gpuModelView = gpuistl::make_view(gpuModelBuffer);
@@ -1203,7 +1216,7 @@ private:
                     }
                 }
 
-                GpuFlowProblemVerySimple<Scalar> gpuFlowProblemVerySimple(alpha0, alpha1, alpha2);
+                GpuFlowProblemVerySimple<Scalar> gpuFlowProblemVerySimple(alpha0, alpha1, alpha2, problem_().moduleParams());
                 auto gpuFlowProblemVerySimpleBuffer = gpuistl::copy_to_gpu(gpuFlowProblemVerySimple);
                 auto gpuFlowProblemVerySimpleView = gpuistl::make_view(gpuFlowProblemVerySimpleBuffer);
                 using GpuProblem = decltype(gpuFlowProblemVerySimpleView);
@@ -1220,6 +1233,7 @@ private:
                     dispersionActive,
                     enableBioeffects,
                     on_full_domain,
+                    gpuFlowProblemVerySimpleView,
                     gpuVolumesView);
                 if (boundaryInfo_buffer.size() > 0) {
                     linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+blockSize - 1)/blockSize), blockSize>>>(
@@ -1250,7 +1264,18 @@ private:
         }
     }
 
-    template<bool useGPU, class LocalIntensiveQuantities, class LocalModelClass, class LocalResidualKernel, class VectorBlockType, class MatrixBlockType, class ADVectorBlockType, class DiagPtrType, class DomainType, class NeighborSparseTable, class ResidualType>
+    template<bool useGPU,
+             class LocalIntensiveQuantities,
+             class LocalModelClass,
+             class LocalResidualKernel,
+             class VectorBlockType,
+             class MatrixBlockType,
+             class ADVectorBlockType,
+             class DiagPtrType,
+             class DomainType,
+             class NeighborSparseTable,
+             class ResidualType,
+             class LocalGpuProblemType>
     void linearize_parallelization_wrapper(
         const unsigned int numCells,
         const DomainType& localDomain,
@@ -1262,14 +1287,16 @@ private:
         bool dispersionActive,
         bool enableBioeffectsArg,
         bool onFullDomain,
-        const gpuistl::GpuView<Scalar>& localVolumes = gpuistl::GpuView<Scalar>())
+        LocalGpuProblemType& localGpuProblem,
+        const gpuistl::GpuView<Scalar>& localVolumes = gpuistl::GpuView<Scalar>()
+        )
     {
         if constexpr (useGPU) {
             assert(!enableBioeffectsArg && "Bioeffects not yet supported on GPU");
             assert(!dispersionActive && "Dispersion not yet supported on GPU");
             int constexpr blockSize = 256;
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
-            gpu_parallelize_linearization_kernel<LocalIntensiveQuantities, LocalModelClass, LocalResidualKernel, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, ResidualType><<<((numCells + blockSize - 1) / blockSize), blockSize>>>(
+            gpu_parallelize_linearization_kernel<LocalIntensiveQuantities, LocalModelClass, LocalResidualKernel, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, ResidualType, LocalGpuProblemType><<<((numCells + blockSize - 1) / blockSize), blockSize>>>(
                 numCells,
                 localDomain,
                 localNeighborInfo,
@@ -1280,7 +1307,8 @@ private:
                 dispersionActive,
                 enableBioeffectsArg,
                 onFullDomain,
-                localVolumes);
+                localVolumes,
+                localGpuProblem);
 #else
             assert(false && "Trying to run GPU code without GPU support");
 #endif
@@ -1288,7 +1316,7 @@ private:
         else {
 #pragma omp parallel for
             for (unsigned ii = 0; ii < numCells; ++ii) {
-            linearize_kernel<false, decltype(problem_()), decltype(velocityInfo_), LocalIntensiveQuantities , LocalModelClass, LocalResidual, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, ResidualType>(
+            linearize_kernel<false, LocalGpuProblemType, decltype(velocityInfo_), LocalIntensiveQuantities , LocalModelClass, LocalResidual, VectorBlockType, MatrixBlockType, ADVectorBlockType, DiagPtrType, DomainType, NeighborSparseTable, ResidualType>(
                 ii,
                 localDomain,
                 localNeighborInfo,
@@ -1297,7 +1325,7 @@ private:
                 localModel,
                 velocityInfo_,
                 invLocDT,
-                problem_(),
+                localGpuProblem,
                 dispersionActive,
                 enableBioeffects,
                 onFullDomain);
@@ -1315,7 +1343,8 @@ private:
              class DiagPtrType,
              class DomainType,
              class NeighborSparseTable,
-             class GpuResidualView>
+             class GpuResidualView,
+             class LocalGpuProblemType>
     __global__ __launch_bounds__(256) static void gpu_parallelize_linearization_kernel(
         const unsigned int numCells,
         const DomainType GPU_LOCAL_domain,
@@ -1327,15 +1356,16 @@ private:
         bool dispersionActive,
         bool enableBioeffects,
         bool onFullDomain,
-        const gpuistl::GpuView<Scalar> GPU_LOCAL_volumes)
+        const gpuistl::GpuView<Scalar> GPU_LOCAL_volumes,
+        LocalGpuProblemType localGpuProblem)
     {
         // Get the index of the cell
         const unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
 
         if (ii < numCells) {
             linearize_kernel<true,
-            std::nullptr_t, /* no problem type on GPU for now */
-            std::nullptr_t, /* no velocity info on GPU for now */
+            LocalGpuProblemType,
+            std::nullptr_t, /* no velocity info on GPU */
             LocalIntensiveQuantities,
             LocalModelClass,
             LocalResidualKernel,
@@ -1354,7 +1384,7 @@ private:
                 localModel,
                 nullptr, /*dummy for velocity info*/
                 invLocDT,
-                nullptr, /*dummy for problem type*/
+                localGpuProblem,
                 dispersionActive,
                 enableBioeffects,
                 onFullDomain,
@@ -1421,14 +1451,8 @@ private:
 
                 const LocalIntensiveQuantities& intQuantsEx = localModel.intensiveQuantities(globJ, /*timeIdx*/ 0);
 
-                // Split because we currently do not have a gpu version of the problem object, so moduleParams are fetched from either localModel or localProblem
-                if constexpr (useGPU) {
-                    LocalResidualKernel::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                                                    nbInfo.res_nbinfo,  localModel.moduleParams());
-                } else {
-                    LocalResidualKernel::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                                                    nbInfo.res_nbinfo,  localProblem.moduleParams());
-                }
+                LocalResidualKernel::computeFlux(adres, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+                                                nbInfo.res_nbinfo, localProblem.moduleParams());
 
                 // currently not supported on GPU
                 if constexpr (!useGPU) {

@@ -70,8 +70,6 @@ public:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using TypeTagPublic = TypeTag;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, Storage>>;
-
     SimplifiedGpuFIBlackOilModel(unsigned int nCells)
         : cachedIntensiveQuantities0_(nCells)
     {
@@ -80,17 +78,10 @@ public:
     // TODO: copy for now, but should be move!
     SimplifiedGpuFIBlackOilModel(
         const Storage<BlackOilIntensiveQuantities<TypeTag>>& cachedIntensiveQuantities0,
-        const Storage<BlackOilIntensiveQuantities<TypeTag>>& cachedIntensiveQuantities1,
-        const ModuleParams& moduleParams)
+        const Storage<BlackOilIntensiveQuantities<TypeTag>>& cachedIntensiveQuantities1)
         : cachedIntensiveQuantities0_(cachedIntensiveQuantities0)
         , cachedIntensiveQuantities1_(cachedIntensiveQuantities1)
-        , moduleParams_(moduleParams)
     {
-    }
-
-    OPM_HOST_DEVICE ModuleParams& moduleParams()
-    {
-        return moduleParams_;
     }
 
     SimplifiedGpuFIBlackOilModel() = default;
@@ -161,7 +152,6 @@ public:
     // gpu kernels
     Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities0_;
     Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities1_;
-    ModuleParams moduleParams_;
 };
 
 namespace gpuistl
@@ -224,15 +214,11 @@ namespace gpuistl
             }
         }
 
-        using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, GpuBuffer>>;
-        ModuleParams moduleParams {
-            gpuistl::copy_to_gpu(cpuModel.moduleParams_.convectiveMixingModuleParam)};
-
         GpuBuffer<CorrectBOIQ> gpuBuf0(cpuIntQuantsWithGpuPtr0);
         GpuBuffer<CorrectBOIQ> gpuBuf1(cpuIntQuantsWithGpuPtr1);
 
         // create new blackoil model providing a gpubuffer allocated version of the intQuants
-        auto result = SimplifiedGpuBufferModel(std::move(gpuBuf0), std::move(gpuBuf1), moduleParams);
+        auto result = SimplifiedGpuBufferModel(std::move(gpuBuf0), std::move(gpuBuf1));
 
         return result;
     }
@@ -240,15 +226,9 @@ namespace gpuistl
     template <typename LocalTypeTag>
     auto make_view(SimplifiedGpuFIBlackOilModel<LocalTypeTag, GpuBuffer>& gpuSimplifiedGpuFIBlackOilModel)
     {
-        using InputSimplifiedGpuFIBlackOilModel = SimplifiedGpuFIBlackOilModel<LocalTypeTag, GpuBuffer>;
-        using Scalar = typename InputSimplifiedGpuFIBlackOilModel::Scalar;
-        using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, GpuView>>;
-
         return SimplifiedGpuFIBlackOilModel<LocalTypeTag, gpuistl::GpuView>(
             make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities0_),
-            make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities1_),
-            ModuleParams {make_view(
-                gpuSimplifiedGpuFIBlackOilModel.moduleParams_.convectiveMixingModuleParam)});
+            make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities1_));
     }
 } // namespace gpuistl
 
