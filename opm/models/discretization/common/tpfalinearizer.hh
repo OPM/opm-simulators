@@ -1262,6 +1262,43 @@ private:
             OPM_THROW(std::logic_error, "Trying to run GPU assembly without compiling with GPU support");
 #endif
         }
+
+        // Handle source terms separately as we want the functionality for CPU and GPU cases
+        // but for now we cannot handle this inside the kernel due to the use of problem_()
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned ii = 0; ii < numCells; ++ii) {
+            OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
+            const unsigned globI = domain.cells[ii];
+            VectorBlock res(0.0);
+            MatrixBlock bMat(0.0);
+            ADVectorBlock adres(0.0);
+            const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            const double volume = model_().dofTotalVolume(globI);
+
+            // Cell-wise source terms.
+            // This will include well sources if SeparateSparseSourceTerms is false.
+            res = 0.0;
+            bMat = 0.0;
+            adres = 0.0;
+            if (separateSparseSourceTerms_) {
+                LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
+            }
+            else {
+                LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+            }
+            adres *= -volume;
+            setResAndJacobi(res, bMat, adres);
+            residual_[globI] += res;
+            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            *diagMatAddress_[globI] += bMat;
+        } // end of loop for cell globI.
+
+        // Add sparse source terms. For now only wells.
+        if (separateSparseSourceTerms_) {
+            problem_().wellModel().addReservoirSourceTerms(residual_, diagMatAddress_);
+        }
     }
 
     template<bool useGPU,

@@ -65,7 +65,7 @@ namespace Properties
 
     template <class TypeTag>
     struct RunAssemblyOnGpu<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
-        static constexpr bool value = false;
+        static constexpr bool value = true;
     };
 
     template <class TypeTag>
