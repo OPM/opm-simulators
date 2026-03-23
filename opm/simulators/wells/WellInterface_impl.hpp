@@ -1026,7 +1026,6 @@ namespace Opm
                     changed_to_stopped_this_step_ = false;
                 }
                 this->stopWell();
-                changed_to_stopped_this_step_ = true;
                 bool converged_zero_rate = this->solveWellWithZeroRate(
                     simulator, dt, groupStateHelper, well_state
                 );
