@@ -180,18 +180,18 @@ public:
 
     // This ctor is used when switching to the GPU typetag which currently supports thermal effects and diffusion.
     template<class OtherTypeTag>
-    OPM_HOST_DEVICE explicit BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fluidSystemPtr)
+    OPM_HOST_DEVICE explicit BlackOilIntensiveQuantities(
+        const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fluidSystemPtr)
         : fluidState_(other.fluidState_.withOtherFluidSystem(fluidSystemPtr))
         , referencePorosity_(other.referencePorosity_)
         , porosity_(other.porosity_)
         , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
         , mobility_(other.mobility_)
         , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
-        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(other.rockInternalEnergy_
-                                                                    , other.totalThermalConductivity_
-                                                                    , other.rockFraction_)
-        , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(other.tortuosities()
-                                                                      , other.diffusionCoefficients())
+        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(
+            other.rockInternalEnergy_, other.totalThermalConductivity_, other.rockFraction_)
+        , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(
+            other.tortuosities(), other.diffusionCoefficients())
     {
         static_assert(!enableSolvent);
         static_assert(!enableExtbo);
@@ -210,7 +210,7 @@ public:
      * auto gpuQuant = cpuQuant.withOtherFluidSystem<GPUTypeTag>(gpuFluidSystem);
      * \endcode
      */
-    template<class OtherTypeTag>
+    template <class OtherTypeTag>
     auto withOtherFluidSystem(const GetPropType<OtherTypeTag, Properties::FluidSystem>& other) const
     {
         BlackOilIntensiveQuantities<OtherTypeTag> newIntQuants(*this, other);
@@ -218,10 +218,10 @@ public:
     }
 
     OPM_HOST_DEVICE void updateTempSalt(const Problem& problem,
-                        const PrimaryVariables& priVars,
-                        const unsigned globalSpaceIdx,
-                        const unsigned timeIdx,
-                        const LinearizationType& lintype)
+                                        const PrimaryVariables& priVars,
+                                        const unsigned globalSpaceIdx,
+                                        const unsigned timeIdx,
+                                        const LinearizationType& lintype)
     {
         asImp_().updateTemperature_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
         if constexpr (enableBrine) {
@@ -230,8 +230,8 @@ public:
     }
 
     OPM_HOST_DEVICE void updateSaturations(const PrimaryVariables& priVars,
-                           const unsigned timeIdx,
-                           [[maybe_unused]] const LinearizationType lintype)
+                                           const unsigned timeIdx,
+                                           [[maybe_unused]] const LinearizationType lintype)
     {
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
@@ -302,10 +302,10 @@ public:
 
     template <class ...Args>
     OPM_HOST_DEVICE void updateRelpermAndPressures(const Problem& problem,
-                                   const PrimaryVariables& priVars,
-                                   const unsigned globalSpaceIdx,
-                                   const unsigned timeIdx,
-                                   const LinearizationType& lintype)
+                                                   const PrimaryVariables& priVars,
+                                                   const unsigned globalSpaceIdx,
+                                                   const unsigned timeIdx,
+                                                   const LinearizationType& lintype)
     {
 
         // Solvent saturation manipulation:
@@ -393,7 +393,10 @@ public:
         }
     }
 
-    OPM_HOST_DEVICE void updateRsRvRsw(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    OPM_HOST_DEVICE void updateRsRvRsw(const Problem& problem,
+                                       const PrimaryVariables& priVars,
+                                       const unsigned globalSpaceIdx,
+                                       const unsigned timeIdx)
     {
         const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
 
@@ -577,7 +580,10 @@ public:
         this->updatePorosityImpl(problem, priVars, globalSpaceIdx, timeIdx);
     }
 
-    OPM_HOST_DEVICE void updatePorosity(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    OPM_HOST_DEVICE void updatePorosity(const Problem& problem,
+                                        const PrimaryVariables& priVars,
+                                        const unsigned globalSpaceIdx,
+                                        const unsigned timeIdx)
     {
         // Retrieve the reference porosity from the problem.
         referencePorosity_ = problem.porosity(globalSpaceIdx, timeIdx);
@@ -585,7 +591,10 @@ public:
         this->updatePorosityImpl(problem, priVars, globalSpaceIdx, timeIdx);
     }
 
-    OPM_HOST_DEVICE void updatePorosityImpl(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    OPM_HOST_DEVICE void updatePorosityImpl(const Problem& problem,
+                                            const PrimaryVariables& priVars,
+                                            const unsigned globalSpaceIdx,
+                                            const unsigned timeIdx)
     {
         const auto& linearizationType = problem.model().linearizer().getLinearizationType();
 
@@ -715,7 +724,10 @@ public:
     }
 
     template <class ...Args>
-    OPM_HOST_DEVICE void update(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    OPM_HOST_DEVICE void update(const Problem& problem,
+                                const PrimaryVariables& priVars,
+                                const unsigned globalSpaceIdx,
+                                const unsigned timeIdx)
     {
         // This is the version of update() that does not use any ElementContext.
         // It is limited by some modules that are not yet adapted to that.
@@ -738,7 +750,10 @@ public:
 
     // This function updated the parts that are common to the IntensiveQuantities regardless of extensions used.
     template <class ...Args>
-    OPM_HOST_DEVICE void updateCommonPart(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    OPM_HOST_DEVICE void updateCommonPart(const Problem& problem,
+                                          const PrimaryVariables& priVars,
+                                          const unsigned globalSpaceIdx,
+                                          const unsigned timeIdx)
     {
         OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate, Subsystem::SatProps | Subsystem::PvtProps);
 
