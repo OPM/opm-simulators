@@ -178,6 +178,7 @@ public:
     template<class OtherTypeTag>
     friend class BlackOilIntensiveQuantities;
 
+    // This ctor is used when switching to the GPU typetag which currently supports thermal effects and diffusion.
     template<class OtherTypeTag>
     OPM_HOST_DEVICE explicit BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fluidSystemPtr)
         : fluidState_(other.fluidState_.withOtherFluidSystem(fluidSystemPtr))
@@ -185,13 +186,20 @@ public:
         , porosity_(other.porosity_)
         , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
         , mobility_(other.mobility_)
-        , dirMob_(/*TODO*/)
+        , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
         , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(other.rockInternalEnergy_
                                                                     , other.totalThermalConductivity_
                                                                     , other.rockFraction_)
         , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(other.tortuosities()
                                                                       , other.diffusionCoefficients())
     {
+        static_assert(!enableSolvent);
+        static_assert(!enableExtbo);
+        static_assert(!enablePolymer);
+        static_assert(!enableFoam);
+        static_assert(!enableMICP);
+        static_assert(!enableBrine);
+        static_assert(!enableDispersion);
     }
 
     /**
@@ -199,7 +207,7 @@ public:
      *
      * \example
      * \code{.cpp}
-     * auto gpuQuant = cpuQuant.withOtherFluidSystem<GPUTypeTag>(gpuFluidSystemPtr);
+     * auto gpuQuant = cpuQuant.withOtherFluidSystem<GPUTypeTag>(gpuFluidSystem);
      * \endcode
      */
     template<class OtherTypeTag>

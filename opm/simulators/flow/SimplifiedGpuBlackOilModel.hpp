@@ -198,7 +198,11 @@ namespace gpuistl
             CorrectBOIQ proto0 =
                 cpuModel.cachedIntensiveQuantities0_[0].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
             cpuIntQuantsWithGpuPtr0.resize(nCells0, proto0);
+
+
+#ifdef _OPENMP
 #pragma omp parallel for schedule(static)
+#endif
             for (std::size_t i = 1; i < nCells0; ++i) {
                 cpuIntQuantsWithGpuPtr0[i] =
                     cpuModel.cachedIntensiveQuantities0_[i].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
@@ -210,7 +214,10 @@ namespace gpuistl
             CorrectBOIQ proto1 =
                 cpuModel.cachedIntensiveQuantities1_[0].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
             cpuIntQuantsWithGpuPtr1.resize(nCells1, proto1);
+
+#ifdef _OPENMP
 #pragma omp parallel for schedule(static)
+#endif
             for (std::size_t i = 1; i < nCells1; ++i) {
                 cpuIntQuantsWithGpuPtr1[i] =
                     cpuModel.cachedIntensiveQuantities1_[i].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
