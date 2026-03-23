@@ -49,6 +49,7 @@
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/common/directionalmobility.hh>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/utility/CopyablePtr.hpp>
@@ -820,7 +821,7 @@ public:
                 }
             }
             else{
-                assert(false && "Directional mobility with non-static fluid system is not supported yet");
+                OPM_THROW(std::logic_error, "Directional mobility with non-static fluid system is not supported yet");
             }
         }
         else {
