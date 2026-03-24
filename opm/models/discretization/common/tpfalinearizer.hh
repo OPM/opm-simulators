@@ -48,7 +48,9 @@
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
+
 #include <opm/simulators/linalg/exportSystem.hpp>
+#include <opm/simulators/flow/SimplifiedFlowProblemGPU.hpp>
 
 // TODO: fetch via typetag of another class instead of accessing directly in this class
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
@@ -73,21 +75,16 @@
 
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/common/utility/pointerArithmetic.hpp>
+#include <opm/common/utility/gpuistl_if_available.hpp>
 #if HAVE_CUDA
 #include <opm/simulators/flow/SimplifiedGpuBlackOilModel.hpp>
 #if USE_HIP
-#include <opm/simulators/linalg/gpuistl_hip/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/GpuBuffer.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/detail/gpusparse_matrix_operations.hpp>
 #else
-#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
@@ -170,87 +167,6 @@ struct NeighborInfoStruct
     }
 };
 
-template<class Scalar, template <class> class Storage = Opm::VectorWithDefaultAllocator>
-class GpuFlowProblemVerySimple
-{
-public:
-    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, Storage>>;
-
-    GpuFlowProblemVerySimple() = default;
-
-    GpuFlowProblemVerySimple(Storage<Scalar> alpha0,
-                             Storage<Scalar> alpha1,
-                             Storage<Scalar> alpha2,
-                             ModuleParams moduleParams)
-        : alpha0_(alpha0)
-        , alpha1_(alpha1)
-        , alpha2_(alpha2)
-        , moduleParams_(moduleParams)
-    {}
-
-    OPM_HOST_DEVICE Scalar getAlpha(unsigned globalIndex, unsigned boundaryFaceIndex) const
-    {
-        assert(boundaryFaceIndex < 3 && "SOMETHING IS WRONG WITH BOUNDARYFACEINDEX");
-        if (boundaryFaceIndex == 0) {
-            return alpha0_[globalIndex];
-        } else if (boundaryFaceIndex == 1) {
-            return alpha1_[globalIndex];
-        } else {
-            return alpha2_[globalIndex];
-        }
-    }
-
-    OPM_HOST_DEVICE Scalar getAlpha2() const { return 1.0;}
-
-    OPM_HOST_DEVICE const ModuleParams& moduleParams() const { return moduleParams_; }
-    OPM_HOST_DEVICE ModuleParams& moduleParams() { return moduleParams_; }
-
-    Storage<Scalar>& alpha0() {
-        return alpha0_;
-    }
-
-    Storage<Scalar>& alpha1() {
-        return alpha1_;
-    }
-
-    Storage<Scalar>& alpha2() {
-        return alpha2_;
-    }
-
-private:
-    Storage<Scalar> alpha0_;
-    Storage<Scalar> alpha1_;
-    Storage<Scalar> alpha2_;
-    ModuleParams moduleParams_;
-};
-
-namespace gpuistl {
-    template<class Scalar>
-    GpuFlowProblemVerySimple<Scalar, gpuistl::GpuBuffer>
-    copy_to_gpu(GpuFlowProblemVerySimple<Scalar, Opm::VectorWithDefaultAllocator>& cpuProblem)
-    {
-        using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, gpuistl::GpuBuffer>>;
-        return GpuFlowProblemVerySimple<Scalar, gpuistl::GpuBuffer>(
-            gpuistl::GpuBuffer<Scalar>(cpuProblem.alpha0()),
-            gpuistl::GpuBuffer<Scalar>(cpuProblem.alpha1()),
-            gpuistl::GpuBuffer<Scalar>(cpuProblem.alpha2()),
-            ModuleParams { gpuistl::copy_to_gpu(cpuProblem.moduleParams().convectiveMixingModuleParam) }
-        );
-    }
-    
-    template<class Scalar>
-    GpuFlowProblemVerySimple<Scalar, gpuistl::GpuView>
-    make_view(GpuFlowProblemVerySimple<Scalar, gpuistl::GpuBuffer>& buffer)
-    {
-        using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar, gpuistl::GpuView>>;
-        return GpuFlowProblemVerySimple<Scalar, gpuistl::GpuView>(
-            gpuistl::make_view(buffer.alpha0()),
-            gpuistl::make_view(buffer.alpha1()),
-            gpuistl::make_view(buffer.alpha2()),
-            ModuleParams { make_view(buffer.moduleParams().convectiveMixingModuleParam) }
-        );
-    }
-} // namespace gpuistl
 template<class VectorBlock, class ScalarFluidState>
 struct BoundaryConditionData
 {
@@ -1216,10 +1132,10 @@ private:
                     }
                 }
 
-                GpuFlowProblemVerySimple<Scalar> gpuFlowProblemVerySimple(alpha0, alpha1, alpha2, problem_().moduleParams());
-                auto gpuFlowProblemVerySimpleBuffer = gpuistl::copy_to_gpu(gpuFlowProblemVerySimple);
-                auto gpuFlowProblemVerySimpleView = gpuistl::make_view(gpuFlowProblemVerySimpleBuffer);
-                using GpuProblem = decltype(gpuFlowProblemVerySimpleView);
+                SimplifiedFlowProblemGPU<Scalar> gpuFlowProblem(alpha0, alpha1, alpha2, problem_().moduleParams());
+                auto gpuFlowProblemBuffer = gpuistl::copy_to_gpu(gpuFlowProblem);
+                auto gpuFlowProblemView = gpuistl::make_view(gpuFlowProblemBuffer);
+                using GpuProblem = decltype(gpuFlowProblemView);
 
                 int constexpr blockSize = 256;
                 linearize_parallelization_wrapper<run_assembly_on_gpu, GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU>(
@@ -1233,7 +1149,7 @@ private:
                     dispersionActive,
                     enableBioeffects,
                     on_full_domain,
-                    gpuFlowProblemVerySimpleView,
+                    gpuFlowProblemView,
                     gpuVolumesView);
                 if (boundaryInfo_buffer.size() > 0) {
                     linearize_kernel_bc<GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU><<<((boundaryInfo_buffer.size()+blockSize - 1)/blockSize), blockSize>>>(
@@ -1241,7 +1157,7 @@ private:
                         gpuResidualView,
                         boundaryInfo_view,
                         gpuModelView,
-                        gpuFlowProblemVerySimpleView);
+                        gpuFlowProblemView);
                 }
 
                 // Now move the gpu residual into the cpu residual

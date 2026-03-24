@@ -1014,6 +1014,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/RFTContainer.hpp
   opm/simulators/flow/RSTConv.hpp
   opm/simulators/flow/RegionPhasePVAverage.hpp
+  opm/simulators/flow/SimplifiedFlowProblemGPU.hpp
   opm/simulators/flow/SimulatorConvergenceOutput.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp
   opm/simulators/flow/SimulatorReportBanners.hpp
