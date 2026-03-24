@@ -11,21 +11,26 @@
 # Any non-zero exit code is treated as PASS. Only exit 0 (master completed
 # despite slave parse error) is treated as FAIL.
 #
-# Known issue — OpenMPI 5.x BTL TCP IPv6 bug:
+# Known issue — OpenMPI 5.x BTL TCP IPv6 bug (observed with Ubuntu package):
 #   On systems where a network interface has both IPv4 and IPv6 addresses
 #   (common with WiFi), OpenMPI 5.x BTL TCP registers only the IPv6
-#   address for the interface, regardless of any if_include/if_exclude
-#   settings. When MPI_Comm_spawn is used, the spawned child connects
-#   back to the parent using IPv4, but the parent only knows the child's
-#   IPv6 address — so it rejects the connection ("dropped inbound
-#   connection" or "UNREACHABLE").
+#   address for the interface when built with --enable-ipv6. When
+#   MPI_Comm_spawn is used, the spawned child may connect back to the
+#   parent using an IPv4 source address that the parent doesn't recognize,
+#   causing the connection to be rejected ("dropped inbound connection"
+#   or "UNREACHABLE").
 #
-#   This bug is NOT present in OpenMPI 4.1.6.
+#   This bug is NOT present in OpenMPI 4.1.6. It has been observed with
+#   the Ubuntu 25.10 system package (5.0.8-8ubuntu1) but could not be
+#   reproduced with custom source builds of the same version, suggesting
+#   additional runtime factors (e.g., --with-verbs, --with-libfabric)
+#   affect connection routing.
 #
 #   Root cause: opal/mca/btl/tcp/btl_tcp_component.c mca_btl_tcp_create()
 #   iterates opal_if_list and takes the FIRST address for each interface,
-#   which is IPv6 when both families are present. The code has a comment
-#   acknowledging this limitation.
+#   which is IPv6 when both families are present. The source code has a
+#   comment acknowledging this limitation:
+#   https://github.com/open-mpi/ompi/blob/v5.0.8/opal/mca/btl/tcp/btl_tcp_component.c#L501-L515
 #
 #   Workaround: disable IPv6 in BTL TCP address selection:
 #     export OMPI_MCA_btl_tcp_disable_family=6
