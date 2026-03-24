@@ -51,6 +51,24 @@
 
 namespace Opm {
 
+namespace {
+
+std::string phaseName(const Phase phase)
+{
+    switch (phase) {
+    case Phase::WATER:
+        return "WATER";
+    case Phase::OIL:
+        return "OIL";
+    case Phase::GAS:
+        return "GAS";
+    default:
+        return fmt::format("UNKNOWN({})", static_cast<int>(phase));
+    }
+}
+
+} // namespace
+
 // ---------------------------------------------
 // Constructor for the GuideRateHandler class
 // ---------------------------------------------
@@ -474,6 +492,21 @@ updateGuideRatesForInjectionGroups_(const Group& group)
         }
         case Group::GuideRateInjTarget::NETV:
         {
+            // A group without RESV/VREP controls has no top-up phase, which is fine — NETV still
+            // computes a meaningful value from the available rates.
+            if (group.topup_phase().has_value() && group.topup_phase().value() != phase) {
+                OPM_DEFLOG_THROW(
+                    std::runtime_error,
+                    fmt::format(
+                        "Invalid GCONINJE guide rate configuration: group {} uses NETV guide rate "
+                        "for phase {}, but the group's top-up phase is {}",
+                        group.name(),
+                        phaseName(phase),
+                        phaseName(group.topup_phase().value())),
+                    this->deferredLogger()
+                );
+            }
+
             const auto& pu = this->phaseUsage();
 
             guide_rate_value = this->group_state_.injection_vrep_rate(group.name());
