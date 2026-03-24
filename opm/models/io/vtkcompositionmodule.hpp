@@ -157,9 +157,11 @@ public:
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 if (params_.totalMassFracOutput_) {
+                    // TODO: for compositional fluid state, there is a member function
                     Scalar compMass = 0;
                     Scalar totalMass = 0;
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                        if (!fs.phaseIsActive(phaseIdx)) continue;
                         totalMass += Toolbox::value(fs.density(phaseIdx)) * Toolbox::value(fs.saturation(phaseIdx));
                         compMass +=
                             Toolbox::value(fs.density(phaseIdx)) *
@@ -169,9 +171,11 @@ public:
                     totalMassFrac_[compIdx][I] = compMass / totalMass;
                 }
                 if (params_.totalMoleFracOutput_) {
+                    // TODO: for compositional fluid state, there is a member function
                     Scalar compMoles = 0;
                     Scalar totalMoles = 0;
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                        if (!fs.phaseIsActive(phaseIdx)) continue;
                         totalMoles +=
                             Toolbox::value(fs.molarDensity(phaseIdx)) *
                             Toolbox::value(fs.saturation(phaseIdx));
