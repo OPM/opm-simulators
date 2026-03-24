@@ -32,8 +32,8 @@ namespace Opm::Parameters {
 // set default values for what quantities to output
 struct VtkWriteMassFractions { static constexpr bool value = false; };
 struct VtkWriteMoleFractions { static constexpr bool value = true; };
-struct VtkWriteTotalMassFractions { static constexpr bool value = false; };
-struct VtkWriteTotalMoleFractions { static constexpr bool value = false; };
+struct VtkWriteTotalMassFractions { static constexpr bool value = true; };
+struct VtkWriteTotalMoleFractions { static constexpr bool value = true; };
 struct VtkWriteMolarities { static constexpr bool value = false; };
 struct VtkWriteFugacities { static constexpr bool value = false; };
 struct VtkWriteFugacityCoeffs { static constexpr bool value = false; };
