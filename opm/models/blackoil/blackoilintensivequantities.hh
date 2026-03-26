@@ -174,7 +174,7 @@ public:
     }
     BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
-    OPM_HOST_DEVICE BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
+    BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
 
     template<class OtherTypeTag>
     friend class BlackOilIntensiveQuantities;
