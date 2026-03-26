@@ -316,6 +316,11 @@ struct IsNumber<Opm::MatrixBlock<T, n, m>>
     : public IsNumber<Dune::FieldMatrix<T,n,m>>
 {};
 
+template<typename T, int n, int m>
+struct FieldTraits<Opm::MatrixBlock<T, n, m>>
+    : public FieldTraits<Dune::FieldMatrix<T,n,m>>
+{};
+
 } // end namespace Dune
 
 
