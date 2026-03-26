@@ -181,7 +181,7 @@ public:
 
     // This ctor is used when switching to the GPU typetag which currently supports thermal effects and diffusion.
     template<class OtherTypeTag>
-    OPM_HOST_DEVICE explicit BlackOilIntensiveQuantities(
+    explicit BlackOilIntensiveQuantities(
         const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
         : fluidState_(other.fluidState_.withOtherFluidSystem(fsystem))
         , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(
