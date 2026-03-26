@@ -184,15 +184,15 @@ public:
     OPM_HOST_DEVICE explicit BlackOilIntensiveQuantities(
         const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
         : fluidState_(other.fluidState_.withOtherFluidSystem(fsystem))
+        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(
+            other.rockInternalEnergy_, other.totalThermalConductivity_, other.rockFraction_)
+        , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(
+            other.tortuosities(), other.diffusionCoefficients())
         , referencePorosity_(other.referencePorosity_)
         , porosity_(other.porosity_)
         , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
         , mobility_(other.mobility_)
         , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
-        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(
-            other.rockInternalEnergy_, other.totalThermalConductivity_, other.rockFraction_)
-        , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(
-            other.tortuosities(), other.diffusionCoefficients())
     {
         static_assert(!enableSolvent);
         static_assert(!enableExtbo);
