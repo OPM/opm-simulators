@@ -194,6 +194,56 @@ namespace {
         return state;
     }
 
+    Opm::Deck makeOilWaterRsconstWellDeck()
+    {
+        return Opm::Parser{}.parseString(R"(
+RUNSPEC
+  OIL
+  WATER
+  METRIC
+  DIMENS
+    2 1 1 /
+
+START
+  1 JAN 2000 /
+
+GRID
+  DXV
+    2*100 /
+  DYV
+    1*100 /
+  DZV
+    1*10 /
+  DEPTHZ
+    6*1000 /
+  PORO
+    2*0.20 /
+  PERMX
+    2*100 /
+  PERMY
+    2*100 /
+  PERMZ
+    2*20 /
+
+SCHEDULE
+  WELSPECS
+    'PROD' 'G' 1 1 1000 'OIL' /
+    'INJ'  'G' 2 1 1000 'WATER' /
+  /
+  COMPDAT
+    'PROD' 1 1 1 1 'OPEN' 1* 100 0.1 /
+    'INJ'  2 1 1 1 'OPEN' 1* 100 0.1 /
+  /
+  WCONPROD
+    'PROD' 'OPEN' 'ORAT' 100 4* 100 /
+  /
+  WCONINJE
+    'INJ' 'WATER' 'OPEN' 'RATE' 100 1* 200 /
+  /
+END
+)");
+    }
+
 
     void setSegPress(const std::vector<Opm::Well>& wells,
                      WellState& wstate)
@@ -400,6 +450,46 @@ BOOST_AUTO_TEST_CASE(STOP_well)
         for (const auto& p : perf_data.pressure)
             BOOST_CHECK(p > 0);
     }
+}
+
+BOOST_AUTO_TEST_CASE(RSCONST_ProducerGasSynthesizedFromOilRate)
+{
+    const Setup setup{ makeOilWaterRsconstWellDeck() };
+    const auto tstep = std::size_t{0};
+
+    std::vector<Opm::ParallelWellInfo<double>> pinfos;
+    auto wstate = buildWellState(setup, tstep, pinfos);
+
+    const auto oilPos = setup.pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+    wstate.well("PROD").surface_rates[oilPos] = 10.0;
+
+    const Opm::RsConstInfo rsConst{true, 0.37};
+    const auto rpt = wstate.report(setup.grid.c_grid()->global_cell,
+                                   [](const int){ return false; },
+                                   rsConst);
+
+    const auto& rates = rpt.at("PROD").rates;
+    BOOST_CHECK_CLOSE(rates.get(Opm::data::Rates::opt::oil), 10.0, 1e-12);
+    BOOST_CHECK_CLOSE(rates.get(Opm::data::Rates::opt::gas), 3.7, 1e-12);
+    BOOST_CHECK_CLOSE(rates.get(Opm::data::Rates::opt::dissolved_gas), 3.7, 1e-12);
+}
+
+BOOST_AUTO_TEST_CASE(RSCONST_InjectionWellDoesNotSynthesizeGas)
+{
+    const Setup setup{ makeOilWaterRsconstWellDeck() };
+    const auto tstep = std::size_t{0};
+
+    std::vector<Opm::ParallelWellInfo<double>> pinfos;
+    auto wstate = buildWellState(setup, tstep, pinfos);
+
+    const Opm::RsConstInfo rsConst{true, 0.37};
+    const auto rpt = wstate.report(setup.grid.c_grid()->global_cell,
+                                   [](const int){ return false; },
+                                   rsConst);
+
+    const auto& rates = rpt.at("INJ").rates;
+    BOOST_CHECK(!rates.has(Opm::data::Rates::opt::gas));
+    BOOST_CHECK(!rates.has(Opm::data::Rates::opt::dissolved_gas));
 }
 
 

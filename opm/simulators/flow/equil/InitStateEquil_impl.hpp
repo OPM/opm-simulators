@@ -1580,7 +1580,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
             Scalar rsConstValue = 0.0;
             Scalar pbConstValue = 0.0;
 
-            if (FluidSystem::enableConstantRs()) {
+            if (FluidSystem::enableConstantRs() && tables.hasTables("RSCONST")) {
                 const TableContainer& rsconstTables = tables.getRsconstTables();
                 if (!rsconstTables.empty()) {
                     const RsconstTable& rsconstTable = rsconstTables.getTable<RsconstTable>(0);
