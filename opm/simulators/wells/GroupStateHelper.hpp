@@ -51,7 +51,6 @@
 
 namespace Opm
 {
-
 template <typename Scalar, typename IndexTraits>
 class GroupStateHelper
 {
@@ -261,6 +260,9 @@ public:
     /// @return The GuideRateModel::Target based on the group's production control mode
     GuideRateModel::Target getProductionGuideTargetMode(const Group& group) const;
 
+    GuideRateModel::Target
+    getProductionGuideTargetModeFromControlMode(const Group::ProductionCMode cmode) const;
+
     std::pair<Scalar, Group::ProductionCMode>
     getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
                                           const Group& group,
@@ -282,7 +284,8 @@ public:
                                                           const Group& group,
                                                           const Scalar* rates,
                                                           const Scalar efficiency_factor,
-                                                          const std::vector<Scalar>& resv_coeff) const;
+                                                          const std::vector<Scalar>& resv_coeff,
+                                                          std::optional<Group::ProductionCMode> target_cmode = std::nullopt) const;
 
     GuideRate::RateVector getWellRateVector(const std::string& name) const;
 
@@ -445,6 +448,8 @@ public:
                                    const Phase injection_phase);
 
     void updateGroupProductionRates(const Group& group);
+
+    void updatePreviousGroupProductionRates(const Group& group);
 
     void updateGroupTargetReduction(const Group& group,
                                     const bool is_injector);
