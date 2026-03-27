@@ -310,6 +310,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
     ThreadSafeMapBuilder dispersivity(dispersivity_, num_threads,
                                       MapBuilderInsertionMode::Insert_Or_Assign);
 
+    const auto& nnc_input = eclState_.getInputNNC().input();
+
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -480,10 +482,19 @@ update(bool global, const TransUpdateQuantities update_quantities,
                     applyMultipliers_(trans, outside.faceIdx, outside.cartElemIdx, transMult);
                 }
 
-                // apply the region multipliers (cf. the MULTREGT keyword)
-                trans *= transMult.getRegionMultiplier(inside.cartElemIdx,
-                                                       outside.cartElemIdx,
-                                                       faceIdToDir(inside.faceIdx));
+                bool foundInputNNC = false;
+                if (! nnc_input.empty()) {
+                    // Skip region multipliers for overlapping input NNCs (they are handled later)
+                    auto it = std::lower_bound(nnc_input.begin(), nnc_input.end(),
+                                               NNCdata { inside.cartElemIdx, outside.cartElemIdx, 0.0 });
+                    foundInputNNC = it != nnc_input.end() && it->cell1 == inside.cartElemIdx && it->cell2 == outside.cartElemIdx;
+                }
+                if (! foundInputNNC) {
+                    // apply the region multipliers (cf. the MULTREGT keyword)
+                    trans *= transMult.getRegionMultiplier(inside.cartElemIdx,
+                                                           outside.cartElemIdx,
+                                                           faceIdToDir(inside.faceIdx));
+                }
 
                 transMap.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), trans);
 
@@ -562,9 +573,9 @@ update(bool global, const TransUpdateQuantities update_quantities,
         // when computing the gobal transmissibilities and all warnings will
         // be seen in a parallel. Unfortunately, when we do not use transmissibilities
         // we will only see warnings for the partition of process 0 and also false positives.
-        this->applyEditNncToGridTrans_(globalToLocal);
         this->applyPinchNncToGridTrans_(globalToLocal, applyNncMultregT);
         this->applyNncToGridTrans_(globalToLocal);
+        this->applyEditNncToGridTrans_(globalToLocal);
         this->applyEditNncrToGridTrans_(globalToLocal);
         if (applyNncMultregT) {
             this->applyNncMultreg_(globalToLocal);
