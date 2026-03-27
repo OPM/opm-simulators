@@ -349,6 +349,12 @@ getGroupConstraintNoGuideRate(const Group& group)
     assert(this->isProductionConstraint());
     const auto cmode = this->getProdCmode(group);
     if (cmode.has_value()) {
+        // For ConstraintType::Target: cmode comes from the group state (the group's active
+        // production control). If the group is under FLD or NONE control, it has no own target
+        // — return std::nullopt so the caller can use a higher-level distributed target instead.
+        if (*cmode == Group::ProductionCMode::FLD || *cmode == Group::ProductionCMode::NONE) {
+            return std::nullopt;
+        }
         return ConstraintInfo{
             this->groupStateHelper().getProductionGroupTargetForMode(group, *cmode),
             *cmode
@@ -609,9 +615,26 @@ calculateGroupConstraint()
     }
     // Return the more restrictive of the top-level distributed target and the
     // bottom group's own target. This prevents the slave group from overshooting the
-    // top-level budget
+    // top-level budget.
     auto bottom_constraint = this->getGroupConstraintNoGuideRate_(this->bottom_group_);
-    if (bottom_constraint.has_value() && full_target < bottom_constraint->constraint) {
+    if (!bottom_constraint.has_value()) {
+        // The bottom group has no own constraint (e.g. production cmode NONE or FLD).
+        // Check if the bottom group has a limit defined for the top-level control mode
+        // (e.g. an ORAT limit in GCONPROD even though the active cmode is NONE).
+        const auto toplevel_control_mode = this->getToplevelControlMode_();
+        Scalar capped_target = full_target;
+        if (this->isProductionConstraint()) {
+            const auto* prod_cmode = std::get_if<Group::ProductionCMode>(&toplevel_control_mode);
+            if (prod_cmode && this->bottom_group_.has_control(*prod_cmode)) {
+                const Scalar bottom_limit
+                    = this->groupStateHelper().getProductionGroupTargetForMode(
+                        this->bottom_group_, *prod_cmode);
+                capped_target = std::min(full_target, bottom_limit);
+            }
+        }
+        return ConstraintInfo{capped_target, toplevel_control_mode};
+    }
+    if (full_target < bottom_constraint->constraint) {
         const auto toplevel_control_mode = this->getToplevelControlMode_();
         return ConstraintInfo{full_target, toplevel_control_mode};
     }
