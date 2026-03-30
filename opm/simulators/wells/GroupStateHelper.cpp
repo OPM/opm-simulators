@@ -34,6 +34,7 @@
 #include <fmt/format.h>
 
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <stack>
 #include <set>
@@ -1891,7 +1892,6 @@ getInjectionGroupTargetForMode_(
     const std::vector<Scalar>& resv_coeff,
     const Group::InjectionCMode cmode) const
 {
-    const auto& pu = this->phaseUsage();
     const int pos = this->phaseToActivePhaseIdx(injection_phase);
     Group::InjectionControls ctrl = group.injectionControls(injection_phase, this->summary_state_);
     bool use_gpmaint = group.has_gpmaint_control(injection_phase, cmode)
@@ -1928,7 +1928,7 @@ getInjectionGroupTargetForMode_(
             injection_phase, voidage_rate, group_injection_reservoir_rates) / resv_coeff[pos];
     }
     case Group::InjectionCMode::SALE: {
-        assert(pos == pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx) );
+        assert(pos == this->phaseUsage().canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx) );
         Scalar sales_target = 0;
         if (this->schedule_[this->report_step_].gconsale().has(group.name())) {
             const auto& gconsale
