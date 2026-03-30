@@ -789,6 +789,12 @@ template <class MaterialLawManager, class FluidSystem, class Region, typename Ce
 void PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::deriveOilSat()
 {
     this->sat_.oil = 1.0 - this->sat_.water - this->sat_.gas;
+    // Thresholding to account for the case when (sgu+swl) is not exactly 1.0
+    // due to floating-point arithmetic. Having exact zero saturation is
+    // important for the initial handling of phase disappearance in the flow solver.
+    if (this->sat_.oil < 1e-6) {
+        this->sat_.oil = 0.0;
+    }
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
