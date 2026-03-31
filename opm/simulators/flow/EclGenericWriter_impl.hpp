@@ -31,6 +31,7 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/RegionSetMatcher.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
@@ -273,9 +274,12 @@ writeInit()
             integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
         }
 
+        const auto nncCollection = Opm::NNCCollection::fromLGROutputContainers(this->outputNnc_,
+                                                                               this->outputNncGlobalLocal_,
+                                                                               this->outputAmalgamatedNnc_);
         eclIO_->writeInitial(*this->outputTrans_,
                              integerVectors,
-                             this->outputNnc_.front());
+                             nncCollection);
         this->outputTrans_.reset();
     }
 }
