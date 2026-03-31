@@ -33,6 +33,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
 
@@ -245,6 +246,8 @@ BlackoilModel<TypeTag>::
 nonlinearIteration(const SimulatorTimerInterface& timer,
                    NonlinearSolverType& nonlinear_solver)
 {
+    OPM_TIMEFUNCTION();
+
     // Model-level timestep initialization (once per timestep).
     // markTimestepInitialized() is called later in initialLinearization(),
     // after assembleReservoir() has triggered the well model's prepareTimeStep().
