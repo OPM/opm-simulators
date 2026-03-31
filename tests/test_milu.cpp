@@ -141,8 +141,7 @@ void setupLaplacian(Dune::BCRSMatrix<B,Alloc>& A, int N)
 
   setupSparsityPattern(A,N);
 
-  B diagonal(static_cast<FieldType>(0)), bone(static_cast<FieldType>(0)),
-  beps(static_cast<FieldType>(0));
+  B diagonal(static_cast<FieldType>(0)), bone(static_cast<FieldType>(0));
   for(typename B::RowIterator b = diagonal.begin(); b !=  diagonal.end(); ++b)
     b->operator[](b.index())=4;
 
