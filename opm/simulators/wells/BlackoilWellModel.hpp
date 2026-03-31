@@ -23,9 +23,8 @@
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 
-#include <opm/simulators/wells/rescoup/RescoupProxy.hpp>
-
 #include <dune/common/fmatrix.hh>
+
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmatrix.hh>
 
@@ -56,6 +55,7 @@
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/MultisegmentWell.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
@@ -66,12 +66,12 @@
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
-#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/WGState.hpp>
+#include <opm/simulators/wells/rescoup/RescoupProxy.hpp>
 
 #include <cstddef>
 #include <map>
@@ -209,9 +209,8 @@ template<class Scalar> class WellContributions;
                 auto wsrpt = this->wellState()
                     .report(this->simulator_.vanguard().globalCell().data(),
                             [this](const int well_index)
-                {
-                    return this->wasDynamicallyShutThisTimeStep(well_index);
-                });
+                            { return this->wasDynamicallyShutThisTimeStep(well_index); },
+                            this->rsConstInfo());
 
                 BlackoilWellModelGuideRates(*this)
                     .assignWellGuideRates(wsrpt, this->reportStepIndex());
@@ -632,6 +631,9 @@ template<class Scalar> class WellContributions;
 
             void assignWellTracerRates(data::Wells& wsrpt) const;
             void assignWellSpeciesRates(data::Wells& wsrpt) const;
+
+            [[nodiscard]] auto rsConstInfo() const
+                -> typename WellState<Scalar,IndexTraits>::RsConstInfo;
         };
 
 } // namespace Opm

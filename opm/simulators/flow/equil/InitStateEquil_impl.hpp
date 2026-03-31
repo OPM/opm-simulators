@@ -30,21 +30,24 @@
 #include <opm/grid/utility/RegionMapping.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/EclipseState/Tables/RsvdTable.hpp>
-#include <opm/input/eclipse/EclipseState/Tables/RvvdTable.hpp>
-#include <opm/input/eclipse/EclipseState/Tables/RvwvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PbvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PdvdTable.hpp>
-#include <opm/input/eclipse/EclipseState/Tables/SaltvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/RsconstTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/RsvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/RtempvdTable.hpp>
-
+#include <opm/input/eclipse/EclipseState/Tables/RvvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/RvwvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SaltvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SaltpvdTable.hpp>
+
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/flow/equil/InitStateEquil.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <fmt/format.h>
@@ -450,7 +453,7 @@ density(const Scalar depth,
 {
     const Scalar temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
     Scalar rs = 0.0;
-    if (FluidSystem::enableDissolvedGas())
+    if (FluidSystem::enableDissolvedGas() || FluidSystem::enableConstantRs())
         rs = rs_(depth, press, temp);
 
     Scalar bOil = 0.0;
@@ -461,7 +464,7 @@ density(const Scalar depth,
         bOil = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, rs);
     }
     Scalar rho = bOil * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_);
-    if (FluidSystem::enableDissolvedGas()) {
+    if (FluidSystem::enableDissolvedGas() || FluidSystem::enableConstantRs()) {
         rho += rs * bOil * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
     }
 
@@ -1574,8 +1577,37 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
             }
         }
     }
+    else if (FluidSystem::enableConstantRs() && tables.hasTables("RSCONST")) {
+        const auto& rsconstTables = tables.getRsconstTables();
+
+        if (rsconstTables.empty()) {
+            for (std::size_t i = 0; i < rec.size(); ++i) {
+                // Normal dead oil (no dissolved gas and rsconst)
+                rsFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
+            }
+        }
+        else {
+            const auto& rsconstTable = rsconstTables.getTable<RsconstTable>(0);
+
+            const auto rsConst = rsconstTable.getRsColumn().front();
+            const auto pBub = rsconstTable.getPbubColumn().front();
+
+            const auto& units = eclipseState.getUnits();
+
+            OpmLog::info(fmt::format("Using RSCONST keyword: Rs = {:.2} [{}], Pb = {:.2} [{}]",
+                                     units.from_si(UnitSystem::measure::gas_oil_ratio, rsConst),
+                                     units.name   (UnitSystem::measure::gas_oil_ratio),
+                                     units.from_si(UnitSystem::measure::pressure, pBub),
+                                     units.name   (UnitSystem::measure::pressure)));
+
+            for (std::size_t i = 0; i < rec.size(); ++i) {
+                rsFunc_.push_back(std::make_shared<Miscibility::RsConst<FluidSystem>>(rsConst, pBub));
+            }
+        }
+    }
     else {
         for (std::size_t i = 0; i < rec.size(); ++i) {
+            // Normal dead oil (no dissolved gas and rsconst)
             rsFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
         }
     }
@@ -1690,7 +1722,6 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
         }
     }
 
-
     // EXTRACT the initial temperature
     updateInitialTemperature_(eclipseState, eqlmap);
 
@@ -1705,7 +1736,9 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     calcPressSatRsRv(eqlmap, rec, materialLawManager, gridView, comm, grav);
 
     // modify the pressure and saturation for numerical aquifer cells
-    applyNumericalAquifers_(gridView, num_aquifers, eclipseState.runspec().co2Storage() || eclipseState.runspec().h2Storage());
+    applyNumericalAquifers_(gridView, num_aquifers,
+                            eclipseState.runspec().co2Storage() ||
+                            eclipseState.runspec().h2Storage());
 
     // Modify oil pressure in no-oil regions so that the pressures of present phases can
     // be recovered from the oil pressure and capillary relations.

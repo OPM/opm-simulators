@@ -31,6 +31,12 @@
 
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
+
 #include <fmt/format.h>
 
 namespace Opm {
@@ -347,6 +353,53 @@ RvwSatAtContact<FluidSystem>::
 satRvw(const Scalar press, const Scalar temp) const
 {
     return FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp, press);;
+}
+
+template <class FluidSystem>
+RsConst<FluidSystem>::RsConst(const Scalar rs_constant,
+                              const Scalar pb_constant)
+    : rs_constant_(rs_constant)
+    , pb_constant_(pb_constant)
+{
+    // Validate that rs_constant is reasonable
+    if (this->rs_constant_ < 0.0) {
+        throw std::invalid_argument("RSCONST RS value cannot be negative");
+    }
+
+    if (this->pb_constant_ <= 0.0) {
+        throw std::invalid_argument("RSCONST bubble point pressure must be positive");
+    }
+}
+
+template <class FluidSystem>
+typename FluidSystem::Scalar
+RsConst<FluidSystem>::satRs([[maybe_unused]] const Scalar press,
+                            [[maybe_unused]] const Scalar temp) const
+{
+    // For RSCONST, the saturated Rs is the constant value.
+    return this->rs_constant_;
+}
+
+template <class FluidSystem>
+typename FluidSystem::Scalar
+RsConst<FluidSystem>::operator()([[maybe_unused]] const Scalar depth,
+                                 [[maybe_unused]] const Scalar press,
+                                 [[maybe_unused]] const Scalar temp,
+                                 [[maybe_unused]] const Scalar satGas) const
+{
+    // For RSCONST with PVDO (dead oil):
+    // 1. Oil is always treated as undersaturated with constant dissolved gas.
+    // 2. Simulation should terminate if pressure < pb_constant_.
+    // 3. Always ensure we use undersaturated PVT calculation.
+
+    if (press < this->pb_constant_) {
+        throw std::invalid_argument {
+            fmt::format("Pressure {} is below bubble point pressure {}",
+                        press, this->pb_constant_)
+        };
+    }
+
+    return this->rs_constant_;
 }
 
 } // namespace Miscibility
