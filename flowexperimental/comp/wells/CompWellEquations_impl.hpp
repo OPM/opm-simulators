@@ -25,9 +25,6 @@ template <typename Scalar, int numWellEq, int numEq>
 CompWellEquations<Scalar, numWellEq, numEq>::
 CompWellEquations()
 {
-    duneB_.setBuildMode(OffDiagMatWell::row_wise);
-    duneC_.setBuildMode(OffDiagMatWell::row_wise),
-    duneD_.setBuildMode(DiagMatWell::row_wise);
     invDuneD_.setBuildMode(DiagMatWell::row_wise);
 }
 
@@ -37,6 +34,10 @@ void
 CompWellEquations<Scalar, numWellEq, numEq>::
 init(const int num_conn,  const std::vector<std::size_t>& cells)
 {
+    duneB_.setBuildMode(OffDiagMatWell::row_wise);
+    duneC_.setBuildMode(OffDiagMatWell::row_wise),
+    duneD_.setBuildMode(DiagMatWell::row_wise);
+
     duneD_.setSize(1, 1, 1);
     duneB_.setSize(1, num_conn, num_conn);
     duneC_.setSize(1, num_conn, num_conn);
