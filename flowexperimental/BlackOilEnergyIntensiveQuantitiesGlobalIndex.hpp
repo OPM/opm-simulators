@@ -134,7 +134,7 @@ public:
                                  [[maybe_unused]] const PrimaryVariables& priVars,
                                  [[maybe_unused]] unsigned globalSpaceIndex,
                                  [[maybe_unused]] unsigned timeIdx,
-                                 const ParamCache& paramCache)
+                                 [[maybe_unused]] const ParamCache& paramCache)
     {
         throw std::logic_error("updateEnergyQuantities_ not implemented "
                 "SequentialImplicitThermal can not be used with"
