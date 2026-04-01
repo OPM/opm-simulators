@@ -32,6 +32,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <functional>
 
 namespace Opm
 {
@@ -83,6 +84,11 @@ public:
 
     /// Well cells.
     const std::vector<int>& cells() const { return well_cells_; }
+
+    /// Local IDs of other ranks' overlap cells that are interior on this rank
+    const std::vector<std::vector<int>>& getOwnedOverlap() const {return ownedOverlapConnections;}
+    /// Local IDs of other ranks' interior cells that are overlap on this rank
+    const std::vector<std::vector<int>>& getMissingOverlap() const {return missingOverlapConnections;}
 
     /// Index of well in the wells struct and wellState
     int indexOfWell() const;
@@ -211,6 +217,14 @@ public:
 
     void addPerforations(const std::vector<RuntimePerforation>& perfs);
 
+    /// \brief initialize ownedOverlapConnections, missingOverlapConnections
+    /// \param[in] getOverlapConnections a function returning local IDs of the well's connections on the overlap
+    /// \param[in] getInteriorConnections a function returning local IDs of the well's connections inside the subdomain
+    /// \param[in] globalCells a vector of global IDs; indexed by local ID
+    void initOverlapConnections (const std::function<std::vector<int>(const WellInterfaceGeneric&)>& getOverlapConnections,
+                                 const std::function<std::vector<int>(const WellInterfaceGeneric&)>& getInteriorConnections,
+                                 const std::vector<int>& globalCells);
+
 protected:
     bool getAllowCrossFlow() const;
 
@@ -333,6 +347,11 @@ protected:
 
     // cell index for each well perforation
     std::vector<int> well_cells_;
+
+    // structures for communicating the distributed well's connections on the overlap
+    // vec[rank][ID] holds the target rank for pair-wise communication and local IDs of cells
+    std::vector<std::vector<int>> ownedOverlapConnections, missingOverlapConnections;
+    bool overlapConnectionsWereSet = false;
 
     // well index for each perforation
     std::vector<Scalar> well_index_;
