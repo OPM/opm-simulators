@@ -1,0 +1,130 @@
+----------------
+RUNSPEC
+----------------
+
+TITLE
+    TWO CELLS X-DIR TPSA /
+
+DIMENS
+    2 1 1 /
+
+EQLDIMS
+/
+
+TABDIMS
+/
+
+WELLDIMS
+1 1 1 1 /
+
+WATER
+
+MECH
+
+MECHSOLV
+TPSA /
+
+METRIC
+
+START
+    1 JAN 2025 /
+
+UNIFIN
+UNIFOUT
+
+----------------
+GRID
+----------------
+
+DX
+    100 200 /
+DY
+    2*100 /
+DZ
+    2*100 /
+
+TOPS
+    50  50 /
+
+PORO
+    2*0.25 /
+PERMX
+    2*1000 /
+COPY
+    PERMX PERMY /
+    PERMX PERMZ /
+/
+
+BIOTCOEF
+    2*1.0 /
+
+LAME
+    2*2.0 /
+
+SMODULUS
+    2*3.0 /
+
+INIT
+
+----------------
+PROPS
+----------------
+
+ROCKOPTS
+    1* STORE /
+
+ROCK
+    1.0 1E-05 /
+
+DENSITY
+    860.04 1033.0 0.853 /
+
+PVTW
+    10 1.0 4E-5 0.5 /
+
+----------------
+SOLUTION
+----------------
+
+EQUIL
+    100.0 10.0 /
+
+RTEMPVD
+        100.0 25.0
+        200.0 25.0 /
+
+RPTRST
+    BASIC=2 /
+
+----------------
+SUMMARY
+----------------
+FPR
+
+----------------
+SCHEDULE
+----------------
+
+RPTRST
+    BASIC=2 /
+
+WELSPECS
+    W1 INJ 1 1 1* WAT/
+/
+
+COMPDAT
+    W1 1 1 1 1 OPEN 2* 0.2 /
+/
+
+WCONINJE
+    W1 WAT OPEN RATE 100.0 1* 900 /
+/
+
+--SOURCE
+--    1 1 1 WATER 100.0 /
+--/
+
+TSTEP
+    2 /
+
+END
