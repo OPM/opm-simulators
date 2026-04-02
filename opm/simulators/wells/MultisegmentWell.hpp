@@ -164,6 +164,8 @@ namespace Opm {
 
         int setPrimaryVars(typename std::vector<Scalar>::const_iterator it) override;
 
+        void getScaledWellFractions(std::vector<Scalar>& scaled_fractions) const override;
+
     protected:
         // regularize msw equation
         bool regularize_;
