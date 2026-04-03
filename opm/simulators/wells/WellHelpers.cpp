@@ -252,7 +252,8 @@ using Comm = Parallel::Communication;
     INSTANTIATE(T,6)                                                            \
     INSTANTIATE_WE(T,2)                                                         \
     INSTANTIATE_WE(T,3)                                                         \
-    INSTANTIATE_WE(T,4)
+    INSTANTIATE_WE(T,4)                                                         \
+    INSTANTIATE_WE(T,5)
 
 INSTANTIATE_TYPE(double)
 
