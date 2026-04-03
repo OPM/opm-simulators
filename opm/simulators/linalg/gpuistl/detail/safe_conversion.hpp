@@ -19,14 +19,18 @@
 #ifndef OPM_CUISTL_SAFE_CONVERSION_HPP
 #define OPM_CUISTL_SAFE_CONVERSION_HPP
 
-
+#include <opm/common/ErrorMacros.hpp>
 
 #include <cstddef>
-#include <fmt/format.h>
 #include <limits>
-#include <opm/common/ErrorMacros.hpp>
 #include <type_traits>
 #include <cuda_runtime.h>
+
+#if CUDA_VERSION >= 12100
+#include <fmt/format.h>
+#else
+#include <sstream>
+#endif
 
 
 /**
@@ -64,10 +68,17 @@ to_int(std::size_t s)
 
 
     if (s > std::size_t(std::numeric_limits<int>::max())) {
+#if CUDA_VERSION >= 12100
         OPM_THROW(std::invalid_argument,
                   fmt::format(fmt::runtime("Trying to convert {} to int, but it is out of range. Maximum possible int: {}. "),
                               s,
                               std::numeric_limits<int>::max()));
+#else
+        std::stringstream str;
+        str << "Trying to convert " << s << " to int, but it is out of range. Maximum possible int: "
+            << std::numeric_limits<int>::max() << " .";
+        OPM_THROW(std::invalid_argument, str.str());
+#endif
     }
 
     // We know it will be in range here:
@@ -100,7 +111,13 @@ to_size_t(int i)
     assert(i >= int(0));
 #else
     if (i < int(0)) {
+#if CUDA_VERSION >= 12100
         OPM_THROW(std::invalid_argument, fmt::format(fmt::runtime("Trying to convert the negative number {} to size_t."), i));
+#else
+        std::stringstream str;
+        str << "Trying to convert the negative number " << i << "  to size_t.";
+        OPM_THROW(std::invalid_argument, str.str());
+#endif
     }
 #endif
 
