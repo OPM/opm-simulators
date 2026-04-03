@@ -75,9 +75,9 @@ namespace Opm
         using typename Base::Indices;
         using typename Base::RateConverterType;
         using typename Base::SparseMatrixAdapter;
-        using typename Base::FluidState;
         using typename Base::RateVector;
         using typename Base::GroupStateHelperType;
+        using typename Base::SolventModule;
 
         using Base::has_solvent;
         using Base::has_zFraction;
@@ -92,6 +92,9 @@ namespace Opm
         using PolymerModule =  BlackOilPolymerModule<TypeTag>;
         using FoamModule = BlackOilFoamModule<TypeTag>;
         using typename Base::PressureMatrix;
+
+        template <typename ValueType>
+        using FluidState = Base::template FluidState<ValueType>;
 
         // number of the conservation equations
         static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
@@ -458,8 +461,34 @@ namespace Opm
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
 
+        EvalWell getWellBoreSurfaceVolume(const Simulator& simulator,
+                                          DeferredLogger& deferred_logger) const;
+
         // density of the first perforation, might not be from this rank
         Scalar cachedRefDensity{0};
+
+        // this is an artificial wellbore volume to account for the fluid accumulation in the wellbore
+        // it is mostly helpful if the well is STOPPed or under zero rate target
+        static constexpr Scalar wellbore_volume = 0.1 * unit::cubic(unit::feet);
+
+        // the volume under surface conditions for different components in the wellbore
+        // at the beginning of the time step
+        std::vector<Scalar> fluids_initial_;
+
+        FluidState<EvalWell> well_fluid_state_;
+
+        // computing the accumulation term for later use in conservation equations for wells
+        void computeInitialFluids();
+
+        // we might not need to have the ValueType template parameter
+        template <typename ValueType>
+        void updateWellFluidState();
+
+        // this function can be static or to helper class
+        template <typename ValueType>
+        ValueType wellboreComponentSurfaceVolume(const FluidState<ValueType>& fs,
+                                                 unsigned compIdx,
+                                                 ValueType wellboreVolume) const;
     };
 
 }
