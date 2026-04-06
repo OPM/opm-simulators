@@ -180,7 +180,7 @@ public:
      * \param boundaryFaceIdx The local index of the boundary segment
      * \param timeIdx The index of the solution used by the time discretization
      */
-    const GlobalPosition& pos(unsigned boundaryFaceIdx, unsigned timeIdx) const
+    GlobalPosition pos(unsigned boundaryFaceIdx, unsigned timeIdx) const
     { return stencil(timeIdx).boundaryFace(boundaryFaceIdx).integrationPos(); }
 
     /*!
@@ -189,7 +189,7 @@ public:
      * \param boundaryFaceIdx The local index of the boundary segment
      * \param timeIdx The index of the solution used by the time discretization
      */
-    const GlobalPosition& cvCenter(unsigned boundaryFaceIdx, unsigned timeIdx) const
+    GlobalPosition cvCenter(unsigned boundaryFaceIdx, unsigned timeIdx) const
     {
         const unsigned scvIdx = stencil(timeIdx).boundaryFace(boundaryFaceIdx).interiorIndex();
         return stencil(timeIdx).subControlVolume(scvIdx).globalPos();
