@@ -174,7 +174,7 @@ public:
     *
     * This function is a combination FvBaseDiscretization::applyInitialSolution and FlowProblemBlackoil::initial()
     */
-    void initialSolutionApplied()
+    void initialSolutionApplied() override
     {
         // Set up initial solution for the Flow model
         ParentType::initialSolutionApplied();
