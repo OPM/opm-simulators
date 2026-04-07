@@ -455,10 +455,10 @@ computeDistance_(const DimVector& distVec, const DimVector& faceNormal)
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 template<class Intersection>
 void FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>::
-computeCellProperties(const Intersection& intersection,
-                      FaceInfo& inside,
-                      FaceInfo& outside,
-                      DimVector& faceNormal,
+computeCellProperties([[maybe_unused]] const Intersection& intersection,
+                      [[maybe_unused]] FaceInfo& inside,
+                      [[maybe_unused]] FaceInfo& outside,
+                      [[maybe_unused]] DimVector& faceNormal,
                       /*isCpGrid=*/std::false_type) const
 {
     throw std::runtime_error("TPSA not implemented for DUNE grid types other than CpGrid!");
