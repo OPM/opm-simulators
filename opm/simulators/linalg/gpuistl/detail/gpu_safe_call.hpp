@@ -19,7 +19,11 @@
 #ifndef OPM_GPU_SAFE_CALL_HPP
 #define OPM_GPU_SAFE_CALL_HPP
 #include <cuda_runtime.h>
+#if CUDA_VERSION >= 12100
 #include <fmt/core.h>
+#else
+#include <sstream>
+#endif
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <string_view>
@@ -30,10 +34,10 @@ namespace Opm::gpuistl::detail
  * @brief getCudaErrorMessage generates the error message to display for a given error.
  *
  * @param error the error code from cublas
- * @param expression the expresison (say "cudaMalloc(&pointer, 1)")
- * @param filename the code file the error occured in (typically __FILE__)
- * @param functionName name of the function the error occured in (typically __func__)
- * @param lineNumber the line number the error occured in (typically __LINE__)
+ * @param expression the expression (say "cudaMalloc(&pointer, 1)")
+ * @param filename the file the error occurred in (typically __FILE__)
+ * @param functionName name of the function the error occurred in (typically __func__)
+ * @param lineNumber the line number the error occurred in (typically __LINE__)
  *
  * @todo Refactor to use std::source_location once we shift to C++20
  *
@@ -48,6 +52,7 @@ getCudaErrorMessage(cudaError_t error,
                     const std::string_view& functionName,
                     size_t lineNumber)
 {
+#if CUDA_VERSION >= 12100
     return fmt::format(fmt::runtime("GPU expression did not execute correctly. Expression was: \n"
                        "    {}\n"
                        "GPU error was {}\n"
@@ -57,6 +62,15 @@ getCudaErrorMessage(cudaError_t error,
                        functionName,
                        filename,
                        lineNumber);
+#else
+    std::stringstream str;
+    str << "GPU expression did not execute correctly. Expression was: \n"
+        << "    " << expression
+        << "\nGPU error was " << cudaGetErrorString(error)
+        << "\nin function " << functionName << ", in " << filename
+        << ", at line " << lineNumber << '\n';
+    return str.str();
+#endif
 }
 
 /**
