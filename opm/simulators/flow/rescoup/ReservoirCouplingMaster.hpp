@@ -154,6 +154,13 @@ public:
          this->logger_.setDeferredLogger(deferred_logger);
     }
     void setFirstSubstepOfSyncTimestep(bool value);
+
+    /// @brief Update the Schedule's satellite production/injection data from
+    ///   slave group rates.
+    /// @details Called from EclWriter::evalSummaryState() at the end of each
+    ///   sync step. Delegates to ReservoirCouplingMasterReportStep.  See its
+    ///   updateScheduleSatelliteData() for details.
+    void updateScheduleSatelliteData(Schedule& schedule, int report_step_idx);
     // These are currently only used for unit testing
     void setSlaveActivationDate(int index, double date) { this->slave_activation_dates_[index] = date; }
     void setSlaveNextReportTimeOffset(int index, double offset);

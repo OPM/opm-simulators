@@ -497,6 +497,15 @@ updateMasterGroupNameOrderMap(
     this->master_group_name_order_[slave_name] = master_group_name_map;
 }
 
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+updateScheduleSatelliteData(Schedule& schedule, const int report_step_idx)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->updateScheduleSatelliteData(schedule, report_step_idx);
+}
+
 // ------------------
 // Private methods
 // ------------------

@@ -320,6 +320,53 @@ setReportStepIdx(int report_step_idx)
     this->report_step_idx_ = report_step_idx;
 }
 
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+updateScheduleSatelliteData(Schedule& schedule, const int report_step_idx)
+{
+    using RcPhase = ReservoirCoupling::Phase;
+    using RateKind = ReservoirCoupling::RateKind;
+
+    const auto numSlaves = this->numSlaves();
+    for (unsigned int i = 0; i < numSlaves; ++i) {
+        const auto& masterGroupNames = this->getMasterGroupNamesForSlave(i);
+        for (const auto& groupName : masterGroupNames) {
+            // GSatProd expects positive production rates.  The rates from
+            // getMasterGroupRate_(ProductionSurface) originate from the slave's
+            // GuideRate::RateVector which stores positive values for production
+            // (guide rate convention, not the well-state sign convention).
+            const double oilRate = this->getMasterGroupRate_(
+                groupName, RcPhase::Oil, RateKind::ProductionSurface);
+            const double gasRate = this->getMasterGroupRate_(
+                groupName, RcPhase::Gas, RateKind::ProductionSurface);
+            const double waterRate = this->getMasterGroupRate_(
+                groupName, RcPhase::Water, RateKind::ProductionSurface);
+            const double resvRate =
+                this->getMasterGroupRate_(groupName, RcPhase::Oil, RateKind::ProductionReservoir)
+                + this->getMasterGroupRate_(groupName, RcPhase::Gas, RateKind::ProductionReservoir)
+                + this->getMasterGroupRate_(groupName, RcPhase::Water, RateKind::ProductionReservoir);
+
+            schedule.updateSatelliteProduction(
+                report_step_idx, groupName, oilRate, gasRate, waterRate, resvRate);
+
+            // Injection rates: positive values match what GSatInje expects.
+            for (const auto phase : {RcPhase::Oil, RcPhase::Gas, RcPhase::Water}) {
+                const double surfRate = this->getMasterGroupRate_(
+                    groupName, phase, RateKind::InjectionSurface);
+                const double resRate = this->getMasterGroupRate_(
+                    groupName, phase, RateKind::InjectionReservoir);
+
+                if (surfRate != 0.0 || resRate != 0.0) {
+                    const auto opmPhase = convertToOpmPhase(phase);
+                    schedule.updateSatelliteInjection(
+                        report_step_idx, groupName, opmPhase, surfRate, resRate);
+                }
+            }
+        }
+    }
+}
+
 
 // ------------------
 // Private methods

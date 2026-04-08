@@ -221,6 +221,17 @@ public:
     /// being processed.
     void setReportStepIdx(int report_step_idx);
 
+    /// @brief Update the Schedule's satellite production/injection data from
+    ///   slave group rates received via MPI.
+    /// @details Populates the Schedule's GSatProd and GroupSatelliteInjection
+    ///   for each master group so that opm-common's Summary.cpp satellite_rate
+    ///   machinery computes all rate-based summary vectors correctly for all
+    ///   master groups.
+    /// @param schedule Non-const reference to the Schedule (needed for
+    ///   updateSatelliteProduction/Injection)
+    /// @param report_step_idx 0-based report step index
+    void updateScheduleSatelliteData(Schedule& schedule, int report_step_idx);
+
     /// @brief Check if a specific slave process has been activated
     /// @param index Index of the slave process
     /// @return true if the slave is activated, false otherwise

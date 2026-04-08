@@ -53,6 +53,11 @@
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
+#include <opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp>
+#ifdef RESERVOIR_COUPLING_ENABLED
+#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
+#endif
+
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <limits>
@@ -128,7 +133,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
 
     typedef Dune::MultipleCodimMultipleGeomTypeMapper< GridView > VertexMapper;
 
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal || 
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal ||
            getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal };
     enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
@@ -319,6 +324,13 @@ public:
         if (this->simulation_report_.success.total_newton_iterations != 0) {
             miscSummaryData["MSUMNEWT"] = this->simulation_report_.success.total_newton_iterations;
         }
+
+        // For reservoir coupling master: populate satellite production/injection
+        // data from slave groups so that summary.eval() picks up the rates through
+        // the existing GSatProd / satellite_rate machinery in opm-common's Summary.cpp.
+        // This must be done before evalSummary() so the rates are available when
+        // summary vectors are evaluated.
+        this->updateReservoirCouplingSatelliteData_();
 
         {
             OPM_TIMEBLOCK(evalSummary);
@@ -751,6 +763,29 @@ private:
 
     const Schedule& schedule() const
     { return simulator_.vanguard().schedule(); }
+
+    /// Populate satellite production/injection data from reservoir coupling
+    /// slave groups into the Schedule's GSatProd / GroupSatelliteInjection
+    /// structures.  Delegates to ReservoirCouplingMaster::updateScheduleSatelliteData().
+    void updateReservoirCouplingSatelliteData_()
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // Guard: only BlackoilWellModel has reservoir coupling support.
+        // CompWellModel (compositional) does not, so we use if constexpr
+        // to avoid compilation errors when EclWriter is instantiated with
+        // a compositional TypeTag.
+        using WellModelType = std::remove_cvref_t<
+            decltype(simulator_.problem().wellModel())>;
+        if constexpr (requires(WellModelType& wm) { wm.isReservoirCouplingMaster(); }) {
+            auto& wellModel = simulator_.problem().wellModel();
+            if (!wellModel.isReservoirCouplingMaster()) {
+                return;
+            }
+            wellModel.reservoirCouplingMaster().updateScheduleSatelliteData(
+                simulator_.vanguard().schedule(), simulator_.episodeIndex());
+        }
+#endif
+    }
 
     void prepareLocalCellData(const bool isSubStep,
                               const int  reportStepNum)
