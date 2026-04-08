@@ -541,8 +541,9 @@ void FlowGenericVanguard::registerParameters_()
         ("Convert plain single-segment wells into multisegment wells so the "
          "wellbore hydrostatic head is handled implicitly. 'none' (default) "
          "or 'per-connection' (one linear tubing, a segment per connection)");
+    Parameters::Register<Parameters::UnstructuredGridFileName>
+        ("Filename for unstructured grid input. If empty, the grid will be constructed from the ECL deck.");
 }
-
 template void FlowGenericVanguard::registerParameters_<double>();
 
 #if FLOW_INSTANTIATE_FLOAT
