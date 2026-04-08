@@ -49,7 +49,10 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+
 #include <opm/simulators/flow/EclGenericWriter.hpp>
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
@@ -246,10 +249,22 @@ EclGenericWriter(const Schedule& schedule,
     outputNnc_.resize(1);
 
     if (this->collectOnIORank_.isIORank()) {
-        this->eclIO_ = std::make_unique<EclipseIO>
-            (this->eclState_,
-             UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
-             this->schedule_, summaryConfig, "", enableEsmry);
+        // If an external unstructured grid is provided, use input grid as-is.
+        // Otherwise, build an EclipseGrid that reflects the simulation grid.
+        const auto gridFileName = Parameters::Get<Parameters::UnstructuredGridFileName>();
+        if (!gridFileName.empty()) {
+            this->eclIO_ = std::make_unique<EclipseIO>
+                (this->eclState_,
+                 eclState_.getInputGrid(),
+                 this->schedule_, summaryConfig, "", enableEsmry);
+        }
+        else {
+            assert(equilGrid != nullptr);
+            this->eclIO_ = std::make_unique<EclipseIO>
+                (this->eclState_,
+                 UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
+                 this->schedule_, summaryConfig, "", enableEsmry);
+        }
     }
 
     // create output thread if enabled and rank is I/O rank

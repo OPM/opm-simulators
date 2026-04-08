@@ -35,6 +35,10 @@
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
+#include <fmt/format.h>
+
 #include <array>
 #include <functional>
 #include <string>
@@ -113,11 +117,17 @@ public:
     {
         this->callImplementationInit();
         // add a copy in standard vector format to fullfill new interface
-        const int* globalcellorg = this->grid().globalCell();
+        const int* globalcellorg = this->grid().globalCellPtr();
         int num_cells = this->gridView().size(0);
         globalcell_.resize(num_cells);
         for(int i=0; i < num_cells; ++i){
-            globalcell_[i] = globalcellorg[i];
+            // For grids without global cell numbering, globalcellorg is nullptr
+            // and we just use the local cell index as global cell index.
+            if (globalcellorg) {
+                globalcell_[i] = globalcellorg[i];
+            } else {
+                globalcell_[i] = i;
+            }
         }
     }
 
@@ -232,7 +242,18 @@ public:
     std::function<std::array<double,FlowBaseVanguard<TypeTag>::dimensionworld>(int)>
     cellCentroids() const
     {
-        return this->cellCentroids_(this->cartesianIndexMapper(), false);
+        if (!cellCentroidsFromGrid_) {
+            return this->cellCentroids_(this->cartesianIndexMapper(), false);
+        } else {
+            using UnstructuredGridType = Grid::UnstructuredGridType;
+            UnstructuredGridType ugPtr( *this->grid_ );
+            double* centroids = ugPtr.cell_centroids;
+            int num_cells = this->grid_->size(0);
+            return [centroids, num_cells](int i) -> std::array<double, FlowBaseVanguard<TypeTag>::dimensionworld> {
+                if (i < 0 || i >= num_cells) return std::array<double, FlowBaseVanguard<TypeTag>::dimensionworld>{};
+                return {centroids[i * 3], centroids[i * 3 + 1], centroids[i * 3 + 2]};
+            };
+        }
     }
 
     std::vector<int> cellPartition() const
@@ -244,11 +265,36 @@ public:
 protected:
     void createGrids_()
     {
-        this->grid_ = std::make_unique<Grid>
-            (this->eclState().getInputGrid(),
-             this->eclState().fieldProps().porv(true),
-             this->edgeConformal());
-
+        // Read the grid from file if specified, otherwise use the grid from the ECL file.
+        std::string gridFileName = Parameters::Get<Parameters::UnstructuredGridFileName>();
+        if (gridFileName.empty()) {
+            this->grid_ = std::make_unique<Grid>
+                (this->eclState().getInputGrid(),
+                this->eclState().fieldProps().porv(true),
+                this->edgeConformal());
+        } else {
+            const auto& input_grid = this->eclState().getInputGrid();
+            if (!input_grid.allActive()) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Cannot use unstructured grid file '{}': the Eclipse input grid "
+                                      "contains inactive cells ({} active out of {} total). "
+                                      "Unstructured grid files require all cells to be active.",
+                                      gridFileName,
+                                      input_grid.getNumActive(),
+                                      input_grid.getCartesianSize()));
+            }
+            std::cout << "Using unstructured grid from file: " << gridFileName << std::endl;
+            this->grid_ = std::make_unique<Grid>(gridFileName.empty() ? "test.txt" : gridFileName);
+            cellCentroidsFromGrid_ = true;
+            const int numCellsFile = static_cast<int>(this->grid_->size(0));
+            const int numCellsEcl  = static_cast<int>(input_grid.getNumActive());
+            if (numCellsFile != numCellsEcl) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Cell count mismatch: unstructured grid file '{}' has {} cells, "
+                                      "but the Eclipse input grid has {} active cells.",
+                                      gridFileName, numCellsFile, numCellsEcl));
+            }
+        }
         this->cartesianIndexMapper_ =
             std::make_unique<CartesianIndexMapper>(*this->grid_);
 
@@ -270,6 +316,7 @@ protected:
 
     std::unordered_set<std::string> defunctWellNames_;
     std::vector<int> globalcell_;
+    bool cellCentroidsFromGrid_ = false;
 };
 
 } // namespace Opm

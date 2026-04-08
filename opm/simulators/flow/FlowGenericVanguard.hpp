@@ -88,7 +88,7 @@ struct ZoltanImbalanceTol { static constexpr Scalar value = 1.1; };
 struct ZoltanPhgEdgeSizeThreshold { static constexpr auto value = 0.35; };
 
 struct ZoltanParams { static constexpr auto value = "graph"; };
-
+struct UnstructuredGridFileName { static constexpr auto* value = ""; };
 } // namespace Opm::Parameters
 
 namespace Opm {
