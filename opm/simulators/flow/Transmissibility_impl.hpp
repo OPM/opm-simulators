@@ -458,8 +458,11 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 Scalar trans = computeHalfMean(computeHalfTrans_, permeability_);
 
                 // apply the full face transmissibility multipliers
-                // for the inside ...
-                if (!pinchActive) {
+                // for the inside
+                // Assumes cartesian grid with possible LGRs, but no unstructured grids.
+                // i.e. check if grid is read from file (unstructured)
+                const bool gridFromFile = !std::string(Parameters::Get<Parameters::UnstructuredGridFileName>()).empty();
+                if (!gridFromFile && !pinchActive) {
                     if (inside.faceIdx > 3) { // top or bottom
                          auto find_layer = [&cartDims](std::size_t cell) {
                             cell /= cartDims[0];
