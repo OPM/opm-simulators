@@ -369,6 +369,15 @@ setLastSubstepOfSyncTimestep(bool value)
     this->report_step_data_->setLastSubstepOfSyncTimestep(value);
 }
 
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+updateSlaveGroupTargetsInSchedule(Schedule& schedule, const int report_step_idx)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->updateSlaveGroupTargetsInSchedule(schedule, report_step_idx);
+}
+
 // ------------------
 // Private methods
 // ------------------

@@ -176,6 +176,16 @@ public:
     /// @param value true if this is the last substep of a "sync" timestep, false if not
     void setLastSubstepOfSyncTimestep(bool value) { is_last_substep_of_sync_timestep_ = value; }
 
+    /// @brief Update the Schedule's Group production properties for slave groups
+    ///   that have received master production targets.
+    /// @details Creates a synthetic GCONPROD entry so that the existing constraint
+    ///   enforcement mechanisms (checkGroupHigherConstraints,
+    ///   getWellGroupTargetProducer, etc.) recognize the group as a production
+    ///   group and apply the master's target.
+    /// @param schedule Non-const reference to the Schedule
+    /// @param report_step_idx 0-based report step index
+    void updateSlaveGroupTargetsInSchedule(Schedule& schedule, int report_step_idx);
+
     /// @brief Get the name of this slave process
     /// @return Reference to the name string for this slave
     const std::string& slaveName() const { return this->slave_.getSlaveName(); }

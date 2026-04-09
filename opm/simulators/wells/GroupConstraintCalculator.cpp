@@ -588,6 +588,9 @@ calculateGroupConstraint()
     // This is the full target rate that should be assigned to the bottom group, to be seen as the unscaled
     // target rate for the top group.
     const Scalar full_target = target / this->chain_efficiency_factor_;
+    // NOTE: Injection targets for VREP, RESV, and REIN modes are always sent as RATE
+    //   control mode to the slave, see
+    //   RescoupConstraintsCalculator.cpp::calculateSlaveGroupConstraints_()
     if (bottom_group_current_rate_available > TARGET_RATE_TOLERANCE) {  // > 1e-12
         const auto toplevel_control_mode = this->getToplevelControlMode_();
         if ((bottom_group_current_rate_available > full_target)) {
