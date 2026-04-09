@@ -22,6 +22,8 @@
 
 #include <dune/istl/preconditioner.hh>
 #include <memory>
+#include <tuple>
+#include <utility>
 
 namespace Dune
 {
@@ -109,7 +111,7 @@ template <class OriginalPreconditioner, class... Args>
 struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPreconditioner> {
     using GenericPreconditioner = Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>;
 
-    explicit PreconditionerMaker(Args&&... args)
+    explicit PreconditionerMaker(Args... args)
         : args_(args...)
     {
     }
@@ -136,7 +138,7 @@ class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename O
 public:
     template<class... Args>
     explicit RebuildOnUpdatePreconditioner(Args... args)
-        : preconditioner_maker_(std::make_unique<PreconditionerMaker<OriginalPreconditioner, Args...>>(std::forward<Args>(args)...))
+        : preconditioner_maker_(std::make_unique<PreconditionerMaker<OriginalPreconditioner, Args...>>(args...))
     {
         update();
     }
@@ -192,8 +194,7 @@ template <class OriginalPreconditioner, class... Args>
 auto
 getRebuildOnUpdateWrapper(Args... args)
 {
-    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner>>(
-        std::forward<Args>(args)...);
+    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner>>(args...);
 }
 
 } // namespace Dune

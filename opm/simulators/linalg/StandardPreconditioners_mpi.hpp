@@ -29,6 +29,9 @@
 #endif
 #endif
 
+#include <functional>
+#include <memory>
+#include <type_traits>
 
 namespace Opm {
 
@@ -154,7 +157,7 @@ struct StandardPreconditioners
             const double w = prm.get<double>("relaxation", 1.0);
             const bool resort = prm.get<bool>("resort", false);
             return wrapBlockPreconditioner<RebuildOnUpdatePreconditioner<Dune::SeqILU<M, V, V>>>(
-                comm, op.getmat(), n, w, resort);
+                comm, std::cref(op.getmat()), n, w, resort);
         });
         F::addCreator("dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             DUNE_UNUSED_PARAMETER(prm);
