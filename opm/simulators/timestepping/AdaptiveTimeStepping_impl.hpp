@@ -682,6 +682,10 @@ runStepReservoirCouplingMaster_()
         // whether master-slave data exchange should occur in beginTimeStep() in the well model.
         // It will be cleared after the first runSubStep_() call.
         reservoirCouplingMaster_().setFirstSubstepOfSyncTimestep(true);
+        // After the first master substep completes, timeStepSucceeded() will
+        // block until slaves finish the sync step and send production data.
+        // This ensures correct summary output for all subsequent substeps.
+        reservoirCouplingMaster_().setNeedsSlaveDataReceive(true);
         SubStepIteration<Solver> substepIteration{*this, substep_timer, current_step_length, final_step};
         const auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
@@ -806,6 +810,7 @@ run()
             detail::logTimer(this->substep_timer_);
         }
 
+        maybeUpdateLastSubstepOfSyncTimestep_(dt);  // Needed for reservoir coupling
         auto substep_report = runSubStep_();
         markFirstSubStepAsFinished_();  // Needed for reservoir coupling
 
@@ -1152,6 +1157,28 @@ maybeRestrictTimeStepGrowth_(const double dt, double dt_estimate, const int rest
     }
 
     return dt_estimate;
+}
+
+
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+maybeUpdateLastSubstepOfSyncTimestep_(double dt)
+{
+#ifdef RESERVOIR_COUPLING_ENABLED
+    // For reservoir coupling slaves: predict if this substep will complete
+    // the sync timestep.  If so, timeStepSucceeded() will send production
+    // data to the master (which is blocking on receive after its first substep).
+    // This is used for summary data synchronization between slaves and master.
+    if (isReservoirCouplingSlave_()) {
+        const bool is_last = ReservoirCoupling::Seconds::compare_gt_or_eq(
+            this->substep_timer_.simulationTimeElapsed() + dt,
+            this->substep_timer_.totalTime()
+        );
+        reservoirCouplingSlave_().setLastSubstepOfSyncTimestep(is_last);
+    }
+#endif
 }
 
 // The maybeUpdateTuning_() lambda callback is defined in SimulatorFullyImplicitBlackoil::runStep()

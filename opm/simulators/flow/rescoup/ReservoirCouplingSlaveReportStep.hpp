@@ -98,6 +98,15 @@ public:
     /// @return true if this is the first substep of a "sync" timestep, false if not
     bool isFirstSubstepOfSyncTimestep() const { return is_first_substep_of_sync_timestep_; }
 
+    /// @brief Check if this is the last substep within a "sync" timestep.
+    /// @details This flag is used to control reservoir coupling synchronization of
+    ///          summary data sent from the slave to the master process.
+    ///          The slave should send production data to the master at the end of
+    ///          its "sync" timestep, while master is waiting for it in timeStepSucceeded()
+    ///          of the first substep of the sync step.
+    /// @return true if this is the last substep of a "sync" timestep, false if not
+    bool isLastSubstepOfSyncTimestep() const { return is_last_substep_of_sync_timestep_; }
+
     /// @brief Get the logger for reservoir coupling operations
     /// @return Reference to the logger object for this coupling session
     ReservoirCoupling::Logger& logger() const { return this->slave_.logger(); }
@@ -162,6 +171,11 @@ public:
     /// @param value true at start of sync timestep, false after first runSubStep_() call
     void setFirstSubstepOfSyncTimestep(bool value) { is_first_substep_of_sync_timestep_ = value; }
 
+    /// @brief Set whether this is the last substep within a "sync" timestep.
+    /// @details See isLastSubstepOfSyncTimestep() for details.
+    /// @param value true if this is the last substep of a "sync" timestep, false if not
+    void setLastSubstepOfSyncTimestep(bool value) { is_last_substep_of_sync_timestep_ = value; }
+
     /// @brief Get the name of this slave process
     /// @return Reference to the name string for this slave
     const std::string& slaveName() const { return this->slave_.getSlaveName(); }
@@ -215,6 +229,10 @@ private:
     // Flag to track if this is the first substep within a "sync" timestep.
     // Used to control reservoir coupling synchronization.
     bool is_first_substep_of_sync_timestep_{true};
+    // Flag to track if this is the last substep within a "sync" timestep.
+    // Used to control reservoir coupling synchronization of summary data sent from
+    // the slave to the master process.
+    bool is_last_substep_of_sync_timestep_{false};
 
     // Master-imposed targets and corresponding control modes, received from the master
     // process at the beginning of each sync timestep. Cleared and repopulated on every

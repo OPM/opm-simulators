@@ -110,6 +110,15 @@ isFirstSubstepOfSyncTimestep() const
 template <class Scalar>
 bool
 ReservoirCouplingSlave<Scalar>::
+isLastSubstepOfSyncTimestep() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->isLastSubstepOfSyncTimestep();
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
 isSlaveGroup(const std::string& group_name) const {
     return this->slave_to_master_group_map_.find(group_name) != this->slave_to_master_group_map_.end();
 }
@@ -349,6 +358,15 @@ setFirstSubstepOfSyncTimestep(bool value)
 {
     assert(this->report_step_data_);
     this->report_step_data_->setFirstSubstepOfSyncTimestep(value);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+setLastSubstepOfSyncTimestep(bool value)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->setLastSubstepOfSyncTimestep(value);
 }
 
 // ------------------

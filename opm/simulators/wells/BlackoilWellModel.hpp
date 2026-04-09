@@ -434,6 +434,7 @@ template<class Scalar> class WellContributions;
 
             void receiveGroupConstraintsFromMaster();
             void sendMasterGroupConstraintsToSlaves();
+            void rescoupSyncSummaryData();
 
             /// \brief Setup RAII guard for reservoir coupling logger
             ///

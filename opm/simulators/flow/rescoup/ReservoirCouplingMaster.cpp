@@ -175,6 +175,24 @@ isFirstSubstepOfSyncTimestep() const
 template <class Scalar>
 bool
 ReservoirCouplingMaster<Scalar>::
+needsSlaveDataReceive() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->needsSlaveDataReceive();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+setNeedsSlaveDataReceive(bool value)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->setNeedsSlaveDataReceive(value);
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingMaster<Scalar>::
 isMasterGroup(const std::string &group_name) const
 {
     return this->master_group_slave_names_.find(group_name) !=
