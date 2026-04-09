@@ -29,6 +29,10 @@
 #endif
 #endif
 
+#include <functional>
+#include <memory>
+#include <type_traits>
+
 namespace Opm {
 
 template <class X, class Y>
@@ -66,7 +70,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             const double w = prm.get<double>("relaxation", 1.0);
             const int n = prm.get<int>("ilulevel", 0);
             const bool resort = prm.get<bool>("resort", false);
-            return getRebuildOnUpdateWrapper<Dune::SeqILU<M, V, V>>(op.getmat(), n, w, resort);
+            return getRebuildOnUpdateWrapper<Dune::SeqILU<M, V, V>>(std::cref(op.getmat()), n, w, resort);
         });
         F::addCreator("paroverilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
