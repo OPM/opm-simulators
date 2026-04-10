@@ -1318,10 +1318,14 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     this->wellState().communicateGroupRates(comm_);
     this->groupState().communicate_rates(comm_);
 
+    if (iterCtx.isFirstGlobalIteration()) {
+        group_state_helper.updatePreviousGroupProductionRates(fieldGroup);
+    }
+
     if (update_wellgrouptarget) {
         for (const auto& well : well_container_generic_) {
-            const auto& ws = this->wellState().well(well->indexOfWell());
-            const auto& group = this->schedule().getGroup(well->wellEcl().groupName(), well->currentStep());
+            auto& ws = this->wellState().well(well->indexOfWell());
+            const Group& group = this->schedule().getGroup(well->wellEcl().groupName(), reportStepIdx);
             std::vector<Scalar> resv_coeff(this->numPhases(), 0.0);
             const int fipnum = 0;
             const int pvtreg = well->pvtRegionIdx();
@@ -1332,7 +1336,10 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             }
             const Scalar efficiencyFactor = well->wellEcl().getEfficiencyFactor() *
                                     ws.efficiency_scaling_factor;
-            auto& group_target = this->wellState().well(well->indexOfWell()).group_target;
+            auto& group_target = ws.group_target;
+            // ensure group target fallback and its flag are reset
+            ws.group_target_fallback = std::nullopt;
+            ws.use_group_target_fallback = false;
             if (well->isProducer()) {
                 group_target = group_state_helper.getWellGroupTargetProducer(
                     well->name(),
@@ -1346,7 +1353,26 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     const std::string msg = fmt::format("Well {} is under GRUP control but no valid group target "
                         "could be determined. Switching the well to under BHP control.", well->name());
                     group_state_helper.deferredLogger().debug(msg);
-                    this->wellState().well(well->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
+                    ws.production_cmode = Well::ProducerCMode::BHP;
+                }
+                if (group_target.has_value()) {
+                    // check whether group giving target is operating at its original cmode, and if not, compute the target 
+                    // corresponding to original cmode for potential later use in case current cmode is/becomes infeasible
+                    const Group& target_group = this->schedule().getGroup(group_target->group_name, reportStepIdx);
+                    const auto cmode_orig = target_group.productionControls(summaryState_).cmode;
+                    if (cmode_orig != group_target->production_cmode &&
+                        cmode_orig != Group::ProductionCMode::FLD &&
+                        cmode_orig != Group::ProductionCMode::NONE) {
+                        auto& group_target_fallback = ws.group_target_fallback;
+                        group_target_fallback = group_state_helper.getWellGroupTargetProducer(
+                            well->name(),
+                            well->wellEcl().groupName(),
+                            group,
+                            ws.surface_rates.data(),
+                            efficiencyFactor,
+                            resv_coeff,
+                            cmode_orig);
+                    }
                 }
             } else {
                 const auto& well_controls = well->wellEcl().injectionControls(summaryState_);

@@ -693,6 +693,46 @@ processFractions()
 }
 
 template<class FluidSystem, class Indices>
+void StandardWellPrimaryVariables<FluidSystem,Indices>::
+scaledWellFractions(std::vector<Scalar>& fractions,
+                    DeferredLogger& deferred_logger) const
+{
+    if constexpr (Indices::enableSolvent) {
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         "Function scaledWellFractions does not support solvent yet.",
+                         deferred_logger);
+    }
+    fractions.resize(well_.numPhases(), 0.0);
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+        fractions[oil_pos] = 1.0;
+        if (has_wfrac_variable) {
+            const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            fractions[water_pos] = value_[WFrac];
+            fractions[oil_pos] -= fractions[water_pos];
+        }
+        if (has_gfrac_variable) {
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            fractions[gas_pos] = value_[GFrac];
+            fractions[oil_pos] -= fractions[gas_pos];
+        }
+    }
+    else if (has_wfrac_variable) {
+        const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+        fractions[water_pos] = 1.0;
+        if (has_gfrac_variable) {
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            fractions[gas_pos] = value_[GFrac];
+            fractions[water_pos] -= fractions[gas_pos];
+        }
+    }
+    else if (has_gfrac_variable) {
+        const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+        fractions[gas_pos] = 1.0;
+    }
+}
+
+template<class FluidSystem, class Indices>
 typename StandardWellPrimaryVariables<FluidSystem,Indices>::Scalar
 StandardWellPrimaryVariables<FluidSystem,Indices>::
 relaxationFactorFractionsProducer(const BVectorWell& dwells,

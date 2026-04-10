@@ -177,6 +177,10 @@ public:
                                         WellStateType& well_state,
                                         const bool solving_with_zero_rate);
 
+    // Convenience overload that gets scaled fractions internally
+    void updateGroupTargetFallbackFlag(WellStateType& well_state,
+                                       DeferredLogger& deferred_logger) const;
+
     // TODO: better name or further refactoring the function to make it more clear
     void prepareWellBeforeAssembling(const Simulator& simulator,
                                      const double dt,
@@ -319,6 +323,11 @@ public:
     virtual std::vector<Scalar>
     computeCurrentWellRates(const Simulator& simulator,
                             DeferredLogger& deferred_logger) const = 0;
+
+    /// Get scaled well fractions from primary variables
+    /// Implemented by derived classes that have access to primary_variables_
+    virtual void getScaledWellFractions(std::vector<Scalar>& scaled_fractions,
+                                        DeferredLogger& deferred_logger) const = 0;
 
     /// Modify the well_state's rates if there is only one nonzero rate.
     /// If so, that rate is kept as is, but the others are set proportionally

@@ -249,6 +249,9 @@ namespace Opm
 
         int setPrimaryVars(typename std::vector<Scalar>::const_iterator it) override;
 
+        void getScaledWellFractions(std::vector<Scalar>& scaled_fractions,
+                                    DeferredLogger& deferred_logger) const override;
+
     protected:
         bool regularize_;
 

@@ -255,14 +255,15 @@ getGroupProductionControl(const Group& group,
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     // gconsale may adjust the grat target.
-    // the adjusted rates is send to the targetCalculator
 
-    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{groupStateHelper, resv_coeff, group};
-
-    const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
-    if (target_rate) {
+    const auto group_target = well_state.well(well_.indexOfWell()).use_group_target_fallback
+        ? well_state.well(well_.indexOfWell()).group_target_fallback
+        : well_state.well(well_.indexOfWell()).group_target;
+    if (group_target) {
+        // the adjusted rates is sent to the targetCalculator
+        GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{groupStateHelper, resv_coeff, group_target->production_cmode};
         const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-        control_eq = current_rate - target_rate->target_value;
+        control_eq = current_rate - group_target->target_value;
     } else {
         const auto& controls = well.productionControls(summaryState);
         control_eq = bhp - controls.bhp_limit;
@@ -306,23 +307,25 @@ getGroupProductionTargetRate(const Group& group,
     std::vector<Scalar> resv_coeff(well_.phaseUsage().numActivePhases(), 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
-    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{groupStateHelper,
-                                                                   resv_coeff,
-                                                                   group};
+    const auto& ws = well_state.well(well_.indexOfWell());
+    const auto& group_target = ws.use_group_target_fallback
+        ? ws.group_target_fallback
+        : ws.group_target;
 
-    const auto target_rate = well_state.well(well_.indexOfWell()).group_target;
-    if (!target_rate) {
+    if (!group_target) {
         return 1.0;
     }
-    if (target_rate->target_value == 0.0) {
+    if (group_target->target_value == 0.0) {
         return 0.0;
     }
-    const auto& ws = well_state.well(well_.indexOfWell());
+    GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{groupStateHelper,
+                                                                   resv_coeff,
+                                                                   group_target->production_cmode};
     const auto& rates = ws.surface_rates;
     const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     Scalar scale = 1.0;
     if (current_rate > 1e-14)
-        scale = target_rate->target_value / current_rate;
+        scale = group_target->target_value / current_rate;
 
     return scale;
 }

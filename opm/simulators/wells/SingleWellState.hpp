@@ -25,6 +25,7 @@
 
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 #include <opm/input/eclipse/Schedule/Events.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 
 #include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 
@@ -86,6 +87,8 @@ public:
         serializer(primaryvar);
         serializer(alq_state);
         serializer(group_target);
+        serializer(group_target_fallback);
+        serializer(use_group_target_fallback);
         serializer(was_shut_before_action_applied);
     }
 
@@ -120,16 +123,26 @@ public:
 
     struct GroupTarget {
         std::string group_name;
-        Scalar target_value;
+        Scalar target_value{0.0};
+        Group::ProductionCMode production_cmode {Group::ProductionCMode::NONE};
+        Group::InjectionCMode injection_cmode {Group::InjectionCMode::NONE};
+        Scalar guiderate_ratio{1.0}; // well to group guide rate ratio for diagnostics
 
         bool operator==(const GroupTarget& other) const {
-            return group_name == other.group_name && target_value == other.target_value;
+            return (group_name == other.group_name 
+                 && target_value == other.target_value 
+                 && production_cmode == other.production_cmode
+                 && injection_cmode == other.injection_cmode
+                 && guiderate_ratio == other.guiderate_ratio);
         }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer) {
             serializer(group_name);
             serializer(target_value);
+            serializer(production_cmode);
+            serializer(injection_cmode);
+            serializer(guiderate_ratio);
         }
     };
 
@@ -143,6 +156,8 @@ public:
     PerfData<Scalar> perf_data;
     bool trivial_group_target;
     std::optional<GroupTarget> group_target;
+    std::optional<GroupTarget> group_target_fallback;
+    bool use_group_target_fallback;
     SegmentState<Scalar> segments;
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};

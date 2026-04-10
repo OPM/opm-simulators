@@ -149,6 +149,10 @@ public:
     void setValue(const int idx, const Scalar val)
     { value_[idx] = val; }
 
+    //! \brief Get scaled well fraction values for all phases, based on the current primary variable values.
+    void scaledWellFractions(std::vector<Scalar>& fractions,
+                             DeferredLogger& deferred_logger) const;
+
 private:
     //! \brief Initialize evaluations from values.
     void setEvaluationsFromValues();
