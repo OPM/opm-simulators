@@ -54,6 +54,9 @@ public:
                     const bool always_include_this);
     Scalar localFraction(const std::string& name,
                          const std::string& always_included_child);
+    Scalar guideRate(const std::string& name,
+                     const std::string& always_included_child,
+                     const bool always_use_potentials);
 
 private:
     std::string parent(const std::string& name);
@@ -63,9 +66,6 @@ private:
     std::pair<Scalar,int> guideRateSum(const Group& group,
                         const std::string& always_included_child,
                         const bool always_use_potentials);
-    Scalar guideRate(const std::string& name,
-                     const std::string& always_included_child,
-                     const bool always_use_potentials);
     int groupControlledWells(const std::string& group_name,
                              const std::string& always_included_child);
     GuideRate::RateVector getGroupRateVector(const std::string& group_name);

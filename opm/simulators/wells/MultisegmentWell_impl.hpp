@@ -1996,6 +1996,10 @@ namespace Opm
                     : groupStateHelper.groupState();
                 GroupStateHelperType groupStateHelper_copy = groupStateHelper;
                 auto group_guard = groupStateHelper_copy.pushGroupState(group_state);
+                // For production wells under group control, ensure feasibility before assembling control equation
+                if (this->wellUnderGroupControl(ws) && this->isProducer() && !stopped_or_zero_target) {
+                    this->updateGroupTargetFallbackFlag(well_state, deferred_logger);
+                }
                 MultisegmentWellAssemble(*this).
                         assembleControlEq(groupStateHelper_copy,
                                         inj_controls,
@@ -2349,6 +2353,16 @@ namespace Opm
             this->primary_variables_.setValue(ii, tmp);
         }
         return num_seg * num_eq;
+    }
+
+
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    getScaledWellFractions(std::vector<Scalar>& scaled_fractions,
+                           DeferredLogger& deferred_logger) const
+    {
+        this->primary_variables_.scaledWellFractions(scaled_fractions, deferred_logger);
     }
 
     template <typename TypeTag>

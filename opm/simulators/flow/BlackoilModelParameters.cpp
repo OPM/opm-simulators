@@ -122,6 +122,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
 
     nupcol_group_rate_tolerance_ = Parameters::Get<Parameters::NupcolGroupRateTolerance<Scalar>>();
     well_group_constraints_max_iterations_ = Parameters::Get<Parameters::WellGroupConstraintsMaxIterations>();
+    group_control_fraction_tolerance_ = Parameters::Get<Parameters::GroupControlFractionTolerance<Scalar>>();
 }
 
 template<class Scalar>
@@ -314,8 +315,10 @@ void BlackoilModelParameters<Scalar>::registerParameters()
     Parameters::Hide<Parameters::DebugEmitCellPartition>();
 
     Parameters::Register<Parameters::WellGroupConstraintsMaxIterations>
-    ("Maximum number of iterations in the well/group switching algorithm");
+        ("Maximum number of iterations in the well/group switching algorithm");
 
+    Parameters::Register<Parameters::GroupControlFractionTolerance<Scalar>>
+        ("Tolerance for minimal allowed fraction for controlled phase before employing a fallback control");
     // if openMP is available, use two threads per mpi rank by default
 #if _OPENMP
     Parameters::SetDefault<Parameters::ThreadsPerProcess>(2);

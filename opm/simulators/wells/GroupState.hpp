@@ -64,6 +64,9 @@ public:
                                            const std::vector<Scalar>& rates);
     const std::vector<Scalar>& production_reduction_rates(const std::string& gname) const;
 
+    void update_prev_production_rates(const std::string& gname, const std::vector<Scalar>& rates);
+    const std::vector<Scalar>& prev_production_rates(const std::string& gname) const;
+
     bool has_injection_reduction_rates(const std::string& gname) const;
     void update_injection_reduction_rates(const std::string& gname,
                                           const std::vector<Scalar>& rates);
@@ -213,6 +216,7 @@ public:
         serializer(m_production_rates);
         serializer(m_network_leaf_node_production_rates);
         serializer(production_controls);
+        serializer(m_prev_production_rates);
         serializer(group_thp);
         serializer(prod_red_rates);
         serializer(inj_red_rates);
@@ -234,6 +238,7 @@ private:
     std::map<std::string, std::vector<Scalar>> m_production_rates;
     std::map<std::string, std::vector<Scalar>> m_network_leaf_node_production_rates;
     std::map<std::string, Group::ProductionCMode> production_controls;
+    std::map<std::string, std::vector<Scalar>> m_prev_production_rates;
     std::map<std::string, std::vector<Scalar>> prod_red_rates;
     std::map<std::string, std::vector<Scalar>> inj_red_rates;
     std::map<std::string, std::vector<Scalar>> inj_surface_rates;

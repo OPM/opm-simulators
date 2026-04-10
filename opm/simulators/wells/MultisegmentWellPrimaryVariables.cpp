@@ -702,6 +702,43 @@ outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const
     }
 }
 
+template<class FluidSystem, class Indices>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+scaledWellFractions(std::vector<Scalar>& fractions,
+                    DeferredLogger& /* deferred_logger */) const
+{
+    fractions.resize(well_.numPhases(), 0.0);
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
+        fractions[oil_pos] = 1.0;
+        if (has_wfrac_variable) {
+            const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+            fractions[water_pos] = value_[0][WFrac];
+            fractions[oil_pos] -= fractions[water_pos];
+        }
+
+        if (has_gfrac_variable) {
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            fractions[gas_pos] = value_[0][GFrac];
+            fractions[oil_pos] -= fractions[gas_pos];
+        }
+    }
+    else if (has_wfrac_variable) {
+        const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+        fractions[water_pos] = 1.0;
+
+        if (has_gfrac_variable) {
+            const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+            fractions[gas_pos] = value_[0][GFrac];
+            fractions[water_pos] -= fractions[gas_pos];
+        }
+    }
+    else if (has_gfrac_variable) {
+        const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+        fractions[gas_pos] = 1.0;
+    }
+}
+
 #include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
 
 INSTANTIATE_TYPE_INDICES(MultisegmentWellPrimaryVariables, double)

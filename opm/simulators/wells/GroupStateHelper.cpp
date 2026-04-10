@@ -540,6 +540,14 @@ GroupStateHelper<Scalar, IndexTraits>::
 getProductionGuideTargetMode(const Group& group) const
 {
     const auto cmode = this->groupState().production_control(group.name());
+    return this->getProductionGuideTargetModeFromControlMode(cmode);
+}
+
+template<typename Scalar, typename IndexTraits>
+GuideRateModel::Target
+GroupStateHelper<Scalar, IndexTraits>::
+getProductionGuideTargetModeFromControlMode(const Group::ProductionCMode cmode) const
+{
     switch (cmode) {
     case Group::ProductionCMode::ORAT:
         return GuideRateModel::Target::OIL;
@@ -767,17 +775,20 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
                                                              do_addback);
 
     // Avoid negative target rates coming from too large local reductions.
-    return GroupTarget{group.name(), std::max(Scalar(0.0), target / efficiency_factor)};
+    // guiderate_fraction is not used for injectors, so set to 0.0
+    return GroupTarget{group.name(), std::max(Scalar(0.0), target / efficiency_factor),
+                       Group::ProductionCMode::NONE, current_group_control, 0.0}; 
 }
 
 template <typename Scalar, typename IndexTraits>
 std::optional<typename SingleWellState<Scalar, IndexTraits>::GroupTarget>
 GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::string& name,
-                                                                 const std::string& parent,
-                                                                 const Group& group,
-                                                                 const Scalar* rates,
-                                                                 const Scalar efficiency_factor,
-                                                                 const std::vector<Scalar>& resv_coeff) const
+                                                                     const std::string& parent,
+                                                                     const Group& group,
+                                                                     const Scalar* rates,
+                                                                     const Scalar efficiency_factor,
+                                                                     const std::vector<Scalar>& resv_coeff,
+                                                                     std::optional<Group::ProductionCMode> fallback_cmode) const
 {
     // This function computes a wells group target.
     // 'parent' will be the name of 'group'. But if we recurse, 'name' and
@@ -787,10 +798,14 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
     // part of. Later it is the accumulated factor including the group efficiency factor
     // of the child of group.
     OPM_TIMEFUNCTION();
-    const Group::ProductionCMode& current_group_control = this->groupState().production_control(group.name());
+    const Group::ProductionCMode& current_group_cmode = this->groupState().production_control(group.name());
+    // If fallback_cmode is provided and different from current_group_cmode, we will translate the target from
+    // original mode to fallback mode using group fractions at previous step. Otherwise, fallback_cmode is 
+    // the same as current_group_cmode and no translation will be done.
+    const Group::ProductionCMode target_group_cmode = fallback_cmode.has_value() ? fallback_cmode.value() : current_group_cmode;
 
-    if (current_group_control == Group::ProductionCMode::FLD
-        || current_group_control == Group::ProductionCMode::NONE) {
+    if (current_group_cmode == Group::ProductionCMode::FLD
+        || current_group_cmode  == Group::ProductionCMode::NONE) {
         // Return if we are not available for parent group.
         if (!group.productionGroupControlAvailable()) {
             return std::nullopt;
@@ -802,7 +817,8 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
                                                 parent_group,
                                                 rates,
                                                 efficiency_factor * group.getGroupEfficiencyFactor(),
-                                                resv_coeff);
+                                                resv_coeff,
+                                                fallback_cmode);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -813,17 +829,17 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
 
     // If we are here, we are at the topmost group to be visited in the recursion.
     // This is the group containing the control we will check against.
-
+    // Calculators for target mode
     GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{*this,
                                                                     resv_coeff,
-                                                                    group};
+                                                                    target_group_cmode};
 
     GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fcalc {this->schedule_,
                                                                       *this,
                                                                       this->summary_state_,
                                                                       this->report_step_,
                                                                       &this->guide_rate_,
-                                                                      this->getProductionGuideTargetMode(group),
+                                                                      this->getProductionGuideTargetModeFromControlMode(target_group_cmode),
                                                                       /*is_producer=*/true,
                                                                       /*injection_phase=*/Phase::OIL};
 
@@ -841,7 +857,20 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
         return fcalc.localFraction(child, always_included);
     };
 
-    const Scalar orig_target = this->getProductionGroupTarget(group);
+    Scalar orig_target = this->getProductionGroupTarget(group); // current cmode
+    if (target_group_cmode != current_group_cmode) {
+        // translate orig_target to target_cmode using "previous" group rate fractions
+        const auto& prev_rates = this->groupState().prev_production_rates(group.name());
+        // Calculator for current cmode:
+        GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc_current{*this,
+                                                                               resv_coeff,
+                                                                               current_group_cmode};
+        const Scalar prev_rate_current_cmode = tcalc_current.calcModeRateFromRates(prev_rates);
+        const Scalar prev_rate_target_cmode = tcalc.calcModeRateFromRates(prev_rates);
+        // shouldn't happen that prev_rate_current is zero since that is the controlled rate, but ...
+        const Scalar ratio = (prev_rate_current_cmode != 0.0) ? prev_rate_target_cmode / prev_rate_current_cmode : 1.0;
+        orig_target *= ratio; // now in target cmode
+    }
     // Switch sign since 'rates' are negative for producers.
     const Scalar current_rate_available = -tcalc.calcModeRateFromRates(rates);
     const auto chain = this->groupChainTopBot(name, group.name());
@@ -861,9 +890,18 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
                                                              local_reduction_lambda,
                                                              local_fraction_lambda,
                                                              do_addback);
-
+    // Finally, we provide the well-to-group guide-rate ratio for subsequent diagnostics of 
+    // target feasibility. Note that we cannot use the target directly for this, since a ~zero 
+    // target may very well just be the result of non-converged group tree. 
+    Scalar guide_rate_fraction = 1.0;
+    const Scalar well_guide_rate = fcalc.guideRate(name, name, /*always_use_potentials=*/false);
+    const Scalar group_guide_rate = fcalc.guideRate(group.name(), name, /*always_use_potentials=*/false);
+    if (group_guide_rate > 0.0) {
+        guide_rate_fraction = (well_guide_rate / group_guide_rate);
+    }  
     // Avoid negative target rates coming from too large local reductions.
-    return GroupTarget{group.name(), std::max(Scalar(0.0), target / efficiency_factor)};
+    return GroupTarget{group.name(), std::max(Scalar(0.0), target / efficiency_factor),
+                       target_group_cmode, Group::InjectionCMode::NONE, guide_rate_fraction};
 }
 
 template <typename Scalar, typename IndexTraits>
@@ -1196,6 +1234,19 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupProductionRates(const Group& g
             /*res_rates=*/false, group, phase, /*injector=*/false, /*network=*/false);
     }
     this->groupState().update_production_rates(group.name(), rates);
+}
+
+template <typename Scalar, typename IndexTraits>
+void
+GroupStateHelper<Scalar, IndexTraits>::updatePreviousGroupProductionRates(const Group& group)
+{
+    OPM_TIMEFUNCTION();
+    for (const std::string& group_name : group.groups()) {
+        const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
+        this->updatePreviousGroupProductionRates(group_tmp);
+    }
+    const std::vector<Scalar>& prev_rates = this->groupState().production_rates(group.name());
+    this->groupState().update_prev_production_rates(group.name(), prev_rates);
 }
 
 template <typename Scalar, typename IndexTraits>

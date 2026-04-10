@@ -159,6 +159,8 @@ struct NewtonMinIterations { static constexpr int value = 2; };
 
 struct WellGroupConstraintsMaxIterations { static constexpr int value = 1; };
 template<class Scalar>
+struct GroupControlFractionTolerance { static constexpr Scalar value = 1e-4; };
+template<class Scalar>
 struct LocalToleranceScalingMb { static constexpr Scalar value = 1.0; };
 
 template<class Scalar>
@@ -353,6 +355,9 @@ public:
 
     /// Maximum number of status switches (open<->stop> during a time step
     int max_well_status_switch_;
+
+    /// Lower tolerance for the guiderate ratio or well-fraction of active phase before switching to group fallback control
+    Scalar group_control_fraction_tolerance_;
 
     /// Nonlinear solver type: newton or nldd
     std::string nonlinear_solver_;

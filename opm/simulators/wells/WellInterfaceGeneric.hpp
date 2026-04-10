@@ -249,6 +249,10 @@ protected:
         std::ranges::fill(this->inj_multiplier_damp_factor_, 1.0);
     }
 
+    void updateGroupTargetFallbackFlag(WellState<Scalar, IndexTraits>& well_state,
+                                       const std::vector<Scalar>& scaled_well_fractions,
+                                       DeferredLogger& deferred_logger) const;
+
     // definition of the struct OperabilityStatus
     struct OperabilityStatus
     {

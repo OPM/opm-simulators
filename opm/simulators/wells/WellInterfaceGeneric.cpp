@@ -953,6 +953,72 @@ onlyKeepBHPandTHPcontrols(const SummaryState& summary_state,
     }
 }
 
+template<typename Scalar, typename IndexTraits>
+void WellInterfaceGeneric<Scalar, IndexTraits>::
+updateGroupTargetFallbackFlag(WellState<Scalar, IndexTraits>& well_state,
+                              const std::vector<Scalar>& scaled_well_fractions,
+                              DeferredLogger& deferred_logger) const
+{
+    auto& ws = well_state.well(this->index_of_well_);
+    if (!wellUnderGroupControl(ws) || this->isInjector() || 
+        !ws.group_target_fallback.has_value() || !ws.group_target.has_value())
+    {
+        ws.use_group_target_fallback = false;
+        return;
+    }
+    // We only need to check modes that can result in small fractions
+    // i.e. ORAT, WRAT, GRAT, LRAT
+    const auto cmode = ws.group_target->production_cmode;
+    const bool do_check = (cmode == Group::ProductionCMode::ORAT ||
+                           cmode == Group::ProductionCMode::WRAT ||
+                           cmode == Group::ProductionCMode::GRAT ||
+                           cmode == Group::ProductionCMode::LRAT);
+    if (!do_check) {
+        ws.use_group_target_fallback = false;
+        return;
+    }
+    // Check whether guiderate ratio or well fraction of production_cmode is too small, 
+    // if so, switch to fallback (original) control mode
+    const Scalar fraction_tolerance = this->param_.group_control_fraction_tolerance_;
+    if (ws.group_target->guiderate_ratio < fraction_tolerance) {
+        if (ws.group_target_fallback->guiderate_ratio < fraction_tolerance) {
+            // both current and fallback guiderate ratios are too small, don't switch
+            // This situation can be result of "badly" setup schedule.
+            const auto msg = fmt::format("Well {} guiderate ratio for current group control {} is {}, and fallback control {} is {},"
+                               " both are smaller than {}, we will keep current group control mode {}",
+                               name(), Group::ProductionCMode2String(cmode), ws.group_target->guiderate_ratio,
+                               Group::ProductionCMode2String(ws.group_target_fallback->production_cmode), ws.group_target_fallback->guiderate_ratio,
+                               fraction_tolerance, Group::ProductionCMode2String(cmode));
+            deferred_logger.info(msg);
+            ws.use_group_target_fallback = false;
+        } else {
+            ws.use_group_target_fallback = true;
+        }
+        return;
+    }
+    // check well fraction corresponding to cmode
+    Scalar cmode_frac = 0.0;
+    const auto& pu = this->phaseUsage();
+    if (cmode == Group::ProductionCMode::ORAT || cmode == Group::ProductionCMode::LRAT) {
+        if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+            const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+            cmode_frac += scaled_well_fractions[oil_pos];
+        }
+    }
+    if (cmode == Group::ProductionCMode::WRAT || cmode == Group::ProductionCMode::LRAT) {
+        if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+            const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+            cmode_frac += scaled_well_fractions[water_pos];
+        }
+    }
+    if (cmode == Group::ProductionCMode::GRAT) {
+        if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+            const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+            cmode_frac += scaled_well_fractions[gas_pos];
+        }
+    }
+    ws.use_group_target_fallback = (cmode_frac < fraction_tolerance); 
+}
 
 template class WellInterfaceGeneric<double, BlackOilDefaultFluidSystemIndices>;
 

@@ -476,6 +476,10 @@ namespace Opm
             auto& group_state = solving_with_zero_rate
                 ? empty_group_state
                 : groupStateHelper.groupState();
+            // For production wells under group control, ensure feasibility before assembling control equation
+            if (this->wellUnderGroupControl(ws) && this->isProducer() && !stopped_or_zero_target) {
+                this->updateGroupTargetFallbackFlag(well_state, deferred_logger);
+            }
             GroupStateHelperType groupStateHelper_copy = groupStateHelper;
             auto group_guard = groupStateHelper_copy.pushGroupState(group_state);
             StandardWellAssemble<FluidSystem,Indices>(*this).
@@ -2645,6 +2649,16 @@ namespace Opm
             this->primary_variables_.setValue(ii, it[ii]);
         }
         return num_pri_vars;
+    }
+
+
+    template <typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    getScaledWellFractions(std::vector<Scalar>& scaled_fractions,
+                           DeferredLogger& deferred_logger) const
+    {
+        this->primary_variables_.scaledWellFractions(scaled_fractions, deferred_logger);
     }
 
 
