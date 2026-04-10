@@ -154,6 +154,14 @@ public:
     /// @return true if this is the first substep of a "sync" timestep, false if not
     bool isFirstSubstepOfSyncTimestep() const { return is_first_substep_of_sync_timestep_; }
 
+    /// @brief Check if the master needs to receive slave data at the next
+    ///   timeStepSucceeded() call.
+    /// @details The slave data is needed for correct summary output.
+    bool needsSlaveDataReceive() const { return needs_slave_data_receive_; }
+
+    /// @brief Set/clear the flag for pending slave data receive.
+    void setNeedsSlaveDataReceive(bool value) { needs_slave_data_receive_ = value; }
+
     /// @brief Get the number of slave groups for a specific slave process
     /// @param index Index of the slave process
     /// @return Number of groups managed by the specified slave
@@ -247,6 +255,13 @@ private:
     /// Flag to track if this is the first substep within a "sync" timestep.
     /// Used to control reservoir coupling synchronization.
     bool is_first_substep_of_sync_timestep_{true};
+
+    /// Flag to indicate that the master needs to receive end-of-sync-step
+    /// production data from slaves.  Set at the start of each sync step,
+    /// cleared after the receive.  The receive happens in timeStepSucceeded()
+    /// on the first converged substep, so that the data is available for
+    /// evalSummaryState() and all subsequent substeps of the same sync step.
+    bool needs_slave_data_receive_{false};
 };
 } // namespace Opm
 #endif // OPM_RESERVOIR_COUPLING_MASTER_REPORT_STEP_HPP

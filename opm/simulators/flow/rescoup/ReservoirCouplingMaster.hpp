@@ -105,6 +105,17 @@ public:
     void initTimeStepping();
     bool isFirstSubstepOfSyncTimestep() const;
     bool isMasterGroup(const std::string &group_name) const;
+    /// @brief Check if the master needs to receive production data from the slaves.
+    /// @details This flag is used to control reservoir coupling synchronization of
+    ///          summary data sent from the slaves to the master process.
+    ///          The master blocks in timeStepSucceeded() until all slaves have sent
+    ///          their production data.
+    /// @return true if the master needs to receive production data from the slaves, false if not
+    bool needsSlaveDataReceive() const;
+    /// @brief Set whether the master needs to receive production data from the slaves.
+    /// @details See needsSlaveDataReceive() for details.
+    /// @param value true if the master needs to receive production data from the slaves, false if not
+    void setNeedsSlaveDataReceive(bool value);
     ReservoirCoupling::Logger& logger() { return this->logger_; }
     ReservoirCoupling::Logger& logger() const { return this->logger_; }
     void maybeActivate(int report_step);

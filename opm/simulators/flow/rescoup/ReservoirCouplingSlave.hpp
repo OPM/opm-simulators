@@ -70,6 +70,14 @@ public:
     bool hasMasterProductionTarget(const std::string& gname) const;
     void initTimeStepping();
     bool isFirstSubstepOfSyncTimestep() const;
+    /// @brief Check if this is the last substep within a "sync" timestep.
+    /// @details This flag is used to control reservoir coupling synchronization of
+    ///          summary data sent from the slave to the master process.
+    ///          The slave should send production data to the master at the end of
+    ///          its "sync" timestep, while master is waiting for it in timeStepSucceeded()
+    ///          of the first substep of the sync step.
+    /// @return true if this is the last substep of a "sync" timestep, false if not
+    bool isLastSubstepOfSyncTimestep() const;
     bool isSlaveGroup(const std::string& group_name) const;
     ReservoirCoupling::Logger& logger() { return this->logger_; }
     ReservoirCoupling::Logger& logger() const { return this->logger_; }
@@ -105,6 +113,10 @@ public:
         this->logger_.setDeferredLogger(deferred_logger);
     }
     void setFirstSubstepOfSyncTimestep(bool value);
+    /// @brief Set whether this is the last substep within a "sync" timestep.
+    /// @details See isLastSubstepOfSyncTimestep() for details.
+    /// @param value true if this is the last substep of a "sync" timestep, false if not
+    void setLastSubstepOfSyncTimestep(bool value);
     const std::string& slaveGroupIdxToGroupName(std::size_t group_idx) const {
         return this->slave_group_order_.at(group_idx);
     }

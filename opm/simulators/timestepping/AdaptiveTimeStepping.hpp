@@ -156,6 +156,7 @@ private:
         double maybeRestrictTimeStepGrowth_(const double dt,
                                             double dt_estimate,
                                             const int restarts) const;
+        void maybeUpdateLastSubstepOfSyncTimestep_(double dt);
         void maybeUpdateTuningAndTimeStep_();
         double maxGrowth_() const;
         double minTimeStepBeforeClosingWells_() const;

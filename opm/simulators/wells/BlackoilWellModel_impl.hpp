@@ -642,6 +642,34 @@ namespace Opm {
         constraint_receiver.receiveGroupConstraintsFromMaster();
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    rescoupSyncSummaryData()
+    {
+        // Reservoir coupling: exchange production data between slaves and master.
+        //
+        // Master side: after its first substep, the master blocks here until all
+        // slaves have completed the sync step and sent their production data.
+        // This ensures evalSummaryState() (called next in endTimeStep) and all
+        // subsequent master substeps have correct slave production rates.
+        //
+        // Slave side: on the last substep of the sync step, the slave sends its
+        // production data to the master.  The master is already waiting at this
+        // point (blocked on MPI_Recv from its first substep's timeStepSucceeded).
+        if (this->isReservoirCouplingMaster()) {
+            if (this->reservoirCouplingMaster().needsSlaveDataReceive()) {
+                this->receiveSlaveGroupData();
+                this->reservoirCouplingMaster().setNeedsSlaveDataReceive(false);
+            }
+        }
+        if (this->isReservoirCouplingSlave()) {
+            if (this->reservoirCouplingSlave().isLastSubstepOfSyncTimestep()) {
+                this->sendSlaveGroupDataToMaster();
+            }
+        }
+    }
+
 #endif // RESERVOIR_COUPLING_ENABLED
 
     template<typename TypeTag>
@@ -797,6 +825,9 @@ namespace Opm {
 
         this->groupStateHelper().updateNONEProductionGroups();
 
+#ifdef RESERVOIR_COUPLING_ENABLED
+        this->rescoupSyncSummaryData();
+#endif
         this->commitWGState();
 
         //reporting output temperatures
