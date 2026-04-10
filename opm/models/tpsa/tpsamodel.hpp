@@ -27,16 +27,21 @@
 
 #include <dune/grid/common/gridenums.hh>
 
+#include <dune/common/dynmatrix.hh>
+#include <dune/common/dynvector.hh>
+
 #include <opm/grid/utility/ElementChunks.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/models/parallel/threadmanager.hpp>
 #include <opm/models/tpsa/tpsabaseproperties.hpp>
+#include <opm/models/utils/linearleastsquares.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <array>
 #include <memory>
+#include <unordered_map>
 
 
 namespace Opm {
@@ -466,12 +471,101 @@ public:
     * \param with_fracture Boolean to activate fracture output
     * \returns Stress tensor (Voigt notation) at grid cell
     *
-    * \note Needed in OutputBlackOilModule, but zero for now!
+    * \warning NNC are not implemented with TPSA, therefore cells with NNC faces will give
+    * incorrect stress output!
     */
-    SymTensor stress(const unsigned /*globalIdx*/, const bool /*with_fracture*/) const
+    SymTensor stress(const unsigned globalIdx, const bool /*with_fracture*/) const
     {
-        SymTensor val;
-        return val;
+        SymTensor stressOutput;
+        const auto& stressInfo = linearizer_->getStressInfo();
+        if (!stressInfo.empty()) {
+            const auto& stressInfoGlobI = stressInfo[globalIdx];
+
+            // Setup least-squares matrix of face normals and right-hand side of traction vectors
+            // per faces. Matrix shape = 3 rows per face x 6 columns for each (symmetric) stress
+            // tensor component.
+            std::unordered_multimap<int, std::size_t> faceIdMap;
+            std::size_t mapSize = 0;
+            for (std::size_t sInfoIdx = 0; sInfoIdx < stressInfoGlobI.size(); ++sInfoIdx) {
+                const auto faceId  = stressInfoGlobI[sInfoIdx].faceId;
+
+                // OBS: NNC faces are not added to least squares system, since TPSA does not handle
+                // NNC connections, like numerical aquifers, yet!
+                if (faceId < 0 || stressInfoGlobI[sInfoIdx].faceArea == 0.0) {
+                    continue;
+                }
+                if (!faceIdMap.contains(faceId)) {
+                    ++mapSize;
+                }
+                faceIdMap.insert({faceId, sInfoIdx});
+            }
+
+            // If no valid faces exist for cell, return zero SymTensor
+            if (mapSize == 0) {
+                return stressOutput;
+            }
+
+            Dune::DynamicMatrix<Scalar> mat(3 * mapSize, 6);
+            Dune::DynamicVector<Scalar> rhs(3 * mapSize);
+            std::size_t rowIdx = 0;
+            for (auto it = faceIdMap.begin(); it != faceIdMap.end();) {
+                auto [first, last] = faceIdMap.equal_range(it->first);
+
+                // Loop over possible multiple of the same face
+                Scalar sumFaceArea = 0.0;
+                for (auto inner = first; inner != last; ++inner) {
+                    const auto sInfoIdx = inner->second;
+                    const auto& faceStressInfo = stressInfoGlobI[sInfoIdx];
+
+                    // One normal per face
+                    if (inner == first) {
+                        const auto& fNormal = faceStressInfo.faceNormal;
+                        mat[3*rowIdx][0] = fNormal[0];
+                        mat[3*rowIdx][3] = fNormal[1];
+                        mat[3*rowIdx][4] = fNormal[2];
+
+                        mat[3*rowIdx + 1][1] = fNormal[1];
+                        mat[3*rowIdx + 1][3] = fNormal[0];
+                        mat[3*rowIdx + 1][5] = fNormal[2];
+
+                        mat[3*rowIdx + 2][2] = fNormal[2];
+                        mat[3*rowIdx + 2][4] = fNormal[0];
+                        mat[3*rowIdx + 2][5] = fNormal[1];
+                    }
+
+                    // Add traction vectors for same faces
+                    const auto& fTraction = faceStressInfo.traction;
+                    rhs[3*rowIdx] += fTraction[0];
+                    rhs[3*rowIdx + 1] += fTraction[1];
+                    rhs[3*rowIdx + 2] += fTraction[2];
+
+                    // Sum face area
+                    sumFaceArea += faceStressInfo.faceArea;
+                }
+                // Divide rhs for (unique) face by sum of face areas
+                rhs[3*rowIdx] /= sumFaceArea;
+                rhs[3*rowIdx + 1] /= sumFaceArea;
+                rhs[3*rowIdx + 2] /= sumFaceArea;
+
+                // Move to next unique face
+                ++rowIdx;
+                it = last;
+            }
+
+            // Use least squares solver for underdetermined system
+            LinearLeastSquares<Scalar> lsq(mat, rhs);
+            lsq.solve();
+
+            // Reconstructed stress tensor at cell center
+            const auto& stress = lsq.x();
+            stressOutput[0] = stress[0]; // XX
+            stressOutput[1] = stress[1]; // YY
+            stressOutput[2] = stress[2]; // ZZ
+            stressOutput[3] = stress[5]; // YZ
+            stressOutput[4] = stress[4]; // XZ
+            stressOutput[5] = stress[3]; // XY
+        }
+        return stressOutput;
     }
 
     /*!
