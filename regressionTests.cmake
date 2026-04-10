@@ -813,6 +813,22 @@ add_test_compareECLFiles(CASENAME nonnc
                          REL_TOL ${rel_tol}
                          DIR editnnc)
 
+add_test_compareECLFiles(CASENAME nnc_overlapping_editnnc
+                         FILENAME NNC_OVERLAPPING_EDITNNC
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR editnnc
+                         TEST_ARGS --enable-opm-rst-file=1)
+
+add_test_compareECLFiles(CASENAME nnc_overlapping_editnncr_multregt
+                         FILENAME NNC_OVERLAPPING_EDITNNCR_MULTREGT
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR editnnc
+                         TEST_ARGS --enable-opm-rst-file=1)
+
 add_test_compareECLFiles(CASENAME spe1_foam
                          FILENAME SPE1FOAM
                          SIMULATOR flow
