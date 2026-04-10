@@ -1886,6 +1886,25 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    editnnc_multregt
+  FILENAME
+    EDITNNC_AND_MULTREGT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    editnnc
+  TEST_ARGS
+    --solver-max-time-step-in-days=0.1
+)
+
+add_test_compareECLFiles(
+  CASENAME
     nnc_overlapping_editnnc
   FILENAME
     NNC_OVERLAPPING_EDITNNC
