@@ -946,6 +946,23 @@ add_test_compare_parallel_simulation(
     --linear-solver-reduction=1e-7
 )
 
+add_test_compare_parallel_simulation(
+  CASENAME
+    editnnc_multregt
+  FILENAME
+    EDITNNC_AND_MULTREGT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  DIR
+    editnnc
+)
+
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")
 
 add_test_compareSeparateECLFiles(
