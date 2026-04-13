@@ -141,6 +141,7 @@ private:
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableGeochemistry = getPropValue<TypeTag, Properties::EnableGeochemistry>() };
+    enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
@@ -236,7 +237,16 @@ public:
         if constexpr (!enableGeochemistry) {
             if (vanguard.eclState().runspec().geochem().enabled()) {
                 throw std::runtime_error("GEOCHEM keyword in the deck but geochemistry module "
-                                         "disabled at compile time!");
+                                         "was disabled at compile time!");
+            }
+        }
+
+        // Safeguard against TPSA-geomechanics since it requires FlowProblemTPSA
+        if constexpr (!enableMech) {
+            const auto& rspec = vanguard.eclState().runspec();
+            if (rspec.mech() && rspec.mechSolver().tpsa()) {
+                throw std::runtime_error("TPSA solver enabled in the deck, but geomechanics "
+                                         "module was disabled at compile time!");
             }
         }
 
