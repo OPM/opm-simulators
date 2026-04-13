@@ -450,13 +450,12 @@ int Opm::Main::runBlackOil()
         // support the diffusion module yet.
         return flowBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
     }
-    if (this->eclipseState_->runspec().hysterPar().active()) {
-        const auto& rspec = this->eclipseState_->runspec();
-        if (rspec.mech() && rspec.mechSolver().tpsa()) {
-            // Blackoil + TPSA geomechanics
-            return flowBlackoilTpsaMain(argc_, argv_, outputCout_, outputFiles_);
-        }
-
+    const auto& rspec = this->eclipseState_->runspec();
+    if (rspec.mech() && rspec.mechSolver().tpsa()) {
+        // Blackoil + TPSA geomechanics
+        return flowBlackoilTpsaMain(argc_, argv_, outputCout_, outputFiles_);
+    }
+    if (rspec.hysterPar().active()) {
         return flowBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
     } else {
         // Use variant without hysteresis support to save memory.
