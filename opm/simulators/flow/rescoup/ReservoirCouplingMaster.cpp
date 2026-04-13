@@ -498,12 +498,12 @@ updateMasterGroupNameOrderMap(
 }
 
 template <class Scalar>
-void
+data::ReservoirCouplingGroupRates
 ReservoirCouplingMaster<Scalar>::
-updateScheduleSatelliteData(Schedule& schedule, const int report_step_idx)
+collectGroupRatesForSummary() const
 {
     assert(this->report_step_data_);
-    this->report_step_data_->updateScheduleSatelliteData(schedule, report_step_idx);
+    return this->report_step_data_->collectGroupRatesForSummary();
 }
 
 // ------------------

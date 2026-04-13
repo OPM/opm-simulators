@@ -30,6 +30,8 @@
 
 #include <opm/models/parallel/tasklets.hpp>
 
+#include <opm/output/data/Groups.hpp>
+
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
@@ -149,7 +151,8 @@ protected:
                      const Inplace*                                       initialInPlace,
                      const InterRegFlowMap&                               interRegFlows,
                      SummaryState&                                        summaryState,
-                     UDQState&                                            udqState);
+                     UDQState&                                            udqState,
+                     const data::ReservoirCouplingGroupRates*             rcGroupRates = nullptr);
 
     CollectDataOnIORankType collectOnIORank_;
     const Grid& grid_;
@@ -180,7 +183,7 @@ protected:
     mutable std::vector<std::vector<NNCdata>> outputNncGlobalLocal_; // here GLOBAL refers to level 0 grid, local to any LGR (refined grid)
 
     // Amalgamated NNCs: nncs between different LGRs. For example, nested refinement or neighboring LGRs.
-    // The cells belong to different refined level grids. 
+    // The cells belong to different refined level grids.
     // nnc.cell1 (NNA1 in *.EGRID) Level/Local Cartesian index of cell1 (in its level grid: level1)
     // nnc.cell2 (NNA2 in *.EGRID) Level/Local Cartesian index of cell2 (in its level grid: level2, with level2 > level1).
     // Equivalent to TRANLL in *.INIT
@@ -209,16 +212,16 @@ private:
     bool isCartesianNeighbour_(const std::array<int,3>& levelCartDims,
                                const std::size_t levelCartIdx1,
                                const std::size_t levelCartIdx2) const;
-    
+
     bool isDirectNeighbours_(const std::unordered_map<int,int>& levelCartesianToActive,
                              const std::array<int,3>& levelCartDims,
                              const std::size_t levelCartIdx1,
                              const std::size_t levelCartIdx2) const;
-    
+
     auto activeCell_(const std::unordered_map<int,int>& levelCartToLevelCompressed,
                      const std::size_t levelCartIdx) const;
-    
-    
+
+
 
     /// Returns true if the given Cartesian cell index belongs to a numerical aquifer.
     /// If no numerical aquifer exists, always returns false.
@@ -285,7 +288,7 @@ private:
     /// Allocates NNCdata  vectors for
     /// - TRANNNC for level grids,
     /// - TRANGL for NNCs between level zero grid and an LGR (refined level grid)
-    /// - TRANLL for NNCs between two different refined level grids. 
+    /// - TRANLL for NNCs between two different refined level grids.
     /// Only for CpGrid. Other grid types do not support refinement yet.
     void allocateAllNncs_(int maxLevel) const;
 };

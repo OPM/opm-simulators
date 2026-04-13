@@ -325,12 +325,9 @@ public:
             miscSummaryData["MSUMNEWT"] = this->simulation_report_.success.total_newton_iterations;
         }
 
-        // For reservoir coupling master: populate satellite production/injection
-        // data from slave groups so that summary.eval() picks up the rates through
-        // the existing GSatProd / satellite_rate machinery in opm-common's Summary.cpp.
-        // This must be done before evalSummary() so the rates are available when
-        // summary vectors are evaluated.
-        this->updateReservoirCouplingSatelliteData_();
+        // For reservoir coupling master: collect slave production/injection
+        // rates to pass through to Summary::eval() via DynamicSimulatorState.
+        const auto rcGroupRates = this->collectReservoirCouplingGroupRates_();
 
         {
             OPM_TIMEBLOCK(evalSummary);
@@ -356,7 +353,8 @@ public:
                               this->outputModule_->initialInplace(),
                               interRegFlows,
                               this->summaryState(),
-                              this->udqState());
+                              this->udqState(),
+                              rcGroupRates ? &(*rcGroupRates) : nullptr);
         }
     }
 
@@ -764,10 +762,9 @@ private:
     const Schedule& schedule() const
     { return simulator_.vanguard().schedule(); }
 
-    /// Populate satellite production/injection data from reservoir coupling
-    /// slave groups into the Schedule's GSatProd / GroupSatelliteInjection
-    /// structures.  Delegates to ReservoirCouplingMaster::updateScheduleSatelliteData().
-    void updateReservoirCouplingSatelliteData_()
+    /// Collect reservoir coupling master group rates for Summary::eval().
+    /// Returns nullopt for non-RC simulations or non-master processes.
+    std::optional<data::ReservoirCouplingGroupRates> collectReservoirCouplingGroupRates_()
     {
 #ifdef RESERVOIR_COUPLING_ENABLED
         // Guard: only BlackoilWellModel has reservoir coupling support.
@@ -779,12 +776,13 @@ private:
         if constexpr (requires(WellModelType& wm) { wm.isReservoirCouplingMaster(); }) {
             auto& wellModel = simulator_.problem().wellModel();
             if (!wellModel.isReservoirCouplingMaster()) {
-                return;
+                return std::nullopt;
             }
-            wellModel.reservoirCouplingMaster().updateScheduleSatelliteData(
-                simulator_.vanguard().schedule(), simulator_.episodeIndex());
+            return wellModel.reservoirCouplingMaster()
+                .collectGroupRatesForSummary();
         }
 #endif
+        return std::nullopt;
     }
 
     void prepareLocalCellData(const bool isSubStep,
