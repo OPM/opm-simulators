@@ -53,6 +53,11 @@
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
+#include <opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp>
+#ifdef RESERVOIR_COUPLING_ENABLED
+#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
+#endif
+
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <limits>
@@ -128,7 +133,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
 
     typedef Dune::MultipleCodimMultipleGeomTypeMapper< GridView > VertexMapper;
 
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal || 
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal ||
            getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal };
     enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
@@ -320,6 +325,10 @@ public:
             miscSummaryData["MSUMNEWT"] = this->simulation_report_.success.total_newton_iterations;
         }
 
+        // For reservoir coupling master: collect slave production/injection
+        // rates to pass through to Summary::eval() via DynamicSimulatorState.
+        const auto rcGroupRates = this->collectReservoirCouplingGroupRates_();
+
         {
             OPM_TIMEBLOCK(evalSummary);
 
@@ -344,7 +353,8 @@ public:
                               this->outputModule_->initialInplace(),
                               interRegFlows,
                               this->summaryState(),
-                              this->udqState());
+                              this->udqState(),
+                              rcGroupRates ? &(*rcGroupRates) : nullptr);
         }
     }
 
@@ -751,6 +761,29 @@ private:
 
     const Schedule& schedule() const
     { return simulator_.vanguard().schedule(); }
+
+    /// Collect reservoir coupling master group rates for Summary::eval().
+    /// Returns nullopt for non-RC simulations or non-master processes.
+    std::optional<data::ReservoirCouplingGroupRates> collectReservoirCouplingGroupRates_()
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // Guard: only BlackoilWellModel has reservoir coupling support.
+        // CompWellModel (compositional) does not, so we use if constexpr
+        // to avoid compilation errors when EclWriter is instantiated with
+        // a compositional TypeTag.
+        using WellModelType = std::remove_cvref_t<
+            decltype(simulator_.problem().wellModel())>;
+        if constexpr (requires(WellModelType& wm) { wm.isReservoirCouplingMaster(); }) {
+            auto& wellModel = simulator_.problem().wellModel();
+            if (!wellModel.isReservoirCouplingMaster()) {
+                return std::nullopt;
+            }
+            return wellModel.reservoirCouplingMaster()
+                .collectGroupRatesForSummary();
+        }
+#endif
+        return std::nullopt;
+    }
 
     void prepareLocalCellData(const bool isSubStep,
                               const int  reportStepNum)

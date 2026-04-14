@@ -497,6 +497,15 @@ updateMasterGroupNameOrderMap(
     this->master_group_name_order_[slave_name] = master_group_name_map;
 }
 
+template <class Scalar>
+data::ReservoirCouplingGroupRates
+ReservoirCouplingMaster<Scalar>::
+collectGroupRatesForSummary() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->collectGroupRatesForSummary();
+}
+
 // ------------------
 // Private methods
 // ------------------

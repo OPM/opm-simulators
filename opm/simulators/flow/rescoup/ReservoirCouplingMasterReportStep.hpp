@@ -22,6 +22,7 @@
 
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMpiTraits.hpp>
+#include <opm/output/data/Groups.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -220,6 +221,10 @@ public:
     /// This updates the internal state to track which report step is currently
     /// being processed.
     void setReportStepIdx(int report_step_idx);
+
+    /// @brief Collect production/injection rates for all master groups.
+    /// @return ReservoirCouplingGroupRates struct with per-group rates.
+    data::ReservoirCouplingGroupRates collectGroupRatesForSummary() const;
 
     /// @brief Check if a specific slave process has been activated
     /// @param index Index of the slave process

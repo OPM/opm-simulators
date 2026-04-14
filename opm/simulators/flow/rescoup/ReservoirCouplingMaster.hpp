@@ -154,6 +154,11 @@ public:
          this->logger_.setDeferredLogger(deferred_logger);
     }
     void setFirstSubstepOfSyncTimestep(bool value);
+
+    /// @brief Collect production/injection rates for all master groups.
+    /// @details Returns a ReservoirCouplingGroupRates struct that can be
+    ///   passed through DynamicSimulatorState to Summary::eval().
+    data::ReservoirCouplingGroupRates collectGroupRatesForSummary() const;
     // These are currently only used for unit testing
     void setSlaveActivationDate(int index, double date) { this->slave_activation_dates_[index] = date; }
     void setSlaveNextReportTimeOffset(int index, double offset);

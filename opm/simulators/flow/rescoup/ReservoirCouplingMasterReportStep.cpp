@@ -320,6 +320,47 @@ setReportStepIdx(int report_step_idx)
     this->report_step_idx_ = report_step_idx;
 }
 
+template <class Scalar>
+data::ReservoirCouplingGroupRates
+ReservoirCouplingMasterReportStep<Scalar>::
+collectGroupRatesForSummary() const
+{
+    using RcPhase = ReservoirCoupling::Phase;
+    using RateKind = ReservoirCoupling::RateKind;
+
+    data::ReservoirCouplingGroupRates result;
+
+    const auto numSlaves = this->numSlaves();
+    for (unsigned int i = 0; i < numSlaves; ++i) {
+        const auto& masterGroupNames = this->getMasterGroupNamesForSlave(i);
+        for (const auto& groupName : masterGroupNames) {
+            // Production rates (positive values, SI units)
+            data::ReservoirCouplingGroupRates::ProductionRates prod;
+            prod.oil = this->getMasterGroupRate_(groupName, RcPhase::Oil, RateKind::ProductionSurface);
+            prod.gas = this->getMasterGroupRate_(groupName, RcPhase::Gas, RateKind::ProductionSurface);
+            prod.water = this->getMasterGroupRate_(groupName, RcPhase::Water, RateKind::ProductionSurface);
+            prod.resv =
+                this->getMasterGroupRate_(groupName, RcPhase::Oil, RateKind::ProductionReservoir)
+                + this->getMasterGroupRate_(groupName, RcPhase::Gas, RateKind::ProductionReservoir)
+                + this->getMasterGroupRate_(groupName, RcPhase::Water, RateKind::ProductionReservoir);
+            result.production[groupName] = prod;
+
+            // Injection rates (positive values, SI units)
+            for (const auto phase : {RcPhase::Oil, RcPhase::Gas, RcPhase::Water}) {
+                const double surfRate = this->getMasterGroupRate_(
+                    groupName, phase, RateKind::InjectionSurface);
+                const double resRate = this->getMasterGroupRate_(
+                    groupName, phase, RateKind::InjectionReservoir);
+                if (surfRate != 0.0 || resRate != 0.0) {
+                    const auto opmPhase = convertToOpmPhase(phase);
+                    result.injection[groupName][opmPhase] = {surfRate, resRate};
+                }
+            }
+        }
+    }
+    return result;
+}
+
 
 // ------------------
 // Private methods
