@@ -989,7 +989,7 @@ updateGroupTargetFallbackFlag(WellState<Scalar, IndexTraits>& well_state,
                                name(), Group::ProductionCMode2String(cmode), ws.group_target->guiderate_ratio,
                                Group::ProductionCMode2String(ws.group_target_fallback->production_cmode), ws.group_target_fallback->guiderate_ratio,
                                fraction_tolerance, Group::ProductionCMode2String(cmode));
-            deferred_logger.info(msg);
+            deferred_logger.debug(msg);
             ws.use_group_target_fallback = false;
         } else {
             ws.use_group_target_fallback = true;
