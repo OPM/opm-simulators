@@ -739,6 +739,13 @@ checkGroupHigherConstraints(const Group& group,
         // Check higher up only if under individual (not FLD) control.
         if (currentControl != Group::ProductionCMode::FLD && group.productionGroupControlAvailable()) {
             const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
+            // NOTE: For reservoir coupling slave groups with no GCONPROD in the slave deck,
+            // checkGroupConstraintsProd() below checks if this group's rate violates
+            // the parent group's constraint. But groups superior to slave groups should in
+            // general not have any constraints on them to avoid interference with the master group
+            // constraints, so checkGroupConstraintsProd() returns is_changed=false which is correct
+            // since the group only has a single constraint imposed by the master and should not be
+            // subject to actionOnBrokenConstraints() below.
             const auto [is_changed, scaling_factor] = this->groupStateHelper().checkGroupConstraintsProd(
                 group.name(),
                 group.parent(),
@@ -1356,7 +1363,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                     ws.production_cmode = Well::ProducerCMode::BHP;
                 }
                 if (group_target.has_value()) {
-                    // check whether group giving target is operating at its original cmode, and if not, compute the target 
+                    // check whether group giving target is operating at its original cmode, and if not, compute the target
                     // corresponding to original cmode for potential later use in case current cmode is/becomes infeasible
                     const Group& target_group = this->schedule().getGroup(group_target->group_name, reportStepIdx);
                     const auto cmode_orig = target_group.productionControls(summaryState_).cmode;

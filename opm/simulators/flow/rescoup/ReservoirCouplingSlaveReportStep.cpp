@@ -262,28 +262,17 @@ setMasterProductionTarget(const std::string& gname, const Scalar target, const G
 template <class Scalar>
 void
 ReservoirCouplingSlaveReportStep<Scalar>::
-updateSlaveGroupTargetsInSchedule(Schedule& schedule, const int report_step_idx)
+markSlaveGroupsInSchedule(Schedule& schedule, const int report_step_idx)
 {
-    // After receiving production constraints from the master, update the
-    // Schedule's Group production properties so the group is recognized as
-    // a production group.  Slave groups may not have GCONPROD in the slave
-    // deck, the master provides the target at runtime.  Without this, the
-    // existing constraint enforcement mechanisms (checkGroupHigherConstraints,
-    // getWellGroupTargetProducer, etc.) skip the group since
-    // isProductionGroup() returns false.
     for (std::size_t i = 0; i < this->slave_.numSlaveGroups(); ++i) {
         const auto& gname = this->slave_.slaveGroupIdxToGroupName(i);
         if (this->hasMasterProductionTarget(gname)) {
-            auto [master_target, master_cmode] = this->masterProductionTarget(gname);
-            schedule.updateSlaveGroupProductionTarget(
-                report_step_idx, gname, master_cmode, master_target);
+            schedule.markSlaveProductionGroup(report_step_idx, gname);
         }
-        // Injection targets — check each phase
         for (const auto phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
             if (this->hasMasterInjectionTarget(gname, phase)) {
-                auto [master_target, master_cmode] = this->masterInjectionTarget(gname, phase);
-                schedule.updateSlaveGroupInjectionTarget(
-                    report_step_idx, gname, phase, master_cmode, master_target);
+                schedule.markSlaveInjectionGroup(report_step_idx, gname);
+                break;  // only need to mark once per group
             }
         }
     }

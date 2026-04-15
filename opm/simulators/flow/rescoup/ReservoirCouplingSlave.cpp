@@ -372,10 +372,10 @@ setLastSubstepOfSyncTimestep(bool value)
 template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
-updateSlaveGroupTargetsInSchedule(Schedule& schedule, const int report_step_idx)
+markSlaveGroupsInSchedule(Schedule& schedule, const int report_step_idx)
 {
     assert(this->report_step_data_);
-    this->report_step_data_->updateSlaveGroupTargetsInSchedule(schedule, report_step_idx);
+    this->report_step_data_->markSlaveGroupsInSchedule(schedule, report_step_idx);
 }
 
 // ------------------
