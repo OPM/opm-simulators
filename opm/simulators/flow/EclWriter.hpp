@@ -449,7 +449,7 @@ public:
         OpmLog::note("");   // Blank line after all reports.
     }
 
-    void writeOutput(data::Solution&& localCellData, bool isSubStep)
+    void writeOutput(data::Solution&& localCellData, const bool isSubStep, const bool isForcedFinalOutput)
     {
         OPM_TIMEBLOCK(writeOutput);
 
@@ -517,6 +517,7 @@ public:
                 timeStepIdx = simulator_.timeStepIndex();
             }
             this->doWriteOutput(reportStepNum, timeStepIdx, isSubStep,
+                                isForcedFinalOutput,
                                 std::move(localCellData),
                                 std::move(localWellData),
                                 std::move(localGroupAndNetworkData),
