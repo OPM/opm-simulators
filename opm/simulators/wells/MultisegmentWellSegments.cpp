@@ -534,9 +534,10 @@ pressureDropAutoICD(const int seg,
     using M  = UnitSystem::measure;
     const Scalar unit_volume_rate = unit_system.to_si(M::geometric_volume_rate, 1.);
 
+    // For viscExponent() and densityExponent(), negative values are allowed, we should use the normal pow() function
     // TODO: we did not consider the maximum allowed rate here
-    const auto result = sign * safe_pow(mixture_density / rho_reference, aicd.densityExponent())
-                      * safe_pow(visc_reference/mixture_viscosity, aicd.viscExponent()) * mixture_density
+    const auto result = sign * MathTool::pow(mixture_density / rho_reference, aicd.densityExponent())
+                      * MathTool::pow(visc_reference/mixture_viscosity, aicd.viscExponent()) * mixture_density
                       * aicd.strength() * safe_pow( -sign * volume_rate_icd, aicd.flowRateExponent())
                       * std::pow(unit_volume_rate, (2. - aicd.flowRateExponent())) ;
     return result;
