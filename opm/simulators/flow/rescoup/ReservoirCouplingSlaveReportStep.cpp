@@ -259,6 +259,25 @@ setMasterProductionTarget(const std::string& gname, const Scalar target, const G
     this->master_production_targets_[gname] = {target, cmode};
 }
 
+template <class Scalar>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+markSlaveGroupsInSchedule(Schedule& schedule, const int report_step_idx)
+{
+    for (std::size_t i = 0; i < this->slave_.numSlaveGroups(); ++i) {
+        const auto& gname = this->slave_.slaveGroupIdxToGroupName(i);
+        if (this->hasMasterProductionTarget(gname)) {
+            schedule.markSlaveProductionGroup(report_step_idx, gname);
+        }
+        for (const auto phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
+            if (this->hasMasterInjectionTarget(gname, phase)) {
+                schedule.markSlaveInjectionGroup(report_step_idx, gname);
+                break;  // only need to mark once per group
+            }
+        }
+    }
+}
+
 // ------------------
 // Private methods
 // ------------------

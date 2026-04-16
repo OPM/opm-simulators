@@ -389,6 +389,13 @@ checkGroupProductionConstraints(const Group& group) const
     const auto controls = group.productionControls(this->summary_state_);
     const auto currentControl = this->groupState().production_control(group.name());
 
+    // NOTE: For reservoir coupling slave groups with no GCONPROD in the slave deck,
+    // has_control() returns false for all modes.
+    // This means the loop below does nothing for such groups, which is correct:
+    // this function checks for control mode switching (e.g. ORAT→WRAT),
+    // and RC slave groups have only one mode imposed by the master.
+    // The actual target enforcement happens in getProductionGroupTarget()
+    // getProductionGroupTarget() via hasMasterProductionTarget().
     for (const auto cmode : {
         Group::ProductionCMode::ORAT,
         Group::ProductionCMode::WRAT,
@@ -777,7 +784,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetInjector(const std::str
     // Avoid negative target rates coming from too large local reductions.
     // guiderate_fraction is not used for injectors, so set to 0.0
     return GroupTarget{group.name(), std::max(Scalar(0.0), target / efficiency_factor),
-                       Group::ProductionCMode::NONE, current_group_control, 0.0}; 
+                       Group::ProductionCMode::NONE, current_group_control, 0.0};
 }
 
 template <typename Scalar, typename IndexTraits>
@@ -800,7 +807,7 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
     OPM_TIMEFUNCTION();
     const Group::ProductionCMode& current_group_cmode = this->groupState().production_control(group.name());
     // If fallback_cmode is provided and different from current_group_cmode, we will translate the target from
-    // original mode to fallback mode using group fractions at previous step. Otherwise, fallback_cmode is 
+    // original mode to fallback mode using group fractions at previous step. Otherwise, fallback_cmode is
     // the same as current_group_cmode and no translation will be done.
     const Group::ProductionCMode target_group_cmode = fallback_cmode.has_value() ? fallback_cmode.value() : current_group_cmode;
 
@@ -857,7 +864,12 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
         return fcalc.localFraction(child, always_included);
     };
 
-    Scalar orig_target = this->getProductionGroupTarget(group); // current cmode
+    // NOTE: For reservoir coupling slave groups which does not have GCONPROD in the slave deck,
+    // getProductionGroupTarget() returns the master-imposed target directly from
+    // hasMasterProductionTarget() (received via MPI), not from
+    // group.productionControls() which reads GCONPROD properties (which will be empty
+    // for such groups). This is correct since the group only has one mode imposed by the master.
+    Scalar orig_target = this->getProductionGroupTarget(group); // current cmode target
     if (target_group_cmode != current_group_cmode) {
         // translate orig_target to target_cmode using "previous" group rate fractions
         const auto& prev_rates = this->groupState().prev_production_rates(group.name());
@@ -890,15 +902,15 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
                                                              local_reduction_lambda,
                                                              local_fraction_lambda,
                                                              do_addback);
-    // Finally, we provide the well-to-group guide-rate ratio for subsequent diagnostics of 
-    // target feasibility. Note that we cannot use the target directly for this, since a ~zero 
-    // target may very well just be the result of non-converged group tree. 
+    // Finally, we provide the well-to-group guide-rate ratio for subsequent diagnostics of
+    // target feasibility. Note that we cannot use the target directly for this, since a ~zero
+    // target may very well just be the result of non-converged group tree.
     Scalar guide_rate_fraction = 1.0;
     const Scalar well_guide_rate = fcalc.guideRate(name, name, /*always_use_potentials=*/false);
     const Scalar group_guide_rate = fcalc.guideRate(group.name(), name, /*always_use_potentials=*/false);
     if (group_guide_rate > 0.0) {
         guide_rate_fraction = (well_guide_rate / group_guide_rate);
-    }  
+    }
     // Avoid negative target rates coming from too large local reductions.
     return GroupTarget{group.name(), std::max(Scalar(0.0), target / efficiency_factor),
                        target_group_cmode, Group::InjectionCMode::NONE, guide_rate_fraction};

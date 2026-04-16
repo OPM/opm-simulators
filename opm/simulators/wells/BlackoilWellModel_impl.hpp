@@ -478,6 +478,8 @@ namespace Opm {
                 this->sendSlaveGroupDataToMaster();
                 this->receiveGroupConstraintsFromMaster();
                 this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
+                this->reservoirCouplingSlave().markSlaveGroupsInSchedule(
+                    this->schedule_, reportStepIdx);
                 slave_needs_well_solution = true;
             }
         }

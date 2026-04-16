@@ -117,6 +117,11 @@ public:
     /// @details See isLastSubstepOfSyncTimestep() for details.
     /// @param value true if this is the last substep of a "sync" timestep, false if not
     void setLastSubstepOfSyncTimestep(bool value);
+
+    /// @brief Mark slave groups in the Schedule as production/injection groups.
+    /// @details Delegates to ReservoirCouplingSlaveReportStep.
+    void markSlaveGroupsInSchedule(Schedule& schedule, int report_step_idx);
+
     const std::string& slaveGroupIdxToGroupName(std::size_t group_idx) const {
         return this->slave_group_order_.at(group_idx);
     }

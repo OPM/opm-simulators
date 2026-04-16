@@ -176,6 +176,14 @@ public:
     /// @param value true if this is the last substep of a "sync" timestep, false if not
     void setLastSubstepOfSyncTimestep(bool value) { is_last_substep_of_sync_timestep_ = value; }
 
+    /// @brief Mark slave groups in the Schedule as production/injection groups.
+    /// @details For slave groups that have received master production/injection
+    ///   targets, mark them so isProductionGroup()/isInjectionGroup() return true.
+    ///   This ensures the existing constraint enforcement mechanisms recognize them.
+    /// @param schedule Non-const reference to the Schedule
+    /// @param report_step_idx 0-based report step index
+    void markSlaveGroupsInSchedule(Schedule& schedule, int report_step_idx);
+
     /// @brief Get the name of this slave process
     /// @return Reference to the name string for this slave
     const std::string& slaveName() const { return this->slave_.getSlaveName(); }

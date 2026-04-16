@@ -181,6 +181,10 @@ std::pair<Group::ProductionCMode, Scalar>
 BlackoilWellModelConstraints<Scalar, IndexTraits>::
 checkGroupProductionConstraints(const Group& group) const
 {
+    // NOTE: For reservoir coupling slave groups with no GCONPROD in the slave deck,
+    // checkGroupProductionConstraints() below returns NONE because has_control() is
+    // false for all modes.  So actionOnBrokenConstraints() will never be called,
+    // this is correct since the group only has one mode imposed by the master.
     return groupStateHelper().checkGroupProductionConstraints(group);
 }
 
