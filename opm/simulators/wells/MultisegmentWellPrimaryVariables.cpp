@@ -314,11 +314,11 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
         Scalar rvMax = 0.0;
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             // Both oil and gas active.
-            rsMax = FluidSystem::oilPvt()
-                .saturatedGasDissolutionFactor(pvtReg, temperature, segment_pressure[seg]);
+            rsMax = std::max(Scalar{0.0}, FluidSystem::oilPvt()
+                .saturatedGasDissolutionFactor(pvtReg, temperature, segment_pressure[seg]));
 
-            rvMax = FluidSystem::gasPvt()
-                .saturatedOilVaporizationFactor(pvtReg, temperature, segment_pressure[seg]);
+            rvMax = std::max(Scalar{0.0}, FluidSystem::gasPvt()
+                .saturatedOilVaporizationFactor(pvtReg, temperature, segment_pressure[seg]));
         }
 
         // 1) Infer phase splitting for oil/gas.
