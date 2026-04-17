@@ -504,7 +504,7 @@ macro(opm-simulators_tests_hook)
                  primary_variables_gpu
                  solver_adapter
                  throw_macros_on_gpu
-                 test_blackoilintensivequantities_gpu
+                 blackoilintensivequantities_gpu
            )
       if(TEST ${test})
         set_tests_properties(${test}
