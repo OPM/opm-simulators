@@ -167,9 +167,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         using ElementChunksType = ElementChunks<GridView, Dune::Partitions::All>;
 
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
-
+        enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>()};
         enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
-        constexpr static bool isIncompatibleWithCprw = enablePolymerMolarWeight;
+
+        static constexpr bool isIncompatibleWithCprw = enablePolymerMolarWeight;
+        static constexpr bool canUseAnalyticWeightsForCprw = !enableSolvent;
 
 #if HAVE_MPI
         using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
@@ -213,7 +215,9 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
               matrix_(nullptr)
         {
             parameters_.resize(1);
-            parameters_[0].init(simulator_.vanguard().eclState().getSimulationConfig().useCPR());
+            parameters_[0].init(simulator_.vanguard().eclState().getSimulationConfig().useCPR(),
+                canUseAnalyticWeightsForCprw);
+            
             initialize();
         }
 
@@ -229,7 +233,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                               "Choose a different option, for example --linear-solver=ilu0");
                 }
             }
-
             if (parameters_[0].linsolver_ == "hybrid") {
                 // Experimental hybrid configuration.
                 // When chosen, will set up two solvers, one with CPRW
@@ -239,7 +242,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 parameters_.clear();
                 {
                     FlowLinearSolverParameters para;
-                    para.init(false);
+                    para.init(false, canUseAnalyticWeightsForCprw);
                     para.linsolver_ = "cprw";
                     parameters_.push_back(para);
                     prm_.push_back(setupPropertyTree(parameters_[0],
@@ -248,7 +251,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 }
                 {
                     FlowLinearSolverParameters para;
-                    para.init(false);
+                    para.init(false, canUseAnalyticWeightsForCprw);
                     para.linsolver_ = "ilu0";
                     parameters_.push_back(para);
                     prm_.push_back(setupPropertyTree(parameters_[1],
