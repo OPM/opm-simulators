@@ -1164,7 +1164,7 @@ template<class TypeTag>
 template<class Solver>
 void
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-maybeUpdateLastSubstepOfSyncTimestep_(double dt)
+maybeUpdateLastSubstepOfSyncTimestep_([[maybe_unused]] const double dt)
 {
 #ifdef RESERVOIR_COUPLING_ENABLED
     // For reservoir coupling slaves: predict if this substep will complete
