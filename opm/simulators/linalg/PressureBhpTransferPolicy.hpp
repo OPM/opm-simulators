@@ -33,10 +33,21 @@
 
 namespace Opm
 {
+    /** \brief Add wells to the communicator
+     *
+     * @param comm:       Communicator to be extended
+     * @param commRw:     Created communicator. Communicates whatever comm does plus wells.
+     * @param localWells: Stores for each well on this rank the well ID and ownership status.
+     *
+     * Make a copy of the communicator comm and add wells to it.
+     * IDs of wells and whether this rank owns it are given by localWells.
+     * If a well is distributed, it should get the same well ID on all
+     * ranks but this method does not check that.
+     */
     template <class Communication>
     void extendCommunicatorWithWells(const Communication& comm,
                                      std::shared_ptr<Communication>& commRW,
-                                     const int nw)
+                                     const std::vector<std::pair<std::size_t, bool>>& localWells)
     {
         OPM_TIMEBLOCK(extendCommunicatorWithWells);
         // used for extending the coarse communicator pattern
@@ -44,8 +55,8 @@ namespace Opm
         using LocalIndex = typename IndexSet::LocalIndex;
         const IndexSet& indset = comm.indexSet();
         IndexSet& indset_rw = commRW->indexSet();
-        const int max_nw = comm.communicator().max(nw);
-        const int rank = comm.communicator().rank();
+
+        // copy the comm into commRW and keep track of the maximal local and global index
         int glo_max = 0;
         std::size_t loc_max = 0;
         indset_rw.beginResize();
@@ -57,18 +68,20 @@ namespace Opm
             loc_max = std::max(loc_max, loc);
         }
         const int global_max = comm.communicator().max(glo_max);
-        // used append the welldofs at the end
         assert(loc_max + 1 == indset.size());
+
+        // append the welldofs at the end
         std::size_t local_ind = loc_max + 1;
-        for (int i = 0; i < nw; ++i) {
-            // need to set unique global number
-            const std::size_t v = global_max + max_nw * rank + i + 1;
-            // set to true to not have problems with higher levels if growing of domains is used
-            indset_rw.add(v, LocalIndex(local_ind, Dune::OwnerOverlapCopyAttributeSet::owner, true));
+        for (const auto& well : localWells) {
+            // global IDs of wells match
+            const std::size_t global_ind = global_max + 1 + well.first;
+            auto ownerTag = well.second ? Dune::OwnerOverlapCopyAttributeSet::owner
+                                        : Dune::OwnerOverlapCopyAttributeSet::copy;
+            indset_rw.add(global_ind, LocalIndex(local_ind, ownerTag, true));
             ++local_ind;
         }
         indset_rw.endResize();
-        assert(indset_rw.size() == indset.size() + nw);
+        assert(indset_rw.size() == indset.size() + localWells.size());
         // assume same communication pattern
         commRW->remoteIndices().setNeighbours(comm.remoteIndices().getNeighbours());
         commRW->remoteIndices().template rebuild<true>();
@@ -158,7 +171,8 @@ namespace Opm
             fineOperator.addWellPressureEquationsStruct(*coarseLevelMatrix_);
             coarseLevelMatrix_->compress(); // all elemenst should be set
             if constexpr (!std::is_same_v<Communication, Dune::Amg::SequentialInformation>) {
-                extendCommunicatorWithWells(*communication_, coarseLevelCommunication_, nw);
+                const auto localWells = fineOperator.getLocalWellIDsAndOwnership();
+                extendCommunicatorWithWells(*communication_, coarseLevelCommunication_, localWells);
             }
         }
         calculateCoarseEntries(fineOperator);
