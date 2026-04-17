@@ -175,18 +175,18 @@ public:
             fluidState_.setRsw(0.0);
         }
     }
-    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
-    BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
+    OPM_HOST_DEVICE BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
 
     template<class OtherTypeTag>
     friend class BlackOilIntensiveQuantities;
 
     // This ctor is used when switching to the GPU typetag which currently supports thermal effects and diffusion.
     template<class OtherTypeTag>
+    requires (energyModuleType == EnergyModules::FullyImplicitThermal && (enableDiffusion != 0))
     explicit BlackOilIntensiveQuantities(
         const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
-        : fluidState_(other.fluidState_.withOtherFluidSystem(fsystem))
+        : fluidState_(other.fluidState_.template withOtherFluidSystem<FluidSystem, Indices::numPhases>(fsystem))
         , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(
             other.rockInternalEnergy_, other.totalThermalConductivity_, other.rockFraction_)
         , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(
@@ -206,6 +206,72 @@ public:
         static_assert(!enableDispersion);
     }
 
+    template<class OtherTypeTag>
+    requires (energyModuleType == EnergyModules::FullyImplicitThermal && (enableDiffusion == 0))
+    explicit BlackOilIntensiveQuantities(
+        const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
+        : fluidState_(other.fluidState_.template withOtherFluidSystem<FluidSystem, Indices::numPhases>(fsystem))
+        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(
+            other.rockInternalEnergy_, other.totalThermalConductivity_, other.rockFraction_)
+        , referencePorosity_(other.referencePorosity_)
+        , porosity_(other.porosity_)
+        , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
+        , mobility_(other.mobility_)
+        , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
+    {
+        static_assert(!enableSolvent);
+        static_assert(!enableExtbo);
+        static_assert(!enablePolymer);
+        static_assert(!enableFoam);
+        static_assert(!enableMICP);
+        static_assert(!enableBrine);
+        static_assert(!enableDispersion);
+    }
+
+    template<class OtherTypeTag>
+    requires (energyModuleType != EnergyModules::FullyImplicitThermal && (enableDiffusion != 0))
+    explicit BlackOilIntensiveQuantities(
+        const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
+        : fluidState_(other.fluidState_.template withOtherFluidSystem<FluidSystem, Indices::numPhases>(fsystem))
+        , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(
+            other.tortuosities(), other.diffusionCoefficients())
+        , referencePorosity_(other.referencePorosity_)
+        , porosity_(other.porosity_)
+        , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
+        , mobility_(other.mobility_)
+        , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
+    {
+        static_assert(!enableSolvent);
+        static_assert(!enableExtbo);
+        static_assert(!enablePolymer);
+        static_assert(!enableFoam);
+        static_assert(!enableMICP);
+        static_assert(!enableBrine);
+        static_assert(!enableDispersion);
+    }
+
+    template<class OtherTypeTag>
+    requires (energyModuleType != EnergyModules::FullyImplicitThermal && (enableDiffusion == 0))
+    explicit BlackOilIntensiveQuantities(
+        const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
+        : fluidState_(other.fluidState_.template withOtherFluidSystem<FluidSystem, Indices::numPhases>(fsystem))
+        , referencePorosity_(other.referencePorosity_)
+        , porosity_(other.porosity_)
+        , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
+        , mobility_(other.mobility_)
+        , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
+    {
+        static_assert(!enableSolvent);
+        static_assert(!enableExtbo);
+        static_assert(!enablePolymer);
+        static_assert(!enableFoam);
+        static_assert(!enableMICP);
+        static_assert(!enableBrine);
+        static_assert(!enableDispersion);
+    }
+
+    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
+
     /**
      * \brief Create a copy of this intensive quantities object
      *
@@ -215,10 +281,49 @@ public:
      * \endcode
      */
     template <class OtherTypeTag>
-    auto withOtherFluidSystem(const GetPropType<OtherTypeTag, Properties::FluidSystem>& other) const
+    auto withOtherFluidSystem(GetPropType<OtherTypeTag, Properties::FluidSystem>* other) const
     {
-        BlackOilIntensiveQuantities<OtherTypeTag> newIntQuants(*this, other);
+        BlackOilIntensiveQuantities<OtherTypeTag> newIntQuants(*this, *other);
         return newIntQuants;
+    }
+
+    /*!
+     * \brief Field-by-field overlay of the BlackOil intensive-quantity values from
+     *        another \c BlackOilIntensiveQuantities instantiation onto this one.
+     *
+     * Used by the experimental GPU intensive-quantities dispatcher to write the
+     * GPU-computed result onto a CPU-side \c IntensiveQuantities even when the
+     * two TypeTags are not value-compatible (e.g. when the CPU TypeTag enables
+     * dispersion or other modules that the GPU TypeTag does not). Only stored
+     * fields that the dispatcher actually computes are copied; the
+     * \c mobility_ field is left untouched (the GPU relperm path is currently
+     * known to return zero, see \c GpuBlackoilIntensiveQuantitiesDispatcher).
+     */
+    template<class OtherTypeTag>
+    OPM_HOST_DEVICE void overlayBlackOilFieldsFrom(
+        const BlackOilIntensiveQuantities<OtherTypeTag>& other)
+    {
+        // Full fluid-state copy (handles every stored field, including
+        // Rs/Rv/Rsw/Rvw, salt concentration, solvent fields, ...). This
+        // is intentionally chosen over a hand-picked field list so that
+        // the GPU dispatcher can be used as the *only* fill of the IQ
+        // cache (no CPU pre-pass required).
+        fluidState_.assign(other.fluidState_);
+
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+            mobility_[phaseIdx] = other.mobility_[phaseIdx];
+        }
+        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
+            this->rockInternalEnergy_ = other.rockInternalEnergy_;
+            this->totalThermalConductivity_ = other.totalThermalConductivity_;
+            this->rockFraction_ = other.rockFraction_;
+        }
+        porosity_ = other.porosity_;
+        referencePorosity_ = other.referencePorosity_;
+        rockCompTransMultiplier_ = other.rockCompTransMultiplier_;
     }
 
     OPM_HOST_DEVICE void updateTempSalt(const Problem& problem,
@@ -430,11 +535,15 @@ public:
             }
             else {
                 if (getFluidSystem().enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
-                    const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
-                        getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                    Evaluation RsSat;
+                    if constexpr (enableExtbo) {
+                        RsSat = asImp_().rs();
+                    } else {
+                        RsSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
                                                                 oilPhaseIdx,
                                                                 pvtRegionIdx,
                                                                 SoMax);
+                    }
                     fluidState_.setRs(min(RsMax, RsSat));
                 }
                 else {
@@ -448,11 +557,15 @@ public:
             }
             else {
                 if (getFluidSystem().enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
-                    const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
-                        getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                    Evaluation RvSat;
+                    if constexpr (enableExtbo) {
+                        RvSat = asImp_().rv();
+                    } else {
+                        RvSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
                                                                 gasPhaseIdx,
                                                                 pvtRegionIdx,
                                                                 SoMax);
+                    }
                     fluidState_.setRv(min(RvMax, RvSat));
                 }
                 else {
@@ -514,11 +627,16 @@ public:
             const auto [b, mu] = getFluidSystem().inverseFormationVolumeFactorAndViscosity(fluidState_, phaseIdx, pvtRegionIdx);
             fluidState_.setInvB(phaseIdx, b);
             for (int i = 0; i < nmobilities; ++i) {
-                if (enableExtbo && phaseIdx == oilPhaseIdx) {
-                    (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
-                }
-                else if (enableExtbo && phaseIdx == gasPhaseIdx) {
-                    (*mobilities[i])[phaseIdx] /= asImp_().gasViscosity();
+                if constexpr (enableExtbo) {
+                    if (phaseIdx == oilPhaseIdx) {
+                        (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
+                    }
+                    else if (phaseIdx == gasPhaseIdx) {
+                        (*mobilities[i])[phaseIdx] /= asImp_().gasViscosity();
+                    }
+                    else {
+                        (*mobilities[i])[phaseIdx] /= mu;
+                    }
                 }
                 else {
                     (*mobilities[i])[phaseIdx] /= mu;
@@ -845,7 +963,7 @@ public:
                     case Dir::ZPlus:
                         return dirMob_->getArray(2)[phaseIdx];
                     default:
-                        throw std::runtime_error("Unexpected face direction");
+                        OPM_THROW(std::runtime_error, "Unexpected face direction");
                 }
             }
             else{
@@ -906,7 +1024,7 @@ public:
             return BrineIntQua::permFactor();
         }
         else {
-            throw std::logic_error("permFactor() called but salt precipitation or bioeffects are disabled");
+            OPM_THROW(std::logic_error, "permFactor() called but salt precipitation and bioeffects are disabled");
         }
     }
 

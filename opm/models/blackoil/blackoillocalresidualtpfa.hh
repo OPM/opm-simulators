@@ -47,9 +47,11 @@
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
+#include <opm/common/utility/gpuistl_if_available.hpp>
 
 #include <array>
 #include <cassert>
@@ -570,10 +572,10 @@ public:
 
     template <class BoundaryConditionData, class RateVectorLocal, class LocalProblem>
     OPM_HOST_DEVICE static void computeBoundaryFlux(RateVectorLocal& bdyFlux,
-                                                    const LocalProblem& problem,
-                                                    const BoundaryConditionData& bdyInfo,
-                                                    const IntensiveQuantities& insideIntQuants,
-                                                    unsigned globalSpaceIdx)
+                                    const LocalProblem& problem,
+                                    const BoundaryConditionData& bdyInfo,
+                                    const IntensiveQuantities& insideIntQuants,
+                                    unsigned globalSpaceIdx)
     {
 #if OPM_IS_INSIDE_HOST_FUNCTION
         switch (bdyInfo.type) {
@@ -745,17 +747,20 @@ public:
         if constexpr (enableFullyImplicitThermal) {
             Evaluation heatFlux;
             // avoid overload of functions with same numeber of elements in eclproblem
-
             Scalar alpha;
-            if constexpr (runAssemblyOnGpu) {
-                // This path is currently only intended for the SimplifiedBlackoilModel for GPUs
-                // which currently does not aim to reproduce the full problem object on the GPU.
+// #if OPM_IS_INSIDE_DEVICE_FUNCTION
+//                 // This path is currently only intended for the SimplifiedBlackoilModel for GPUs
+//                 // which currently does not aim to reproduce the full problem object on the GPU.
+//                 alpha = problem.getAlpha(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+// #else
+//                 alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(
+//                     globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+// #endif
+            if constexpr (!std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
                 alpha = problem.getAlpha(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
             } else {
-                alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(
-                    globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+                alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
             }
-
             unsigned inIdx = 0; // dummy
             // always calculated with derivatives of this cell
             EnergyModule::ExtensiveQuantities::updateEnergyBoundary(heatFlux,
@@ -958,10 +963,19 @@ public:
      * This overload accepts a fluid system instance, enabling use in GPU kernels and
      * other contexts where the static fluid system is not accessible.
      */
+    template <class ScalarVector>
+    OPM_HOST_DEVICE static void adaptMassConservationQuantities_(ScalarVector& container,
+                                                                 unsigned pvtRegionIdx)
+    {
+        // Delegate to the generic overload using a default-constructed static FluidSystem
+        // instance. Valid because the static FluidSystem is stateless (std::is_empty_v).
+        adaptMassConservationQuantities_(container, pvtRegionIdx, FluidSystem{});
+    }
+
     template <class ScalarVector, class FsysType>
     OPM_HOST_DEVICE static void adaptMassConservationQuantities_(ScalarVector& container,
-                                                                 unsigned pvtRegionIdx,
-                                                                 const FsysType& fsys)
+                                                 unsigned pvtRegionIdx,
+                                                 const FsysType& fsys)
     {
         if constexpr (!blackoilConserveSurfaceVolume) {
             // convert "surface volume" to mass. this is complicated a bit by the fact that
