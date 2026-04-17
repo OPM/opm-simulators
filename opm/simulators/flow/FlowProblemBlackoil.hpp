@@ -593,7 +593,9 @@ public:
 #endif
 
         if (this->enableEclOutput_ && (this->eclWriter_ != nullptr)) {
-            this->eclWriter_->writeOutput(std::move(localCellData), isSubStep);
+            this->eclWriter_->writeOutput(std::move(localCellData), isSubStep,
+                                          this->simulator().vanguard().schedule()
+                                         .exitStatus().has_value());
         }
     }
 
