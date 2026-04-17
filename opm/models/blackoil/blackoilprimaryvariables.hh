@@ -1065,7 +1065,7 @@ private:
         #endif
     }
 
-    void setScaledPressure_(Scalar pressure)
+    OPM_HOST_DEVICE void setScaledPressure_(Scalar pressure)
     { (*this)[Indices::pressureSwitchIdx] = pressure / (this->getPressureScale()); }
 
     // NOTE: When adding new member variables, be sure to update the template copy constructor,

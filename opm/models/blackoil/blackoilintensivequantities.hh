@@ -175,7 +175,6 @@ public:
             fluidState_.setRsw(0.0);
         }
     }
-    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
     BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
 
@@ -184,6 +183,7 @@ public:
 
     // This ctor is used when switching to the GPU typetag which currently supports thermal effects and diffusion.
     template<class OtherTypeTag>
+    requires (energyModuleType == EnergyModules::FullyImplicitThermal && (enableDiffusion != 0))
     explicit BlackOilIntensiveQuantities(
         const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
         : fluidState_(other.fluidState_.withOtherFluidSystem(fsystem))
@@ -205,6 +205,72 @@ public:
         static_assert(!enableBrine);
         static_assert(!enableDispersion);
     }
+
+    template<class OtherTypeTag>
+    requires (energyModuleType == EnergyModules::FullyImplicitThermal && (enableDiffusion == 0))
+    explicit BlackOilIntensiveQuantities(
+        const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
+        : fluidState_(other.fluidState_.withOtherFluidSystem(fsystem))
+        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(
+            other.rockInternalEnergy_, other.totalThermalConductivity_, other.rockFraction_)
+        , referencePorosity_(other.referencePorosity_)
+        , porosity_(other.porosity_)
+        , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
+        , mobility_(other.mobility_)
+        , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
+    {
+        static_assert(!enableSolvent);
+        static_assert(!enableExtbo);
+        static_assert(!enablePolymer);
+        static_assert(!enableFoam);
+        static_assert(!enableMICP);
+        static_assert(!enableBrine);
+        static_assert(!enableDispersion);
+    }
+
+    template<class OtherTypeTag>
+    requires (energyModuleType != EnergyModules::FullyImplicitThermal && (enableDiffusion != 0))
+    explicit BlackOilIntensiveQuantities(
+        const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
+        : fluidState_(other.fluidState_.withOtherFluidSystem(fsystem))
+        , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(
+            other.tortuosities(), other.diffusionCoefficients())
+        , referencePorosity_(other.referencePorosity_)
+        , porosity_(other.porosity_)
+        , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
+        , mobility_(other.mobility_)
+        , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
+    {
+        static_assert(!enableSolvent);
+        static_assert(!enableExtbo);
+        static_assert(!enablePolymer);
+        static_assert(!enableFoam);
+        static_assert(!enableMICP);
+        static_assert(!enableBrine);
+        static_assert(!enableDispersion);
+    }
+
+    template<class OtherTypeTag>
+    requires (energyModuleType != EnergyModules::FullyImplicitThermal && (enableDiffusion == 0))
+    explicit BlackOilIntensiveQuantities(
+        const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
+        : fluidState_(other.fluidState_.withOtherFluidSystem(fsystem))
+        , referencePorosity_(other.referencePorosity_)
+        , porosity_(other.porosity_)
+        , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
+        , mobility_(other.mobility_)
+        , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
+    {
+        static_assert(!enableSolvent);
+        static_assert(!enableExtbo);
+        static_assert(!enablePolymer);
+        static_assert(!enableFoam);
+        static_assert(!enableMICP);
+        static_assert(!enableBrine);
+        static_assert(!enableDispersion);
+    }
+
+    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
     /**
      * \brief Create a copy of this intensive quantities object
@@ -514,11 +580,16 @@ public:
             const auto [b, mu] = getFluidSystem().inverseFormationVolumeFactorAndViscosity(fluidState_, phaseIdx, pvtRegionIdx);
             fluidState_.setInvB(phaseIdx, b);
             for (int i = 0; i < nmobilities; ++i) {
-                if (enableExtbo && phaseIdx == oilPhaseIdx) {
-                    (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
-                }
-                else if (enableExtbo && phaseIdx == gasPhaseIdx) {
-                    (*mobilities[i])[phaseIdx] /= asImp_().gasViscosity();
+                if constexpr (enableExtbo) {
+                    if (phaseIdx == oilPhaseIdx) {
+                        (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
+                    }
+                    else if (phaseIdx == gasPhaseIdx) {
+                        (*mobilities[i])[phaseIdx] /= asImp_().gasViscosity();
+                    }
+                    else {
+                        (*mobilities[i])[phaseIdx] /= mu;
+                    }
                 }
                 else {
                     (*mobilities[i])[phaseIdx] /= mu;
