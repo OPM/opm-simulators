@@ -98,7 +98,7 @@ public:
     static void registerParameters()
     {}
 
-    static bool primaryVarApplies(unsigned pvIdx)
+    static OPM_HOST_DEVICE bool primaryVarApplies(unsigned pvIdx)
     {
         if constexpr (enableBrine) {
             return pvIdx == saltConcentrationIdx;
@@ -135,7 +135,7 @@ public:
         return static_cast<Scalar>(1.0);
     }
 
-    static bool eqApplies(unsigned eqIdx)
+    static OPM_HOST_DEVICE bool eqApplies(unsigned eqIdx)
     {
         if constexpr (enableBrine) {
             return eqIdx == contiBrineEqIdx;
@@ -405,7 +405,7 @@ public:
      *        primary variables
      *
      */
-    void updateSaltConcentration_(const ElementContext& elemCtx,
+    OPM_HOST_DEVICE void updateSaltConcentration_(const ElementContext& elemCtx,
                                   unsigned dofIdx,
                                   unsigned timeIdx)
     {
@@ -414,7 +414,7 @@ public:
         updateSaltConcentration_(priVars, timeIdx, lintype);
     }
 
-    void updateSaltConcentration_(const PrimaryVariables& priVars,
+    OPM_HOST_DEVICE void updateSaltConcentration_(const PrimaryVariables& priVars,
                                   const unsigned timeIdx,
                                   const LinearizationType lintype)
     {
@@ -442,9 +442,9 @@ public:
         }
     }
 
-    void saltPropertiesUpdate_([[maybe_unused]] const ElementContext& elemCtx,
-                               [[maybe_unused]] unsigned dofIdx,
-                               [[maybe_unused]] unsigned timeIdx)
+    OPM_HOST_DEVICE void saltPropertiesUpdate_([[maybe_unused]] const ElementContext& elemCtx,
+                                                  [[maybe_unused]] unsigned dofIdx,
+                                                  [[maybe_unused]] unsigned timeIdx)
     {
         if constexpr (enableSaltPrecipitation) {
             const Evaluation porosityFactor  = min(1.0 - asImp_().fluidState_.saltSaturation(), 1.0); //phi/phi_0
@@ -455,20 +455,20 @@ public:
         }
     }
 
-    const Evaluation& brineRefDensity() const
+    OPM_HOST_DEVICE const Evaluation& brineRefDensity() const
     { return refDensity_; }
 
-    Scalar saltSolubility() const
+    OPM_HOST_DEVICE Scalar saltSolubility() const
     { return saltSolubility_; }
 
-    Scalar saltDensity() const
+    OPM_HOST_DEVICE Scalar saltDensity() const
     { return saltDensity_; }
 
-    const Evaluation& permFactor() const
+    OPM_HOST_DEVICE const Evaluation& permFactor() const
     { return permFactor_; }
 
 protected:
-    Implementation& asImp_()
+    OPM_HOST_DEVICE Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
     Evaluation saltConcentration_;
@@ -487,27 +487,27 @@ class BlackOilBrineIntensiveQuantities<TypeTag, false>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    void updateSaltConcentration_(const ElementContext&,
-                                  unsigned,
-                                  unsigned)
+    OPM_HOST_DEVICE void updateSaltConcentration_(const ElementContext&,
+                                                  unsigned,
+                                                  unsigned)
     {}
 
-    void saltPropertiesUpdate_(const ElementContext&,
-                                  unsigned,
-                                  unsigned)
+    OPM_HOST_DEVICE void saltPropertiesUpdate_(const ElementContext&,
+                                               unsigned,
+                                               unsigned)
     {}
 
-    const Evaluation& brineRefDensity() const
-    { throw std::runtime_error("brineRefDensity() called but brine are disabled"); }
+    OPM_HOST_DEVICE const Evaluation& brineRefDensity() const
+    { OPM_THROW(std::runtime_error, "brineRefDensity() called but brine are disabled"); }
 
-    const Scalar saltSolubility() const
-    { throw std::logic_error("saltSolubility() called but salt precipitation is disabled"); }
+    OPM_HOST_DEVICE const Scalar saltSolubility() const
+    { OPM_THROW(std::logic_error, "saltSolubility() called but salt precipitation is disabled"); }
 
-    const Scalar saltDensity() const
-    { throw std::logic_error("saltDensity() called but salt precipitation is disabled"); }
+    OPM_HOST_DEVICE const Scalar saltDensity() const
+    { OPM_THROW(std::logic_error, "saltDensity() called but salt precipitation is disabled"); }
 
-    const Evaluation& permFactor() const
-    { throw std::logic_error("permFactor() called but salt precipitation is disabled"); }
+    OPM_HOST_DEVICE const Evaluation& permFactor() const
+    { OPM_THROW(std::logic_error, "permFactor() called but salt precipitation is disabled"); }
 };
 
 } // namespace Opm

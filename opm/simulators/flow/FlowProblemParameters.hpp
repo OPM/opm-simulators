@@ -69,6 +69,14 @@ struct UseHybridNewton { static constexpr bool value = false; };
 // Conserve inner energy instead of enthalpy even if THERMAL is used
 struct ConserveInnerEnergyThermal { static constexpr bool value = false; };
 
+#if HAVE_CUDA
+// Experimental: route the per-element BlackOilIntensiveQuantities update
+// through the GPU dispatcher instead of computing it on the CPU. Only takes
+// effect for CO2STORE-compatible TypeTags (gas+water, no oil); ignored
+// otherwise.
+struct ExperimentalComputePropertiesOnGpu { static constexpr bool value = true; };
+#endif
+
 } // namespace Opm::Parameters
 
 namespace Opm {
