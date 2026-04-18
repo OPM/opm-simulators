@@ -72,7 +72,12 @@
 #include <opm/models/discretization/common/fvbaseelementcontextgpu.hh>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawTwoPhaseTypes.hpp>
+#include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterialParams.hpp>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+
+#include <opm/simulators/flow/GpuEclMaterialLawManager.hpp>
+#include <opm/simulators/flow/GpuFlowProblem.hpp>
 
 
 static constexpr const char* deckString1 = "-- =============== RUNSPEC\n"
@@ -290,7 +295,8 @@ namespace Properties
         static constexpr bool value = false;
     };
 
-    // Use the simple material law.
+    // Use the simple material law on the CPU side (full-featured Manager so that
+    // FlowProblemBlackoil etc. compile).
     template <class TypeTag>
     struct MaterialLaw<TypeTag, TTag::FlowSimpleProblem> {
     private:
@@ -306,6 +312,34 @@ namespace Properties
 
     public:
         using EclMaterialLawManager = ::Opm::EclMaterialLaw::Manager<Traits>;
+        using type = typename EclMaterialLawManager::MaterialLaw;
+    };
+
+    // Use the simplified, GPU-compatible material law for the GPU tags.
+    template <class TypeTag>
+    struct MaterialLaw<TypeTag, TTag::FlowSimpleProblemGPU> {
+    private:
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+        using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+
+        using Traits = ThreePhaseMaterialTraits<Scalar,
+                                                /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+                                                /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+                                                /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx,
+                                                /*hysteresis=*/false,
+                                                /*enableEndPointScaling=*/true>;
+
+        using TwoPhaseTraits = TwoPhaseMaterialTraits<Scalar,
+                                                      /*wettingPhaseIdx=*/Traits::wettingPhaseIdx,
+                                                      /*nonWettingPhaseIdx=*/Traits::nonWettingPhaseIdx>;
+        // The two-phase params use a GpuView based vector storage so the
+        // destructor is trivial on the device.
+        using TwoPhaseParams = ::Opm::PiecewiseLinearTwoPhaseMaterialParams<
+            TwoPhaseTraits, ::Opm::gpuistl::GpuView<const Scalar>>;
+        using TwoPhaseLaw = ::Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraits, TwoPhaseParams>;
+
+    public:
+        using EclMaterialLawManager = ::Opm::EclMaterialLaw::GpuManager<Traits, TwoPhaseLaw, TwoPhaseLaw>;
         using type = typename EclMaterialLawManager::MaterialLaw;
     };
 
@@ -353,7 +387,19 @@ namespace Properties
 
     template <class TypeTag>
     struct Problem<TypeTag, TTag::FlowSimpleDummyProblemGPU> {
-        using type = DummyProblem<TypeTag>;
+    private:
+        using ScalarT = GetPropType<TypeTag, Properties::Scalar>;
+        using CpuMaterialLawManager =
+            typename Opm::GetProp<TypeTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
+        // Compose the GPU-view variant of the manager (template parameters
+        // mirror those of GpuManager but with GpuView storage).
+        using GpuViewMaterialLawManager =
+            ::Opm::EclMaterialLaw::GpuManager<typename CpuMaterialLawManager::Traits,
+                                              typename CpuMaterialLawManager::GasOilLaw,
+                                              typename CpuMaterialLawManager::OilWaterLaw,
+                                              ::Opm::gpuistl::GpuView>;
+    public:
+        using type = ::Opm::GpuFlowProblem<ScalarT, GpuViewMaterialLawManager, ::Opm::gpuistl::GpuView>;
     };
 
     template <class TypeTag>
@@ -378,9 +424,12 @@ using TypeTag = Opm::Properties::TTag::FlowSimpleProblem;
 using TypeNacht = Opm::Properties::TTag::FlowSimpleDummyProblemGPU;
 using TypeTagGPU = Opm::Properties::TTag::FlowSimpleProblemGPU;
 
-template<class IndexTraits>
+template<class IndexTraits, class GpuProblem>
 __global__ void
-testUsingOnGPU(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView> fs,  Opm::BlackOilIntensiveQuantities<TypeNacht> intensiveQuantities, Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector> primaryVariables)
+testUsingOnGPU(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView> fs,
+               Opm::BlackOilIntensiveQuantities<TypeNacht> intensiveQuantities,
+               Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector> primaryVariables,
+               GpuProblem problem)
 {
     printf("fs.phaseIsActive(0): %d\n", fs.phaseIsActive(0));
     printf("fs.phaseIsActive(1): %d\n", fs.phaseIsActive(1));
@@ -392,6 +441,8 @@ testUsingOnGPU(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuis
     ScalarFluidState state2(fs);
     primaryVariables.assignNaive(state2);
     printf("BlackOilState density before update: %f\n", asDouble(state.density(0)));
+    intensiveQuantities.update(problem, primaryVariables, 0, 0);
+
     printf("BlackOilState density after update: %f\n", asDouble(state.density(0)));
 }
 
@@ -434,7 +485,24 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationGPU)
     Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector> primaryVariablesGPU(primaryVariablesCPU);
 
     Opm::BlackOilIntensiveQuantities<TypeNacht> intensiveQuantitiesGPU = intensiveQuantities.withOtherFluidSystem<TypeNacht>(dynamicGpuFluidSystemView);
-    testUsingOnGPU<<<1, 1>>>(dynamicGpuFluidSystemView, intensiveQuantitiesGPU, primaryVariablesGPU);
+
+    // Build a small CPU GpuFlowProblem (single active cell), then move it to the GPU.
+    using DummyMaterialLawManager =
+        typename Opm::GetProp<TypeNacht, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
+    using CpuGpuFlowProblem = Opm::GpuFlowProblem<ScalarToUse, DummyMaterialLawManager>;
+    using MLP = typename DummyMaterialLawManager::MaterialLawParams;
+    DummyMaterialLawManager cpuMgr(std::vector<MLP>(1), std::vector<int>{0});
+    CpuGpuFlowProblem cpuProblem(std::move(cpuMgr),
+                                 std::vector<ScalarToUse>{ScalarToUse(0.25)},
+                                 std::vector<ScalarToUse>{},
+                                 std::vector<ScalarToUse>{},
+                                 std::vector<ScalarToUse>{},
+                                 std::vector<ScalarToUse>{},
+                                 std::vector<ScalarToUse>{});
+    auto gpuProblemBuffer = ::Opm::gpuistl::copy_to_gpu(cpuProblem);
+    auto gpuProblemView = ::Opm::gpuistl::make_view(gpuProblemBuffer);
+
+    testUsingOnGPU<<<1, 1>>>(dynamicGpuFluidSystemView, intensiveQuantitiesGPU, primaryVariablesGPU, gpuProblemView);
     dummykernel<<<1,1>>>();
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
@@ -509,6 +577,26 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
     auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(
         dynamicGpuFluidSystemBuffer);
     std::cout << "Created GPU view of dynamic fluid system." << std::endl;
+
+    // Compile-only check: verify that a CPU GpuFlowProblem can be constructed
+    // from sim->problem() and that, in turn, the inner GpuManager can be
+    // constructed from the CPU EclMaterialLaw::Manager. The 'very_simple_deck'
+    // is two-phase so the underlying multiplexer approach is not Default; an
+    // actual call would throw at runtime, but the API must compile.
+    if (false) {
+        using CpuManager = typename Opm::GetProp<TypeTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
+        using Traits = typename CpuManager::MaterialLaw::Traits;
+        using TwoPhaseTraits = Opm::TwoPhaseMaterialTraits<ScalarToUse,
+                                                           Traits::wettingPhaseIdx,
+                                                           Traits::nonWettingPhaseIdx>;
+        using CpuPlParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraits>;
+        using CpuPlLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraits, CpuPlParams>;
+        using CpuGpuManager = Opm::EclMaterialLaw::GpuManager<Traits, CpuPlLaw, CpuPlLaw>;
+        using CpuGpuFlowProblem = Opm::GpuFlowProblem<ScalarToUse, CpuGpuManager>;
+
+        CpuGpuFlowProblem cpuGpuProblem(sim->problem());
+        (void)cpuGpuProblem;
+    }
 
 }
 BOOST_AUTO_TEST_CASE(TestIntensiveQuantitiesCreationGPU)
