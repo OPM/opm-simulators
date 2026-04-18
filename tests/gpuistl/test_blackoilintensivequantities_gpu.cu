@@ -14,6 +14,18 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
+
+// Tricks for older versions of ROCm that do not support alugrid
+// or dune fem. Note that these changes are only valid for this test file.
+#ifdef HAVE_DUNE_ALUGRID
+#undef HAVE_DUNE_ALUGRID
+#endif
+#define HAVE_DUNE_ALUGRID 0
+#ifdef HAVE_DUNE_FEM
+#undef HAVE_DUNE_FEM
+#endif
+#define HAVE_DUNE_FEM 0
+
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
