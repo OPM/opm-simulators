@@ -81,7 +81,10 @@
 #include <opm/simulators/flow/GpuFlowProblem.hpp>
 
 #include <chrono>
+#include <filesystem>
+#include <format>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 
 
@@ -476,19 +479,19 @@ using TypeTagGPU = Opm::Properties::TTag::FlowSimpleProblemGPU;
 
 template<class IndexTraits, class GpuProblem>
 __global__ void
-testUsingOnGPU(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView> fs,
+testUsingOnGPU(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView> fluidSystem,
                Opm::BlackOilIntensiveQuantities<TypeNacht> intensiveQuantities,
                Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector> primaryVariables,
                GpuProblem problem)
 {
-    printf("fs.phaseIsActive(0): %d\n", fs.phaseIsActive(0));
-    printf("fs.phaseIsActive(1): %d\n", fs.phaseIsActive(1));
-    printf("fs.phaseIsActive(2): %d\n", fs.phaseIsActive(2));
+    printf("fluidSystem.phaseIsActive(0): %d\n", fluidSystem.phaseIsActive(0));
+    printf("fluidSystem.phaseIsActive(1): %d\n", fluidSystem.phaseIsActive(1));
+    printf("fluidSystem.phaseIsActive(2): %d\n", fluidSystem.phaseIsActive(2));
     using ScalarFluidState = typename Opm::BlackOilIntensiveQuantities<TypeTagGPU>::ScalarFluidState;
-    ScalarFluidState state(fs);
+    ScalarFluidState state(fluidSystem);
     printf("BlackOilState density before update: %f\n", asDouble(state.density(0)));
 
-    ScalarFluidState state2(fs);
+    ScalarFluidState state2(fluidSystem);
     primaryVariables.assignNaive(state2);
     printf("BlackOilState density before update: %f\n", asDouble(state.density(0)));
     intensiveQuantities.updateSaturations(primaryVariables, 0, Opm::LinearizationType{});
@@ -502,21 +505,21 @@ __global__ void dummykernel()
     printf("Hello from dummy kernel!\n");
 }
 
-template <class GpuProblem, class PriVars, class Iq>
+template <class GpuProblem, class PrimaryVariables, class IntensiveQuantities>
 __global__ void
 updateAllCellsKernel(GpuProblem problem,
-                     Opm::gpuistl::GpuView<const PriVars> priVars,
-                     Opm::gpuistl::GpuView<Iq> outIq,
+                     Opm::gpuistl::GpuView<const PrimaryVariables> primaryVariables,
+                     Opm::gpuistl::GpuView<IntensiveQuantities> outIntensiveQuantities,
                      std::size_t numCells)
 {
     const std::size_t i = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
     if (i >= numCells) {
         return;
     }
-    Iq iq = outIq[i];
-    iq.updateSaturations(priVars[i], 0, Opm::LinearizationType{});
-    iq.update(problem, priVars[i], static_cast<unsigned>(i), 0);
-    outIq[i] = iq;
+    IntensiveQuantities intensiveQuantities = outIntensiveQuantities[i];
+    intensiveQuantities.updateSaturations(primaryVariables[i], 0, Opm::LinearizationType{});
+    intensiveQuantities.update(problem, primaryVariables[i], static_cast<unsigned>(i), 0);
+    outIntensiveQuantities[i] = intensiveQuantities;
 }
 
 /// One-shot global initialization of MPI, communicator, and parameter
@@ -547,16 +550,17 @@ static void initSimulatorOnce()
     done = true;
 }
 
-/// Run the per-cell IQ update on both GPU and CPU for the deck stored at
-/// \p deckPath, optionally measuring wall-clock time on both sides.
+/// Run the per-cell intensive quantities update on both GPU and CPU for the
+/// deck stored at \p deckPath, optionally measuring wall-clock time on both
+/// sides.
 ///
-/// Correctness is checked by comparing CPU vs GPU IQ values cell-by-cell at
-/// indices \p i = 0, \p sampleStride, 2*\p sampleStride, ...
+/// Correctness is checked by comparing CPU vs GPU intensive quantities
+/// cell-by-cell at indices \p i = 0, \p sampleStride, 2*\p sampleStride, ...
 ///
 /// \param deckPath        path to a CO2STORE WATER+GAS deck written to disk
 /// \param expectedNumCells number of grid cells the deck describes
 /// \param sampleStride    stride for sampled correctness; 1 means full check
-/// \param measureTiming   if true, prints CPU and GPU wall-clock to stderr
+/// \param measureTiming   if true, prints CPU and GPU wall-clock to stdout
 static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
                                               std::size_t expectedNumCells,
                                               std::size_t sampleStride,
@@ -587,142 +591,152 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     auto& cpuProblem = sim->problem();
     auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
 
-    auto dynamicGpuFsBuf  = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
-    auto dynamicGpuFsView = ::Opm::gpuistl::make_view(dynamicGpuFsBuf);
+    auto dynamicGpuFluidSystemBuffer  = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+    auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
 
     // Place the FluidSystemView in unified memory so that the device-side
     // BlackOilFluidState pointer dereference is valid both on host and on
     // device.
-    using FsViewT = std::decay_t<decltype(dynamicGpuFsView)>;
-    FsViewT* managedFsView = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMallocManaged(&managedFsView, sizeof(FsViewT)));
-    new (managedFsView) FsViewT(dynamicGpuFsView);
+    using FluidSystemViewType = std::decay_t<decltype(dynamicGpuFluidSystemView)>;
+    FluidSystemViewType* managedFluidSystemView = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMallocManaged(&managedFluidSystemView, sizeof(FluidSystemViewType)));
+    new (managedFluidSystemView) FluidSystemViewType(dynamicGpuFluidSystemView);
 
-    using CpuMlm = typename Opm::GetProp<TypeTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
-    using Traits = typename CpuMlm::MaterialLaw::Traits;
+    using CpuMaterialLawManager = typename Opm::GetProp<TypeTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
+    using Traits = typename CpuMaterialLawManager::MaterialLaw::Traits;
     using TwoPhaseTraits = Opm::TwoPhaseMaterialTraits<ScalarToUse,
                                                        Traits::wettingPhaseIdx,
                                                        Traits::nonWettingPhaseIdx>;
-    using GpuPlParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<
+    using GpuPiecewiseLinearParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<
         TwoPhaseTraits, Opm::gpuistl::GpuView<const ScalarToUse>>;
-    using GpuPlLaw   = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraits, GpuPlParams>;
+    using GpuPiecewiseLinearLaw   = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraits, GpuPiecewiseLinearParams>;
     using GpuMaterialLaw = Opm::EclMaterialLaw::GpuTwoPhaseMaterial<
-        Traits, GpuPlLaw, GpuPlLaw, GpuPlLaw>;
-    using GpuMgrBuf  = Opm::EclMaterialLaw::GpuManager<Traits, GpuPlLaw, GpuPlLaw,
-                                                       Opm::gpuistl::GpuBuffer,
-                                                       GpuMaterialLaw>;
-    using GpuProblemBuf = Opm::GpuFlowProblem<ScalarToUse, GpuMgrBuf, Opm::gpuistl::GpuBuffer>;
+        Traits, GpuPiecewiseLinearLaw, GpuPiecewiseLinearLaw, GpuPiecewiseLinearLaw>;
+    using GpuManagerBuffer  = Opm::EclMaterialLaw::GpuManager<Traits, GpuPiecewiseLinearLaw, GpuPiecewiseLinearLaw,
+                                                               Opm::gpuistl::GpuBuffer,
+                                                               GpuMaterialLaw>;
+    using GpuProblemBuffer = Opm::GpuFlowProblem<ScalarToUse, GpuManagerBuffer, Opm::gpuistl::GpuBuffer>;
 
-    GpuProblemBuf gpuProblemBuf(cpuProblem);
-    auto gpuProblemView = Opm::gpuistl::make_view(gpuProblemBuf);
+    GpuProblemBuffer gpuProblemBuffer(cpuProblem);
+    auto gpuProblemView = Opm::gpuistl::make_view(gpuProblemBuffer);
 
-    const std::size_t n = cpuProblem.model().numGridDof();
-    BOOST_REQUIRE_EQUAL(n, expectedNumCells);
-    BOOST_REQUIRE_GT(n, 0u);
+    const std::size_t numCells = cpuProblem.model().numGridDof();
+    BOOST_REQUIRE_EQUAL(numCells, expectedNumCells);
+    BOOST_REQUIRE_GT(numCells, 0u);
 
-    using PrimaryVariablesCPU = Opm::GetPropType<TypeTag, Opm::Properties::PrimaryVariables>;
-    using PrimaryVariablesGPU = Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector>;
-    using IqCPU = Opm::BlackOilIntensiveQuantities<TypeTag>;
-    using IqGPU = Opm::BlackOilIntensiveQuantities<TypeNacht>;
+    using PrimaryVariablesCpu = Opm::GetPropType<TypeTag, Opm::Properties::PrimaryVariables>;
+    using PrimaryVariablesGpu = Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector>;
+    using IntensiveQuantitiesCpu = Opm::BlackOilIntensiveQuantities<TypeTag>;
+    using IntensiveQuantitiesGpu = Opm::BlackOilIntensiveQuantities<TypeNacht>;
 
-    PrimaryVariablesCPU pvCpu;
-    pvCpu.setPrimaryVarsMeaningPressure(Opm::BlackOil::PressureMeaning::Pg);
-    PrimaryVariablesGPU pvGpu(pvCpu);
-    std::vector<PrimaryVariablesGPU> hostPvGpu(n, pvGpu);
-    Opm::gpuistl::GpuBuffer<PrimaryVariablesGPU> pvBuf(hostPvGpu);
+    PrimaryVariablesCpu primaryVariablesCpu;
+    primaryVariablesCpu.setPrimaryVarsMeaningPressure(Opm::BlackOil::PressureMeaning::Pg);
+    PrimaryVariablesGpu primaryVariablesGpu(primaryVariablesCpu);
+    std::vector<PrimaryVariablesGpu> hostPrimaryVariablesGpu(numCells, primaryVariablesGpu);
+    Opm::gpuistl::GpuBuffer<PrimaryVariablesGpu> primaryVariablesBuffer(hostPrimaryVariablesGpu);
 
-    IqCPU cpuIqProto;
-    IqGPU gpuIqProto = cpuIqProto.template withOtherFluidSystem<TypeNacht>(*managedFsView);
+    IntensiveQuantitiesCpu cpuIntensiveQuantitiesPrototype;
+    IntensiveQuantitiesGpu gpuIntensiveQuantitiesPrototype = cpuIntensiveQuantitiesPrototype.template withOtherFluidSystem<TypeNacht>(*managedFluidSystemView);
     if (measureTiming) {
-        std::fprintf(stderr,
-                     "[timing] sizeof(IqGPU)=%zu  sizeof(IqCPU)=%zu  "
-                     "sizeof(PrimaryVariablesGPU)=%zu  cells=%zu  "
-                     "approx GPU mem for IQ buffer=%.2f MiB\n",
-                     sizeof(IqGPU), sizeof(IqCPU),
-                     sizeof(PrimaryVariablesGPU), n,
-                     (sizeof(IqGPU) * n) / (1024.0 * 1024.0));
+        std::cout << std::format("[timing] sizeof(IntensiveQuantitiesGpu)={}  sizeof(IntensiveQuantitiesCpu)={}  "
+                                 "sizeof(PrimaryVariablesGpu)={}  cells={}  "
+                                 "approx GPU mem for IQ buffer={:.2f} MiB\n",
+                                 sizeof(IntensiveQuantitiesGpu), sizeof(IntensiveQuantitiesCpu),
+                                 sizeof(PrimaryVariablesGpu), numCells,
+                                 (sizeof(IntensiveQuantitiesGpu) * numCells) / (1024.0 * 1024.0));
     }
-    std::vector<IqGPU> hostIq(n, gpuIqProto);
-    Opm::gpuistl::GpuBuffer<IqGPU> iqBuf(hostIq);
+    std::vector<IntensiveQuantitiesGpu> hostIntensiveQuantities(numCells, gpuIntensiveQuantitiesPrototype);
+    Opm::gpuistl::GpuBuffer<IntensiveQuantitiesGpu> intensiveQuantitiesBuffer(hostIntensiveQuantities);
 
     const unsigned blockSize = 64u;
-    const unsigned gridSize = static_cast<unsigned>((n + blockSize - 1u) / blockSize);
+    const unsigned gridSize = static_cast<unsigned>((numCells + blockSize - 1u) / blockSize);
 
     // Time the GPU kernel using CUDA events (excludes the host-to-device
     // setup and device-to-host copy already done via GpuBuffer ctors above).
-    cudaEvent_t evStart{}, evStop{};
-    OPM_GPU_SAFE_CALL(cudaEventCreate(&evStart));
-    OPM_GPU_SAFE_CALL(cudaEventCreate(&evStop));
-    OPM_GPU_SAFE_CALL(cudaEventRecord(evStart));
+    cudaEvent_t eventStart{}, eventStop{};
+    OPM_GPU_SAFE_CALL(cudaEventCreate(&eventStart));
+    OPM_GPU_SAFE_CALL(cudaEventCreate(&eventStop));
+    OPM_GPU_SAFE_CALL(cudaEventRecord(eventStart));
     updateAllCellsKernel<<<gridSize, blockSize>>>(
         gpuProblemView,
-        Opm::gpuistl::GpuView<const PrimaryVariablesGPU>(pvBuf.data(), pvBuf.size()),
-        Opm::gpuistl::GpuView<IqGPU>(iqBuf.data(), iqBuf.size()),
-        n);
-    OPM_GPU_SAFE_CALL(cudaEventRecord(evStop));
-    OPM_GPU_SAFE_CALL(cudaEventSynchronize(evStop));
+        Opm::gpuistl::GpuView<const PrimaryVariablesGpu>(primaryVariablesBuffer.data(), primaryVariablesBuffer.size()),
+        Opm::gpuistl::GpuView<IntensiveQuantitiesGpu>(intensiveQuantitiesBuffer.data(), intensiveQuantitiesBuffer.size()),
+        numCells);
+    OPM_GPU_SAFE_CALL(cudaEventRecord(eventStop));
+    OPM_GPU_SAFE_CALL(cudaEventSynchronize(eventStop));
     OPM_GPU_SAFE_CALL(cudaGetLastError());
-    float gpuMs = 0.0f;
-    OPM_GPU_SAFE_CALL(cudaEventElapsedTime(&gpuMs, evStart, evStop));
-    OPM_GPU_SAFE_CALL(cudaEventDestroy(evStart));
-    OPM_GPU_SAFE_CALL(cudaEventDestroy(evStop));
+    float gpuMilliseconds = 0.0f;
+    OPM_GPU_SAFE_CALL(cudaEventElapsedTime(&gpuMilliseconds, eventStart, eventStop));
+    OPM_GPU_SAFE_CALL(cudaEventDestroy(eventStart));
+    OPM_GPU_SAFE_CALL(cudaEventDestroy(eventStop));
 
     // CPU reference: same per-cell update on the host side using the full
     // CPU problem; time it with std::chrono.
-    std::vector<IqCPU> cpuIqs(n);
+    std::vector<IntensiveQuantitiesCpu> cpuIntensiveQuantities(numCells);
     const auto cpuT0 = std::chrono::steady_clock::now();
-    for (std::size_t i = 0; i < n; ++i) {
-        cpuIqs[i].updateSaturations(pvCpu, 0, Opm::LinearizationType{});
-        cpuIqs[i].update(cpuProblem, pvCpu, static_cast<unsigned>(i), 0);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        cpuIntensiveQuantities[i].updateSaturations(primaryVariablesCpu, 0, Opm::LinearizationType{});
+        cpuIntensiveQuantities[i].update(cpuProblem, primaryVariablesCpu, static_cast<unsigned>(i), 0);
     }
     const auto cpuT1 = std::chrono::steady_clock::now();
-    const double cpuMs =
+    const double cpuMilliseconds =
         std::chrono::duration<double, std::milli>(cpuT1 - cpuT0).count();
 
     if (measureTiming) {
-        std::fprintf(stderr,
-                     "[timing] cells=%zu  CPU=%.3f ms  GPU(kernel)=%.3f ms  "
-                     "speedup=%.2fx\n",
-                     n, cpuMs, gpuMs, cpuMs / gpuMs);
+        std::cout << std::format("[timing] cells={}  CPU={:.3f} ms  GPU(kernel)={:.3f} ms  "
+                                 "speedup={:.2f}x\n",
+                                 numCells, cpuMilliseconds, gpuMilliseconds,
+                                 cpuMilliseconds / gpuMilliseconds);
     }
 
-    // Bring GPU IQs back and compare cells (sampled by sampleStride).
-    std::vector<IqGPU> gpuIqsHost(n, gpuIqProto);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuIqsHost.data(),
-                                 iqBuf.data(),
-                                 n * sizeof(IqGPU),
+    // Bring GPU intensive quantities back and compare cells (sampled by sampleStride).
+    std::vector<IntensiveQuantitiesGpu> gpuIntensiveQuantitiesHost(numCells, gpuIntensiveQuantitiesPrototype);
+    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuIntensiveQuantitiesHost.data(),
+                                 intensiveQuantitiesBuffer.data(),
+                                 numCells * sizeof(IntensiveQuantitiesGpu),
                                  cudaMemcpyDeviceToHost));
-    BOOST_REQUIRE_EQUAL(gpuIqsHost.size(), n);
+    BOOST_REQUIRE_EQUAL(gpuIntensiveQuantitiesHost.size(), numCells);
 
     constexpr double tol = 1e-6;
     std::size_t checked = 0;
-    for (std::size_t i = 0; i < n; i += sampleStride) {
-        const auto& cpuFs = cpuIqs[i].fluidState();
-        const auto& gpuFs = gpuIqsHost[i].fluidState();
-        BOOST_CHECK_CLOSE(asDouble(cpuFs.saturation(0)), asDouble(gpuFs.saturation(0)), tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuFs.saturation(2)), asDouble(gpuFs.saturation(2)), tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuFs.pressure(0)),   asDouble(gpuFs.pressure(0)),   tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuFs.density(0)),    asDouble(gpuFs.density(0)),    tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuFs.density(2)),    asDouble(gpuFs.density(2)),    tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuIqs[i].porosity()),
-                          asDouble(gpuIqsHost[i].porosity()),
+    for (std::size_t i = 0; i < numCells; i += sampleStride) {
+        const auto& cpuFluidState = cpuIntensiveQuantities[i].fluidState();
+        const auto& gpuFluidState = gpuIntensiveQuantitiesHost[i].fluidState();
+        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.saturation(0)), asDouble(gpuFluidState.saturation(0)), tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.saturation(2)), asDouble(gpuFluidState.saturation(2)), tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.pressure(0)),   asDouble(gpuFluidState.pressure(0)),   tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.density(0)),    asDouble(gpuFluidState.density(0)),    tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.density(2)),    asDouble(gpuFluidState.density(2)),    tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuIntensiveQuantities[i].porosity()),
+                          asDouble(gpuIntensiveQuantitiesHost[i].porosity()),
                           tol);
         ++checked;
     }
     BOOST_TEST_MESSAGE("Per-cell GPU vs CPU IQ comparison: checked "
-                       << checked << " / " << n << " cells");
+                       << checked << " / " << numCells << " cells");
 }
+
+/// RAII wrapper around a temporary file. The file is deleted when the
+/// object goes out of scope.
+struct TemporaryFile {
+    std::filesystem::path path;
+    explicit TemporaryFile(std::string_view filename)
+        : path(std::filesystem::temp_directory_path() / filename) {}
+    ~TemporaryFile() { std::filesystem::remove(path); }
+    TemporaryFile(const TemporaryFile&) = delete;
+    TemporaryFile& operator=(const TemporaryFile&) = delete;
+};
 
 BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
 {
     // Persist the in-source two-phase WATER+GAS+CO2STORE deck to a file so
     // the standard Vanguard read path can ingest it.
-    const std::string filename = "/tmp/test_blackoilintensivequantities_gpu.DATA";
+    const TemporaryFile tempFile("test_blackoilintensivequantities_gpu.DATA");
     {
-        std::ofstream f(filename);
+        std::ofstream f(tempFile.path);
         f << deckString1;
     }
-    runIntensiveQuantitiesTestForDeck(filename,
+    runIntensiveQuantitiesTestForDeck(tempFile.path.string(),
                                       /*expectedNumCells=*/27u,
                                       /*sampleStride=*/1u,
                                       /*measureTiming=*/false);
@@ -750,12 +764,12 @@ BOOST_AUTO_TEST_CASE(TestPerformanceGpuVsCpuLargeGrid)
     constexpr int dim = 64;
     constexpr std::size_t expected =
         static_cast<std::size_t>(dim) * dim * dim;
-    const std::string filename = "/tmp/test_blackoilintensivequantities_gpu_1M.DATA";
+    const TemporaryFile tempFile("test_blackoilintensivequantities_gpu_1M.DATA");
     {
-        std::ofstream f(filename);
+        std::ofstream f(tempFile.path);
         f << makeDeckString(dim, dim, dim);
     }
-    runIntensiveQuantitiesTestForDeck(filename,
+    runIntensiveQuantitiesTestForDeck(tempFile.path.string(),
                                       /*expectedNumCells=*/expected,
                                       /*sampleStride=*/256u,
                                       /*measureTiming=*/true);
