@@ -80,7 +80,46 @@
 #include <opm/simulators/flow/GpuEclMaterialLawManager.hpp>
 #include <opm/simulators/flow/GpuFlowProblem.hpp>
 
+#include <chrono>
 #include <fstream>
+#include <sstream>
+
+
+/// Build a CO2STORE WATER+GAS deck with the requested DIMENS. The grid is
+/// a uniform unit-cube grid; PERMX/PORO are constant. EQUIL gives the
+/// pressure profile so different cells (different depths) get different
+/// fluid states, exercising the per-cell update on both CPU and GPU.
+static std::string makeDeckString(int nx, int ny, int nz)
+{
+    const long total = static_cast<long>(nx) * ny * nz;
+    const long areal = static_cast<long>(nx) * ny;
+    std::ostringstream o;
+    o << "RUNSPEC\n"
+      << "DIMENS\n" << nx << ' ' << ny << ' ' << nz << " /\n"
+      << "EQLDIMS\n/\n"
+      << "TABDIMS\n/\n"
+      << "WATER\nGAS\nCO2STORE\nMETRIC\n"
+      << "GRID\n"
+      << "GRIDFILE\n0 0 /\n"
+      << "DX\n" << total << "*1 /\n"
+      << "DY\n" << total << "*1 /\n"
+      << "DZ\n" << total << "*1 /\n"
+      << "TOPS\n" << areal << "*0 /\n"
+      << "PERMX\n" << total << "*1013.25 /\n"
+      << "PORO\n" << total << "*0.25 /\n"
+      << "COPY\nPERMX PERMY /\nPERMX PERMZ /\n/\n"
+      << "PROPS\n"
+      << "SGWFN\n"
+      << "0.000000E+00 0.000000E+00 1.000000E+00 3.060000E-02\n"
+      << "1.000000E+00 1.000000E+00 0.000000E+00 3.060000E-01 /\n"
+      << "SOLUTION\n"
+      << "RPTRST\n'BASIC=0' /\n"
+      << "EQUIL\n0 300 100 0 0 0 1 1 0 /\n"
+      << "SCHEDULE\n"
+      << "RPTRST\n'BASIC=0' /\n"
+      << "TSTEP\n1 /";
+    return o.str();
+}
 
 
 static constexpr const char* deckString1 = "-- =============== RUNSPEC\n"
@@ -480,10 +519,16 @@ updateAllCellsKernel(GpuProblem problem,
     outIq[i] = iq;
 }
 
-BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
+/// One-shot global initialization of MPI, communicator, and parameter
+/// registration. Safe to call from multiple BOOST test cases; only the
+/// first call performs the work.
+static void initSimulatorOnce()
 {
-    Opm::resetLocale();
-    using TypeTag = Opm::Properties::TTag::FlowSimpleProblem;
+    static bool done = false;
+    if (done) {
+        return;
+    }
+    using namespace Opm;
     int argc1 = boost::unit_test::framework::master_test_suite().argc;
     char** argv1 = boost::unit_test::framework::master_test_suite().argv;
 #if HAVE_DUNE_FEM
@@ -491,8 +536,6 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
 #else
     Dune::MPIHelper::instance(argc1, argv1);
 #endif
-
-    using namespace Opm;
     FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     Opm::ThreadManager::registerParameters();
     Opm::NewtonMethodParams<double>::registerParameters();
@@ -500,24 +543,37 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
     AdaptiveTimeStepping<TypeTag>::registerParameters();
     Parameters::Register<Parameters::EnableTerminalOutput>(
         "Dummy added for the well model to compile.");
+    registerAllParameters_<TypeTag>(true);
+    done = true;
+}
 
+/// Run the per-cell IQ update on both GPU and CPU for the deck stored at
+/// \p deckPath, optionally measuring wall-clock time on both sides.
+///
+/// Correctness is checked by comparing CPU vs GPU IQ values cell-by-cell at
+/// indices \p i = 0, \p sampleStride, 2*\p sampleStride, ...
+///
+/// \param deckPath        path to a CO2STORE WATER+GAS deck written to disk
+/// \param expectedNumCells number of grid cells the deck describes
+/// \param sampleStride    stride for sampled correctness; 1 means full check
+/// \param measureTiming   if true, prints CPU and GPU wall-clock to stderr
+static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
+                                              std::size_t expectedNumCells,
+                                              std::size_t sampleStride,
+                                              bool measureTiming)
+{
+    Opm::resetLocale();
+    initSimulatorOnce();
+
+    using namespace Opm;
     using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
-    // Persist the in-source two-phase WATER+GAS+CO2STORE deck to a file so
-    // the standard Vanguard read path can ingest it.
-    const std::string filename = "/tmp/test_blackoilintensivequantities_gpu.DATA";
-    {
-        std::ofstream f(filename);
-        f << deckString1;
-    }
-    const auto filenameArg = std::string{"--ecl-deck-file-name="} + filename;
-
+    const auto filenameArg = std::string{"--ecl-deck-file-name="} + deckPath;
     const char* argv2[] = {
         "test_gpuflowproblem",
         filenameArg.c_str(),
         "--check-satfunc-consistency=false",
     };
-    registerAllParameters_<TypeTag>(true);
     Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv2) / sizeof(argv2[0]),
                                    argv2,
                                    /*registerParams=*/false,
@@ -525,7 +581,7 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
                                    /*handleHelp=*/false,
                                    /*myRank=*/0);
 
-    Opm::FlowGenericVanguard::readDeck(filename);
+    Opm::FlowGenericVanguard::readDeck(deckPath);
     auto sim = std::make_unique<Simulator>();
 
     auto& cpuProblem = sim->problem();
@@ -542,9 +598,6 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
     OPM_GPU_SAFE_CALL(cudaMallocManaged(&managedFsView, sizeof(FsViewT)));
     new (managedFsView) FsViewT(dynamicGpuFsView);
 
-    // Build the GPU-storage problem directly from the CPU problem; the
-    // GpuFlowProblem and GpuEclMaterialLawManager constructors handle all
-    // the per-cell sample uploading internally.
     using CpuMlm = typename Opm::GetProp<TypeTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
     using Traits = typename CpuMlm::MaterialLaw::Traits;
     using TwoPhaseTraits = Opm::TwoPhaseMaterialTraits<ScalarToUse,
@@ -564,6 +617,7 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
     auto gpuProblemView = Opm::gpuistl::make_view(gpuProblemBuf);
 
     const std::size_t n = cpuProblem.model().numGridDof();
+    BOOST_REQUIRE_EQUAL(n, expectedNumCells);
     BOOST_REQUIRE_GT(n, 0u);
 
     using PrimaryVariablesCPU = Opm::GetPropType<TypeTag, Opm::Properties::PrimaryVariables>;
@@ -572,44 +626,67 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
     using IqGPU = Opm::BlackOilIntensiveQuantities<TypeNacht>;
 
     PrimaryVariablesCPU pvCpu;
-    // For two-phase CO2STORE (water+gas) the pressure switch is the gas phase
-    // pressure; the default-constructed value of Po would otherwise hit
-    // assert(phaseIsActive(oilPhaseIdx)) inside updateRelpermAndPressures.
     pvCpu.setPrimaryVarsMeaningPressure(Opm::BlackOil::PressureMeaning::Pg);
     PrimaryVariablesGPU pvGpu(pvCpu);
     std::vector<PrimaryVariablesGPU> hostPvGpu(n, pvGpu);
     Opm::gpuistl::GpuBuffer<PrimaryVariablesGPU> pvBuf(hostPvGpu);
 
-    // Build a GPU IQ "prototype" with the FluidSystem pointer set to the
-    // managed-memory copy.  Replicate this prototype across all cells so each
-    // device thread starts with a fully-formed IQ ready to be updated.
     IqCPU cpuIqProto;
     IqGPU gpuIqProto = cpuIqProto.template withOtherFluidSystem<TypeNacht>(*managedFsView);
+    if (measureTiming) {
+        std::fprintf(stderr,
+                     "[timing] sizeof(IqGPU)=%zu  sizeof(IqCPU)=%zu  "
+                     "sizeof(PrimaryVariablesGPU)=%zu  cells=%zu  "
+                     "approx GPU mem for IQ buffer=%.2f MiB\n",
+                     sizeof(IqGPU), sizeof(IqCPU),
+                     sizeof(PrimaryVariablesGPU), n,
+                     (sizeof(IqGPU) * n) / (1024.0 * 1024.0));
+    }
     std::vector<IqGPU> hostIq(n, gpuIqProto);
     Opm::gpuistl::GpuBuffer<IqGPU> iqBuf(hostIq);
 
     const unsigned blockSize = 64u;
     const unsigned gridSize = static_cast<unsigned>((n + blockSize - 1u) / blockSize);
+
+    // Time the GPU kernel using CUDA events (excludes the host-to-device
+    // setup and device-to-host copy already done via GpuBuffer ctors above).
+    cudaEvent_t evStart{}, evStop{};
+    OPM_GPU_SAFE_CALL(cudaEventCreate(&evStart));
+    OPM_GPU_SAFE_CALL(cudaEventCreate(&evStop));
+    OPM_GPU_SAFE_CALL(cudaEventRecord(evStart));
     updateAllCellsKernel<<<gridSize, blockSize>>>(
         gpuProblemView,
         Opm::gpuistl::GpuView<const PrimaryVariablesGPU>(pvBuf.data(), pvBuf.size()),
         Opm::gpuistl::GpuView<IqGPU>(iqBuf.data(), iqBuf.size()),
         n);
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    OPM_GPU_SAFE_CALL(cudaEventRecord(evStop));
+    OPM_GPU_SAFE_CALL(cudaEventSynchronize(evStop));
     OPM_GPU_SAFE_CALL(cudaGetLastError());
+    float gpuMs = 0.0f;
+    OPM_GPU_SAFE_CALL(cudaEventElapsedTime(&gpuMs, evStart, evStop));
+    OPM_GPU_SAFE_CALL(cudaEventDestroy(evStart));
+    OPM_GPU_SAFE_CALL(cudaEventDestroy(evStop));
 
-    // CPU reference: same per-cell update on the host side using the full CPU
-    // problem.
+    // CPU reference: same per-cell update on the host side using the full
+    // CPU problem; time it with std::chrono.
     std::vector<IqCPU> cpuIqs(n);
+    const auto cpuT0 = std::chrono::steady_clock::now();
     for (std::size_t i = 0; i < n; ++i) {
         cpuIqs[i].updateSaturations(pvCpu, 0, Opm::LinearizationType{});
         cpuIqs[i].update(cpuProblem, pvCpu, static_cast<unsigned>(i), 0);
     }
+    const auto cpuT1 = std::chrono::steady_clock::now();
+    const double cpuMs =
+        std::chrono::duration<double, std::milli>(cpuT1 - cpuT0).count();
 
-    // Bring GPU IQs back and compare a few representative scalars per cell.
-    // We can't use asStdVector() because BlackOilIntensiveQuantities cannot
-    // be default-constructed when the FluidSystem is non-static; instead we
-    // reuse the prototype-filled host vector and copy device memory into it.
+    if (measureTiming) {
+        std::fprintf(stderr,
+                     "[timing] cells=%zu  CPU=%.3f ms  GPU(kernel)=%.3f ms  "
+                     "speedup=%.2fx\n",
+                     n, cpuMs, gpuMs, cpuMs / gpuMs);
+    }
+
+    // Bring GPU IQs back and compare cells (sampled by sampleStride).
     std::vector<IqGPU> gpuIqsHost(n, gpuIqProto);
     OPM_GPU_SAFE_CALL(cudaMemcpy(gpuIqsHost.data(),
                                  iqBuf.data(),
@@ -617,8 +694,9 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
                                  cudaMemcpyDeviceToHost));
     BOOST_REQUIRE_EQUAL(gpuIqsHost.size(), n);
 
-    constexpr double tol = 1e-6;  // BOOST_CHECK_CLOSE percent tolerance
-    for (std::size_t i = 0; i < n; ++i) {
+    constexpr double tol = 1e-6;
+    std::size_t checked = 0;
+    for (std::size_t i = 0; i < n; i += sampleStride) {
         const auto& cpuFs = cpuIqs[i].fluidState();
         const auto& gpuFs = gpuIqsHost[i].fluidState();
         BOOST_CHECK_CLOSE(asDouble(cpuFs.saturation(0)), asDouble(gpuFs.saturation(0)), tol);
@@ -629,10 +707,57 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
         BOOST_CHECK_CLOSE(asDouble(cpuIqs[i].porosity()),
                           asDouble(gpuIqsHost[i].porosity()),
                           tol);
+        ++checked;
     }
+    BOOST_TEST_MESSAGE("Per-cell GPU vs CPU IQ comparison: checked "
+                       << checked << " / " << n << " cells");
 }
-BOOST_AUTO_TEST_CASE(TestIntensiveQuantitiesCreationGPU)
+
+BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
 {
-    // Intentionally empty: the per-cell GPU vs CPU comparison is performed in
-    // TestInstantiateGpuFlowProblem above.
+    // Persist the in-source two-phase WATER+GAS+CO2STORE deck to a file so
+    // the standard Vanguard read path can ingest it.
+    const std::string filename = "/tmp/test_blackoilintensivequantities_gpu.DATA";
+    {
+        std::ofstream f(filename);
+        f << deckString1;
+    }
+    runIntensiveQuantitiesTestForDeck(filename,
+                                      /*expectedNumCells=*/27u,
+                                      /*sampleStride=*/1u,
+                                      /*measureTiming=*/false);
 }
+
+BOOST_AUTO_TEST_CASE(TestPerformanceGpuVsCpuLargeGrid)
+{
+    // 100^3 = 1'000'000 cells. Build a CO2STORE WATER+GAS deck with a uniform
+    // unit-cube grid and EQUIL initialization, then time the per-cell IQ
+    // update on both GPU and CPU. Correctness is checked at every 1000th
+    // cell (1000 sample points) so the test stays reasonably fast.
+    // 64^3 = 262'144 cells. Build a CO2STORE WATER+GAS deck with a uniform
+    // unit-cube grid and EQUIL initialization, then time the per-cell IQ
+    // update on both GPU and CPU. Correctness is checked at every 256th cell
+    // (~1024 sample points) so the test stays reasonably fast.
+    //
+    // NOTE: the upper grid size here is bounded by the per-cell device
+    // allocation pattern in GpuEclMaterialLawManager (one cudaMalloc per
+    // piecewise-linear sample array per cell, i.e. ~12 cudaMalloc per cell).
+    // With ROCm's typical 4 KiB allocation granularity, ~16 GiB of VRAM
+    // limits us to a few hundred thousand cells; a 1M-cell deck would
+    // require consolidating per-cell sample buffers (left as a future
+    // optimisation, since for a homogeneous deck all cells share the same
+    // SGWFN table).
+    constexpr int dim = 64;
+    constexpr std::size_t expected =
+        static_cast<std::size_t>(dim) * dim * dim;
+    const std::string filename = "/tmp/test_blackoilintensivequantities_gpu_1M.DATA";
+    {
+        std::ofstream f(filename);
+        f << makeDeckString(dim, dim, dim);
+    }
+    runIntensiveQuantitiesTestForDeck(filename,
+                                      /*expectedNumCells=*/expected,
+                                      /*sampleStride=*/256u,
+                                      /*measureTiming=*/true);
+}
+
