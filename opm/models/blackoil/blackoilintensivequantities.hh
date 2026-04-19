@@ -496,11 +496,15 @@ public:
             }
             else {
                 if (getFluidSystem().enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
-                    const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
-                        getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                    Evaluation RsSat;
+                    if constexpr (enableExtbo) {
+                        RsSat = asImp_().rs();
+                    } else {
+                        RsSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
                                                                 oilPhaseIdx,
                                                                 pvtRegionIdx,
                                                                 SoMax);
+                    }
                     fluidState_.setRs(min(RsMax, RsSat));
                 }
                 else {
@@ -514,11 +518,15 @@ public:
             }
             else {
                 if (getFluidSystem().enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
-                    const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
-                        getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                    Evaluation RvSat;
+                    if constexpr (enableExtbo) {
+                        RvSat = asImp_().rv();
+                    } else {
+                        RvSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
                                                                 gasPhaseIdx,
                                                                 pvtRegionIdx,
                                                                 SoMax);
+                    }
                     fluidState_.setRv(min(RvMax, RvSat));
                 }
                 else {

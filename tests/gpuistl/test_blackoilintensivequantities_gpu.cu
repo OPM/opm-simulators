@@ -72,12 +72,15 @@
 #include <opm/models/discretization/common/fvbaseelementcontextgpu.hh>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawTwoPhaseTypes.hpp>
+#include <opm/material/fluidmatrixinteractions/EclTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterialParams.hpp>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 
 #include <opm/simulators/flow/GpuEclMaterialLawManager.hpp>
 #include <opm/simulators/flow/GpuFlowProblem.hpp>
+
+#include <fstream>
 
 
 static constexpr const char* deckString1 = "-- =============== RUNSPEC\n"
@@ -261,7 +264,7 @@ namespace Properties
 
     } // namespace TTag
 
-    // Indices for two-phase gas-water.
+    // Indices for two-phase gas-water (CO2STORE: WATER + GAS, oil disabled).
     template <class TypeTag>
     struct Indices<TypeTag, TTag::FlowSimpleProblem> {
     private:
@@ -283,13 +286,12 @@ namespace Properties
                                              0 /*numBioCompV*/>;
     };
 
-    // SPE11C requires thermal/energy
+    // CO2STORE requires thermal/energy
     template <class TypeTag>
     struct EnableEnergy<TypeTag, TTag::FlowSimpleProblem> {
         static constexpr bool value = true;
     };
 
-    // SPE11C requires dispersion
     template <class TypeTag>
     struct EnableDispersion<TypeTag, TTag::FlowSimpleProblem> {
         static constexpr bool value = false;
@@ -337,9 +339,17 @@ namespace Properties
         using TwoPhaseParams = ::Opm::PiecewiseLinearTwoPhaseMaterialParams<
             TwoPhaseTraits, ::Opm::gpuistl::GpuView<const Scalar>>;
         using TwoPhaseLaw = ::Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraits, TwoPhaseParams>;
+        // CO2STORE uses the GasWater two-phase sub-approach; pin the GPU
+        // MaterialLaw to the device-friendly GpuTwoPhaseMaterial which
+        // dispatches to the GasWater law and stores its sub-params by value.
+        using GpuMaterialLaw = ::Opm::EclMaterialLaw::GpuTwoPhaseMaterial<
+            Traits, TwoPhaseLaw, TwoPhaseLaw, TwoPhaseLaw>;
 
     public:
-        using EclMaterialLawManager = ::Opm::EclMaterialLaw::GpuManager<Traits, TwoPhaseLaw, TwoPhaseLaw>;
+        using EclMaterialLawManager = ::Opm::EclMaterialLaw::GpuManager<
+            Traits, TwoPhaseLaw, TwoPhaseLaw,
+            ::Opm::VectorWithDefaultAllocator,
+            GpuMaterialLaw>;
         using type = typename EclMaterialLawManager::MaterialLaw;
     };
 
@@ -397,7 +407,8 @@ namespace Properties
             ::Opm::EclMaterialLaw::GpuManager<typename CpuMaterialLawManager::Traits,
                                               typename CpuMaterialLawManager::GasOilLaw,
                                               typename CpuMaterialLawManager::OilWaterLaw,
-                                              ::Opm::gpuistl::GpuView>;
+                                              ::Opm::gpuistl::GpuView,
+                                              typename CpuMaterialLawManager::MaterialLaw>;
     public:
         using type = ::Opm::GpuFlowProblem<ScalarT, GpuViewMaterialLawManager, ::Opm::gpuistl::GpuView>;
     };
@@ -441,6 +452,7 @@ testUsingOnGPU(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuis
     ScalarFluidState state2(fs);
     primaryVariables.assignNaive(state2);
     printf("BlackOilState density before update: %f\n", asDouble(state.density(0)));
+    intensiveQuantities.updateSaturations(primaryVariables, 0, Opm::LinearizationType{});
     intensiveQuantities.update(problem, primaryVariables, 0, 0);
 
     printf("BlackOilState density after update: %f\n", asDouble(state.density(0)));
@@ -451,63 +463,22 @@ __global__ void dummykernel()
     printf("Hello from dummy kernel!\n");
 }
 
-BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationGPU)
+template <class GpuProblem, class PriVars, class Iq>
+__global__ void
+updateAllCellsKernel(GpuProblem problem,
+                     Opm::gpuistl::GpuView<const PriVars> priVars,
+                     Opm::gpuistl::GpuView<Iq> outIq,
+                     std::size_t numCells)
 {
-    Opm::Parser parser;
-
-    auto deck = parser.parseString(deckString1);
-    auto python = std::make_shared<Opm::Python>();
-    Opm::EclipseState eclState(deck);
-    Opm::Schedule schedule(deck, eclState, python);
-
-    FluidSystem::initFromState(eclState, schedule);
-
-    auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
-
-    auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
-    auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
-    std::cout << "phaseIsActive: " << dynamicFluidSystem.phaseIsActive(0) << ", "
-              << dynamicFluidSystem.phaseIsActive(1) << ", " << dynamicFluidSystem.phaseIsActive(2)
-              << std::endl;
-    std::cout << "blackoil is active" << dynamicFluidSystem.phaseIsActive(FluidSystem::oilPhaseIdx)
-              << std::endl;
-    Opm::BlackOilIntensiveQuantities<TypeTag> intensiveQuantities;
-
-    auto& state = intensiveQuantities.fluidState();
-
-
-    printf("(CPU) BlackOilState density before update: %f\n", asDouble(state.density(0)));
-    intensiveQuantities.updatePhaseDensities();
-    printf("(CPU) BlackOilState density after update: %f\n", asDouble(state.density(0)));
-
-    using PrimaryVariables = Opm::GetPropType<TypeTag, Opm::Properties::PrimaryVariables>;
-    PrimaryVariables primaryVariablesCPU;
-    Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector> primaryVariablesGPU(primaryVariablesCPU);
-
-    Opm::BlackOilIntensiveQuantities<TypeNacht> intensiveQuantitiesGPU = intensiveQuantities.withOtherFluidSystem<TypeNacht>(dynamicGpuFluidSystemView);
-
-    // Build a small CPU GpuFlowProblem (single active cell), then move it to the GPU.
-    using DummyMaterialLawManager =
-        typename Opm::GetProp<TypeNacht, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
-    using CpuGpuFlowProblem = Opm::GpuFlowProblem<ScalarToUse, DummyMaterialLawManager>;
-    using MLP = typename DummyMaterialLawManager::MaterialLawParams;
-    DummyMaterialLawManager cpuMgr(std::vector<MLP>(1), std::vector<int>{0});
-    CpuGpuFlowProblem cpuProblem(std::move(cpuMgr),
-                                 std::vector<ScalarToUse>{ScalarToUse(0.25)},
-                                 std::vector<ScalarToUse>{},
-                                 std::vector<ScalarToUse>{},
-                                 std::vector<ScalarToUse>{},
-                                 std::vector<ScalarToUse>{},
-                                 std::vector<ScalarToUse>{});
-    auto gpuProblemBuffer = ::Opm::gpuistl::copy_to_gpu(cpuProblem);
-    auto gpuProblemView = ::Opm::gpuistl::make_view(gpuProblemBuffer);
-
-    testUsingOnGPU<<<1, 1>>>(dynamicGpuFluidSystemView, intensiveQuantitiesGPU, primaryVariablesGPU, gpuProblemView);
-    dummykernel<<<1,1>>>();
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    const std::size_t i = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (i >= numCells) {
+        return;
+    }
+    Iq iq = outIq[i];
+    iq.updateSaturations(priVars[i], 0, Opm::LinearizationType{});
+    iq.update(problem, priVars[i], static_cast<unsigned>(i), 0);
+    outIq[i] = iq;
 }
-
 
 BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
 {
@@ -515,19 +486,16 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
     using TypeTag = Opm::Properties::TTag::FlowSimpleProblem;
     int argc1 = boost::unit_test::framework::master_test_suite().argc;
     char** argv1 = boost::unit_test::framework::master_test_suite().argv;
-    std::cout << "Initializing MPI..." << std::endl;
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc1, argv1);
 #else
     Dune::MPIHelper::instance(argc1, argv1);
 #endif
-    std::cout << "Initialized MPI..." << std::endl;
 
     using namespace Opm;
     FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     Opm::ThreadManager::registerParameters();
     Opm::NewtonMethodParams<double>::registerParameters();
-    std::cout << "Registered ThreadManager parameters." << std::endl;
     BlackoilModelParameters<ScalarToUse>::registerParameters();
     AdaptiveTimeStepping<TypeTag>::registerParameters();
     Parameters::Register<Parameters::EnableTerminalOutput>(
@@ -535,8 +503,14 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
 
     using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
-    const std::string filename = "very_simple_deck.DATA";
-    const auto filenameArg = std::string {"--ecl-deck-file-name="} + filename;
+    // Persist the in-source two-phase WATER+GAS+CO2STORE deck to a file so
+    // the standard Vanguard read path can ingest it.
+    const std::string filename = "/tmp/test_blackoilintensivequantities_gpu.DATA";
+    {
+        std::ofstream f(filename);
+        f << deckString1;
+    }
+    const auto filenameArg = std::string{"--ecl-deck-file-name="} + filename;
 
     const char* argv2[] = {
         "test_gpuflowproblem",
@@ -551,58 +525,114 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
                                    /*handleHelp=*/false,
                                    /*myRank=*/0);
 
-    std::cout << "Registered all parameters." << std::endl;
-    std::cout << "Reading deck" << std::endl;
-
-    if (!std::filesystem::exists(filename)) {
-        throw std::runtime_error(std::format("Missing file {}.", filename));
-    }
-
-
     Opm::FlowGenericVanguard::readDeck(filename);
-    std::cout << "Read deck." << std::endl;
-    std::cout << "Initializing simulator..." << std::endl;
     auto sim = std::make_unique<Simulator>();
-    std::cout << "Created simulator." << std::endl;
 
+    auto& cpuProblem = sim->problem();
     auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
-    std::cout << "Initialized dynamic fluid system." << std::endl;
 
-    
-    std::cout << "phaseIsActive: " << dynamicFluidSystem.phaseIsActive(0) << ", " << dynamicFluidSystem.phaseIsActive(1)
-              << ", " << dynamicFluidSystem.phaseIsActive(2) << std::endl;
-    auto dynamicGpuFluidSystemBuffer
-        = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
-    std::cout << "Copied dynamic fluid system to GPU." << std::endl;
-    auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(
-        dynamicGpuFluidSystemBuffer);
-    std::cout << "Created GPU view of dynamic fluid system." << std::endl;
+    auto dynamicGpuFsBuf  = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+    auto dynamicGpuFsView = ::Opm::gpuistl::make_view(dynamicGpuFsBuf);
 
-    // Compile-only check: verify that a CPU GpuFlowProblem can be constructed
-    // from sim->problem() and that, in turn, the inner GpuManager can be
-    // constructed from the CPU EclMaterialLaw::Manager. The 'very_simple_deck'
-    // is two-phase so the underlying multiplexer approach is not Default; an
-    // actual call would throw at runtime, but the API must compile.
-    if (false) {
-        using CpuManager = typename Opm::GetProp<TypeTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
-        using Traits = typename CpuManager::MaterialLaw::Traits;
-        using TwoPhaseTraits = Opm::TwoPhaseMaterialTraits<ScalarToUse,
-                                                           Traits::wettingPhaseIdx,
-                                                           Traits::nonWettingPhaseIdx>;
-        using CpuPlParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraits>;
-        using CpuPlLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraits, CpuPlParams>;
-        using CpuGpuManager = Opm::EclMaterialLaw::GpuManager<Traits, CpuPlLaw, CpuPlLaw>;
-        using CpuGpuFlowProblem = Opm::GpuFlowProblem<ScalarToUse, CpuGpuManager>;
+    // Place the FluidSystemView in unified memory so that the device-side
+    // BlackOilFluidState pointer dereference is valid both on host and on
+    // device.
+    using FsViewT = std::decay_t<decltype(dynamicGpuFsView)>;
+    FsViewT* managedFsView = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMallocManaged(&managedFsView, sizeof(FsViewT)));
+    new (managedFsView) FsViewT(dynamicGpuFsView);
 
-        CpuGpuFlowProblem cpuGpuProblem(sim->problem());
-        (void)cpuGpuProblem;
+    // Build the GPU-storage problem directly from the CPU problem; the
+    // GpuFlowProblem and GpuEclMaterialLawManager constructors handle all
+    // the per-cell sample uploading internally.
+    using CpuMlm = typename Opm::GetProp<TypeTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
+    using Traits = typename CpuMlm::MaterialLaw::Traits;
+    using TwoPhaseTraits = Opm::TwoPhaseMaterialTraits<ScalarToUse,
+                                                       Traits::wettingPhaseIdx,
+                                                       Traits::nonWettingPhaseIdx>;
+    using GpuPlParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<
+        TwoPhaseTraits, Opm::gpuistl::GpuView<const ScalarToUse>>;
+    using GpuPlLaw   = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraits, GpuPlParams>;
+    using GpuMaterialLaw = Opm::EclMaterialLaw::GpuTwoPhaseMaterial<
+        Traits, GpuPlLaw, GpuPlLaw, GpuPlLaw>;
+    using GpuMgrBuf  = Opm::EclMaterialLaw::GpuManager<Traits, GpuPlLaw, GpuPlLaw,
+                                                       Opm::gpuistl::GpuBuffer,
+                                                       GpuMaterialLaw>;
+    using GpuProblemBuf = Opm::GpuFlowProblem<ScalarToUse, GpuMgrBuf, Opm::gpuistl::GpuBuffer>;
+
+    GpuProblemBuf gpuProblemBuf(cpuProblem);
+    auto gpuProblemView = Opm::gpuistl::make_view(gpuProblemBuf);
+
+    const std::size_t n = cpuProblem.model().numGridDof();
+    BOOST_REQUIRE_GT(n, 0u);
+
+    using PrimaryVariablesCPU = Opm::GetPropType<TypeTag, Opm::Properties::PrimaryVariables>;
+    using PrimaryVariablesGPU = Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector>;
+    using IqCPU = Opm::BlackOilIntensiveQuantities<TypeTag>;
+    using IqGPU = Opm::BlackOilIntensiveQuantities<TypeNacht>;
+
+    PrimaryVariablesCPU pvCpu;
+    // For two-phase CO2STORE (water+gas) the pressure switch is the gas phase
+    // pressure; the default-constructed value of Po would otherwise hit
+    // assert(phaseIsActive(oilPhaseIdx)) inside updateRelpermAndPressures.
+    pvCpu.setPrimaryVarsMeaningPressure(Opm::BlackOil::PressureMeaning::Pg);
+    PrimaryVariablesGPU pvGpu(pvCpu);
+    std::vector<PrimaryVariablesGPU> hostPvGpu(n, pvGpu);
+    Opm::gpuistl::GpuBuffer<PrimaryVariablesGPU> pvBuf(hostPvGpu);
+
+    // Build a GPU IQ "prototype" with the FluidSystem pointer set to the
+    // managed-memory copy.  Replicate this prototype across all cells so each
+    // device thread starts with a fully-formed IQ ready to be updated.
+    IqCPU cpuIqProto;
+    IqGPU gpuIqProto = cpuIqProto.template withOtherFluidSystem<TypeNacht>(*managedFsView);
+    std::vector<IqGPU> hostIq(n, gpuIqProto);
+    Opm::gpuistl::GpuBuffer<IqGPU> iqBuf(hostIq);
+
+    const unsigned blockSize = 64u;
+    const unsigned gridSize = static_cast<unsigned>((n + blockSize - 1u) / blockSize);
+    updateAllCellsKernel<<<gridSize, blockSize>>>(
+        gpuProblemView,
+        Opm::gpuistl::GpuView<const PrimaryVariablesGPU>(pvBuf.data(), pvBuf.size()),
+        Opm::gpuistl::GpuView<IqGPU>(iqBuf.data(), iqBuf.size()),
+        n);
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+
+    // CPU reference: same per-cell update on the host side using the full CPU
+    // problem.
+    std::vector<IqCPU> cpuIqs(n);
+    for (std::size_t i = 0; i < n; ++i) {
+        cpuIqs[i].updateSaturations(pvCpu, 0, Opm::LinearizationType{});
+        cpuIqs[i].update(cpuProblem, pvCpu, static_cast<unsigned>(i), 0);
     }
 
+    // Bring GPU IQs back and compare a few representative scalars per cell.
+    // We can't use asStdVector() because BlackOilIntensiveQuantities cannot
+    // be default-constructed when the FluidSystem is non-static; instead we
+    // reuse the prototype-filled host vector and copy device memory into it.
+    std::vector<IqGPU> gpuIqsHost(n, gpuIqProto);
+    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuIqsHost.data(),
+                                 iqBuf.data(),
+                                 n * sizeof(IqGPU),
+                                 cudaMemcpyDeviceToHost));
+    BOOST_REQUIRE_EQUAL(gpuIqsHost.size(), n);
+
+    constexpr double tol = 1e-6;  // BOOST_CHECK_CLOSE percent tolerance
+    for (std::size_t i = 0; i < n; ++i) {
+        const auto& cpuFs = cpuIqs[i].fluidState();
+        const auto& gpuFs = gpuIqsHost[i].fluidState();
+        BOOST_CHECK_CLOSE(asDouble(cpuFs.saturation(0)), asDouble(gpuFs.saturation(0)), tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuFs.saturation(2)), asDouble(gpuFs.saturation(2)), tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuFs.pressure(0)),   asDouble(gpuFs.pressure(0)),   tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuFs.density(0)),    asDouble(gpuFs.density(0)),    tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuFs.density(2)),    asDouble(gpuFs.density(2)),    tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuIqs[i].porosity()),
+                          asDouble(gpuIqsHost[i].porosity()),
+                          tol);
+    }
 }
 BOOST_AUTO_TEST_CASE(TestIntensiveQuantitiesCreationGPU)
 {
-    // This test is currently just to check that the code compiles and can be launched on the GPU
-    // without errors. It does not actually check that the intensive quantities are correct. Adding
-    // such checks would require implementing a CPU version of the intensive quantities, which is
-    // non-trivial and currently not available.
+    // Intentionally empty: the per-cell GPU vs CPU comparison is performed in
+    // TestInstantiateGpuFlowProblem above.
 }

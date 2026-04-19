@@ -156,6 +156,46 @@ public:
         }
     }
 
+    /*!
+     * \brief Construct directly into device-resident \c GpuBuffer storage
+     *        from any CPU \c FlowProblem (or \c FlowProblemBlackoil).
+     *
+     * Internally builds the per-cell rock/mixing data on the host as
+     * \c std::vector<Scalar>, then uploads each as a single
+     * \c GpuBuffer<Scalar>. The inner GPU material law manager is constructed
+     * from \c *cpu.materialLawManager() via its own GpuBuffer-storage
+     * constructor, which uploads the per-cell sample arrays.
+     *
+     * Only enabled when this problem itself uses \c GpuBuffer storage.
+     */
+    template <class CpuProblem,
+              class StS = Storage<Scalar>,
+              std::enable_if_t<
+                  std::is_same_v<StS, ::Opm::gpuistl::GpuBuffer<Scalar>>,
+                  int> = 0>
+    explicit GpuFlowProblem(const CpuProblem& cpu)
+        : materialLawManager_(*cpu.materialLawManager(), cpu.model().numGridDof())
+        , porosity_(extractRockField(cpu, [](const CpuProblem& p, unsigned u) {
+              return Scalar(p.porosity(u, 0u));
+          }))
+        , rockCompressibility_(extractRockField(cpu, [](const CpuProblem& p, unsigned u) {
+              return Scalar(p.rockCompressibility(u));
+          }))
+        , rockReferencePressure_(extractRockField(cpu, [](const CpuProblem& p, unsigned u) {
+              return Scalar(p.rockReferencePressure(u));
+          }))
+        , maxOilSaturation_(extractRockField(cpu, [](const CpuProblem& p, unsigned u) {
+              return Scalar(p.maxOilSaturation(u));
+          }))
+        , maxOilVaporizationFactor_(extractRockField(cpu, [](const CpuProblem& p, unsigned u) {
+              return Scalar(p.maxOilVaporizationFactor(0u, u));
+          }))
+        , maxGasDissolutionFactor_(extractRockField(cpu, [](const CpuProblem& p, unsigned u) {
+              return Scalar(p.maxGasDissolutionFactor(0u, u));
+          }))
+    {
+    }
+
     OPM_HOST_DEVICE ModelView model() const
     {
         return ModelView{};
@@ -166,7 +206,7 @@ public:
         return materialLawManager_.satnumRegionIdx(static_cast<unsigned>(elemIdx));
     }
 
-    OPM_HOST_DEVICE const MaterialLawParams& materialLawParams(std::size_t elemIdx) const
+    OPM_HOST_DEVICE MaterialLawParams materialLawParams(std::size_t elemIdx) const
     {
         return materialLawManager_.materialLawParams(static_cast<unsigned>(elemIdx));
     }
@@ -244,6 +284,22 @@ public:
     //!\}
 
 private:
+    template <class CpuProblem, class F>
+    static Storage<Scalar> extractRockField(const CpuProblem& cpu, F f)
+    {
+        const std::size_t n = cpu.model().numGridDof();
+        std::vector<Scalar> v(n);
+        for (std::size_t i = 0; i < n; ++i) {
+            v[i] = f(cpu, static_cast<unsigned>(i));
+        }
+        if constexpr (std::is_same_v<Storage<Scalar>,
+                                     ::Opm::VectorWithDefaultAllocator<Scalar>>) {
+            return Storage<Scalar>(v.begin(), v.end());
+        } else {
+            return Storage<Scalar>(v);
+        }
+    }
+
     EclMaterialLawManager materialLawManager_{};
     Storage<Scalar> porosity_{};
     Storage<Scalar> rockCompressibility_{};
