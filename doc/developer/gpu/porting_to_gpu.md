@@ -494,6 +494,29 @@ place where `.cu` files are actually compiled. The pattern is:
    The `ADD_CUDA_OR_HIP_FILE` macro takes care of wiring the file into
    the CUDA build *and* into the HIP build (see section 8).
 
+5. Add the test name to the `foreach(test ...)` block inside the
+   `opm-simulators_tests_hook` macro in
+   **`opm-simulators/CMakeLists.txt`** (around line 512). That loop
+   tags every GPU test with the `gpu_cuda` or `gpu_hip` CTest label
+   (selected automatically based on `CONVERT_CUDA_TO_HIP`), which is
+   what the CI uses to pick up GPU tests. The entry is just the bare
+   test name (without the `test_` prefix), inserted in alphabetical
+   order, e.g.:
+
+   ```cmake
+   foreach(test
+                ...
+                MiniVector
+                my_composite
+                preconditioner_factory_gpu
+                ...
+          )
+   ```
+
+   Without this entry the test will still build and run locally, but
+   it will not be labelled as a GPU test and therefore will be skipped
+   by GPU-targeted CI jobs.
+
 Reference test files to read before writing your own:
 
 * `tests/gpuistl/test_gpu_linear_two_phase_material.cu` — composite
@@ -578,3 +601,6 @@ falls out automatically.
 - [ ] A new `test_*.cu` exists in `opm-simulators/tests/gpuistl/` and
       is registered via `ADD_CUDA_OR_HIP_FILE` in
       `opm-simulators/CMakeLists_files.cmake`.
+- [ ] The test name is added to the `foreach(test ...)` block in
+      `opm-simulators/CMakeLists.txt` so it gets the `gpu_cuda` /
+      `gpu_hip` CTest label.
