@@ -255,14 +255,27 @@ public:
         return Evaluation(1.0);
     }
 
-    /*! \brief No-op relperm update; intensive quantities are expected to be
-     *         updated through the material law manager directly when needed. */
+    /*!
+     * \brief Update the relative permeabilities of all phases for a single
+     *        cell, in the same way as the CPU \c FlowProblem does.
+     *
+     * Calls \c MaterialLaw::relativePermeabilities on the cell's
+     * \c MaterialLawParams. The \c BlackOilIntensiveQuantities later divides
+     * the result by the phase viscosity to obtain the mobility.
+     *
+     * Directional relative permeabilities are not supported by the GPU
+     * problem, so the \p dirMob output is left untouched.
+     */
     template <class FluidState, class... Args>
-    OPM_HOST_DEVICE void updateRelperms(auto& /*mobility*/,
+    OPM_HOST_DEVICE void updateRelperms(auto& mobility,
                                         auto& /*dirMob*/,
-                                        FluidState& /*fluidState*/,
-                                        unsigned /*globalSpaceIdx*/) const
+                                        FluidState& fluidState,
+                                        unsigned globalSpaceIdx) const
     {
+        using ContainerT = std::decay_t<decltype(mobility)>;
+        const auto materialParams = materialLawParams(globalSpaceIdx);
+        EclMaterialLawManager::MaterialLaw::template relativePermeabilities<
+            ContainerT, FluidState, Args...>(mobility, materialParams, fluidState);
     }
 
     /*! \name Direct accessors for serialization to the GPU. */

@@ -381,11 +381,17 @@ namespace Properties
         using TwoPhaseParams = ::Opm::PiecewiseLinearTwoPhaseMaterialParams<
             TwoPhaseTraits, ::Opm::gpuistl::GpuView<const Scalar>>;
         using TwoPhaseLaw = ::Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraits, TwoPhaseParams>;
-        // CO2STORE uses the GasWater two-phase sub-approach; pin the GPU
-        // MaterialLaw to the device-friendly GpuTwoPhaseMaterial which
-        // dispatches to the GasWater law and stores its sub-params by value.
-        using GpuMaterialLaw = ::Opm::EclMaterialLaw::GpuTwoPhaseMaterial<
-            Traits, TwoPhaseLaw, TwoPhaseLaw, TwoPhaseLaw>;
+        // CO2STORE uses the GasWater two-phase sub-approach. The GPU
+        // MaterialLaw is the regular opm-common EclTwoPhaseMaterial driven
+        // by an EclTwoPhaseMaterialParams whose sub-law parameter objects
+        // are stored inline (via Opm::gpuistl::ValueAsPointer) so the
+        // resulting per-cell parameters object is trivially copyable to
+        // the device.
+        using GpuMaterialLawParams = ::Opm::EclTwoPhaseMaterialParams<
+            Traits, TwoPhaseParams, TwoPhaseParams, TwoPhaseParams,
+            ::Opm::gpuistl::ValueAsPointer>;
+        using GpuMaterialLaw = ::Opm::EclTwoPhaseMaterial<
+            Traits, TwoPhaseLaw, TwoPhaseLaw, TwoPhaseLaw, GpuMaterialLawParams>;
 
     public:
         using EclMaterialLawManager = ::Opm::EclMaterialLaw::GpuManager<
@@ -609,12 +615,16 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
                                                        Traits::nonWettingPhaseIdx>;
     using GpuPiecewiseLinearParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<
         TwoPhaseTraits, Opm::gpuistl::GpuView<const ScalarToUse>>;
-    using GpuPiecewiseLinearLaw   = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraits, GpuPiecewiseLinearParams>;
-    using GpuMaterialLaw = Opm::EclMaterialLaw::GpuTwoPhaseMaterial<
-        Traits, GpuPiecewiseLinearLaw, GpuPiecewiseLinearLaw, GpuPiecewiseLinearLaw>;
-    using GpuManagerBuffer  = Opm::EclMaterialLaw::GpuManager<Traits, GpuPiecewiseLinearLaw, GpuPiecewiseLinearLaw,
-                                                               Opm::gpuistl::GpuBuffer,
-                                                               GpuMaterialLaw>;
+    using GpuPiecewiseLinearLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraits, GpuPiecewiseLinearParams>;
+    using GpuMaterialLawParams = Opm::EclTwoPhaseMaterialParams<
+        Traits, GpuPiecewiseLinearParams, GpuPiecewiseLinearParams, GpuPiecewiseLinearParams,
+        Opm::gpuistl::ValueAsPointer>;
+    using GpuMaterialLaw = Opm::EclTwoPhaseMaterial<
+        Traits, GpuPiecewiseLinearLaw, GpuPiecewiseLinearLaw, GpuPiecewiseLinearLaw,
+        GpuMaterialLawParams>;
+    using GpuManagerBuffer = Opm::EclMaterialLaw::GpuManager<
+        Traits, GpuPiecewiseLinearLaw, GpuPiecewiseLinearLaw,
+        Opm::gpuistl::GpuBuffer, GpuMaterialLaw>;
     using GpuProblemBuffer = Opm::GpuFlowProblem<ScalarToUse, GpuManagerBuffer, Opm::gpuistl::GpuBuffer>;
 
     GpuProblemBuffer gpuProblemBuffer(cpuProblem);
@@ -698,18 +708,54 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     BOOST_REQUIRE_EQUAL(gpuIntensiveQuantitiesHost.size(), numCells);
 
     constexpr double tol = 1e-6;
+    // Active phase indices for CO2STORE WATER+GAS (oil disabled).
+    constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
+    constexpr unsigned gasPhaseIdx   = FluidSystem::gasPhaseIdx;
+    const unsigned activePhases[] = {waterPhaseIdx, gasPhaseIdx};
+
     std::size_t checked = 0;
     for (std::size_t i = 0; i < numCells; i += sampleStride) {
-        const auto& cpuFluidState = cpuIntensiveQuantities[i].fluidState();
-        const auto& gpuFluidState = gpuIntensiveQuantitiesHost[i].fluidState();
-        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.saturation(0)), asDouble(gpuFluidState.saturation(0)), tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.saturation(2)), asDouble(gpuFluidState.saturation(2)), tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.pressure(0)),   asDouble(gpuFluidState.pressure(0)),   tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.density(0)),    asDouble(gpuFluidState.density(0)),    tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.density(2)),    asDouble(gpuFluidState.density(2)),    tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuIntensiveQuantities[i].porosity()),
-                          asDouble(gpuIntensiveQuantitiesHost[i].porosity()),
-                          tol);
+        const auto& cpuIQ = cpuIntensiveQuantities[i];
+        const auto& gpuIQ = gpuIntensiveQuantitiesHost[i];
+        const auto& cpuFluidState = cpuIQ.fluidState();
+        const auto& gpuFluidState = gpuIQ.fluidState();
+
+        // Per-phase fluid state quantities for the active phases. Restricted
+        // to fields that are stored directly on the FluidState (no call into
+        // the underlying FluidSystem), since the GPU-side FluidState's
+        // FluidSystem holds device pointers (GpuView) that are not
+        // dereferenceable on the host.
+        for (unsigned p : activePhases) {
+            BOOST_CHECK_CLOSE(asDouble(cpuFluidState.saturation(p)),
+                              asDouble(gpuFluidState.saturation(p)), tol);
+            BOOST_CHECK_CLOSE(asDouble(cpuFluidState.pressure(p)),
+                              asDouble(gpuFluidState.pressure(p)),   tol);
+            BOOST_CHECK_CLOSE(asDouble(cpuFluidState.density(p)),
+                              asDouble(gpuFluidState.density(p)),    tol);
+            BOOST_CHECK_CLOSE(asDouble(cpuFluidState.invB(p)),
+                              asDouble(gpuFluidState.invB(p)),       tol);
+            // Mobility now goes through the opm-common EclTwoPhaseMaterial
+            // (relativePermeabilities) on both CPU and GPU, so the values
+            // must agree to the same tolerance as the rest of the IQ.
+            BOOST_CHECK_CLOSE(asDouble(cpuIQ.mobility(p)),
+                              asDouble(gpuIQ.mobility(p)), tol);
+        }
+
+        // Scalar / per-cell quantities. Both CPU and GPU FluidState configs
+        // have enableVapwat=true and enableDisgasInWater=true so Rsw/Rvw are
+        // stored on both sides.
+        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.Rsw()), asDouble(gpuFluidState.Rsw()), tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.Rvw()), asDouble(gpuFluidState.Rvw()), tol);
+        BOOST_CHECK_EQUAL(static_cast<unsigned>(cpuFluidState.pvtRegionIndex()),
+                          static_cast<unsigned>(gpuFluidState.pvtRegionIndex()));
+
+        BOOST_CHECK_CLOSE(asDouble(cpuIQ.porosity()),
+                          asDouble(gpuIQ.porosity()), tol);
+        BOOST_CHECK_CLOSE(static_cast<double>(cpuIQ.referencePorosity()),
+                          static_cast<double>(gpuIQ.referencePorosity()), tol);
+        BOOST_CHECK_CLOSE(asDouble(cpuIQ.rockCompTransMultiplier()),
+                          asDouble(gpuIQ.rockCompTransMultiplier()), tol);
+
         ++checked;
     }
     BOOST_TEST_MESSAGE("Per-cell GPU vs CPU IQ comparison: checked "
