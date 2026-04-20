@@ -197,6 +197,57 @@ OPM_HOST_DEVICE double asDouble(const Value& value)
     }
 }
 
+/// Compare two scalar-or-Evaluation quantities. Always compares the value
+/// part. When \p checkDerivatives is true and both operands are
+/// `DenseAd::Evaluation`s, also checks every partial derivative using
+/// \c BOOST_CHECK_CLOSE with the supplied tolerance and increments
+/// \p derivativeComparisons by the number of partial derivatives compared.
+/// If \p checkDerivatives is true but the operands are not Evaluations,
+/// the test fails with \c BOOST_FAIL so a misconfigured derivative test
+/// cannot silently pass on plain scalars.
+template <class CpuValue, class GpuValue>
+void checkValueAndDerivatives(const CpuValue& cpuValue,
+                              const GpuValue& gpuValue,
+                              double tol,
+                              bool checkDerivatives,
+                              const char* label,
+                              std::size_t& derivativeComparisons)
+{
+    BOOST_CHECK_CLOSE(asDouble(cpuValue), asDouble(gpuValue), tol);
+
+    if (!checkDerivatives) {
+        return;
+    }
+
+    if constexpr (requires {
+                      CpuValue::numVars;
+                      cpuValue.derivative(0);
+                      GpuValue::numVars;
+                      gpuValue.derivative(0);
+                  })
+    {
+        static_assert(static_cast<int>(CpuValue::numVars)
+                          == static_cast<int>(GpuValue::numVars),
+                      "CPU and GPU Evaluation types must have the same numVars");
+        static_assert(static_cast<int>(CpuValue::numVars) > 0,
+                      "Derivative comparison requires at least one partial derivative");
+        for (int derivIdx = 0; derivIdx < CpuValue::numVars; ++derivIdx) {
+            const double cpuDerivative = static_cast<double>(cpuValue.derivative(derivIdx));
+            const double gpuDerivative = static_cast<double>(gpuValue.derivative(derivIdx));
+            BOOST_CHECK_MESSAGE(std::abs(cpuDerivative - gpuDerivative)
+                                    <= tol * (1.0 + std::abs(cpuDerivative)),
+                                label << " derivative[" << derivIdx
+                                      << "] cpu=" << cpuDerivative
+                                      << " gpu=" << gpuDerivative);
+            ++derivativeComparisons;
+        }
+    }
+    else {
+        BOOST_FAIL(std::string("checkDerivatives=true but ") + label
+                   + " is not a DenseAd::Evaluation");
+    }
+}
+
 template <class TypeTag>
 struct DummyProblem {
  
@@ -570,7 +621,8 @@ static void initSimulatorOnce()
 static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
                                               std::size_t expectedNumCells,
                                               std::size_t sampleStride,
-                                              bool measureTiming)
+                                              bool measureTiming,
+                                              bool checkDerivatives = false)
 {
     Opm::resetLocale();
     initSimulatorOnce();
@@ -714,6 +766,7 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     const unsigned activePhases[] = {waterPhaseIdx, gasPhaseIdx};
 
     std::size_t checked = 0;
+    std::size_t derivativeComparisons = 0;
     for (std::size_t i = 0; i < numCells; i += sampleStride) {
         const auto& cpuIQ = cpuIntensiveQuantities[i];
         const auto& gpuIQ = gpuIntensiveQuantitiesHost[i];
@@ -726,40 +779,64 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
         // FluidSystem holds device pointers (GpuView) that are not
         // dereferenceable on the host.
         for (unsigned p : activePhases) {
-            BOOST_CHECK_CLOSE(asDouble(cpuFluidState.saturation(p)),
-                              asDouble(gpuFluidState.saturation(p)), tol);
-            BOOST_CHECK_CLOSE(asDouble(cpuFluidState.pressure(p)),
-                              asDouble(gpuFluidState.pressure(p)),   tol);
-            BOOST_CHECK_CLOSE(asDouble(cpuFluidState.density(p)),
-                              asDouble(gpuFluidState.density(p)),    tol);
-            BOOST_CHECK_CLOSE(asDouble(cpuFluidState.invB(p)),
-                              asDouble(gpuFluidState.invB(p)),       tol);
+            checkValueAndDerivatives(cpuFluidState.saturation(p),
+                                     gpuFluidState.saturation(p),
+                                     tol, checkDerivatives, "saturation",
+                                     derivativeComparisons);
+            checkValueAndDerivatives(cpuFluidState.pressure(p),
+                                     gpuFluidState.pressure(p),
+                                     tol, checkDerivatives, "pressure",
+                                     derivativeComparisons);
+            checkValueAndDerivatives(cpuFluidState.density(p),
+                                     gpuFluidState.density(p),
+                                     tol, checkDerivatives, "density",
+                                     derivativeComparisons);
+            checkValueAndDerivatives(cpuFluidState.invB(p),
+                                     gpuFluidState.invB(p),
+                                     tol, checkDerivatives, "invB",
+                                     derivativeComparisons);
             // Mobility now goes through the opm-common EclTwoPhaseMaterial
             // (relativePermeabilities) on both CPU and GPU, so the values
             // must agree to the same tolerance as the rest of the IQ.
-            BOOST_CHECK_CLOSE(asDouble(cpuIQ.mobility(p)),
-                              asDouble(gpuIQ.mobility(p)), tol);
+            checkValueAndDerivatives(cpuIQ.mobility(p),
+                                     gpuIQ.mobility(p),
+                                     tol, checkDerivatives, "mobility",
+                                     derivativeComparisons);
         }
 
         // Scalar / per-cell quantities. Both CPU and GPU FluidState configs
         // have enableVapwat=true and enableDisgasInWater=true so Rsw/Rvw are
         // stored on both sides.
-        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.Rsw()), asDouble(gpuFluidState.Rsw()), tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuFluidState.Rvw()), asDouble(gpuFluidState.Rvw()), tol);
+        checkValueAndDerivatives(cpuFluidState.Rsw(), gpuFluidState.Rsw(),
+                                 tol, checkDerivatives, "Rsw",
+                                 derivativeComparisons);
+        checkValueAndDerivatives(cpuFluidState.Rvw(), gpuFluidState.Rvw(),
+                                 tol, checkDerivatives, "Rvw",
+                                 derivativeComparisons);
         BOOST_CHECK_EQUAL(static_cast<unsigned>(cpuFluidState.pvtRegionIndex()),
                           static_cast<unsigned>(gpuFluidState.pvtRegionIndex()));
 
-        BOOST_CHECK_CLOSE(asDouble(cpuIQ.porosity()),
-                          asDouble(gpuIQ.porosity()), tol);
+        checkValueAndDerivatives(cpuIQ.porosity(), gpuIQ.porosity(),
+                                 tol, checkDerivatives, "porosity",
+                                 derivativeComparisons);
         BOOST_CHECK_CLOSE(static_cast<double>(cpuIQ.referencePorosity()),
                           static_cast<double>(gpuIQ.referencePorosity()), tol);
-        BOOST_CHECK_CLOSE(asDouble(cpuIQ.rockCompTransMultiplier()),
-                          asDouble(gpuIQ.rockCompTransMultiplier()), tol);
+        checkValueAndDerivatives(cpuIQ.rockCompTransMultiplier(),
+                                 gpuIQ.rockCompTransMultiplier(),
+                                 tol, checkDerivatives, "rockCompTransMultiplier",
+                                 derivativeComparisons);
 
         ++checked;
     }
     BOOST_TEST_MESSAGE("Per-cell GPU vs CPU IQ comparison: checked "
                        << checked << " / " << numCells << " cells");
+    if (checkDerivatives) {
+        BOOST_TEST_MESSAGE("Derivative comparisons performed: " << derivativeComparisons);
+        // Guard against silent regressions: if checkDerivatives is requested
+        // but the helper never actually compared a derivative (e.g. because
+        // the IQ types degraded to plain scalars), fail loudly.
+        BOOST_REQUIRE_GT(derivativeComparisons, 0u);
+    }
 }
 
 /// RAII wrapper around a temporary file. The file is deleted when the
@@ -819,5 +896,25 @@ BOOST_AUTO_TEST_CASE(TestPerformanceGpuVsCpuLargeGrid)
                                       /*expectedNumCells=*/expected,
                                       /*sampleStride=*/256u,
                                       /*measureTiming=*/true);
+}
+
+BOOST_AUTO_TEST_CASE(TestGpuVsCpuIntensiveQuantitiesEvaluationDerivatives)
+{
+    // Re-runs the small (3x3x3) WATER+GAS+CO2STORE deck used by
+    // TestInstantiateGpuFlowProblem, but in addition to the value of every
+    // intensive-quantity field this test also compares every partial
+    // derivative of the underlying DenseAd::Evaluation between CPU and GPU.
+    // This guarantees that the GPU material-law / fluid-system evaluation
+    // chain is differentiated identically to the CPU one.
+    const TemporaryFile tempFile("test_blackoilintensivequantities_gpu_deriv.DATA");
+    {
+        std::ofstream f(tempFile.path);
+        f << deckString1;
+    }
+    runIntensiveQuantitiesTestForDeck(tempFile.path.string(),
+                                      /*expectedNumCells=*/27u,
+                                      /*sampleStride=*/1u,
+                                      /*measureTiming=*/false,
+                                      /*checkDerivatives=*/true);
 }
 
