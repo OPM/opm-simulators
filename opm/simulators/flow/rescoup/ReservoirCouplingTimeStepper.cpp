@@ -27,6 +27,7 @@
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <dune/common/parallel/mpitraits.hh>
@@ -104,6 +105,7 @@ void
 ReservoirCouplingTimeStepper<Scalar>::
 receiveNextReportDateFromSlaves()
 {
+    OPM_TIMEFUNCTION();
     auto num_slaves = this->numSlaves();
     if (this->comm().rank() == 0) {
         this->logger().debug("Receiving next report dates from slave processes");
@@ -145,6 +147,7 @@ void
 ReservoirCouplingTimeStepper<Scalar>::
 sendNextTimeStepToSlaves(double timestep)
 {
+    OPM_TIMEFUNCTION();
     if (this->comm().rank() == 0) {
         for (unsigned int slave_idx = 0; slave_idx < this->numSlaves(); slave_idx++) {
             if (!this->slaveIsActivated(slave_idx)) {
