@@ -602,6 +602,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     receiveSlaveGroupData()
     {
+        OPM_TIMEFUNCTION();
         assert(this->isReservoirCouplingMaster());
         RescoupReceiveSlaveGroupData<Scalar, IndexTraits> slave_group_data_receiver{
             this->groupStateHelper(),
@@ -614,6 +615,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     sendSlaveGroupDataToMaster()
     {
+        OPM_TIMEFUNCTION();
         assert(this->isReservoirCouplingSlave());
         RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{this->groupStateHelper()};
         slave_group_data_sender.sendSlaveGroupDataToMaster();
@@ -624,6 +626,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     sendMasterGroupConstraintsToSlaves()
     {
+        OPM_TIMEFUNCTION();
         // This function is called by the master process to send the group constraints to the slaves.
         RescoupConstraintsCalculator<Scalar, IndexTraits> constraints_calculator{
             this->guide_rate_handler_,
@@ -637,6 +640,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     receiveGroupConstraintsFromMaster()
     {
+        OPM_TIMEFUNCTION();
         RescoupReceiveGroupConstraints<Scalar, IndexTraits> constraint_receiver{
             this->guide_rate_handler_,
             this->groupStateHelper()

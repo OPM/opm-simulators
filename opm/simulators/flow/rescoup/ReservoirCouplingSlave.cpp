@@ -24,6 +24,7 @@
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlaveReportStep.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 
+#include <opm/common/TimingMacros.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
@@ -222,6 +223,7 @@ template <class Scalar>
 double
 ReservoirCouplingSlave<Scalar>::
 receiveNextTimeStepFromMaster() {
+    OPM_TIMEFUNCTION();
     double timestep;
     if (this->comm_.rank() == 0) {
         // NOTE: See comment about error handling at the top of this file.
@@ -318,6 +320,7 @@ void
 ReservoirCouplingSlave<Scalar>::
 sendNextReportDateToMasterProcess() const
 {
+    OPM_TIMEFUNCTION();
     if (this->comm_.rank() == 0) {
         double elapsed_time = this->timer_.simulationTimeElapsed();
         double current_step_length = this->timer_.currentStepLength();
