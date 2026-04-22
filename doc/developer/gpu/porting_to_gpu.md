@@ -5,6 +5,16 @@ This document describes how to port an existing composite C++ class
 to the GPU using the **`GpuBuffer`** / **`GpuView`** paradigm that is
 already established in `opm-simulators/opm/simulators/linalg/gpuistl/`.
 
+> **Golden rule: edit, do not duplicate.**
+> The goal is to add GPU support *to the existing class* by templating
+> it on its storage container. **Do not create a separate GPU class.**
+> A duplicate class doubles the maintenance burden, risks divergence,
+> and is rejected in code review. Creating a brand-new GPU-only class
+> is an exceptional last resort reserved for situations where the
+> original class truly cannot be templated (e.g. it has a heavily
+> virtual interface or is generated code). In all normal cases the
+> single header file is edited in-place.
+
 The pattern is split across three repositories:
 
 | Repository      | Role                                                                                  |
@@ -126,6 +136,13 @@ that validates this behaviour.
 
 ## 3. Templating the class on its storage container
 
+> **Edit the existing file — do not copy it.**
+> Open the class's existing `.hpp` file and add the `Storage` template
+> parameter directly. The CPU instantiation (`Storage =
+> VectorWithDefaultAllocator`) must continue to behave exactly as
+> before — callers that do not supply the second template argument are
+> completely unaffected.
+
 The trick that makes the same class instantiable on CPU *and* GPU is
 to template it on the container type using a **template template
 parameter**, defaulting to `VectorWithDefaultAllocator`.
@@ -136,6 +153,21 @@ The same class is then instantiated three times:
 | `MyClass<Traits>`                    | `VectorWithDefaultAllocator<Scalar>` | CPU |
 | `MyClass<Traits, GpuBuffer>`         | `GpuBuffer<Scalar>` (owning)  | GPU mem, CPU object |
 | `MyClass<Traits, GpuView>`           | `GpuView<Scalar>`             | GPU (passed to kernel) |
+
+**Limit the public interface for GPU instantiations.**
+When `Storage` is `GpuBuffer` or `GpuView`, many methods that are
+perfectly valid on the CPU (e.g. those that resize, append, serialize,
+or return `std::string`) are meaningless or impossible on the device.
+Do not try to make every method work for every storage type. Instead:
+
+* Guard host-only methods with `if constexpr` or a `static_assert` so
+  that they produce a clear compile-time error when called on a
+  `GpuBuffer` / `GpuView` instantiation.
+* Decorate only the methods that *need* to run in a kernel with
+  `OPM_HOST_DEVICE`; leave the rest undecorated.
+* It is acceptable — and encouraged — for `MyClass<Traits, GpuView>`
+  to expose fewer methods than `MyClass<Traits>`. The GPU instantiation
+  is a read-only, compute-only slice of the full class.
 
 The canonical reference implementation is
 `opm-common/opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterialParams.hpp`.
@@ -401,6 +433,93 @@ void myKernel(Opm::gpuistl::ValueAsPointer<float> v, float* out)
 
 ---
 
+## 5c. Convenience include: `gpuistl_if_available.hpp`
+
+`opm-common/opm/common/utility/gpuistl_if_available.hpp`
+
+Sections 4 and 5 showed `copy_to_gpu` / `make_view` bodies that manually
+include individual GPU headers inside `#if HAVE_CUDA` / `#if USE_HIP`
+blocks. In practice, replace all of that boilerplate with a single include
+of **`gpuistl_if_available.hpp`**. The header does everything for you:
+
+* It always includes `gpuDecorators.hpp` (so `OPM_HOST_DEVICE` etc. are
+  available unconditionally).
+* When `HAVE_CUDA` is defined it selects the correct backend:
+  * `USE_HIP` → `gpuistl_hip/GpuBuffer.hpp`, `GpuView.hpp`,
+    `GpuVector.hpp`, `gpu_smart_pointer.hpp`
+  * otherwise → the corresponding `gpuistl/` headers
+* When `HAVE_CUDA` is **not** defined the header is empty (beyond the
+  `gpuDecorators.hpp` pull-in).
+
+### Usage in `opm-common`
+
+Include unconditionally at the top of the header — no `#if HAVE_CUDA`
+guard is required:
+
+```cpp
+// In an opm-common header:
+#include <opm/common/utility/gpuistl_if_available.hpp>
+
+// copy_to_gpu / make_view still need their own #if HAVE_CUDA guard
+// because the function *bodies* reference GpuBuffer/GpuView types,
+// but the include itself does not:
+#if HAVE_CUDA
+namespace Opm::gpuistl {
+
+template <class Traits>
+MyComposite<Traits, GpuBuffer>
+copy_to_gpu(const MyComposite<Traits>& cpu)
+{
+    // GpuBuffer is already available — no additional #include needed.
+    return MyComposite<Traits, GpuBuffer>(
+        GpuBuffer<typename Traits::Scalar>(cpu.xs()),
+        GpuBuffer<typename Traits::Scalar>(cpu.ys()));
+}
+
+} // namespace Opm::gpuistl
+#endif // HAVE_CUDA
+```
+
+### Usage in `opm-grid`
+
+`opm-grid` may be built without `opm-common` as a dependency. Guard the
+include with `HAVE_OPM_COMMON`:
+
+```cpp
+// In an opm-grid header:
+#if HAVE_OPM_COMMON
+#include <opm/common/utility/gpuistl_if_available.hpp>
+#endif
+```
+
+The `copy_to_gpu` / `make_view` bodies are then double-guarded:
+
+```cpp
+#if HAVE_OPM_COMMON && HAVE_CUDA
+namespace Opm::gpuistl {
+// ... implementations using GpuBuffer / GpuView ...
+} // namespace Opm::gpuistl
+#endif // HAVE_OPM_COMMON && HAVE_CUDA
+```
+
+See `opm-grid/opm/grid/utility/SparseTable.hpp` for a complete reference
+example.
+
+### What `gpuistl_if_available.hpp` provides
+
+After the include, the following are available inside `#if HAVE_CUDA`
+blocks (no further includes needed):
+
+| Symbol | Header it comes from |
+| ------ | -------------------- |
+| `Opm::gpuistl::GpuBuffer<T>` | `GpuBuffer.hpp` |
+| `Opm::gpuistl::GpuView<T>` | `GpuView.hpp` |
+| `Opm::gpuistl::GpuVector<T>` | `GpuVector.hpp` |
+| `Opm::gpuistl::make_gpu_shared_ptr` / `make_gpu_unique_ptr` | `gpu_smart_pointer.hpp` |
+| `Opm::gpuistl::PointerView<T>` / `ValueAsPointer<T>` | `gpu_smart_pointer.hpp` |
+
+---
+
 ## 6. Putting it together: launching a kernel
 
 A complete CPU-side example, mirroring
@@ -586,8 +705,19 @@ falls out automatically.
 
 ## Checklist
 
+- [ ] **The existing class file was edited in-place** — no duplicate
+      GPU-only class was created. A separate GPU class is only
+      acceptable when the original class has a heavily virtual interface
+      or is otherwise impossible to template.
 - [ ] Class is templated on its storage container using
       `template<class> class Storage = VectorWithDefaultAllocator`.
+- [ ] The CPU default instantiation (`Storage = VectorWithDefaultAllocator`)
+      is behaviourally identical to the class before the porting work.
+- [ ] Only the methods that must run on the device are annotated with
+      `OPM_HOST_DEVICE`; host-only methods are left undecorated.
+- [ ] Host-only methods that make no sense for a `GpuBuffer` /
+      `GpuView` instantiation are guarded (e.g. `static_assert` or
+      `if constexpr`) so they fail clearly at compile time if misused.
 - [ ] Every member function callable from a kernel is annotated with
       `OPM_HOST_DEVICE`.
 - [ ] All exceptions go through `OPM_THROW`.
@@ -596,6 +726,11 @@ falls out automatically.
 - [ ] `copy_to_gpu` and `make_view` live in `namespace Opm::gpuistl`,
       are friended by the class, and are guarded by `#if HAVE_CUDA`
       when the class itself is in `opm-common` or `opm-grid`.
+- [ ] GPU headers in `opm-common` / `opm-grid` are pulled in via
+      `<opm/common/utility/gpuistl_if_available.hpp>` (unconditionally
+      in `opm-common`; guarded by `#if HAVE_OPM_COMMON` in `opm-grid`)
+      rather than manually including individual `GpuBuffer` / `GpuView`
+      headers inside `#if HAVE_CUDA` / `#if USE_HIP` blocks.
 - [ ] The CPU code that calls `copy_to_gpu` keeps the returned owning
       object alive until every kernel using the view has completed.
 - [ ] A new `test_*.cu` exists in `opm-simulators/tests/gpuistl/` and
