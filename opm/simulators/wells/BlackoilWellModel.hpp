@@ -400,6 +400,15 @@ template<class Scalar> class WellContributions;
             /// @brief Check if this process is a reservoir coupling slave
             bool isReservoirCouplingSlave() const { return rescoup_.isSlave(); }
 
+            /// @brief Check if a group is a reservoir coupling master group.
+            /// @details Returns true only when this process is a master and the
+            ///          named group is registered as a master group.  Safe to
+            ///          call unconditionally — returns false in non-MPI builds
+            ///          and on non-master processes.
+            bool isReservoirCouplingMasterGroup(const std::string& group_name) const {
+                return rescoup_.isMasterGroup(group_name);
+            }
+
             /// @brief Get reference to reservoir coupling master
             /// @note Caller must ensure isReservoirCouplingMaster() is true
             ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {

@@ -2654,19 +2654,30 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
 {
     // NOTE: The number of group controlled wells (GCW) is only relevant for groups that are NOT under
     //   individual control. However, it is collected for all groups here.
+    //   For a group not under individual control, GCW is used to check if it should participate in
+    //   target reduction and guide rate control.
     const Group& group = this->schedule_.getGroup(group_name, this->report_step_);
     int num_wells = 0;
-    // NOTE: If "group" is a reservoir coupling master group, it should have no child groups or wells.
-    //   As a convention, we will assign GCW = 1 (GCW=Group Controlled Wells). This is consistent with
-    //   the usage of GCW elsewhere in the code: GCW is only checked for GCW>0, the number of wells if
-    //   greater than zero is irrelevant.
-    //   1) for target reductions, GCW is used to check if a group not under individual control and with a guide rate
-    //      set should participate in target reduction, and
-    //   2) for guide rate control, GCW is used to check if a group not under individual control should (or
-    //      under individual control if "always_included_child" in localFraction():FractionCalculator.cpp is true)
-    //      should participate in guide rate control.
     if (this->isReservoirCouplingMasterGroup(group)) {
-        num_wells = 1;
+        // NOTE: If "group" is a reservoir coupling master group, it should have no child groups or wells.
+        //   During master group constraint calculation, we will set individual control on master groups
+        //   to exclude them from guide rate distribution, see
+        //   RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves().
+        // TODO: a master group with individual control and GCONPROD item 8 = "YES"
+        //   (RESPOND_TO_PARENT = YES) has an own rate limit AND is available for
+        //   higher-level group control. The current control mode-driven check
+        //   below assigns GCW=0 for such groups, which excludes them from
+        //   guide-rate distribution and yields a wrong target.
+        //   Proposed fix: effective-GCW accessor on ReservoirCouplingMaster + extension
+        //   to FractionCalculator::guideRateSum. Deferred to a follow-up PR.
+        if (is_production_group) {
+            const auto ctrl = this->groupState().production_control(group_name);
+            const bool individual = (ctrl != Group::ProductionCMode::FLD
+                                  && ctrl != Group::ProductionCMode::NONE);
+            num_wells = individual ? 0 : 1;
+        } else {
+            num_wells = 1;  // injection: not yet handled
+        }
     }
     else {
         // NOTE: A group with sub groups cannot also have direct wells (one level below) under its control.
