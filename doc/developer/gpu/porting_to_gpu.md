@@ -520,6 +520,106 @@ blocks (no further includes needed):
 
 ---
 
+## 5d. The static/non-static fluid system duality
+
+### Background: why a non-static twin exists
+
+`BlackOilFluidSystem` was historically a **fully static** class: all its
+data lives in `static` member variables, and all its methods are
+`static`. This design works perfectly on the CPU — there is effectively
+a single global instance — but is incompatible with the GPU because
+`static` storage cannot be placed in device memory.
+
+To solve this without breaking existing CPU code, a **non-static twin**
+`BlackOilFluidSystemNonStatic` was introduced
+(`opm-common/opm/material/fluidsystems/BlackOilFluidSystemNonStatic.hpp`).
+Both classes share the same implementation via a macro-template
+(`BlackOilFluidSystem_macrotemplate.hpp`), so they are always in sync.
+The static class exposes `getNonStaticInstance()` which returns a
+reference to a `BlackOilFluidSystemNonStatic` object that holds the same
+data as the static class but as ordinary member variables — making it
+portable to the GPU via the standard `copy_to_gpu` / `make_view` pattern.
+
+The two classes are **interchangeable as template arguments**: any class
+that is templated on `FluidSystemT` can be instantiated with either the
+static (`BlackOilFluidSystem`) or the non-static
+(`BlackOilFluidSystemNonStatic<Scalar, IndexTraits, GpuView>`) variant.
+
+### How dependent classes support both variants: `fluidSystemIsStatic`
+
+`BlackOilFluidState` illustrates the canonical pattern for a class that
+needs to call into a fluid system but must work with *both* the static
+and the non-static variant:
+
+```cpp
+// FluidSystemT may be BlackOilFluidSystem (static) or
+// BlackOilFluidSystemNonStatic<..., GpuView> (GPU view).
+template <class ValueT, class FluidSystemT, ...>
+class BlackOilFluidState
+{
+    using FluidSystem = FluidSystemT;
+
+    // True when FluidSystem is a zero-sized empty type (i.e. fully static).
+    static constexpr bool fluidSystemIsStatic = std::is_empty_v<FluidSystem>;
+
+    // Unified accessor — compiles and works for both variants.
+    OPM_HOST_DEVICE const FluidSystem& fluidSystem() const
+    {
+        if constexpr (fluidSystemIsStatic) {
+            static FluidSystem instance;
+            return instance;          // zero-cost; no stored pointer
+        } else {
+            return **fluidSystemPtr_; // double-deref: ConditionalStorage<T*>
+        }
+    }
+
+    // Only occupies storage when FluidSystem is not a zero-sized empty type.
+    ConditionalStorage<!fluidSystemIsStatic, FluidSystem const*> fluidSystemPtr_;
+};
+```
+
+When instantiated with the **static** fluid system, `fluidSystemIsStatic`
+is `true`, `ConditionalStorage` stores nothing, and `fluidSystem()`
+returns a `static` local — no overhead, no stored pointer, fully
+backwards-compatible.
+
+When instantiated with the **non-static / GPU view** variant,
+`fluidSystemIsStatic` is `false`, the constructor stores a pointer to the
+provided fluid system, and `fluidSystem()` dereferences it. Because the
+GPU-view fluid system is trivially copyable and its data lives in device
+memory, the pointer is valid inside a kernel.
+
+### CPU-to-GPU flow for a class with a non-static fluid system
+
+```cpp
+// 1. Initialise the static fluid system as usual.
+FluidSystem::initFromState(eclState, schedule);
+
+// 2. Obtain the non-static twin — owned by the static fluid system,
+//    valid as long as no re-init occurs.
+auto& dynamicFs = FluidSystem::getNonStaticInstance();
+
+// 3. Copy the fluid system to the GPU (owning buffer).
+auto gpuFsBuffer = Opm::gpuistl::copy_to_gpu(dynamicFs);
+
+// 4. Create a trivially copyable view to pass to kernels.
+auto gpuFsView = Opm::gpuistl::make_view(gpuFsBuffer);
+
+// 5. Construct the dependent object using the non-static GPU view type.
+//    The fluid-state is now parameterised on the GpuView fluid system.
+using GpuFluidSystem = decltype(gpuFsView);
+BlackOilFluidState<Scalar, GpuFluidSystem, ...> gpuFluidState(gpuFsView);
+
+// 6. Pass by value to the kernel (gpuFsBuffer must outlive the kernel).
+myKernel<<<grid, block>>>(gpuFluidState, /* … */);
+OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+```
+
+The complete working example is in
+`opm-simulators/tests/gpuistl/test_gpuBlackOilFluidSystem.cu`.
+
+---
+
 ## 6. Putting it together: launching a kernel
 
 A complete CPU-side example, mirroring
