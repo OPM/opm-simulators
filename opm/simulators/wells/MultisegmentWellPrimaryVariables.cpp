@@ -224,6 +224,10 @@ updateNewton(const BVectorWell& dwells,
             constexpr Scalar max_temperature_change = 5.0;
             const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][Temperature]) * relaxation_factor, max_temperature_change);
             value_[seg][Temperature] = std::max(old_primary_variables[seg][Temperature] - dx_limited, Scalar{0.0});
+            if (this->well_.isInjector()) {
+                std::cout << " well " << this->well_.name() << " seg " << seg << " oil temperature " << old_primary_variables[seg][Temperature] << " dT " << dwells[seg][Temperature]
+                << " new tempearture " << value_[seg][Temperature] << std::endl;
+            }
         }
     }
 
