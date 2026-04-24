@@ -376,7 +376,7 @@ namespace Opm {
 
         void computeInitialSegmentEnergy();
 
-        void updateWellHeadCondtion(const Simulator& simulator);
+        void updateWellHeadCondition(const Simulator& simulator);
 
         void updateSegmentFluidState();
 
