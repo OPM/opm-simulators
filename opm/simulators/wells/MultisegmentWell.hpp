@@ -90,6 +90,7 @@ namespace Opm {
                                                      /*has_brine*/ false,
                                                      /*has_saltPrecip*/ false,
                                                      /*has_disgas_in_water*/ false,
+                                                     has_solvent,
                                                      Indices::numPhases>;
 
         MultisegmentWell(const Well& well,
