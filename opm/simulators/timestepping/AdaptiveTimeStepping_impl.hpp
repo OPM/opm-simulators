@@ -538,9 +538,9 @@ template<class TypeTag>
 template<class Solver>
 bool
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
-maybeUpdateTuning_(double elapsed, double dt, int sub_step_number) const
+maybeUpdateTuning_(double elapsed, double substep_length, int sub_step_number) const
 {
-    return this->tuning_updater_(elapsed, dt, sub_step_number);
+    return this->tuning_updater_(elapsed, substep_length, sub_step_number);
 }
 
 template<class TypeTag>

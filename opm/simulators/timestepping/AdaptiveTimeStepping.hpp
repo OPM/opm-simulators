@@ -75,7 +75,9 @@ template<class TypeTag>
 class AdaptiveTimeStepping
 {
 public:
-    using TuningUpdateCallback = std::function<bool(const double, const double, const int)>;
+    using TuningUpdateCallback = std::function<bool(double elapsed,
+                                                    double substep_length,
+                                                    int sub_step_number)>;
 
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -111,7 +113,7 @@ private:
         bool isReservoirCouplingMaster_() const;
         bool isReservoirCouplingSlave_() const;
         void maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double originalTimeStep);
-        bool maybeUpdateTuning_(double elapsed, double dt, int sub_step_number) const;
+        bool maybeUpdateTuning_(double elapsed, double substep_length, int sub_step_number) const;
         double maxTimeStep_() const;
         SimulatorReport runStepOriginal_();
 #ifdef RESERVOIR_COUPLING_ENABLED
