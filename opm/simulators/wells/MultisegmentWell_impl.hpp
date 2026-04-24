@@ -1984,7 +1984,10 @@ namespace Opm
                         if (cq_r_thermal > 0.0) {
                             // injecting connection: fluid flows from wellbore into reservoir
                             // use segment (wellbore) fluid properties for enthalpy and density
-                            energy_flux += cq_r_thermal * seg_fs.enthalpy(phaseIdx) * seg_fs.density(phaseIdx);
+                            // TODO: we do not consider the rs and rv in the segment for now
+                            // Basically, we need to do very differently for the injecting connections
+                            // especially, now we have a fluid state for the wellbore now
+                            energy_flux += cq_s[activeCompIdx] * seg_fs.enthalpy(phaseIdx) * seg_fs.density(phaseIdx) / seg_fs.invB(phaseIdx);
                         } else {
                             // producing connection: fluid flows from reservoir into wellbore
                             // use reservoir cell fluid properties for enthalpy and density
