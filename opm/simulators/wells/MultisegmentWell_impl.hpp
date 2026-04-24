@@ -2583,7 +2583,7 @@ namespace Opm
                     if constexpr (Indices::compositionSwitchIdx >= 0) {
                         if (both_oil_gas) {
                             const ValueType saturated_rs = FluidSystem::saturatedDissolutionFactor(fluid_state, phaseIdx,  fluid_state.pvtRegionIndex());
-                            const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
+                            const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
                             const ValueType max_possible_rs = fluid_composition[gasCompIdx] / fluid_composition[activeCompIdx];
                             const ValueType rs = std::min(saturated_rs, max_possible_rs);
                             fluid_state.setRs(rs);
@@ -2598,7 +2598,7 @@ namespace Opm
                     if constexpr (Indices::compositionSwitchIdx >= 0) {
                         if (both_oil_gas) {
                         const ValueType saturated_rv = FluidSystem::saturatedVaporizationFactor(fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
-                        const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
+                        const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
                         const ValueType max_possible_rv = fluid_composition[oilCompIdx] / fluid_composition[activeCompIdx];
                         const ValueType rv = std::min(saturated_rv, max_possible_rv);
                         fluid_state.setRv(rv);
@@ -2721,15 +2721,18 @@ namespace Opm
         const auto controls = this->well_ecl_.injectionControls(simulator.vanguard().summaryState());
         switch (controls.injector_type) {
             case InjectorType::OIL: {
-                fluid_composition[FluidSystem::oilPhaseIdx] = 1.0;
+                const unsigned oilActiveCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
+                fluid_composition[oilActiveCompIdx] = 1.0;
                 break;
             }
             case InjectorType::GAS: {
-                fluid_composition[FluidSystem::gasPhaseIdx] = 1.0;
+                const unsigned gasActiveCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+                fluid_composition[gasActiveCompIdx] = 1.0;
                 break;
             }
             case InjectorType::WATER: {
-                fluid_composition[FluidSystem::waterPhaseIdx] = 1.0;
+                const unsigned waterActiveCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
+                fluid_composition[waterActiveCompIdx] = 1.0;
                 break;
             }
             default: {
