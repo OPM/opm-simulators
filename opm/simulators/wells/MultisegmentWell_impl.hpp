@@ -2052,7 +2052,7 @@ namespace Opm
                 if constexpr (has_energy) {
                     const bool top_injecting_segment = (seg == 0) && this->isInjector();
                     if (top_injecting_segment) {
-                        this->updateWellHeadCondtion(simulator);
+                        this->updateWellHeadCondition(simulator);
                     }
 
                     // Energy carried by fluid flowing out of this segment toward its outlet.
@@ -2618,7 +2618,7 @@ namespace Opm
         }
 
         std::vector<ValueType> saturations (FluidSystem::numPhases, zero_value);
-        ValueType total_saturation {0.0};
+        ValueType sum_saturation {0.0};
         // calculate the saturation for all the phases
         // let us handle the dissolution first
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
@@ -2628,6 +2628,7 @@ namespace Opm
             if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
                 const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
                 saturations[phaseIdx] = fluid_composition[activeCompIdx] / fluid_state.invB(phaseIdx);
+                sum_saturation += saturations[phaseIdx];
             } else {
                 // remove dissolved gas and vapporized oil
                 const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
@@ -2638,7 +2639,7 @@ namespace Opm
                 // d = 1.0 - rs * rv
                 const ValueType d = 1.0 - fluid_state.Rv() * fluid_state.Rs();
                 if (d <= 0.0) {
-                    throw std::logic_error(fmt::format("Problematic d value {} obtained for well {}"
+                    throw std::runtime_error(fmt::format("Problematic d value {} obtained for well {}"
                                                        " during createFluidState with rs {}"
                                                        ", rv {}. Continue as if no dissolution (rs = 0) and"
                                                        " vaporization (rv = 0) for this connection.",
@@ -2653,7 +2654,7 @@ namespace Opm
                                              fluid_state.Rv() * fluid_composition[gasCompIdx]) /
                                             (d * fluid_state.invB(phaseIdx));
                 }
-                total_saturation += saturations[phaseIdx];
+                sum_saturation += saturations[phaseIdx];
             }
         }
 
@@ -2661,7 +2662,7 @@ namespace Opm
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
-            fluid_state.setSaturation(phaseIdx, saturations[phaseIdx] / total_saturation);
+            fluid_state.setSaturation(phaseIdx, saturations[phaseIdx] / sum_saturation);
 
             typename FluidSystem::template ParameterCache<ValueType> paramCache;
             paramCache.setRegionIndex(fluid_state.pvtRegionIndex());
@@ -2676,11 +2677,12 @@ namespace Opm
 
     // it looks like these functions should go to MultisegmentWellSegments class
     template <typename TypeTag>
-    MultisegmentWell<TypeTag>::SegmentFluidState<typename MultisegmentWell<TypeTag>::EvalWell>
+    MultisegmentWell<TypeTag>::template SegmentFluidState<typename MultisegmentWell<TypeTag>::EvalWell>
     MultisegmentWell<TypeTag>::createSegmentFluidstate(const int seg) const
     {
         const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
-        const EvalWell seg_temperature = this->primary_variables_.getSegmentTemperature(seg);
+        // TODO: 0 should be some other values fixed or we make it a std::optional
+        const EvalWell seg_temperature = has_energy ? this->primary_variables_.getSegmentTemperature(seg) : 0.;
 
         // TODO: with the energy equation joins, the num_conservation_quantities will be challenged
         std::vector<EvalWell> fluid_composition(this->numConservationQuantities(), 0.0);
@@ -2702,13 +2704,13 @@ namespace Opm
 
     template <typename TypeTag>
     void
-    MultisegmentWell<TypeTag>::updateWellHeadCondtion(const Simulator& simulator)
+    MultisegmentWell<TypeTag>::updateWellHeadCondition(const Simulator& simulator)
     {
         if (!this->well_ecl_.isInjector()) return;
 
         std::vector<EvalWell> fluid_composition(FluidSystem::numPhases, 0.0);
 
-        // tempeature should be the injecting temperature
+        // temperature should be the injecting temperature
         // pressure should be the BHP
         const EvalWell bhp = this->primary_variables_.getSegmentPressure(0);
         const EvalWell inj_temperature = this->well_ecl_.inj_temperature();

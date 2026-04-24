@@ -219,7 +219,7 @@ updateNewton(const BVectorWell& dwells,
         }
 
         if constexpr (enable_energy) {
-            // TODO: how to regularize the tempearture update remains to be investigated
+            // TODO: how to regularize the temperature update remains to be investigated
             const int sign = dwells[seg][Temperature] > 0. ? 1 : -1;
             constexpr Scalar max_temperature_change = 5.0;
             const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][Temperature]) * relaxation_factor, max_temperature_change);
