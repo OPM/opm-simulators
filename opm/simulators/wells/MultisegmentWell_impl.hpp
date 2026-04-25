@@ -1803,7 +1803,6 @@ namespace Opm
         }
 
         if (converged) {
-            std::cout << " well " << this->name() << " CONVERGED in " << it << " inner iterations " << std::endl;
             if (allow_switching){
                 // update operability if status change
                 const bool is_stopped = this->wellIsStopped();
@@ -1822,7 +1821,6 @@ namespace Opm
             }
             deferred_logger.debug(message, OpmLog::defaultDebugVerbosityLevel + ((it == 0) && (switch_count == 0)));
         } else {
-            std::cout << " well " << this->name() << " DID NOT CONVERGE in " << it << " inner iterations " << std::endl;
             this->wellStatus_ = well_status_orig;
             this->operability_status_ = operability_orig;
             const std::string message = fmt::format("   Well {} did not converge in {} inner iterations ("
@@ -2105,7 +2103,6 @@ namespace Opm
                 if constexpr (has_energy) {
                     for (const int inlet : this->segments_.inlets()[seg]) {
                         const int inlet_upwind = this->segments_.upwinding_segment(inlet);
-                        // std::cout << " well " << this->name() << " assembling inflow term for energy equation for segment " << seg << " inlet segment " << inlet << " upwinding seg " << inlet_upwind << "\n";
                         // Energy carried by fluid flowing from inlet segment into this segment.
                         // Use upwind segment fluid properties for enthalpy and density.
                         const auto& upwind_fs = this->segment_fluid_state_[inlet_upwind];
