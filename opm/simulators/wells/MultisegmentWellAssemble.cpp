@@ -224,7 +224,6 @@ assembleAccelerationTerm(const int seg_target,
     if constexpr (has_gfrac_variable) {
         eqns.D()[seg_target][seg_upwind][SPres][GFrac] -= accelerationTerm.derivative(GFrac + Indices::numEq);
     }
-    assert(!enable_energy || std::abs(accelerationTerm.derivative(Temperature + Indices::numEq)) < 1.e-14); // TODO: for debugging
 }
 
 template<class FluidSystem, class Indices>
@@ -262,7 +261,6 @@ assemblePressureEqExtraDerivatives(const int seg,
     // Frac - derivatives are zero (they belong to upwind^2)
     eqns.D()[seg][seg_upwind][SPres][SPres] += extra_derivatives.derivative(SPres + Indices::numEq);
     eqns.D()[seg][seg_upwind][SPres][WQTotal] += extra_derivatives.derivative(WQTotal + Indices::numEq);
-    assert(!enable_energy || std::abs(extra_derivatives.derivative(Temperature + Indices::numEq)) < 1.e-14); // TODO: for debugging
 }
 
 
@@ -288,7 +286,6 @@ assemblePressureEq(const int seg,
     if constexpr (has_gfrac_variable) {
         eqns.D()[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
     }
-    assert(!enable_energy || std::abs(pressure_equation.derivative(Temperature + Indices::numEq)) < 1.e-14); // TODO: for debugging
 
     // contribution from the outlet segment
     eqns.residual()[seg][SPres] -= outlet_pressure.value();
