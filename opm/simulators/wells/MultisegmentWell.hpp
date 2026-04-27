@@ -376,6 +376,13 @@ namespace Opm {
 
         void computeInitialSegmentEnergy();
 
+        // assemble the energy equation contribution for a single perforation/connection
+        void assemblePerforationEnergyEq(const IntensiveQuantities& int_quants,
+                                         const std::vector<EvalWell>& cq_s,
+                                         const int seg,
+                                         const int local_perf_index,
+                                         DeferredLogger& deferred_logger);
+
         void updateWellHeadCondition(const Simulator& simulator);
 
         void updateSegmentFluidState();

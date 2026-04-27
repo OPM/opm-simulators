@@ -1930,76 +1930,7 @@ namespace Opm
 
                 // assembling the energy equation for the perforation if needed
                 if constexpr (has_energy) {
-                    // TODO: this part of the code should go to a different function
-                    // TODO: this part of the implementation remains to be debugged
-                    const auto& fs = int_quants.fluidState();
-                    // segment fluid state for wellbore properties (used for injecting connections)
-                    const auto& seg_fs = this->segment_fluid_state_[seg];
-
-                    EvalWell energy_flux(0.0);
-                    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                        if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                            continue;
-                        }
-
-                        // convert surface rate to reservoir volumetric rate
-                        // TODO: should we only use the following for production cases
-                        // since it only uses the reservoir cell fluid properties, which might be less accurate for injectors?
-                        // TODO: it is something we should investigate for the injecting connections, it might be related to the
-                        // abnormal results for the injectors.
-
-                        EvalWell cq_r_thermal(0.0);
-                        const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-                        const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-                        if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
-                            cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
-                        } else {
-                            // remove dissolved gas and vaporized oil
-                            const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
-                            const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
-                            const EvalWell d = this->extendEval(1.0 - fs.Rv() * fs.Rs());
-                            if (d <= 0.0) {
-                                deferred_logger.debug(
-                                    fmt::format("Problematic d value {} obtained for well {}"
-                                                " during energy assembly with rs {}"
-                                                ", rv {}. Continue as if no dissolution (rs = 0) and"
-                                                " vaporization (rv = 0) for this connection.",
-                                                d, this->name(), fs.Rs(), fs.Rv()));
-                                cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
-                            } else {
-                                if (FluidSystem::gasPhaseIdx == phaseIdx) {
-                                    cq_r_thermal = (cq_s[gasCompIdx] -
-                                                    this->extendEval(fs.Rs()) * cq_s[oilCompIdx]) /
-                                                    (d * this->extendEval(fs.invB(phaseIdx)));
-                                } else if (FluidSystem::oilPhaseIdx == phaseIdx) {
-                                    cq_r_thermal = (cq_s[oilCompIdx] -
-                                                    this->extendEval(fs.Rv()) * cq_s[gasCompIdx]) /
-                                                    (d * this->extendEval(fs.invB(phaseIdx)));
-                                }
-                            }
-                        }
-
-                        if (cq_r_thermal > 0.0) {
-                            // injecting connection: fluid flows from wellbore into reservoir
-                            // use segment (wellbore) fluid properties for enthalpy and density
-                            // TODO: we do not consider the rs and rv in the segment for now
-                            // Basically, we need to do very differently for the injecting connections
-                            // especially, now we have a fluid state for the wellbore now
-                            energy_flux += cq_s[activeCompIdx] * seg_fs.enthalpy(phaseIdx) * seg_fs.density(phaseIdx) / seg_fs.invB(phaseIdx);
-                        } else {
-                            // producing connection: fluid flows from reservoir into wellbore
-                            // use reservoir cell fluid properties for enthalpy and density
-                            energy_flux += cq_r_thermal * this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
-                        }
-                    }
-                    energy_flux *= this->well_efficiency_factor_;
-                    this->connectionRates_[local_perf_index][Indices::contiEnergyEqIdx]= Base::restrictEval(energy_flux);
-
-                    MultisegmentWellAssemble(*this).
-                        assemblePerforationEq(seg, local_perf_index,
-                                              MSWEval::PrimaryVariables::Temperature,
-                                              energy_flux,
-                                              this->linSys_);
+                    assemblePerforationEnergyEq(int_quants, cq_s, seg, local_perf_index, deferred_logger);
                 }
             }
         }
@@ -2691,6 +2622,85 @@ namespace Opm
         }
 
         return createFluidState(fluid_composition, seg_pressure, seg_temperature);
+    }
+
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    assemblePerforationEnergyEq(const IntensiveQuantities& int_quants,
+                                const std::vector<EvalWell>& cq_s,
+                                const int seg,
+                                const int local_perf_index,
+                                DeferredLogger& deferred_logger)
+    {
+        // TODO: this part of the implementation remains to be debugged
+        const auto& fs = int_quants.fluidState();
+        // segment fluid state for wellbore properties (used for injecting connections)
+        const auto& seg_fs = this->segment_fluid_state_[seg];
+
+        EvalWell energy_flux(0.0);
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+
+            // convert surface rate to reservoir volumetric rate
+            // TODO: should we only use the following for production cases
+            // since it only uses the reservoir cell fluid properties, which might be less accurate for injectors?
+            // TODO: it is something we should investigate for the injecting connections, it might be related to the
+            // abnormal results for the injectors.
+
+            EvalWell cq_r_thermal(0.0);
+            const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+            const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+            // whether the connection is injecting
+            const bool injecting = cq_s[activeCompIdx] > 0.0;
+
+            const EvalWell& invB = injecting ? seg_fs.invB(phaseIdx) : this->extendEval(fs.invB(phaseIdx));
+            if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
+                cq_r_thermal = cq_s[activeCompIdx] / invB;
+            } else {
+                // remove dissolved gas and vaporized oil
+                const EvalWell rs = injecting ? seg_fs.Rs() : this->extendEval(fs.Rs());
+                const EvalWell rv = injecting ? seg_fs.Rv() : this->extendEval(fs.Rv());
+                const EvalWell d = 1. - rs * rv;
+                if (d <= 0.0) {
+                    deferred_logger.debug(
+                        fmt::format("Problematic d value {} obtained for well {}"
+                                    " during energy assembly with rs {}"
+                                    ", rv {}. Continue as if no dissolution (rs = 0) and"
+                                    " vaporization (rv = 0) for this connection.",
+                                    d, this->name(), rs, rv));
+                    cq_r_thermal = cq_s[activeCompIdx] / invB;
+                } else {
+                    const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
+                    const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+                    if (FluidSystem::gasPhaseIdx == phaseIdx) {
+                        cq_r_thermal = (cq_s[gasCompIdx] - rs * cq_s[oilCompIdx]) / (d * invB);
+                    } else if (FluidSystem::oilPhaseIdx == phaseIdx) {
+                        cq_r_thermal = (cq_s[oilCompIdx] - rv * cq_s[gasCompIdx]) / (d * invB);
+                    }
+                }
+            }
+
+            if (injecting) {
+                // injecting connection: fluid flows from wellbore into reservoir
+                // use segment (wellbore) fluid properties for enthalpy and density
+                energy_flux += cq_r_thermal * seg_fs.enthalpy(phaseIdx) * seg_fs.density(phaseIdx);
+            } else {
+                // producing connection: fluid flows from reservoir into wellbore
+                // use reservoir cell fluid properties for enthalpy and density
+                energy_flux += cq_r_thermal * this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+            }
+        }
+        energy_flux *= this->well_efficiency_factor_;
+        this->connectionRates_[local_perf_index][Indices::contiEnergyEqIdx] = Base::restrictEval(energy_flux);
+
+        MultisegmentWellAssemble(*this).
+            assemblePerforationEq(seg, local_perf_index,
+                                  MSWEval::PrimaryVariables::Temperature,
+                                  energy_flux,
+                                  this->linSys_);
     }
 
     template <typename TypeTag>
