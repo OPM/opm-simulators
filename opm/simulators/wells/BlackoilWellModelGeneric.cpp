@@ -110,6 +110,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , guideRate_(schedule)
     , active_wgstate_(pu)
     , last_valid_wgstate_(pu)
+    , prev_timestep_wgstate_(pu)
     , nupcol_wgstate_(pu)
     , group_state_helper_(this->wellState(),
                           this->groupState(),
@@ -1964,10 +1965,12 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->last_run_wellpi_ == rhs.last_run_wellpi_
         && this->local_shut_wells_ == rhs.local_shut_wells_
         && this->closed_this_step_ == rhs.closed_this_step_
+        && this->prev_timestep_closed_this_step_ == rhs.prev_timestep_closed_this_step_
         && this->genNetwork_ == rhs.genNetwork_
         && this->prev_inj_multipliers_ == rhs.prev_inj_multipliers_
         && this->active_wgstate_ == rhs.active_wgstate_
         && this->last_valid_wgstate_ == rhs.last_valid_wgstate_
+        && this->prev_timestep_wgstate_ == rhs.prev_timestep_wgstate_
         && this->nupcol_wgstate_ == rhs.nupcol_wgstate_
         && this->switched_prod_groups_ == rhs.switched_prod_groups_
         && this->switched_inj_groups_ == rhs.switched_inj_groups_
