@@ -1999,6 +1999,7 @@ namespace Opm
                             continue;
                         }
                         const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                        // TODO: this is a surface rate, we should convert it to reservoir rate
                         const EvalWell segment_rate =
                             this->primary_variables_.getSegmentRateUpwinding(seg,
                                                                              seg_upwind,
@@ -2043,6 +2044,8 @@ namespace Opm
                                 continue;
                             }
                             const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                            // TODO: this is a surface rate, we should convert it to be a reservoir rate
+                            // TODO: we should write a function for it
                             const EvalWell inlet_rate =
                                 this->primary_variables_.getSegmentRateUpwinding(inlet,
                                                                                  inlet_upwind,
