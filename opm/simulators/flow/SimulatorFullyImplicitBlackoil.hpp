@@ -459,7 +459,8 @@ public:
         if (adaptiveTimeStepping_) {
             auto tuningUpdater = [enableTUNING, this,
                                   reportStep = timer.currentStepNum()](const double curr_time,
-                                                                       double dt, const int timeStep)
+                                                                       double substep_length,
+                                                                       const int sub_step_number)
             {
                 auto& schedule = this->simulator_.vanguard().schedule();
                 auto& events = this->schedule()[reportStep].events();
@@ -478,9 +479,9 @@ public:
                         // \Note: Need to update both solver (model) and simulator since solver is re-created each report step.
                         solver_->model().updateTUNING(tuning);
                         this->updateTUNING(tuning);
-                        dt = this->adaptiveTimeStepping_->suggestedNextStep();
+                        substep_length = this->adaptiveTimeStepping_->suggestedNextStep();
                     } else {
-                        dt = max_next_tstep;
+                        substep_length = max_next_tstep;
                         this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
                     }
                     result = max_next_tstep > 0;
@@ -507,22 +508,22 @@ public:
                 const auto& wmatcher = schedule.wellMatcher(reportStep);
                 double wcycle_time_step =
                     wcycle.nextTimeStep(curr_time,
-                                        dt,
+                                        substep_length,
                                         wmatcher,
                                         this->wellModel_().wellOpenTimes(),
                                         this->wellModel_().wellCloseTimes(),
-                                        [timeStep,
+                                        [sub_step_number,
                                          &wg_events = this->wellModel_().reportStepStartEvents()]
                                         (const std::string& name)
                                         {
-                                            if (timeStep != 0) {
+                                            if (sub_step_number != 0) {
                                                 return false;
                                             }
                                             return wg_events.hasEvent(name, ScheduleEvents::REQUEST_OPEN_WELL);
                                         });
 
                 wcycle_time_step = this->grid().comm().min(wcycle_time_step);
-                if (dt != wcycle_time_step) {
+                if (substep_length != wcycle_time_step) {
                     this->adaptiveTimeStepping_->updateNEXTSTEP(wcycle_time_step);
                     return true;
                 }

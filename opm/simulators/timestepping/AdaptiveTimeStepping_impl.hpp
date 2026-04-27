@@ -188,14 +188,7 @@ registerParameters()
     detail::registerAdaptiveParameters();
 }
 
-/** \brief  step method that acts like the solver::step method
-            in a sub cycle of time steps
-    \param simulator_timer Simulator timer
-    \param solver Solver to use
-    \param is_event True if this is an event
-    \param tuning_updater Function used to update TUNING parameters before each
-                         time step. ACTIONX might change tuning.
-*/
+// See Doxygen comment on the declaration in AdaptiveTimeStepping.hpp.
 template<class TypeTag>
 template <class Solver>
 SimulatorReport
@@ -538,9 +531,9 @@ template<class TypeTag>
 template<class Solver>
 bool
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
-maybeUpdateTuning_(double elapsed, double dt, int sub_step_number) const
+maybeUpdateTuning_(double elapsed, double substep_length, int sub_step_number) const
 {
-    return this->tuning_updater_(elapsed, dt, sub_step_number);
+    return this->tuning_updater_(elapsed, substep_length, sub_step_number);
 }
 
 template<class TypeTag>
