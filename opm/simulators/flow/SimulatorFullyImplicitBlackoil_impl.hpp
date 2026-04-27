@@ -53,7 +53,6 @@ SimulatorFullyImplicitBlackoil(Simulator& simulator)
                   Parameters::Get<Parameters::SaveFile>(),
                   Parameters::Get<Parameters::LoadFile>())
 {
-
     // Only rank 0 does print to std::cout, and only if specifically requested.
     this->terminalOutput_ = false;
     if (this->grid().comm().rank() == 0) {
