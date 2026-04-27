@@ -422,13 +422,15 @@ setupHypreParallelInfoParallel(const CommType& comm, const MatrixType& matrix)
     // STEP 3: Global Offset Calculation
     // Coordinate with other processes to determine global index ranges
     // Each process owns a contiguous range of global indices
-    std::vector<int> dof_counts_per_process(collective_comm.size());
+    // Use HYPRE_Int to match the send buffer type exactly; on builds where
+    // HYPRE_Int is 64-bit (long long) using int here causes MPI_ERR_TRUNCATE.
+    std::vector<HYPRE_Int> dof_counts_per_process(collective_comm.size());
     collective_comm.allgather(&info.N_owned, 1, dof_counts_per_process.data());
 
     // Calculate this process's global offset (sum of DOFs in processes with lower rank)
     info.dof_offset = std::accumulate(dof_counts_per_process.begin(),
                                       dof_counts_per_process.begin() + collective_comm.rank(),
-                                      0);
+                                      HYPRE_Int{0});
 
     // STEP 4: Create Global Indices for Owned DOFs
     // Convert local HYPRE indices to global HYPRE indices by adding offset
