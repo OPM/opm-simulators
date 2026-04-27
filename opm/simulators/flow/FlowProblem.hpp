@@ -392,6 +392,11 @@ public:
 
     }
 
+    void updateFailed()
+    {
+        this->model().updateFailed();
+    }
+
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
      */
