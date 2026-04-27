@@ -311,6 +311,7 @@ using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
     INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,7,0u>)   \
     INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,8,0u>)   \
     INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,9,0u>)   \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,10,0u>)  \
     INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,4u>)  \
     INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,5u>)  \
     INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,6u>)  \
