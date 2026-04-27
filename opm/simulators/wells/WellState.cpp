@@ -870,15 +870,11 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 // top segment is always the first one, and its pressure is the well bhp
                 auto& segment_pressure = ws.segments.pressure;
                 segment_pressure[0] = ws.bhp;
-                // The segment_indices contain the indices of the segments, that are only available on one process.
-                std::vector<int> segment_indices;
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if (!segment_perforations[seg].empty()) {
                         const int first_perf_global_index = segment_perforations[seg][0];
                         segment_pressure[seg] = perforation_pressures[first_perf_global_index];
-                        segment_indices.push_back(seg);
                     } else {
-                        // seg_press_.push_back(bhp); // may not be a good decision
                         // using the outlet segment pressure // it needs the ordering is correct
                         const int outlet_seg = segment_set[seg].outletSegment();
                         segment_pressure[seg] = segment_pressure[segment_set.segmentNumberToIndex(outlet_seg)];
