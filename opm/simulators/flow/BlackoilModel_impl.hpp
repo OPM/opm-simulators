@@ -125,7 +125,7 @@ prepareStep(const SimulatorTimerInterface& timer)
         simulator_.problem().updateFailed();
     }
     else {
-        simulator_.model().advanceTimeLevel();
+        simulator_.problem().advanceTimeLevel();
     }
 
     // Set the timestep size and episode index for the model explicitly.
