@@ -147,18 +147,18 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
             }
         } else if (enable_energy && eq_idx == Temperature) {
             const Scalar energy_residual = maximum_residual[eq_idx];
-            // TODO: possible the dummy_component should be something else
-            const int dummy_component = -1;
-            const Scalar tolerance_energy_wells = 1.e-5; // TODO: need to determine a reasonable value for this
-            const Scalar relaxed_tolerance_energy_wells = 1.e-4; // TODO: need to determine a reasonable value for this
+            // TODO: possibly the dummy_phase should be something else, while requires extension to WellConvergenceMetric
+            constexpr int dummy_phase = -1;
+            constexpr Scalar tolerance_energy_wells = 1.e-5; // TODO: need to determine a reasonable value for this
+            constexpr Scalar relaxed_tolerance_energy_wells = 1.e-4; // TODO: need to determine a reasonable value for this
             if (std::isnan(energy_residual)) {
-                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::NotANumber, dummy_component, baseif_.name()});
+                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::NotANumber, dummy_phase, baseif_.name()});
             } else if (std::isinf(energy_residual)) {
-                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::TooLarge, dummy_component, baseif_.name()});
+                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::TooLarge, dummy_phase, baseif_.name()});
             } else if (!relax_tolerance && energy_residual > tolerance_energy_wells) {
-                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_component, baseif_.name()});
+                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_phase, baseif_.name()});
             } else if (energy_residual > relaxed_tolerance_energy_wells) {
-                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_component, baseif_.name()});
+                report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_phase, baseif_.name()});
             }
         } else if (eq_idx == SPres) { // pressure equation
             const Scalar pressure_residual = maximum_residual[eq_idx];
@@ -573,7 +573,8 @@ getResidualMeasureValue(const WellState<Scalar, IndexTraits>& well_state,
     [[maybe_unused]] int count = 0;
     Scalar sum = 0;
     // Loop over mass balance equations
-    // TODO: we should probably also do something related to the energy equation also?
+    // TODO: we should probably also do something related to the energy equation also
+    // in the residual measures
     for (int eq_idx = 0; eq_idx < baseif_.numConservationQuantities(); ++eq_idx) {
         if (residuals[eq_idx] > rate_tolerance) {
             sum += residuals[eq_idx] / rate_tolerance;

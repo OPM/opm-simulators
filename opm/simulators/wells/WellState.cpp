@@ -865,7 +865,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
             // for the segment pressure, the segment pressure is the same with the first perforation belongs to the segment
             // if there is no perforation associated with this segment, it uses the pressure from the outlet segment
-            // which requres the ordering is successful
+            // which requires the ordering is successful
             // Not sure what is the best way to handle the initialization, hopefully, the bad initialization can be
             // improved during the solveWellEq process
             {

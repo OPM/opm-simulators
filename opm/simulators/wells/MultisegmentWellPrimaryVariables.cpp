@@ -221,6 +221,7 @@ updateNewton(const BVectorWell& dwells,
         if constexpr (enable_energy) {
             // TODO: how to regularize the temperature update remains to be investigated
             const int sign = dwells[seg][Temperature] > 0. ? 1 : -1;
+            // currently we limit the temperature change to be 5 C/K in each iteration
             constexpr Scalar max_temperature_change = 5.0;
             const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][Temperature]) * relaxation_factor, max_temperature_change);
             value_[seg][Temperature] = std::max(old_primary_variables[seg][Temperature] - dx_limited, Scalar{0.0});
