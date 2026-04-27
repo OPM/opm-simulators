@@ -100,6 +100,18 @@ macro(opm-simulators_prereqs_hook)
       Boost::date_time
   )
 
+  find_package(ParMETIS)
+
+  if(TARGET ParMETIS::ParMETIS)
+    target_link_libraries(opmsimulators PUBLIC ParMETIS::ParMETIS)
+  else()
+    message(
+      WARNING
+      "We have not found ParMETIS/PTScotch on your systems. "
+      "Please note that without this the parallel AMG will be less scalable. "
+      "It is advised to install PTScotch to fix this.")
+  endif()
+
   if(MPI_FOUND)
     target_link_libraries(opmsimulators PUBLIC MPI::MPI_C MPI::MPI_CXX)
   endif()
