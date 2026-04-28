@@ -1016,6 +1016,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/RegionPhasePVAverage.hpp
   opm/simulators/flow/SimulatorConvergenceOutput.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp
+  opm/simulators/flow/SimulatorFullyImplicitBlackoil_impl.hpp
   opm/simulators/flow/SimulatorReportBanners.hpp
   opm/simulators/flow/SimulatorSerializer.hpp
   opm/simulators/flow/SolutionContainers.hpp
