@@ -5,6 +5,7 @@ find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 find_package(SuiteSparse COMPONENTS UMFPACK REQUIRED)
 find_package(opm-grid REQUIRED)
+find_package(ParMETIS)
 
 if(TARGET opmsimulators)
   get_property(opm-simulators_libs TARGET opmsimulators PROPERTY INTERFACE_LINK_LIBRARIES)
