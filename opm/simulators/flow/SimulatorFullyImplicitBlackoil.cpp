@@ -22,6 +22,10 @@
 #include <config.h>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <fmt/format.h>
+
 namespace Opm::detail {
 
 void registerSimulatorParameters()
@@ -62,6 +66,68 @@ void registerSimulatorParameters()
         ("Specify if the simulation is a slave simulation in a master-slave simulation");
     Parameters::Hide<Parameters::Slave>();
 
+}
+
+void logTuning(const Tuning& tuning)
+{
+    const auto msg = fmt::format(fmt::runtime("Tuning values: "
+                                 "MB: {:.2e}, CNV: {:.2e}, NEWTMN: {}, NEWTMX: {}"),
+                                 tuning.TRGMBE, tuning.TRGCNV, tuning.NEWTMN, tuning.NEWTMX);
+    OpmLog::debug(msg);
+    if (tuning.TRGTTE_has_value) {
+        OpmLog::warning("Tuning item 2-1 (TRGTTE) is not supported.");
+    }
+    if (tuning.TRGLCV_has_value) {
+        OpmLog::warning("Tuning item 2-4 (TRGLCV) is not supported.");
+    }
+    if (tuning.XXXTTE_has_value) {
+        OpmLog::warning("Tuning item 2-5 (XXXTTE) is not supported.");
+    }
+    if (tuning.XXXLCV_has_value) {
+        OpmLog::warning("Tuning item 2-8 (XXXLCV) is not supported.");
+    }
+    if (tuning.XXXWFL_has_value) {
+        OpmLog::warning("Tuning item 2-9 (XXXWFL) is not supported.");
+    }
+    if (tuning.TRGFIP_has_value) {
+        OpmLog::warning("Tuning item 2-10 (TRGFIP) is not supported.");
+    }
+    if (tuning.TRGSFT_has_value) {
+        OpmLog::warning("Tuning item 2-11 (TRGSFT) is not supported.");
+    }
+    if (tuning.THIONX_has_value) {
+        OpmLog::warning("Tuning item 2-12 (THIONX) is not supported.");
+    }
+    if (tuning.TRWGHT_has_value) {
+        OpmLog::warning("Tuning item 2-13 (TRWGHT) is not supported.");
+    }
+    if (tuning.LITMAX_has_value) {
+        OpmLog::warning("Tuning item 3-3 (LITMAX) is not supported.");
+    }
+    if (tuning.LITMIN_has_value) {
+        OpmLog::warning("Tuning item 3-4 (LITMIN) is not supported.");
+    }
+    if (tuning.MXWSIT_has_value) {
+        OpmLog::warning("Tuning item 3-5 (MXWSIT) is not supported.");
+    }
+    if (tuning.MXWPIT_has_value) {
+        OpmLog::warning("Tuning item 3-6 (MXWPIT) is not supported.");
+    }
+    if (tuning.DDPLIM_has_value) {
+        OpmLog::warning("Tuning item 3-7 (DDPLIM) is not supported.");
+    }
+    if (tuning.DDSLIM_has_value) {
+        OpmLog::warning("Tuning item 3-8 (DDSLIM) is not supported.");
+    }
+    if (tuning.TRGDPR_has_value) {
+        OpmLog::warning("Tuning item 3-9 (TRGDPR) is not supported.");
+    }
+    if (tuning.XXXDPR_has_value) {
+        OpmLog::warning("Tuning item 3-10 (XXXDPR) is not supported.");
+    }
+    if (tuning.MNWRFP_has_value) {
+        OpmLog::warning("Tuning item 3-11 (MNWRFP) is not supported.");
+    }
 }
 
 } // namespace Opm::detail
