@@ -34,11 +34,7 @@
 #include <opm/common/Exceptions.hpp>
 #endif
 
-#include <opm/input/eclipse/Units/UnitSystem.hpp>
-
 #include <opm/grid/utility/StopWatch.hpp>
-
-#include <opm/models/tpsa/tpsanewtonmethodparams.hpp>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
@@ -49,24 +45,18 @@
 #include <opm/simulators/flow/SimulatorConvergenceOutput.hpp>
 #include <opm/simulators/flow/SimulatorReportBanners.hpp>
 #include <opm/simulators/flow/SimulatorSerializer.hpp>
-#include <opm/simulators/linalg/TPSALinearSolverParameters.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
-#include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #if HAVE_HDF5
 #include <opm/simulators/utils/HDF5Serializer.hpp>
 #endif
 
-#include <filesystem>
+#include <array>
 #include <memory>
 #include <string>
-#include <string_view>
-#include <utility>
 #include <vector>
-
-#include <fmt/format.h>
 
 namespace Opm::Parameters {
 
@@ -88,7 +78,32 @@ void registerSimulatorParameters();
 
 namespace Opm {
 
-/// a simulator for the blackoil model
+/** \brief Top-level driver for a fully implicit black-oil simulation.
+ *
+ * Owns the per-report-step loop: \ref run repeatedly invokes
+ * \ref runStep until `timer.done()` is reached.  Each \ref runStep
+ * covers one report step (the interval between dates in the deck
+ * SCHEDULE), either as a single \ref Solver::step call or, when
+ * adaptive time stepping is enabled (the default), by delegating the
+ * substep loop to \ref AdaptiveTimeStepping::step.
+ *
+ * Beyond the report-step loop, this class owns:
+ *   - the \ref NonlinearSolver, constructed lazily on the first
+ *     \ref runStep call;
+ *   - per-report-step TUNING / TUNINGDP application via
+ *     \ref updateTUNING and \ref updateTUNINGDP;
+ *   - the WCYCLE-aware tuning-update callback handed to
+ *     \ref AdaptiveTimeStepping;
+ *   - simulation report aggregation and wall-clock timing;
+ *   - the convergence-output thread lifecycle (INFOSTEP / INFOITER);
+ *   - OPMRST save/load via \ref SimulatorSerializer;
+ *   - reservoir-coupling master/slave bring-up and shutdown when
+ *     RESERVOIR_COUPLING_ENABLED is set.
+ *
+ * The class is instantiated once per simulation process.  Static
+ * configuration is registered via \ref registerParameters during
+ * program startup.
+ */
 template<class TypeTag>
 class SimulatorFullyImplicitBlackoil : private SerializableSim
 {
@@ -117,639 +132,241 @@ public:
     using SolverParameters = typename Solver::SolverParameters;
     using WellModel = BlackoilWellModel<TypeTag>;
 
-    /// Initialise from parameters and objects to observe.
-    /// \param simulator Reference to main simulator
-    explicit SimulatorFullyImplicitBlackoil(Simulator& simulator)
-        : simulator_(simulator)
-        , serializer_(*this,
-                      FlowGenericVanguard::comm(),
-                      simulator_.vanguard().eclState().getIOConfig(),
-                      Parameters::Get<Parameters::SaveStep>(),
-                      Parameters::Get<Parameters::LoadStep>(),
-                      Parameters::Get<Parameters::SaveFile>(),
-                      Parameters::Get<Parameters::LoadFile>())
-    {
+    /** \brief Construct from the surrounding eWoms `Simulator`.
+     *
+     * Initialises the OPMRST serializer from the SaveStep / LoadStep /
+     * SaveFile / LoadFile parameters and, on rank 0 with terminal
+     * output enabled, starts the background convergence-output thread
+     * that writes INFOSTEP / INFOITER files.
+     *
+     * \param simulator The surrounding eWoms simulator; observed, not owned.
+     */
+    explicit SimulatorFullyImplicitBlackoil(Simulator& simulator);
 
-        // Only rank 0 does print to std::cout, and only if specifically requested.
-        this->terminalOutput_ = false;
-        if (this->grid().comm().rank() == 0) {
-            this->terminalOutput_ = Parameters::Get<Parameters::EnableTerminalOutput>();
+    /// Ends the convergence-output thread cleanly on all ranks.
+    ~SimulatorFullyImplicitBlackoil() override;
 
-            auto getPhaseName = ConvergenceOutputThread::ComponentToPhaseName {
-                [compNames = typename Model::ComponentName{}](const int compIdx)
-                { return std::string_view { compNames.name(compIdx) }; }
-            };
+    /** \brief Register all parameters consumed by this class and its
+     *         major collaborators.
+     *
+     * Forwards to \ref ModelParameters::registerParameters,
+     * \ref SolverParameters::registerParameters,
+     * \ref AdaptiveTimeStepping::registerParameters,
+     * \ref Opm::detail::registerSimulatorParameters, and the TPSA
+     * Newton-method / linear-solver parameter sets.  Called once
+     * during program startup.
+     */
+    static void registerParameters();
 
-            if (!simulator_.vanguard().eclState().getIOConfig().initOnly()) {
-                this->convergence_output_.
-                    startThread(this->simulator_.vanguard().eclState(),
-                                Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
-                                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
-                                getPhaseName);
-            }
-        }
-    }
-
-    ~SimulatorFullyImplicitBlackoil() override
-    {
-        // Safe to call on all ranks, not just the I/O rank.
-        convergence_output_.endThread();
-    }
-
-    static void registerParameters()
-    {
-        ModelParameters::registerParameters();
-        SolverParameters::registerParameters();
-        TimeStepper::registerParameters();
-        detail::registerSimulatorParameters();
-
-        TpsaNewtonMethodParams<Scalar>::registerParameters();
-        TpsaLinearSolverParameters::registerParameters();
-    }
-
-    /// Run the simulation.
-    /// This will run succesive timesteps until timer.done() is true. It will
-    /// modify the reservoir and well states.
-    /// \param[in,out] timer       governs the requested reporting timesteps
-    /// \param[in,out] state       state of reservoir: pressure, fluxes
-    /// \return                    simulation report, with timing data
 #ifdef RESERVOIR_COUPLING_ENABLED
-    SimulatorReport run(SimulatorTimer& timer, int argc, char** argv)
-    {
-        init(timer, argc, argv);
+    /** \brief Run the entire simulation to completion.
+     *
+     * Loops over report steps, calling \ref runStep on each one; on
+     * exit, sends the reservoir-coupling shutdown signal (master sends
+     * terminate; slave acknowledges) before MPI_Finalize.  Stops early
+     * if the schedule triggers an EXIT keyword.
+     *
+     * \param timer Outer report-step timer; advanced once per report step.
+     * \param argc  Process `argc`, forwarded to spawned slave processes.
+     * \param argv  Process `argv`, forwarded to spawned slave processes.
+     * \return      Aggregated simulation report (timing + per-step data).
+     */
+    SimulatorReport run(SimulatorTimer& timer, int argc, char** argv);
+
+    /** \brief Detect whether this process should run as a
+     *         reservoir-coupling master.
+     *
+     * Master mode is enabled when the schedule contains a SLAVES
+     * keyword (master allocates rates if GRUPMAST is also present;
+     * otherwise master only synchronises time-stepping).  GRUPMAST
+     * without SLAVES is rejected as an inconsistent schedule.
+     *
+     * Should only be called when this process is *not* a slave (i.e.
+     * `Parameters::Get<Parameters::Slave>()` is false).
+     */
+    bool checkRunningAsReservoirCouplingMaster();
+
+    /** \brief One-shot setup performed before the first \ref runStep.
+     *
+     * Constructs the wall-clock timers, the \ref AdaptiveTimeStepping
+     * instance (if adaptive stepping is enabled), and — for reservoir
+     * coupling — either the master or slave coordination object.  The
+     * slave-mode prologue exchanges initial sync data with the master;
+     * the master-mode prologue stores `argc`/`argv` for later
+     * `maybeSpawnSlaveProcesses` calls in \ref runStep.
+     *
+     * \param timer Report-step timer; only its current step is read here.
+     * \param argc  Process `argc`, used when later spawning slave processes.
+     * \param argv  Process `argv`, used when later spawning slave processes.
+     */
+    void init(const SimulatorTimer& timer, int argc, char** argv);
 #else
-    SimulatorReport run(SimulatorTimer& timer)
-    {
-        init(timer);
-#endif
-        // Make cache up to date. No need for updating it in elementCtx.
-        // NB! Need to be at the correct step in case of restart
-        simulator_.setEpisodeIndex(timer.currentStepNum());
-        simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
-        // Main simulation loop.
-        while (!timer.done()) {
-            simulator_.problem().writeReports(timer);
-            bool continue_looping = runStep(timer);
-            if (!continue_looping) break;
-        }
-        simulator_.problem().writeReports(timer);
+    /** \brief Run the entire simulation to completion.
+     *
+     * Loops over report steps, calling \ref runStep on each one.
+     * Stops early if the schedule triggers an EXIT keyword.
+     *
+     * \param timer Outer report-step timer; advanced once per report step.
+     * \return      Aggregated simulation report (timing + per-step data).
+     */
+    SimulatorReport run(SimulatorTimer& timer);
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-        // Clean up MPI intercommunicators before MPI_Finalize()
-        // Master sends terminate=1 signal; slave receives it and both call MPI_Comm_disconnect()
-        if (this->reservoirCouplingMaster_) {
-            this->reservoirCouplingMaster_->sendTerminateAndDisconnect();
-        }
-        else if (this->reservoirCouplingSlave_ && !this->reservoirCouplingSlave_->terminated()) {
-            // TODO: Implement GECON item 8: stop master process when a slave finishes
-            // Only call if not already terminated via maybeReceiveTerminateSignalFromMaster()
-            // (which happens when master finishes before slave reaches end of its loop)
-            this->reservoirCouplingSlave_->receiveTerminateAndDisconnect();
-        }
+    /** \brief One-shot setup performed before the first \ref runStep.
+     *
+     * Constructs the wall-clock timers and the \ref AdaptiveTimeStepping
+     * instance (if adaptive stepping is enabled).  For restart runs,
+     * the suggested next step is seeded from `Simulator::timeStepSize()`.
+     *
+     * \param timer Report-step timer; only its current step is read here.
+     */
+    void init(const SimulatorTimer& timer);
 #endif
 
-        return finalize();
-    }
+    /** \brief Apply a TUNING keyword to the cached model parameters.
+     *
+     * Overwrites convergence tolerances (TRGCNV / XXXCNV / TRGMBE /
+     * XXXMBE) and Newton iteration limits (NEWTMX / NEWTMN) on the
+     * \ref ModelParameters copy held by this class.  Items that are
+     * recognised by the parser but not honoured by this simulator are
+     * logged at warning level on rank 0.
+     *
+     * \note This method only updates the copy held here.  The same
+     *       TUNING data is forwarded separately to the model held by
+     *       the solver and to \ref AdaptiveTimeStepping by the
+     *       tuning-update callback in \ref runStep.
+     */
+    void updateTUNING(const Tuning& tuning);
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-    // This method should only be called if slave mode (i.e. Parameters::Get<Parameters::Slave>())
-    // is false. We try to determine if this is a normal flow simulation or a reservoir
-    // coupling master. It is a normal flow simulation if the schedule does not contain
-    // any SLAVES and GRUPMAST keywords.
-    bool checkRunningAsReservoirCouplingMaster()
-    {
-        for (std::size_t report_step = 0; report_step < this->schedule().size(); ++report_step) {
-            auto rescoup = this->schedule()[report_step].rescoup();
-            auto slave_count = rescoup.slaveCount();
-            auto master_group_count = rescoup.masterGroupCount();
-            // Master mode is enabled when SLAVES keyword is present.
-            // - Prediction mode: SLAVES + GRUPMAST (master allocates rates)
-            // - History mode: SLAVES only (master synchronizes time-stepping)
-            if (slave_count > 0) {
-                return true;
-            }
-            else if (master_group_count > 0) {
-                // GRUPMAST without SLAVES is invalid
-                throw ReservoirCouplingError(
-                    "Inconsistent reservoir coupling master schedule: "
-                    "Master group count is greater than 0 but slave count is 0"
-                );
-            }
-        }
-        return false;
-    }
-#endif
+    /** \brief Apply a TUNINGDP keyword to the cached model parameters.
+     *
+     * Overwrites the maximum allowed pressure (TRGDDP), saturation
+     * (TRGDDS), and dissolved-gas / vaporised-oil ratio (TRGDDRS,
+     * TRGDDRV) changes per Newton iteration.  TRGLCV / XXXLCV are
+     * accepted by the parser but logged as unsupported on rank 0.
+     */
+    void updateTUNINGDP(const TuningDp& tuning_dp);
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-    // NOTE: The argc and argv will be used when launching a slave process
-    void init(const SimulatorTimer& timer, int argc, char** argv)
-    {
-        auto slave_mode = Parameters::Get<Parameters::Slave>();
-        if (slave_mode) {
-            this->reservoirCouplingSlave_ =
-                std::make_unique<ReservoirCouplingSlave<Scalar>>(
-                    FlowGenericVanguard::comm(),
-                    this->schedule(), timer
-                );
-            this->reservoirCouplingSlave_->sendAndReceiveInitialData();
-            this->simulator_.setReservoirCouplingSlave(this->reservoirCouplingSlave_.get());
-            wellModel_().setReservoirCouplingSlave(this->reservoirCouplingSlave_.get());
-        }
-        else {
-            auto master_mode = checkRunningAsReservoirCouplingMaster();
-            if (master_mode) {
-                this->reservoirCouplingMaster_ =
-                    std::make_unique<ReservoirCouplingMaster<Scalar>>(
-                        FlowGenericVanguard::comm(),
-                        this->schedule(),
-                        argc, argv
-                    );
-                this->simulator_.setReservoirCouplingMaster(this->reservoirCouplingMaster_.get());
-                wellModel_().setReservoirCouplingMaster(this->reservoirCouplingMaster_.get());
-            }
-        }
-#else
-    void init(const SimulatorTimer& timer)
-    {
-#endif
-        simulator_.setEpisodeIndex(-1);
+    /** \brief Advance the simulation by one report step.
+     *
+     * Called by \ref run once per report step.  Performs:
+     *   - early exit if the schedule requested EXIT;
+     *   - OPMRST state load on the chosen restart step;
+     *   - first-step init-state output;
+     *   - lazy construction of the \ref Solver;
+     *   - construction and dispatch of the WCYCLE / TUNING / TUNINGDP
+     *     tuning-update callback consumed by \ref AdaptiveTimeStepping;
+     *   - the actual solve, either via \ref AdaptiveTimeStepping::step
+     *     (substep loop) or a single \ref Solver::step call;
+     *   - end-of-step report output and OPMRST save.
+     *
+     * \param timer Report-step timer; advanced by one report step on success.
+     * \return false to terminate the outer \ref run loop (e.g. EXIT
+     *         keyword); true to continue with the next report step.
+     */
+    bool runStep(SimulatorTimer& timer);
 
-        // Create timers and file for writing timing info.
-        solverTimer_ = std::make_unique<time::StopWatch>();
-        totalTimer_ = std::make_unique<time::StopWatch>();
-        totalTimer_->start();
+    /** \brief Stop the timers and emit the final OPMRST output.
+     *
+     * Called by \ref run after the report-step loop finishes.  Stops
+     * the total wall-clock timer and marks the report as converged.
+     *
+     * \return The final aggregated simulation report.
+     */
+    SimulatorReport finalize();
 
-        // adaptive time stepping
-        bool enableAdaptive = Parameters::Get<Parameters::EnableAdaptiveTimeStepping>();
-        bool enableTUNING = Parameters::Get<Parameters::EnableTuning>();
-        if (enableAdaptive) {
-            const UnitSystem& unitSystem = this->simulator_.vanguard().eclState().getUnits();
-            const auto& sched_state = schedule()[timer.currentStepNum()];
-            auto max_next_tstep = sched_state.max_next_tstep(enableTUNING);
-            if (enableTUNING) {
-                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(max_next_tstep,
-                                                                      sched_state.tuning(),
-                                                                      unitSystem, report_, terminalOutput_);
-            }
-            else {
-                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, report_, max_next_tstep, terminalOutput_);
-            }
-            if (isRestart()) {
-                // For restarts the simulator may have gotten some information
-                // about the next timestep size from the OPMEXTRA field
-                adaptiveTimeStepping_->setSuggestedNextStep(simulator_.timeStepSize());
-            }
-        }
-    }
+    const Grid& grid() const { return simulator_.vanguard().grid(); }
 
-    void updateTUNING(const Tuning& tuning)
-    {
-        modelParam_.tolerance_cnv_ = tuning.TRGCNV;
-        modelParam_.tolerance_cnv_relaxed_ = tuning.XXXCNV;
-        modelParam_.tolerance_mb_ = tuning.TRGMBE;
-        modelParam_.tolerance_mb_relaxed_ = tuning.XXXMBE;
-        modelParam_.newton_max_iter_ = tuning.NEWTMX;
-        modelParam_.newton_min_iter_ = tuning.NEWTMN;
-        if (terminalOutput_) {
-            const auto msg = fmt::format(fmt::runtime("Tuning values: "
-                                         "MB: {:.2e}, CNV: {:.2e}, NEWTMN: {}, NEWTMX: {}"),
-                                         tuning.TRGMBE, tuning.TRGCNV, tuning.NEWTMN, tuning.NEWTMX);
-            OpmLog::debug(msg);
-            if (tuning.TRGTTE_has_value) {
-                OpmLog::warning("Tuning item 2-1 (TRGTTE) is not supported.");
-            }
-            if (tuning.TRGLCV_has_value) {
-                OpmLog::warning("Tuning item 2-4 (TRGLCV) is not supported.");
-            }
-            if (tuning.XXXTTE_has_value) {
-                OpmLog::warning("Tuning item 2-5 (XXXTTE) is not supported.");
-            }
-            if (tuning.XXXLCV_has_value) {
-                OpmLog::warning("Tuning item 2-8 (XXXLCV) is not supported.");
-            }
-            if (tuning.XXXWFL_has_value) {
-                OpmLog::warning("Tuning item 2-9 (XXXWFL) is not supported.");
-            }
-            if (tuning.TRGFIP_has_value) {
-                OpmLog::warning("Tuning item 2-10 (TRGFIP) is not supported.");
-            }
-            if (tuning.TRGSFT_has_value) {
-                OpmLog::warning("Tuning item 2-11 (TRGSFT) is not supported.");
-            }
-            if (tuning.THIONX_has_value) {
-                OpmLog::warning("Tuning item 2-12 (THIONX) is not supported.");
-            }
-            if (tuning.TRWGHT_has_value) {
-                OpmLog::warning("Tuning item 2-13 (TRWGHT) is not supported.");
-            }
-            if (tuning.LITMAX_has_value) {
-                OpmLog::warning("Tuning item 3-3 (LITMAX) is not supported.");
-            }
-            if (tuning.LITMIN_has_value) {
-                OpmLog::warning("Tuning item 3-4 (LITMIN) is not supported.");
-            }
-            if (tuning.MXWSIT_has_value) {
-                OpmLog::warning("Tuning item 3-5 (MXWSIT) is not supported.");
-            }
-            if (tuning.MXWPIT_has_value) {
-                OpmLog::warning("Tuning item 3-6 (MXWPIT) is not supported.");
-            }
-            if (tuning.DDPLIM_has_value) {
-                OpmLog::warning("Tuning item 3-7 (DDPLIM) is not supported.");
-            }
-            if (tuning.DDSLIM_has_value) {
-                OpmLog::warning("Tuning item 3-8 (DDSLIM) is not supported.");
-            }
-            if (tuning.TRGDPR_has_value) {
-                OpmLog::warning("Tuning item 3-9 (TRGDPR) is not supported.");
-            }
-            if (tuning.XXXDPR_has_value) {
-                OpmLog::warning("Tuning item 3-10 (XXXDPR) is not supported.");
-            }
-            if (tuning.MNWRFP_has_value) {
-                OpmLog::warning("Tuning item 3-11 (MNWRFP) is not supported.");
-            }
-        }
-    }
-
-    void updateTUNINGDP(const TuningDp& tuning_dp)
-    {
-        // NOTE: If TUNINGDP item is _not_ set it should be 0.0
-        modelParam_.tolerance_max_dp_ = tuning_dp.TRGDDP;
-        modelParam_.tolerance_max_ds_ = tuning_dp.TRGDDS;
-        modelParam_.tolerance_max_drs_ = tuning_dp.TRGDDRS;
-        modelParam_.tolerance_max_drv_ = tuning_dp.TRGDDRV;
-
-        // Terminal warnings
-        if (terminalOutput_) {
-            // Warnings unsupported items
-            if (tuning_dp.TRGLCV_has_value) {
-                OpmLog::warning("TUNINGDP item 1 (TRGLCV) is not supported.");
-            }
-            if (tuning_dp.XXXLCV_has_value) {
-                OpmLog::warning("TUNINGDP item 2 (XXXLCV) is not supported.");
-            }
-        }
-    }
-
-    bool runStep(SimulatorTimer& timer)
-    {
-        if (schedule().exitStatus().has_value()) {
-            if (terminalOutput_) {
-                OpmLog::info("Stopping simulation since EXIT was triggered by an action keyword.");
-            }
-            report_.success.exit_status = schedule().exitStatus().value();
-            return false;
-        }
-
-        if (serializer_.shouldLoad()) {
-            serializer_.loadTimerInfo(timer);
-        }
-
-        // Report timestep.
-        if (terminalOutput_) {
-            std::ostringstream ss;
-            timer.report(ss);
-            OpmLog::debug(ss.str());
-            details::outputReportStep(timer);
-        }
-
-        // write the inital state at the report stage
-        if (timer.initialStep()) {
-            Dune::Timer perfTimer;
-            perfTimer.start();
-
-            simulator_.setEpisodeIndex(-1);
-            simulator_.setEpisodeLength(0.0);
-            simulator_.setTimeStepSize(0.0);
-            wellModel_().beginReportStep(timer.currentStepNum());
-            simulator_.problem().writeOutput(true);
-
-            report_.success.output_write_time += perfTimer.stop();
-        }
-
-        // Run a multiple steps of the solver depending on the time step control.
-        solverTimer_->start();
-
-        if (!solver_) {
-            solver_ = createSolver(wellModel_());
-        }
-
-        simulator_.startNextEpisode(
-            simulator_.startTime()
-               + schedule().seconds(timer.currentStepNum()),
-            timer.currentStepLength());
-        simulator_.setEpisodeIndex(timer.currentStepNum());
-
-        if (serializer_.shouldLoad()) {
-            wellModel_().prepareDeserialize(serializer_.loadStep() - 1);
-            serializer_.loadState();
-            simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
-        }
-
-        this->solver_->model().beginReportStep();
-
-        const bool enableTUNING = Parameters::Get<Parameters::EnableTuning>();
-
-        // If sub stepping is enabled allow the solver to sub cycle
-        // in case the report steps are too large for the solver to converge
-        //
-        // \Note: The report steps are met in any case
-        // \Note: The sub stepping will require a copy of the state variables
-        if (adaptiveTimeStepping_) {
-            auto tuningUpdater = [enableTUNING, this,
-                                  reportStep = timer.currentStepNum()](const double curr_time,
-                                                                       double substep_length,
-                                                                       const int sub_step_number)
-            {
-                auto& schedule = this->simulator_.vanguard().schedule();
-                auto& events = this->schedule()[reportStep].events();
-
-                bool result = false;
-                if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
-                    // Unset the event to not trigger it again on the next sub step
-                    schedule.clear_event(ScheduleEvents::TUNING_CHANGE, reportStep);
-                    const auto& sched_state = schedule[reportStep];
-                    const auto& max_next_tstep = sched_state.max_next_tstep(enableTUNING);
-                    const auto& tuning = sched_state.tuning();
-
-                    if (enableTUNING) {
-                        adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning);
-                        // \Note: Assumes TUNING is only used with adaptive time-stepping
-                        // \Note: Need to update both solver (model) and simulator since solver is re-created each report step.
-                        solver_->model().updateTUNING(tuning);
-                        this->updateTUNING(tuning);
-                        substep_length = this->adaptiveTimeStepping_->suggestedNextStep();
-                    } else {
-                        substep_length = max_next_tstep;
-                        this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
-                    }
-                    result = max_next_tstep > 0;
-                }
-
-                if (events.hasEvent(ScheduleEvents::TUNINGDP_CHANGE)) {
-                    // Unset the event to not trigger it again on the next sub step
-                    schedule.clear_event(ScheduleEvents::TUNINGDP_CHANGE, reportStep);
-
-                    // Update TUNINGDP parameters
-                    // NOTE: Need to update both solver (model) and simulator since solver is re-created each report
-                    // step.
-                    const auto& sched_state = schedule[reportStep];
-                    const auto& tuning_dp = sched_state.tuning_dp();
-                    solver_->model().updateTUNINGDP(tuning_dp);
-                    this->updateTUNINGDP(tuning_dp);
-                }
-
-                const auto& wcycle = schedule[reportStep].wcycle.get();
-                if (wcycle.empty()) {
-                    return result;
-                }
-
-                const auto& wmatcher = schedule.wellMatcher(reportStep);
-                double wcycle_time_step =
-                    wcycle.nextTimeStep(curr_time,
-                                        substep_length,
-                                        wmatcher,
-                                        this->wellModel_().wellOpenTimes(),
-                                        this->wellModel_().wellCloseTimes(),
-                                        [sub_step_number,
-                                         &wg_events = this->wellModel_().reportStepStartEvents()]
-                                        (const std::string& name)
-                                        {
-                                            if (sub_step_number != 0) {
-                                                return false;
-                                            }
-                                            return wg_events.hasEvent(name, ScheduleEvents::REQUEST_OPEN_WELL);
-                                        });
-
-                wcycle_time_step = this->grid().comm().min(wcycle_time_step);
-                if (substep_length != wcycle_time_step) {
-                    this->adaptiveTimeStepping_->updateNEXTSTEP(wcycle_time_step);
-                    return true;
-                }
-
-                return result;
-            };
-
-            tuningUpdater(timer.simulationTimeElapsed(),
-                          this->adaptiveTimeStepping_->suggestedNextStep(), 0);
-
-#ifdef RESERVOIR_COUPLING_ENABLED
-            if (this->reservoirCouplingMaster_) {
-                this->reservoirCouplingMaster_->maybeSpawnSlaveProcesses(timer.currentStepNum());
-                this->reservoirCouplingMaster_->maybeActivate(timer.currentStepNum());
-            }
-            else if (this->reservoirCouplingSlave_) {
-                this->reservoirCouplingSlave_->maybeActivate(timer.currentStepNum());
-            }
-#endif
-            const auto& events = schedule()[timer.currentStepNum()].events();
-            bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||
-                events.hasEvent(ScheduleEvents::INJECTION_TYPE_CHANGED) ||
-                events.hasEvent(ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER) ||
-                events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE) ||
-                events.hasEvent(ScheduleEvents::INJECTION_UPDATE) ||
-                events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
-            auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, tuningUpdater);
-            report_ += stepReport;
-        } else {
-            // solve for complete report step
-            auto stepReport = solver_->step(timer, nullptr);
-            report_ += stepReport;
-            // Pass simulation report to eclwriter for summary output
-            simulator_.problem().setSubStepReport(stepReport);
-            simulator_.problem().setSimulationReport(report_);
-            simulator_.problem().endTimeStep();
-            if (terminalOutput_) {
-                std::ostringstream ss;
-                stepReport.reportStep(ss);
-                OpmLog::info(ss.str());
-            }
-        }
-
-        // write simulation state at the report stage
-        Dune::Timer perfTimer;
-        perfTimer.start();
-        const double nextstep = adaptiveTimeStepping_ ? adaptiveTimeStepping_->suggestedNextStep() : -1.0;
-        simulator_.problem().setNextTimeStepSize(nextstep);
-        simulator_.problem().writeOutput(true);
-        report_.success.output_write_time += perfTimer.stop();
-
-        solver_->model().endReportStep();
-
-        // take time that was used to solve system for this reportStep
-        solverTimer_->stop();
-
-        // update timing.
-        report_.success.solver_time += solverTimer_->secsSinceStart();
-
-        if (this->grid().comm().rank() == 0) {
-            // Grab the step convergence reports that are new since last we
-            // were here.
-            const auto& reps = this->solver_->model().stepReports();
-            convergence_output_.write(reps);
-        }
-
-        // Increment timer, remember well state.
-        ++timer;
-
-        if (terminalOutput_) {
-            std::string msg =
-                "Time step took " + std::to_string(solverTimer_->secsSinceStart()) + " seconds; "
-                "total solver time " + std::to_string(report_.success.solver_time) + " seconds.";
-            OpmLog::debug(msg);
-        }
-
-        serializer_.save(timer);
-
-        return true;
-    }
-
-    SimulatorReport finalize()
-    {
-        // make sure all output is written to disk before run is finished
-        {
-            Dune::Timer finalOutputTimer;
-            finalOutputTimer.start();
-
-            simulator_.problem().finalizeOutput();
-            report_.success.output_write_time += finalOutputTimer.stop();
-        }
-
-        // Stop timer and create timing report
-        totalTimer_->stop();
-        report_.success.total_time = totalTimer_->secsSinceStart();
-        report_.success.converged = true;
-
-        return report_;
-    }
-
-    const Grid& grid() const
-    { return simulator_.vanguard().grid(); }
-
+    /// Serialize the parts of this class needed for OPMRST round-tripping
+    /// (the surrounding simulator state, the report, and the adaptive
+    /// time stepper).
     template<class Serializer>
-    void serializeOp(Serializer& serializer)
-    {
-        serializer(simulator_);
-        serializer(report_);
-        serializer(adaptiveTimeStepping_);
-    }
+    void serializeOp(Serializer& serializer);
 
-    const Model& model() const
-    { return solver_->model(); }
+    const Model& model() const { return solver_->model(); }
 
 protected:
-    //! \brief Load simulator state from hdf5 serializer.
-    void loadState([[maybe_unused]] HDF5Serializer& serializer,
-                   [[maybe_unused]] const std::string& groupName) override
-    {
-#if HAVE_HDF5
-        serializer.read(*this, groupName, "simulator_data");
-#endif
-    }
+    /// Load this simulator's data block from an OPMRST file via HDF5.
+    void loadState(HDF5Serializer& serializer, const std::string& groupName) override;
 
-    //! \brief Save simulator state using hdf5 serializer.
-    void saveState([[maybe_unused]] HDF5Serializer& serializer,
-                   [[maybe_unused]] const std::string& groupName) const override
-    {
-#if HAVE_HDF5
-        serializer.write(*this, groupName, "simulator_data");
-#endif
-    }
+    /// Save this simulator's data block to an OPMRST file via HDF5.
+    void saveState(HDF5Serializer& serializer, const std::string& groupName) const override;
 
-    //! \brief Returns header data
-    std::array<std::string,5> getHeader() const override
-    {
-        std::ostringstream str;
-        Parameters::printValues(str);
-        return {"OPM Flow",
-                moduleVersion(),
-                compileTimestamp(),
-                simulator_.vanguard().caseName(),
-                str.str()};
-    }
+    /// Return the OPMRST header tuple: product name, module version,
+    /// compile timestamp, deck case name, and parameter dump.
+    std::array<std::string,5> getHeader() const override;
 
-    //! \brief Returns local-to-global cell mapping.
-    const std::vector<int>& getCellMapping() const override
-    {
+    /// Local-to-global cell index mapping.
+    const std::vector<int>& getCellMapping() const override {
         return simulator_.vanguard().globalCell();
     }
 
-    std::unique_ptr<Solver> createSolver(WellModel& wellModel)
-    {
-        auto model = std::make_unique<Model>(simulator_,
-                                             modelParam_,
-                                             wellModel,
-                                             terminalOutput_);
+    /** \brief Build the \ref Solver used during the current report step.
+     *
+     * Wraps a freshly constructed \ref Model in a \ref Solver.  Side
+     * effect: if `write_partitions` is set in the model parameters,
+     * the partition layout is written under
+     * `<output_dir>/partition/<case>` on the first call only — the
+     * flag is cleared after, so subsequent calls skip the dump.
+     */
+    std::unique_ptr<Solver> createSolver(WellModel& wellModel);
 
-        if (this->modelParam_.write_partitions_) {
-            const auto& iocfg = this->eclState().cfg().io();
+    const EclipseState& eclState() const { return simulator_.vanguard().eclState(); }
 
-            const auto odir = iocfg.getOutputDir()
-                / std::filesystem::path { "partition" }
-                / iocfg.getBaseName();
+    const Schedule& schedule() const { return simulator_.vanguard().schedule(); }
 
-            if (this->grid().comm().rank() == 0) {
-                create_directories(odir);
-            }
+    bool isRestart() const { return eclState().getInitConfig().restartRequested(); }
 
-            this->grid().comm().barrier();
+    WellModel& wellModel_() { return simulator_.problem().wellModel(); }
 
-            model->writePartitions(odir);
+    const WellModel& wellModel_() const { return simulator_.problem().wellModel(); }
 
-            this->modelParam_.write_partitions_ = false;
-        }
-
-        return std::make_unique<Solver>(solverParam_, std::move(model));
-    }
-
-    const EclipseState& eclState() const
-    { return simulator_.vanguard().eclState(); }
-
-
-    const Schedule& schedule() const
-    { return simulator_.vanguard().schedule(); }
-
-    bool isRestart() const
-    {
-        const auto& initconfig = eclState().getInitConfig();
-        return initconfig.restartRequested();
-    }
-
-    WellModel& wellModel_()
-    { return simulator_.problem().wellModel(); }
-
-    const WellModel& wellModel_() const
-    { return simulator_.problem().wellModel(); }
-
-    // Data.
+    /// Surrounding eWoms simulator; observed, not owned.
     Simulator& simulator_;
 
+    /// Cached model parameters; mutated by TUNING / TUNINGDP application.
     ModelParameters modelParam_;
+
+    /// Cached nonlinear-solver parameters.
     SolverParameters solverParam_;
 
+    /// Built lazily on the first \ref runStep call; reused thereafter.
     std::unique_ptr<Solver> solver_;
 
-    // Observed objects.
-    // Misc. data
+    /// Emit high-level progress to std::cout (rank 0 only).
     bool terminalOutput_;
 
+    /// Aggregated report across the entire simulation.
     SimulatorReport report_;
+
+    /// Wall-clock for the current report step's solve.
     std::unique_ptr<time::StopWatch> solverTimer_;
+
+    /// Wall-clock for the entire simulation.
     std::unique_ptr<time::StopWatch> totalTimer_;
+
+    /// Set iff adaptive time stepping is enabled.
     std::unique_ptr<TimeStepper> adaptiveTimeStepping_;
 
+    /// Background thread for INFOSTEP / INFOITER files.
     SimulatorConvergenceOutput convergence_output_{};
 
 #ifdef RESERVOIR_COUPLING_ENABLED
+    /// True iff this process runs as a reservoir-coupling slave.
     bool slaveMode_{false};
+
+    /// Non-null iff this process is a reservoir-coupling master.
     std::unique_ptr<ReservoirCouplingMaster<Scalar>> reservoirCouplingMaster_{nullptr};
+
+    /// Non-null iff this process is a reservoir-coupling slave.
     std::unique_ptr<ReservoirCouplingSlave<Scalar>> reservoirCouplingSlave_{nullptr};
 #endif
 
+    /// OPMRST save / load.
     SimulatorSerializer serializer_;
 };
 
 } // namespace Opm
+
+#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil_impl.hpp>
 
 #endif // OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
