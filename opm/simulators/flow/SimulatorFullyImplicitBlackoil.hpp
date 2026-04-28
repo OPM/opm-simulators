@@ -78,7 +78,32 @@ void registerSimulatorParameters();
 
 namespace Opm {
 
-/// a simulator for the blackoil model
+/** \brief Top-level driver for a fully implicit black-oil simulation.
+ *
+ * Owns the per-report-step loop: \ref run repeatedly invokes
+ * \ref runStep until `timer.done()` is reached.  Each \ref runStep
+ * covers one report step (the interval between dates in the deck
+ * SCHEDULE), either as a single \ref Solver::step call or, when
+ * adaptive time stepping is enabled (the default), by delegating the
+ * substep loop to \ref AdaptiveTimeStepping::step.
+ *
+ * Beyond the report-step loop, this class owns:
+ *   - the \ref NonlinearSolver, constructed lazily on the first
+ *     \ref runStep call;
+ *   - per-report-step TUNING / TUNINGDP application via
+ *     \ref updateTUNING and \ref updateTUNINGDP;
+ *   - the WCYCLE-aware tuning-update callback handed to
+ *     \ref AdaptiveTimeStepping;
+ *   - simulation report aggregation and wall-clock timing;
+ *   - the convergence-output thread lifecycle (INFOSTEP / INFOITER);
+ *   - OPMRST save/load via \ref SimulatorSerializer;
+ *   - reservoir-coupling master/slave bring-up and shutdown when
+ *     RESERVOIR_COUPLING_ENABLED is set.
+ *
+ * The class is instantiated once per simulation process.  Static
+ * configuration is registered via \ref registerParameters during
+ * program startup.
+ */
 template<class TypeTag>
 class SimulatorFullyImplicitBlackoil : private SerializableSim
 {
@@ -107,67 +132,182 @@ public:
     using SolverParameters = typename Solver::SolverParameters;
     using WellModel = BlackoilWellModel<TypeTag>;
 
-    /// Initialise from parameters and objects to observe.
-    /// \param simulator Reference to main simulator
+    /** \brief Construct from the surrounding eWoms `Simulator`.
+     *
+     * Initialises the OPMRST serializer from the SaveStep / LoadStep /
+     * SaveFile / LoadFile parameters and, on rank 0 with terminal
+     * output enabled, starts the background convergence-output thread
+     * that writes INFOSTEP / INFOITER files.
+     *
+     * \param simulator The surrounding eWoms simulator; observed, not owned.
+     */
     explicit SimulatorFullyImplicitBlackoil(Simulator& simulator);
 
+    /// Ends the convergence-output thread cleanly on all ranks.
     ~SimulatorFullyImplicitBlackoil() override;
 
+    /** \brief Register all parameters consumed by this class and its
+     *         major collaborators.
+     *
+     * Forwards to \ref ModelParameters::registerParameters,
+     * \ref SolverParameters::registerParameters,
+     * \ref AdaptiveTimeStepping::registerParameters,
+     * \ref Opm::detail::registerSimulatorParameters, and the TPSA
+     * Newton-method / linear-solver parameter sets.  Called once
+     * during program startup.
+     */
     static void registerParameters();
 
-    /// Run the simulation.
-    /// This will run succesive timesteps until timer.done() is true. It will
-    /// modify the reservoir and well states.
-    /// \param[in,out] timer       governs the requested reporting timesteps
-    /// \param[in,out] state       state of reservoir: pressure, fluxes
-    /// \return                    simulation report, with timing data
 #ifdef RESERVOIR_COUPLING_ENABLED
+    /** \brief Run the entire simulation to completion.
+     *
+     * Loops over report steps, calling \ref runStep on each one; on
+     * exit, sends the reservoir-coupling shutdown signal (master sends
+     * terminate; slave acknowledges) before MPI_Finalize.  Stops early
+     * if the schedule triggers an EXIT keyword.
+     *
+     * \param timer Outer report-step timer; advanced once per report step.
+     * \param argc  Process `argc`, forwarded to spawned slave processes.
+     * \param argv  Process `argv`, forwarded to spawned slave processes.
+     * \return      Aggregated simulation report (timing + per-step data).
+     */
     SimulatorReport run(SimulatorTimer& timer, int argc, char** argv);
 
-    // This method should only be called if slave mode (i.e. Parameters::Get<Parameters::Slave>())
-    // is false. We try to determine if this is a normal flow simulation or a reservoir
-    // coupling master. It is a normal flow simulation if the schedule does not contain
-    // any SLAVES and GRUPMAST keywords.
+    /** \brief Detect whether this process should run as a
+     *         reservoir-coupling master.
+     *
+     * Master mode is enabled when the schedule contains a SLAVES
+     * keyword (master allocates rates if GRUPMAST is also present;
+     * otherwise master only synchronises time-stepping).  GRUPMAST
+     * without SLAVES is rejected as an inconsistent schedule.
+     *
+     * Should only be called when this process is *not* a slave (i.e.
+     * `Parameters::Get<Parameters::Slave>()` is false).
+     */
     bool checkRunningAsReservoirCouplingMaster();
 
-    // NOTE: The argc and argv will be used when launching a slave process
+    /** \brief One-shot setup performed before the first \ref runStep.
+     *
+     * Constructs the wall-clock timers, the \ref AdaptiveTimeStepping
+     * instance (if adaptive stepping is enabled), and — for reservoir
+     * coupling — either the master or slave coordination object.  The
+     * slave-mode prologue exchanges initial sync data with the master;
+     * the master-mode prologue stores `argc`/`argv` for later
+     * `maybeSpawnSlaveProcesses` calls in \ref runStep.
+     *
+     * \param timer Report-step timer; only its current step is read here.
+     * \param argc  Process `argc`, used when later spawning slave processes.
+     * \param argv  Process `argv`, used when later spawning slave processes.
+     */
     void init(const SimulatorTimer& timer, int argc, char** argv);
 #else
+    /** \brief Run the entire simulation to completion.
+     *
+     * Loops over report steps, calling \ref runStep on each one.
+     * Stops early if the schedule triggers an EXIT keyword.
+     *
+     * \param timer Outer report-step timer; advanced once per report step.
+     * \return      Aggregated simulation report (timing + per-step data).
+     */
     SimulatorReport run(SimulatorTimer& timer);
 
+    /** \brief One-shot setup performed before the first \ref runStep.
+     *
+     * Constructs the wall-clock timers and the \ref AdaptiveTimeStepping
+     * instance (if adaptive stepping is enabled).  For restart runs,
+     * the suggested next step is seeded from `Simulator::timeStepSize()`.
+     *
+     * \param timer Report-step timer; only its current step is read here.
+     */
     void init(const SimulatorTimer& timer);
 #endif
 
+    /** \brief Apply a TUNING keyword to the cached model parameters.
+     *
+     * Overwrites convergence tolerances (TRGCNV / XXXCNV / TRGMBE /
+     * XXXMBE) and Newton iteration limits (NEWTMX / NEWTMN) on the
+     * \ref ModelParameters copy held by this class.  Items that are
+     * recognised by the parser but not honoured by this simulator are
+     * logged at warning level on rank 0.
+     *
+     * \note This method only updates the copy held here.  The same
+     *       TUNING data is forwarded separately to the model held by
+     *       the solver and to \ref AdaptiveTimeStepping by the
+     *       tuning-update callback in \ref runStep.
+     */
     void updateTUNING(const Tuning& tuning);
 
+    /** \brief Apply a TUNINGDP keyword to the cached model parameters.
+     *
+     * Overwrites the maximum allowed pressure (TRGDDP), saturation
+     * (TRGDDS), and dissolved-gas / vaporised-oil ratio (TRGDDRS,
+     * TRGDDRV) changes per Newton iteration.  TRGLCV / XXXLCV are
+     * accepted by the parser but logged as unsupported on rank 0.
+     */
     void updateTUNINGDP(const TuningDp& tuning_dp);
 
+    /** \brief Advance the simulation by one report step.
+     *
+     * Called by \ref run once per report step.  Performs:
+     *   - early exit if the schedule requested EXIT;
+     *   - OPMRST state load on the chosen restart step;
+     *   - first-step init-state output;
+     *   - lazy construction of the \ref Solver;
+     *   - construction and dispatch of the WCYCLE / TUNING / TUNINGDP
+     *     tuning-update callback consumed by \ref AdaptiveTimeStepping;
+     *   - the actual solve, either via \ref AdaptiveTimeStepping::step
+     *     (substep loop) or a single \ref Solver::step call;
+     *   - end-of-step report output and OPMRST save.
+     *
+     * \param timer Report-step timer; advanced by one report step on success.
+     * \return false to terminate the outer \ref run loop (e.g. EXIT
+     *         keyword); true to continue with the next report step.
+     */
     bool runStep(SimulatorTimer& timer);
 
+    /** \brief Stop the timers and emit the final OPMRST output.
+     *
+     * Called by \ref run after the report-step loop finishes.  Stops
+     * the total wall-clock timer and marks the report as converged.
+     *
+     * \return The final aggregated simulation report.
+     */
     SimulatorReport finalize();
 
     const Grid& grid() const { return simulator_.vanguard().grid(); }
 
+    /// Serialize the parts of this class needed for OPMRST round-tripping
+    /// (the surrounding simulator state, the report, and the adaptive
+    /// time stepper).
     template<class Serializer>
     void serializeOp(Serializer& serializer);
 
     const Model& model() const { return solver_->model(); }
 
 protected:
-    //! \brief Load simulator state from hdf5 serializer.
+    /// Load this simulator's data block from an OPMRST file via HDF5.
     void loadState(HDF5Serializer& serializer, const std::string& groupName) override;
 
-    //! \brief Save simulator state using hdf5 serializer.
+    /// Save this simulator's data block to an OPMRST file via HDF5.
     void saveState(HDF5Serializer& serializer, const std::string& groupName) const override;
 
-    //! \brief Returns header data
+    /// Return the OPMRST header tuple: product name, module version,
+    /// compile timestamp, deck case name, and parameter dump.
     std::array<std::string,5> getHeader() const override;
 
-    //! \brief Returns local-to-global cell mapping.
+    /// Local-to-global cell index mapping.
     const std::vector<int>& getCellMapping() const override {
         return simulator_.vanguard().globalCell();
     }
 
+    /** \brief Build the \ref Solver used during the current report step.
+     *
+     * Wraps a freshly constructed \ref Model in a \ref Solver.  Side
+     * effect: if `write_partitions` is set in the model parameters,
+     * the partition layout is written under
+     * `<output_dir>/partition/<case>` on the first call only — the
+     * flag is cleared after, so subsequent calls skip the dump.
+     */
     std::unique_ptr<Solver> createSolver(WellModel& wellModel);
 
     const EclipseState& eclState() const { return simulator_.vanguard().eclState(); }
@@ -180,31 +320,48 @@ protected:
 
     const WellModel& wellModel_() const { return simulator_.problem().wellModel(); }
 
-    // Data.
+    /// Surrounding eWoms simulator; observed, not owned.
     Simulator& simulator_;
 
+    /// Cached model parameters; mutated by TUNING / TUNINGDP application.
     ModelParameters modelParam_;
+
+    /// Cached nonlinear-solver parameters.
     SolverParameters solverParam_;
 
+    /// Built lazily on the first \ref runStep call; reused thereafter.
     std::unique_ptr<Solver> solver_;
 
-    // Observed objects.
-    // Misc. data
+    /// Emit high-level progress to std::cout (rank 0 only).
     bool terminalOutput_;
 
+    /// Aggregated report across the entire simulation.
     SimulatorReport report_;
+
+    /// Wall-clock for the current report step's solve.
     std::unique_ptr<time::StopWatch> solverTimer_;
+
+    /// Wall-clock for the entire simulation.
     std::unique_ptr<time::StopWatch> totalTimer_;
+
+    /// Set iff adaptive time stepping is enabled.
     std::unique_ptr<TimeStepper> adaptiveTimeStepping_;
 
+    /// Background thread for INFOSTEP / INFOITER files.
     SimulatorConvergenceOutput convergence_output_{};
 
 #ifdef RESERVOIR_COUPLING_ENABLED
+    /// True iff this process runs as a reservoir-coupling slave.
     bool slaveMode_{false};
+
+    /// Non-null iff this process is a reservoir-coupling master.
     std::unique_ptr<ReservoirCouplingMaster<Scalar>> reservoirCouplingMaster_{nullptr};
+
+    /// Non-null iff this process is a reservoir-coupling slave.
     std::unique_ptr<ReservoirCouplingSlave<Scalar>> reservoirCouplingSlave_{nullptr};
 #endif
 
+    /// OPMRST save / load.
     SimulatorSerializer serializer_;
 };
 
