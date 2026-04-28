@@ -74,6 +74,11 @@ namespace Opm::detail {
 
 void registerSimulatorParameters();
 
+/// \brief Log tuning parameters.
+/// \param tuning Tuning values to log
+/// \details Logs warnings if unsupported values are provided.
+void logTuning(const Tuning& tuning);
+
 }
 
 namespace Opm {
