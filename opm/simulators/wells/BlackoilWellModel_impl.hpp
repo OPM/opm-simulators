@@ -1434,14 +1434,9 @@ namespace Opm {
         // We make sure that all processes throw in case there is an exception
         // on one of them (WetGasPvt::saturationPressure might throw if not converged)
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-
-        // When the system solver is active, D^-1 is not needed for the outer
-        // Newton loop (no Schur complement, no recoverSolutionWell). Inner well
-        // iterations still compute D^-1 because they default skipLocalInverse to false.
-        const bool skipInverse = param_.use_system_solver_;
         for (auto& well: well_container_) {
             well->assembleWellEqWithoutIteration(simulator_, this->groupStateHelper(), dt, this->wellState(),
-                                                 /*solving_with_zero_rate=*/false, skipInverse);
+                                                 /*solving_with_zero_rate=*/false);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(deferred_logger, "BlackoilWellModel::assembleWellEqWithoutIteration failed: ",
                                        this->terminal_output_, grid().comm());
@@ -1528,11 +1523,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::addBCDMatrix(std::vector<BMatrix>& b_matrices,
                                             std::vector<CMatrix>& c_matrices,
                                             std::vector<DMatrix>& d_matrices,
-                                            std::vector<std::vector<int>>& wcells,
-                                            std::vector<WVector>& residual) const
+                                            std::vector<std::vector<int>>& wcells) const
     {
         for ( const auto& well: well_container_ ) {
-            well->addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells, residual);
+            well->addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells);
         }
     }
 
@@ -1618,30 +1612,16 @@ namespace Opm {
     {
         auto loggerGuard = this->groupStateHelper().pushLogger();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        if (cachedSystemWellSolution_) {
-            // System solver path: well solution was produced by the block
-            // system solve and cached on this object by the solver.
-            const auto& xWell = *cachedSystemWellSolution_;
-            for (size_t w = 0; w < well_container_.size(); ++w) {
-                const int offset = cachedWellDofOffsets_[w];
-                const int nDofs = cachedWellDofOffsets_[w + 1] - offset;
-                well_container_[w]->updateWellStateFromSystemSolution(
-                    simulator_, xWell, offset, nDofs,
-                    this->groupStateHelper(), this->wellState());
+        // Schur complement path: recover well solution from
+        // reservoir solution via xw = D^-1 * (resWell - B * x).
+        for (const auto& well : well_container_) {
+            const auto& cells = well->cells();
+            x_local_.resize(cells.size());
+            for (size_t i = 0; i < cells.size(); ++i) {
+                x_local_[i] = x[cells[i]];
             }
-            cachedSystemWellSolution_.reset();
-        } else {
-            // Schur complement path: recover well solution from
-            // reservoir solution via xw = D^-1 * (resWell - B * x).
-            for (const auto& well : well_container_) {
-                const auto& cells = well->cells();
-                x_local_.resize(cells.size());
-                for (size_t i = 0; i < cells.size(); ++i) {
-                    x_local_[i] = x[cells[i]];
-                }
-                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
-                                                            this->groupStateHelper(), this->wellState());
-            }
+            well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
+                                                        this->groupStateHelper(), this->wellState());
         }
         OPM_END_PARALLEL_TRY_CATCH("recoverWellSolutionAndUpdateWellState() failed: ",
                                    simulator_.vanguard().grid().comm());

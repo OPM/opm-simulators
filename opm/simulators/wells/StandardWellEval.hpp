@@ -78,8 +78,7 @@ public:
     void addBCDMatrix(std::vector<BMatrix>& b_matrices,
                 std::vector<CMatrix>& c_matrices,
                 std::vector<DMatrix>& d_matrices,
-                std::vector<std::vector<int>>& wcells,
-                std::vector<WVector>& residual) const;
+                std::vector<std::vector<int>>& wcells) const;
 protected:
     explicit StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif);
 

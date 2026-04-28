@@ -293,15 +293,7 @@ template<class Scalar> class WellContributions;
             void addBCDMatrix(std::vector<BMatrix>& b_matrices,
                                             std::vector<CMatrix>& c_matrices,
                                             std::vector<DMatrix>& d_matrices,
-                                            std::vector<std::vector<int>>& wcells,
-                                            std::vector<WVector>& residual) const;
-
-            void setWellSolution(WellVectorT<Scalar> solution,
-                                 std::vector<int> dofOffsets)
-            {
-                cachedSystemWellSolution_ = std::move(solution);
-                cachedWellDofOffsets_ = std::move(dofOffsets);
-            }
+                                            std::vector<std::vector<int>>& wcells) const;
 
             const WellInterface<TypeTag>& getWell(const std::string& well_name) const;
 
@@ -651,11 +643,6 @@ template<class Scalar> class WellContributions;
 
             // Store cell rates after assembling to avoid iterating all wells and connections for every element
             std::map<int, RateVector> cellRates_;
-
-            // Cached well solution from the system solver, consumed by
-            // recoverWellSolutionAndUpdateWellState during postSolve.
-            std::optional<WellVectorT<Scalar>> cachedSystemWellSolution_;
-            std::vector<int> cachedWellDofOffsets_;
 
             void assignWellTracerRates(data::Wells& wsrpt) const;
             void assignWellSpeciesRates(data::Wells& wsrpt) const;

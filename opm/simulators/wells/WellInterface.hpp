@@ -182,8 +182,7 @@ public:
                                         const GroupStateHelperType& groupStateHelper,
                                         const double dt,
                                         WellStateType& well_state,
-                                        const bool solving_with_zero_rate,
-                                        const bool skipLocalInverse);
+                                        const bool solving_with_zero_rate);
 
     // Convenience overload that gets scaled fractions internally
     void updateGroupTargetFallbackFlag(WellStateType& well_state,
@@ -219,15 +218,6 @@ public:
                                                        const BVector& x,
                                                        const GroupStateHelperType& groupStateHelper,
                                                        WellStateType& well_state) = 0;
-
-    /// Update well state directly from the well solution obtained
-    /// by the coupled system solver (no D^-1 recovery needed).
-    virtual void updateWellStateFromSystemSolution(const Simulator& simulator,
-                                                   const Opm::WellVectorT<Scalar>& mergedWellSolution,
-                                                   int wellDofOffset,
-                                                   int nWellDofs,
-                                                   const GroupStateHelperType& groupStateHelper,
-                                                   WellStateType& well_state) = 0;
 
     /// Ax = Ax - C D^-1 B x
     virtual void apply(const BVector& x, BVector& Ax) const = 0;
@@ -387,8 +377,7 @@ public:
     virtual void addBCDMatrix(std::vector<BMatrix>& b_matrices,
         std::vector<CMatrix>& c_matrices,
         std::vector<DMatrix>& d_matrices,
-        std::vector<std::vector<int>>& wcells,
-        std::vector<WVector>& residual) const = 0;
+        std::vector<std::vector<int>>& wcells) const = 0;
 
 protected:
     // simulation parameters
@@ -430,8 +419,7 @@ protected:
                                                 const WellInjectionControls& inj_controls,
                                                 const WellProductionControls& prod_controls,
                                                 WellStateType& well_state,
-                                                const bool solving_with_zero_rate,
-                                                const bool skipLocalInverse) = 0;
+                                                const bool solving_with_zero_rate) = 0;
 
     // iterate well equations with the specified control until converged
     virtual bool iterateWellEqWithControl(const Simulator& simulator,

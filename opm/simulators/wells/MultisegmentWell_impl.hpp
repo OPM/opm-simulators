@@ -285,35 +285,6 @@ namespace Opm
             throw;
         }
     }
-
-
-    template <typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
-    updateWellStateFromSystemSolution(const Simulator& simulator,
-                                      const Opm::WellVectorT<Scalar>& mergedWellSolution,
-                                      const int wellDofOffset,
-                                      const int nWellDofs,
-                                      const GroupStateHelperType& groupStateHelper,
-                                      WellStateType& well_state)
-    {
-        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) {
-            return;
-        }
-
-        assert(nWellDofs == this->numberOfSegments());
-
-        BVectorWell xw(nWellDofs);
-        for (int seg = 0; seg < nWellDofs; ++seg) {
-            for (int i = 0; i < MSWEval::numWellEq; ++i) {
-                xw[seg][i] = mergedWellSolution[wellDofOffset + seg][i];
-            }
-        }
-        updateWellState(simulator, xw, groupStateHelper, well_state);
-    }
-
-
-
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
@@ -1471,7 +1442,7 @@ namespace Opm
         ws.production_cmode = Well::ProducerCMode::BHP;
         const double dt = simulator.timeStepSize();
         assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls, well_state,
-                                       /*solving_with_zero_rate=*/false, /*skipLocalInverse=*/false);
+                                       /*solving_with_zero_rate=*/false);
 
         BVectorWell rhs(this->numberOfSegments());
         rhs = 0.0;
@@ -1587,7 +1558,7 @@ namespace Opm
 
             assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls,
                                            well_state,
-                                           /*solving_with_zero_rate=*/false, /*skipLocalInverse=*/false);
+                                           /*solving_with_zero_rate=*/false);
 
             const auto report = getWellConvergence(groupStateHelper, Base::B_avg_, relax_convergence);
             if (report.converged()) {
@@ -1763,7 +1734,7 @@ namespace Opm
             }
 
             assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls,
-                                           well_state, solving_with_zero_rate, /*skipLocalInverse=*/false);
+                                           well_state, solving_with_zero_rate);
 
 
             const auto report = getWellConvergence(groupStateHelper, Base::B_avg_, relax_convergence);
@@ -1860,8 +1831,7 @@ namespace Opm
                                    const Well::InjectionControls& inj_controls,
                                    const Well::ProductionControls& prod_controls,
                                    WellStateType& well_state,
-                                   const bool solving_with_zero_rate,
-                                   const bool skipLocalInverse)
+                                   const bool solving_with_zero_rate)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
@@ -2042,9 +2012,7 @@ namespace Opm
 
         this->parallel_well_info_.communication().sum(this->ipr_a_.data(), this->ipr_a_.size());
 
-        if (!skipLocalInverse) {
-            this->linSys_.createSolver();
-        }
+        this->linSys_.createSolver();
     }
 
 

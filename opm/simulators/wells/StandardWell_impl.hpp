@@ -345,8 +345,7 @@ namespace Opm
                                    const Well::InjectionControls& inj_controls,
                                    const Well::ProductionControls& prod_controls,
                                    WellStateType& well_state,
-                                   const bool solving_with_zero_rate,
-                                   const bool skipLocalInverse)
+                                   const bool solving_with_zero_rate)
     {
         // TODO: only_wells should be put back to save some computation
         // for example, the matrices B C does not need to update if only_wells
@@ -356,7 +355,7 @@ namespace Opm
         this->linSys_.clear();
 
         assembleWellEqWithoutIterationImpl(simulator, groupStateHelper, dt, inj_controls,
-                                           prod_controls, well_state, solving_with_zero_rate, skipLocalInverse);
+                                           prod_controls, well_state, solving_with_zero_rate);
     }
 
 
@@ -371,8 +370,7 @@ namespace Opm
                                        const Well::InjectionControls& inj_controls,
                                        const Well::ProductionControls& prod_controls,
                                        WellStateType& well_state,
-                                       const bool solving_with_zero_rate,
-                                       const bool skipLocalInverse)
+                                       const bool solving_with_zero_rate)
     {
         auto& deferred_logger = groupStateHelper.deferredLogger();
 
@@ -493,12 +491,10 @@ namespace Opm
                                   stopped_or_zero_target);
         }
 
-        if (!skipLocalInverse) {
-            try {
-                this->linSys_.invert();
-            } catch( ... ) {
-                OPM_DEFLOG_PROBLEM(NumericalProblem, "Error when inverting local well equations for well " + name(), deferred_logger);
-            }
+        try {
+            this->linSys_.invert();
+        } catch( ... ) {
+            OPM_DEFLOG_PROBLEM(NumericalProblem, "Error when inverting local well equations for well " + name(), deferred_logger);
         }
     }
 
@@ -976,7 +972,7 @@ namespace Opm
         ws.production_cmode = Well::ProducerCMode::BHP;
         const double dt = simulator.timeStepSize();
         assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls, well_state,
-                                       /*solving_with_zero_rate=*/false, /*skipLocalInverse=*/false);
+                                       /*solving_with_zero_rate=*/false);
 
         const size_t nEq = this->primary_variables_.numWellEq();
         BVectorWell rhs(1);
@@ -1500,32 +1496,6 @@ namespace Opm
         xw[0].resize(this->primary_variables_.numWellEq());
 
         this->linSys_.recoverSolutionWell(x, xw);
-        updateWellState(simulator, xw, groupStateHelper, well_state);
-    }
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    updateWellStateFromSystemSolution(const Simulator& simulator,
-                                      const Opm::WellVectorT<Scalar>& mergedWellSolution,
-                                      const int wellDofOffset,
-                                      const int nWellDofs,
-                                      const GroupStateHelperType& groupStateHelper,
-                                      WellStateType& well_state)
-    {
-        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) {
-            return;
-        }
-
-        assert(nWellDofs == 1);
-
-        BVectorWell xw(1);
-        const int nEq = this->primary_variables_.numWellEq();
-        xw[0].resize(nEq);
-        for (int i = 0; i < nEq; ++i) {
-            xw[0][i] = mergedWellSolution[wellDofOffset][i];
-        }
         updateWellState(simulator, xw, groupStateHelper, well_state);
     }
 
@@ -2436,7 +2406,7 @@ namespace Opm
         this->regularize_ = false;
         do {
             assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls, well_state,
-                                           /*solving_with_zero_rate=*/false, /*skipLocalInverse=*/false);
+                                           /*solving_with_zero_rate=*/false);
 
             if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;
@@ -2556,7 +2526,7 @@ namespace Opm
             }
 
             assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls,
-                                           well_state, solving_with_zero_rate, /*skipLocalInverse=*/false);
+                                           well_state, solving_with_zero_rate);
 
             if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;

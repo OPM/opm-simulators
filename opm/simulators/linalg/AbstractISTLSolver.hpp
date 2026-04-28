@@ -154,18 +154,6 @@ public:
 
     using Scalar = typename SparseMatrixAdapter::Scalar;
 
-    /// Non-owning view of the well solution produced by a coupled system solve.
-    struct WellSolutionView {
-        const WellVectorT<Scalar>& solution;
-        const std::vector<int>& dofOffsets;
-    };
-
-    /// Return a view of the well solution from the last solve, if the solver
-    /// operates on a coupled reservoir+well system.  Returns nullopt
-    /// for solvers that do not produce a well solution (the default).
-    virtual std::optional<WellSolutionView> getWellSolution() const
-    { return std::nullopt; }
-
     /**
      * \brief Get the number of iterations used in the last solve.
      *
