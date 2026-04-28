@@ -71,11 +71,52 @@ namespace detail {
     createController(const UnitSystem& unitSystem);
 }
 
+/** \brief Adaptive time-stepping coordinator for the black-oil simulator.
+ *
+ * Drives the substep loop inside each report step.  A report step is the
+ * time interval between dates defined in the deck SCHEDULE.  Within a
+ * report step, this class chooses a sequence of smaller substeps whose
+ * lengths are adjusted to honour:
+ *   - the solver's convergence behaviour (chop on failure, grow on
+ *     success);
+ *   - TUNING keywords and ACTIONX-driven NEXTSTEP updates;
+ *   - WCYCLE well-cycling schedules;
+ *   - (when reservoir coupling is enabled) master/slave sync dates.
+ *
+ * The user-facing entry point is \ref step().  The substep loop itself
+ * is split across the nested helpers \ref SubStepper (which selects
+ * between the original loop and the two reservoir-coupling variants) and
+ * \ref SubStepIteration (which runs the inner per-substep logic).
+ */
 template<class TypeTag>
 class AdaptiveTimeStepping
 {
 public:
-    using TuningUpdateCallback = std::function<bool(const double, const double, const int)>;
+    /** \brief Callback invoked at the start of each substep to apply
+     *         TUNING, NEXTSTEP (via ACTIONX), and WCYCLE updates.
+     *
+     * Called once by `SimulatorFullyImplicitBlackoil::runStep` at the
+     * start of a report step, and once per substep inside
+     * \ref SubStepIteration::maybeUpdateTuningAndTimeStep_ (plus equivalent
+     * sites in the reservoir-coupling loops).  The callback may adjust
+     * the simulator's suggested next substep via
+     * \ref updateNEXTSTEP() or \ref updateTUNING().
+     *
+     * \param elapsed          Simulation time elapsed at the call point [s].
+     * \param substep_length   Candidate length of the substep about to run
+     *                         [s].  This is the look-ahead horizon the
+     *                         callback uses internally, e.g. WCYCLE chops
+     *                         the substep if a well switching event falls
+     *                         inside `[elapsed, elapsed + substep_length]`.
+     * \param sub_step_number  Index of the substep within its report step;
+     *                         0 means "first substep".  WCYCLE's
+     *                         `REQUEST_OPEN_WELL` handling is only consulted
+     *                         when this is 0.
+     * \return true if the callback modified `suggested_next_timestep_`.
+     */
+    using TuningUpdateCallback = std::function<bool(double elapsed,
+                                                    double substep_length,
+                                                    int sub_step_number)>;
 
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -94,6 +135,20 @@ private:
     // Forward declaration of SubStepIteration
     template <class Solver> class SubStepIteration;
 
+    /** \brief Per-report-step substepping driver.
+     *
+     * Owns the connection between the outer \ref SimulatorTimer (whose
+     * step granularity is the report step) and the per-substep state.
+     * `run()` selects the substepping loop to use based on whether
+     * reservoir coupling is active for this run:
+     *   - \ref runStepOriginal_ for standalone (non-rescoup) runs,
+     *   - \ref runStepReservoirCouplingMaster_ on the master process of
+     *     a coupled run,
+     *   - \ref runStepReservoirCouplingSlave_ on a slave process.
+     *
+     * All three variants delegate the inner per-substep work to
+     * \ref SubStepIteration::run().
+     */
     template <class Solver>
     class SubStepper {
     public:
@@ -104,20 +159,55 @@ private:
                    const TuningUpdateCallback& tuning_updater);
 
         AdaptiveTimeStepping<TypeTag>& getAdaptiveTimerStepper();
+
+        /// Dispatch to the appropriate substep loop and run it to
+        /// completion (end of report step).  Returns the aggregated
+        /// per-substep report.
         SimulatorReport run();
         friend class SubStepIteration<Solver>;
 
     private:
         bool isReservoirCouplingMaster_() const;
         bool isReservoirCouplingSlave_() const;
+
+        /** \brief Apply start-of-report-step overrides to
+         *         `suggested_next_timestep_`.
+         *
+         * Three overrides, checked in order:
+         *   - if the suggestion is negative (uninitialised), set it to
+         *     `restart_factor_ * original_time_step`;
+         *   - if `full_timestep_initially_` is set, use the full report-step
+         *     length;
+         *   - if this report step is an event and `timestep_after_event_` is
+         *     positive, use `timestep_after_event_`.
+         * No-op otherwise.
+         *
+         * \param originalTimeStep Full report-step length [s].
+         */
         void maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double originalTimeStep);
-        bool maybeUpdateTuning_(double elapsed, double dt, int sub_step_number) const;
+
+        /// Invoke the stored \ref TuningUpdateCallback.  Thin
+        /// passthrough; see the callback alias for the argument contract.
+        bool maybeUpdateTuning_(double elapsed, double substep_length, int sub_step_number) const;
+
         double maxTimeStep_() const;
+
+        /// Standalone (non-rescoup) substep loop.  One pass through
+        /// \ref SubStepIteration covers the whole report step.
         SimulatorReport runStepOriginal_();
 #ifdef RESERVOIR_COUPLING_ENABLED
         ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster_();
         ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave_();
+
+        /// Reservoir-coupling master substep loop.  Each outer iteration
+        /// is one "sync step" (one master-slave exchange); inside, a
+        /// \ref SubStepIteration handles the substeps within that sync
+        /// step.
         SimulatorReport runStepReservoirCouplingMaster_();
+
+        /// Reservoir-coupling slave substep loop.  Receives the next
+        /// sync-step length from the master, runs it to completion, and
+        /// iterates until the report-step end is reached.
         SimulatorReport runStepReservoirCouplingSlave_();
 #endif
         double suggestedNextTimestep_() const;
@@ -129,6 +219,18 @@ private:
         const TuningUpdateCallback& tuning_updater_;
     };
 
+    /** \brief Inner substep loop.
+     *
+     * Runs the sequence of substeps required to cover a given interval
+     * (either a full report step, for \ref SubStepper::runStepOriginal_,
+     * or a single sync step, for the reservoir-coupling variants).
+     * Handles:
+     *   - solver restarts and time-step chopping on convergence failure;
+     *   - time-step growth control on convergence success;
+     *   - per-substep tuning/WCYCLE updates via
+     *     \ref maybeUpdateTuningAndTimeStep_;
+     *   - per-substep SUMMARY and restart output.
+     */
     template <class Solver>
     class SubStepIteration {
     public:
@@ -137,6 +239,8 @@ private:
                          const double original_time_step,
                          const bool final_step);
 
+        /// Run substeps until `substep_timer_` is done.  Returns the
+        /// aggregated per-substep report.
         SimulatorReport run();
 
     private:
@@ -157,6 +261,24 @@ private:
                                             double dt_estimate,
                                             const int restarts) const;
         void maybeUpdateLastSubstepOfSyncTimestep_(double dt);
+
+        /** \brief Per-substep tuning/WCYCLE update with save-and-restore
+         *         of `suggested_next_timestep_`.
+         *
+         * Invokes \ref SubStepper::maybeUpdateTuning_ with the current
+         * substep's elapsed time, length, and index.  If the callback
+         * reports a change (e.g. WCYCLE chopped the step via
+         * `updateNEXTSTEP`), the new suggestion is applied to the
+         * current substep via `setTimeStep_`, then the original
+         * suggestion is restored so it can drive the next substep.
+         *
+         * \note The name is a historical artefact: by this point in the
+         *       report step, TUNING_CHANGE/TUNINGDP_CHANGE events have
+         *       already been cleared by the initial callback invocation
+         *       in `SimulatorFullyImplicitBlackoil::runStep`, so what
+         *       actually runs here is the WCYCLE/NEXTSTEP branch of the
+         *       callback.
+         */
         void maybeUpdateTuningAndTimeStep_();
         double maxGrowth_() const;
         double minTimeStepBeforeClosingWells_() const;
@@ -208,17 +330,59 @@ public:
     bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs) const;
 
     static void registerParameters();
+
+    /// Set the suggested length for the next substep [s].
     void setSuggestedNextStep(const double x);
+
+    /// Current suggested length for the next substep [s].  Updated by
+    /// the time-step controller, by TUNING/NEXTSTEP application, and by
+    /// WCYCLE chopping.
     double suggestedNextStep() const;
+
     const TimeStepControlInterface& timeStepControl() const;
 
+    /** \brief Run one report step by orchestrating adaptive substepping.
+     *
+     * Splits the report step into a sequence of smaller substeps whose
+     * lengths are chosen adaptively, invoking `solver` once per substep.
+     * Called from `SimulatorFullyImplicitBlackoil::runStep` in place of a
+     * direct `Solver::step()` call on the non-adaptive path.  The actual
+     * substep loop lives one layer down in \ref SubStepper::run(); this
+     * method just constructs a \ref SubStepper and delegates.
+     *
+     * \param simulator_timer  Outer report-step timer.
+     * \param solver           Newton solver invoked once per substep.
+     * \param is_event         True if this report step carries an event
+     *                         (NEW_WELL, INJECTION_UPDATE, etc.); affects
+     *                         \ref SubStepper::maybeModifySuggestedTimeStepAtBeginningOfReportStep_.
+     * \param tuning_updater   Callback invoked to apply TUNING / NEXTSTEP
+     *                         / WCYCLE updates; see
+     *                         \ref TuningUpdateCallback.
+     */
     template <class Solver>
     SimulatorReport step(const SimulatorTimer& simulator_timer,
                          Solver& solver,
                          const bool is_event,
                          const TuningUpdateCallback& tuning_updater);
 
+    /** \brief Apply TUNING keyword parameters.
+     *
+     * Overwrites `restart_factor_`, `growth_factor_`, `max_growth_`,
+     * `max_time_step_`, and `timestep_after_event_` from `tuning`, then
+     * forwards `max_next_tstep` to \ref updateNEXTSTEP().
+     *
+     * \param max_next_tstep   Next-step suggestion [s]; ignored if <= 0.
+     * \param tuning           Source of the new TUNING parameters.
+     */
     void updateTUNING(double max_next_tstep, const Tuning& tuning);
+
+    /** \brief Set `suggested_next_timestep_` to `max_next_tstep` iff
+     *         `max_next_tstep > 0`.
+     *
+     * Used by both the TUNING path and the WCYCLE path in the
+     * tuning-update callback.  A non-positive value is interpreted as
+     * "no suggestion" and is silently ignored.
+     */
     void updateNEXTSTEP(double max_next_tstep);
 
     template<class Serializer>
