@@ -916,6 +916,10 @@ if(CONVERT_CUDA_TO_HIP)
   set(USE_GPU_BRIDGE OFF)
 endif()
 
+# These modules are special because they search with the first
+# find_package call in here
+set(initial_depends opm-common dune-common)
+
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
   get_filename_component(_leaf_dir_name ${PROJECT_BINARY_DIR} NAME)
@@ -923,28 +927,28 @@ if(SIBLING_SEARCH AND NOT opm-common_DIR)
   get_filename_component(_parent_dir_name ${_parent_full_dir} NAME)
   #Try if <module-name>/<build-dir> is used
   get_filename_component(_modules_dir ${_parent_full_dir} DIRECTORY)
-  if(IS_DIRECTORY ${_modules_dir}/opm-common/${_leaf_dir_name})
-    set(opm-common_DIR ${_modules_dir}/opm-common/${_leaf_dir_name})
-    set(opm-grid_DIR ${_modules_dir}/opm-grid/${_leaf_dir_name})
-  else()
-    string(REPLACE ${PROJECT_NAME} opm-common _opm_common_leaf ${_leaf_dir_name})
-    if(NOT _leaf_dir_name STREQUAL _opm_common_leaf
-        AND IS_DIRECTORY ${_parent_full_dir}/${_opm_common_leaf})
-      # We are using build directories named <prefix><module-name><postfix>
-      set(opm-common_DIR ${_parent_full_dir}/${_opm_common_leaf})
-      string(REPLACE ${PROJECT_NAME} opm-grid _opm_grid_leaf ${_leaf_dir_name})
-      set(opm-grid_DIR ${_parent_full_dir}/${_opm_grid_leaf})
-    elseif(IS_DIRECTORY ${_parent_full_dir}/opm-common)
-      # All modules are in a common build dir
-      set(opm-common_DIR "${_parent_full_dir}/opm-common")
-      set(opm-grid_DIR "${_parent_full_dir}/opm-grid")
+  foreach(module ${initial_depends})
+    if(IS_DIRECTORY ${_modules_dir}/${module}/${_leaf_dir_name})
+      set(${module}_DIR ${_modules_dir}/${module}/${_leaf_dir_name})
+    else()
+      string(REPLACE ${PROJECT_NAME} ${module} _module_leaf ${_leaf_dir_name})
+      if(NOT _leaf_dir_name STREQUAL _module_leaf
+          AND IS_DIRECTORY ${_parent_full_dir}/${_module_leaf})
+        # We are using build directories named <prefix><module-name><postfix>
+        set(${module}_DIR ${_parent_full_dir}/${_module_leaf})
+      elseif(IS_DIRECTORY ${_parent_full_dir}/${module})
+        # All modules are in a common build dir
+        set(${module}_DIR "${_parent_full_dir}/${module}")
+      endif()
     endif()
+  endforeach()
+endif()
+foreach(module ${initial_depends})
+  if(${module}_DIR AND NOT IS_DIRECTORY ${${module}_DIR})
+    message(WARNING "Value ${${module}_DIR} passed to variable"
+      " ${module}_DIR is not a directory")
   endif()
-endif()
-if(opm-common_DIR AND NOT IS_DIRECTORY ${opm-common_DIR})
-  message(WARNING "Value ${opm-common_DIR} passed to variable"
-    " opm-common_DIR is not a directory")
-endif()
+endforeach()
 
 find_package(opm-common REQUIRED)
 
