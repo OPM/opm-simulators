@@ -327,6 +327,7 @@ macro(opm-simulators_sources_hook)
 
   if(HAVE_AVX2_EXTENSION)
     set_property(SOURCE ${AVX2_SOURCE_FILES} PROPERTY COMPILE_OPTIONS ${AVX2_FLAGS})
+    set_property(TARGET opmsimulators PROPERTY INTERFACE_COMPILE_DEFINITIONS HAVE_AVX2_EXTENSION=1 APPEND)
   endif()
 
   # Boost 1.66 used on RHEL8 cannot be built as c++-20
