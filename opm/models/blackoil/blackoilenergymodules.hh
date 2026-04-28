@@ -30,6 +30,7 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
@@ -104,7 +105,7 @@ public:
         }
     }
 
-    static bool primaryVarApplies(unsigned pvIdx)
+    static OPM_HOST_DEVICE bool primaryVarApplies(unsigned pvIdx)
     {
         if constexpr (enableFullyImplicitThermal) {
             return pvIdx == temperatureIdx;
@@ -129,7 +130,7 @@ public:
         return static_cast<Scalar>(1.0);
     }
 
-    static bool eqApplies(unsigned eqIdx)
+    static OPM_HOST_DEVICE bool eqApplies(unsigned eqIdx)
     {
         if constexpr (enableFullyImplicitThermal) {
             return eqIdx == contiEnergyEqIdx;
@@ -241,11 +242,11 @@ public:
     }
 
     template <class UpstreamEval>
-    static void addPhaseEnthalpyFlux_(RateVector& flux,
-                                      unsigned phaseIdx,
-                                      const ElementContext& elemCtx,
-                                      unsigned scvfIdx,
-                                      unsigned timeIdx)
+    OPM_HOST_DEVICE static void addPhaseEnthalpyFlux_(RateVector& flux,
+                                                      unsigned phaseIdx,
+                                                      const ElementContext& elemCtx,
+                                                      unsigned scvfIdx,
+                                                      unsigned timeIdx)
     {
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         const unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
@@ -258,8 +259,8 @@ public:
                                               fs);
     }
 
-    static void addToEnthalpyRate(RateVector& flux,
-                                  const Evaluation& hRate)
+    OPM_HOST_DEVICE static void addToEnthalpyRate(RateVector& flux,
+                                                  const Evaluation& hRate)
     {
         if constexpr (enableFullyImplicitThermal) {
             flux[contiEnergyEqIdx] += hRate;
@@ -270,8 +271,8 @@ public:
      * \brief Assign the energy specific primary variables to a PrimaryVariables object
      */
     template <class FluidState>
-    static void assignPrimaryVars(PrimaryVariables& priVars,
-                                  const FluidState& fluidState)
+    OPM_HOST_DEVICE static void assignPrimaryVars(PrimaryVariables& priVars,
+                                                  const FluidState& fluidState)
     {
         if constexpr (enableFullyImplicitThermal) {
             priVars[temperatureIdx] = getValue(fluidState.temperature(/*phaseIdx=*/0));
@@ -281,9 +282,9 @@ public:
     /*!
      * \brief Do a Newton-Raphson update the primary variables of the energys.
      */
-    static void updatePrimaryVars(PrimaryVariables& newPv,
-                                  const PrimaryVariables& oldPv,
-                                  const EqVector& delta)
+    OPM_HOST_DEVICE static void updatePrimaryVars(PrimaryVariables& newPv,
+                                                  const PrimaryVariables& oldPv,
+                                                  const EqVector& delta)
     {
         if constexpr (enableFullyImplicitThermal) {
             // do a plain unchopped Newton update
@@ -294,8 +295,8 @@ public:
     /*!
      * \brief Return how much a Newton-Raphson update is considered an error
      */
-    static Scalar computeUpdateError(const PrimaryVariables&,
-                                     const EqVector&)
+    OPM_HOST_DEVICE static Scalar computeUpdateError(const PrimaryVariables&,
+                                                     const EqVector&)
     {
         // do not consider consider the cange of energy primary variables for
         // convergence
@@ -306,7 +307,7 @@ public:
     /*!
      * \brief Return how much a residual is considered an error
      */
-    static Scalar computeResidualError(const EqVector& resid)
+    OPM_HOST_DEVICE static Scalar computeResidualError(const EqVector& resid)
     {
         // do not weight the residual of energy when it comes to convergence
         return std::abs(scalarValue(resid[contiEnergyEqIdx]));
@@ -385,9 +386,9 @@ public:
      * \brief Update the temperature of the intensive quantity's fluid state
      *
      */
-    void updateTemperature_(const ElementContext& elemCtx,
-                            unsigned dofIdx,
-                            unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_(const ElementContext& elemCtx,
+                                            unsigned dofIdx,
+                                            unsigned timeIdx)
     {
         auto& fs = asImp_().fluidState_;
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
@@ -400,11 +401,11 @@ public:
      * \brief Update the temperature of the intensive quantity's fluid state
      *
      */
-    void updateTemperature_([[maybe_unused]] const Problem& problem,
-                            const PrimaryVariables& priVars,
-                            [[maybe_unused]] unsigned globalDofIdx,
-                            const unsigned timeIdx,
-                            const LinearizationType& lintype)
+    OPM_HOST_DEVICE void updateTemperature_([[maybe_unused]] const Problem& problem,
+                                            const PrimaryVariables& priVars,
+                                            [[maybe_unused]] unsigned globalDofIdx,
+                                            const unsigned timeIdx,
+                                            const LinearizationType& lintype)
     {
         auto& fs = asImp_().fluidState_;
         fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx, lintype));
@@ -414,16 +415,16 @@ public:
      * \brief Compute the intensive quantities needed to handle energy conservation
      *
      */
-    void updateEnergyQuantities_(const ElementContext& elemCtx,
-                                 unsigned dofIdx,
-                                 unsigned timeIdx)
+    OPM_HOST_DEVICE void updateEnergyQuantities_(const ElementContext& elemCtx,
+                                                 unsigned dofIdx,
+                                                 unsigned timeIdx)
     {
         updateEnergyQuantities_(elemCtx.problem(), elemCtx.globalSpaceIndex(dofIdx, timeIdx), timeIdx);
     }
 
-    void updateEnergyQuantities_(const Problem& problem,
-                                 const unsigned globalSpaceIdx,
-                                 const unsigned timeIdx)
+    OPM_HOST_DEVICE void updateEnergyQuantities_(const Problem& problem,
+                                                 const unsigned globalSpaceIdx,
+                                                 const unsigned timeIdx)
     {
         auto& fs = asImp_().fluidState_;
 
@@ -462,7 +463,7 @@ public:
     { return rockFraction_; }
 
 protected:
-    Implementation& asImp_()
+    OPM_HOST_DEVICE Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
     Evaluation rockInternalEnergy_;
@@ -484,51 +485,54 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::ConstantTemperat
 
 public:
 
-    void updateTemperature_(const ElementContext& elemCtx,
-                            unsigned dofIdx,
-                            unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_(const ElementContext& elemCtx,
+                                            unsigned dofIdx,
+                                            unsigned timeIdx)
     {
         updateTemperature_(elemCtx.problem(), elemCtx.globalSpaceIndex(dofIdx, timeIdx), timeIdx);
     }
 
     template<class Problem>
-    void updateTemperature_(const Problem& problem,
-                            [[maybe_unused]] const PrimaryVariables& priVars,
-                            unsigned globalDofIdx,
-                            unsigned timeIdx,
-                            [[maybe_unused]] const LinearizationType& lintype
-        )
+    OPM_HOST_DEVICE void updateTemperature_(const Problem& problem,
+                                            [[maybe_unused]] const PrimaryVariables& priVars,
+                                            unsigned globalDofIdx,
+                                            unsigned timeIdx,
+                                            [[maybe_unused]] const LinearizationType& lintype)
     {
         updateTemperature_(problem, globalDofIdx, timeIdx);
     }
 
-    void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_(const Problem& problem,
+                                            unsigned globalDofIdx,
+                                            unsigned timeIdx)
     {
         auto& fs = asImp_().fluidState_;
         const Scalar T = problem.temperature(globalDofIdx, timeIdx);
         fs.setTemperature(T);
     }
 
-    void updateEnergyQuantities_(const ElementContext&,
-                                 unsigned,
-                                 unsigned,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
+    OPM_HOST_DEVICE void updateEnergyQuantities_(const ElementContext&,
+                                                 unsigned,
+                                                 unsigned,
+                                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
     {}
 
-    const Evaluation& rockInternalEnergy() const
+    OPM_HOST_DEVICE const Evaluation& rockInternalEnergy() const
     {
-        throw std::logic_error("Requested the rock internal energy, which is "
-                             "unavailable because energy is not conserved");
+        OPM_THROW(std::logic_error,
+                  "Requested the rock internal energy, which is "
+                  "unavailable because energy is not conserved");
     }
 
-    const Evaluation& totalThermalConductivity() const
+    OPM_HOST_DEVICE const Evaluation& totalThermalConductivity() const
     {
-        throw std::logic_error("Requested the total thermal conductivity, which is "
-                             "unavailable because energy is not conserved");
+        OPM_THROW(std::logic_error,
+                  "Requested the total thermal conductivity, which is "
+                  "unavailable because energy is not conserved");
     }
 
 protected:
-    Implementation& asImp_()
+    OPM_HOST_DEVICE Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 };
 
@@ -548,26 +552,28 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::SequentialImplic
 
 public:
 
-    void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_(const Problem& problem,
+                                            unsigned globalDofIdx,
+                                            unsigned timeIdx)
     {
         // update the temperature for output (without derivatives)
         auto& fs = asImp_().fluidState_;
         fs.setTemperature(problem.temperature(globalDofIdx, timeIdx));
     }
 
-    void updateTemperature_(const ElementContext& elemCtx,
-                            unsigned dofIdx,
-                            unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_(const ElementContext& elemCtx,
+                                            unsigned dofIdx,
+                                            unsigned timeIdx)
     {
         updateTemperature_(elemCtx.problem(), elemCtx.globalSpaceIndex(dofIdx, timeIdx), timeIdx);
     }
 
     template<class Problem>
-    void updateTemperature_(const Problem& problem,
-                            [[maybe_unused]] const PrimaryVariables& priVars,
-                            unsigned globalDofIdx,
-                            unsigned timeIdx,
-                            [[maybe_unused]] const LinearizationType& lintype)
+    OPM_HOST_DEVICE void updateTemperature_(const Problem& problem,
+                                            [[maybe_unused]] const PrimaryVariables& priVars,
+                                            unsigned globalDofIdx,
+                                            unsigned timeIdx,
+                                            [[maybe_unused]] const LinearizationType& lintype)
     {
         updateTemperature_(problem, globalDofIdx, timeIdx);
     }
@@ -576,32 +582,34 @@ public:
      * \brief Compute the intensive quantities needed to handle energy conservation
      *
      */
-    void updateEnergyQuantities_([[maybe_unused]] const ElementContext& elemCtx,
-                                 [[maybe_unused]] unsigned dofIdx,
-                                 [[maybe_unused]] unsigned timeIdx)
+    OPM_HOST_DEVICE void updateEnergyQuantities_([[maybe_unused]] const ElementContext& elemCtx,
+                                                 [[maybe_unused]] unsigned dofIdx,
+                                                 [[maybe_unused]] unsigned timeIdx)
     {
     }
 
-    void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
-                                 [[maybe_unused]] const unsigned globalSpaceIdx,
-                                 [[maybe_unused]] const unsigned timeIdx)
+    OPM_HOST_DEVICE void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
+                                                 [[maybe_unused]] const unsigned globalSpaceIdx,
+                                                 [[maybe_unused]] const unsigned timeIdx)
     {
     }
 
-    const Evaluation& rockInternalEnergy() const
+    OPM_HOST_DEVICE const Evaluation& rockInternalEnergy() const
     {
-        throw std::logic_error("Requested the rock internal energy, which is "
-                             "unavailable because energy is not conserved");
+        OPM_THROW(std::logic_error,
+                  "Requested the rock internal energy, which is "
+                  "unavailable because energy is not conserved");
     }
 
-    const Evaluation& totalThermalConductivity() const
+    OPM_HOST_DEVICE const Evaluation& totalThermalConductivity() const
     {
-        throw std::logic_error("Requested the total thermal conductivity, which is "
-                             "unavailable because energy is not conserved");
+        OPM_THROW(std::logic_error,
+                  "Requested the total thermal conductivity, which is "
+                  "unavailable because energy is not conserved");
     }
 
 protected:
-    Implementation& asImp_()
+    OPM_HOST_DEVICE Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
 };
@@ -617,41 +625,43 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::NoTemperature>
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
 public:
-    void updateTemperature_([[maybe_unused]] const ElementContext& elemCtx,
-                            [[maybe_unused]] unsigned dofIdx,
-                            [[maybe_unused]] unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_([[maybe_unused]] const ElementContext& elemCtx,
+                                            [[maybe_unused]] unsigned dofIdx,
+                                            [[maybe_unused]] unsigned timeIdx)
     {
     }
 
     template<class Problem>
-    void updateTemperature_([[maybe_unused]] const Problem& problem,
-                            [[maybe_unused]] const PrimaryVariables& priVars,
-                            [[maybe_unused]] unsigned globalDofIdx,
-                            [[maybe_unused]] unsigned timeIdx,
-                            [[maybe_unused]] const LinearizationType& lintype)
+    OPM_HOST_DEVICE void updateTemperature_([[maybe_unused]] const Problem& problem,
+                                            [[maybe_unused]] const PrimaryVariables& priVars,
+                                            [[maybe_unused]] unsigned globalDofIdx,
+                                            [[maybe_unused]] unsigned timeIdx,
+                                            [[maybe_unused]] const LinearizationType& lintype)
     {
     }
 
-    void updateEnergyQuantities_(const ElementContext&,
-                                 unsigned,
-                                 unsigned,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
+    OPM_HOST_DEVICE void updateEnergyQuantities_(const ElementContext&,
+                                                 unsigned,
+                                                 unsigned,
+                                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
     {}
 
-    const Evaluation& rockInternalEnergy() const
+    OPM_HOST_DEVICE const Evaluation& rockInternalEnergy() const
     {
-        throw std::logic_error("Requested the rock internal energy, which is "
-                             "unavailable because energy is not conserved");
+        OPM_THROW(std::logic_error,
+                  "Requested the rock internal energy, which is "
+                  "unavailable because energy is not conserved");
     }
 
-    const Evaluation& totalThermalConductivity() const
+    OPM_HOST_DEVICE const Evaluation& totalThermalConductivity() const
     {
-        throw std::logic_error("Requested the total thermal conductivity, which is "
-                             "unavailable because energy is not conserved");
+        OPM_THROW(std::logic_error,
+                  "Requested the total thermal conductivity, which is "
+                  "unavailable because energy is not conserved");
     }
 
 protected:
-    Implementation& asImp_()
+    OPM_HOST_DEVICE Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 };
 
@@ -873,8 +883,8 @@ public:
                                      const BoundaryFluidState& /*boundaryFs*/)
     {}
 
-    const Evaluation& energyFlux()  const
-    { throw std::logic_error("Requested the energy flux, but energy is not conserved"); }
+    OPM_HOST_DEVICE const Evaluation& energyFlux() const
+    { OPM_THROW(std::logic_error, "Requested the energy flux, but energy is not conserved"); }
 };
 
 template <class TypeTag>
@@ -934,8 +944,8 @@ public:
                                      const BoundaryFluidState& /*boundaryFs*/)
     { }
 
-    const Evaluation& energyFlux()  const
-    { throw std::logic_error("Requested the energy flux, but energy is not conserved"); }
+    OPM_HOST_DEVICE const Evaluation& energyFlux() const
+    { OPM_THROW(std::logic_error, "Requested the energy flux, but energy is not conserved"); }
 };
 
 template <class TypeTag>
@@ -982,8 +992,8 @@ public:
                                      const BoundaryFluidState& /*boundaryFs*/)
     {}
 
-    const Evaluation& energyFlux()  const
-    { throw std::logic_error("Requested the energy flux, but energy is not conserved"); }
+    OPM_HOST_DEVICE const Evaluation& energyFlux() const
+    { OPM_THROW(std::logic_error, "Requested the energy flux, but energy is not conserved"); }
 };
 
 } // namespace Opm

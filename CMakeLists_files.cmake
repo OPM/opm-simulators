@@ -587,6 +587,8 @@ if(CUDA_FOUND OR hip_FOUND)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primary_variables_gpu.cu)
   endif()
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniMatrix.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_blackoilintensivequantities_gpu.cu)
+
   # Boost < 1.75 + nvcc = trouble in this test
   if(Boost_VERSION VERSION_GREATER 1.74)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniVector.cu)
@@ -707,6 +709,7 @@ list (APPEND TEST_DATA_FILES
   tests/data/test_stokes2c.dgf
   tests/data/test_stokes2cni.dgf
   tests/data/waterair.dgf
+  tests/very_simple_deck.DATA
   )
 
 
