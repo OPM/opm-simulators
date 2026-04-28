@@ -234,8 +234,7 @@ public:
                  const WWMatrixT<Scalar>& D,
                  const std::vector<int>& cellIndices,
                  int wellIndex,
-                 const std::string& wellName,
-                 const WellVectorT<Scalar>& residual)
+                 const std::string& wellName)
     {
         B_matrices_.push_back(B);
         C_matrices_.push_back(C);
@@ -243,7 +242,6 @@ public:
         wellIndices_.push_back(wellIndex);
         wellCells_.push_back(cellIndices);
         wellNames_.push_back(wellName);
-        well_residuals_.push_back(residual);
 
         // Map cell indices to well indices
         for (const auto& cellIdx : cellIndices) {
@@ -257,14 +255,7 @@ public:
         mergeWRMatrices<Scalar>(B_matrices_, mergedB_, wellCells_, numResDof_);
         mergeRWMatrices<Scalar>(C_matrices_, mergedC_, wellCells_, numResDof_);
         createDiagonalBlockMatrix<Scalar>(D_matrices_, mergedD_);
-        mergeWellResiduals();
     }
-
-    WellVectorT<Scalar>& getMergedWellResidual() { return mergedWellResidual_; }
-    const WellVectorT<Scalar>& getMergedWellResidual() const { return mergedWellResidual_; }
-
-    std::vector<int>& getWellDofOffsets() { return wellDofOffsets_; }
-    const std::vector<int>& getWellDofOffsets() const { return wellDofOffsets_; }
 
     WRMatrixT<Scalar>& getMergedB() { return mergedB_; }
     const WRMatrixT<Scalar>& getMergedB() const { return mergedB_; }
@@ -295,31 +286,10 @@ public:
         return notFound;
     }
 
-private:
-    void mergeWellResiduals()
-    {
-        std::size_t totalSize = 0;
-        wellDofOffsets_.clear();
-        wellDofOffsets_.push_back(0);
-        for (const auto& res : well_residuals_) {
-            totalSize += res.N();
-            wellDofOffsets_.push_back(static_cast<int>(totalSize));
-        }
-        mergedWellResidual_.resize(totalSize);
-        std::size_t offset = 0;
-        for (const auto& res : well_residuals_) {
-            for (std::size_t i = 0; i < res.N(); ++i) {
-                mergedWellResidual_[offset + i] = res[i];
-            }
-            offset += res.N();
-        }
-    }
-
     int numResDof_;
     std::vector<WRMatrixT<Scalar>> B_matrices_;
     std::vector<RWMatrixT<Scalar>> C_matrices_;
     std::vector<WWMatrixT<Scalar>> D_matrices_;
-    std::vector<WellVectorT<Scalar>> well_residuals_;
     std::vector<int> wellIndices_;
     std::vector<std::vector<int>> wellCells_;
     std::vector<std::string> wellNames_;
@@ -328,8 +298,6 @@ private:
     WRMatrixT<Scalar> mergedB_;
     RWMatrixT<Scalar> mergedC_;
     WWMatrixT<Scalar> mergedD_;
-    WellVectorT<Scalar> mergedWellResidual_;
-    std::vector<int> wellDofOffsets_;
 };
 
 } // namespace Opm

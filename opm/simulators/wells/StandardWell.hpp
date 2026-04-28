@@ -160,13 +160,6 @@ namespace Opm
                                                    const GroupStateHelperType& groupStateHelper,
                                                    WellStateType& well_state) override;
 
-        void updateWellStateFromSystemSolution(const Simulator& simulator,
-                                               const Opm::WellVectorT<Scalar>& mergedWellSolution,
-                                               int wellDofOffset,
-                                               int nWellDofs,
-                                               const GroupStateHelperType& groupStateHelper,
-                                               WellStateType& well_state) override;
-
         /// computing the well potentials for group control
         void computeWellPotentials(const Simulator& simulator,
                                    const WellStateType& well_state,
@@ -266,10 +259,9 @@ namespace Opm
         void addBCDMatrix(std::vector<BMatrix>& b_matrices,
                           std::vector<CMatrix>& c_matrices,
                           std::vector<DMatrix>& d_matrices,
-                          std::vector<std::vector<int>>& wcells,
-                          std::vector<WVector>& residual) const override
+                          std::vector<std::vector<int>>& wcells) const override
         {
-            StdWellEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells, residual);
+            StdWellEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells);
         }
 
     protected:
@@ -375,8 +367,7 @@ namespace Opm
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
                                             WellStateType& well_state,
-                                            const bool solving_with_zero_rate,
-                                            const bool skipLocalInverse) override;
+                                            const bool solving_with_zero_rate) override;
 
         void assembleWellEqWithoutIterationImpl(const Simulator& simulator,
                                                 const GroupStateHelperType& groupStateHelper,
@@ -384,8 +375,7 @@ namespace Opm
                                                 const Well::InjectionControls& inj_controls,
                                                 const Well::ProductionControls& prod_controls,
                                                 WellStateType& well_state,
-                                                const bool solving_with_zero_rate,
-                                                const bool skipLocalInverse);
+                                                const bool solving_with_zero_rate);
 
         void calculateSinglePerf(const Simulator& simulator,
                                  const int perf,

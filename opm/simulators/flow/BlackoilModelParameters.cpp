@@ -81,9 +81,6 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     use_update_stabilization_ = Parameters::Get<Parameters::UseUpdateStabilization>();
     matrix_add_well_contributions_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
     use_system_solver_ = Parameters::Get<Parameters::UseSystemSolver>();
-    if (use_system_solver_) {
-        matrix_add_well_contributions_ = false;
-    }
     check_well_operability_ = Parameters::Get<Parameters::EnableWellOperabilityCheck>();
     check_well_operability_iter_ = Parameters::Get<Parameters::EnableWellOperabilityCheckIter>();
     max_number_of_well_switches_ = Parameters::Get<Parameters::MaximumNumberOfWellSwitches>();

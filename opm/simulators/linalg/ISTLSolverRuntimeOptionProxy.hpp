@@ -147,12 +147,6 @@ public:
         return istlSolver_->getSolveCount();
     }
 
-    std::optional<typename Parent::WellSolutionView>
-    getWellSolution() const override
-    {
-        return istlSolver_->getWellSolution();
-    }
-
 private:
     std::unique_ptr<AbstractISTLSolver<SparseMatrixAdapter, Vector>> istlSolver_;
 

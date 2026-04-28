@@ -84,8 +84,10 @@ public:
         sysX_[_1].resize(cachedWellDofs_);
         sysX_[_1] = 0.0;
 
+        sysRhs_[_0].resize(numRes);
         sysRhs_[_0] = *Parent::rhs_;
-        sysRhs_[_1] = mergedWellResidual_;
+        sysRhs_[_1].resize(cachedWellDofs_);
+        sysRhs_[_1] = 0.0;
 
         Dune::InverseOperatorResult result;
         sysSolver_->apply(sysX_, sysRhs_, result);
@@ -96,16 +98,9 @@ public:
         return this->checkConvergence(result);
     }
 
-    std::optional<typename Parent::WellSolutionView> getWellSolution() const override
-    {
-        return typename Parent::WellSolutionView{sysX_[_1], wellDofOffsets_};
-    }
-
 private:
     bool sysInitialized_ = false;
     size_t cachedWellDofs_ = 0;
-    WellVectorT<Scalar> mergedWellResidual_;
-    std::vector<int> wellDofOffsets_;
 
     // Owned storage for merged well matrices; SystemMatrix points into these.
     WRMatrixT<Scalar> mergedB_;
@@ -142,10 +137,9 @@ private:
         std::vector<RWMatrixT<Scalar>> c_matrices;
         std::vector<WWMatrixT<Scalar>> d_matrices;
         std::vector<std::vector<int>> wcells;
-        std::vector<WellVectorT<Scalar>> well_residuals;
 
         this->simulator_.problem().wellModel().addBCDMatrix(
-            b_matrices, c_matrices, d_matrices, wcells, well_residuals);
+            b_matrices, c_matrices, d_matrices, wcells);
 
         Opm::WellMatrixMerger<Scalar> merger(Parent::matrix_->N());
         for (size_t i = 0; i < b_matrices.size(); ++i) {
@@ -154,13 +148,9 @@ private:
                            d_matrices[i],
                            wcells[i],
                            static_cast<int>(i),
-                           "Well" + std::to_string(i + 1),
-                           well_residuals[i]);
+                           "Well" + std::to_string(i + 1));
         }
         merger.finalize();
-
-        mergedWellResidual_ = std::move(merger.getMergedWellResidual());
-        wellDofOffsets_ = std::move(merger.getWellDofOffsets());
 
         const size_t newWellDofs = merger.getMergedD().N();
         const bool localNeedRebuild = !sysInitialized_ || (newWellDofs != cachedWellDofs_);

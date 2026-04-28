@@ -119,13 +119,6 @@ namespace Opm {
                                                    const GroupStateHelperType& groupStateHelper,
                                                    WellStateType& well_state) override;
 
-        void updateWellStateFromSystemSolution(const Simulator& simulator,
-                                               const Opm::WellVectorT<Scalar>& mergedWellSolution,
-                                               int wellDofOffset,
-                                               int nWellDofs,
-                                               const GroupStateHelperType& groupStateHelper,
-                                               WellStateType& well_state) override;
-
         /// computing the well potentials for group control
         void computeWellPotentials(const Simulator& simulator,
                                    const WellStateType& well_state,
@@ -178,13 +171,12 @@ namespace Opm {
         void addBCDMatrix(std::vector<BMatrix>& b_matrices,
                           std::vector<CMatrix>& c_matrices,
                           std::vector<DMatrix>& d_matrices,
-                          std::vector<std::vector<int>>& wcells,
-                          std::vector<WVector>& residual) const override
+                          std::vector<std::vector<int>>& wcells) const override
         {
             // System solver is only supported when well DOF dimensions
             // match between WellInterface and MultisegmentWellEval (standard 3-phase blackoil).
             if constexpr (Base::numWellDofs == MSWEval::numWellDofs) {
-                MSWEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells, residual);
+                MSWEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells);
             } else {
                 OPM_THROW(std::runtime_error,
                           "System solver with multisegment wells is only supported for standard "
@@ -313,8 +305,7 @@ namespace Opm {
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
                                             WellStateType& well_state,
-                                            const bool solving_with_zero_rate,
-                                            const bool skipLocalInverse) override;
+                                            const bool solving_with_zero_rate) override;
 
         void updateWaterThroughput(const double dt, WellStateType& well_state) const override;
 
