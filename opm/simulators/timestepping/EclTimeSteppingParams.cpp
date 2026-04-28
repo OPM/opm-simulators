@@ -34,6 +34,11 @@ void registerEclTimeSteppingParameters()
 {
     Parameters::Register<Parameters::EnableTuning>
         ("Honor some aspects of the TUNING keyword.");
+    Parameters::Register<Parameters::RescoupSyncAtReportSteps>
+        ("Developer flag for reservoir coupling.  If true, the master "
+         "synchronizes with its slaves at slave report-step boundaries. "
+         "If false (default), the master synchronizes at every master actual time step. "
+         "Has no effect in non-rescoup runs.");
     Parameters::Register<Parameters::SolverGrowthFactor<Scalar>>
         ("The factor time steps are elongated after a successful substep");
     Parameters::Register<Parameters::SolverMaxGrowth<Scalar>>

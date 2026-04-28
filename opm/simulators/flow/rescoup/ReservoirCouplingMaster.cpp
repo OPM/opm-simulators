@@ -31,6 +31,8 @@
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+#include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -57,9 +59,18 @@ ReservoirCouplingMaster(
     schedule_{schedule},
     argc_{argc},
     argv_{argv},
-    logger_{comm}
+    logger_{comm},
+    sync_at_report_steps_{Parameters::Get<Parameters::RescoupSyncAtReportSteps>()}
 {
     this->activation_date_ = this->getMasterActivationDate_();
+    if (this->comm_.rank() == 0) {
+        OpmLog::info(fmt::format(
+            "Reservoir coupling: master synchronizes with slaves at {}.",
+            this->sync_at_report_steps_
+                ? "report-step boundaries (RSYNC) (--rescoup-sync-at-report-steps=true)"
+                : "every master time step (TSYNC) (--rescoup-sync-at-report-steps=false)"
+        ));
+    }
 }
 
 // ------------------

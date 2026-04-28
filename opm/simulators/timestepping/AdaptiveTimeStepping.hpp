@@ -196,6 +196,11 @@ private:
         /// \ref SubStepIteration covers the whole report step.
         SimulatorReport runStepOriginal_();
 #ifdef RESERVOIR_COUPLING_ENABLED
+        // Reservoir coupling master: pick the sync-step length for the next outer-loop
+        // iteration of `runStepReservoirCouplingMaster_()`, including the chop
+        // against slave-report boundaries.  See the helper's own comment for
+        // details.
+        double getRcMasterSyncStepLength_(double prev_step, double current_time, double step_end_time);
         ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster_();
         ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave_();
 

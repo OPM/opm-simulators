@@ -164,6 +164,11 @@ public:
     void setSlaveNextReportTimeOffset(int index, double offset);
     void setSlaveStartDate(int index, std::time_t date) { this->slave_start_dates_[index] = date; }
     bool slaveIsActivated(int index) const { return this->slave_activation_status_[index] != 0; }
+    /// @brief Whether the master syncs with slaves at slave report-step boundaries
+    ///        (true) or at every master actual time step (false, default CLI flag value).
+    /// @details Set from the --rescoup-sync-at-report-steps CLI flag in the
+    ///          constructor.  See `Parameters::RescoupSyncAtReportSteps`.
+    bool syncAtReportSteps() const { return this->sync_at_report_steps_; }
     void updateMasterGroupNameOrderMap(
         const std::string& slave_name, const std::map<std::string, std::size_t>& master_group_map);
 
@@ -232,6 +237,10 @@ private:
     std::unique_ptr<ReservoirCouplingMasterReportStep<Scalar>> report_step_data_{nullptr};
     // Handles time stepping for the master and slaves
     std::unique_ptr<ReservoirCouplingTimeStepper<Scalar>> time_stepper_{nullptr};
+    // CLI flag --rescoup-sync-at-report-steps.  When true, the master syncs with
+    // its slaves at report-step boundaries (RSYNC).  When false
+    // (default), it syncs at every master time step (TSYNC).
+    bool sync_at_report_steps_{false};
 };
 
 } // namespace Opm

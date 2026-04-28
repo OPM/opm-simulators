@@ -569,7 +569,70 @@ runStepOriginal_()
     return substepIteration.run();
 }
 
+template <class TypeTag>
+template <class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+suggestedNextTimestep_() const
+{
+    return this->adaptive_time_stepping_.suggestedNextStep();
+}
+
+
 #ifdef RESERVOIR_COUPLING_ENABLED
+// Pick the master's sync-step length for the next outer-loop iteration of
+// `runStepReservoirCouplingMaster_()`.  Includes the chop against slave-
+// report dates and emits the user-visible log line.  See the block comment
+// above `runStepReservoirCouplingMaster_()` for TSYNC/RSYNC mode definitions.
+//
+// TSYNC (default):
+//   Each iteration is one master time step.  Start from the master's
+//   adaptive suggestion, capped at the max time step and at the time
+//   remaining until the report-step end, then chop.
+//
+// RSYNC:
+//   The outer loop iterates per chunk between slave-report boundaries.
+//   Re-use the previous iteration's chopped value as the candidate for
+//   this iteration (the caller seeds the first iteration with
+//   `original_time_step`), then chop.
+template <class TypeTag>
+template <class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+getRcMasterSyncStepLength_(double prev_step,
+                           double current_time,
+                           double step_end_time)
+{
+    const bool sync_at_report_steps = reservoirCouplingMaster_().syncAtReportSteps();
+    double current_step_length;
+    if (sync_at_report_steps) {
+        current_step_length = prev_step;
+    } else {
+        const double remaining = step_end_time - current_time;
+        current_step_length = std::min({suggestedNextTimestep_(), maxTimeStep_(), remaining});
+        // NOTE: The substep timer is later constructed (in the caller) with
+        //  current_step_length as its span, and after construction,
+        //  substep_timer.currentStepLength() should return the same as
+        //  current_step_length.  The timer's constructor calls
+        //  provideTimeStepEstimate() with suggestedNextTimestep_() as the dt_
+        //  estimate and current_step_length as the span.  Since we took
+        //    current_step_length = min(suggestedNextTimestep_(), maxTimeStep_(), remaining)
+        //  here (and only shrink it further via maybeChopSubStep below), the
+        //  estimate is always >= the span, so the timer's snap branch (see
+        //  AdaptiveSimulatorTimer::provideTimeStepEstimate) fires and clamps
+        //  dt_ to current_step_length.
+    }
+    current_step_length = reservoirCouplingMaster_().maybeChopSubStep(current_step_length, current_time);
+    auto num_active = reservoirCouplingMaster_().numActivatedSlaves();
+    OpmLog::info(fmt::format(
+        "\nChoosing next sync time{} between master and {} active slave {}: {:.2f} days",
+        sync_at_report_steps ? " (RSYNC)" : "",
+        num_active, (num_active == 1 ? "process" : "processes"),
+        current_step_length / unit::day
+    ));
+    return current_step_length;
+}
+
 template <class TypeTag>
 template <class Solver>
 ReservoirCouplingMaster<typename AdaptiveTimeStepping<TypeTag>::Scalar>&
@@ -578,9 +641,7 @@ reservoirCouplingMaster_()
 {
     return *(this->solver_.model().simulator().reservoirCouplingMaster());
 }
-#endif
 
-#ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
 template <class Solver>
 ReservoirCouplingSlave<typename AdaptiveTimeStepping<TypeTag>::Scalar>&
@@ -589,39 +650,61 @@ reservoirCouplingSlave_()
 {
     return *(this->solver_.model().simulator().reservoirCouplingSlave());
 }
-#endif
 
-#ifdef RESERVOIR_COUPLING_ENABLED
 // Description of the reservoir coupling master and slave substep loop
 // -------------------------------------------------------------------
-// The master and slave processes attempts to reach the end of the report step using a series of substeps
-// (also called timesteps). Each substep have an upper limit that is roughly determined by a combination
-// of the keywords TUNING (through the TSINIT, TSMAXZ values), NEXSTEP, WCYCLE, and the start of the
-// next report step (the last substep needs to coincide with this time). Note that NEXTSTEP can be
-// updated from an ACTIONX keyword. Although, this comment focuses on the maximum substep limit,
-// note that there is also a lower limit on the substep length. And the substep sizes will be adjusted
-// automatically (or retried) based on the convergence behavior of the solver and other criteria.
+// The master and slave processes attempt to reach the end of the report step using a series of substeps
+// (also called timesteps).  Each substep has an upper limit roughly determined by a combination of the
+// keywords TUNING (through TSINIT, TSMAXZ), NEXSTEP, WCYCLE, and the start of the next report step
+// (the last substep has to coincide with this time).  Note that NEXTSTEP can be updated from an
+// ACTIONX keyword.  Although this comment focuses on the maximum substep limit, there is also a lower
+// limit on the substep length, and the substep sizes are adjusted automatically (or retried) based on
+// the convergence behavior of the solver and other criteria.
 //
-// When using reservoir coupling, the upper limit on each substep is further limited to: a) not overshoot
-// next report date of a slave reservoir, and b) to keep the flow rate of the slave groups within
-// certain limits. To determine this potential further limitation on the substep, the following procedure
-// is used at the beginning of each master substep:
-// - First, the slaves sends the master the date of their next report step
-// - The master receives the date of the next report step from the slaves
-// - If necessary, the master computes a modified substep length based on the received dates
-// TODO: explain how the substep is limited to keep the flow rate of the slave groups within certain
-// limits. Since this is not implemented yet, this part of the procedure is not explained here.
+// The master chooses a "sync step" — the span between successive master<->slave exchanges — via one
+// of two modes, selected by the `--rescoup-sync-at-report-steps` CLI flag:
 //
-// Then, after the master has determined the substep length using the above procedure, it sends it
-// to the slaves. The slaves will now use the end of this substep as a fixed point (like a mini report
-// step), that they will try to reach using a single substep or multiple substeps. The end of the
-// substep received from the master will either conincide with the end of its current report step, or
-// it will end before (it cannot not end after since the master has already adjusted the step to not
-// exceed any report time in a slave). If the end of this substep is earlier in time than its next report
-// date, the slave will enter a loop and wait for the master to send it a new substep.
-// The loop is finished when the end of the received time step conincides with the end of its current
-// report step.
+//   TSYNC (default, flag=false)
+//       Each master time step is a sync step.  Every outer iteration of the master substep
+//       loop redistributes group-rate targets to the slaves.  This gives fine sync granularity and
+//       matches the reference simulator's coupling semantics.
+//
+//   RSYNC (flag=true)
+//       Each chunk between slave-report-step boundaries is one sync step.  The master's own adaptive
+//       timestepping runs inside the chunk, but slaves only hear back from the master once per chunk.
+//       Provided as a developer escape hatch.
+//
+// In both modes the sync step is also limited so as not to overshoot the next slave report date
+// (`maybeChopSubStep`).  A second, drift-based limit (GRUPMAST item 4 / RCMASTS) is parsed but not
+// yet honored — tracked as a follow-up PR.
+//
+// Per sync step:
+//   - Master receives each activated slave's next report date (`receiveNextReportDateFromSlaves`).
+//   - Master picks the sync-step length via `getRcMasterSyncStepLength_()` (mode-dependent) and
+//     chops it so as not to overshoot any slave report date.
+//   - Master sends the chosen sync-step length to each slave (`sendNextTimeStepToSlaves`).
+//
+// The slaves use the sync-step end as a fixed point — a "mini report step" — that they reach via one
+// or more of their own substeps.  If the slave's current report step extends beyond the received
+// sync step, the slave loops waiting for the master to send further sync steps; the loop ends when
+// the received sync step coincides with the end of the slave's current report step.
 
+// Master-side rescoup outer loop.  See the block comment above for TSYNC
+// and RSYNC mode definitions.
+//
+// TSYNC (default):
+//   Each outer iteration is one master time step.  The sync-step
+//   length is chosen fresh each iteration by `getRcMasterSyncStepLength_()`
+//   from the master's adaptive suggestion (capped at the max time step and
+//   at the remaining report-step time), then chopped against slave-report
+//   dates.  `SubStepIteration::run()` is still used but normally handles
+//   only solver-driven chops within a single master time step.
+//
+// RSYNC:
+//   The outer loop iterates once per chunk between slave-report boundaries.
+//   The sync-step length starts at the full report step and only shrinks
+//   via `maybeChopSubStep`; the master's adaptive timestepping runs inside
+//   `SubStepIteration` as solver-driven substeps within each chunk.
 template <class TypeTag>
 template <class Solver>
 SimulatorReport
@@ -632,6 +715,12 @@ runStepReservoirCouplingMaster_()
     const double original_time_step = this->simulator_timer_.currentStepLength();
     double current_time{this->simulator_timer_.simulationTimeElapsed()};
     double step_end_time = current_time + original_time_step;
+    // In RSYNC mode this variable persists across outer iterations and
+    // carries the previously-chopped sync span into the next iteration.  In
+    // TSYNC mode it is overwritten each iteration by
+    // `getRcMasterSyncStepLength_()`; the initial value is only consumed by
+    // the first helper call in RSYNC mode (as the candidate span for that
+    // iteration).
     auto current_step_length = original_time_step;
     auto report_step_idx = this->simulator_timer_.currentStepNum();
     if (report_step_idx == 0 && iteration == 0) {
@@ -643,23 +732,15 @@ runStepReservoirCouplingMaster_()
     while (true) {
         reservoirCouplingMaster_().sendDontTerminateSignalToSlaves(); // Tell the slaves to keep running.
         reservoirCouplingMaster_().receiveNextReportDateFromSlaves();
-        bool start_of_report_step = (iteration == 0);
+        const bool start_of_report_step = (iteration == 0);
         if (start_of_report_step) {
             reservoirCouplingMaster_().initStartOfReportStep(report_step_idx);
-        }
-        current_step_length = reservoirCouplingMaster_().maybeChopSubStep(
-                                          current_step_length, current_time);
-        auto num_active = reservoirCouplingMaster_().numActivatedSlaves();
-        OpmLog::info(fmt::format(
-            "\nChoosing next sync time between master and {} active slave {}: {:.2f} days",
-            num_active, (num_active == 1 ? "process" : "processes"),
-            current_step_length / unit::day
-        ));
-        reservoirCouplingMaster_().sendNextTimeStepToSlaves(current_step_length);
-        if (start_of_report_step) {
             maybeUpdateTuning_(current_time, suggestedNextTimestep_(), /*substep=*/0);
-            maybeModifySuggestedTimeStepAtBeginningOfReportStep_(current_step_length);
+            maybeModifySuggestedTimeStepAtBeginningOfReportStep_(original_time_step);
         }
+        current_step_length = getRcMasterSyncStepLength_(
+                                          current_step_length, current_time, step_end_time);
+        reservoirCouplingMaster_().sendNextTimeStepToSlaves(current_step_length);
         AdaptiveSimulatorTimer substep_timer{
             this->simulator_timer_.startDateTime(),
             /*stepLength=*/current_step_length,
@@ -690,9 +771,7 @@ runStepReservoirCouplingMaster_()
     }
     return report;
 }
-#endif
 
-#ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
 template <class Solver>
 SimulatorReport
@@ -746,18 +825,7 @@ runStepReservoirCouplingSlave_()
     }
     return report;
 }
-
-#endif
-
-template <class TypeTag>
-template <class Solver>
-double
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
-suggestedNextTimestep_() const
-{
-    return this->adaptive_time_stepping_.suggestedNextStep();
-}
-
+#endif  // RESERVOIR_COUPLING_ENABLED
 
 
 /************************************************
