@@ -28,8 +28,15 @@
  */
 #include "config.h"
 
+#include <opm/common/OpmLog/LogUtil.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/StreamLog.hpp>
+
 #include <opm/models/utils/start.hh>
 #include "problems/co2ptflashproblem.hh"
+
+#include <iostream>
+#include <memory>
 
 
 namespace Opm::Properties {
@@ -57,6 +64,10 @@ struct LocalLinearizerSplice<TypeTag, TTag::CO2PTEcfvProblem>
 
 int main(int argc, char **argv)
 {
+    // Add a debug backend so that PTFlash OpmLog::debug() messages are not lost.
+    auto debugLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::MessageType::Debug);
+    Opm::OpmLog::addBackend("DEBUGLOG", debugLog);
+
     using EcfvProblemTypeTag = Opm::Properties::TTag::CO2PTEcfvProblem;
     return Opm::start<EcfvProblemTypeTag>(argc, argv, true);
 }
