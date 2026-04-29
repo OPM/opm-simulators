@@ -362,9 +362,9 @@ partiallySupported()
          {
             "EQUIL",
             {
-               {9,{true, [](int x) { return x >= -20 && x <= 20; }, "EQUIL(EQLOPT3): only values between -20 and 20 are allowed (default is -5)"}}, // OIP_INIT
-               {10,{false, allow_values<int> {}, "EQUIL(EQLOPT4): compositional option not used, should be defaulted"}}, // EQLOPT4
-               {11,{false, allow_values<int> {}, "EQUIL(EQLOPT5): compositional option not used, should be defaulted"}}, // EQLOPT5
+               {9,{true, [](int x) { return x >= -20 && x <= 20; }, "EQUIL(OIP_INIT): only values between -20 and 20 are allowed (default is -5)"}}, // OIP_INIT
+               {10,{false, allow_values<int> {}, "EQUIL(COMP_INIT_TYPE): compositional option not used, should be defaulted"}}, // COMP_INIT_TYPE
+               {11,{false, allow_values<int> {}, "EQUIL(COMP_NOT_SET_SAT_PRESSURE): compositional option not used, should be defaulted"}}, // COMP_NOT_SET_SAT_PRESSURE
             },
          },
          {
