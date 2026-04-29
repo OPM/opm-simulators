@@ -164,6 +164,7 @@ namespace Opm
                 Invalid,
                 MassBalance,
                 Pressure,
+                Energy,
                 ControlBHP,
                 ControlTHP,
                 ControlRate,
