@@ -100,8 +100,6 @@ macro(opm-simulators_prereqs_hook)
       Boost::date_time
   )
 
-  find_package(ParMETIS)
-
   if(TARGET ParMETIS::ParMETIS)
     target_link_libraries(opmsimulators PUBLIC ParMETIS::ParMETIS)
   else()
