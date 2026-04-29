@@ -128,6 +128,7 @@ add_test_compareECLFiles(
 set(_spe1_tests_energy
   SPE1CASE2_THERMAL
   SPE1CASE2_THERMAL_WATVISC
+  SPE1CASE2_MSW_THERMAL
 )
 
 add_multiple_tests(
