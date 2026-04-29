@@ -7,6 +7,7 @@ find_package(SuiteSparse COMPONENTS UMFPACK REQUIRED)
 find_package(opm-grid REQUIRED)
 
 if(TARGET opmsimulators)
+  # This branch is executed if find_package(opm-simulators) was called.
   get_property(opm-simulators_libs TARGET opmsimulators PROPERTY INTERFACE_LINK_LIBRARIES)
   get_property(opm-simulators_def TARGET opmsimulators PROPERTY INTERFACE_COMPILE_DEFINITIONS)
   if(opm-simulators_def MATCHES USE_HIP)
@@ -61,6 +62,7 @@ if(TARGET opmsimulators)
     find_package(dune-fem REQUIRED)
   endif()
 else()
+  # This branch is excuted when cmake is run for opom-simulators
   find_package(fmt)
   find_package(HDF5)
   find_package(MPI)
