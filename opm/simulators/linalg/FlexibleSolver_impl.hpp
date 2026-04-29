@@ -33,8 +33,9 @@
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 #include <opm/simulators/linalg/is_gpu_operator.hpp>
 
-#if HAVE_AVX2_EXTENSION
+#if 1 //HAVE_AVX2_EXTENSION
 #include <opm/simulators/linalg/mixed/wrapper.hpp>
+#include <opm/simulators/linalg/mixed/adapter.hpp>
 #endif
 
 #include <dune/common/fmatrix.hh>
@@ -217,7 +218,7 @@ namespace Dune
                                                                             tol, // desired residual reduction factor
                                                                             maxiter, // maximum number of iterations
                                                                             verbosity);
-#if HAVE_AVX2_EXTENSION
+#if 1 //HAVE_AVX2_EXTENSION
           } else if (solver_type == "mixed-bicgstab") {
               if constexpr (Opm::is_gpu_operator_v<Operator>) {
                 OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for GPU operatorsg");
@@ -236,6 +237,17 @@ namespace Dune
                                                                             use_mixed_dilu
                                                                         );
             }
+            // mixed-solver adapter starts here
+          } else if (solver_type == "mixed-adapter") {
+
+                linsolver_ = std::make_shared<Dune::MixedAdapter<Operator,VectorType>>(*linearoperator_for_solver_,
+                                                                            *scalarproduct_,
+                                                                            *preconditioner_,
+                                                                            tol, // desired residual reduction factor
+                                                                            maxiter, // maximum number of iterations
+                                                                            verbosity);
+
+
 #endif
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
