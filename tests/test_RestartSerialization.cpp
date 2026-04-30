@@ -370,6 +370,16 @@ public:
         return 0;
     }
 
+    int compressedIndexForInteriorOrOverlap(int) const override
+    {
+        return 0;
+    }
+
+    int compressedIndexForOverlap(int) const override
+    {
+        return 0;
+    }
+
 private:
     BlackoilWellModelNetworkGeneric<double, IndexTraits> network_;
     ParallelWellInfo<double> dummy;

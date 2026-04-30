@@ -719,6 +719,70 @@ void WellInterfaceGeneric<Scalar, IndexTraits>::addPerforations(const std::vecto
 }
 
 template<typename Scalar, typename IndexTraits>
+void WellInterfaceGeneric<Scalar, IndexTraits>::
+initOverlapConnections (const std::function<std::vector<int>(const WellInterfaceGeneric&)>& getOverlapConnections,
+                        const std::function<std::vector<int>(const WellInterfaceGeneric&)>& getInteriorConnections,
+                        const std::vector<int>& globalCells)
+{
+    const auto& comm = this->parallelWellInfo().communication();
+    if (overlapConnectionsWereSet || comm.size() == 1)
+        return;
+
+    // initialize ownedOverlapConnections: 2D vector[rank][Ids] that records to whom to send entries
+    // and missingOverlapConnections: 2D vector[rank][Ids] that records from whom to receive entries
+
+    std::vector<std::vector<int>> overlapConnections(comm.size()); // IDs of overlap for each rank
+    std::vector<std::vector<int>> connOwners(comm.size()); // ranks owning the connections from overlapConnections
+
+    auto translateToGlobal = [&globalCells](const std::vector<int>& localIDs) {
+        std::vector<int> globalIDs;
+        globalIDs.reserve(localIDs.size());
+        std::for_each(localIDs.begin(), localIDs.end(), [&](int lID) { globalIDs.push_back(globalCells[lID]); });
+        return globalIDs;
+    };
+
+    // build overlapConnections: get local IDs of overlap, translate them to global IDs, and communicate
+    std::vector<int> localOverlapConnections = getOverlapConnections(*this);
+    overlapConnections[comm.rank()] = translateToGlobal(localOverlapConnections);
+    std::vector<int> nrConnections(comm.size(), 0);
+    nrConnections[comm.rank()] = overlapConnections[comm.rank()].size();
+    comm.sum(nrConnections.data(), nrConnections.size());
+    assert(nrConnections[comm.rank()] == (int)overlapConnections[comm.rank()].size());
+    for (int i = 0; i < comm.size(); ++i) {
+        overlapConnections[i].resize(nrConnections[i], 0);
+        connOwners[i].resize(nrConnections[i], -1);
+        comm.sum(overlapConnections[i].data(), overlapConnections[i].size());
+    }
+
+    // build connOwners, and record owned cells that lie in other ranks' overlap
+    ownedOverlapConnections.resize(comm.size());
+    std::vector<int> localInteriorConnections = getInteriorConnections(*this); // local IDs of owned cells
+    std::unordered_map<int, int> interiorGlobalToLocal;
+    interiorGlobalToLocal.reserve(localInteriorConnections.size());
+    std::for_each(localInteriorConnections.begin(), localInteriorConnections.end(), [&](int lID) { interiorGlobalToLocal.emplace(globalCells[lID], lID); });
+    for (int i = 0; i < comm.size(); ++i) {
+        for (std::size_t j = 0; j < overlapConnections[i].size(); ++j) {
+            const auto pIC = interiorGlobalToLocal.find(overlapConnections[i][j]);
+            if (pIC != interiorGlobalToLocal.end()) {
+                // connection *pIC will be sent rank i, we store local ID
+                ownedOverlapConnections[i].push_back(pIC->second);
+                assert(connOwners[i][j] == -1);
+                connOwners[i][j] = comm.rank();
+            }
+        }
+    }
+    for (auto& rankOverlap : connOwners)
+        comm.max(rankOverlap.data(), rankOverlap.size());
+
+    // record from which rank to receive the overlap data
+    missingOverlapConnections.resize(comm.size());
+    for (std::size_t i = 0; i < localOverlapConnections.size(); ++i) {
+        missingOverlapConnections[connOwners[comm.rank()][i]].push_back(localOverlapConnections[i]);
+    }
+    overlapConnectionsWereSet = true;
+}
+
+template<typename Scalar, typename IndexTraits>
 Scalar
 WellInterfaceGeneric<Scalar, IndexTraits>::wmicrobes_() const
 {
