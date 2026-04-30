@@ -59,20 +59,20 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::Fully
     static constexpr unsigned numPhases = FluidSystem::numPhases;
 
 public:
-    void updateTemperature_([[maybe_unused]] const Problem& problem,
-                            const PrimaryVariables& priVars,
-                            [[maybe_unused]] unsigned globalSpaceIndex,
-                            unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_([[maybe_unused]] const Problem& problem,
+                                            const PrimaryVariables& priVars,
+                                            [[maybe_unused]] unsigned globalSpaceIndex,
+                                            unsigned timeIdx)
     {
         auto& fs = Parent::asImp_().fluidState_;
         // set temperature
         fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx));
     }
-    void updateEnergyQuantities_(const Problem& problem,
-                                 [[maybe_unused]] const PrimaryVariables& priVars,
-                                 unsigned globalSpaceIndex,
-                                 unsigned timeIdx,
-                                 const ParamCache& paramCache)
+    OPM_HOST_DEVICE void updateEnergyQuantities_(const Problem& problem,
+                                                 [[maybe_unused]] const PrimaryVariables& priVars,
+                                                 unsigned globalSpaceIndex,
+                                                 unsigned timeIdx,
+                                                 const ParamCache& paramCache)
     {
         auto& fs = Parent::asImp_().fluidState_;
 
@@ -120,25 +120,27 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::Seque
     static constexpr unsigned numPhases = FluidSystem::numPhases;
 public:
 
-    void updateTemperature_([[maybe_unused]] const Problem& problem,
-                            [[maybe_unused]] const PrimaryVariables& priVars,
-                            [[maybe_unused]] unsigned globalSpaceIndex,
-                            [[maybe_unused]] unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_([[maybe_unused]] const Problem& problem,
+                                            [[maybe_unused]] const PrimaryVariables& priVars,
+                                            [[maybe_unused]] unsigned globalSpaceIndex,
+                                            [[maybe_unused]] unsigned timeIdx)
     {
-        throw std::logic_error("updateTemperature not implemented "
-                        "SequentialImplicitThermal can not be used with"
-                        "global intensive quantites yet.");
+        OPM_THROW(std::logic_error,
+                  "updateTemperature not implemented "
+                  "SequentialImplicitThermal can not be used with"
+                  "global intensive quantites yet.");
     }
 
-    void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
-                                 [[maybe_unused]] const PrimaryVariables& priVars,
-                                 [[maybe_unused]] unsigned globalSpaceIndex,
-                                 [[maybe_unused]] unsigned timeIdx,
-                                 [[maybe_unused]] const ParamCache& paramCache)
+    OPM_HOST_DEVICE void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
+                                                 [[maybe_unused]] const PrimaryVariables& priVars,
+                                                 [[maybe_unused]] unsigned globalSpaceIndex,
+                                                 [[maybe_unused]] unsigned timeIdx,
+                                                 [[maybe_unused]] const ParamCache& paramCache)
     {
-        throw std::logic_error("updateEnergyQuantities_ not implemented "
-                "SequentialImplicitThermal can not be used with"
-                "global intensive quantites yet.");
+        OPM_THROW(std::logic_error,
+                  "updateEnergyQuantities_ not implemented "
+                  "SequentialImplicitThermal can not be used with"
+                  "global intensive quantites yet.");
     }
 
 };
@@ -155,21 +157,21 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::Const
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    void updateTemperature_([[maybe_unused]] const Problem& problem,
-                            [[maybe_unused]] const PrimaryVariables& priVars,
-                            [[maybe_unused]] unsigned globalSpaceIdx,
-                            [[maybe_unused]] unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_([[maybe_unused]] const Problem& problem,
+                                            [[maybe_unused]] const PrimaryVariables& priVars,
+                                            [[maybe_unused]] unsigned globalSpaceIdx,
+                                            [[maybe_unused]] unsigned timeIdx)
     {
         auto& fs = this->asImp_().fluidState_;
         Scalar T = problem.temperature(globalSpaceIdx, timeIdx);
         fs.setTemperature(T);
     }
 
-    void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
-                                 [[maybe_unused]] const PrimaryVariables& priVars,
-                                 [[maybe_unused]] unsigned globalSpaceIdx,
-                                 [[maybe_unused]] unsigned timeIdx,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
+    OPM_HOST_DEVICE void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
+                                                 [[maybe_unused]] const PrimaryVariables& priVars,
+                                                 [[maybe_unused]] unsigned globalSpaceIdx,
+                                                 [[maybe_unused]] unsigned timeIdx,
+                                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
     { }
 };
 
@@ -185,17 +187,17 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::NoTem
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    void updateTemperature_([[maybe_unused]] const Problem& problem,
-                            [[maybe_unused]] const PrimaryVariables& priVars,
-                            [[maybe_unused]] unsigned globalSpaceIdx,
-                            [[maybe_unused]] unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_([[maybe_unused]] const Problem& problem,
+                                            [[maybe_unused]] const PrimaryVariables& priVars,
+                                            [[maybe_unused]] unsigned globalSpaceIdx,
+                                            [[maybe_unused]] unsigned timeIdx)
     { }
 
-    void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
-                                 [[maybe_unused]] const PrimaryVariables& priVars,
-                                 [[maybe_unused]] unsigned globalSpaceIdx,
-                                 [[maybe_unused]] unsigned timeIdx,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
+    OPM_HOST_DEVICE void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
+                                                 [[maybe_unused]] const PrimaryVariables& priVars,
+                                                 [[maybe_unused]] unsigned globalSpaceIdx,
+                                                 [[maybe_unused]] unsigned timeIdx,
+                                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
     { }
 };
 
