@@ -424,6 +424,18 @@ macro(opm-simulators_config_hook)
     target_compile_definitions(opmsimulators PUBLIC HAVE_CUDA=1)
   endif()
 
+  # The BlackOil intensive-quantities GPU dispatcher requires either HIP or
+  # CUDA >= 13.1; the corresponding .cu source is only added to the build
+  # under the same condition (see CMakeLists_files.cmake). Expose a public
+  # macro so that callers (e.g. FIBlackoilModel) can guard their use of the
+  # dispatcher accordingly.
+  if(hip_FOUND OR CUDA_VERSION VERSION_GREATER_EQUAL 13.1)
+    target_compile_definitions(opmsimulators
+      PUBLIC
+        OPM_HAVE_GPU_BLACKOIL_INTENSIVE_QUANTITIES_DISPATCHER=1
+    )
+  endif()
+
   if(USE_GPU_BRIDGE)
     target_compile_definitions(opmsimulators PUBLIC COMPILE_GPU_BRIDGE=1)
   endif()
