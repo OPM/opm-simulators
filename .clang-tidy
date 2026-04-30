@@ -1,0 +1,73 @@
+# .clang-tidy-suggested
+# Goal: minimum + a few extra checks for stricter safety and modernisation.
+# Adds: cppcoreguidelines-special-member-functions,
+#        bugprone-narrowing-conversions,
+#        cppcoreguidelines-narrowing-conversions,
+#        modernize-use-nullptr,
+#        bugprone-exception-escape,
+#        cppcoreguidelines-avoid-c-arrays + modernize-avoid-c-arrays,
+#        readability-function-cognitive-complexity,
+#        readability-implicit-bool-conversion
+
+Checks: >
+  -*,
+  bugprone-exception-escape,
+  bugprone-use-after-move,
+  bugprone-undefined-memory-manipulation,
+  bugprone-integer-division,
+  bugprone-macro-parentheses,
+  bugprone-misplaced-widening-cast,
+  bugprone-narrowing-conversions,
+  bugprone-sizeof-expression,
+  bugprone-string-constructor,
+  bugprone-suspicious-memset-usage,
+  bugprone-suspicious-semicolon,
+  bugprone-suspicious-string-compare,
+  bugprone-too-small-loop-variable,
+  bugprone-unused-raii,
+  bugprone-unused-return-value,
+  cppcoreguidelines-avoid-c-arrays,
+  cppcoreguidelines-narrowing-conversions,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  cppcoreguidelines-pro-type-vararg,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-special-member-functions,
+  google-explicit-constructor,
+  hicpp-exception-baseclass,
+  hicpp-multiway-paths-covered,
+  modernize-avoid-c-arrays,
+  modernize-deprecated-headers,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  performance-for-range-copy,
+  performance-implicit-conversion-in-loop,
+  performance-unnecessary-value-param,
+  performance-move-const-arg,
+  readability-function-cognitive-complexity,
+  readability-implicit-bool-conversion,
+  readability-make-member-function-const,
+  readability-misleading-indentation,
+  readability-non-const-parameter
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(opm|tests)/.*\.(hpp|hh|h)$'
+FormatStyle: file
+
+CheckOptions:
+  - key:   modernize-use-override.IgnoreDestructors
+    value: true
+  - key:   modernize-use-override.AllowOverrideAndFinal
+    value: true
+  - key:   performance-unnecessary-value-param.AllowedTypes
+    value: 'std::shared_ptr;std::unique_ptr;std::function'
+  - key:   performance-for-range-copy.WarnOnAllAutoCopies
+    value: false
+  - key:   google-explicit-constructor.WarnOnDefaultedOrDeleted
+    value: false
+  - key:   cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
+    value: true
+  - key:   readability-function-cognitive-complexity.Threshold
+    value: '25'
