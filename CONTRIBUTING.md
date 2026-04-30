@@ -8,6 +8,7 @@ Thank you for your interest in contributing to the Open Porous Media (OPM) Simul
 - [Development Process](#development-process)
 - [Code Style and Formatting](#code-style-and-formatting)
 - [Automated Formatting Tools](#automated-formatting-tools)
+- [Static Analysis with clang-tidy](#static-analysis-with-clang-tidy)
 - [Testing](#testing)
 - [Submitting Changes](#submitting-changes)
 - [Reporting Issues](#reporting-issues)
@@ -181,6 +182,46 @@ again. This ensures you see exactly what was changed before it's committed.
    # Update hook versions
    pre-commit autoupdate
    ```
+
+## Static Analysis with clang-tidy
+
+We recommend running `clang-tidy` on code you contribute. A `.clang-tidy` configuration file is provided in the repository root with a curated set of checks covering bug-prone patterns, C++ Core Guidelines, modernization, and performance.
+
+### Setup
+
+`clang-tidy` requires a compilation database. Generate one by passing `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` to CMake:
+
+```bash
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
+```
+
+This produces a `compile_commands.json` file in the build directory.
+
+### Running clang-tidy
+
+Run on a single file (from the build directory or pointing to `compile_commands.json`):
+
+```bash
+clang-tidy -p build/ opm/simulators/your_file.cpp
+```
+
+Or use `run-clang-tidy` to analyse multiple files in parallel:
+
+```bash
+run-clang-tidy -p build/ 'opm/simulators/.*\.cpp'
+```
+
+The `.clang-tidy` file in the root is picked up automatically; no extra flags are needed to load it.
+
+### Fixing Issues
+
+Many findings can be fixed automatically with the `--fix` flag:
+
+```bash
+clang-tidy -p build/ --fix opm/simulators/your_file.cpp
+```
+
+Review the applied fixes with `git diff` before committing.
 
 ## Testing
 
