@@ -594,6 +594,10 @@ if(CUDA_FOUND OR hip_FOUND)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primary_variables_gpu.cu)
   endif()
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniMatrix.cu)
+  if(hip_FOUND OR CUDA_VERSION VERSION_GREATER_EQUAL 13.1)
+    ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_blackoilintensivequantities_gpu.cu)
+  endif()
+
   # Boost < 1.75 + nvcc = trouble in this test
   if(Boost_VERSION VERSION_GREATER 1.74)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniVector.cu)
