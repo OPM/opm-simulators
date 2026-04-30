@@ -116,6 +116,96 @@ make_gpu_unique_ptr(const T& value)
 }
 
 /**
+ * @brief Deleter that releases a GPU array allocation made with \c cudaMalloc.
+ *
+ * Used by \c make_gpu_unique_ptr_array. Having a named deleter type (rather than a lambda)
+ * makes the resulting \c std::unique_ptr type stable across translation units, which is
+ * important when storing it as a class member.
+ */
+template <class T>
+struct GpuArrayDeleter {
+    void operator()(T* ptr) const noexcept
+    {
+        OPM_GPU_WARN_IF_ERROR(cudaFree(ptr));
+    }
+};
+
+/**
+ * @brief Deleter for objects living in unified (managed) GPU memory.
+ *
+ * Calls the destructor of the contained object before releasing the allocation with
+ * \c cudaFree. Used by \c make_gpu_managed_unique_ptr.
+ */
+template <class T>
+struct GpuManagedDeleter {
+    void operator()(T* ptr) const noexcept
+    {
+        if (ptr != nullptr) {
+            ptr->~T();
+            OPM_GPU_WARN_IF_ERROR(cudaFree(ptr));
+        }
+    }
+};
+
+/**
+ * @brief Creates a unique pointer managing a GPU-allocated array of \p numElements elements.
+ *
+ * This function allocates memory on the GPU for \p numElements elements of type \c T using
+ * \c cudaMalloc. It returns a \c std::unique_ptr that automatically releases the GPU memory
+ * with \c cudaFree when destroyed.
+ *
+ * The returned smart pointer uses the \c T[] specialization, so element access via
+ * \c operator[] is well defined; however, dereferencing the returned pointer on the host is
+ * not safe because the underlying memory lives on the device.
+ *
+ * @tparam T The element type to allocate on the GPU.
+ * @param numElements The number of elements of type \c T to allocate.
+ * @return A \c std::unique_ptr to the GPU-allocated array.
+ */
+template <typename T>
+std::unique_ptr<T[], GpuArrayDeleter<T>>
+make_gpu_unique_ptr_array(std::size_t numElements)
+{
+    T* ptr = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&ptr, numElements * sizeof(T)));
+    return std::unique_ptr<T[], GpuArrayDeleter<T>>(ptr);
+}
+
+/**
+ * @brief Creates a unique pointer managing GPU unified (managed) memory for a single object.
+ *
+ * Allocates one \c T worth of unified memory with \c cudaMallocManaged, then constructs a
+ * \c T in-place using the supplied arguments via placement-new. The returned
+ * \c std::unique_ptr destroys the contained object and releases the unified memory with
+ * \c cudaFree when it goes out of scope.
+ *
+ * Unified memory is accessible from both host and device, so the returned pointer can be
+ * dereferenced directly on either side. This is useful when an object must be visible to
+ * GPU kernels but also needs to be touched from host code (e.g. when a device-side member
+ * holds a pointer into the same unified-memory region).
+ *
+ * @tparam T The type of the object to construct in unified memory.
+ * @tparam Args Argument types forwarded to \c T's constructor.
+ * @param args Arguments forwarded to \c T's constructor.
+ * @return A \c std::unique_ptr owning the unified-memory allocation.
+ */
+template <typename T, class... Args>
+std::unique_ptr<T, GpuManagedDeleter<T>>
+make_gpu_managed_unique_ptr(Args&&... args)
+{
+    void* raw = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMallocManaged(&raw, sizeof(T)));
+    T* ptr = nullptr;
+    try {
+        ptr = new (raw) T(std::forward<Args>(args)...);
+    } catch (...) {
+        OPM_GPU_WARN_IF_ERROR(cudaFree(raw));
+        throw;
+    }
+    return std::unique_ptr<T, GpuManagedDeleter<T>>(ptr);
+}
+
+/**
  * @brief Copies a value from GPU-allocated memory to the host.
  *
  * @param value A pointer to the value on the GPU.
@@ -336,7 +426,9 @@ class ValueAsPointer {
 public:
     using element_type = T;
 
-    ValueAsPointer(const T& t) : value(t) {}
+    OPM_HOST_DEVICE ValueAsPointer() = default;
+
+    OPM_HOST_DEVICE explicit ValueAsPointer(const T& t) : value(t) {}
 
     OPM_HOST_DEVICE T* operator->() {
         return &value;
