@@ -269,7 +269,7 @@ add_test_compareECLFiles(CASENAME polymer_injectivity
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --tolerance-wells=1.e-6 --linear-solver=ilu0)
+                         TEST_ARGS --tolerance-wells=1.e-6)
 
 add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
