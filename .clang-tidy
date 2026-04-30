@@ -1,4 +1,4 @@
-# .clang-tidy-suggested
+# .clang-tidy
 # Goal: minimum + a few extra checks for stricter safety and modernisation.
 # Adds: cppcoreguidelines-special-member-functions,
 #        bugprone-narrowing-conversions,

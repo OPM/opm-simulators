@@ -199,7 +199,7 @@ This produces a `compile_commands.json` file in the build directory.
 
 ### Running clang-tidy
 
-Run on a single file (from the build directory or pointing to `compile_commands.json`):
+Run the following commands from the **repository root** (where the `.clang-tidy` file lives):
 
 ```bash
 clang-tidy -p build/ opm/simulators/your_file.cpp
