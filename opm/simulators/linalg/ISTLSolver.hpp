@@ -52,6 +52,8 @@
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 #include <opm/simulators/linalg/printlinearsolverparameter.hpp>
 
+#include <fmt/format.h>
+
 #include <any>
 #include <cstddef>
 #include <functional>
@@ -223,10 +225,18 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
             if (isIncompatibleWithCprw) {
                 // Polymer injectivity is incompatible with the CPRW linear solver.
+                // Instead of aborting the run, emit a warning and fall back to ILU0
+                // so that polymer injectivity cases work with default parameters.
                 if (parameters_[0].linsolver_ == "cprw" || parameters_[0].linsolver_ == "hybrid") {
-                    OPM_THROW(std::runtime_error,
-                              "The polymer injectivity model is incompatible with the CPRW linear solver.\n"
-                              "Choose a different option, for example --linear-solver=ilu0");
+                    const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
+                    const std::string msg =
+                        fmt::format("The polymer injectivity model is incompatible with the '{}' "
+                                    "linear solver. Falling back to --linear-solver=ilu0.",
+                                    parameters_[0].linsolver_);
+                    if (on_io_rank) {
+                        OpmLog::warning(msg);
+                    }
+                    parameters_[0].linsolver_ = "ilu0";
                 }
             }
 
