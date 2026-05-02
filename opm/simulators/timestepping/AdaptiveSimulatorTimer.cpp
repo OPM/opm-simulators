@@ -165,12 +165,29 @@ namespace Opm
     void AdaptiveSimulatorTimer::
     report(std::ostream& os) const
     {
-        os << "Sub steps started at time = " <<  unit::convert::to( start_time_, unit::day ) << " (days)" << std::endl;
+        os << "Sub steps started at time = "
+           << unit::convert::to(reportStepStartTime(), unit::day) << " (days)" << std::endl;
         for (std::size_t i = 0; i < steps_.size(); ++i)
         {
-            os << " step[ " << i << " ] = " << unit::convert::to( steps_[ i ], unit::day ) << " (days)" << std::endl;
+            os << " step[ " << (report_step_substep_offset_ + i) << " ] = "
+               << unit::convert::to(steps_[i], unit::day) << " (days)" << std::endl;
         }
         os << "sub steps end time = " << unit::convert::to( simulationTimeElapsed(), unit::day ) << " (days)" << std::endl;
+    }
+
+    double AdaptiveSimulatorTimer::reportStepStartTime() const
+    {
+        return report_step_start_time_.value_or(start_time_);
+    }
+
+    double AdaptiveSimulatorTimer::reportStepTotalTime() const
+    {
+        return report_step_total_time_.value_or(total_time_);
+    }
+
+    int AdaptiveSimulatorTimer::reportStepSubstepNum() const
+    {
+        return report_step_substep_offset_ + current_step_;
     }
 
     boost::posix_time::ptime AdaptiveSimulatorTimer::startDateTime() const
