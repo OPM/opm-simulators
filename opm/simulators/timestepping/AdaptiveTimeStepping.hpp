@@ -265,6 +265,8 @@ private:
         double maybeRestrictTimeStepGrowth_(const double dt,
                                             double dt_estimate,
                                             const int restarts) const;
+        double stabilizeTimeStepEstimate_(const double dt,
+                          double dt_estimate) const;
         void maybeUpdateLastSubstepOfSyncTimestep_(double dt);
 
         /** \brief Per-substep tuning/WCYCLE update with save-and-restore

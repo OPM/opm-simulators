@@ -38,6 +38,8 @@
 
 #include <opm/input/eclipse/Schedule/Tuning.hpp>
 
+#include <cmath>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
@@ -889,17 +891,25 @@ run()
             report += substep_report;
 
             ++this->substep_timer_;   // advance by current dt
+            const bool report_step_done = this->substep_timer_.done();
 
-            const int iterations = getNumIterations_(substep_report);
-            auto dt_estimate = timeStepControlComputeEstimate_(
-                                     dt, iterations, this->substep_timer_);
+            if (!report_step_done) {
+                const int iterations = getNumIterations_(substep_report);
+                auto dt_estimate = timeStepControlComputeEstimate_(
+                                         dt, iterations, this->substep_timer_);
 
-            assert(dt_estimate > 0);
-            dt_estimate = maybeRestrictTimeStepGrowth_(dt, dt_estimate, restarts);
+                if (!std::isfinite(dt_estimate) || (dt_estimate <= 0.0)) {
+                    dt_estimate = dt;
+                }
+                dt_estimate = maybeRestrictTimeStepGrowth_(dt, dt_estimate, restarts);
+                dt_estimate = stabilizeTimeStepEstimate_(dt, dt_estimate);
+                setTimeStep_(dt_estimate);
+            }
+
             restarts = 0;         // solver converged, reset restarts counter
 
             maybeReportSubStep_(substep_report);
-            if (this->final_step_ && this->substep_timer_.done()) {
+            if (this->final_step_ && report_step_done) {
                 // if the time step is done we do not need to write it as this will be done
                 // by the simulator anyway.
             }
@@ -907,10 +917,7 @@ run()
                 report.success.output_write_time += writeOutput_();
             }
 
-            // set new time step length
-            setTimeStep_(dt_estimate);
-
-            report.success.converged = this->substep_timer_.done();
+            report.success.converged = report_step_done;
             this->substep_timer_.setLastStepFailed(false);
         }
         else { // in case of no convergence or time step tolerance test failure
@@ -1215,6 +1222,37 @@ maybeRestrictTimeStepGrowth_(const double dt, double dt_estimate, const int rest
     // further restrict time step size growth after convergence problems
     if (restarts > 0) {
         dt_estimate = std::min(growthFactor_() * dt, dt_estimate);
+    }
+
+    return dt_estimate;
+}
+
+
+template<class TypeTag>
+template<class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+stabilizeTimeStepEstimate_(const double dt, double dt_estimate) const
+{
+    if (this->adaptive_time_stepping_.time_step_control_type_ == TimeStepControlType::HardCodedTimeStep) {
+        return dt_estimate;
+    }
+
+    if (!std::isfinite(dt) || !std::isfinite(dt_estimate) || dt <= 0.0 || dt_estimate <= 0.0) {
+        return dt_estimate;
+    }
+
+    constexpr double KeepCurrentBand = 0.05;
+    constexpr double GrowthBlendWeight = 0.5;
+    const double ratio = dt_estimate / dt;
+
+    if (ratio > (1.0 - KeepCurrentBand) && ratio < (1.0 + KeepCurrentBand)) {
+        return dt;
+    }
+
+    if (ratio > 1.0) {
+        return std::exp((1.0 - GrowthBlendWeight) * std::log(dt)
+                        + GrowthBlendWeight * std::log(dt_estimate));
     }
 
     return dt_estimate;

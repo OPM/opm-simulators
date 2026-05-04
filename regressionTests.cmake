@@ -5,6 +5,7 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
+set(timestep_replay_rel_tol 2e-4)
 
 add_test_compareECLFiles(CASENAME spe1flowexp
                          FILENAME SPE1CASE2
@@ -51,6 +52,35 @@ add_multiple_tests(
   REL_TOL ${rel_tol}
   DIR spe1
 )
+
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-timestep-replay-regressionTest.sh "")
+
+add_test_compareECLFiles(CASENAME spe1_timestep_replay
+                         FILENAME SPE1CASE1
+                         SIMULATOR flow
+                         PREFIX compareTimestepReplay
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR spe1)
+
+add_test_compareECLFiles(CASENAME spe9_timestep_replay
+                         FILENAME SPE9_CP_SHORT
+                         SIMULATOR flow
+                         PREFIX compareTimestepReplay
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR spe9)
+
+add_test_compareECLFiles(CASENAME base_model
+                         FILENAME 0_BASE_MODEL6
+                         SIMULATOR flow
+                         PREFIX compareTimestepReplay
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model6
+                         TEST_ARGS --full-time-step-initially=true)
+
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 
 set(_spe1_coarse_tests
   SPE1CASE2_GASWATER

@@ -23,7 +23,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
+#include <limits>
 #include <ostream>
 #include <numeric>
 #include <vector>
@@ -35,6 +37,10 @@
 
 namespace Opm
 {
+    namespace {
+    constexpr double TimerToleranceFactor = 64.0;
+    }
+
     AdaptiveSimulatorTimer::
     AdaptiveSimulatorTimer( const boost::posix_time::ptime simulation_start_time,
                             const double step_length,
@@ -69,6 +75,7 @@ namespace Opm
     {
         ++current_step_;
         current_time_ += dt_;
+        snapCurrentTimeToReportStepEnd();
         assert(dt_ > 0);
         // store used time step sizes
         steps_.push_back( dt_ );
@@ -79,16 +86,23 @@ namespace Opm
     provideTimeStepEstimate( const double dt_estimate )
     {
         double remaining = (total_time_ - current_time_);
+        const double tol = this->timeTolerance(remaining);
+
+        if (remaining <= tol) {
+            current_time_ = total_time_;
+            return;
+        }
+
         // apply max time step if it was set
-        dt_ = std::min( dt_estimate, max_time_step_ );
+        dt_ = std::min(std::max(dt_estimate, tol), max_time_step_);
         assert(dt_ > 0);
         if( remaining > 0 ) {
 
             // set new time step (depending on remaining time)
-            if( 1.05 * dt_ > remaining ) {
+            if ((dt_ + tol) >= remaining) {
                 dt_ = remaining;
                 // check max time step again and use half remaining if too large
-                if( dt_ > max_time_step_ ) {
+                if ((dt_ - max_time_step_) > tol) {
                     dt_ = 0.5 * remaining;
                 }
                 assert(dt_ > 0);
@@ -98,7 +112,7 @@ namespace Opm
             // check for half interval step to avoid very small step at the end
             // remaining *= 0.5;
 
-            if( 1.5 * dt_ > remaining ) {
+            if( (1.5 * dt_) + tol >= remaining ) {
                 dt_ = 0.5 * remaining;
                 assert(dt_ > 0);
                 return;
@@ -122,6 +136,10 @@ namespace Opm
     {
         assert(dt > 0);
         dt_ = dt;
+        const double remaining = total_time_ - current_time_;
+        if (remaining > 0.0 && (dt_ + this->timeTolerance(dt_)) >= remaining) {
+            dt_ = remaining;
+        }
     }
 
     double AdaptiveSimulatorTimer::stepLengthTaken() const
@@ -136,7 +154,10 @@ namespace Opm
 
     double AdaptiveSimulatorTimer::simulationTimeElapsed() const { return current_time_; }
 
-    bool AdaptiveSimulatorTimer::done () const { return (current_time_ >= total_time_) ; }
+    bool AdaptiveSimulatorTimer::done () const
+    {
+        return current_time_ + this->timeTolerance() >= total_time_;
+    }
 
     double AdaptiveSimulatorTimer::averageStepLength() const
     {
@@ -151,14 +172,14 @@ namespace Opm
     double AdaptiveSimulatorTimer::maxStepLength () const
     {
         if (steps_.empty()) return 0.0;
-        return *std::ranges::max_element(steps_);
+        return *std::max_element(steps_.begin(), steps_.end());
     }
 
     /// \brief return min step length used so far
     double AdaptiveSimulatorTimer::minStepLength () const
     {
         if (steps_.empty()) return 0.0;
-        return *std::ranges::min_element(steps_);
+        return *std::min_element(steps_.begin(), steps_.end());
     }
 
     /// \brief report start and end time as well as used steps so far
@@ -176,6 +197,24 @@ namespace Opm
     boost::posix_time::ptime AdaptiveSimulatorTimer::startDateTime() const
     {
         return *start_date_time_;
+    }
+
+    double AdaptiveSimulatorTimer::timeTolerance(double reference) const
+    {
+        const double scale = std::max({1.0,
+                                       std::abs(start_time_),
+                                       std::abs(total_time_),
+                                       std::abs(current_time_),
+                                       std::abs(dt_),
+                                       std::abs(reference)});
+        return TimerToleranceFactor * std::numeric_limits<double>::epsilon() * scale;
+    }
+
+    void AdaptiveSimulatorTimer::snapCurrentTimeToReportStepEnd()
+    {
+        if (current_time_ + this->timeTolerance() >= total_time_) {
+            current_time_ = total_time_;
+        }
     }
 
     /// return copy of object

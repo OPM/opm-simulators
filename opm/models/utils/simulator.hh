@@ -395,7 +395,7 @@ public:
      * \param value The new value for the time step size \f$\mathrm{[s]}\f$
      */
     void setTimeStepSize(Scalar value)
-    { timeStepSize_ = value; }
+    { timeStepSize_ = float(value); }
 
     /*!
      * \brief Set the current time step index to a given value.

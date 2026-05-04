@@ -41,6 +41,17 @@
 
 namespace Opm
 {
+    namespace {
+    constexpr double TimeControlDeadbandFactor = 1e-3;
+    constexpr double HardcodedTimeToleranceFactor = 64.0;
+
+    double scaledTolerance(const double a, const double b, const double c = 0.0)
+    {
+        const double scale = std::max({1.0, std::abs(a), std::abs(b), std::abs(c)});
+        return HardcodedTimeToleranceFactor * std::numeric_limits<double>::epsilon() * scale;
+    }
+    }
+
     ////////////////////////////////////////////////////////
     //
     //  InterationCountTimeStepControl Implementation
@@ -128,12 +139,23 @@ namespace Opm
         std::string::size_type sz;
         std::string line;
         while ( std::getline(infile, line)) {
-            if( line[0] != '-') { // ignore lines starting with '-'
-                const double time = std::stod(line,&sz); // read the first number i.e. the actual substep time
-                subStepTime_.push_back( time * unit::day );
+            if (line.empty() || line[0] == '-') {
+                continue;
             }
 
+            const double time = std::stod(line,&sz); // read the first number i.e. the actual substep time
+            subStepTime_.push_back( time * unit::day );
+
         }
+
+        std::sort(subStepTime_.begin(), subStepTime_.end());
+        subStepTime_.erase(std::unique(subStepTime_.begin(),
+                                       subStepTime_.end(),
+                                       [](const double lhs, const double rhs) {
+                                           return std::abs(lhs - rhs) <= scaledTolerance(lhs, rhs);
+                                       }),
+                           subStepTime_.end());
+
     }
 
     HardcodedTimeStepControl HardcodedTimeStepControl::serializationTestObject()
@@ -145,14 +167,26 @@ namespace Opm
     }
 
     double
-    HardcodedTimeStepControl::computeTimeStepSize(const double /*dt */,
+    HardcodedTimeStepControl::computeTimeStepSize(const double dt,
                                                   const int /*iterations */,
                                                   const RelativeChangeInterface& /* relativeChange */,
                                                   const AdaptiveSimulatorTimer& substepTimer) const
     {
+        const double currentTime = substepTimer.simulationTimeElapsed();
+        const double tol = scaledTolerance(currentTime, substepTimer.totalTime(), dt);
         auto nextTime
-            = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), substepTimer.simulationTimeElapsed());
-        return (*nextTime - substepTimer.simulationTimeElapsed());
+            = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), currentTime + tol);
+
+        while (nextTime != subStepTime_.end() && (*nextTime - currentTime) <= tol) {
+            ++nextTime;
+        }
+
+        if (nextTime == subStepTime_.end()) {
+            const double remaining = substepTimer.totalTime() - currentTime;
+            return remaining > tol ? remaining : std::max(dt, tol);
+        }
+
+        return std::max(*nextTime - currentTime, tol);
     }
 
     bool HardcodedTimeStepControl::operator==(const HardcodedTimeStepControl& ctrl) const
@@ -190,6 +224,9 @@ namespace Opm
                                             const RelativeChangeInterface& relChange,
                                             const AdaptiveSimulatorTimer& /* substepTimer */) const
     {
+        const double upperTol = tol_ * (1.0 + TimeControlDeadbandFactor);
+        const double lowerTol = tol_ * (1.0 - TimeControlDeadbandFactor);
+
         // shift errors
         for( int i=0; i<2; ++i ) {
             errors_[ i ] = errors_[i+1];
@@ -202,7 +239,7 @@ namespace Opm
             assert(std::isfinite(errors_[i]));
         }
 
-        if( errors_[2] > tol_ )
+        if( errors_[2] > upperTol )
         {
             // adjust dt by given tolerance
             const double newDt = dt * tol_ / error;
@@ -210,6 +247,12 @@ namespace Opm
                     OpmLog::debug(fmt::format("Suggested next time step size (from PID controller): {} days",
                                               unit::convert::to( newDt, unit::day )));
             return newDt;
+        }
+        else if (errors_[2] >= lowerTol)
+        {
+            if (verbose_)
+                OpmLog::debug("Relative change is within timestep-control deadband; keeping current step size.");
+            return dt;
         }
         else if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
         {
@@ -446,11 +489,12 @@ namespace Opm
     timeStepAccepted(const double error, const double timeStepJustCompleted) const
     {
         bool acceptTimeStep = true;
+        const double upperTol = tolerance_ * (1.0 + TimeControlDeadbandFactor);
 
         // Reject time step if chosen tolerance test version fails
         if (toleranceTestVersion_ == ToleranceTestVersions::Standard)
         {
-            if (rejectCompletedStep_ && error > tolerance_)
+            if (rejectCompletedStep_ && error > upperTol)
             {
                 acceptTimeStep = false;
             }
@@ -460,7 +504,7 @@ namespace Opm
             const std::array<double, 3> tempErrors{errors_[1], errors_[2], error};
             const std::array<double, 3> tempTimeSteps{timeSteps_[1], timeSteps_[2], timeStepJustCompleted};
             const double stepFactor = timeStepFactor(tempErrors, tempTimeSteps);
-            if (rejectCompletedStep_ && stepFactor < maxReductionTimeStep_)
+            if (rejectCompletedStep_ && stepFactor < maxReductionTimeStep_ * (1.0 - TimeControlDeadbandFactor))
             {
                 acceptTimeStep = false;
             }

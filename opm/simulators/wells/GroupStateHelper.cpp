@@ -45,6 +45,14 @@ namespace Opm
 
 namespace {
 
+constexpr double ControlSwitchDeadbandFactor = 1e-3;
+
+template <typename Scalar>
+bool exceedsTargetWithDeadband(const Scalar current, const Scalar target)
+{
+    return current > target * Scalar(1.0 + ControlSwitchDeadbandFactor);
+}
+
 bool hasInjectionTopupControl(const Group::GroupInjectionProperties& injection)
 {
     return (injection.injection_controls & static_cast<int>(Group::InjectionCMode::RESV)) != 0
@@ -236,7 +244,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
     if (current_rate_available > 1e-12)
         scale = target_rate_available / current_rate_available;
 
-    return std::make_pair(current_rate_available > target_rate_available, scale);
+    return std::make_pair(exceedsTargetWithDeadband(current_rate_available, target_rate_available), scale);
 }
 
 template <typename Scalar, typename IndexTraits>
@@ -378,7 +386,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsProd(const std::stri
     if (current_rate_available > 1e-12)
         scale = target_rate_available / current_rate_available;
 
-    return std::make_pair(current_rate_available > target_rate_available, scale);
+    return std::make_pair(exceedsTargetWithDeadband(current_rate_available, target_rate_available), scale);
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -1868,7 +1876,7 @@ checkProductionRateConstraint_(const Group& group,
     if (currentControl == cmode) {
         return {Group::ProductionCMode::NONE, Scalar(1.0)};
     }
-    if (target < current_rate) {
+    if (exceedsTargetWithDeadband(current_rate, target)) {
         Scalar scale = 1.0;
         if (current_rate > 1e-12)
             scale = target / current_rate;

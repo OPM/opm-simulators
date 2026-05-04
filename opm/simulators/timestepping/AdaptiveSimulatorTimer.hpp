@@ -129,6 +129,10 @@ namespace Opm
         std::vector< double > steps_;
         bool last_step_failed_;
 
+    private:
+        double timeTolerance(double reference = 0.0) const;
+        void snapCurrentTimeToReportStepEnd();
+
     };
 
 } // namespace Opm

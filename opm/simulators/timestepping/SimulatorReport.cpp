@@ -25,6 +25,7 @@
 
 #include <cstddef>
 #include <iomanip>
+#include <limits>
 #include <ostream>
 #include <fmt/format.h>
 
@@ -393,10 +394,11 @@ namespace Opm
     void SimulatorReport::fullReports(std::ostream& os) const
     {
         os << "  Time(day)  TStep(day)  Assembly    LSetup    LSolve    LocSol    Update    Output WellIt Lins NewtIt LinIt Conv\n";
+        constexpr auto preciseTimeDigits = 17;//std::numeric_limits<double>::max_digits10;
         for (std::size_t i = 0; i < this->stepreports.size(); ++i) {
             const SimulatorReportSingle& sr = this->stepreports[i];
-            os.precision(10);
-            os << std::defaultfloat;
+            os.precision(preciseTimeDigits);
+            //os << std::defaultfloat;
             os << std::setw(11) << unit::convert::to(sr.global_time, unit::day) << " ";
             os << std::setw(11) << unit::convert::to(sr.timestep_length, unit::day) << " ";
             os.precision(4);
