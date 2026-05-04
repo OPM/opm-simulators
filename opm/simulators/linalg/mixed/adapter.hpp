@@ -17,8 +17,26 @@
 
 #include <opm/simulators/linalg/mixed/MatrixWrapper.hpp>
 
+
+
 namespace Dune
 {
+
+
+template <class Matrix, class Vector, class Comm>
+struct MixedOperator
+{
+    using type = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Comm>;
+    //static std::shared_ptr<type> mixed_operator(Matrix &M, Comm comm) {return std:make_shared<type>(M,comm);}
+};
+
+template <class Matrix, class Vector>
+struct MixedOperator<Matrix, Vector, Dune::Amg::SequentialInformation>
+{
+    using type = Dune::MatrixAdapter<Matrix, Vector, Vector>;
+};
+
+
 template <class Comm, class Operator, class Vector>
 class MixedAdapter:public InverseOperator<Vector, Vector>
 {
@@ -33,8 +51,11 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
 
     //using SingleMatrixType  = Dune::BCRSMatrix<Opm::MatrixBlock<float, block_size, block_size>>;
     using SingleMatrixType  = MatrixWrapper<Vector, block_size>;
-    using MixedOperatorType = Dune::OverlappingSchwarzOperator<SingleMatrixType, Vector, Vector, Comm>;
+    //using MixedOperatorType = Dune::OverlappingSchwarzOperator<SingleMatrixType, Vector, Vector, Comm>;
+    using MixedOperatorType = MixedOperator<SingleMatrixType, Vector, Comm>::type;
     //using MixedOperatorType = Dune::MatrixAdapter<SingleMatrixType, Vector, Vector>;
+
+
 
     MixedAdapter(Operator *op,
                  std::shared_ptr<AbstractScalarProductType> sp,
@@ -73,9 +94,15 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
 
         //initializemixedoperator
         double_operator_ = op;
+        if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>)
+        {
+            mixed_operator_ = std::make_shared<MixedOperatorType>(B);
+        }
+        else
+        {
+            mixed_operator_ = std::make_shared<MixedOperatorType>(B,comm);
+        }
 
-        mixed_operator_ = std::make_shared<MixedOperatorType>(B,comm);
-        //mixed_operator_ = std::make_shared<MixedOperatorType>(B);
 
         //initialize bicgstab solver from Dune
         solver_ = std::make_shared<Dune::BiCGSTABSolver<Vector>>(
