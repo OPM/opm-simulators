@@ -60,6 +60,7 @@ namespace Opm {
         using Base::has_solvent;
         using Base::has_polymer;
         using Base::has_energy;
+        using Base::has_brine;
         using Base::Water;
         using Base::Oil;
         using Base::Gas;
@@ -95,7 +96,7 @@ namespace Opm {
                                                      has_energy,
                                                      Indices::compositionSwitchIdx >= 0,
                                                      /*has_watVapor*/ false,
-                                                     /*has_brine*/ false,
+                                                     has_brine,
                                                      /*has_saltPrecip*/ false,
                                                      /*has_disgas_in_water*/ false,
                                                      has_solvent,
