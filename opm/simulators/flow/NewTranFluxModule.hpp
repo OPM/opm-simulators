@@ -300,6 +300,8 @@ public:
                                         Vex,
                                         I,
                                         J,
+                                        zIn,
+                                        zEx,
                                         distZ*g,
                                         thpresInToEx,
                                         thpresExToIn,
@@ -338,6 +340,8 @@ public:
                                                             const Scalar Vex,
                                                             const unsigned globalIndexIn,
                                                             const unsigned globalIndexEx,
+                                                            const Scalar zIn,
+                                                            const Scalar zEx,
                                                             const Scalar distZg,
                                                             const Scalar thpresInToEx,
                                                             const Scalar thpresExToIn,
@@ -362,7 +366,13 @@ public:
         Evaluation rhoAvg = (rhoIn + rhoEx)/2;
 
         if constexpr (enableConvectiveMixing) {
-            ConvectiveMixingModule::modifyAvgDensity(rhoAvg, intQuantsIn, intQuantsEx, phaseIdx, moduleParams.convectiveMixingModuleParam);
+            ConvectiveMixingModule::modifyAvgDensity(rhoAvg,
+                                                     intQuantsIn,
+                                                     intQuantsEx,
+                                                     phaseIdx,
+                                                     zIn,
+                                                     zEx,
+                                                     moduleParams.convectiveMixingModuleParam);
         }
 
         const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);

@@ -454,6 +454,7 @@ namespace Opm
     private:
         Eval connectionRateEnergy(const std::vector<EvalWell>& cq_s,
                                   const IntensiveQuantities& intQuants,
+                                  Scalar depth,
                                   DeferredLogger& deferred_logger) const;
 
         // density of the first perforation, might not be from this rank

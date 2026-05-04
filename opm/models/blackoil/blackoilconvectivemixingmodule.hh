@@ -111,6 +111,8 @@ public:
                                                  const IntensiveQuantities& intQuantsIn,
                                                  const IntensiveQuantities& intQuantsEx,
                                                  const unsigned phaseIdx,
+                                                 const Scalar zIn,
+                                                 const Scalar zEx,
                                                  const CMMParam& info) {
         // Local constexpr aliases avoid nvcc's failure to resolve class-scope
         // static constexpr members in device code.
@@ -142,7 +144,7 @@ public:
         const auto& bLiquidIn =
             fsys.phaseIsActive(waterPhaseIdx)
                 ? fsys.waterPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
-                                                                         t_in, p_in, Evaluation(0.0), salt_in)
+                                                                         t_in, p_in, Evaluation(0.0), salt_in, Evaluation(zIn))
                 : fsys.oilPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
                                                                  t_in, p_in, Evaluation(0.0));
 
@@ -160,7 +162,7 @@ public:
         const auto bLiquidEx =
             fsys.phaseIsActive(waterPhaseIdx)
                 ? fsys.waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
-                                                                       t_ex, p_ex, Scalar{0.0}, salt_ex)
+                                                                       t_ex, p_ex, Scalar{0.0}, salt_ex, zEx)
                 : fsys.oilPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
                                                                      t_ex, p_ex, Scalar{0.0});
 
@@ -204,6 +206,8 @@ public:
                                 intQuantsEx,
                                 globalIndexIn,
                                 globalIndexEx,
+                                zIn,
+                                zEx,
                                 distZ * g,
                                 trans,
                                 faceArea,
@@ -220,6 +224,8 @@ public:
                                                         const IntensiveQuantities& intQuantsEx,
                                                         const unsigned globalIndexIn,
                                                         const unsigned globalIndexEx,
+                                                        const Scalar zIn,
+                                                        const Scalar zEx,
                                                         const Scalar distZg,
                                                         const Scalar trans,
                                                         const Scalar faceArea,
@@ -254,7 +260,7 @@ public:
         const auto bLiquidSatIn =
             fsys.phaseIsActive(waterPhaseIdx)
                 ? fsys.waterPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
-                                                                       t_in, p_in, rssat_in, salt_in)
+                                                                       t_in, p_in, rssat_in, salt_in, Evaluation(zIn))
                 : fsys.oilPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
                                                                      t_in, p_in, rssat_in);
 
@@ -277,7 +283,7 @@ public:
         const auto bLiquidSatEx =
             fsys.phaseIsActive(waterPhaseIdx)
                 ? fsys.waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
-                                                                       t_ex, p_ex, rssat_ex, salt_ex)
+                                                                       t_ex, p_ex, rssat_ex, salt_ex, zEx)
                 : fsys.oilPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
                                                                      t_ex, p_ex, rssat_ex);
 
@@ -356,6 +362,7 @@ template <class TypeTag>
 class BlackOilConvectiveMixingIntensiveQuantities<TypeTag, /*enableConvectiveMixingV=*/true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
@@ -364,17 +371,22 @@ public:
      * \brief Compute the intensive quantities needed to handle convective dissolution
      *
      */
-    void updateSaturatedDissolutionFactor_()
+    void updateSaturatedDissolutionFactor_(Scalar depth)
     {
         const auto liquidPhaseIdx =
             FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
                 ? FluidSystem::waterPhaseIdx
                 : FluidSystem::oilPhaseIdx;
 
+        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
+        paramCache.setRegionIndex(asImp_().pvtRegionIndex());
+        paramCache.setDepth(depth);
+        paramCache.updateAll(asImp_().fluidState());
+
         const Evaluation SoMax = 0.0;
         saturatedDissolutionFactor_ = FluidSystem::saturatedDissolutionFactor(asImp_().fluidState(),
+                                                                              paramCache,
                                                                               liquidPhaseIdx,
-                                                                              asImp_().pvtRegionIndex(),
                                                                               SoMax);
     }
 

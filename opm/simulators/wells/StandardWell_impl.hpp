@@ -558,7 +558,9 @@ namespace Opm
 
         if constexpr (has_energy) {
             connectionRates[perf][Indices::contiEnergyEqIdx] =
-                connectionRateEnergy(cq_s, intQuants, deferred_logger);
+                connectionRateEnergy(cq_s, intQuants,
+                                     simulator.problem().dofCenterDepth(cell_idx),
+                                     deferred_logger);
             ws.energy_rate += getValue(connectionRates[perf][Indices::contiEnergyEqIdx]);
         }
 
@@ -2667,6 +2669,7 @@ namespace Opm
     StandardWell<TypeTag>::
     connectionRateEnergy(const std::vector<EvalWell>& cq_s,
                          const IntensiveQuantities& intQuants,
+                         const Scalar depth,
                          DeferredLogger& deferred_logger) const
     {
         auto fs = intQuants.fluidState();
@@ -2722,6 +2725,7 @@ namespace Opm
                 typename FluidSystem::template ParameterCache<FsValueType> paramCache;
                 const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
                 paramCache.setRegionIndex(pvtRegionIdx);
+                paramCache.setDepth(depth);
                 paramCache.updatePhase(fs, phaseIdx);
 
                 const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);

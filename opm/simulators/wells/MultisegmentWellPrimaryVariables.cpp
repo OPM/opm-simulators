@@ -309,6 +309,8 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
         const Scalar temperature = 0.0; // Ignore thermal effects
         const Scalar saltConc = 0.0;    // Ignore salt precipitation
         const Scalar Rvw = 0.0;         // Ignore vaporised water.
+        const Scalar depth = well_.wellEcl().getSegments()
+            .getFromSegmentNumber(segments.segment_number()[seg]).depth();
 
         Scalar rsMax = 0.0;
         Scalar rvMax = 0.0;
@@ -351,7 +353,7 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
                  std::max(Scalar{0.0}, Rv),
                  Scalar{0.0}, // Rsw
                  Scalar{0.0}, // Rvw
-                 temperature, saltConc, surf_rates, resv_rates);
+                 temperature, saltConc, depth, surf_rates, resv_rates);
         }
 
         // 3) Local condition holdup fractions.
@@ -392,7 +394,8 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
             segments.phase_viscosity[seg * well_.numPhases() + water_pos] =
                 FluidSystem::waterPvt().viscosity(pvtReg, temperature,
                                                   segment_pressure[seg],
-                                                  Scalar{0.0} /*Rsw*/, saltConc);
+                                                  Scalar{0.0} /*Rsw*/, saltConc,
+                                                  depth);
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {

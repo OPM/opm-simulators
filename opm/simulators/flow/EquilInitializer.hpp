@@ -171,14 +171,19 @@ public:
                     continue;
                 fluidState.setPressure(phaseIdx, initialState.press()[phaseIdx][elemIdx]);
 
-                const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, regionIdx);
+                typename FluidSystem::template ParameterCache<Scalar> paramCache;
+                paramCache.setRegionIndex(regionIdx);
+                paramCache.setDepth(simulator_.problem().dofCenterDepth(elemIdx));
+                paramCache.updateAll(fluidState);
+
+                const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, paramCache, phaseIdx);
                 fluidState.setInvB(phaseIdx, b);
 
-                const auto& rho = FluidSystem::density(fluidState, phaseIdx, regionIdx);
+                const auto& rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
                 fluidState.setDensity(phaseIdx, rho);
 
                 if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
-                    const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, regionIdx);
+                    const auto& h = FluidSystem::enthalpy(fluidState, paramCache, phaseIdx);
                     fluidState.setEnthalpy(phaseIdx, h);
                 }
             }
