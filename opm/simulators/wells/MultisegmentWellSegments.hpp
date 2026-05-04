@@ -48,13 +48,15 @@ class MultisegmentWellSegments
     using EvalWell = typename PrimaryVariables::EvalWell;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
 
+    static constexpr bool enable_energy = Indices::enableFullyImplicitThermal;
+
 public:
     MultisegmentWellSegments(const int numSegments,
                              const ParallelWellInfo<Scalar>& parallel_well_info,
                              WellInterfaceGeneric<Scalar, IndexTraits>& well);
 
-    void computeFluidProperties(const EvalWell& temperature,
-                                const EvalWell& saltConcentration,
+    void computeFluidProperties(const Scalar firstPerfTemperature,
+                                const Scalar firstPerfSaltConcentration,
                                 const PrimaryVariables& primary_variables,
                                 DeferredLogger& deferred_logger);
 
@@ -68,8 +70,8 @@ public:
     Scalar getPressureDiffSegLocalPerf(const int seg,
                                        const int local_perf_index) const;
 
-    EvalWell getSurfaceVolume(const EvalWell& temperature,
-                              const EvalWell& saltConcentration,
+    EvalWell getSurfaceVolume(const Scalar firstPerfTemperature,
+                              const Scalar firstPerfSaltConcentration,
                               const PrimaryVariables& primary_variables,
                               const int seg_idx,
                               DeferredLogger& deferred_logger) const;

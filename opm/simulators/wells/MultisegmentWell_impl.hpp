@@ -1149,9 +1149,6 @@ namespace Opm
         // get the temperature for later use. It is only useful when we are not handling
         // thermal related simulation
         // basically, it is a single value for all the segments
-
-        EvalWell temperature;
-        EvalWell saltConcentration;
         // not sure how to handle the pvt region related to segment
         // for the current approach, we use the pvt region of the first perforated cell
         // although there are some text indicating using the pvt region of the lowest
@@ -1159,11 +1156,11 @@ namespace Opm
         // TODO: later to investigate how to handle the pvt region
 
         auto info = this->getFirstPerforationFluidStateInfo(simulator);
-        temperature.setValue(std::get<0>(info));
-        saltConcentration.setValue(std::get<1>(info));
+        const Scalar firstPerfTemperature = std::get<0>(info);
+        const Scalar firstPerfSaltConcentration = std::get<1>(info);
 
-        this->segments_.computeFluidProperties(temperature,
-                                               saltConcentration,
+        this->segments_.computeFluidProperties(firstPerfTemperature,
+                                               firstPerfSaltConcentration,
                                                this->primary_variables_,
                                                deferred_logger);
     }
@@ -2153,15 +2150,12 @@ namespace Opm
                             const int seg_idx,
                             DeferredLogger& deferred_logger) const
     {
-        EvalWell temperature;
-        EvalWell saltConcentration;
-
         auto info = this->getFirstPerforationFluidStateInfo(simulator);
-        temperature.setValue(std::get<0>(info));
-        saltConcentration.setValue(std::get<1>(info));
+        const Scalar firstPerfTemperature = std::get<0>(info);
+        const Scalar firstPerfSaltConcentration = std::get<1>(info);
 
-        return this->segments_.getSurfaceVolume(temperature,
-                                                saltConcentration,
+        return this->segments_.getSurfaceVolume(firstPerfTemperature,
+                                                firstPerfSaltConcentration,
                                                 this->primary_variables_,
                                                 seg_idx,
                                                 deferred_logger);
