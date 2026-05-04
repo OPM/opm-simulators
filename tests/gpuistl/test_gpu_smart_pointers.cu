@@ -145,3 +145,44 @@ BOOST_AUTO_TEST_CASE(TestCopyToGPU) {
     BOOST_CHECK_EQUAL(valueFromDeviceArray[2], 3.0);
     BOOST_CHECK_EQUAL(valueFromDeviceArray[3], 4.0);
 }
+
+BOOST_AUTO_TEST_CASE(TestUniquePointerArray)
+{
+    constexpr std::size_t numElements = 5;
+    auto arrayPtr = Opm::gpuistl::make_gpu_unique_ptr_array<double>(numElements);
+
+    const std::array<double, numElements> hostInput {1.5, 2.5, 3.5, 4.5, 5.5};
+    OPM_GPU_SAFE_CALL(cudaMemcpy(arrayPtr.get(),
+                                 hostInput.data(),
+                                 numElements * sizeof(double),
+                                 cudaMemcpyHostToDevice));
+
+    std::array<double, numElements> hostOutput {};
+    OPM_GPU_SAFE_CALL(cudaMemcpy(hostOutput.data(),
+                                 arrayPtr.get(),
+                                 numElements * sizeof(double),
+                                 cudaMemcpyDeviceToHost));
+
+    for (std::size_t i = 0; i < numElements; ++i) {
+        BOOST_CHECK_EQUAL(hostOutput[i], hostInput[i]);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(TestManagedUniquePointer)
+{
+    // Default-constructed payload.
+    auto managedPtr = Opm::gpuistl::make_gpu_managed_unique_ptr<SomeStruct>();
+    BOOST_CHECK_EQUAL(managedPtr->isCalled, false);
+
+    // Mutate from the device through a regular kernel; the unified-memory
+    // pointer is dereferenceable on the device, just like cudaMallocManaged.
+    callFunction<<<1, 1>>>(Opm::gpuistl::make_view(managedPtr));
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+
+    // Read back directly from host (the whole point of unified memory).
+    BOOST_CHECK_EQUAL(managedPtr->isCalled, true);
+
+    // Forwarded constructor arguments.
+    auto managedDouble = Opm::gpuistl::make_gpu_managed_unique_ptr<double>(7.25);
+    BOOST_CHECK_EQUAL(*managedDouble, 7.25);
+}
