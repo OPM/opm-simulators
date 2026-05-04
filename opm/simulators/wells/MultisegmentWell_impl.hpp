@@ -1155,6 +1155,12 @@ namespace Opm
         auto info = this->getFirstPerforationFluidStateInfo(simulator);
         temperature.setValue(std::get<0>(info));
         saltConcentration = this->extendEval(std::get<1>(info));
+        if (getValue(saltConcentration) >= 1.e-6) {
+            OPM_THROW(std::runtime_error,
+                      "Non-zero salt concentration (" + std::to_string(getValue(saltConcentration)) +
+                      ") encountered in MultisegmentWell segment fluid property computation for well " +
+                      this->name() + ". Salt concentration is not supported.");
+        }
 
         this->segments_.computeFluidProperties(temperature,
                                                saltConcentration,
