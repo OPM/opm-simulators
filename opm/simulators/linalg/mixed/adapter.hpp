@@ -15,27 +15,6 @@
 
 #include <dune/istl/matrixindexset.hh>
 
-/*
-// Type definitions
-typedef Dune::BCRSMatrix<Dune::FieldMatrix<double,1,1>> BCRSMat;
-typedef Dune::BlockVector<Dune::FieldVector<double,1>> BVector;
-typedef Dune::OwnerOverlapCopyCommunication<int,int> Communication;
-
-//Assume parallel_A is the assembled BCRSMatrix and comm is the communicator
-//1. Create the parallel operator
-typedef Dune::OverlappingSchwarzOperator<BCRSMat,BVector,BVector,Communication> Operator;
-Operator op(parallel_A,comm);
-
-//2. Create the scalar product
-typedef Dune::OverlappingSchwarzScalarProduct<BVector,Communication> ScalarProduct;
-ScalarProduct sp(comm);
-
-//3. Create the parallel preconditioner (e.g., usingSSOR)
-typedef Dune::SeqSSOR<BCRSMat,BVector,BVector> Smoother;
-typedef Dune::BlockPreconditioner<BVector,BVector,Communication,Smoother> ParPrec;
-Smoother smoother(parallel_A,1,1.0);
-ParPrec pprec(smoother,comm);
-*/
 
 namespace Dune
 {
@@ -52,11 +31,8 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
     static constexpr auto block_size = domain_type::block_type::dimension;
 
     using SingleMatrixType  = Dune::BCRSMatrix<Opm::MatrixBlock<float, block_size, block_size>>;
-#if HAVE_MPI
     using MixedOperatorType = Dune::OverlappingSchwarzOperator<SingleMatrixType, Vector, Vector, Comm>;
-#else // HAVE_MPI
-    using MixedOperatorType = Dune::MatrixAdapter<SingleMatrixType, Vector, Vector>;
-#endif // HAVE_MPI
+    //using MixedOperatorType = Dune::MatrixAdapter<SingleMatrixType, Vector, Vector>;
 
     MixedAdapter(Operator *op,
                  std::shared_ptr<AbstractScalarProductType> sp,
@@ -94,11 +70,8 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
         //initializemixedoperator
         double_operator_ = op;
 
-#if HAVE_MPI
         mixed_operator_ = std::make_shared<MixedOperatorType>(B,comm);
-#else // HAVE_MPI
-        mixed_operator_ = std::make_shared<MixedOperatorType>(B);
-#endif // HAVE_MPI
+        //mixed_operator_ = std::make_shared<MixedOperatorType>(B);
 
         //pointerstodataarrays
         //double_data_=&A[0][0][0][0];
@@ -125,25 +98,7 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
         float *flt        = &B[0][0][0][0];
         int N = A.nonzeroes()*block_size*block_size;
         for(int k=0;k<N;k++) flt[k] = dbl[k];
-/*
-        //demote jacobian to single precision
-        auto &A = double_operator_->getmat();
-        auto &B = *single_matrix_;
 
-        int irow=0;
-        int icol=0;
-        for(auto row=A.begin();row!=A.end();row++)
-        {
-            for(unsigned int i=0;i<row->getsize();i++)
-            {
-                icol = row->getindexptr()[i];
-                for(int ii=0;ii<block_size;ii++)
-                for(int jj=0;jj<block_size;jj++)
-                B[irow][icol][ii][jj]=A[irow][icol][ii][jj];
-            }
-            irow++;
-        }
-*/
         //apply bicgstab solver from Dune
         solver_->apply(x,b,res);
     }
