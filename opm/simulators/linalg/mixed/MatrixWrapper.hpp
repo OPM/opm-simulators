@@ -1,0 +1,73 @@
+#ifndef OPM_MIXED_MATRIX_HEADER_INCLUDED
+#define OPM_MIXED_MATRIX_HEADER_INCLUDED
+
+
+#include <opm/simulators/linalg/mixed/bsr.h>
+
+
+template <class Vector, int b>
+class MatrixWrapper
+{
+    public:
+    virtual void mv(const Vector& x, Vector& y) const;
+    virtual void umv(const Vector& x, Vector& y) const;
+    virtual void usmv(double alpha, const Vector& x, Vector& y) const;
+
+
+    MatrixWrapper(int nrows, int nnz)
+    {
+        nnz_=nnz;
+        M_ = bsr_alloc();
+        bsr_init(M_, nrows, nnz, b);
+
+    }
+
+    void update(double const *data);
+
+    int *rowptr(){return M_->rowptr;}
+    int *colidx(){return M_->colidx;}
+
+    private:
+    int nnz_;
+    bsr_matrix  *M_;
+};
+
+template <class Vector, int b>
+void MatrixWrapper<Vector,b>::
+mv(const Vector& x, Vector& y) const
+{
+    bsr_vmspmv3(M_, &x[0][0], &y[0][0]);
+}
+
+template <class Vector, int b>
+void MatrixWrapper<Vector,b>::
+umv(const Vector& x, Vector& y) const
+{
+    bsr_vmspumv3(M_, &x[0][0], &y[0][0], 1.0);
+}
+
+template <class Vector, int b>
+void MatrixWrapper<Vector,b>::
+usmv(double alpha, const Vector& x, Vector& y) const
+{
+    bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
+}
+
+template <class Vector, int b>
+void MatrixWrapper<Vector,b>::
+update(double const *data)
+{
+    // transpose each dense block to make them column-major
+    int bb=b*b;
+    double B[bb];
+    for(int k=0;k<nnz_;k++)
+    {
+        for(int i=0;i<b;i++) for(int j=0;j<b;j++) B[b*j+i] = data[bb*k + b*i + j];
+        for(int i=0;i<bb;i++) M_->dbl[bb*k + i] = B[i];
+    }
+
+    // downcast to allow mixed precision
+    bsr_downcast(M_);
+}
+
+#endif // OPM_MIXED_MATRIX_HEADER_INCLUDED
