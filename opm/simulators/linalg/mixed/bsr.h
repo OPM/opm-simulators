@@ -64,6 +64,19 @@ void bsr_init(bsr_matrix *A, int nrows, int nnz, int b);
  * @param x Pointer to input vector.
  * @param y Pointer to output vector.
  */
+void bsr_vmspumv3(bsr_matrix *A, const double *x, double *y, double alpha);
+
+/**
+ * @brief Sparse matrix-vector multiplication in mixed precision.
+ *
+ * @note Function is specialized for 3x3 block-sparse matrices.
+ * @note Function uses AVX2 intrinsics.
+ *
+ * @param A Pointer to bsr matrix.
+ * @param x Pointer to input vector.
+ * @param y Pointer to output vector.
+ */
+
 void bsr_vmspmv3(bsr_matrix *A, const double *x, double *y);
 
 /**

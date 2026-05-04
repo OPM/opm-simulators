@@ -15,6 +15,7 @@
 
 #include <dune/istl/matrixindexset.hh>
 
+#include <opm/simulators/linalg/mixed/MatrixWrapper.hpp>
 
 namespace Dune
 {
@@ -30,7 +31,8 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
     using typename InverseOperator<Vector, Vector>::domain_type;
     static constexpr auto block_size = domain_type::block_type::dimension;
 
-    using SingleMatrixType  = Dune::BCRSMatrix<Opm::MatrixBlock<float, block_size, block_size>>;
+    //using SingleMatrixType  = Dune::BCRSMatrix<Opm::MatrixBlock<float, block_size, block_size>>;
+    using SingleMatrixType  = MatrixWrapper<Vector, block_size>;
     using MixedOperatorType = Dune::OverlappingSchwarzOperator<SingleMatrixType, Vector, Vector, Comm>;
     //using MixedOperatorType = Dune::MatrixAdapter<SingleMatrixType, Vector, Vector>;
 
@@ -45,37 +47,35 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
 
         auto &A = op->getmat();
         int nrows = A.N();
-        //int nnz = A.nonzeroes();
+        int nnz = A.nonzeroes();
         //int b = A[0][0].N();
 
-        single_matrix_ = std::make_shared<SingleMatrixType>();
+        double_data_ = &A[0][0][0][0];
+        single_matrix_ = std::make_shared<SingleMatrixType>(nrows,nnz);
         auto &B = *single_matrix_;
 
-        //copy sparsity pattern
-        int irow=0;
-        int icol=0;
-        MatrixIndexSet sparsity(nrows,nrows);
-        for(auto row=A.begin();row!=A.end();row++)
+        // copy sparsity pattern
+        int *rows = single_matrix_->rowptr();
+        int *cols = single_matrix_->colidx();
+
+        int irow = 0;
+        int icol = 0;
+        rows[0]  = 0;
+        for(auto row=A.begin(); row!=A.end(); row++)
         {
-            for(unsigned int i=0;i<row->getsize();i++)
+            for(unsigned int i=0; i<row->getsize(); i++)
             {
-                icol = row->getindexptr()[i];
-                sparsity.add(irow,icol);
+                cols[icol++] = row->getindexptr()[i];
             }
+            rows[irow+1]     = rows[irow]+row->getsize();
             irow++;
         }
-        sparsity.exportIdx(B);
-        //B.compress();
 
         //initializemixedoperator
         double_operator_ = op;
 
         mixed_operator_ = std::make_shared<MixedOperatorType>(B,comm);
         //mixed_operator_ = std::make_shared<MixedOperatorType>(B);
-
-        //pointerstodataarrays
-        //double_data_=&A[0][0][0][0];
-        //single_data_=&B[0][0][0][0];
 
         //initialize bicgstab solver from Dune
         solver_ = std::make_shared<Dune::BiCGSTABSolver<Vector>>(
@@ -91,13 +91,9 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
     virtual void apply(Vector &x, Vector &b, InverseOperatorResult &res) override
     {
         //demote jacobian to single precision
-        auto &A = double_operator_->getmat();
-        auto &B = *single_matrix_;
-
-        double const *dbl = &A[0][0][0][0];
-        float *flt        = &B[0][0][0][0];
-        int N = A.nonzeroes()*block_size*block_size;
-        for(int k=0;k<N;k++) flt[k] = dbl[k];
+        //auto &A = double_operator_->getmat();
+        single_matrix_->update(double_data_);
+        //single_matrix_->update(&A[0][0][0][0]);
 
         //apply bicgstab solver from Dune
         solver_->apply(x,b,res);
@@ -117,16 +113,11 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
     using AbstractSolverType = Dune::InverseOperator<Vector,Vector>;
 
 
-    //Operator* operator_;
-    //std::shared_ptr<AbstractPrecondType> prec_;
-    //std::shared_ptr<AbstractScalarProductType> product_;
+    Operator *double_operator_;
     std::shared_ptr<AbstractSolverType> solver_;
     std::shared_ptr<MixedOperatorType> mixed_operator_;
     std::shared_ptr<SingleMatrixType> single_matrix_;
-    Operator *double_operator_;
-    //SingleMatrixType *single_matrix_;
     double const *double_data_;
-    //float *single_data_;
 
 };
 
