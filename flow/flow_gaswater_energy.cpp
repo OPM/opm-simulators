@@ -22,74 +22,12 @@
 #include <flow/flow_gaswater_energy.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
-#include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
-#include <opm/models/discretization/common/tpfalinearizer.hh>
-#include <opm/material/thermal/EnergyModuleType.hpp>
-
-namespace Opm {
-namespace Properties {
-namespace TTag {
-struct FlowGasWaterEnergyProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
-}
-
-template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = TpfaLinearizer<TypeTag>; };
-
-template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowGasWaterEnergyProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
-
-template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowGasWaterEnergyProblem> { static constexpr bool value = true; };
-
-template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::FlowGasWaterEnergyProblem> { static constexpr bool value = true; };
-
-template<class TypeTag>
-struct EnergyModuleType<TypeTag, TTag::FlowGasWaterEnergyProblem>
-{ static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
-
-template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterEnergyProblem> {
-    static constexpr bool value = true;
-};
-
-template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::FlowGasWaterEnergyProblem> {
-    static constexpr bool value = true;
-};
-
-//! The indices required by the model
-template<class TypeTag>
-struct Indices<TypeTag, TTag::FlowGasWaterEnergyProblem>
-{
-private:
-    // it is unfortunately not possible to simply use 'TypeTag' here because this leads
-    // to cyclic definitions of some properties. if this happens the compiler error
-    // messages unfortunately are *really* confusing and not really helpful.
-    using BaseTypeTag = TTag::FlowProblem;
-    using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
-    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
-    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
-public:
-    using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                         getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         numEnergyVars,
-                                         getPropValue<TypeTag, Properties::EnableFoam>(),
-                                         getPropValue<TypeTag, Properties::EnableBrine>(),
-                                         /*PVOffset=*/0,
-                                         /*disabledCompIdx=*/FluidSystem::oilCompIdx,
-                                         getPropValue<TypeTag, Properties::EnableBioeffects>()>;
-};
-}}
+#include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
 
 namespace Opm {
 

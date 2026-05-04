@@ -31,6 +31,8 @@
 
 #include <fmt/core.h>
 
+#include <iostream>
+
 namespace Opm::gpuistl
 {
 
@@ -80,7 +82,7 @@ public:
      *
      * @param idx The index of the element
      */
-    __host__ __device__ T operator[](size_t idx) const {
+    __host__ __device__ const T& operator[](size_t idx) const {
 #ifndef NDEBUG
         assertInRange(idx);
 #endif
@@ -401,7 +403,14 @@ private:
     {
 #if OPM_IS_INSIDE_DEVICE_FUNCTION
         // TODO: find a better way to handle exceptions in kernels, this will possibly be printed many times
-        assert(idx < m_numberOfElements && "The index provided was not in the range [0, buffersize-1]");
+        // assert(idx < m_numberOfElements && fmt::format("Index {} is out of range [0, {})", idx, m_numberOfElements - 1).c_str());
+        if (idx >= m_numberOfElements)
+        {
+            printf("Index %llu is out of range [0, %llu)\n",
+                (unsigned long long)idx,
+                (unsigned long long)m_numberOfElements);
+            assert(false && "Index is out of range");
+        }
 #else
         if (idx >= m_numberOfElements) {
             OPM_THROW(std::invalid_argument,

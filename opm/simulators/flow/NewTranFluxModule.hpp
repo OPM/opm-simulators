@@ -35,6 +35,7 @@
 #include <dune/common/fmatrix.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
@@ -47,7 +48,6 @@
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 
-#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <array>
 
@@ -142,7 +142,7 @@ public:
      */
     OPM_HOST_DEVICE const DimMatrix& intrinsicPermeability() const
     {
-        throw std::invalid_argument("The ECL transmissibility module does not provide an explicit intrinsic permeability");
+        OPM_THROW(std::invalid_argument, "The ECL transmissibility module does not provide an explicit intrinsic permeability");
     }
 
     /*!
@@ -153,7 +153,7 @@ public:
      */
     OPM_HOST_DEVICE const EvalDimVector& potentialGrad(unsigned) const
     {
-        throw std::invalid_argument("The ECL transmissibility module does not provide explicit potential gradients");
+        OPM_THROW(std::invalid_argument, "The ECL transmissibility module does not provide explicit potential gradients");
     }
 
     /*!
@@ -173,7 +173,7 @@ public:
      */
     OPM_HOST_DEVICE const EvalDimVector& filterVelocity(unsigned) const
     {
-        throw std::invalid_argument("The ECL transmissibility module does not provide explicit filter velocities");
+        OPM_THROW(std::invalid_argument, "The ECL transmissibility module does not provide explicit filter velocities");
     }
 
     /*!
@@ -309,7 +309,7 @@ public:
         }
     }
 
-    template<class EvalType>
+    template<class EvalType, class ModuleParamsT = ModuleParams>
     OPM_HOST_DEVICE static void calculatePhasePressureDiff_(short& upIdx,
                                             short& dnIdx,
                                             EvalType& pressureDifference,
@@ -324,7 +324,7 @@ public:
                                             const unsigned globalIndexEx,
                                             const Scalar distZg,
                                             const Scalar thpres,
-                                            const ModuleParams& moduleParams)
+                                            const ModuleParamsT& moduleParams)
     {
 
         // check shortcut: if the mobility of the phase is zero in the interior as

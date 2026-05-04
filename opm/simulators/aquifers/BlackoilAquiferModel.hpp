@@ -32,7 +32,7 @@
 #include <opm/simulators/aquifers/AquiferCarterTracy.hpp>
 #include <opm/simulators/aquifers/AquiferFetkovich.hpp>
 #include <opm/simulators/aquifers/AquiferNumerical.hpp>
-#include <opm/simulators/aquifers/SupportsFaceTag.hpp>
+// #include <opm/simulators/aquifers/SupportsFaceTag.hpp>
 
 #include <opm/simulators/flow/BaseAquiferModel.hpp>
 
