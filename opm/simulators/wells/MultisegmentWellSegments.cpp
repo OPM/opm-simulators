@@ -161,15 +161,21 @@ MultisegmentWellSegments(const int numSegments,
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellSegments<FluidSystem,Indices>::
-computeFluidProperties(const EvalWell& temperature,
-                       const EvalWell& saltConcentration,
+computeFluidProperties(const Scalar firstPerfTemperature,
+                       const Scalar firstPerfSaltConcentration,
                        const PrimaryVariables& primary_variables,
                        DeferredLogger& deferred_logger)
 {
     const int num_quantities = well_.numConservationQuantities();
     PhaseCalcResult result(static_cast<size_t>(num_quantities));
 
+    // \Note: we do not have salt concentration supported as primary variable yet.
+    // \Note: this will change when we implement the brine equation in the multisegment well
+    const EvalWell saltConcentration = firstPerfSaltConcentration;
+
     for (std::size_t seg = 0; seg < perforations_.size(); ++seg) {
+        const EvalWell temperature = enable_energy ?  primary_variables.getSegmentTemperature(seg) : firstPerfTemperature;
+
         calculatePhaseProperties(result, temperature, saltConcentration,
                                  primary_variables, seg, true, deferred_logger);
 
