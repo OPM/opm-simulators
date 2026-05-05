@@ -5,7 +5,8 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
-set(timestep_replay_rel_tol 2e-4)
+set(timestep_replay_abs_tol 2e-20)
+set(timestep_replay_rel_tol 2e-20)
 
 add_test_compareECLFiles(CASENAME spe1flowexp
                          FILENAME SPE1CASE2
@@ -57,28 +58,50 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-timestep-replay-regressionTe
 
 add_test_compareECLFiles(CASENAME spe1_timestep_replay
                          FILENAME SPE1CASE1
-                         SIMULATOR flow
+                         SIMULATOR flow_blackoil
                          PREFIX compareTimestepReplay
-                         ABS_TOL ${abs_tol}
+                         ABS_TOL ${timestep_replay_abs_tol}
                          REL_TOL ${timestep_replay_rel_tol}
-                         DIR spe1)
+                         DIR spe1
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
 
 add_test_compareECLFiles(CASENAME spe9_timestep_replay
                          FILENAME SPE9_CP_SHORT
-                         SIMULATOR flow
+                         SIMULATOR flow_blackoil
                          PREFIX compareTimestepReplay
-                         ABS_TOL ${abs_tol}
+                         ABS_TOL ${timestep_replay_abs_tol}
                          REL_TOL ${timestep_replay_rel_tol}
-                         DIR spe9)
+                         DIR spe9
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
 
-add_test_compareECLFiles(CASENAME base_model
-                         FILENAME 0_BASE_MODEL6
-                         SIMULATOR flow
+add_test_compareECLFiles(CASENAME spe9_timestep_replay_all
+                         FILENAME SPE9
+                         SIMULATOR flow_blackoil
                          PREFIX compareTimestepReplay
-                         ABS_TOL ${abs_tol}
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR spe9
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
+
+add_test_compareECLFiles(CASENAME base_model_large_timestep_replay
+                         FILENAME 0_BASE_MODEL6
+                         SIMULATOR flow_oilwater
+                         PREFIX compareTimestepReplay
+                         ABS_TOL ${timestep_replay_abs_tol}
                          REL_TOL ${timestep_replay_rel_tol}
                          DIR model6
-                         TEST_ARGS --full-time-step-initially=true)
+                         TEST_ARGS --full-time-step-initially=false --solver-max-time-step-in-days=10
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
+
+add_test_compareECLFiles(CASENAME base_model_short_timestep_replay
+                         FILENAME 0_BASE_MODEL6
+                         SIMULATOR flow_oilwater
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model6
+                         TEST_ARGS --full-time-step-initially=true
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
 
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 

@@ -24,7 +24,8 @@ then
 fi
 
 OPTIND=1
-while getopts "i:r:b:f:a:t:c:d:e:" OPT
+declare -a TEST_ARGS_REPLAY=()
+while getopts "i:r:b:f:a:t:c:d:e:y:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -36,10 +37,11 @@ do
     c) COMPARE_ECL_COMMAND=${OPTARG} ;;
     d) : ;;
     e) EXE_NAME=${OPTARG} ;;
+        y) TEST_ARGS_REPLAY+=("${OPTARG}") ;;
   esac
 done
 shift $(($OPTIND-1))
-TEST_ARGS="$@"
+declare -a TEST_ARGS=("$@")
 
 BASELINE_PATH=${RESULT_PATH}/baseline
 REPLAY_PATH=${RESULT_PATH}/replay
@@ -73,7 +75,7 @@ run_simulation() {
     simulator_binary=$(resolve_simulator_binary) || return 1
 
     mkdir -p "${output_path}"
-    "${simulator_binary}" "${INPUT_DATA_PATH}/${FILENAME}" "$@" --output-dir="${output_path}" > "${log_path}" 2>&1
+    "${simulator_binary}" "$@" --output-dir="${output_path}" "${INPUT_DATA_PATH}/${FILENAME}" > "${log_path}" 2>&1
     local status=$?
     if [ ${status} -ne 0 ]; then
         cat "${log_path}"
@@ -129,7 +131,7 @@ final_time = None
 for line in reversed(log_path.read_text().splitlines()):
     match = re.search(r"day\s+[^/]+/(\S+)", line)
     if match:
-        final_time = match.group(1)
+        final_time = match.group(1).rstrip(",;")
         break
 
 if final_time is None:
@@ -146,14 +148,13 @@ rm -rf "${RESULT_PATH}"
 mkdir -p "${RESULT_PATH}"
 
 # Generate precise accepted substep end times from INFOSTEP.
-run_simulation "${BASELINE_PATH}" "${BASELINE_LOG}" ${TEST_ARGS} --output-extra-convergence-info=steps
+run_simulation "${BASELINE_PATH}" "${BASELINE_LOG}" ${TEST_ARGS[@]+"${TEST_ARGS[@]}"} --output-extra-convergence-info=steps
 test $? -eq 0 || exit 1
 
 extract_timesteps "${BASELINE_INFOSTEP}" "${BASELINE_LOG}" "${TIMESTEP_FILE}"
 test $? -eq 0 || exit 1
 
-#run_simulation "${REPLAY_PATH}" "${REPLAY_LOG}" ${TEST_ARGS_REPLAY} --output-extra-convergence-info=steps --time-step-control=hardcoded --time-step-control-file-name="${TIMESTEP_FILE}"
-run_simulation "${REPLAY_PATH}" "${REPLAY_LOG}" --initial-time-step-in-days=11111111 --output-extra-convergence-info=steps --time-step-control=hardcoded --time-step-control-file-name="${TIMESTEP_FILE}"
+run_simulation "${REPLAY_PATH}" "${REPLAY_LOG}" ${TEST_ARGS[@]+"${TEST_ARGS[@]}"} ${TEST_ARGS_REPLAY[@]+"${TEST_ARGS_REPLAY[@]}"} --output-extra-convergence-info=steps --time-step-control=hardcoded --time-step-control-file-name="${TIMESTEP_FILE}"
 test $? -eq 0 || exit 1
 
 ecode=0

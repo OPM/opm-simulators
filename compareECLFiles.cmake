@@ -60,7 +60,7 @@ endfunction()
 #   - This test class compares output from a simulation to reference files.
 function(add_test_compareECLFiles)
   set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED)
-  set(multiValueArgs TEST_ARGS)
+  set(multiValueArgs TEST_ARGS TEST_ARGS_REPLAY)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
@@ -84,6 +84,9 @@ function(add_test_compareECLFiles)
   if(PARAM_RESTART_SCHED STREQUAL "false" OR PARAM_RESTART_SCHED STREQUAL "true")
     list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
   endif()
+  foreach(arg IN LISTS PARAM_TEST_ARGS_REPLAY)
+    list(APPEND DRIVER_ARGS -y ${arg})
+  endforeach()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
