@@ -216,7 +216,11 @@ public:
     void advanceTimeLevel()
     {
         this->prev_timestep_wgstate_ = this->active_wgstate_;
+        this->prev_timestep_nupcol_wgstate_ = this->nupcol_wgstate_;
         this->prev_timestep_closed_this_step_ = this->closed_this_step_;
+        this->prev_timestep_guideRate_ = this->guideRate_;
+        this->prev_timestep_well_open_times_ = this->well_open_times_;
+        this->prev_timestep_well_close_times_ = this->well_close_times_;
         this->genNetwork_.commitState();
     }
 
@@ -224,7 +228,11 @@ public:
     void updateFailed()
     {
         this->active_wgstate_ = this->prev_timestep_wgstate_;
+        this->nupcol_wgstate_ = this->prev_timestep_nupcol_wgstate_;
         this->closed_this_step_ = this->prev_timestep_closed_this_step_;
+        this->guideRate_ = this->prev_timestep_guideRate_;
+        this->well_open_times_ = this->prev_timestep_well_open_times_;
+        this->well_close_times_ = this->prev_timestep_well_close_times_;
         this->genNetwork_.resetState();
         this->group_state_helper_.updateState(this->wellState(), this->groupState());
     }
@@ -549,9 +557,11 @@ protected:
 
     // Times at which wells were opened (for WCYCLE)
     std::map<std::string, double> well_open_times_;
+    std::map<std::string, double> prev_timestep_well_open_times_;
 
     // Times at which wells were shut (for WCYCLE)
     std::map<std::string, double> well_close_times_;
+    std::map<std::string, double> prev_timestep_well_close_times_;
 
     std::vector<ConnectionIndexMap> conn_idx_map_{};
     std::function<bool(const std::string&)> not_on_process_{};
@@ -572,6 +582,7 @@ protected:
     std::unordered_set<std::string> prev_timestep_closed_this_step_;
 
     GuideRate guideRate_;
+    GuideRate prev_timestep_guideRate_;
     std::unique_ptr<VFPProperties<Scalar, IndexTraits>> vfp_properties_{};
 
     // previous injection multiplier, it is used in the injection multiplier calculation for WINJMULT keyword
@@ -590,6 +601,7 @@ protected:
     WGState<Scalar, IndexTraits> last_valid_wgstate_;
     WGState<Scalar, IndexTraits> prev_timestep_wgstate_;
     WGState<Scalar, IndexTraits> nupcol_wgstate_;
+    WGState<Scalar, IndexTraits> prev_timestep_nupcol_wgstate_;
     GroupStateHelperType group_state_helper_;
     WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 

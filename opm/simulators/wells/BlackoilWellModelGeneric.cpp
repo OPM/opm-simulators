@@ -108,10 +108,12 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , terminal_output_(comm_.rank() == 0 &&
                        Parameters::Get<Parameters::EnableTerminalOutput>())
     , guideRate_(schedule)
+    , prev_timestep_guideRate_(schedule)
     , active_wgstate_(pu)
     , last_valid_wgstate_(pu)
     , prev_timestep_wgstate_(pu)
     , nupcol_wgstate_(pu)
+    , prev_timestep_nupcol_wgstate_(pu)
     , group_state_helper_(this->wellState(),
                           this->groupState(),
                           this->schedule(),

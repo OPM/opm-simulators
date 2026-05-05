@@ -367,6 +367,8 @@ public:
         const int episodeIdx = this->episodeIndex();
         const int timeStepSize = this->simulator().timeStepSize();
 
+        this->captureBeginTimeStepState_();
+
         this->beginTimeStep_(enableExperiments,
                              episodeIdx,
                              this->simulator().timeStepIndex(),
@@ -394,6 +396,7 @@ public:
 
     void updateFailed()
     {
+        this->restoreBeginTimeStepState_();
         wellModel_.updateFailed();
         this->model().updateFailed();
     }
@@ -1283,6 +1286,26 @@ private:
     { return *static_cast<const Implementation *>(this); }
 
 protected:
+    virtual void captureBeginTimeStepState_()
+    {
+        prev_timestep_first_step_ = first_step_;
+        prev_timestep_max_polymer_adsorption_ = this->polymer_.maxAdsorption;
+        prev_timestep_max_oil_saturation_ = this->maxOilSaturation_;
+        prev_timestep_max_water_saturation_ = this->maxWaterSaturation_;
+        prev_timestep_min_ref_pressure_ = this->minRefPressure_;
+        prev_timestep_rock_comp_trans_mult_val_ = this->rockCompTransMultVal_;
+    }
+
+    virtual void restoreBeginTimeStepState_()
+    {
+        first_step_ = prev_timestep_first_step_;
+        this->polymer_.maxAdsorption = prev_timestep_max_polymer_adsorption_;
+        this->maxOilSaturation_ = prev_timestep_max_oil_saturation_;
+        this->maxWaterSaturation_ = prev_timestep_max_water_saturation_;
+        this->minRefPressure_ = prev_timestep_min_ref_pressure_;
+        this->rockCompTransMultVal_ = prev_timestep_rock_comp_trans_mult_val_;
+    }
+
     template<class UpdateFunc>
     void updateProperty_(const std::string& failureMsg,
                          UpdateFunc func)
@@ -1869,6 +1892,13 @@ protected:
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
     bool first_step_ = true;
+    bool prev_timestep_first_step_ = true;
+
+    std::vector<Scalar> prev_timestep_max_polymer_adsorption_;
+    std::vector<Scalar> prev_timestep_max_oil_saturation_;
+    std::vector<Scalar> prev_timestep_max_water_saturation_;
+    std::vector<Scalar> prev_timestep_min_ref_pressure_;
+    std::vector<Scalar> prev_timestep_rock_comp_trans_mult_val_;
 
     /// Whether or not the current episode will end at the end of the
     /// current time step.

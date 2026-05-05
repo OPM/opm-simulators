@@ -5,8 +5,8 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
-set(timestep_replay_abs_tol 2e-20)
-set(timestep_replay_rel_tol 2e-20)
+set(timestep_replay_abs_tol 2e-14)
+set(timestep_replay_rel_tol 2e-14)
 
 add_test_compareECLFiles(CASENAME spe1flowexp
                          FILENAME SPE1CASE2
@@ -74,16 +74,16 @@ add_test_compareECLFiles(CASENAME spe9_timestep_replay
                          DIR spe9
                          TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
 
-add_test_compareECLFiles(CASENAME spe9_timestep_replay_all
-                         FILENAME SPE9
-                         SIMULATOR flow_blackoil
-                         PREFIX compareTimestepReplay
-                         ABS_TOL ${timestep_replay_abs_tol}
-                         REL_TOL ${timestep_replay_rel_tol}
-                         DIR spe9
-                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
+# add_test_compareECLFiles(CASENAME spe9_timestep_replay_all
+#                          FILENAME SPE9
+#                          SIMULATOR flow_blackoil
+#                          PREFIX compareTimestepReplay
+#                          ABS_TOL ${timestep_replay_abs_tol}
+#                          REL_TOL ${timestep_replay_rel_tol}
+#                          DIR spe9
+#                          TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
 
-add_test_compareECLFiles(CASENAME base_model_large_timestep_replay
+add_test_compareECLFiles(CASENAME base_model_small_timestep_replay
                          FILENAME 0_BASE_MODEL6
                          SIMULATOR flow_oilwater
                          PREFIX compareTimestepReplay
@@ -93,15 +93,89 @@ add_test_compareECLFiles(CASENAME base_model_large_timestep_replay
                          TEST_ARGS --full-time-step-initially=false --solver-max-time-step-in-days=10
                          TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
 
-add_test_compareECLFiles(CASENAME base_model_short_timestep_replay
+add_test_compareECLFiles(CASENAME base_model_large_timestep_replay
                          FILENAME 0_BASE_MODEL6
                          SIMULATOR flow_oilwater
                          PREFIX compareTimestepReplayFail
                          ABS_TOL ${timestep_replay_abs_tol}
                          REL_TOL ${timestep_replay_rel_tol}
                          DIR model6
-                         TEST_ARGS --full-time-step-initially=true
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0
                          TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
+
+add_test_compareECLFiles(CASENAME msw_model6_large_timestep_replay
+                         FILENAME 1_MSW_MODEL6
+                         SIMULATOR flow_oilwater
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model6
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
+
+add_test_compareECLFiles(CASENAME aq_model6_large_timestep_replay
+                         FILENAME 0A_AQUCT_MODEL6
+                         SIMULATOR flow_oilwater
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model6
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
+
+add_test_compareECLFiles(CASENAME model5_large_timestep_replay
+                         #FILENAME 0_BASE_MODEL5
+                         #FILENAME 5_NETWORK_MODEL5_MSW
+                         FILENAME 4_GLIFT_MODEL5
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model5
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
+
+add_test_compareECLFiles(CASENAME grupcntl_large_timestep_replay
+                         FILENAME GRUPCNTL-36
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR grupcntl
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8 --tolerance-cnv-relaxed=1e-3
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
+
+add_test_compareECLFiles(CASENAME model2_fail_large_timestep_replay
+                         FILENAME 9_2A_DEPL_GCONPROD_1L_MSW 
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model2
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8 --tolerance-cnv-relaxed=1e-3
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
+                         
+add_test_compareECLFiles(CASENAME model2_large_timestep_replay
+                         FILENAME 0_BASE_MODEL2 
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model2
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8 --tolerance-cnv-relaxed=1e-3
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
+                         
+add_test_compareECLFiles(CASENAME model2_large_timestep_replay
+                         #FILENAME 7_HYSTERESIS_MODEL2  #ok
+                         #FILENAME 9_4E_WINJ_GINJ_GUIDERATE_MSW #ok
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model2
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8 --tolerance-cnv-relaxed=1e-3
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
+
 
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 

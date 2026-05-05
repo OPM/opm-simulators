@@ -274,7 +274,15 @@ public:
     * \copydoc AbstractISTLSolver::eraseMatrix
     */
     void eraseMatrix() override
-    { }
+    {
+        matrix_ = nullptr;
+        rhs_ = nullptr;
+        iterations_ = 0;
+        solveCount_ = 0;
+        flexibleSolver_.pre_ = nullptr;
+        flexibleSolver_.solver_.reset();
+        flexibleSolver_.op_.reset();
+    }
 
     /*!
     * \copydoc AbstractISTLSolver::setActiveSolver
