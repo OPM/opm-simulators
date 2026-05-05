@@ -143,6 +143,9 @@ struct UseAverageDensityMsWells { static constexpr bool value = false; };
 struct LocalWellSolveControlSwitching { static constexpr bool value = true; };
 struct UseImplicitIpr { static constexpr bool value = true; };
 struct CheckGroupConstraintsInnerWellIterations { static constexpr bool value = true; };
+struct LocalWellEqLinearSolver { static constexpr auto value = "umfpack"; };
+struct LocalWellEqReusePreconditioner { static constexpr bool value = false; };
+struct LocalWellEqUseLegacyGlobalOperator { static constexpr bool value = true; };
 
 // Network solver parameters
 struct NetworkMaxStrictOuterIterations { static constexpr int value = 10; };
@@ -331,6 +334,18 @@ public:
 
     /// Whether to allow checking/changing to group controls during inner well iterations
     bool check_group_constraints_inner_well_iterations_;
+
+    /// Well-equation linear solver specification. Can be a solver name (e.g., "umfpack")
+    /// or a path to a JSON solver configuration file.
+    std::string local_well_eq_linear_solver_;
+
+    /// If true, reuse the existing flexible solver and only update its preconditioner
+    /// when the matrix sparsity structure is unchanged.
+    bool local_well_eq_reuse_preconditioner_;
+
+    /// If true, use the legacy UMFPACK-based implementation for multisegment well
+    /// contributions that are applied through the global ISTL operator.
+    bool local_well_eq_use_legacy_global_operator_;
 
     /// Maximum number of iterations in the network solver before relaxing tolerance
     int network_max_strict_outer_iterations_;

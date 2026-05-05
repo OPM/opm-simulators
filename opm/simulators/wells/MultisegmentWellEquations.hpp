@@ -23,17 +23,21 @@
 #define OPM_MULTISEGMENTWELL_EQUATIONS_HEADER_INCLUDED
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
+#include <dune/istl/matrix.hh>
 
 #include <memory>
 #include <type_traits>
 
 namespace Dune {
+template<class M, class X, class Y> class MatrixAdapter;
+template<class Operator> class FlexibleSolver;
 template<class M> class UMFPack;
 }
 
@@ -152,6 +156,15 @@ public:
                                              EmptyType>; // TODO: c++20: add no_unique_address
     mutable UMFPackSolver duneDSolver_;
 
+    using DiagOperator = Dune::MatrixAdapter<DiagMatWell, BVectorWell, BVectorWell>;
+    using FlexibleDiagSolver = std::shared_ptr<Dune::FlexibleSolver<DiagOperator>>;
+    mutable std::shared_ptr<DiagOperator> duneDOperator_;
+    mutable FlexibleDiagSolver flexibleDsolver_;
+    mutable bool matrix_structure_changed_{true};
+    mutable Opm::PropertyTree local_solver_prm_;
+    bool local_solver_reuse_preconditioner_{false};
+    bool use_legacy_global_operator_{true};
+
     // residuals of the well equations
     BVectorWell resWell_;
 
@@ -162,6 +175,11 @@ public:
 
     // Wrapper for the parallel application of B for distributed wells
     mswellhelpers::ParallellMSWellB<OffDiagMatWell> parallelB_;
+
+    BVectorWell solveLocalDSystem(const BVectorWell& rhs) const;
+    BVectorWell solveLegacyGlobalDSystem(const BVectorWell& rhs) const;
+    BVectorWell solveGlobalOperatorDSystem(const BVectorWell& rhs) const;
+    void setupLocalSolverConfig();
 };
 
 }
