@@ -724,6 +724,12 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
         const bool lowActionParsingStrictness = (actionParsingStrictness == "low");
         try {
             auto parseContext = setupParseContext(exitOnAllErrors);
+            if (slaveMode) {
+                // In slave mode, fatal parse errors must throw instead of calling
+                // std::exit() so the slave can notify the master before exiting.
+                // Without this, the master hangs on MPI_Recv waiting for the slave.
+                parseContext->update(ParseContext::PARSE_MISSING_INCLUDE, InputErrorAction::THROW_EXCEPTION);
+            }
             if (treatCriticalAsNonCritical) { // Continue with invalid names if parsing strictness is set to low
                 parseContext->update(ParseContext::SCHEDULE_INVALID_NAME, InputErrorAction::WARN);
             }

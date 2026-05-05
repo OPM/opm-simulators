@@ -296,6 +296,8 @@ void
 ReservoirCouplingSlave<Scalar>::
 sendAndReceiveInitialData() {
     // Communication order must match master's spawn() method.
+    // First, send status OK to let master know we initialized successfully.
+    this->sendStatusToMasterProcess_(/*ok=*/true);
     // We receive master group names before sending activation date so that
     // we can detect history matching mode (no master groups) and use start_date as activation.
     this->sendSimulationStartDateToMasterProcess_();
@@ -619,6 +621,24 @@ sendSimulationStartDateToMasterProcess_() const
         );
         this->logger_.debug("Sent start date to master");
    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+sendStatusToMasterProcess_(bool ok) {
+    if (this->comm_.rank() == 0) {
+        int status = ok ? 0 : 1;
+        MPI_Send(
+            &status,
+            /*count=*/1,
+            /*datatype=*/MPI_INT,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::SlaveStatus),
+            this->slave_master_comm_
+        );
+        this->logger_.debug(fmt::format("Sent status {} to master", ok ? "OK" : "FAILED"));
+    }
 }
 
 // Explicit template instantiations

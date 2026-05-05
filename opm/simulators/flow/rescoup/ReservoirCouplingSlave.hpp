@@ -159,6 +159,7 @@ private:
     void sendActivationDateToMasterProcess_();
     void sendActivationHandshakeToMasterProcess_() const;
     void sendSimulationStartDateToMasterProcess_() const;
+    void sendStatusToMasterProcess_(bool ok);
 
     const Parallel::Communication &comm_;
     const Schedule& schedule_;
