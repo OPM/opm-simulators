@@ -333,6 +333,7 @@ public:
         if (!this->doTemp()) {
             return;
         }
+        OPM_TIMEBLOCK(TemperatureModel_endTimeStep);
 
         // We use the specialized intensive quantities here with only the temperature derivative
         const unsigned int numCells = simulator_.model().numTotalDof();
@@ -396,6 +397,7 @@ protected:
 
     void advanceTemperatureFields()
     {
+        OPM_TIMEBLOCK(TemperatureModel_advanceTemperatureFields);
         const int max_iter = 20;
         const int min_iter = 1;
         bool is_converged = false;
@@ -419,6 +421,7 @@ protected:
 
     void solveAndUpdate()
     {
+        OPM_TIMEBLOCK(TemperatureModel_solveAndUpdate);
         const unsigned int numCells = simulator_.model().numTotalDof();
         EnergyVector dx(numCells);
         bool conv = this->linearSolve_(this->energyMatrix_->istlMatrix(), dx, this->energyVector_);
@@ -428,6 +431,7 @@ protected:
             }
         }
         else {
+            OPM_TIMEBLOCK(TemperatureModel_solveAndUpdate_update);
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
@@ -441,6 +445,7 @@ protected:
 
     bool converged(const int iter)
     {
+        OPM_TIMEBLOCK(TemperatureModel_converged);
         Scalar dt = simulator_.timeStepSize();
         Scalar maxNorm = 0.0;
         Scalar sumNorm = 0.0;
@@ -464,13 +469,17 @@ protected:
                 sum_pv += pvValue;
             }
         }
-        maxNorm = simulator_.gridView().comm().max(maxNorm);
-        sumNorm = simulator_.gridView().comm().sum(sumNorm);
-        sum_pv = simulator_.gridView().comm().sum(sum_pv);
-        sumNorm /= sum_pv;
+        {
+            OPM_TIMEBLOCK(TemperatureModel_converged_communicate);
 
-        // Use relaxed tolerance if the fraction of unconverged cells porevolume is less than relaxed_max_pv_fraction
-        sum_pv_not_converged = simulator_.gridView().comm().sum(sum_pv_not_converged);
+            maxNorm = simulator_.gridView().comm().max(maxNorm);
+            sumNorm = simulator_.gridView().comm().sum(sumNorm);
+            sum_pv = simulator_.gridView().comm().sum(sum_pv);
+            sumNorm /= sum_pv;
+
+            // Use relaxed tolerance if the fraction of unconverged cells porevolume is less than relaxed_max_pv_fraction
+            sum_pv_not_converged = simulator_.gridView().comm().sum(sum_pv_not_converged);
+        }
         Scalar relaxed_max_pv_fraction = Parameters::Get<Parameters::RelaxedMaxPvFraction<Scalar>>();
         const bool relax = (sum_pv_not_converged / sum_pv) <  relaxed_max_pv_fraction;
         const auto tolerance_energy_balance = relax? Parameters::Get<Parameters::ToleranceEnergyBalanceRelaxed<Scalar>>():
@@ -571,76 +580,90 @@ protected:
 
     void assembleEquations()
     {
+        OPM_TIMEBLOCK(TemperatureModel_assembleEquations);
+
         const unsigned int numCells = simulator_.model().numTotalDof();
         for (unsigned globI = 0; globI < numCells; ++globI) {
             this->energyVector_[globI] = 0.0;
             energyMatrix_->clearRow(globI, 0.0);
         }
-        Scalar dt = simulator_.timeStepSize();
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (unsigned globI = 0; globI < numCells; ++globI) {
-            MatrixBlockTemp bMat;
-            Scalar volume = simulator_.model().dofTotalVolume(globI);
-            Scalar storefac = volume / dt;
-            Evaluation storage = 0.0;
-            computeStorageTerm(globI, storage);
-            this->energyVector_[globI] += storefac * ( getValue(storage) - storage1_[globI] );
-            bMat[0][0] = storefac * storage.derivative(temperatureIdx);
-            *diagMatAddress_[globI] += bMat;
+        const Scalar dt = simulator_.timeStepSize();
+
+        // Storage term
+        {
+            OPM_TIMEBLOCK(TemperatureModel_assembleEquations_storage);
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
+            for (unsigned globI = 0; globI < numCells; ++globI) {
+                MatrixBlockTemp bMat;
+                Scalar volume = simulator_.model().dofTotalVolume(globI);
+                Scalar storefac = volume / dt;
+                Evaluation storage = 0.0;
+                computeStorageTerm(globI, storage);
+                this->energyVector_[globI] += storefac * ( getValue(storage) - storage1_[globI] );
+                bMat[0][0] = storefac * storage.derivative(temperatureIdx);
+                *diagMatAddress_[globI] += bMat;
+            }
         }
 
-        const auto& floresInfo = this->simulator_.problem().model().linearizer().getFloresInfo();
-        const bool enableDriftCompensation = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
-        const auto& problem = simulator_.problem();
+        // Flux term
+        {
+            OPM_TIMEBLOCK(TemperatureModel_assembleEquations_flux);
+            const auto& floresInfo = this->simulator_.problem().model().linearizer().getFloresInfo();
+            const bool enableDriftCompensation = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
+            const auto& problem = simulator_.problem();
 
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (unsigned globI = 0; globI < numCells; ++globI) {
-            const auto& nbInfos = neighborInfo_[globI];
-            const auto& floresInfos = floresInfo[globI];
-            int loc = 0;
-            const auto& intQuantsIn = intQuants_[globI];
-            MatrixBlockTemp bMat;
-            for (const auto& nbInfo : nbInfos) {
-                unsigned globJ = nbInfo.neighbor;
-                const auto& intQuantsEx = intQuants_[globJ];
-                assert(globJ != globI);
-                const auto& darcyflux = floresInfos[loc].flow;
-                // compute convective flux
-                Evaluation flux = 0.0;
-                computeFluxTerm(intQuantsIn.fluidStateTemp(), intQuantsEx.fluidStateTemp(), darcyflux, flux);
-                // compute conductive flux
-                Evaluation heatFlux = 0.0;
-                computeHeatFluxTerm(intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, heatFlux);
-                heatFlux += flux;
-                this->energyVector_[globI] += getValue(heatFlux);
-                bMat[0][0] = heatFlux.derivative(temperatureIdx);
-                *diagMatAddress_[globI] += bMat;
-                bMat *= -1.0;
-                //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
-                *nbInfo.matBlockAddress += bMat;
-                loc++;
-            }
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
+            for (unsigned globI = 0; globI < numCells; ++globI) {
+                const auto& nbInfos = neighborInfo_[globI];
+                const auto& floresInfos = floresInfo[globI];
+                int loc = 0;
+                const auto& intQuantsIn = intQuants_[globI];
+                MatrixBlockTemp bMat;
+                for (const auto& nbInfo : nbInfos) {
+                    unsigned globJ = nbInfo.neighbor;
+                    const auto& intQuantsEx = intQuants_[globJ];
+                    assert(globJ != globI);
+                    const auto& darcyflux = floresInfos[loc].flow;
+                    // compute convective flux
+                    Evaluation flux = 0.0;
+                    computeFluxTerm(intQuantsIn.fluidStateTemp(), intQuantsEx.fluidStateTemp(), darcyflux, flux);
+                    // compute conductive flux
+                    Evaluation heatFlux = 0.0;
+                    computeHeatFluxTerm(intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, heatFlux);
+                    heatFlux += flux;
+                    this->energyVector_[globI] += getValue(heatFlux);
+                    bMat[0][0] = heatFlux.derivative(temperatureIdx);
+                    *diagMatAddress_[globI] += bMat;
+                    bMat *= -1.0;
+                    //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+                    *nbInfo.matBlockAddress += bMat;
+                    loc++;
+                }
 
-            if (enableDriftCompensation) {
-                auto dofDriftRate = problem.drift()[globI]/dt;
-                const auto& fs = intQuantsIn.fluidStateTemp();
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                   const unsigned activeCompIdx =
-                        FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-                   auto drift_hrate = dofDriftRate[activeCompIdx]*getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) /  getValue(fs.invB(phaseIdx));
-                   this->energyVector_[globI] -= drift_hrate*scalingFactor_;
+                if (enableDriftCompensation) {
+                    auto dofDriftRate = problem.drift()[globI]/dt;
+                    const auto& fs = intQuantsIn.fluidStateTemp();
+                    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                    const unsigned activeCompIdx =
+                            FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                    auto drift_hrate = dofDriftRate[activeCompIdx]*getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) /  getValue(fs.invB(phaseIdx));
+                    this->energyVector_[globI] -= drift_hrate*scalingFactor_;
+                    }
                 }
             }
         }
 
         // Well terms
-        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
-        for (const auto& wellPtr : wellPtrs) {
-            this->assembleEquationWell(*wellPtr);
+        {
+            OPM_TIMEBLOCK(TemperatureModel_assembleEquations_wells);
+            const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+            for (const auto& wellPtr : wellPtrs) {
+                this->assembleEquationWell(*wellPtr);
+            }
         }
 
         // For standard ilu0 we need to set the overlapping cells to identity. But since we use "paroverilu0"

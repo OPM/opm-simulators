@@ -112,6 +112,7 @@ SimulatorReportSingle
 BlackoilModel<TypeTag>::
 prepareStep(const SimulatorTimerInterface& timer)
 {
+    OPM_TIMEFUNCTION();
     SimulatorReportSingle report;
     Dune::Timer perfTimer;
     perfTimer.start();
@@ -280,6 +281,8 @@ BlackoilModel<TypeTag>::
 nonlinearIterationNewton(const SimulatorTimerInterface& timer,
                          NonlinearSolverType& nonlinear_solver)
 {
+    OPM_TIMEFUNCTION();
+
     // -----------   Set up reports and timer   -----------
     SimulatorReportSingle report;
     Dune::Timer perfTimer;

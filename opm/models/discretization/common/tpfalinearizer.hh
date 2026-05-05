@@ -323,6 +323,7 @@ public:
                       << "\n"  << std::flush;
             succeeded = 0;
         }
+        OPM_TIMEBLOCK(linearizationSynch);
         succeeded = simulator_().gridView().comm().min(succeeded);
 
         if (!succeeded) {

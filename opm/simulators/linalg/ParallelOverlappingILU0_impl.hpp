@@ -42,6 +42,7 @@ namespace detail
 template<class M>
 void ghost_last_bilu0_decomposition (M& A, std::size_t interiorSize)
 {
+    OPM_TIMEBLOCK(GhostLastBlockILU0Decomp);
     // iterator types
     assert(interiorSize <= A.N());
     using rowiterator = typename M::RowIterator;
@@ -434,10 +435,13 @@ update()
     }
 
     std::vector<std::size_t> inverseOrdering(ordering_.size());
-    std::size_t index = 0;
-    for (const auto newIndex : ordering_)
     {
-        inverseOrdering[newIndex] = index++;
+        OPM_TIMEBLOCK(createInverseOrdering);
+        std::size_t index = 0;
+        for (const auto newIndex : ordering_)
+            {
+                inverseOrdering[newIndex] = index++;
+            }
     }
 
     try
@@ -453,8 +457,9 @@ update()
             // create ILU-0 decomposition
             if (ordering_.empty())
             {
+                OPM_TIMEBLOCK(iluDecompositionUpdateMatrix);
                 if (ILU_) {
-                    OPM_TIMEBLOCK(iluDecompositionMakeMatrix);
+                    OPM_TIMEBLOCK(iluDecompositionCopyEntries);
                     // The ILU_ matrix is already a copy with the same
                     // sparse structure as A_, but the values of A_ may
                     // have changed, so we must copy all elements.
@@ -468,6 +473,7 @@ update()
                         }
                     }
                 } else {
+                    OPM_TIMEBLOCK(iluDecompositionDuplicateMatrix);
                     // First call, must duplicate matrix.
                     ILU_ = std::make_unique<Matrix>(*A_);
                 }
@@ -550,11 +556,14 @@ update()
     }
 
     // Check whether there was a problem on some process
-    const bool parallel_failure = comm_ && comm_->communicator().min(ilu_setup_successful) == 0;
-    const bool local_failure = ilu_setup_successful == 0;
-    if (local_failure || parallel_failure)
     {
-        throw Dune::MatrixBlockError();
+        OPM_TIMEBLOCK(checkParallelFailure);
+        const bool parallel_failure = comm_ && comm_->communicator().min(ilu_setup_successful) == 0;
+        const bool local_failure = ilu_setup_successful == 0;
+        if (local_failure || parallel_failure)
+        {
+            throw Dune::MatrixBlockError();
+        }
     }
 
     // store ILU in simple CRS format
