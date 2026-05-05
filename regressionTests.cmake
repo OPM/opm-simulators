@@ -41,6 +41,7 @@ set(_spe1_tests
   SPE1CASE2_THERMAL_WATVISC
   SPE1CASE2_2P
   SPE1CASE2_TEMP
+  SPE1CASE2_MSW_THERMAL
 )
 
 add_multiple_tests(

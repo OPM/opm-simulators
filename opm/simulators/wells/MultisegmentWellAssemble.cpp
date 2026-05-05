@@ -352,6 +352,12 @@ assembleOutflowTerm(const int seg,
         eqns.D()[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
     }
     // pressure derivative should be zero
+
+    if constexpr (enable_energy) {
+       // energy flux depends on the pressure
+        eqns.D()[seg][seg_upwind][comp_idx][SPres] -= segment_rate.derivative(SPres + Indices::numEq);
+        eqns.D()[seg][seg_upwind][comp_idx][Temperature] -= segment_rate.derivative(Temperature + Indices::numEq);
+    }
 }
 
 template<class FluidSystem, class Indices>
@@ -377,6 +383,12 @@ assembleInflowTerm(const int seg,
         eqns.D()[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
     }
     // pressure derivative should be zero
+
+    if constexpr (enable_energy) {
+       // energy flux depends on the pressure
+        eqns.D()[seg][inlet_upwind][comp_idx][SPres] += inlet_rate.derivative(SPres + Indices::numEq);
+        eqns.D()[seg][inlet_upwind][comp_idx][Temperature] += inlet_rate.derivative(Temperature + Indices::numEq);
+    }
 }
 
 template<class FluidSystem, class Indices>
