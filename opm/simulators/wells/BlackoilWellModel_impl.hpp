@@ -1434,7 +1434,6 @@ namespace Opm {
         // We make sure that all processes throw in case there is an exception
         // on one of them (WetGasPvt::saturationPressure might throw if not converged)
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-
         for (auto& well: well_container_) {
             well->assembleWellEqWithoutIteration(simulator_, this->groupStateHelper(), dt, this->wellState(),
                                                  /*solving_with_zero_rate=*/false);
@@ -1521,6 +1520,18 @@ namespace Opm {
 
     template<typename TypeTag>
     void
+    BlackoilWellModel<TypeTag>::addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                                            std::vector<CMatrix>& c_matrices,
+                                            std::vector<DMatrix>& d_matrices,
+                                            std::vector<std::vector<int>>& wcells) const
+    {
+        for ( const auto& well: well_container_ ) {
+            well->addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells);
+        }
+    }
+
+    template<typename TypeTag>
+    void
     BlackoilWellModel<TypeTag>::
     addWellPressureEquations(PressureMatrix& jacobian,
                              const BVector& weights,
@@ -1601,17 +1612,16 @@ namespace Opm {
     {
         auto loggerGuard = this->groupStateHelper().pushLogger();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        {
-            for (const auto& well : well_container_) {
-                const auto& cells = well->cells();
-                x_local_.resize(cells.size());
-
-                for (size_t i = 0; i < cells.size(); ++i) {
-                    x_local_[i] = x[cells[i]];
-                }
-                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
-                                                            this->groupStateHelper(), this->wellState());
+        // Schur complement path: recover well solution from
+        // reservoir solution via xw = D^-1 * (resWell - B * x).
+        for (const auto& well : well_container_) {
+            const auto& cells = well->cells();
+            x_local_.resize(cells.size());
+            for (size_t i = 0; i < cells.size(); ++i) {
+                x_local_[i] = x[cells[i]];
             }
+            well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
+                                                        this->groupStateHelper(), this->wellState());
         }
         OPM_END_PARALLEL_TRY_CATCH("recoverWellSolutionAndUpdateWellState() failed: ",
                                    simulator_.vanguard().grid().comm());

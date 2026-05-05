@@ -20,6 +20,9 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/system/SystemTypes.hpp>
+
+#include <optional>
 
 namespace Opm
 {
@@ -148,6 +151,8 @@ public:
      * - setMatrix(const SparseMatrixAdapter& M)
      */
     virtual bool solve(Vector& x) = 0;
+
+    using Scalar = typename SparseMatrixAdapter::Scalar;
 
     /**
      * \brief Get the number of iterations used in the last solve.
