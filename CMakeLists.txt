@@ -102,7 +102,7 @@ macro(opm-simulators_prereqs_hook)
 
   if(TARGET ParMETIS::ParMETIS)
     target_link_libraries(opmsimulators PUBLIC ParMETIS::ParMETIS)
-  else()
+  elseif(MPI_FOUND)
     message(
       WARNING
       "We have not found ParMETIS/PTScotch on your systems. "
