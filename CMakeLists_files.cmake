@@ -337,9 +337,18 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg detail/FlexibleSolverWrapper.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg FlexibleSolver_gpu_instantiate.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg PreconditionerFactory_gpu_instantiate.cpp)
+  if(hip_FOUND OR CUDA_VERSION VERSION_GREATER_EQUAL 13.1)
+    ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuBlackoilIntensiveQuantitiesDispatcher.cu)
+  endif()
 
 
   # HEADERS
+  list(APPEND PUBLIC_HEADER_FILES opm/models/discretization/common/fvbaseelementcontextgpu.hh)
+  list(APPEND PUBLIC_HEADER_FILES opm/simulators/flow/GpuEclMaterialLawManager.hpp)
+  list(APPEND PUBLIC_HEADER_FILES opm/simulators/flow/GpuEclThermalLawManager.hpp)
+  list(APPEND PUBLIC_HEADER_FILES opm/simulators/flow/GpuFlowProblem.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuBlackoilIntensiveQuantitiesDispatcher.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowGasWaterEnergyTypeTags.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/autotuner.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/coloringAndReorderingUtils.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/gpu_safe_call.hpp)
@@ -570,6 +579,9 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_safe_conversion.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_solver_adapter.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_ad.cu)
+  if(hip_FOUND OR CUDA_VERSION VERSION_GREATER_EQUAL 13.1)
+    ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_ecl_thermal_law_manager.cu)
+  endif()
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_linear_two_phase_material.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuPvt.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_smart_pointers.cu)
@@ -587,6 +599,10 @@ if(CUDA_FOUND OR hip_FOUND)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primary_variables_gpu.cu)
   endif()
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniMatrix.cu)
+  if(hip_FOUND OR CUDA_VERSION VERSION_GREATER_EQUAL 13.1)
+    ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_blackoilintensivequantities_gpu.cu)
+  endif()
+
   # Boost < 1.75 + nvcc = trouble in this test
   if(Boost_VERSION VERSION_GREATER 1.74)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniVector.cu)
@@ -707,6 +723,7 @@ list (APPEND TEST_DATA_FILES
   tests/data/test_stokes2c.dgf
   tests/data/test_stokes2cni.dgf
   tests/data/waterair.dgf
+  tests/very_simple_deck.DATA
   )
 
 
@@ -969,6 +986,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FIPContainer.hpp
   opm/simulators/flow/FlowBaseProblemProperties.hpp
   opm/simulators/flow/FlowBaseVanguard.hpp
+  opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp
   opm/simulators/flow/FlowGenericProblem.hpp
   opm/simulators/flow/FlowGenericProblem_impl.hpp
   opm/simulators/flow/FlowGenericVanguard.hpp
