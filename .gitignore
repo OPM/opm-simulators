@@ -1,11 +1,18 @@
-# Editor autosave files
+# editor backup files
 *~
+.\#*
+\#*\#
+.\#*\#
 *.swp
 
-# Compiled Object files
-*.slo
-*.lo
+# compiler output
 *.o
+*.mod
+.libs
+.deps
+stamp-*
+*.aux
+*.log
 
 # Compiled Dynamic libraries
 *.so
@@ -16,27 +23,28 @@
 *.la
 *.a
 
-# Compiled executables
-a.out
-find_zero
-sim_2p_incomp_adfi
-sim_simple
-test_ad
-test_block
-test_impestpfa_ad
-test_syntax
-test_vec
-
-# Build directory in source
-build/
-
-# Mac OS X debug info
-*.dSYM
-*.DS_Store
+# Eclipse project settings
+.cproject
+.project
+.settings/*
 
 # VSCode
 .vs
 .vscode
+
+# QtCreator project settings
+CMakeLists.txt.user*
+
+# Build directory in source.
+build
+
+log.log
+install
+.idea
+
+# Mac OS X debug info
+*.dSYM
+*.DS_Store
 
 # emacs directory setting:
 .dir-locals.el
@@ -48,6 +56,12 @@ python/sphinx_docs/docs/_build/
 **/__pycache__/
 
 # Python docker files
-/python/docker/wheelhouse*
-/python/docker/build*.log
-/python/docker/extracted_wheels/
+python/docker/wheelhouse*
+python/docker/build*.log
+python/docker/extracted_wheels/
+
+*.pyc
+*.eggs
+*.egg-info
+
+
