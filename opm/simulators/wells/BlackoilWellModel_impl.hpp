@@ -569,6 +569,22 @@ namespace Opm {
 
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateFailed()
+    {
+        this->BlackoilWellModelGeneric<Scalar, IndexTraits>::updateFailed();
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    advanceTimeLevel()
+    {
+        this->BlackoilWellModelGeneric<Scalar, IndexTraits>::advanceTimeLevel();
+    }
+
 #ifdef RESERVOIR_COUPLING_ENABLED
     // Automatically manages the lifecycle of the DeferredLogger pointer
     // in the reservoir coupling logger. Ensures the logger is properly
