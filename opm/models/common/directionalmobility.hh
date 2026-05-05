@@ -30,9 +30,11 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
+
 #include <array>
 #include <stdexcept>
-#include <string>
 #include <utility>
 
 namespace Opm {
@@ -54,16 +56,15 @@ public:
         : mobility_{mX, mY, mZ}
     {}
 
-    const array_type& getArray(unsigned index) const
+    OPM_HOST_DEVICE const array_type& getArray(unsigned index) const
     {
         if (index > 2) {
-            throw std::runtime_error("Unexpected mobility array index " + std::to_string(index));
+            OPM_THROW(std::runtime_error, "Unexpected mobility array index");
         }
-
         return mobility_[index];
     }
 
-    array_type& getArray(unsigned index)
+    OPM_HOST_DEVICE array_type& getArray(unsigned index)
     {
         return const_cast<array_type&>(std::as_const(*this).getArray(index));
     }

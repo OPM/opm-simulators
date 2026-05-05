@@ -33,6 +33,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
 #include <array>
 #include <algorithm>
@@ -80,8 +81,10 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
 
     NorneEvaluation* gpuAdInput;
     NorneEvaluation* gpuAdResOnGPU;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuAdInput, sizeof(NorneEvaluation)));
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuAdResOnGPU, sizeof(NorneEvaluation)));
+    auto gpuAdInputOwner = Opm::gpuistl::make_gpu_unique_ptr<NorneEvaluation>();
+    auto gpuAdResOnGPUOwner = Opm::gpuistl::make_gpu_unique_ptr<NorneEvaluation>();
+    gpuAdInput = gpuAdInputOwner.get();
+    gpuAdResOnGPU = gpuAdResOnGPUOwner.get();
 
     for (Scalar x_i : testXs){
         auto cpuMadeAd = NorneEvaluation(x_i, 0);
@@ -96,7 +99,4 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
 
         BOOST_CHECK(gpuAdResOnCPU == cpuInterpolatedEval);
     }
-
-    OPM_GPU_SAFE_CALL(cudaFree(gpuAdInput));
-    OPM_GPU_SAFE_CALL(cudaFree(gpuAdResOnGPU));
 }

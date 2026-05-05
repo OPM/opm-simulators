@@ -42,7 +42,20 @@
 
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/simulators/flow/FlowProblemParameters.hpp>
+
+#if HAVE_CUDA
+#include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
+#include <memory>
+#include <variant>
+#include <vector>
+#endif
+
+#include <chrono>
 #include <cstddef>
+#include <format>
 #include <stdexcept>
 #include <type_traits>
 
@@ -79,14 +92,30 @@ public:
                           Dune::Partitions::all,
                           ThreadManager::maxThreads())
     {
+        initGpuIntensiveQuantitiesDispatcher_();
     }
 
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
         this->invalidateIntensiveQuantitiesCache(timeIdx);
+
+        // When the experimental GPU dispatcher is active and the CPU has
+        // already populated the cache once (including the fields the GPU
+        // dispatcher does not overlay, e.g. mobility / energy), skip the
+        // expensive CPU loop and rely solely on the GPU dispatcher to
+        // refresh the BlackOil intensive-quantities fields. The remaining
+        // cached fields keep their previously computed values, which is
+        // the intended behaviour for this experimental GPU-only path.
+        if (gpuDispatcherActiveAndInitialized_()) {
+            markIntensiveQuantitiesCacheValid_(timeIdx);
+            maybeRunGpuIntensiveQuantitiesDispatcher_(timeIdx);
+            return;
+        }
+
         if constexpr (gridIsUnchanging) {
             if constexpr (avoidElementContext) {
                 updateCachedIntQuants(timeIdx);
+                cpuIntensiveQuantitiesInitialized_ = true;
                 return;
             }
             OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -102,6 +131,11 @@ public:
             }
             OPM_END_PARALLEL_TRY_CATCH("invalidateAndUpdateIntensiveQuantities: state error",
                                        this->simulator_.vanguard().grid().comm());
+            // After all cells are CPU-updated and written into the cache,
+            // overlay the GPU-computed BlackOil fields in one batched call
+            // (no-op when the GPU dispatcher is unavailable or disabled).
+            maybeRunGpuIntensiveQuantitiesDispatcher_(timeIdx);
+            cpuIntensiveQuantitiesInitialized_ = true;
         } else {
             // Grid is possibly refined or otherwise changed between calls.
             ElementContext elemCtx(this->simulator_);
@@ -262,6 +296,16 @@ protected:
                 this->template updateSingleCachedIntQuantUnchecked<Args...>(elementMapper.index(elem), timeIdx);
             }
         }
+
+        // After the CPU per-cell update has populated all fields, optionally
+        // overlay the BlackOil intensive-quantities fields with their GPU
+        // counterparts via the experimental dispatcher. The dispatcher
+        // overwrites the subset of fields covered by
+        // BlackOilIntensiveQuantities::overlayBlackOilFieldsFrom; any field
+        // not handled there keeps the CPU-computed value.
+        // The call is a no-op when the GPU dispatcher is unavailable or the
+        // user has not enabled it.
+        maybeRunGpuIntensiveQuantitiesDispatcher_(timeIdx);
     }
 
     template <class ...Args>
@@ -276,6 +320,158 @@ protected:
     }
 
     ElementChunks<GridView, Dune::Partitions::All> element_chunks_;
+
+    // ----------------------------------------------------------------------
+    // GPU intensive-quantities dispatcher integration.
+    //
+    // All knowledge about whether the experimental GPU dispatcher is
+    // available, whether it is supported for the current TypeTag, and how
+    // to invoke it, is intentionally isolated to the few private members
+    // and helper methods below. The rest of the model only sees a single
+    // entry point: maybeRunGpuIntensiveQuantitiesDispatcher_(timeIdx).
+    // ----------------------------------------------------------------------
+
+    // Compile-time predicates. We use them to avoid sprinkling preprocessor
+    // conditionals throughout the rest of the class.
+    static constexpr bool gpuDispatcherCompiledIn_ =
+#if HAVE_CUDA && OPM_HAVE_GPU_BLACKOIL_INTENSIVE_QUANTITIES_DISPATCHER
+        true;
+#else
+        false;
+#endif
+
+    static constexpr bool gpuDispatcherSupportsTypeTag_ =
+#if HAVE_CUDA && OPM_HAVE_GPU_BLACKOIL_INTENSIVE_QUANTITIES_DISPATCHER
+        Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value;
+#else
+        false;
+#endif
+
+    bool useGpuIntensiveQuantitiesDispatcher_{false};
+
+    // Tracks whether the CPU intensive-quantities update has been run at
+    // least once. Used to ensure non-BlackOil cached fields (mobility,
+    // energy, ...) are populated before we switch to the GPU-only path
+    // when the experimental dispatcher is enabled.
+    mutable bool cpuIntensiveQuantitiesInitialized_{false};
+
+    // True iff the GPU dispatcher is compiled in, supported for the
+    // current TypeTag, enabled at runtime, and the CPU has already been
+    // run once to populate the cached non-BlackOil fields.
+    bool gpuDispatcherActiveAndInitialized_() const noexcept
+    {
+        if constexpr (gpuDispatcherCompiledIn_ && gpuDispatcherSupportsTypeTag_) {
+            return useGpuIntensiveQuantitiesDispatcher_
+                && cpuIntensiveQuantitiesInitialized_;
+        } else {
+            return false;
+        }
+    }
+
+    // Mark every entry of the intensive-quantity cache for the given time
+    // index as valid. Used on the GPU-only path where we skip the CPU
+    // update loop (which would normally mark each entry valid as a
+    // side-effect) and rely on the GPU dispatcher to refresh the
+    // BlackOil fields in-place.
+    void markIntensiveQuantitiesCacheValid_(const unsigned timeIdx) const
+    {
+        const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
+        for (std::size_t i = 0; i < numCells; ++i) {
+            this->setIntensiveQuantitiesCacheEntryValidity(i, timeIdx, true);
+        }
+    }
+
+#if HAVE_CUDA && OPM_HAVE_GPU_BLACKOIL_INTENSIVE_QUANTITIES_DISPATCHER
+    using GpuDispatcherStorage = std::conditional_t<
+        Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value,
+        std::unique_ptr<Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<TypeTag>>,
+        std::monostate>;
+    mutable GpuDispatcherStorage gpuIntensiveQuantitiesDispatcher_{};
+#endif
+
+    // Read the user-facing parameter and validate that the requested
+    // configuration is actually supported by this build / TypeTag.
+    // Throws (with a self-contained reason) when the user requests the GPU
+    // dispatcher but it is not available.
+    void initGpuIntensiveQuantitiesDispatcher_()
+    {
+        const bool requested =
+            Parameters::Get<Parameters::ExperimentalComputePropertiesOnGpu>();
+        if (!requested) {
+            useGpuIntensiveQuantitiesDispatcher_ = false;
+            return;
+        }
+
+        if constexpr (!gpuDispatcherCompiledIn_) {
+            OPM_THROW(std::runtime_error,
+                      "--experimental-compute-properties-on-gpu=true was "
+                      "specified, but this binary was built without a "
+                      "compatible GPU back-end. The GPU intensive-quantities "
+                      "dispatcher requires either HIP or CUDA >= 13.1; "
+                      "rebuild with HIP or with a sufficiently new CUDA "
+                      "toolkit (see CMake option "
+                      "OPM_HAVE_GPU_BLACKOIL_INTENSIVE_QUANTITIES_DISPATCHER).");
+        } else if constexpr (!gpuDispatcherSupportsTypeTag_) {
+            OPM_THROW(std::runtime_error,
+                      "--experimental-compute-properties-on-gpu=true was "
+                      "specified, but the active TypeTag is not supported "
+                      "by the GPU BlackOil intensive-quantities dispatcher. "
+                      "Only the CO2STORE-compatible TypeTag "
+                      "FlowGasWaterEnergyProblem (gas+water+energy, no oil) "
+                      "is currently supported by the experimental GPU "
+                      "dispatcher.");
+        } else {
+            useGpuIntensiveQuantitiesDispatcher_ = true;
+        }
+    }
+
+    // Single entry point that hides all dispatcher-related logic from the
+    // rest of the model. No-op when the dispatcher is either not compiled
+    // in, not supported for the current TypeTag, or not enabled at runtime.
+    void maybeRunGpuIntensiveQuantitiesDispatcher_(const unsigned timeIdx) const
+    {
+        if constexpr (gpuDispatcherCompiledIn_ && gpuDispatcherSupportsTypeTag_) {
+            if (useGpuIntensiveQuantitiesDispatcher_) {
+                const auto gpuStartTime = std::chrono::steady_clock::now();
+                this->runGpuIntensiveQuantitiesDispatcher_(timeIdx);
+                const auto gpuDuration =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now() - gpuStartTime);
+                Opm::OpmLog::info(std::format(
+                    "GPU intensive-quantities dispatch took {} ms",
+                    gpuDuration.count()));
+            }
+        } else {
+            (void)timeIdx;
+        }
+    }
+
+#if HAVE_CUDA && OPM_HAVE_GPU_BLACKOIL_INTENSIVE_QUANTITIES_DISPATCHER
+    void runGpuIntensiveQuantitiesDispatcher_(const unsigned timeIdx) const
+    {
+        if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (!gpuIntensiveQuantitiesDispatcher_) {
+                gpuIntensiveQuantitiesDispatcher_ =
+                    std::make_unique<
+                        Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<TypeTag>>();
+            }
+            using PV = GetPropType<TypeTag, Properties::PrimaryVariables>;
+            const auto& sol = this->solution(timeIdx);
+            const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
+            std::vector<const PV*> priVarsPtrs(numCells);
+            std::vector<IntensiveQuantities*> outIqPtrs(numCells);
+            for (std::size_t i = 0; i < numCells; ++i) {
+                priVarsPtrs[i] = &sol[i];
+                outIqPtrs[i] = &this->intensiveQuantityCache_[timeIdx][i];
+            }
+            gpuIntensiveQuantitiesDispatcher_->update(
+                this->simulator_.problem(),
+                priVarsPtrs.data(),
+                outIqPtrs.data(),
+                numCells);
+        }
+    }
+#endif
 };
 
 } // namespace Opm

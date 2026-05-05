@@ -34,6 +34,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
@@ -142,7 +143,7 @@ public:
      */
     OPM_HOST_DEVICE const DimMatrix& intrinsicPermeability() const
     {
-        throw std::invalid_argument("The ECL transmissibility module does not provide an explicit intrinsic permeability");
+        OPM_THROW(std::invalid_argument, "The ECL transmissibility module does not provide an explicit intrinsic permeability");
     }
 
     /*!
@@ -153,7 +154,7 @@ public:
      */
     OPM_HOST_DEVICE const EvalDimVector& potentialGrad(unsigned) const
     {
-        throw std::invalid_argument("The ECL transmissibility module does not provide explicit potential gradients");
+        OPM_THROW(std::invalid_argument, "The ECL transmissibility module does not provide explicit potential gradients");
     }
 
     /*!
@@ -173,7 +174,7 @@ public:
      */
     OPM_HOST_DEVICE const EvalDimVector& filterVelocity(unsigned) const
     {
-        throw std::invalid_argument("The ECL transmissibility module does not provide explicit filter velocities");
+        OPM_THROW(std::invalid_argument, "The ECL transmissibility module does not provide explicit filter velocities");
     }
 
     /*!
