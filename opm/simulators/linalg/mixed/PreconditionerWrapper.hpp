@@ -13,7 +13,7 @@ class MixedPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
     using domain_type = X;
     static constexpr auto block_size = domain_type::block_type::dimension;
 
-    MixedPreconditioner(const M& A)
+    MixedPreconditioner(const M& A, bool use_dilu = false)
     {
         int nrows = A.N();
         int nnz = A.nonzeroes();
@@ -42,6 +42,7 @@ class MixedPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
 
         prec_init(prec_,mixed_matrix_);
         nnz_ = nnz;
+        use_dilu_ = use_dilu;
 
         update();
     };
@@ -53,6 +54,7 @@ class MixedPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
     virtual Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
 
     private:
+    bool use_dilu_;
     double const *double_data_;
     bsr_matrix *mixed_matrix_;
     prec_t *prec_;
@@ -73,7 +75,7 @@ update ()
         for(int i=0;i<bb;i++) mixed_matrix_->dbl[bb*k + i] = B[i];
     }
 
-    prec_ilu0_factorize(prec_, mixed_matrix_);
+    use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_); // choose dilu or ilu0
     prec_downcast(prec_);
 }
 
