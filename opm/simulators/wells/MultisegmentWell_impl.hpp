@@ -1154,9 +1154,9 @@ namespace Opm
 
         auto info = this->getFirstPerforationFluidStateInfo(simulator);
         temperature.setValue(std::get<0>(info));
-        if (getValue(temperature) > 1) {
+        if (getValue(temperature) < 1) {
             OPM_THROW(std::runtime_error,
-                      "Non-zero temperature (" + std::to_string(getValue(temperature)) +
+                      "too low temperature (" + std::to_string(getValue(temperature)) +
                       ") encountered in MultisegmentWell segment fluid property computation for well " +
                       this->name() + ".");
         }
