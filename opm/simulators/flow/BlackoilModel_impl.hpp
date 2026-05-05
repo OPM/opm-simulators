@@ -122,10 +122,10 @@ prepareStep(const SimulatorTimerInterface& timer)
                                 "- the previous step succeeded on some ranks but failed on others.");
     }
     if (lastStepFailed) {
-        simulator_.model().updateFailed();
+        simulator_.problem().updateFailed();
     }
     else {
-        simulator_.model().advanceTimeLevel();
+        simulator_.problem().advanceTimeLevel();
     }
 
     // Set the timestep size and episode index for the model explicitly.
