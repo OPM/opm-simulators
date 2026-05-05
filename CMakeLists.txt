@@ -364,8 +364,10 @@ macro(opm-simulators_sources_hook)
     # cuda warns when constxpr functions are used in kernels.
     # since the entire stl is constexpr ..., we enable relaxed flag
     set_source_files_properties(
+      tests/gpuistl/test_blackoilintensivequantities_gpu.cu
       tests/gpuistl/test_blackoilfluidstategpu.cu
       tests/gpuistl/test_gpu_ad.cu
+      tests/gpuistl/test_gpu_ecl_thermal_law_manager.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
       tests/gpuistl/test_gpuBlackOilFluidSystem.cu
@@ -490,6 +492,7 @@ macro(opm-simulators_tests_hook)
                  cuVector_operations
                  deviceBlockOperations
                  gpu_ad
+                 gpu_ecl_thermal_law_manager
                  gpu_linear_two_phase_material
                  gpu_resources
                  gpu_safe_call
@@ -515,6 +518,7 @@ macro(opm-simulators_tests_hook)
                  primary_variables_gpu
                  solver_adapter
                  throw_macros_on_gpu
+                 blackoilintensivequantities_gpu
            )
       if(TEST ${test})
         set_tests_properties(${test}
@@ -681,6 +685,9 @@ macro(opm-simulators_targets_hook)
   target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_tpsa_localresidual PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  if (TARGET test_blackoilintensivequantities_gpu)
+    target_sources(test_blackoilintensivequantities_gpu PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  endif()
   if(MPI_FOUND)
     target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   endif()
