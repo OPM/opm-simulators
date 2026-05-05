@@ -392,6 +392,16 @@ public:
 
     }
 
+    void updateFailed()
+    {
+        this->model().updateFailed();
+    }
+
+    void advanceTimeLevel()
+    {
+        this->model().advanceTimeLevel();
+    }
+
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
      */
