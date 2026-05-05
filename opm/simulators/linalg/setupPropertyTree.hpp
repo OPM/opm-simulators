@@ -42,6 +42,7 @@ PropertyTree setupMixedILU(const std::string& conf, const FlowLinearSolverParame
 PropertyTree setupHaugenILU(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupDILU(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupMixedDILU(const std::string& conf, const FlowLinearSolverParameters& p);
+PropertyTree setupHaugenDILU(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupUMFPack(const std::string& conf, const FlowLinearSolverParameters& p);
 
 } // namespace Opm
