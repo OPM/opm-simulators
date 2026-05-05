@@ -71,7 +71,7 @@ namespace Opm {
         using typename MSWEval::BVectorWell;
         using MSWEval::SPres;
         using typename Base::PressureMatrix;
-        using FSInfo = std::tuple<Scalar,typename std::decay<decltype(std::declval<decltype(std::declval<const Simulator&>().model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type>;
+        using FSInfo = std::tuple<Scalar, Scalar>;
 
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo<Scalar>& pw_info,

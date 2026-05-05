@@ -817,13 +817,6 @@ checkAllConnectionsFound()
 template<class Scalar> using dIter = typename std::vector<Scalar>::iterator;
 template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterator;
 
-#define INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, DIM)                 \
-    template std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>>                \
-        Opm::ParallelWellInfo<T>::broadcastFirstPerforationValue                    \
-        <std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>>>                   \
-        (std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>> const&)            \
-        const;
-
 #define INSTANTIATE_TYPE(T)                                                         \
     template class CheckDistributedWellConnections<T>;                              \
     template class CommunicateAboveBelow<T>;                                        \
@@ -837,12 +830,9 @@ template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterat
         broadcastFirstPerforationValue<int>(const int&) const;                      \
     template T ParallelWellInfo<T>::                                                \
         broadcastFirstPerforationValue<T>(const T&) const;                          \
-    INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, 1)                       \
-    INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, 2)                       \
-    INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, 3)                       \
-    INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, 4)                       \
-    INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, 5)                       \
-    INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, 6)                       \
+    template std::tuple<T, T>                                                       \
+    ParallelWellInfo<T>::broadcastFirstPerforationValue<std::tuple<T, T>>           \
+    (std::tuple<T, T> const&) const;                                                \
     template void CommunicateAboveBelow<T>::                                        \
         partialSumPerfValues<dIter<T>>(dIter<T>, dIter<T>) const;                   \
     template bool operator<(const ParallelWellInfo<T>&,                             \

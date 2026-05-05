@@ -1154,7 +1154,7 @@ namespace Opm
 
         auto info = this->getFirstPerforationFluidStateInfo(simulator);
         temperature.setValue(std::get<0>(info));
-        saltConcentration = this->extendEval(std::get<1>(info));
+        saltConcentration.setValue(std::get<1>(info));
 
         this->segments_.computeFluidProperties(temperature,
                                                saltConcentration,
@@ -2107,7 +2107,7 @@ namespace Opm
 
         auto info = this->getFirstPerforationFluidStateInfo(simulator);
         temperature.setValue(std::get<0>(info));
-        saltConcentration = this->extendEval(std::get<1>(info));
+        saltConcentration.setValue(std::get<1>(info));
 
         return this->segments_.getSurfaceVolume(temperature,
                                                 saltConcentration,
@@ -2371,8 +2371,7 @@ namespace Opm
     getFirstPerforationFluidStateInfo(const Simulator& simulator) const
     {
         Scalar fsTemperature = 0.0;
-        using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
-        SaltConcType fsSaltConcentration{};
+        Scalar fsSaltConcentration = 0.0;
 
         // If this process does not contain active perforations, this->well_cells_ is empty.
         if (this->well_cells_.size() > 0) {
@@ -2382,8 +2381,8 @@ namespace Opm
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
-            fsSaltConcentration = fs.saltConcentration();
+            fsTemperature = getValue(fs.temperature(FluidSystem::oilPhaseIdx));
+            fsSaltConcentration = getValue(fs.saltConcentration());
         }
 
         auto info = std::make_tuple(fsTemperature, fsSaltConcentration);
