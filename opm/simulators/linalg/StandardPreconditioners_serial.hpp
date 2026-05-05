@@ -33,6 +33,10 @@
 #include <memory>
 #include <type_traits>
 
+
+#include <opm/simulators/linalg/mixed/PreconditionerWrapper.hpp>
+
+
 namespace Opm {
 
 template <class X, class Y>
@@ -87,6 +91,10 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
         F::addCreator("dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
             return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat());
+        });
+        F::addCreator("haugen-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            DUNE_UNUSED_PARAMETER(prm);
+            return std::make_shared<MixedPreconditioner<M,V,V>>(op.getmat());
         });
         F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
