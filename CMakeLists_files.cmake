@@ -1034,6 +1034,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/VtkTracerModule.hpp
   opm/simulators/flow/equil/EquilibrationHelpers.hpp
   opm/simulators/flow/equil/EquilibrationHelpers_impl.hpp
+  opm/simulators/flow/equil/InitStateEquilBase.hpp
+  opm/simulators/flow/equil/InitStateEquilBase_impl.hpp
   opm/simulators/flow/equil/InitStateEquil.hpp
   opm/simulators/flow/equil/InitStateEquil_impl.hpp
   opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp
