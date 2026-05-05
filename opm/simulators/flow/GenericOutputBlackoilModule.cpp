@@ -617,10 +617,12 @@ doAllocBuffers(const unsigned bufferSize,
         }
     }
 
-    if (auto& norst = rstKeywords["NORST"]; norst > 0) {
-        // Don't emit diagnostic messages about unsupported 'NORST' key.
-        norst = 0;
-    }
+    const int norst_value = rstKeywords["NORST"];
+    rstKeywords["NORST"] = 0;  // Don't emit diagnostic about NORST
+
+    // For NORST >= 1 (graphics-only restart), suppress hysteresis arrays.
+    const EclHysteresisConfig* effectiveHysteresisConfig =
+        (norst_value > 0) ? nullptr : hysteresisConfig;
 
     // We always output oil pressure
     rstKeywords["PRES"] = 0;
@@ -742,28 +744,28 @@ doAllocBuffers(const unsigned bufferSize,
        Entry{&pSalt_,                             "", enableSaltPrecipitation_},
        Entry{&permFact_,                          "", enableSaltPrecipitation_ || enableBioeffects_},
        Entry{&soMax_,                             "", oilvap.getType() == OilVapP::VAPPARS},
-       Entry{&soMax_,                             "", hysteresisConfig &&
-                                                      hysteresisConfig->enableNonWettingHysteresis() &&
+       Entry{&soMax_,                             "", effectiveHysteresisConfig &&
+                                                      effectiveHysteresisConfig->enableNonWettingHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(waterPhaseIdx)},
-       Entry{&sgmax_,                             "", hysteresisConfig &&
-                                                      hysteresisConfig->enableNonWettingHysteresis() &&
+       Entry{&sgmax_,                             "", effectiveHysteresisConfig &&
+                                                      effectiveHysteresisConfig->enableNonWettingHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(gasPhaseIdx)},
-       Entry{&swMax_,                             "", hysteresisConfig &&
-                                                      hysteresisConfig->enableWettingHysteresis() &&
+       Entry{&swMax_,                             "", effectiveHysteresisConfig &&
+                                                      effectiveHysteresisConfig->enableWettingHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(waterPhaseIdx)},
-       Entry{&shmax_,                             "", hysteresisConfig &&
-                                                      hysteresisConfig->enableWettingHysteresis() &&
+       Entry{&shmax_,                             "", effectiveHysteresisConfig &&
+                                                      effectiveHysteresisConfig->enableWettingHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(gasPhaseIdx)},
-       Entry{&swmin_,                             "", hysteresisConfig &&
-                                                      hysteresisConfig->enablePCHysteresis() &&
+       Entry{&swmin_,                             "", effectiveHysteresisConfig &&
+                                                      effectiveHysteresisConfig->enablePCHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(waterPhaseIdx)},
-       Entry{&somin_,                             "", hysteresisConfig &&
-                                                      hysteresisConfig->enablePCHysteresis() &&
+       Entry{&somin_,                             "", effectiveHysteresisConfig &&
+                                                      effectiveHysteresisConfig->enablePCHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(gasPhaseIdx)},
        Entry{&ppcw_,                          "PPCW", eclState_.fieldProps().has_double("SWATINIT")},
