@@ -239,6 +239,11 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     }
 
     // mixed-precision ILU0
+    if (conf == "haugen-ilu0") {
+        return setupHaugenILU(conf, p);
+    }
+
+    // mixed-precision ILU0
     if (conf == "mixed-ilu0") {
         return setupMixedILU(conf, p);
     }
@@ -408,6 +413,20 @@ setupILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
     return prm;
 }
+
+PropertyTree
+setupHaugenILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
+{
+    using namespace std::string_literals;
+    PropertyTree prm;
+    prm.put("tol", p.linear_solver_reduction_);
+    prm.put("maxiter", p.linear_solver_maxiter_);
+    prm.put("verbosity", p.linear_solver_verbosity_);
+    prm.put("solver", "mixed-precision"s);
+    prm.put("preconditioner.type", "haugen-ilu0"s);
+    return prm;
+}
+
 
 PropertyTree
 setupMixedILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
