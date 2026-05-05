@@ -29,6 +29,7 @@
 #define OPM_TEMPERATURE_MODEL_HPP
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/models/parallel/gridcommhandles.hh>
 #include <opm/models/utils/propertysystem.hh>
@@ -97,15 +98,17 @@ class BlackOilEnergyIntensiveQuantitiesTemp
 
 
 
-    void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
+    OPM_HOST_DEVICE void updateTemperature_(const Problem& problem,
+                                            unsigned globalDofIdx,
+                                            unsigned timeIdx)
     {
         const EvaluationTemp T = EvaluationTemp::createVariable(problem.temperature(globalDofIdx, timeIdx), 0);
         fluidState_.setTemperature(T);
     }
 
-    void updateEnergyQuantities_(const Problem& problem,
-                                 const unsigned globalSpaceIdx,
-                                 const unsigned timeIdx)
+    OPM_HOST_DEVICE void updateEnergyQuantities_(const Problem& problem,
+                                                 const unsigned globalSpaceIdx,
+                                                 const unsigned timeIdx)
     {
         // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
         // and the thermal conductivity coefficients
@@ -132,20 +135,20 @@ class BlackOilEnergyIntensiveQuantitiesTemp
         rockFraction_ = problem.rockFraction(globalSpaceIdx, timeIdx);
     }
 
-    const EvaluationTemp& rockInternalEnergy() const
+    OPM_HOST_DEVICE const EvaluationTemp& rockInternalEnergy() const
     { return rockInternalEnergy_; }
 
-    const EvaluationTemp& totalThermalConductivity() const
+    OPM_HOST_DEVICE const EvaluationTemp& totalThermalConductivity() const
     { return totalThermalConductivity_; }
 
-    const Scalar& rockFraction() const
+    OPM_HOST_DEVICE const Scalar& rockFraction() const
     { return rockFraction_; }
 
-    const FluidStateTemp& fluidStateTemp() const
+    OPM_HOST_DEVICE const FluidStateTemp& fluidStateTemp() const
     { return fluidState_; }
 
     template <class FluidState>
-    void setFluidState(const FluidState& fs)
+    OPM_HOST_DEVICE void setFluidState(const FluidState& fs)
     {
         // copy the needed part of the fluid state
         fluidState_.setPvtRegionIndex(fs.pvtRegionIndex());
