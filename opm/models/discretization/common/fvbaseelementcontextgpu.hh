@@ -1,6 +1,9 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*
+
+  Copyright 2026 Equinor ASA
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -43,7 +46,8 @@
 
 #include <cstddef>
 
-namespace Opm {
+namespace Opm
+{
 
 /*!
  * \ingroup FiniteVolumeDiscretizations
@@ -55,91 +59,150 @@ namespace Opm {
  *
  * \tparam TypeTag  The type tag from which Scalar, PrimaryVariables, etc. are derived.
  */
-template<class TypeTag>
+template <class TypeTag>
 class FvBaseElementContextGpu
 {
 public:
-    using Scalar              = GetPropType<TypeTag, Properties::Scalar>;
-    using PrimaryVariables    = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
-    using Problem             = GetPropType<TypeTag, Properties::Problem>;
-    using Model               = GetPropType<TypeTag, Properties::Model>;
-    using GradientCalculator  = GetPropType<TypeTag, Properties::GradientCalculator>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using GradientCalculator = GetPropType<TypeTag, Properties::GradientCalculator>;
 
     // -----------------------------------------------------------------------
     // Construction / assignment
     // -----------------------------------------------------------------------
 
     OPM_HOST_DEVICE FvBaseElementContextGpu() = default;
+    OPM_HOST_DEVICE ~FvBaseElementContextGpu() = default;
     OPM_HOST_DEVICE FvBaseElementContextGpu(const FvBaseElementContextGpu&) = default;
+    OPM_HOST_DEVICE FvBaseElementContextGpu(FvBaseElementContextGpu&&) noexcept = default;
     OPM_HOST_DEVICE FvBaseElementContextGpu& operator=(const FvBaseElementContextGpu&) = default;
+    OPM_HOST_DEVICE FvBaseElementContextGpu& operator=(FvBaseElementContextGpu&&) noexcept
+        = default;
 
     // -----------------------------------------------------------------------
     // Stencil / element update stubs
     // -----------------------------------------------------------------------
 
-    OPM_HOST_DEVICE void updateAll() {}
-    OPM_HOST_DEVICE void updateStencil() {}
-    OPM_HOST_DEVICE void updatePrimaryStencil() {}
-    OPM_HOST_DEVICE void updateStencilTopology() {}
-    OPM_HOST_DEVICE void updateAllIntensiveQuantities() {}
-    OPM_HOST_DEVICE void updateIntensiveQuantities(unsigned /*timeIdx*/) {}
-    OPM_HOST_DEVICE void updatePrimaryIntensiveQuantities(unsigned /*timeIdx*/) {}
+    OPM_HOST_DEVICE void updateAll()
+    {
+    }
+    OPM_HOST_DEVICE void updateStencil()
+    {
+    }
+    OPM_HOST_DEVICE void updatePrimaryStencil()
+    {
+    }
+    OPM_HOST_DEVICE void updateStencilTopology()
+    {
+    }
+    OPM_HOST_DEVICE void updateAllIntensiveQuantities()
+    {
+    }
+    OPM_HOST_DEVICE void updateIntensiveQuantities(unsigned /*timeIdx*/)
+    {
+    }
+    OPM_HOST_DEVICE void updatePrimaryIntensiveQuantities(unsigned /*timeIdx*/)
+    {
+    }
     OPM_HOST_DEVICE void updateIntensiveQuantities(const PrimaryVariables& /*priVars*/,
                                                    unsigned /*dofIdx*/,
-                                                   unsigned /*timeIdx*/) {}
-    OPM_HOST_DEVICE void updateAllExtensiveQuantities() {}
-    OPM_HOST_DEVICE void updateExtensiveQuantities(unsigned /*timeIdx*/) {}
+                                                   unsigned /*timeIdx*/)
+    {
+    }
+    OPM_HOST_DEVICE void updateAllExtensiveQuantities()
+    {
+    }
+    OPM_HOST_DEVICE void updateExtensiveQuantities(unsigned /*timeIdx*/)
+    {
+    }
 
     // -----------------------------------------------------------------------
     // Focus DOF
     // -----------------------------------------------------------------------
 
-    OPM_HOST_DEVICE void setFocusDofIndex(unsigned dofIdx) { focusDofIdx_ = dofIdx; }
-    OPM_HOST_DEVICE unsigned focusDofIndex() const { return focusDofIdx_; }
+    OPM_HOST_DEVICE void setFocusDofIndex(unsigned dofIdx)
+    {
+        focusDofIdx_ = static_cast<int>(dofIdx);
+    }
+    OPM_HOST_DEVICE unsigned focusDofIndex() const
+    {
+        return focusDofIdx_;
+    }
 
     // -----------------------------------------------------------------------
     // Linearization type
     // -----------------------------------------------------------------------
 
     OPM_HOST_DEVICE LinearizationType linearizationType() const
-    { return LinearizationType{}; }
+    {
+        return LinearizationType {};
+    }
 
     // -----------------------------------------------------------------------
     // Problem / model accessors — return references to dummy stored objects
     // -----------------------------------------------------------------------
 
-    OPM_HOST_DEVICE const Problem& problem() const { return problem_; }
-    OPM_HOST_DEVICE const Model&   model()   const { return model_;   }
+    OPM_HOST_DEVICE const Problem& problem() const
+    {
+        return problem_;
+    }
+    OPM_HOST_DEVICE const Model& model() const
+    {
+        return model_;
+    }
 
     // -----------------------------------------------------------------------
     // DOF / face counts
     // -----------------------------------------------------------------------
 
-    OPM_HOST_DEVICE std::size_t numDof(unsigned /*timeIdx*/) const        { return 0; }
-    OPM_HOST_DEVICE std::size_t numPrimaryDof(unsigned /*timeIdx*/) const  { return 0; }
-    OPM_HOST_DEVICE std::size_t numInteriorFaces(unsigned /*timeIdx*/) const { return 0; }
-    OPM_HOST_DEVICE std::size_t numBoundaryFaces(unsigned /*timeIdx*/) const { return 0; }
+    OPM_HOST_DEVICE std::size_t numDof(unsigned /*timeIdx*/) const
+    {
+        return 0;
+    }
+    OPM_HOST_DEVICE std::size_t numPrimaryDof(unsigned /*timeIdx*/) const
+    {
+        return 0;
+    }
+    OPM_HOST_DEVICE std::size_t numInteriorFaces(unsigned /*timeIdx*/) const
+    {
+        return 0;
+    }
+    OPM_HOST_DEVICE std::size_t numBoundaryFaces(unsigned /*timeIdx*/) const
+    {
+        return 0;
+    }
 
     // -----------------------------------------------------------------------
     // Global space index / volume
     // -----------------------------------------------------------------------
 
     OPM_HOST_DEVICE unsigned globalSpaceIndex(unsigned /*dofIdx*/, unsigned /*timeIdx*/) const
-    { return 0; }
+    {
+        return 0;
+    }
 
     OPM_HOST_DEVICE Scalar dofVolume(unsigned /*dofIdx*/, unsigned /*timeIdx*/) const
-    { return Scalar{0}; }
+    {
+        return Scalar {0};
+    }
 
     OPM_HOST_DEVICE Scalar dofTotalVolume(unsigned /*dofIdx*/, unsigned /*timeIdx*/) const
-    { return Scalar{0}; }
+    {
+        return Scalar {0};
+    }
 
     // -----------------------------------------------------------------------
     // Boundary
     // -----------------------------------------------------------------------
 
-    OPM_HOST_DEVICE bool onBoundary() const { return false; }
+    OPM_HOST_DEVICE bool onBoundary() const
+    {
+        return false;
+    }
 
     // -----------------------------------------------------------------------
     // Intensive quantities
@@ -147,15 +210,21 @@ public:
 
     OPM_HOST_DEVICE const IntensiveQuantities& intensiveQuantities(unsigned /*dofIdx*/,
                                                                    unsigned /*timeIdx*/) const
-    { return intensiveQuantitiesStashed_; }
+    {
+        return intensiveQuantitiesStashed_;
+    }
 
     OPM_HOST_DEVICE IntensiveQuantities& intensiveQuantities(unsigned /*dofIdx*/,
                                                              unsigned /*timeIdx*/)
-    { return intensiveQuantitiesStashed_; }
+    {
+        return intensiveQuantitiesStashed_;
+    }
 
     OPM_HOST_DEVICE const IntensiveQuantities* thermodynamicHint(unsigned /*dofIdx*/,
-                                                                  unsigned /*timeIdx*/) const
-    { return nullptr; }
+                                                                 unsigned /*timeIdx*/) const
+    {
+        return nullptr;
+    }
 
     // -----------------------------------------------------------------------
     // Primary variables
@@ -163,29 +232,42 @@ public:
 
     OPM_HOST_DEVICE const PrimaryVariables& primaryVars(unsigned /*dofIdx*/,
                                                         unsigned /*timeIdx*/) const
-    { return priVarsStashed_; }
+    {
+        return priVarsStashed_;
+    }
 
     // -----------------------------------------------------------------------
     // Stash / restore
     // -----------------------------------------------------------------------
 
     OPM_HOST_DEVICE bool haveStashedIntensiveQuantities() const
-    { return stashedDofIdx_ != -1; }
+    {
+        return stashedDofIdx_ != -1;
+    }
 
-    OPM_HOST_DEVICE int stashedDofIdx() const { return stashedDofIdx_; }
+    OPM_HOST_DEVICE int stashedDofIdx() const
+    {
+        return stashedDofIdx_;
+    }
 
     OPM_HOST_DEVICE void stashIntensiveQuantities(unsigned dofIdx)
-    { stashedDofIdx_ = static_cast<int>(dofIdx); }
+    {
+        stashedDofIdx_ = static_cast<int>(dofIdx);
+    }
 
     OPM_HOST_DEVICE void restoreIntensiveQuantities(unsigned /*dofIdx*/)
-    { stashedDofIdx_ = -1; }
+    {
+        stashedDofIdx_ = -1;
+    }
 
     // -----------------------------------------------------------------------
     // Gradient calculator
     // -----------------------------------------------------------------------
 
     OPM_HOST_DEVICE const GradientCalculator& gradientCalculator() const
-    { return gradientCalculator_; }
+    {
+        return gradientCalculator_;
+    }
 
     // -----------------------------------------------------------------------
     // Extensive quantities
@@ -193,28 +275,36 @@ public:
 
     OPM_HOST_DEVICE const ExtensiveQuantities& extensiveQuantities(unsigned /*fluxIdx*/,
                                                                    unsigned /*timeIdx*/) const
-    { return extensiveQuantitiesStashed_; }
+    {
+        return extensiveQuantitiesStashed_;
+    }
 
     // -----------------------------------------------------------------------
     // Storage cache flag
     // -----------------------------------------------------------------------
 
-    OPM_HOST_DEVICE bool enableStorageCache() const        { return enableStorageCache_; }
-    OPM_HOST_DEVICE void setEnableStorageCache(bool yesno) { enableStorageCache_ = yesno; }
+    OPM_HOST_DEVICE bool enableStorageCache() const
+    {
+        return enableStorageCache_;
+    }
+    OPM_HOST_DEVICE void setEnableStorageCache(bool yesno)
+    {
+        enableStorageCache_ = yesno;
+    }
 
 private:
     // Dummy stored objects returned by reference accessors.
     // On device these are default-constructed and carry no meaningful data.
-    Problem            problem_{};
-    Model              model_{};
-    GradientCalculator gradientCalculator_{};
-    IntensiveQuantities intensiveQuantitiesStashed_{};
-    ExtensiveQuantities extensiveQuantitiesStashed_{};
-    PrimaryVariables   priVarsStashed_{};
+    Problem problem_ {};
+    Model model_ {};
+    GradientCalculator gradientCalculator_ {};
+    IntensiveQuantities intensiveQuantitiesStashed_ {};
+    ExtensiveQuantities extensiveQuantitiesStashed_ {};
+    PrimaryVariables priVarsStashed_ {};
 
-    int  stashedDofIdx_{-1};
-    int  focusDofIdx_{-1};
-    bool enableStorageCache_{false};
+    int stashedDofIdx_ {-1};
+    int focusDofIdx_ {-1};
+    bool enableStorageCache_ {false};
 };
 
 } // namespace Opm

@@ -35,8 +35,8 @@
 
 #include <opm/models/discretization/common/linearizationtype.hh>
 
-#include <opm/simulators/flow/GpuEclMaterialLawManager.hpp>
-#include <opm/simulators/flow/GpuEclThermalLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
+#include <opm/material/thermal/GpuEclThermalLawManager.hpp>
 
 #include <cstddef>
 #include <type_traits>

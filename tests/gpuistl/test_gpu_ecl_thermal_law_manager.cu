@@ -33,7 +33,7 @@
 #include <opm/material/thermal/EclThconrLaw.hpp>
 #include <opm/material/thermal/EclThconrLawParams.hpp>
 
-#include <opm/simulators/flow/GpuEclThermalLawManager.hpp>
+#include <opm/material/thermal/GpuEclThermalLawManager.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>

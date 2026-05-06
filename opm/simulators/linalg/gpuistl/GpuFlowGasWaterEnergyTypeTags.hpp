@@ -52,8 +52,8 @@
 #include <opm/material/thermal/EclThconrLawParams.hpp>
 
 #include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
-#include <opm/simulators/flow/GpuEclMaterialLawManager.hpp>
-#include <opm/simulators/flow/GpuEclThermalLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
+#include <opm/material/thermal/GpuEclThermalLawManager.hpp>
 #include <opm/simulators/flow/GpuFlowProblem.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>

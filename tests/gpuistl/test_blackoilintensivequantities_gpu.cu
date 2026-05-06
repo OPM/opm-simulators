@@ -77,8 +77,8 @@
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterialParams.hpp>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 
-#include <opm/simulators/flow/GpuEclMaterialLawManager.hpp>
-#include <opm/simulators/flow/GpuEclThermalLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
+#include <opm/material/thermal/GpuEclThermalLawManager.hpp>
 #include <opm/simulators/flow/GpuFlowProblem.hpp>
 
 #include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
@@ -265,7 +265,7 @@ void checkValueAndDerivatives(const CpuValue& cpuValue,
 
 template <class TypeTag>
 struct DummyProblem {
- 
+
 
     OPM_HOST_DEVICE DummyProblem() {
         // empty
@@ -274,7 +274,7 @@ struct DummyProblem {
     OPM_HOST_DEVICE ~DummyProblem() {
         // empty
     }
-     
+
     using EclMaterialLawManager =
         typename Opm::GetProp<TypeTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
     using EclThermalLawManager =
@@ -1097,4 +1097,3 @@ BOOST_AUTO_TEST_CASE(TestGpuVsCpuIntensiveQuantitiesEvaluationDerivatives)
                                       /*measureTiming=*/false,
                                       /*checkDerivatives=*/true);
 }
-
