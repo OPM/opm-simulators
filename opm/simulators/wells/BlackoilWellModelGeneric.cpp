@@ -1543,7 +1543,7 @@ updateWellPotentials(const int reportStepIdx,
                      const SummaryConfig& summaryConfig,
                      DeferredLogger& deferred_logger)
 {
-    auto well_state_copy = this->wellState();
+    auto& well_state_copy = this->potentialWellState();
 
     const bool write_restart_file = schedule().write_rst_file(reportStepIdx);
     auto exc_type = ExceptionType::NONE;

@@ -116,7 +116,7 @@ namespace Opm {
 
         /// computing the well potentials for group control
         void computeWellPotentials(const Simulator& simulator,
-                                   const WellStateType& well_state,
+                                   WellStateType& well_state,
                                    const GroupStateHelperType& groupStateHelper,
                                    std::vector<Scalar>& well_potentials) override;
 
@@ -239,6 +239,7 @@ namespace Opm {
 
         void computeWellRatesAtBhpLimit(const Simulator& simulator,
                                         const GroupStateHelperType& groupStateHelper,
+                                        WellStateType& well_state,
                                         std::vector<Scalar>& well_flux) const;
 
         void computeWellRatesWithBhp(const Simulator& simulator,
@@ -249,15 +250,17 @@ namespace Opm {
         void computeWellRatesWithBhpIterations(const Simulator& simulator,
                                                const Scalar& bhp,
                                                const GroupStateHelperType& groupStateHelper,
+                                               WellStateType& well_state,
                                                std::vector<Scalar>& well_flux) const override;
 
         std::vector<Scalar>
-        computeWellPotentialWithTHP(const WellStateType& well_state,
+        computeWellPotentialWithTHP(WellStateType& well_state,
                                     const Simulator& simulator,
                                     const GroupStateHelperType& groupStateHelper) const;
 
         bool computeWellPotentialsImplicit(const Simulator& simulator,
                                            const GroupStateHelperType& groupStateHelper,
+                                           WellStateType& well_state,
                                            std::vector<Scalar>& well_potentials) const;
 
         Scalar getRefDensity() const override;

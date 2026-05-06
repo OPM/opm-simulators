@@ -220,7 +220,7 @@ public:
 
     // TODO: before we decide to put more information under mutable, this function is not const
     virtual void computeWellPotentials(const Simulator& simulator,
-                                       const WellStateType& well_state,
+                                       WellStateType& well_state,
                                        const GroupStateHelperType& groupStateHelper,
                                        std::vector<Scalar>& well_potentials) = 0;
 
@@ -233,6 +233,7 @@ public:
     virtual void computeWellRatesWithBhpIterations(const Simulator& simulator,
                                                    const Scalar& bhp,
                                                    const GroupStateHelperType& groupStateHelper,
+                                                   WellStateType& well_state,
                                                    std::vector<Scalar>& well_flux) const = 0;
 
     bool wellUnderZeroRateTarget(const GroupStateHelperType& groupStateHelper) const;
