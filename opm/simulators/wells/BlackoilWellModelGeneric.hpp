@@ -330,9 +330,9 @@ protected:
     /*
       The dynamic state of the well model is maintained with an instance
       of the WellState class. Currently we have
-      four different wellstate instances:
+      four different well state instances:
 
-       1. The currently active wellstate is in the active_well_state_
+       1. The currently active well state is in the active_well_state_
           member. That is the state which is mutated by the simulator.
 
        2. In the case timestep fails to converge and we must go back and
@@ -341,14 +341,14 @@ protected:
           last_valid_well_state_ member and the functions
           commitWGState() and resetWellState().
 
-         3. Potential calculations keep a separate wellstate with
-            their own updated primary variables and rates so later
-            potential solves can start from a better guess.
+       3. Potential calculations keep a separate well state with
+          its own updated primary variables and rates so later
+          potential solves can start from a better guess.
 
-         4. For the NUPCOL functionality we should either use the
-            currently active wellstate or a wellstate frozen at max
-            nupcol iterations. This is handled with the member
-            nupcol_well_state_ and the updateNupcolWGState() function.
+       4. For the NUPCOL functionality we should either use the
+          currently active well state or a well state frozen at max
+          nupcol iterations. This is handled with the member
+          nupcol_well_state_ and the updateNupcolWGState() function.
     */
 
     /*
