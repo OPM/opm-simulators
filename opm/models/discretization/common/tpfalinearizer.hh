@@ -132,6 +132,50 @@ struct FullDomain
             gpuistl::make_view(buffer.cells)
         };
     };
+
+template<class TypeTag,
+         class LocalIntensiveQuantities,
+         class LocalModelClass,
+         class LocalResidualKernel,
+         class VectorBlockType,
+         class MatrixBlockType,
+         class ADVectorBlockType,
+         class DiagPtrType,
+         class DomainType,
+         class NeighborSparseTable,
+         class GpuResidualView,
+         class LocalGpuProblemType>
+__global__ void gpu_parallelize_linearization_kernel(
+    const unsigned int numCells,
+    const DomainType GPU_LOCAL_domain,
+    const NeighborSparseTable GPU_LOCAL_neighborInfo,
+    DiagPtrType GPU_LOCAL_diagMatAddress,
+    GpuResidualView GPU_LOCAL_residualView,
+    LocalModelClass localModel,
+    GetPropType<TypeTag, Properties::Scalar> invLocDT,
+    bool dispersionActive,
+    bool enableBioeffects,
+    bool onFullDomain,
+    const gpuistl::GpuView<GetPropType<TypeTag, Properties::Scalar>> GPU_LOCAL_volumes,
+    LocalGpuProblemType localGpuProblem);
+
+template<class TypeTag,
+         class LocalIntensiveQuantities,
+         class LocalModelClass,
+         class LocalResidualKernel,
+         class VectorBlockType,
+         class MatrixBlockType,
+         class ADVectorBlockType,
+         class DiagPtrType,
+         class GpuResidualView,
+         class GpuBoundaryInfoView,
+         class GpuProblem>
+__global__ void linearize_kernel_bc(
+    DiagPtrType GPU_LOCAL_diagMatAddress,
+    GpuResidualView GPU_LOCAL_residualView,
+    const GpuBoundaryInfoView GPU_LOCAL_boundaryInfo,
+    LocalModelClass localModel,
+    GpuProblem gpuProblem);
 #endif
 
 template <class ResidualNBInfoType,class BlockType>
@@ -1144,7 +1188,11 @@ private:
                 using GpuProblem = decltype(gpuFlowProblemView);
 
                 int constexpr blockSize = 256;
+#if USE_HIP
+                hipDeviceSynchronize();
+#else
                 cudaDeviceSynchronize();
+#endif
                 auto linearizeStartTime = std::chrono::high_resolution_clock::now();
 
                 linearize_parallelization_wrapper<run_assembly_on_gpu, GPUBOIQ, decltype(gpuModelView), LocalResidualGPU, VectorBlockGPU, MatrixBlockGPU, ADVectorBlockGPU>(
@@ -1169,7 +1217,11 @@ private:
                         gpuFlowProblemView);
                 }
 
+#if USE_HIP
+                hipDeviceSynchronize();
+#else
                 cudaDeviceSynchronize();
+#endif
                 auto linearizeEndTime = std::chrono::high_resolution_clock::now();
                 auto linearizeDuration = std::chrono::duration_cast<std::chrono::microseconds>(linearizeEndTime - linearizeStartTime).count();
                 std::cout << fmt::format("GPU linearization took {:.3f} ms\n", static_cast<double>(linearizeDuration) / 1000.0);

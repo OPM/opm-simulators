@@ -772,10 +772,10 @@ macro(opm-simulators_targets_hook)
     set(SOURCE_FILE "flow/flow_${OBJ}.cpp")
 
     if(OBJ STREQUAL "gpu")
-      if(CUDA_FOUND)
-        set(SOURCE_FILE "flow/flow_${OBJ}.cu")
-      elseif(USE_HIP)
+      if (CONVERT_CUDA_TO_HIP)
         set(SOURCE_FILE "flow/flow_${OBJ}.hip")
+      else()
+        set(SOURCE_FILE "flow/flow_${OBJ}.cu")
       endif()
     endif()
 

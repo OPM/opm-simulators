@@ -570,49 +570,6 @@ public:
         }
     }
 
-    template <class BoundaryConditionData, class RateVectorLocal, class LocalProblem>
-    OPM_HOST_DEVICE static void computeBoundaryFlux(RateVectorLocal& bdyFlux,
-                                    const LocalProblem& problem,
-                                    const BoundaryConditionData& bdyInfo,
-                                    const IntensiveQuantities& insideIntQuants,
-                                    unsigned globalSpaceIdx)
-    {
-#if OPM_IS_INSIDE_HOST_FUNCTION
-        switch (bdyInfo.type) {
-        case BCType::NONE:
-            bdyFlux = 0.0;
-            break;
-        case BCType::RATE:
-            computeBoundaryFluxRate(bdyFlux, bdyInfo);
-            break;
-        case BCType::FREE:
-        case BCType::DIRICHLET:
-            computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-            break;
-        case BCType::THERMAL:
-            computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-            break;
-        default:
-            throw std::logic_error("Unknown boundary condition type "
-                                   + std::to_string(static_cast<int>(bdyInfo.type))
-                                   + " in computeBoundaryFlux().");
-        }
-#else // TODO: support all boundary conditions on GPU as well to unify this code
-        switch (bdyInfo.type) {
-        case BCType::NONE:
-            bdyFlux = 0.0;
-            break;
-        case BCType::THERMAL:
-            computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-            break;
-        default:
-            OPM_THROW(std::logic_error,
-                      "Boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type))
-                          + " is not supported for GPU fluid systems in computeBoundaryFlux().");
-        }
-#endif
-    }
-
     template <class BoundaryConditionData>
     static void computeBoundaryFluxRate(RateVector& bdyFlux, const BoundaryConditionData& bdyInfo)
     {
@@ -778,6 +735,49 @@ public:
         }
         Valgrind::CheckDefined(bdyFlux);
 #endif
+    }
+
+    template <class BoundaryConditionData, class RateVectorLocal, class LocalProblem>
+    OPM_HOST_DEVICE static void computeBoundaryFlux(RateVectorLocal& bdyFlux,
+                                    const LocalProblem& problem,
+                                    const BoundaryConditionData& bdyInfo,
+                                    const IntensiveQuantities& insideIntQuants,
+                                    unsigned globalSpaceIdx)
+    {
+        if constexpr (std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
+            switch (bdyInfo.type) {
+            case BCType::NONE:
+                bdyFlux = 0.0;
+                break;
+            case BCType::RATE:
+                computeBoundaryFluxRate(bdyFlux, bdyInfo);
+                break;
+            case BCType::FREE:
+            case BCType::DIRICHLET:
+                computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            case BCType::THERMAL:
+                computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            default:
+                OPM_THROW(std::logic_error, "Unknown boundary condition type "
+                                    + std::to_string(static_cast<int>(bdyInfo.type))
+                                    + " in computeBoundaryFlux().");
+            }
+        } else { // Non-static fluid system used in GPU assembly
+            switch (bdyInfo.type) {
+            case BCType::NONE:
+                bdyFlux = 0.0;
+                break;
+            case BCType::THERMAL:
+                computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+                break;
+            default:
+                OPM_THROW(std::logic_error,
+                        "Boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type))
+                            + " is not supported for GPU fluid systems in computeBoundaryFlux().");
+            }
+        }
     }
 
     static void computeSource(RateVector& source,
