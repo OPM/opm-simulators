@@ -696,12 +696,11 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeInitialSegmentFluids(const Simulator& simulator,
+    computeInitialSegmentFluids(const FSInfo& info,
                                 DeferredLogger& deferred_logger)
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            // TODO: trying to reduce the times for the surfaceVolumeFraction calculation
-            const Scalar surface_volume = getSegmentSurfaceVolume(simulator, seg, deferred_logger).value();
+            const Scalar surface_volume = getSegmentSurfaceVolume(seg, info, deferred_logger).value();
             for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
                 segment_fluid_initial_[seg][comp_idx] = surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx).value();
             }
@@ -766,10 +765,12 @@ namespace Opm
         updatePrimaryVariables(groupStateHelper);
         computePerfCellPressDiffs(simulator);
 
-        // after updating the primary variables, we need to update the segment fluid state
-        updateSegmentFluidState(deferred_logger);
+        const auto info = this->getFirstPerforationFluidStateInfo(simulator);
 
-        computeInitialSegmentFluids(simulator, deferred_logger);
+        // after updating the primary variables, we need to update the segment fluid state
+        updateSegmentFluidState(info, deferred_logger);
+
+        computeInitialSegmentFluids(info, deferred_logger);
         if constexpr (has_energy) {
             computeInitialSegmentEnergy();
         }
@@ -1788,7 +1789,8 @@ namespace Opm
             try{
                 const BVectorWell dx_well = this->linSys_.solve();
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
-                updateSegmentFluidState(deferred_logger);
+                const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
+                updateSegmentFluidState(info, deferred_logger);
             }
             catch(const NumericalProblem& exp) {
                 // Add information about the well and log to deferred logger
@@ -1943,10 +1945,12 @@ namespace Opm
             this->linSys_.sumDistributed(this->parallel_well_info_.communication());
         }
 
+        const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
+
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term
             {
-                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(simulator, seg, deferred_logger);
+                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(seg, info, deferred_logger);
 
                 // Add a regularization_factor to increase the accumulation term
                 // This will make the system less stiff and help convergence for
@@ -2146,11 +2150,10 @@ namespace Opm
     template<typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
-    getSegmentSurfaceVolume(const Simulator& simulator,
-                            const int seg_idx,
+    getSegmentSurfaceVolume(const int seg_idx,
+                            const FSInfo& info,
                             DeferredLogger& deferred_logger) const
     {
-        auto info = this->getFirstPerforationFluidStateInfo(simulator);
         const Scalar firstPerfTemperature = std::get<0>(info);
         const Scalar firstPerfSaltConcentration = std::get<1>(info);
 
@@ -2582,11 +2585,14 @@ namespace Opm
     // it looks like these functions should go to MultisegmentWellSegments class
     template <typename TypeTag>
     MultisegmentWell<TypeTag>::template SegmentFluidState<typename MultisegmentWell<TypeTag>::EvalWell>
-    MultisegmentWell<TypeTag>::createSegmentFluidState(const int seg, DeferredLogger& deferred_logger) const
+    MultisegmentWell<TypeTag>::createSegmentFluidState(const int seg, const FSInfo& info,
+                                                       DeferredLogger& deferred_logger) const
     {
         const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
-        // TODO: 0 should be some other values fixed or we make it a std::optional
-        const EvalWell seg_temperature = has_energy ? this->primary_variables_.getSegmentTemperature(seg) : 0.;
+        const Scalar firstPerfTemperature = std::get<0>(info);
+        // TODO: we can extend the salt concentration to the createFluidState
+        // const Scalar firstPerfSaltConcentration = std::get<1>(info);
+        const EvalWell seg_temperature = has_energy ? this->primary_variables_.getSegmentTemperature(seg) : firstPerfTemperature;
 
         // TODO: with the energy equation joins, the num_conservation_quantities will be challenged
         std::vector<EvalWell> fluid_composition(this->numConservationQuantities(), 0.0);
@@ -2829,10 +2835,11 @@ namespace Opm
 
     template <typename TypeTag>
     void
-    MultisegmentWell<TypeTag>::updateSegmentFluidState(DeferredLogger& deferred_logger)
+    MultisegmentWell<TypeTag>::updateSegmentFluidState(const FSInfo& info,
+                                                       DeferredLogger& deferred_logger)
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            segment_fluid_state_[seg] = this->createSegmentFluidState(seg, deferred_logger);
+            segment_fluid_state_[seg] = this->createSegmentFluidState(seg, info, deferred_logger);
         }
     }
 
