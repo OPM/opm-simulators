@@ -69,13 +69,13 @@ struct EnableDispersion<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
 };
 
 template <class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
-    static constexpr bool value = true;
+struct EnableDiffusion<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
+    static constexpr bool value = false;
 };
 
 template <class TypeTag>
-struct EnergyModuleType<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
-    static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal;
+struct EnableEnergy<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
+    static constexpr bool value = true;
 };
 
 template<class TypeTag>

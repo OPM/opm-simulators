@@ -78,7 +78,6 @@ public:
         fill(value);
     }
 
-    #if HAVE_DUNE_COMMON
     /**
      * @brief Conversion constructor from Dune::FieldVector.
      * @param fv Source FieldVector (must have dimension `Dimension`).
@@ -89,7 +88,6 @@ public:
             data_[i] = fv[i];
         }
     }
-    #endif
 
     /**
      * @brief Initializer‑list constructor.

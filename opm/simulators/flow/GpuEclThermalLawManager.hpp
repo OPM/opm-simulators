@@ -216,15 +216,21 @@ private:
 /*!
  * \brief Build a CPU \c GpuManager from a CPU \c Opm::FlowProblem.
  *
- * Iterates over the active cells, querying the CPU problem for each
- * cell's \c SolidEnergyLawParams (multiplexer) and
- * \c ThermalConductionLawParams (multiplexer). The per-cell SPECROCK
- * multiplexer references are deduplicated by address to recover the
- * underlying region index (so the resulting GPU manager stores one
- * \c SolidEnergyLawParams per region rather than one per cell).
+ * Reads the solid-energy and thermal-conduction law data directly from
+ * the CPU problem's \c EclThermalLawManager (via \c thermalLawManager()).
+ *
+ * The per-region SPECROCK sample tables are extracted from the manager's
+ * per-region vector (one entry per SATNUM region), and the element-to-region
+ * index map is copied directly from \c EclThermalLawManager::elemToSatnumIdx().
+ * The per-element THCONR thermal-conduction coefficients are then populated
+ * in a single, focused loop.
  *
  * Throws via \c OPM_THROW for any solid-energy approach other than
  * SPECROCK or any thermal-conduction approach other than THCONR.
+ *
+ * \note \c CpuFlowProblemT must expose a \c thermalLawManager() accessor
+ *       returning a (possibly const) pointer or reference to an
+ *       \c EclThermalLawManager.
  */
 template <class ScalarT, class FluidSystemT, class CpuFlowProblemT>
 GpuManager<ScalarT, FluidSystemT>
@@ -234,53 +240,44 @@ buildCpuManagerFromFlowProblem(const CpuFlowProblemT& cpu, std::size_t numElemen
     using SolidEnergyLawParams = typename ManagerCpu::SolidEnergyLawParams;
     using ThermalConductionLawParams = typename ManagerCpu::ThermalConductionLawParams;
 
-    std::vector<const void*> regionMultiplexerAddress;
-    std::vector<int> hostElementToSolidRegionIdx(numElements);
+    const auto& thermalMgr = *cpu.thermalLawManager();
+
+    // Validate both approaches upfront, not once per element.
+    if (thermalMgr.solidEnergyApproach() != ::Opm::EclSolidEnergyApproach::Specrock) {
+        OPM_THROW(std::logic_error,
+                  "Opm::EclThermalLaw::GpuManager only supports the SPECROCK "
+                  "solid-energy approach.");
+    }
+    if (thermalMgr.thermalConductionApproach() != ::Opm::EclThermalConductionApproach::Thconr) {
+        OPM_THROW(std::logic_error,
+                  "Opm::EclThermalLaw::GpuManager only supports the THCONR "
+                  "thermal-conduction approach.");
+    }
+
+    // Build per-region solid-energy params by iterating over the region table
+    // (one entry per SATNUM region, not one per element).
+    const auto& cpuRegionParams = thermalMgr.solidEnergyLawParamsVector();
     std::vector<SolidEnergyLawParams> hostSolidEnergyParams;
+    hostSolidEnergyParams.reserve(cpuRegionParams.size());
+    for (const auto& cpuRegion : cpuRegionParams) {
+        const auto& cpuSpecrock = cpuRegion.template getRealParams<
+            ::Opm::EclSolidEnergyApproach::Specrock>();
+        SolidEnergyLawParams params;
+        params.setSamples(cpuSpecrock.temperatureSamples(),
+                          cpuSpecrock.internalEnergySamples());
+        hostSolidEnergyParams.emplace_back(std::move(params));
+    }
+
+    // Copy the element→region index map directly from the CPU manager.
+    const auto& srcMap = thermalMgr.elemToSatnumIdx();
+    std::vector<int> hostElementToSolidRegionIdx(srcMap.begin(), srcMap.end());
+
+    // Build per-element THCONR thermal-conduction params.
     std::vector<ThermalConductionLawParams> hostThermalConductionParams(numElements);
-
     for (std::size_t i = 0; i < numElements; ++i) {
-        const auto& cpuSolidMultiplexer
-            = cpu.solidEnergyLawParams(static_cast<unsigned>(i), 0u);
-        if (cpuSolidMultiplexer.solidEnergyApproach()
-            != ::Opm::EclSolidEnergyApproach::Specrock) {
-            OPM_THROW(std::logic_error,
-                      "Opm::EclThermalLaw::GpuManager only supports the SPECROCK "
-                      "solid-energy approach.");
-        }
-        const void* address = static_cast<const void*>(&cpuSolidMultiplexer);
-        int regionIdx = -1;
-        for (std::size_t r = 0; r < regionMultiplexerAddress.size(); ++r) {
-            if (regionMultiplexerAddress[r] == address) {
-                regionIdx = static_cast<int>(r);
-                break;
-            }
-        }
-        if (regionIdx < 0) {
-            const auto& cpuSpecrock = cpuSolidMultiplexer.template getRealParams<
-                ::Opm::EclSolidEnergyApproach::Specrock>();
-            const auto& xValues = cpuSpecrock.temperatureSamples();
-            const auto& yValues = cpuSpecrock.internalEnergySamples();
-            std::vector<ScalarT> temperatureSamples(xValues.begin(), xValues.end());
-            std::vector<ScalarT> internalEnergySamples(yValues.begin(), yValues.end());
-            SolidEnergyLawParams params;
-            params.setSamples(temperatureSamples, internalEnergySamples);
-            regionIdx = static_cast<int>(hostSolidEnergyParams.size());
-            hostSolidEnergyParams.emplace_back(std::move(params));
-            regionMultiplexerAddress.push_back(address);
-        }
-        hostElementToSolidRegionIdx[i] = regionIdx;
-
-        const auto& cpuThermalMultiplexer
-            = cpu.thermalConductionLawParams(static_cast<unsigned>(i), 0u);
-        if (cpuThermalMultiplexer.thermalConductionApproach()
-            != ::Opm::EclThermalConductionApproach::Thconr) {
-            OPM_THROW(std::logic_error,
-                      "Opm::EclThermalLaw::GpuManager only supports the THCONR "
-                      "thermal-conduction approach.");
-        }
-        const auto& cpuThconr = cpuThermalMultiplexer.template getRealParams<
-            ::Opm::EclThermalConductionApproach::Thconr>();
+        const auto& cpuThconr = thermalMgr
+            .thermalConductionLawParams(static_cast<unsigned>(i))
+            .template getRealParams<::Opm::EclThermalConductionApproach::Thconr>();
         hostThermalConductionParams[i].setReferenceTotalThermalConductivity(
             cpuThconr.referenceTotalThermalConductivity());
         hostThermalConductionParams[i].setDTotalThermalConductivity_dSg(
@@ -317,6 +314,7 @@ copy_to_gpu(const ::Opm::EclThermalLaw::GpuManager<ScalarT, FluidSystemT>& cpu)
     using SolidEnergyLawParamsView = typename ManagerBuf::SolidEnergyLawParams;
     using ThermalConductionLawParams = typename ManagerBuf::ThermalConductionLawParams;
 
+    // multiplied by two to account for both temperature and internal energy samples
     std::vector<GpuBuffer<ScalarT>> sampleBuffers;
     sampleBuffers.reserve(2u * cpu.solidEnergyParamsStorage().size());
 

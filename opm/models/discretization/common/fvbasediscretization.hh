@@ -645,16 +645,6 @@ public:
         if (!enableIntensiveQuantityCache_ ||
             timeIdx >= cachedIntensiveQuantityHistorySize_ ||
             !intensiveQuantityCacheUpToDate_[timeIdx][globalIdx]) {
-            
-            std::cout << __FILE__ << ":" << __LINE__ << " - No up-to-date intensive quantity cache entry for globalIdx "
-                      << globalIdx << " at timeIdx " << timeIdx << std::endl;
-            std::cout << "  (enableIntensiveQuantityCache_: " << enableIntensiveQuantityCache_
-                      << ", timeIdx: " << timeIdx
-                      << ", cachedIntensiveQuantityHistorySize_: " << cachedIntensiveQuantityHistorySize_
-                      << ", intensiveQuantityCacheUpToDate_[timeIdx][globalIdx]: "
-                      << (enableIntensiveQuantityCache_ && timeIdx < cachedIntensiveQuantityHistorySize_ ?
-                          intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] : 0)
-                      << ")" << std::endl;
             return nullptr;
         }
 
@@ -664,14 +654,12 @@ public:
         // variants, so we should check if the cache exists for
         // the timeIdx in question.
         if (timeIdx > 0 && enableStorageCache_ && intensiveQuantityCache_[timeIdx].empty()) {
-            std::cout << __FILE__ << ":" << __LINE__ << " - No intensive quantity cache for timeIdx " << timeIdx
-                      << " (storage cache enabled, but cache is empty)" << std::endl;
             return nullptr;
         }
 
         return &intensiveQuantityCache_[timeIdx][globalIdx];
     }
-    
+
     // TODO: make this more efficient (avoid copy!) and still valid for gpu
     // TODO: did not want to delve into the special IntQuants vector with special allocators
     std::vector<IntensiveQuantities> allIntensiveQuantities0()
@@ -682,7 +670,7 @@ public:
                                         timeZeroIntQuants.begin(),
                                         timeZeroIntQuants.end());
 
-            
+
         return allIntensiveQuantities;
     }
 
