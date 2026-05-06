@@ -2333,8 +2333,8 @@ namespace Opm
             // able to get a solution with an update
             // solution
             std::vector<Scalar> rates(3);
-            auto well_state_copy = groupStateHelper.wellState();
-            computeWellRatesWithBhpIterations(simulator, bhp, groupStateHelper, well_state_copy, rates);
+            auto temp_well_state = groupStateHelper.wellState();
+            computeWellRatesWithBhpIterations(simulator, bhp, groupStateHelper, temp_well_state, rates);
             this->adaptRatesForVFP(rates);
             return rates;
         };
