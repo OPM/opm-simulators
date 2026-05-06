@@ -164,9 +164,11 @@ public:
 
     WellState<Scalar, IndexTraits>& potentialWellState()
     {
-        if (!this->potential_well_state_
-            || this->wellStructureChangedDynamically_
-            || this->potential_well_state_->size() != this->wellState().size())
+        const bool needs_init = !this->potential_well_state_;
+        const bool size_mismatch = !needs_init
+            && (this->potential_well_state_->size() != this->wellState().size());
+
+        if (needs_init || this->wellStructureChangedDynamically_ || size_mismatch)
         {
             this->potential_well_state_ = this->wellState();
         }
@@ -376,6 +378,9 @@ protected:
     void commitWGState(WGState<Scalar, IndexTraits> wgstate)
     {
         this->last_valid_wgstate_ = std::move(wgstate);
+        // The potential state is only an initial-guess cache for local
+        // potential solves, so it must be rebuilt from the newly accepted
+        // active state after committing a time step.
         this->potential_well_state_.reset();
     }
 
@@ -387,6 +392,8 @@ protected:
     void resetWGState()
     {
         this->active_wgstate_ = this->last_valid_wgstate_;
+        // Failed-step potential solve guesses may no longer match the
+        // restored active state, so drop the cache and rebuild it lazily.
         this->potential_well_state_.reset();
         this->genNetwork_.resetState();
         // Update helper pointers to reference the restored active state
