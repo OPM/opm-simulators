@@ -238,7 +238,7 @@ namespace Opm {
                              const Scalar relaxation_factor = 1.0);
 
         // computing the accumulation term for later use in well mass equations
-        void computeInitialSegmentFluids(const Simulator& simulator, DeferredLogger& deferred_logger);
+        void computeInitialSegmentFluids(const FSInfo& info, DeferredLogger& deferred_logger);
 
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& simulator);
@@ -343,8 +343,8 @@ namespace Opm {
 
         void updateWaterThroughput(const double dt, WellStateType& well_state) const override;
 
-        EvalWell getSegmentSurfaceVolume(const Simulator& simulator,
-                                         const int seg_idx,
+        EvalWell getSegmentSurfaceVolume(const int seg_idx,
+                                         const FSInfo& info,
                                          DeferredLogger& deferred_logger) const;
 
         // turn on crossflow to avoid singular well equations
@@ -397,7 +397,7 @@ namespace Opm {
                          DeferredLogger& deferred_logger) const;
 
         SegmentFluidState<EvalWell>
-        createSegmentFluidState(int seg, DeferredLogger& deferred_logger) const;
+        createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger) const;
 
         void computeInitialSegmentEnergy();
 
@@ -410,7 +410,7 @@ namespace Opm {
 
         void updateWellHeadCondition(const Simulator& simulator, DeferredLogger& deferred_logger);
 
-        void updateSegmentFluidState(DeferredLogger& deferred_logger);
+        void updateSegmentFluidState(const FSInfo& info, DeferredLogger& deferred_logger);
 
         template <typename ValueType = EvalWell>
         ValueType computeSegmentEnergy(int seg) const;
