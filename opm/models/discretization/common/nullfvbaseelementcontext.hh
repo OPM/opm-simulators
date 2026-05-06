@@ -60,7 +60,7 @@ namespace Opm
  * \tparam TypeTag  The type tag from which Scalar, PrimaryVariables, etc. are derived.
  */
 template <class TypeTag>
-class FvBaseElementContextGpu
+class NullFvBaseElementContext
 {
 public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -75,12 +75,12 @@ public:
     // Construction / assignment
     // -----------------------------------------------------------------------
 
-    OPM_HOST_DEVICE FvBaseElementContextGpu() = default;
-    OPM_HOST_DEVICE ~FvBaseElementContextGpu() = default;
-    OPM_HOST_DEVICE FvBaseElementContextGpu(const FvBaseElementContextGpu&) = default;
-    OPM_HOST_DEVICE FvBaseElementContextGpu(FvBaseElementContextGpu&&) noexcept = default;
-    OPM_HOST_DEVICE FvBaseElementContextGpu& operator=(const FvBaseElementContextGpu&) = default;
-    OPM_HOST_DEVICE FvBaseElementContextGpu& operator=(FvBaseElementContextGpu&&) noexcept
+    OPM_HOST_DEVICE NullFvBaseElementContext() = default;
+    OPM_HOST_DEVICE ~NullFvBaseElementContext() = default;
+    OPM_HOST_DEVICE NullFvBaseElementContext(const NullFvBaseElementContext&) = default;
+    OPM_HOST_DEVICE NullFvBaseElementContext(NullFvBaseElementContext&&) noexcept = default;
+    OPM_HOST_DEVICE NullFvBaseElementContext& operator=(const NullFvBaseElementContext&) = default;
+    OPM_HOST_DEVICE NullFvBaseElementContext& operator=(NullFvBaseElementContext&&) noexcept
         = default;
 
     // -----------------------------------------------------------------------

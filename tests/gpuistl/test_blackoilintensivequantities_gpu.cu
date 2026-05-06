@@ -69,7 +69,7 @@
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
-#include <opm/models/discretization/common/fvbaseelementcontextgpu.hh>
+#include <opm/models/discretization/common/nullfvbaseelementcontext.hh>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawTwoPhaseTypes.hpp>
 #include <opm/material/fluidmatrixinteractions/EclTwoPhaseMaterial.hpp>

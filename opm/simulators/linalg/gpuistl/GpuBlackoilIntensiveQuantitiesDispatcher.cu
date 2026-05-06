@@ -44,7 +44,7 @@
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
-#include <opm/models/discretization/common/fvbaseelementcontextgpu.hh>
+#include <opm/models/discretization/common/nullfvbaseelementcontext.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
