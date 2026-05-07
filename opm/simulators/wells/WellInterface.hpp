@@ -127,18 +127,22 @@ public:
     static constexpr bool has_bioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool has_micp = Indices::enableMICP;
 
-    // For the conversion between the surface volume rate and reservoir voidage rate
-    using FluidState = BlackOilFluidState<Eval,
-                                          FluidSystem,
-                                          energyModuleType != EnergyModules::NoTemperature,
-                                          energyModuleType == EnergyModules::FullyImplicitThermal,
-                                          Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max(),
-                                          has_watVapor,
-                                          has_brine,
-                                          has_saltPrecip,
-                                          has_disgas_in_water,
-                                          has_solvent,
-                                          Indices::numPhases >;
+    template<class ValueType>
+    using BlackOilFluidStateType = BlackOilFluidState<ValueType,
+                                                      FluidSystem,
+                                                      energyModuleType != EnergyModules::NoTemperature,
+                                                      energyModuleType == EnergyModules::FullyImplicitThermal,
+                                                      Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max(),
+                                                      has_watVapor,
+                                                      has_brine,
+                                                      has_saltPrecip,
+                                                      has_disgas_in_water,
+                                                      has_solvent,
+                                                      Indices::numPhases>;
+
+    // fluid state for the reservoir fluid
+    using FluidState = BlackOilFluidStateType<Eval>;
+
     /// Constructor
     WellInterface(const Well& well,
                   const ParallelWellInfo<Scalar>& pw_info,

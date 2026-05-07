@@ -85,22 +85,9 @@ namespace Opm {
 
         // a fluid state to calculate the properties inside the wellbore for each segment
         // it will be probably used for more things, but at the moment, it is for the enthalpy
-        // calculation in the wellbore
-        // templated on Value type because we want to use it for surface condition calculation injection
-        // while we shifted to use the bottom-hole/well-head condition instead, so there is only EvalWell type
-        // used here for now.
-        template <typename Value>
-        using SegmentFluidState = BlackOilFluidState<Value,
-                                                     FluidSystem,
-                                                     has_energy,
-                                                     has_energy,
-                                                     Indices::compositionSwitchIdx >= 0,
-                                                     /*has_watVapor*/ false,
-                                                     has_brine,
-                                                     /*has_saltPrecip*/ false,
-                                                     /*has_disgas_in_water*/ false,
-                                                     has_solvent,
-                                                     Indices::numPhases>;
+        // calculation in the wellbore.
+        template <typename ValueType>
+        using SegmentFluidState = Base::template BlackOilFluidStateType<ValueType>;
 
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo<Scalar>& pw_info,
