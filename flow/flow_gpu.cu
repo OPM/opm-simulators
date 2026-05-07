@@ -16,14 +16,10 @@
 */
 #include "config.h"
 
-
 // For now flow_gpu is developed to support SPE11 simulations, that is 2-phase gas-water flow with
 // thermal effects The goal is to support both property-evaluation and matrix assembly on the GPU,
 // in addition to the linear solver which already works on the GPU. The CPU would still have to
 // manage well contributions, although there are no wells in SPE11, only source-terms.
-
-// Define making clear that the simulator supports AMG
-#define FLOW_SUPPORT_AMG 1
 
 #include <flow/flow_gpu.hpp>
 
@@ -45,51 +41,6 @@
 namespace Opm
 {
 
-namespace Properties
-{
-    namespace TTag
-    {
-        // FlowGasWaterEnergyProblemGPU is declared in FlowGasWaterEnergyTypeTag.hpp
-        // (InheritsFrom = FlowGasWaterEnergyProblem).  The template below maps it
-        // to FlowGasWaterEnergyProblemGPUTrue<Storage> for GPU-storage variants.
-
-        template <template <class> class Storage>
-        struct FlowGasWaterEnergyProblemGPUTrue {
-            using InheritsFrom = std::tuple<FlowGasWaterEnergyProblemGPU>;
-        };
-
-        template <template <class> class Storage>
-        struct to_gpu_type<FlowGasWaterEnergyProblemGPU, Storage> {
-            using type = FlowGasWaterEnergyProblemGPUTrue<Storage>;
-        };
-    } // namespace TTag
-
-    // -----------------------------------------------------------------------
-    // GPU assembly: enable the TPFA linearization kernel on the GPU.
-    // -----------------------------------------------------------------------
-    template <class TypeTag>
-    struct RunAssemblyOnGpu<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
-        static constexpr bool value = true;
-    };
-
-    template <class TypeTag>
-    struct Scalar<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
-        using type = double;
-    };
-
-    template <class TypeTag>
-    struct GpuFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
-        using type = SimplifiedGpuFIBlackOilModel<TypeTag>;
-    };
-
-    template <class TypeTag, template <class> class Storage>
-    struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyProblemGPUTrue<Storage>> {
-        using type = Opm::
-            BlackOilFluidSystemNonStatic<double, Opm::BlackOilDefaultFluidSystemIndices, Storage>;
-    };
-} // namespace Properties
-
-// ----------------- Main program -----------------
 int
 flowGasWaterEnergyMainGPU(int argc, char** argv, bool outputCout, bool outputFiles)
 {

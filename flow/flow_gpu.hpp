@@ -17,8 +17,51 @@
 #ifndef FLOW_GPU_HIP_HPP
 #define FLOW_GPU_HIP_HPP
 
+#include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
+
 namespace Opm
 {
+
+namespace Properties
+{
+    namespace TTag
+    {
+        // FlowGasWaterEnergyProblemGPU is declared in FlowGasWaterEnergyTypeTag.hpp
+        // (InheritsFrom = FlowGasWaterEnergyProblem).  The template below maps it
+        // to FlowGasWaterEnergyProblemGPUTrue<Storage> for GPU-storage variants.
+
+        template <template <class> class Storage>
+        struct FlowGasWaterEnergyProblemGPUTrue {
+            using InheritsFrom = std::tuple<FlowGasWaterEnergyProblemGPU>;
+        };
+
+        template <template <class> class Storage>
+        struct to_gpu_type<FlowGasWaterEnergyProblemGPU, Storage> {
+            using type = FlowGasWaterEnergyProblemGPUTrue<Storage>;
+        };
+    } // namespace TTag
+
+    template <class TypeTag>
+    struct RunAssemblyOnGpu<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
+        static constexpr bool value = true;
+    };
+
+    template <class TypeTag>
+    struct Scalar<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
+        using type = double;
+    };
+
+    template <class TypeTag>
+    struct GpuFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
+        using type = SimplifiedGpuFIBlackOilModel<TypeTag>;
+    };
+
+    template <class TypeTag, template <class> class Storage>
+    struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyProblemGPUTrue<Storage>> {
+        using type = Opm::
+            BlackOilFluidSystemNonStatic<double, Opm::BlackOilDefaultFluidSystemIndices, Storage>;
+    };
+} // namespace Properties
 
 //! \brief Main function used in flow binary.
 int flowGasWaterEnergyMainGPU(int argc, char** argv, bool outputCout, bool outputFiles);
