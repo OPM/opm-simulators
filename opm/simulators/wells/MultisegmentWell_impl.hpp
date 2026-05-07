@@ -700,7 +700,7 @@ namespace Opm
                                 DeferredLogger& deferred_logger)
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            const Scalar surface_volume = getSegmentSurfaceVolume(seg, info, deferred_logger).value();
+            const Scalar surface_volume = this->segments_.getSurfaceVolume(seg, deferred_logger).value();
             for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
                 segment_fluid_initial_[seg][comp_idx] = surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx).value();
             }
@@ -1950,7 +1950,7 @@ namespace Opm
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term
             {
-                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(seg, info, deferred_logger);
+                const EvalWell segment_surface_volume = this->segments_.getSurfaceVolume(seg, deferred_logger);
 
                 // Add a regularization_factor to increase the accumulation term
                 // This will make the system less stiff and help convergence for
@@ -1986,7 +1986,7 @@ namespace Opm
                 if constexpr (has_energy) {
                     const bool top_injecting_segment = (seg == 0) && this->isInjector();
                     if (top_injecting_segment) {
-                        this->updateWellHeadCondition(simulator, deferred_logger);
+                        this->updateWellHeadCondition(simulator, info, deferred_logger);
                     }
 
                     // Energy carried by fluid flowing out of this segment toward its outlet.
@@ -2447,11 +2447,16 @@ namespace Opm
     createFluidState(const std::vector<ValueType>& fluid_composition,
                      const ValueType& pressure,
                      const ValueType& temperature,
+                     const ValueType& saltConcentration,
+                     ValueType& volume_ratio,
                      DeferredLogger& deferred_logger) const
     {
         SegmentFluidState<ValueType> fluid_state;
         if constexpr (has_energy) {
             fluid_state.setTemperature(temperature);
+        }
+        if constexpr (has_brine) {
+            fluid_state.setSaltConcentration(saltConcentration);
         }
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2483,7 +2488,7 @@ namespace Opm
                             if (fluid_composition[activeCompIdx] > epsilon) {
                                 const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
                                 const ValueType max_possible_rs = fluid_composition[gasCompIdx] / fluid_composition[activeCompIdx];
-                                rs = std::min(rs, max_possible_rs);
+                                rs = std::clamp(rs, zero_value, max_possible_rs);
                             }
                             fluid_state.setRs(rs);
                         } else {
@@ -2500,7 +2505,7 @@ namespace Opm
                             const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
                             if (fluid_composition[activeCompIdx] > epsilon) {
                                 const ValueType max_possible_rv = fluid_composition[oilCompIdx] / fluid_composition[activeCompIdx];
-                                rv = std::min(rv, max_possible_rv);
+                                rv = std::clamp(rv, zero_value, max_possible_rv);
                             }
                             fluid_state.setRv(rv);
                         } else {
@@ -2564,6 +2569,7 @@ namespace Opm
                 sum_saturation += saturations[phaseIdx];
             }
         }
+        volume_ratio = sum_saturation;
 
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2586,13 +2592,17 @@ namespace Opm
     template <typename TypeTag>
     MultisegmentWell<TypeTag>::template SegmentFluidState<typename MultisegmentWell<TypeTag>::EvalWell>
     MultisegmentWell<TypeTag>::createSegmentFluidState(const int seg, const FSInfo& info,
-                                                       DeferredLogger& deferred_logger) const
+                                                       DeferredLogger& deferred_logger)
     {
         const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
         const Scalar firstPerfTemperature = std::get<0>(info);
+        const Scalar firstPerfSaltConcentration = std::get<1>(info);
         // TODO: we can extend the salt concentration to the createFluidState
         // const Scalar firstPerfSaltConcentration = std::get<1>(info);
         const EvalWell seg_temperature = has_energy ? this->primary_variables_.getSegmentTemperature(seg) : firstPerfTemperature;
+        // \Note: salt concentration is not yet a primary variable for the multisegment well;
+        // we use the value taken at the first perforation, matching what computeSegmentFluidProperties() did before.
+        const EvalWell seg_salt_concentration {firstPerfSaltConcentration};
 
         // TODO: with the energy equation joins, the num_conservation_quantities will be challenged
         std::vector<EvalWell> fluid_composition(this->numConservationQuantities(), 0.0);
@@ -2600,7 +2610,11 @@ namespace Opm
             fluid_composition[idx] = this->primary_variables_.surfaceVolumeFraction(seg, idx);
         }
 
-        return createFluidState(fluid_composition, seg_pressure, seg_temperature, deferred_logger);
+        // we also update the volume ratio for this segment to calculate the surface volume later
+        auto& volume_ratio = this->segments_.volumeRatio(seg);
+
+        return createFluidState(fluid_composition, seg_pressure, seg_temperature,
+                                seg_salt_concentration, volume_ratio, deferred_logger);
     }
 
     template <typename TypeTag>
@@ -2767,7 +2781,9 @@ namespace Opm
 
     template <typename TypeTag>
     void
-    MultisegmentWell<TypeTag>::updateWellHeadCondition(const Simulator& simulator, DeferredLogger& deferred_logger)
+    MultisegmentWell<TypeTag>::updateWellHeadCondition(const Simulator& simulator,
+                                                       const FSInfo& info,
+                                                       DeferredLogger& deferred_logger)
     {
         if (!this->well_ecl_.isInjector()) return;
 
@@ -2800,7 +2816,9 @@ namespace Opm
             }
         }
 
-        this->wellhead_fluid_state_ = createFluidState(fluid_composition, bhp, inj_temperature, deferred_logger);
+        EvalWell volume_ratio {0.0}; // it is not needed, while for interface reason.
+        const EvalWell saltConcentration = std::get<1>(info); // saltConcentration
+        this->wellhead_fluid_state_ = createFluidState(fluid_composition, bhp, inj_temperature, saltConcentration, volume_ratio, deferred_logger);
     }
 
 
