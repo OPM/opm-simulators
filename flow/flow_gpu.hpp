@@ -14,10 +14,15 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef FLOW_GPU_HIP_HPP
-#define FLOW_GPU_HIP_HPP
+#ifndef FLOW_GPU_HPP
+#define FLOW_GPU_HPP
 
 #include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
+#include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
+/*
+    This file extracts typetag declarations that must be present in both the .CU and .HIP
+   executables for Flow to avoid double maintenance.
+*/
 
 namespace Opm
 {
@@ -53,7 +58,7 @@ namespace Properties
 
     template <class TypeTag>
     struct GpuFIBlackOilModel<TypeTag, TTag::FlowGasWaterEnergyProblemGPU> {
-        using type = SimplifiedGpuFIBlackOilModel<TypeTag>;
+        using type = SimpleFIBlackOilModel<TypeTag>;
     };
 
     template <class TypeTag, template <class> class Storage>
@@ -71,4 +76,4 @@ int flowGasWaterEnergyMainGPUStandalone(int argc, char** argv);
 
 } // namespace Opm
 
-#endif // FLOW_GPU_HIP_HPP
+#endif // FLOW_GPU_HPP

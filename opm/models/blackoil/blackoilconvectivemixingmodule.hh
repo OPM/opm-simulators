@@ -165,10 +165,8 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     using Toolbox = MathToolbox<Evaluation>;
     using ConvectiveMixingModuleParamT = ConvectiveMixingModuleParam<Scalar>;
 
-    enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { dimWorld = GridView::dimensionworld };
-    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
-    enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
+    static constexpr int conti0EqIdx = Indices::conti0EqIdx;
+    static constexpr int dimWorld = GridView::dimensionworld;
     static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
@@ -201,6 +199,10 @@ public:
                                                  const IntensiveQuantities& intQuantsEx,
                                                  const unsigned phaseIdx,
                                                  const CMMParam& info) {
+        // Local constexpr aliases avoid nvcc's failure to resolve class-scope
+        // static constexpr members in device code.
+        constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
+        constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
 
         if (info.active_.empty()) {
             return;
@@ -310,6 +312,11 @@ public:
                                                         const Scalar faceArea,
                                                         const CMMParam& info)
     {
+        // Local constexpr aliases avoid nvcc's failure to resolve class-scope
+        // static constexpr members in device code.
+        constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
+        constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
+
         const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
         if (info.active_.empty()) {

@@ -31,8 +31,6 @@
 
 #include <fmt/core.h>
 
-#include <iostream>
-
 namespace Opm::gpuistl
 {
 
@@ -403,14 +401,7 @@ private:
     {
 #if OPM_IS_INSIDE_DEVICE_FUNCTION
         // TODO: find a better way to handle exceptions in kernels, this will possibly be printed many times
-        // assert(idx < m_numberOfElements && fmt::format("Index {} is out of range [0, {})", idx, m_numberOfElements - 1).c_str());
-        if (idx >= m_numberOfElements)
-        {
-            printf("Index %llu is out of range [0, %llu)\n",
-                (unsigned long long)idx,
-                (unsigned long long)m_numberOfElements);
-            assert(false && "Index is out of range");
-        }
+        assert(idx < m_numberOfElements && "The index provided was not in the range [0, buffersize-1]");
 #else
         if (idx >= m_numberOfElements) {
             OPM_THROW(std::invalid_argument,

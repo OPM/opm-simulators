@@ -21,6 +21,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/deviceBlockOperations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpuThreadUtils.hpp>
+#include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
 
 namespace Opm::gpuistl::detail
 {
@@ -97,13 +98,13 @@ namespace
         }
     }
 
-    template <class T>
-    __global__ void cuComputeDiagPtrs(const int* rowIndices,
-                                      const int* colIndices,
-                                      int rows,
-                                      T** diagPtrs,
-                                      T* values,
-                                      size_t blocksize)
+    template <class MatrixBlockType, class T>
+    __global__ void cuComputeDiagPtrsTyped(const int* rowIndices,
+                                           const int* colIndices,
+                                           int rows,
+                                           MatrixBlockType** diagPtrs,
+                                           T* values,
+                                           size_t blocksize)
     {
         const auto rawIdx = blockDim.x * blockIdx.x + threadIdx.x;
         if (rawIdx < rows) {
@@ -114,8 +115,7 @@ namespace
                 ++diagIdx;
             }
 
-            // Pointer arithmetic based on first element is sufficient here
-            diagPtrs[rawIdx] = values + diagIdx*blocksize*blocksize;
+            diagPtrs[rawIdx] = reinterpret_cast<MatrixBlockType*>(values + diagIdx * blocksize * blocksize);
         }
     }
 } // namespace
@@ -166,23 +166,6 @@ copyMatDataToReorderedSplit(const T* srcMatrix,
                                                                                  numberOfRows);
 }
 
-template <class T>
-GpuBuffer<T*>
-getDiagPtrs(GpuSparseMatrixWrapper<T>& matrix)
-{
-    GpuBuffer<T*> diagPtrs(matrix.N());
-
-    // Have cuda/hip automatically pick a reasonable block size for this kernel based on static analysis
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuComputeDiagPtrs<T>);
-    // Calculate the number of blocks needed
-    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(matrix.N(), threadBlockSize);
-
-    cuComputeDiagPtrs<T>
-        <<<nThreadBlocks, threadBlockSize>>>(
-            matrix->getRowIndices().data(), matrix->getColumnIndices().data(), matrix.N(), diagPtrs.data(), matrix->getNonZeroValues().data(), matrix.blockSize());
-    return diagPtrs;
-}
-
 #define INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(T, blocksize)                                                                      \
     template void copyMatDataToReordered<T, blocksize>(const T*, const int*, T*, int*, int*, size_t, int);                         \
     template void copyMatDataToReorderedSplit<T, blocksize>(const T*, const int*, const int*, T*, int*, T*, int*, T*, int*, size_t, int);
@@ -202,11 +185,40 @@ INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(double, 5);
 INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(double, 6);
 INSTANTIATE_KERNEL_WRAPPERS_WITH_SCALAR_AND_BLOCKSIZE(double, 7);
 
-#define INSTANTIATE_KERNEL_WRAPPER_WITH_SCALAR(T) \
-    template Opm::gpuistl::GpuBuffer<T*> Opm::gpuistl::detail::getDiagPtrs<T>(                           \
+template <class MatrixBlockType, class T>
+GpuBuffer<MatrixBlockType*>
+getDiagPtrsTyped(GpuSparseMatrixWrapper<T>& matrix)
+{
+    GpuBuffer<MatrixBlockType*> diagPtrs(matrix.N());
+
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuComputeDiagPtrsTyped<MatrixBlockType, T>);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(matrix.N(), threadBlockSize);
+
+    cuComputeDiagPtrsTyped<MatrixBlockType, T>
+        <<<nThreadBlocks, threadBlockSize>>>(
+            matrix->getRowIndices().data(), matrix->getColumnIndices().data(), matrix.N(),
+            diagPtrs.data(), matrix->getNonZeroValues().data(), matrix.blockSize());
+    return diagPtrs;
+}
+
+#define INSTANTIATE_GET_DIAG_PTRS_TYPED(T, blocksize) \
+    template Opm::gpuistl::GpuBuffer<Opm::gpuistl::MiniMatrix<T, blocksize>*>                \
+    Opm::gpuistl::detail::getDiagPtrsTyped<Opm::gpuistl::MiniMatrix<T, blocksize>, T>(        \
         Opm::gpuistl::GpuSparseMatrixWrapper<T>&);
 
-INSTANTIATE_KERNEL_WRAPPER_WITH_SCALAR(float)
-INSTANTIATE_KERNEL_WRAPPER_WITH_SCALAR(double)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(float, 1)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(float, 2)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(float, 3)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(float, 4)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(float, 5)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(float, 6)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(float, 7)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(double, 1)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(double, 2)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(double, 3)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(double, 4)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(double, 5)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(double, 6)
+INSTANTIATE_GET_DIAG_PTRS_TYPED(double, 7)
 
 } // namespace Opm::gpuistl::detail

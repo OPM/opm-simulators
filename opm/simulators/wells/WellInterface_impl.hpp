@@ -28,12 +28,6 @@
 #include <opm/simulators/wells/WellInterface.hpp>
 #endif
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include <ranges>
-#include <algorithm>
-
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
@@ -313,6 +307,7 @@ namespace Opm
         }
         const bool oscillating =
             std::ranges::count(this->well_control_log_, from) >= this->param_.max_number_of_well_switches_;
+
         if (oscillating || this->wellUnderZeroRateTarget(groupStateHelper) || !(well_state.well(this->index_of_well_).status == WellStatus::OPEN)) {
            return false;
         }

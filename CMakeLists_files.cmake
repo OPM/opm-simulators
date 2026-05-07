@@ -587,7 +587,6 @@ if(CUDA_FOUND OR hip_FOUND)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primary_variables_gpu.cu)
   endif()
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniMatrix.cu)
-
   # Boost < 1.75 + nvcc = trouble in this test
   if(Boost_VERSION VERSION_GREATER 1.74)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniVector.cu)
@@ -736,7 +735,6 @@ list (APPEND TEST_DATA_FILES
   tests/data/test_stokes2c.dgf
   tests/data/test_stokes2cni.dgf
   tests/data/waterair.dgf
-  tests/very_simple_deck.DATA
   )
 
 
@@ -821,6 +819,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/discretization/common/linearizationtype.hh
   opm/models/discretization/common/restrictprolong.hh
   opm/models/discretization/common/tpfalinearizer.hh
+  opm/models/discretization/common/tpfalinearizergpukernels.hh
+  opm/models/discretization/common/tpfalinearizergpuparams.hh
   opm/models/discretization/common/tpsalinearizer.hpp
   opm/models/discretization/ecfv/ecfvbaseoutputmodule.hh
   opm/models/discretization/ecfv/ecfvdiscretization.hh
@@ -996,7 +996,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FacePropertiesTPSA_impl.hpp
   opm/simulators/flow/FemCpGridCompat.hpp
   opm/simulators/flow/FIBlackoilModel.hpp
-  opm/simulators/flow/SimplifiedGpuBlackOilModel.hpp
+  opm/simulators/flow/SimpleFIBlackOilModel.hpp
   opm/simulators/flow/FIPContainer.hpp
   opm/simulators/flow/FlowBaseProblemProperties.hpp
   opm/simulators/flow/FlowBaseVanguard.hpp
@@ -1046,7 +1046,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/RFTContainer.hpp
   opm/simulators/flow/RSTConv.hpp
   opm/simulators/flow/RegionPhasePVAverage.hpp
-  opm/simulators/flow/SimplifiedFlowProblemGPU.hpp
   opm/simulators/flow/SimulatorConvergenceOutput.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoil_impl.hpp
@@ -1054,6 +1053,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/SimulatorSerializer.hpp
   opm/simulators/flow/SolutionContainers.hpp
   opm/simulators/flow/SubDomain.hpp
+  opm/simulators/flow/ThermalGasWaterFlowProblem.hpp
   opm/simulators/flow/TTagFlowProblemTPFA.hpp
   opm/simulators/flow/TTagFlowProblemTPSA.hpp
   opm/simulators/flow/TTagFlowProblemGasWater.hpp

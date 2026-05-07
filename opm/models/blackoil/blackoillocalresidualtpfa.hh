@@ -705,14 +705,6 @@ public:
             Evaluation heatFlux;
             // avoid overload of functions with same numeber of elements in eclproblem
             Scalar alpha;
-// #if OPM_IS_INSIDE_DEVICE_FUNCTION
-//                 // This path is currently only intended for the SimplifiedBlackoilModel for GPUs
-//                 // which currently does not aim to reproduce the full problem object on the GPU.
-//                 alpha = problem.getAlpha(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
-// #else
-//                 alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(
-//                     globalSpaceIdx, bdyInfo.boundaryFaceIndex);
-// #endif
             if constexpr (!std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
                 alpha = problem.getAlpha(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
             } else {
@@ -739,10 +731,10 @@ public:
 
     template <class BoundaryConditionData, class RateVectorLocal, class LocalProblem>
     OPM_HOST_DEVICE static void computeBoundaryFlux(RateVectorLocal& bdyFlux,
-                                    const LocalProblem& problem,
-                                    const BoundaryConditionData& bdyInfo,
-                                    const IntensiveQuantities& insideIntQuants,
-                                    unsigned globalSpaceIdx)
+                                                    const LocalProblem& problem,
+                                                    const BoundaryConditionData& bdyInfo,
+                                                    const IntensiveQuantities& insideIntQuants,
+                                                    unsigned globalSpaceIdx)
     {
         if constexpr (std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
             switch (bdyInfo.type) {
@@ -761,8 +753,8 @@ public:
                 break;
             default:
                 OPM_THROW(std::logic_error, "Unknown boundary condition type "
-                                    + std::to_string(static_cast<int>(bdyInfo.type))
-                                    + " in computeBoundaryFlux().");
+                              + std::to_string(static_cast<int>(bdyInfo.type))
+                              + " in computeBoundaryFlux().");
             }
         } else { // Non-static fluid system used in GPU assembly
             switch (bdyInfo.type) {
@@ -774,8 +766,8 @@ public:
                 break;
             default:
                 OPM_THROW(std::logic_error,
-                        "Boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type))
-                            + " is not supported for GPU fluid systems in computeBoundaryFlux().");
+                          "Boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type))
+                              + " is not supported for GPU fluid systems in computeBoundaryFlux().");
             }
         }
     }
@@ -974,8 +966,8 @@ public:
 
     template <class ScalarVector, class FsysType>
     OPM_HOST_DEVICE static void adaptMassConservationQuantities_(ScalarVector& container,
-                                                 unsigned pvtRegionIdx,
-                                                 const FsysType& fsys)
+                                                                 unsigned pvtRegionIdx,
+                                                                 const FsysType& fsys)
     {
         if constexpr (!blackoilConserveSurfaceVolume) {
             // convert "surface volume" to mass. this is complicated a bit by the fact that

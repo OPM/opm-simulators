@@ -25,21 +25,20 @@
  *
  * \copydoc Opm::FIBlackOilModel
  */
-#ifndef SIMPLIFIED_BLACK_OIL_MODEL_HPP
-#define SIMPLIFIED_BLACK_OIL_MODEL_HPP
+#ifndef SIMPLE_FI_BLACK_OIL_MODEL_HPP
+#define SIMPLE_FI_BLACK_OIL_MODEL_HPP
 
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
+#include <opm/models/parallel/threadmanager.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/utility/ElementChunks.hpp>
 
-#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
-#include <opm/models/blackoil/blackoilmoduleparams.hh>
-#include <opm/models/parallel/threadmanager.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
@@ -64,49 +63,76 @@ namespace Opm
 {
 
 template <typename TypeTag, template <class> class Storage = Opm::VectorWithDefaultAllocator>
-class SimplifiedGpuFIBlackOilModel
+class SimpleFIBlackOilModel
 {
 public:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using TypeTagPublic = TypeTag;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    SimplifiedGpuFIBlackOilModel(unsigned int nCells)
+    SimpleFIBlackOilModel(unsigned int nCells)
         : cachedIntensiveQuantities0_(nCells)
     {
     }
 
-    // TODO: copy for now, but should be move!
-    SimplifiedGpuFIBlackOilModel(
+    SimpleFIBlackOilModel(
         const Storage<BlackOilIntensiveQuantities<TypeTag>>& cachedIntensiveQuantities0,
-        const Storage<BlackOilIntensiveQuantities<TypeTag>>& cachedIntensiveQuantities1)
+        const Storage<BlackOilIntensiveQuantities<TypeTag>>& cachedIntensiveQuantities1,
+        const Storage<Scalar>& volumes)
         : cachedIntensiveQuantities0_(cachedIntensiveQuantities0)
         , cachedIntensiveQuantities1_(cachedIntensiveQuantities1)
+        , volumes_(volumes)
     {
     }
 
-    SimplifiedGpuFIBlackOilModel() = default;
+    // Special ctor because fvbasediscretization stores BOIQs with a custom allocator.
+    // OtherIQContainer can be any container (e.g. std::vector with a non-default allocator).
+    // Could this be using refs instead of making the copy? Then the copy-to-gpu would have to be
+    // rewritten a bit
+    template <typename OtherIQContainer>
+    SimpleFIBlackOilModel(const OtherIQContainer& cachedIntensiveQuantities0,
+                          const OtherIQContainer& cachedIntensiveQuantities1,
+                          const Storage<Scalar>& volumes)
+        : cachedIntensiveQuantities0_(cachedIntensiveQuantities0.begin(),
+                                      cachedIntensiveQuantities0.end())
+        , cachedIntensiveQuantities1_(cachedIntensiveQuantities1.begin(),
+                                      cachedIntensiveQuantities1.end())
+        , volumes_(volumes)
+    {
+    }
+
+    SimpleFIBlackOilModel() = default;
 
     void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */) const
     {
-        OPM_THROW(std::logic_error, "invalidateAndUpdateIntensiveQuantities should not be called in SimplifiedGpuFIBlackOilModel");
+        OPM_THROW(
+            std::logic_error,
+            "invalidateAndUpdateIntensiveQuantities should not be called in SimpleFIBlackOilModel");
     }
 
     void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned /* timeIdx */) const
     {
-        OPM_THROW(std::logic_error, "invalidateAndUpdateIntensiveQuantitiesOverlap should not be called in SimplifiedGpuFIBlackOilModel");
+        OPM_THROW(std::logic_error,
+                  "invalidateAndUpdateIntensiveQuantitiesOverlap should not be called in "
+                  "SimpleFIBlackOilModel");
     }
 
     template <class GridSubDomain>
-    void
-    invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */,
-                                           const GridSubDomain& /* gridSubDomain */) const
+    void invalidateAndUpdateIntensiveQuantities(unsigned /* timeIdx */,
+                                                const GridSubDomain& /* gridSubDomain */) const
     {
-        OPM_THROW(std::logic_error, "invalidateAndUpdateIntensiveQuantities with GridSubDomain should not be called in SimplifiedGpuFIBlackOilModel");
+        OPM_THROW(std::logic_error,
+                  "invalidateAndUpdateIntensiveQuantities with GridSubDomain should not be called "
+                  "in SimpleFIBlackOilModel");
     }
 
     void updateFailed()
     {
-        OPM_THROW(std::logic_error, "updateFailed should not be called in SimplifiedGpuFIBlackOilModel");
+        OPM_THROW(std::logic_error, "updateFailed should not be called in SimpleFIBlackOilModel");
+    }
+
+    OPM_HOST_DEVICE Scalar dofTotalVolume(unsigned int globalIdx) const
+    {
+        return volumes_[globalIdx];
     }
 
     OPM_HOST_DEVICE const auto& intensiveQuantities(unsigned int globalIdx,
@@ -125,26 +151,31 @@ public:
 protected:
     void updateCachedIntQuants(const unsigned /* timeIdx */) const
     {
-        OPM_THROW(std::logic_error, "updateCachedIntQuants should not be called in SimplifiedGpuFIBlackOilModel");
+        OPM_THROW(std::logic_error,
+                  "updateCachedIntQuants should not be called in SimpleFIBlackOilModel");
     }
 
     template <class EMDArg>
     void updateCachedIntQuants1(const unsigned /* timeIdx */) const
     {
-        OPM_THROW(std::logic_error, "updateCachedIntQuants1 should not be called in SimplifiedGpuFIBlackOilModel");
+        OPM_THROW(std::logic_error,
+                  "updateCachedIntQuants1 should not be called in SimpleFIBlackOilModel");
     }
 
     template <class... Args>
     void updateCachedIntQuantsLoop(const unsigned /* timeIdx */) const
     {
-        OPM_THROW(std::logic_error, "updateCachedIntQuantsLoop should not be called in SimplifiedGpuFIBlackOilModel");
+        OPM_THROW(std::logic_error,
+                  "updateCachedIntQuantsLoop should not be called in SimpleFIBlackOilModel");
     }
 
     template <class... Args>
     void updateSingleCachedIntQuantUnchecked(const unsigned /* globalIdx */,
                                              const unsigned /* timeIdx */) const
     {
-        OPM_THROW(std::logic_error, "updateSingleCachedIntQuantUnchecked should not be called in SimplifiedGpuFIBlackOilModel");
+        OPM_THROW(
+            std::logic_error,
+            "updateSingleCachedIntQuantUnchecked should not be called in SimpleFIBlackOilModel");
     }
 
 public:
@@ -152,16 +183,18 @@ public:
     // gpu kernels
     Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities0_;
     Storage<BlackOilIntensiveQuantities<TypeTag>> cachedIntensiveQuantities1_;
+    Storage<Scalar> volumes_;
 };
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 namespace gpuistl
 {
     // For now we make a copy of the simplified CPU model because we need to set the fluid system
     // pointer without breaking copy semantics
     template <class TypeTag, typename GpuFluidSystem>
-    auto copy_to_gpu(const SimplifiedGpuFIBlackOilModel<TypeTag>& cpuModel, GpuFluidSystem* fsys)
+    auto copy_to_gpu(const SimpleFIBlackOilModel<TypeTag>& cpuModel, GpuFluidSystem* fsys)
     {
-        using Scalar = typename SimplifiedGpuFIBlackOilModel<TypeTag>::Scalar;
+        using Scalar = typename SimpleFIBlackOilModel<TypeTag>::Scalar;
         // In this copy_to_gpu we need to take care of two things:
         // 1) Copy the cachedIntensiveQuantities_ to GPU (go from vector to GpuBuffer to allocate
         // things on GPU) 2) Ensure that the FluidSystem pointer inside each IntensiveQuantities
@@ -172,8 +205,7 @@ namespace gpuistl
         using CorrectTypeTagView =
             typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, GpuView>;
         using CorrectBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
-        using SimplifiedGpuBufferModel
-            = SimplifiedGpuFIBlackOilModel<CorrectTypeTagView, GpuBuffer>;
+        using SimplifiedGpuBufferModel = SimpleFIBlackOilModel<CorrectTypeTagView, GpuBuffer>;
 
         std::size_t nCells0 = cpuModel.cachedIntensiveQuantities0_.size();
         std::size_t nCells1 = cpuModel.cachedIntensiveQuantities1_.size();
@@ -185,8 +217,8 @@ namespace gpuistl
         // stand-in until it is overwritten.
         std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr0;
         if (nCells0 > 0) {
-            CorrectBOIQ proto0 =
-                cpuModel.cachedIntensiveQuantities0_[0].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
+            CorrectBOIQ proto0 = cpuModel.cachedIntensiveQuantities0_[0]
+                                     .template withOtherFluidSystem<CorrectTypeTagView>(fsys);
             cpuIntQuantsWithGpuPtr0.resize(nCells0, proto0);
 
 
@@ -194,44 +226,50 @@ namespace gpuistl
 #pragma omp parallel for schedule(static)
 #endif
             for (std::size_t i = 1; i < nCells0; ++i) {
-                cpuIntQuantsWithGpuPtr0[i] =
-                    cpuModel.cachedIntensiveQuantities0_[i].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
+                cpuIntQuantsWithGpuPtr0[i]
+                    = cpuModel.cachedIntensiveQuantities0_[i]
+                          .template withOtherFluidSystem<CorrectTypeTagView>(fsys);
             }
         }
 
         std::vector<CorrectBOIQ> cpuIntQuantsWithGpuPtr1;
         if (nCells1 > 0) {
-            CorrectBOIQ proto1 =
-                cpuModel.cachedIntensiveQuantities1_[0].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
+            CorrectBOIQ proto1 = cpuModel.cachedIntensiveQuantities1_[0]
+                                     .template withOtherFluidSystem<CorrectTypeTagView>(fsys);
             cpuIntQuantsWithGpuPtr1.resize(nCells1, proto1);
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif
             for (std::size_t i = 1; i < nCells1; ++i) {
-                cpuIntQuantsWithGpuPtr1[i] =
-                    cpuModel.cachedIntensiveQuantities1_[i].template withOtherFluidSystem<CorrectTypeTagView>(fsys);
+                cpuIntQuantsWithGpuPtr1[i]
+                    = cpuModel.cachedIntensiveQuantities1_[i]
+                          .template withOtherFluidSystem<CorrectTypeTagView>(fsys);
             }
         }
 
         GpuBuffer<CorrectBOIQ> gpuBuf0(cpuIntQuantsWithGpuPtr0);
         GpuBuffer<CorrectBOIQ> gpuBuf1(cpuIntQuantsWithGpuPtr1);
+        GpuBuffer<Scalar> gpuVolumes(cpuModel.volumes_);
 
         // create new blackoil model providing a gpubuffer allocated version of the intQuants
-        auto result = SimplifiedGpuBufferModel(std::move(gpuBuf0), std::move(gpuBuf1));
+        auto result = SimplifiedGpuBufferModel(
+            std::move(gpuBuf0), std::move(gpuBuf1), std::move(gpuVolumes));
 
         return result;
     }
 
     template <typename LocalTypeTag>
-    auto make_view(SimplifiedGpuFIBlackOilModel<LocalTypeTag, GpuBuffer>& gpuSimplifiedGpuFIBlackOilModel)
+    auto make_view(SimpleFIBlackOilModel<LocalTypeTag, GpuBuffer>& gpuSimpleFIBlackOilModel)
     {
-        return SimplifiedGpuFIBlackOilModel<LocalTypeTag, gpuistl::GpuView>(
-            make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities0_),
-            make_view(gpuSimplifiedGpuFIBlackOilModel.cachedIntensiveQuantities1_));
+        return SimpleFIBlackOilModel<LocalTypeTag, gpuistl::GpuView>(
+            make_view(gpuSimpleFIBlackOilModel.cachedIntensiveQuantities0_),
+            make_view(gpuSimpleFIBlackOilModel.cachedIntensiveQuantities1_),
+            make_view(gpuSimpleFIBlackOilModel.volumes_));
     }
 } // namespace gpuistl
+#endif
 
 } // namespace Opm
 
-#endif // SIMPLIFIED_BLACK_OIL_MODEL_HPP
+#endif // SIMPLE_FI_BLACK_OIL_MODEL_HPP

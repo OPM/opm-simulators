@@ -88,6 +88,42 @@ public:
     }
 
     /**
+     * @brief Move constructor: transfers ownership of GPU memory without copying.
+     *
+     * The source buffer is left in a valid, empty state (size 0, null pointer) so
+     * that its destructor's cudaFree(nullptr) is a harmless no-op.
+     *
+     * @param other the GpuBuffer to move from
+     */
+    GpuBuffer(GpuBuffer<T>&& other) noexcept
+        : m_dataOnDevice(other.m_dataOnDevice)
+        , m_numberOfElements(other.m_numberOfElements)
+    {
+        other.m_dataOnDevice = nullptr;
+        other.m_numberOfElements = 0;
+    }
+
+    /**
+     * @brief Move assignment: frees current GPU memory, then takes ownership from other.
+     *
+     * The source buffer is left in a valid, empty state after the transfer.
+     *
+     * @param other the GpuBuffer to move from
+     * @return *this
+     */
+    GpuBuffer<T>& operator=(GpuBuffer<T>&& other) noexcept
+    {
+        if (this != &other) {
+            OPM_GPU_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
+            m_dataOnDevice = other.m_dataOnDevice;
+            m_numberOfElements = other.m_numberOfElements;
+            other.m_dataOnDevice = nullptr;
+            other.m_numberOfElements = 0;
+        }
+        return *this;
+    }
+
+    /**
      * @brief GpuBuffer allocates new GPU memory of the same size as data and copies the content of the data vector to
      * this newly allocated memory.
      *
