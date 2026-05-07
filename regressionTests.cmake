@@ -167,7 +167,7 @@ add_test_compareECLFiles(CASENAME model2_large_timestep_replay
                          
 add_test_compareECLFiles(CASENAME model2_large_timestep_replay
                          #FILENAME 7_HYSTERESIS_MODEL2  #ok
-                         #FILENAME 9_4E_WINJ_GINJ_GUIDERATE_MSW #ok
+                         FILENAME 9_4E_WINJ_GINJ_GUIDERATE_MSW #ok
                          SIMULATOR flow_blackoil
                          PREFIX compareTimestepReplayFail
                          ABS_TOL ${timestep_replay_abs_tol}
@@ -175,6 +175,26 @@ add_test_compareECLFiles(CASENAME model2_large_timestep_replay
                          DIR model2
                          TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8 --tolerance-cnv-relaxed=1e-3
                          TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
+
+add_test_compareECLFiles(CASENAME model2_large_timestep_replay
+                         FILENAME 0_BASE_MODEL2_LET
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model2
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8 --tolerance-cnv-relaxed=1e-3
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
+
+add_test_compareECLFiles(CASENAME model2_large_timestep_replay
+                         FILENAME 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_MSW
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model2
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8 --tolerance-cnv-relaxed=1e-3
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
 
 
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
