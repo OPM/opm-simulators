@@ -154,6 +154,16 @@ add_test_compareECLFiles(CASENAME model2_fail_large_timestep_replay
                          DIR model2
                          TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8 --tolerance-cnv-relaxed=1e-3
                          TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)                         
+
+add_test_compareECLFiles(CASENAME model2_fail_large_timestep_replay
+                         FILENAME 9_2B_DEPL_GCONPROD_2L_MSW
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplayFail
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL 2e-7
+                         DIR model2
+                         TEST_ARGS --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8 --tolerance-cnv-relaxed=1e-3
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
                          
 add_test_compareECLFiles(CASENAME model2_large_timestep_replay
                          FILENAME 0_BASE_MODEL2 
