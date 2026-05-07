@@ -90,6 +90,8 @@ namespace Opm {
         using typename MSWEval::BVectorWell;
         using MSWEval::SPres;
         using typename Base::PressureMatrix;
+        // it contains the temperature and salt concentration of the first perforation
+        // TODO: kind of temporary measure, will evolve or be replaced based on future development and understanding
         using FSInfo = std::tuple<Scalar, Scalar>;
 
         // a fluid state to calculate the properties inside the wellbore for each segment
@@ -375,10 +377,12 @@ namespace Opm {
         createFluidState(const std::vector<ValueType>& fluid_composition,
                          const ValueType& pressure,
                          const ValueType& temperature,
+                         const ValueType& saltConcentration,
+                         ValueType& volume_ratio,
                          DeferredLogger& deferred_logger) const;
 
         SegmentFluidState<EvalWell>
-        createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger) const;
+        createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger);
 
         void computeInitialSegmentEnergy();
 
@@ -389,9 +393,7 @@ namespace Opm {
                                          const int local_perf_index,
                                          DeferredLogger& deferred_logger);
 
-        void updateWellHeadCondition(const Simulator& simulator,
-                                     const Scalar first_perf_temperature,
-                                     DeferredLogger& deferred_logger);
+        void updateWellHeadCondition(const Simulator& simulator, const FSInfo& info, DeferredLogger& deferred_logger);
 
         void updateSegmentFluidState(const FSInfo& info, DeferredLogger& deferred_logger);
 

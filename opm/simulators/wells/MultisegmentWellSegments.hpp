@@ -76,6 +76,9 @@ public:
                               const int seg_idx,
                               DeferredLogger& deferred_logger) const;
 
+    EvalWell getSurfaceVolume(const int seg_idx,
+                              DeferredLogger& deferred_logger) const;
+
     EvalWell getFrictionPressureLoss(const int seg,
                                      const bool extra_reverse_flow_derivatives = false) const;
 
@@ -128,6 +131,11 @@ public:
         return densities_[seg];
     }
 
+    EvalWell& volumeRatio(const int seg)
+    {
+        return volume_ratios_[seg];
+    }
+
     Scalar local_perforation_depth_diff(const int local_perf_index) const
     {
         return local_perforation_depth_diffs_[local_perf_index];
@@ -178,6 +186,9 @@ private:
     std::vector<std::vector<EvalWell>> phase_densities_;
     std::vector<std::vector<EvalWell>> phase_fractions_;
     std::vector<std::vector<EvalWell>> phase_viscosities_;
+
+    // volume ratio between wellbore condition and surface condition for each segment
+    std::vector<EvalWell> volume_ratios_;
 
     WellInterfaceGeneric<Scalar, IndexTraits>& well_;
 

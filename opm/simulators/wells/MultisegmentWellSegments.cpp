@@ -99,6 +99,7 @@ MultisegmentWellSegments(const int numSegments,
     , phase_densities_(numSegments, std::vector<EvalWell>(well.numConservationQuantities(), 0.0)) // number of phase here?
     , phase_fractions_(numSegments, std::vector<EvalWell>(well.numConservationQuantities(), 0.0)) // number of phase here?
     , phase_viscosities_(numSegments, std::vector<EvalWell>(well.numConservationQuantities(), 0.0)) // number of phase here?
+    , volume_ratios_(numSegments, 0.0)
     , well_(well)
 {
     // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
@@ -186,6 +187,8 @@ computeFluidProperties(const Scalar firstPerfTemperature,
         const auto& mix_s = result.mix_s;
         const auto& b = result.b;
         const auto& volrat = result.vol_ratio;
+
+        volume_ratios_[seg] = volrat;
 
         viscosities_[seg] = 0.;
         // calculate the average viscosity
@@ -278,6 +281,22 @@ getSurfaceVolume(const Scalar firstPerfTemperature,
     // We increase the segment volume with a factor 10 to stabilize the system.
     const Scalar volume = well_.wellEcl().getSegments()[seg_idx].volume();
 
+    return volume / vol_ratio;
+}
+
+template<class FluidSystem, class Indices>
+typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices>::
+getSurfaceVolume(const int seg_idx,
+                 DeferredLogger& deferred_logger) const
+{
+    const Scalar volume = well_.wellEcl().getSegments()[seg_idx].volume();
+    const auto& vol_ratio = volume_ratios_[seg_idx];
+    if (vol_ratio.value() == 0.) {
+        deferred_logger.warning(fmt::format("Volume ratio for segment {} for well {} is zero, "
+                                                     "returning segment volume as surface volume.", seg_idx, this->well_.name()));
+        return volume;
+    }
     return volume / vol_ratio;
 }
 
