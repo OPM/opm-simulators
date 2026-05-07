@@ -1,10 +1,7 @@
 #ifndef OPM_MIXED_ADAPTER_HEADER_INCLUDED
 #define OPM_MIXED_ADAPTER_HEADER_INCLUDED
 
-//#include <opm/simulators/flow/BlackoilModelParameters.hpp>
-//#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-//#include <dune/istl/solver.hh>
 
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
@@ -15,19 +12,57 @@
 
 #include <dune/istl/matrixindexset.hh>
 
+#include <opm/simulators/linalg/mixed/Vector64b.hpp>
 #include <opm/simulators/linalg/mixed/MatrixWrapper.hpp>
 
 
 
 namespace Dune
 {
+#include <dune/istl/solvers.hh>
 
+
+template<class Vector>
+class SeqOptmizedProduct : public Dune::SeqScalarProduct<Vector>
+{
+public:
+
+    static constexpr auto block_size = Vector::block_type::dimension;
+
+    // Compute the dot product <x, y>
+    virtual double dot(const Vector& vx, const Vector& vy) const override
+    {
+        double const *x = &vx[0][0];
+        double const *y = &vy[0][0];
+
+        int NN = block_size*vx.N();
+
+        // unroll loop in multiples of 8
+        int n=NN/8;
+        int N=8*n;
+        double agg[8];
+        for(int i=0;i<8;i++) agg[i]=0.0;
+        for(int i=0;i<N;i+=8) for(int j=0;j<8;j++) agg[j]+=x[i+j]*y[i+j];
+        for(int j=0;j<4;j++) agg[j]+=agg[j+4];
+        for(int j=0;j<2;j++) agg[j]+=agg[j+2];
+        for(int j=0;j<1;j++) agg[j]+=agg[j+1];
+
+        // trailing end
+        for(int j=N;j<NN;j++) agg[0]+=x[j]*y[j];
+
+        return agg[0];
+    }
+
+    // Compute the norm ||x||
+    virtual double norm(const Vector& x) const override {
+        return std::sqrt(this->dot(x, x));
+    }
+};
 
 template <class Matrix, class Vector, class Comm>
 struct MixedOperator
 {
     using type = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Comm>;
-    //static std::shared_ptr<type> mixed_operator(Matrix &M, Comm comm) {return std:make_shared<type>(M,comm);}
 };
 
 template <class Matrix, class Vector>
@@ -40,22 +75,15 @@ struct MixedOperator<Matrix, Vector, Dune::Amg::SequentialInformation>
 template <class Comm, class Operator, class Vector>
 class MixedAdapter:public InverseOperator<Vector, Vector>
 {
-
     public:
 
     using AbstractPrecondType = Dune::PreconditionerWithUpdate<Vector,Vector>;
     using AbstractScalarProductType = Dune::ScalarProduct<Vector>;
 
-    using typename InverseOperator<Vector, Vector>::domain_type;
-    static constexpr auto block_size = domain_type::block_type::dimension;
-
-    //using SingleMatrixType  = Dune::BCRSMatrix<Opm::MatrixBlock<float, block_size, block_size>>;
-    using SingleMatrixType  = MatrixWrapper<Vector, block_size>;
-    //using MixedOperatorType = Dune::OverlappingSchwarzOperator<SingleMatrixType, Vector, Vector, Comm>;
-    using MixedOperatorType = MixedOperator<SingleMatrixType, Vector, Comm>::type;
-    //using MixedOperatorType = Dune::MatrixAdapter<SingleMatrixType, Vector, Vector>;
-
-
+    static constexpr auto block_size = Vector::block_type::dimension;
+    using MixedMatrixType     = MatrixWrapper<Vector, block_size>;
+    using MixedOperatorType    = MixedOperator<MixedMatrixType, Vector, Comm>::type;
+    using OptimizedProductType = SeqOptmizedProduct<Vector>;
 
     MixedAdapter(Operator *op,
                  std::shared_ptr<AbstractScalarProductType> sp,
@@ -69,15 +97,14 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
         auto &A = op->getmat();
         int nrows = A.N();
         int nnz = A.nonzeroes();
-        //int b = A[0][0].N();
 
         double_data_ = &A[0][0][0][0];
-        single_matrix_ = std::make_shared<SingleMatrixType>(nrows,nnz);
-        auto &B = *single_matrix_;
+        mixed_matrix_ = std::make_shared<MixedMatrixType>(nrows,nnz);
+        auto &B = *mixed_matrix_;
 
         // copy sparsity pattern
-        int *rows = single_matrix_->rowptr();
-        int *cols = single_matrix_->colidx();
+        int *rows = mixed_matrix_->rowptr();
+        int *cols = mixed_matrix_->colidx();
 
         int irow = 0;
         int icol = 0;
@@ -92,23 +119,23 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
             irow++;
         }
 
-        //initializemixedoperator
+        //initialize mixed operator
         double_operator_ = op;
         if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>)
         {
             mixed_operator_ = std::make_shared<MixedOperatorType>(B);
+            scalar_product_ = std::make_shared<OptimizedProductType>();
         }
         else
         {
             mixed_operator_ = std::make_shared<MixedOperatorType>(B,comm);
+            scalar_product_ = sp;
         }
-
 
         //initialize bicgstab solver from Dune
         solver_ = std::make_shared<Dune::BiCGSTABSolver<Vector>>(
-                                                              //*op,
                                                               *mixed_operator_,
-                                                              *sp,
+                                                              *scalar_product_,
                                                               *prec,
                                                               tol, // desired residual reduction factor
                                                               maxiter, // maximum number of iterations
@@ -118,9 +145,7 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
     virtual void apply(Vector &x, Vector &b, InverseOperatorResult &res) override
     {
         //demote jacobian to single precision
-        //auto &A = double_operator_->getmat();
-        single_matrix_->update(double_data_);
-        //single_matrix_->update(&A[0][0][0][0]);
+        mixed_matrix_->update(double_data_);
 
         //apply bicgstab solver from Dune
         solver_->apply(x,b,res);
@@ -143,7 +168,8 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
     Operator *double_operator_;
     std::shared_ptr<AbstractSolverType> solver_;
     std::shared_ptr<MixedOperatorType> mixed_operator_;
-    std::shared_ptr<SingleMatrixType> single_matrix_;
+    std::shared_ptr<MixedMatrixType> mixed_matrix_;
+    std::shared_ptr<AbstractScalarProductType> scalar_product_;
     double const *double_data_;
 
 };
