@@ -62,7 +62,9 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
     auto& well_state = well_model_.wellState();
 
     const bool changed_well_group =
-        well_model_.updateWellControlsAndNetwork(true, dt, deferred_logger);
+        well_model_.updateWellControlsAndNetwork(/*mandatory_network_balance=*/true,
+                                                 dt,
+                                                 deferred_logger);
     well_model_.assembleWellEqWithoutIteration(dt);
     const bool converged =
         well_model_.getWellConvergence(well_model_.B_avg(), true).converged() &&
@@ -93,7 +95,7 @@ update(const bool mandatory_network_balance,
     const int episodeIdx = well_model_.simulator().episodeIndex();
     const auto& network = well_model_.schedule()[episodeIdx].network();
     if (!well_model_.wellsActive() && !network.active()) {
-        return {false, 0.0};
+        return {/*more_network_update=*/false, /*network_imbalance=*/0.0};
     }
 
     const auto& comm = well_model_.simulator().vanguard().grid().comm();

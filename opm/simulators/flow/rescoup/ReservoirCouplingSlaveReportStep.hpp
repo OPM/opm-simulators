@@ -56,6 +56,7 @@ class ReservoirCouplingSlaveReportStep {
 public:
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
     using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
+    using MasterGroupNodePressure = ReservoirCoupling::MasterGroupNodePressure<Scalar>;
     using MessageTag = ReservoirCoupling::MessageTag;
     using MasterProductionLimits = ReservoirCoupling::MasterProductionLimits<Scalar>;
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
@@ -80,6 +81,11 @@ public:
     /// @param phase Injection phase (e.g., Phase::WATER, Phase::GAS)
     /// @return true if the master sent an injection target for this group/phase pair
     bool hasMasterInjectionTarget(const std::string& gname, const Phase phase) const;
+
+    /// @brief Check if a master-computed network-leaf node pressure exists for a master group
+    /// @param gname Slave group name
+    /// @return true if the master sent a node pressure for this group
+    bool hasMasterGroupNodePressure(const std::string& gname) const;
 
     /// @brief Check if master-imposed per-rate-type production limits exist for a group
     /// @param gname Slave group name
@@ -111,6 +117,17 @@ public:
     /// @return Reference to the logger object for this coupling session
     ReservoirCoupling::Logger& logger() const { return this->slave_.logger(); }
 
+    /// @brief Get the master-computed network-leaf node pressure for a master group
+    /// @param gname Slave group name
+    /// @return Node pressure (SI units, Pa)
+    /// @throws std::out_of_range if no pressure exists for the given group
+    Scalar masterGroupNodePressure(const std::string& gname) const;
+
+    /// @brief Get the full map of master-computed network-leaf node pressures
+    /// @return Map keyed by slave group name; values are pressures in SI units (Pa)
+    const std::map<std::string, Scalar>& masterGroupNodePressures() const
+    { return master_group_node_pressures_; }
+
     /// @brief Get the master-imposed injection target and control mode for a group and phase
     /// @param gname Slave group name
     /// @param phase Injection phase
@@ -130,6 +147,34 @@ public:
     /// @return Pair of (target rate, control mode)
     /// @throws std::out_of_range if no target exists for the given group
     std::pair<Scalar, Group::ProductionCMode> masterProductionTarget(const std::string& gname) const;
+
+    /// @brief Receive master-computed network-leaf node pressures from master
+    ///   and store them locally.  Only emitted for master groups that are
+    ///   leaf nodes in the master's extended network.
+    /// @param num_pressures Number of pressure entries to receive
+    void receiveMasterGroupNodePressuresFromMaster(std::size_t num_pressures);
+
+    /// @brief Receive the master-group-node-pressures header from master.
+    /// @return (num_pressures, is_final).  is_final tells the slave whether
+    ///   the master is done iterating for the current sync timestep.
+    std::pair<std::size_t, bool> receiveNumMasterGroupNodePressuresFromMaster();
+
+    /// @brief Receive the master's single-bool flag for the current sync
+    ///   timestep and mirror it into
+    ///   `last_received_master_group_node_pressures_is_final_`
+    ///   (is_final = !active).
+    /// @details The flag is queryable via
+    ///   lastReceivedMasterGroupNodePressuresIsFinal().
+    void receiveCoupledNetworkActiveStatusFromMaster();
+
+    /// @brief Whether the most recent master-group-node-pressures receive
+    ///   carried the `is_final` flag.  Updated by every call to
+    ///   `receiveNumMasterGroupNodePressuresFromMaster`, and by
+    ///   `receiveCoupledNetworkActiveStatusFromMaster` at the start of
+    ///   each sync step.
+    /// @details See `last_received_master_group_node_pressures_is_final_` variable for details.
+    bool lastReceivedMasterGroupNodePressuresIsFinal() const
+    { return last_received_master_group_node_pressures_is_final_; }
 
     /// @brief Receive the number of injection and production constraints from master
     /// @return Pair of (num_injection_targets, num_production_constraints)
@@ -187,6 +232,11 @@ public:
     /// @brief Get the name of this slave process
     /// @return Reference to the name string for this slave
     const std::string& slaveName() const { return this->slave_.getSlaveName(); }
+
+    /// @brief Store a master-computed network-leaf node pressure for a master group
+    /// @param gname Slave group name
+    /// @param pressure Node pressure (SI units, Pa)
+    void setMasterGroupNodePressure(const std::string& gname, const Scalar pressure);
 
     /// @brief Store a master-imposed injection target for a group and phase
     /// @param gname Slave group name
@@ -253,6 +303,27 @@ private:
     // Per-rate-type production limits from master hierarchy. Key: slave group name.
     // A limit of -1 means no limit defined in the hierarchy for that rate type.
     std::map<std::string, MasterProductionLimits> master_production_limits_;
+    // Master-computed network-leaf node pressures keyed by slave group name. Only
+    // populated for master groups that are leaf nodes in the master's extended
+    // network. Cleared and repopulated on every receive cycle.
+    std::map<std::string, Scalar> master_group_node_pressures_;
+    // This variable is initialized for each sync step through the call chain: beginTimeStep()
+    //   -> BlackoilWellModelRescoup::sendCoupledNetworkActiveStatus()
+    //   -> BlackoilWellModelRescoup::masterNetworkHasMasterGroupLeaves()
+    // Which determines the value:
+    //   1) true : the master has no master groups connected to its network,
+    //             or has no network at all.
+    //   2) false: the master has master groups connected to its network (and the master has not
+    //             sent the final node pressures in the network iteration in BlackoilWellModel::assemble()).
+    //
+    // In the case of "false" above: The value is reset to "true" in the course of the network iteration
+    // in BlackoilWellModel::assemble() -> BlackoilWellModel::updateWellControlsAndNetworkIteration()
+    // based on the "more_network_update" return value of BlackoilWellModelNetwork::update().
+    // If it returns "false" the flag below is reset to "true" and stays true for the rest of the sync timestep.
+    //
+    // So in the case of "false" above: The slaves use this variable to determine when to exit
+    // the outer network loop such that the MPI master-slave communication protocol is kept in sync.
+    bool last_received_master_group_node_pressures_is_final_{true};
 };
 } // namespace Opm
 #endif // OPM_RESERVOIR_COUPLING_SLAVE_REPORT_STEP_HPP
