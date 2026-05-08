@@ -295,8 +295,7 @@ std::string getSolverString(const FlowLinearSolverParameters& p)
     }
     else
     {
-        //return {"bicgstab"};
-        return {"mixed-precision"};
+        return {"bicgstab"};
     }
 }
 

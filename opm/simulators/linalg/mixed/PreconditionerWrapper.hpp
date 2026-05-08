@@ -5,6 +5,12 @@
 
 namespace Opm {
 
+//! @brief Wraps c-implementation of mixed-precision preconditioner
+//!
+//! @tparam Vector the block-vector used by linear operator
+//! @tparam M block-sparse matrix type
+//! @tparam X block-vector input type
+//! @tparam Y block vector output type
 template <class M, class X, class Y>
 class MixedPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
 {
@@ -13,17 +19,23 @@ class MixedPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
     using domain_type = X;
     static constexpr auto block_size = domain_type::block_type::dimension;
 
+    //! @brief constructor
+    //!
+    //! @param A block-sparse matrix
+    //! @param use_dilu toggle between dilu or ilu0 factorization
     MixedPreconditioner(const M& A, bool use_dilu = false)
     {
+        // Access double precision matrix data
         int nrows = A.N();
         int nnz = A.nonzeroes();
-
         double_data_  = &A[0][0][0][0];
         prec_         = prec_alloc();
+
+        // allocate and initialize mixed-precision matrix
         mixed_matrix_ = bsr_alloc();
         bsr_init(mixed_matrix_, nrows, nnz, block_size);
 
-        // copy sparsity pattern
+        // copy sparsity pattern from double preccision matrix
         int *rows = mixed_matrix_->rowptr;
         int *cols = mixed_matrix_->colidx;
 
@@ -40,12 +52,24 @@ class MixedPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
             irow++;
         }
 
+        // allocate and initialize preconditioner
         prec_init(prec_,mixed_matrix_);
+
+        // attribute initialization
         nnz_ = nnz;
         use_dilu_ = use_dilu;
 
+        // perform matrix factorization
         update();
     };
+
+    //! @brief destructor
+    ~MixedPreconditioner()
+    {
+        bsr_free(mixed_matrix_);
+        prec_free(prec_);
+    }
+
     virtual void update() override;
     virtual bool hasPerfectUpdate() const override {return true;}
     virtual void pre ([[maybe_unused]] X& x, [[maybe_unused]] Y& y) override {};

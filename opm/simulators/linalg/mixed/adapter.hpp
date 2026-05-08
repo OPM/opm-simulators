@@ -12,29 +12,34 @@
 
 #include <dune/istl/matrixindexset.hh>
 
-#include <opm/simulators/linalg/mixed/Vector64b.hpp>
 #include <opm/simulators/linalg/mixed/MatrixWrapper.hpp>
 
 
 
 namespace Dune
 {
-#include <dune/istl/solvers.hh>
+//#include <dune/istl/solvers.hh>
 
 
+//! @brief Optimized sequential scalar product.
+//!
+//! @tparam Vector block-vector class with data stored as contiguous double array
 template<class Vector>
 class SeqOptmizedProduct : public Dune::SeqScalarProduct<Vector>
 {
 public:
 
+    // extract block size
     static constexpr auto block_size = Vector::block_type::dimension;
 
-    // Compute the dot product <x, y>
+    // Compute the dot product <vx, vy>
     virtual double dot(const Vector& vx, const Vector& vy) const override
     {
+        // access underlying data
         double const *x = &vx[0][0];
         double const *y = &vy[0][0];
 
+        // total array length
         int NN = block_size*vx.N();
 
         // unroll loop in multiples of 8
@@ -59,12 +64,21 @@ public:
     }
 };
 
+//! @brief Generalized mixed precision operator interface
+//!
+//! @tparam Matrix the block-matrix used by linear operator
+//! @tparam Vector the block-vector used by linear operator
+//! @tparam Comm the communicator used by linear operator
 template <class Matrix, class Vector, class Comm>
 struct MixedOperator
 {
     using type = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Comm>;
 };
 
+//! @brief Generalized mixed precision operator interface
+//!
+//! @tparam Matrix the block-matrix used by linear operator
+//! @tparam Vector the block-vector used by linear operator
 template <class Matrix, class Vector>
 struct MixedOperator<Matrix, Vector, Dune::Amg::SequentialInformation>
 {
@@ -72,6 +86,11 @@ struct MixedOperator<Matrix, Vector, Dune::Amg::SequentialInformation>
 };
 
 
+//! @brief Wraps mixed precision
+//!
+//! @tparam Comm the communicator passed to FlexibleLinearSolver
+//! @tparam Operator the linear operator passed to FlexibleLinearSolver
+//! @tparam Vector the block vector passed to FlexibleLinearSolver
 template <class Comm, class Operator, class Vector>
 class MixedAdapter:public InverseOperator<Vector, Vector>
 {
@@ -81,10 +100,19 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
     using AbstractScalarProductType = Dune::ScalarProduct<Vector>;
 
     static constexpr auto block_size = Vector::block_type::dimension;
-    using MixedMatrixType     = MatrixWrapper<Vector, block_size>;
+    using MixedMatrixType      = MatrixWrapper<Vector, block_size>;
     using MixedOperatorType    = MixedOperator<MixedMatrixType, Vector, Comm>::type;
     using OptimizedProductType = SeqOptmizedProduct<Vector>;
 
+    //! @brief constructor
+    //!
+    //! @param op the linear operator (assumed double precision)
+    //! @param sp the scalar product
+    //! @param prec the preconditioner to use
+    //! @param reduction the reduction factor passed to the iterative solver
+    //! @param maxit maximum number of iterations for the linear solver
+    //! @param verbose verbosity level
+    //! @param comm the communication object.
     MixedAdapter(Operator *op,
                  std::shared_ptr<AbstractScalarProductType> sp,
                  std::shared_ptr<AbstractPrecondType> prec,
@@ -94,15 +122,17 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
                  const Comm &comm)
     {
 
+        // Access matrix data from double precision operator
         auto &A = op->getmat();
         int nrows = A.N();
         int nnz = A.nonzeroes();
-
         double_data_ = &A[0][0][0][0];
-        mixed_matrix_ = std::make_shared<MixedMatrixType>(nrows,nnz);
-        auto &B = *mixed_matrix_;
 
-        // copy sparsity pattern
+        //allocate mixed matrix
+        mixed_matrix_ = std::make_shared<MixedMatrixType>(nrows,nnz);
+        //auto &B = *mixed_matrix_;
+
+        // copy sparsity pattern from double precision matrix
         int *rows = mixed_matrix_->rowptr();
         int *cols = mixed_matrix_->colidx();
 
@@ -119,16 +149,16 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
             irow++;
         }
 
-        //initialize mixed operator
+        //initialize mixed operator and optimized scalar product
         double_operator_ = op;
         if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>)
         {
-            mixed_operator_ = std::make_shared<MixedOperatorType>(B);
+            mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_);
             scalar_product_ = std::make_shared<OptimizedProductType>();
         }
         else
         {
-            mixed_operator_ = std::make_shared<MixedOperatorType>(B,comm);
+            mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_,comm);
             scalar_product_ = sp;
         }
 
@@ -144,7 +174,7 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
 
     virtual void apply(Vector &x, Vector &b, InverseOperatorResult &res) override
     {
-        //demote jacobian to single precision
+        //transpose dense blocks and demote to single precision
         mixed_matrix_->update(double_data_);
 
         //apply bicgstab solver from Dune
