@@ -64,6 +64,7 @@ public:
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
+    using MasterGroupNodePressure = ReservoirCoupling::MasterGroupNodePressure<Scalar>;
     using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
 
     /// @brief Construct a report step manager for the master process
@@ -201,12 +202,45 @@ public:
     /// @return Reference to the Schedule object containing well and group definitions
     const Schedule &schedule() const { return this->master_.schedule(); }
 
+    /// @brief Send a single boolean to a slave telling it whether the master
+    ///   will iterate the cross-rescoup network exchange this sync timestep.
+    ///   Rank-0-only on the master comm.
+    /// @param slave_idx Zero-based slave index.
+    /// @param active True if the master will iterate (the slave should
+    ///   participate in per-iteration node-pressure receives in
+    ///   updateWellControlsAndNetworkIteration); false if the master will not
+    ///   iterate cross-rescoup this sync timestep.
+    void sendCoupledNetworkActiveStatusToSlave(
+        std::size_t slave_idx, bool active
+    ) const;
+
     void sendInjectionTargetsToSlave(
         std::size_t slave_idx, const std::vector<InjectionGroupTarget>& injection_targets
     ) const;
+
+    /// @brief Send master-computed network-leaf node pressures to a slave.
+    /// @details Only emits entries for master groups that are leaf nodes in
+    ///   the master's extended network.  Rank-0-only on the master comm.
+    void sendMasterGroupNodePressuresToSlave(
+        std::size_t slave_idx, const std::vector<MasterGroupNodePressure>& pressures
+    ) const;
+
     void sendNumGroupConstraintsToSlave(
         std::size_t slave_idx, std::size_t num_injection_targets, std::size_t num_production_constraints
     ) const;
+
+    /// @brief Send the count of master-computed network-leaf node pressures
+    ///   that will follow, plus an `is_final` flag telling the slave whether
+    ///   the master will iterate again.  Rank-0-only on the master comm.
+    /// @param slave_idx Zero-based slave index.
+    /// @param num_pressures Number of pressures that will follow.
+    /// @param is_final True if this is the master's final pressure send for
+    ///   the current sync timestep; false if the master is iterating and
+    ///   expects to receive updated rates from the slave.
+    void sendNumMasterGroupNodePressuresToSlave(
+        std::size_t slave_idx, std::size_t num_pressures, bool is_final
+    ) const;
+
     void sendProductionConstraintsToSlave(
         std::size_t slave_idx, const std::vector<ProductionGroupConstraints>& production_constraints
     ) const;

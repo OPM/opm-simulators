@@ -46,10 +46,48 @@ template<typename TypeTag>
 BlackoilWellModelRescoup<TypeTag>::
 BlackoilWellModelRescoup(BlackoilWellModel<TypeTag>& well_model)
     : well_model_{well_model}
+    , network_{well_model.network()}
+    , simulator_{well_model.simulator()}
+    , param_{well_model.param()}
 {}
 
 // Public methods alphabetically
 // ------------------------------
+
+template<typename TypeTag>
+bool
+BlackoilWellModelRescoup<TypeTag>::
+masterNetworkHasMasterGroupLeaves() const
+{
+    // Query the parsed Schedule topology (`network.has_node(...)`) rather than the runtime
+    // `node_pressures_` map.  The runtime map is empty on the very first beginTimeStep call
+    // (network_.update has not yet run for this substep).
+    if (!this->isReservoirCouplingMaster()) return false;
+    const int episodeIdx = this->simulator_.episodeIndex();
+    const auto& network = this->schedule()[episodeIdx].network();
+    if (!network.active()) return false;
+    const auto& rcm = this->reservoirCouplingMaster();
+    const auto num_slaves = rcm.numSlaves();
+    for (std::size_t s = 0; s < num_slaves; ++s) {
+        if (!rcm.slaveIsActivated(s)) continue;
+        for (const auto& mg : rcm.getMasterGroupNamesForSlave(s)) {
+            if (network.has_node(mg)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+receiveCoupledNetworkActiveStatus()
+{
+    OPM_TIMEFUNCTION();
+    assert(this->isReservoirCouplingSlave());
+    this->reservoirCouplingSlave().receiveCoupledNetworkActiveStatusFromMaster();
+}
 
 template<typename TypeTag>
 void
@@ -59,9 +97,47 @@ receiveGroupConstraintsFromMaster()
     OPM_TIMEFUNCTION();
     RescoupReceiveGroupConstraints<Scalar, IndexTraits> constraint_receiver{
         this->well_model_.guideRateHandler(),
-        this->well_model_.groupStateHelper()
+        this->groupStateHelper()
     };
     constraint_receiver.receiveGroupConstraintsFromMaster();
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+receiveMasterGroupNodePressuresFromMaster()
+{
+    OPM_TIMEFUNCTION();
+    assert(this->isReservoirCouplingSlave());
+    auto& rescoup_slave = this->reservoirCouplingSlave();
+    const auto [num_pressures, _is_final] =
+        rescoup_slave.receiveNumMasterGroupNodePressuresFromMaster();
+    if (num_pressures > 0) {
+        rescoup_slave.receiveMasterGroupNodePressuresFromMaster(num_pressures);
+    }
+    // Apply pressures as dynamic THP limits on every producer whose
+    // group has a master-supplied pressure.  Wells in master groups that
+    // are not network leaves are not touched (no entry in the map).
+    // Mirrors the standard local-network apply pattern in
+    // BlackoilWellModelNetworkGeneric::updatePressures(): when the well is
+    // currently THP-controlled, also write the new THP into the WellState
+    // directly, because setDynamicThpLimit() alone leaves the active
+    // control's THP value stale and the subsequent well-solve would
+    // converge against the old THP.
+    const auto& pressures = rescoup_slave.masterGroupNodePressures();
+    if (pressures.empty()) return;
+    const auto& summary_state = this->well_model_.summaryState();
+    auto& well_state = this->wellState();
+    for (auto& well : this->wellContainer()) {
+        if (!well->isProducer() || !well->wellEcl().predictionMode()) continue;
+        const auto it = pressures.find(well->wellEcl().groupName());
+        if (it == pressures.end()) continue;
+        well->setDynamicThpLimit(it->second);
+        auto& ws = well_state[well->indexOfWell()];
+        if (ws.production_cmode == Well::ProducerCMode::THP) {
+            ws.thp = well->getTHPConstraint(summary_state);
+        }
+    }
 }
 
 template<typename TypeTag>
@@ -70,9 +146,9 @@ BlackoilWellModelRescoup<TypeTag>::
 receiveSlaveGroupData()
 {
     OPM_TIMEFUNCTION();
-    assert(this->well_model_.isReservoirCouplingMaster());
+    assert(this->isReservoirCouplingMaster());
     RescoupReceiveSlaveGroupData<Scalar, IndexTraits> slave_group_data_receiver{
-        this->well_model_.groupStateHelper(),
+        this->groupStateHelper(),
     };
     slave_group_data_receiver.receiveSlaveGroupData();
 }
@@ -92,14 +168,14 @@ rescoupSyncSummaryData()
     // Slave side: on the last substep of the sync step, the slave sends its
     // production data to the master.  The master is already waiting at this
     // point (blocked on MPI_Recv from its first substep's timeStepSucceeded).
-    if (this->well_model_.isReservoirCouplingMaster()) {
-        if (this->well_model_.reservoirCouplingMaster().needsSlaveDataReceive()) {
+    if (this->isReservoirCouplingMaster()) {
+        if (this->reservoirCouplingMaster().needsSlaveDataReceive()) {
             this->receiveSlaveGroupData();
-            this->well_model_.reservoirCouplingMaster().setNeedsSlaveDataReceive(false);
+            this->reservoirCouplingMaster().setNeedsSlaveDataReceive(false);
         }
     }
-    if (this->well_model_.isReservoirCouplingSlave()) {
-        if (this->well_model_.reservoirCouplingSlave().isLastSubstepOfSyncTimestep()) {
+    if (this->isReservoirCouplingSlave()) {
+        if (this->reservoirCouplingSlave().isLastSubstepOfSyncTimestep()) {
             this->sendSlaveGroupDataToMaster();
         }
     }
@@ -108,13 +184,26 @@ rescoupSyncSummaryData()
 template<typename TypeTag>
 void
 BlackoilWellModelRescoup<TypeTag>::
-sendSlaveGroupDataToMaster()
+sendCoupledNetworkActiveStatus()
 {
     OPM_TIMEFUNCTION();
-    assert(this->well_model_.isReservoirCouplingSlave());
-    RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{
-        this->well_model_.groupStateHelper()};
-    slave_group_data_sender.sendSlaveGroupDataToMaster();
+    assert(this->isReservoirCouplingMaster());
+    // Send to each activated slave a single bool: "will the master iterate
+    // the cross-rescoup network exchange this sync timestep?".  Sent as a
+    // dedicated one-element MPI message; the per-iteration node-pressure
+    // sends inside updateWellControlsAndNetworkIteration() carry their own
+    // is_final flag in the NumMasterGroupNodePressures header.
+    const bool active = this->masterNetworkHasMasterGroupLeaves();
+    auto& rescoup_master = this->reservoirCouplingMaster();
+    const auto num_slaves = rescoup_master.numSlaves();
+    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+        if (rescoup_master.slaveIsActivated(slave_idx)) {
+            rescoup_master.sendCoupledNetworkActiveStatusToSlave(slave_idx, active);
+        }
+    }
+    // Mirror into the master's local is_final state so the master's own
+    // updateWellControlsAndNetworkIteration() gates see the initial value before the per-iteration sends.
+    this->last_sent_master_group_node_pressures_is_final_ = !active;
 }
 
 template<typename TypeTag>
@@ -123,12 +212,55 @@ BlackoilWellModelRescoup<TypeTag>::
 sendMasterGroupConstraintsToSlaves()
 {
     OPM_TIMEFUNCTION();
-    // This function is called by the master process to send the group constraints to the slaves.
+    // This function is called by the master process to send the group
+    // constraints to the slaves.  The "will the master iterate cross-rescoup?"
+    // flag is shipped separately by sendCoupledNetworkActiveStatus().
     RescoupConstraintsCalculator<Scalar, IndexTraits> constraints_calculator{
         this->well_model_.guideRateHandler(),
-        this->well_model_.groupStateHelper()
+        this->groupStateHelper()
     };
     constraints_calculator.calculateMasterGroupConstraintsAndSendToSlaves();
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+sendMasterGroupNodePressuresToSlaves(bool is_final)
+{
+    OPM_TIMEFUNCTION();
+    assert(this->isReservoirCouplingMaster());
+    auto& rescoup_master = this->reservoirCouplingMaster();
+    const auto& node_pressures = this->network_.nodePressures();
+    const auto num_slaves = rescoup_master.numSlaves();
+    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+        if (!rescoup_master.slaveIsActivated(slave_idx)) continue;
+        std::vector<typename ReservoirCoupling::MasterGroupNodePressure<Scalar>> pressures;
+        const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+        for (std::size_t i = 0; i < master_groups.size(); ++i) {
+            const auto it = node_pressures.find(master_groups[i]);
+            if (it != node_pressures.end()) {
+                pressures.push_back({i, it->second});
+            }
+        }
+        rescoup_master.sendNumMasterGroupNodePressuresToSlave(
+            slave_idx, pressures.size(), is_final);
+        if (!pressures.empty()) {
+            rescoup_master.sendMasterGroupNodePressuresToSlave(slave_idx, pressures);
+        }
+    }
+    this->last_sent_master_group_node_pressures_is_final_ = is_final;
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+sendSlaveGroupDataToMaster()
+{
+    OPM_TIMEFUNCTION();
+    assert(this->isReservoirCouplingSlave());
+    RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{
+        this->groupStateHelper()};
+    slave_group_data_sender.sendSlaveGroupDataToMaster();
 }
 
 // Automatically manages the lifecycle of the DeferredLogger pointer
@@ -145,14 +277,14 @@ std::optional<ReservoirCoupling::ScopedLoggerGuard>
 BlackoilWellModelRescoup<TypeTag>::
 setupScopedLogger(DeferredLogger& local_logger)
 {
-    if (this->well_model_.isReservoirCouplingMaster()) {
+    if (this->isReservoirCouplingMaster()) {
         return ReservoirCoupling::ScopedLoggerGuard{
-            this->well_model_.reservoirCouplingMaster().logger(),
+            this->reservoirCouplingMaster().logger(),
             &local_logger
         };
-    } else if (this->well_model_.isReservoirCouplingSlave()) {
+    } else if (this->isReservoirCouplingSlave()) {
         return ReservoirCoupling::ScopedLoggerGuard{
-            this->well_model_.reservoirCouplingSlave().logger(),
+            this->reservoirCouplingSlave().logger(),
             &local_logger
         };
     }
