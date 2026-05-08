@@ -5,6 +5,10 @@
 #include <opm/simulators/linalg/mixed/bsr.h>
 
 
+//! @brief Wraps c-implementation of mixed-precision matrix
+//!
+//! @tparam Vector the block-vector used by linear operator
+//! @tparam b block size
 template <class Vector, int b>
 class MatrixWrapper
 {
@@ -13,14 +17,19 @@ class MatrixWrapper
     virtual void umv(const Vector& x, Vector& y) const;
     virtual void usmv(double alpha, const Vector& x, Vector& y) const;
 
-
+    //! @brief constructor
+    //!
+    //! @param nrows number of block rows
+    //! @param nnz number of nonzero blocks
     MatrixWrapper(int nrows, int nnz)
     {
         nnz_=nnz;
         M_ = bsr_alloc();
         bsr_init(M_, nrows, nnz, b);
-
     }
+
+    //! @brief destructor
+    ~MatrixWrapper() {bsr_free(M_);}
 
     void update(double const *data);
 
@@ -36,6 +45,7 @@ template <class Vector, int b>
 void MatrixWrapper<Vector,b>::
 mv(const Vector& x, Vector& y) const
 {
+    // mixed-precision block spmv (y = M.x)
     bsr_vmspmv3(M_, &x[0][0], &y[0][0]);
 }
 
@@ -43,6 +53,7 @@ template <class Vector, int b>
 void MatrixWrapper<Vector,b>::
 umv(const Vector& x, Vector& y) const
 {
+    // mixed-precision block spmv with update (y += M.x)
     bsr_vmspumv3(M_, &x[0][0], &y[0][0], 1.0);
 }
 
@@ -50,6 +61,7 @@ template <class Vector, int b>
 void MatrixWrapper<Vector,b>::
 usmv(double alpha, const Vector& x, Vector& y) const
 {
+    // scaled mixed-precision block spmv with update (y += alpha *  M.x)
     bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
 }
 
@@ -66,7 +78,7 @@ update(double const *data)
         for(int i=0;i<bb;i++) M_->dbl[bb*k + i] = B[i];
     }
 
-    // downcast to allow mixed precision
+    // downcast to single precision
     bsr_downcast(M_);
 }
 
