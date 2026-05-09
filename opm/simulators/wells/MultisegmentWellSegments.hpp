@@ -60,6 +60,13 @@ public:
                                 const PrimaryVariables& primary_variables,
                                 DeferredLogger& deferred_logger);
 
+    void updateFluidProperties(const std::vector<std::vector<EvalWell>>& phase_densities,
+                               const std::vector<std::vector<EvalWell>>& phase_viscosities,
+                               const std::vector<std::vector<EvalWell>>& phase_fractions,
+                               const std::vector<EvalWell>& viscosities,
+                               const std::vector<EvalWell>& densities,
+                               const std::vector<EvalWell>& mass_rates);
+
     //! \brief Update upwinding segments.
     void updateUpwindingSegments(const PrimaryVariables& primary_variables);
 
@@ -131,6 +138,11 @@ public:
         return densities_[seg];
     }
 
+    const EvalWell& volumeRatio(const int seg) const
+    {
+        return volume_ratios_[seg];
+    }
+
     EvalWell& volumeRatio(const int seg)
     {
         return volume_ratios_[seg];
@@ -139,6 +151,11 @@ public:
     Scalar local_perforation_depth_diff(const int local_perf_index) const
     {
         return local_perforation_depth_diffs_[local_perf_index];
+    }
+
+    const std::vector<Scalar>& surfaceDensities() const
+    {
+        return surface_densities_;
     }
 
     void copyPhaseDensities(SegmentState<Scalar>& segSol) const;

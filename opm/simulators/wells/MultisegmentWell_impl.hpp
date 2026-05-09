@@ -1144,6 +1144,9 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computeSegmentFluidProperties(const Simulator& simulator, DeferredLogger& deferred_logger)
     {
+        static_cast<void>(simulator);
+        static_cast<void>(deferred_logger);
+
         // TODO: the concept of phases and components are rather confusing in this function.
         // needs to be addressed sooner or later.
 
@@ -1155,15 +1158,57 @@ namespace Opm
         // although there are some text indicating using the pvt region of the lowest
         // perforated cell
         // TODO: later to investigate how to handle the pvt region
+        //
+        // auto info = this->getFirstPerforationFluidStateInfo(simulator);
+        // const Scalar firstPerfTemperature = std::get<0>(info);
+        // const Scalar firstPerfSaltConcentration = std::get<1>(info);
+        //
+        // this->segments_.computeFluidProperties(firstPerfTemperature,
+        //                                        firstPerfSaltConcentration,
+        //                                        this->primary_variables_,
+        //                                        deferred_logger);
+        const int nseg = this->numberOfSegments();
+        const int nquantities = this->numConservationQuantities();
+        const auto nseg_size = static_cast<std::size_t>(nseg);
+        const auto nquantities_size = static_cast<std::size_t>(nquantities);
+        std::vector<std::vector<EvalWell>> phase_densities(nseg_size, std::vector<EvalWell>(nquantities_size, 0.0));
+        std::vector<std::vector<EvalWell>> phase_viscosities(nseg_size, std::vector<EvalWell>(nquantities_size, 0.0));
+        std::vector<std::vector<EvalWell>> phase_fractions(nseg_size, std::vector<EvalWell>(nquantities_size, 0.0));
+        std::vector<EvalWell> viscosities(nseg_size, 0.0);
+        std::vector<EvalWell> densities(nseg_size, 0.0);
+        std::vector<EvalWell> mass_rates(nseg_size, 0.0);
+        for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
+            const auto& fs = this->segment_fluid_state_[seg];
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+                const int compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
 
-        auto info = this->getFirstPerforationFluidStateInfo(simulator);
-        const Scalar firstPerfTemperature = std::get<0>(info);
-        const Scalar firstPerfSaltConcentration = std::get<1>(info);
+                phase_fractions[seg][compIdx] = fs.saturation(phaseIdx);
+                phase_viscosities[seg][compIdx] = fs.viscosity(phaseIdx);
+                viscosities[seg] += phase_fractions[seg][compIdx] * phase_viscosities[seg][compIdx];
 
-        this->segments_.computeFluidProperties(firstPerfTemperature,
-                                               firstPerfSaltConcentration,
-                                               this->primary_variables_,
-                                               deferred_logger);
+                phase_densities[seg][compIdx] = fs.density(phaseIdx);
+                densities[seg] += phase_fractions[seg][compIdx] * phase_densities[seg][compIdx];
+            }
+            const auto& surface_densities = this->segments_.surfaceDensities();
+
+            for (int compIdx = 0; compIdx < nquantities; ++compIdx) {
+                const int upwind_seg = this->segments_.upwinding_segment(seg);
+                const EvalWell rate = this->primary_variables_.getSegmentRateUpwinding(seg,
+                                                                                      upwind_seg,
+                                                                                      compIdx);
+                mass_rates[seg] += rate * surface_densities[compIdx];
+            }
+        }
+
+        this->segments_.updateFluidProperties(phase_densities,
+                                              phase_viscosities,
+                                              phase_fractions,
+                                              viscosities,
+                                              densities,
+                                              mass_rates);
     }
 
     template<typename TypeTag>

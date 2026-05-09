@@ -47,6 +47,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -58,7 +59,7 @@
 namespace {
 
 template <typename FluidSystem>
-std::vector<typename FluidSystem::Scalar> surfaceDensities(const int pvt_region, const std::size_t num_quantities)
+std::vector<typename FluidSystem::Scalar> getSurfaceDensities(const int pvt_region, const std::size_t num_quantities)
 {
     using Scalar = typename FluidSystem::Scalar;
     auto surf_dens = std::vector<Scalar>(num_quantities);
@@ -93,7 +94,7 @@ MultisegmentWellSegments(const int numSegments,
     // local information. This is an exception and intentionally, since here, we only need the local entries.
     , inlets_(well.wellEcl().getSegments().size())
     , depth_diffs_(numSegments, 0.0)
-    , surface_densities_(surfaceDensities<FluidSystem>(well.pvtRegionIdx(), well.numConservationQuantities()))
+    , surface_densities_(getSurfaceDensities<FluidSystem>(well.pvtRegionIdx(), well.numConservationQuantities()))
     , densities_(numSegments, 0.0)
     , mass_rates_(numSegments, 0.0)
     , viscosities_(numSegments, 0.0)
@@ -218,6 +219,30 @@ computeFluidProperties(const Scalar firstPerfTemperature,
             mass_rates_[seg] += rate * surface_densities_[comp_idx];
         }
     }
+}
+
+template<class FluidSystem, class Indices>
+void MultisegmentWellSegments<FluidSystem,Indices>::
+updateFluidProperties(const std::vector<std::vector<EvalWell>>& phase_densities,
+                      const std::vector<std::vector<EvalWell>>& phase_viscosities,
+                      const std::vector<std::vector<EvalWell>>& phase_fractions,
+                      const std::vector<EvalWell>& viscosities,
+                      const std::vector<EvalWell>& densities,
+                      const std::vector<EvalWell>& mass_rates)
+{
+    assert(phase_densities.size() == phase_densities_.size());
+    assert(phase_viscosities.size() == phase_viscosities_.size());
+    assert(phase_fractions.size() == phase_fractions_.size());
+    assert(viscosities.size() == viscosities_.size());
+    assert(densities.size() == densities_.size());
+    assert(mass_rates.size() == mass_rates_.size());
+
+    phase_densities_ = phase_densities;
+    phase_viscosities_ = phase_viscosities;
+    phase_fractions_ = phase_fractions;
+    viscosities_ = viscosities;
+    densities_ = densities;
+    mass_rates_ = mass_rates;
 }
 
 template<class FluidSystem, class Indices>
