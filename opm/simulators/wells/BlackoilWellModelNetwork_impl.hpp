@@ -96,13 +96,12 @@ update(const bool mandatory_network_balance,
         return {false, 0.0};
     }
 
-    const auto& iterCtx = well_model_.simulator().problem().iterationContext();
     const auto& comm = well_model_.simulator().vanguard().grid().comm();
 
     // network related
     Scalar network_imbalance = 0.0;
     bool more_network_update = false;
-    if (this->shouldBalance(episodeIdx, iterCtx) || mandatory_network_balance) {
+    if (this->shouldBalance(episodeIdx) || mandatory_network_balance) {
         OPM_TIMEBLOCK(BalanceNetwork);
         const double dt = well_model_.simulator().timeStepSize();
         // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
@@ -143,9 +142,7 @@ update(const bool mandatory_network_balance,
                                                       well_model_.wellState());
                 }
             }
-            well_model_.updateAndCommunicateGroupData(episodeIdx,
-                                                      iterCtx,
-                                                      /*update_wellgrouptarget*/ true);
+            well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
         }
         more_network_update = more_network_sub_update || well_group_thp_updated;
     }

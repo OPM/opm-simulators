@@ -33,7 +33,7 @@
 namespace Opm {
 
 template <typename TypeTag>
-CompWellModel<TypeTag>::CompWellModel(Simulator& simulator)
+CompWellModel<TypeTag>::CompWellModel(Simulator& simulator, const NewtonIterationContext& /*iter_ctx*/)
     : WellConnectionModule(*this, simulator.gridView().comm())
     , simulator_(simulator)
     , schedule_(simulator.vanguard().schedule())

@@ -41,6 +41,7 @@
 namespace Opm {
 
 class Schedule;
+struct NewtonIterationContext;
 
 template<typename TypeTag>
 class CompWellModel : WellConnectionAuxiliaryModule<TypeTag, CompWellModel<TypeTag>>
@@ -69,7 +70,7 @@ public:
 
     // TODO: Scalar will probably to be TypeTag later
     using CompWellPtr = std::shared_ptr<CompWell<TypeTag> >;
-    explicit CompWellModel(Simulator& /*simulator*/);
+    CompWellModel(Simulator& /*simulator*/, const NewtonIterationContext& /*iter_ctx*/);
 
     // No extra dofs are inserted for wells. (we use a Schur complement.)
     [[nodiscard]] unsigned numDofs() const override
