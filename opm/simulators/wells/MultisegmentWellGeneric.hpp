@@ -72,6 +72,9 @@ protected:
                         const std::vector<Scalar>& seg_dp) const;
 
     const WellInterfaceGeneric<Scalar, IndexTraits>& baseif_;
+
+    // surface densities of the fluid (it is better in WellInterfaceGeneric, w)
+    std::vector<Scalar> surface_densities_;
 };
 
 }

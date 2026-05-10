@@ -700,8 +700,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeInitialSegmentFluids(const FSInfo& info,
-                                DeferredLogger& deferred_logger)
+    computeInitialSegmentFluids(DeferredLogger& deferred_logger)
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             const Scalar surface_volume = this->segments_.getSurfaceVolume(seg, deferred_logger).value();
@@ -771,11 +770,13 @@ namespace Opm
 
         const auto info = this->getFirstPerforationFluidStateInfo(simulator);
 
-        computeInitialSegmentFluids(info, deferred_logger);
+        // after updating the primary variables, we need to update the segment fluid state.
+        // computeInitialSegmentFluids() reads the per-segment volume ratios that are populated
+        // while building the segment fluid state, so this has to run unconditionally first.
+        updateSegmentFluidState(info, deferred_logger);
+
+        computeInitialSegmentFluids(deferred_logger);
         if constexpr (has_energy) {
-            // after updating the primary variables, we need to update the segment fluid state
-            // it is only consumed by the energy equation, so we only do it when energy is active
-            updateSegmentFluidState(info, deferred_logger);
             computeInitialSegmentEnergy();
         }
     }
@@ -1154,23 +1155,6 @@ namespace Opm
         // TODO: the concept of phases and components are rather confusing in this function.
         // needs to be addressed sooner or later.
 
-        // get the temperature for later use. It is only useful when we are not handling
-        // thermal related simulation
-        // basically, it is a single value for all the segments
-        // not sure how to handle the pvt region related to segment
-        // for the current approach, we use the pvt region of the first perforated cell
-        // although there are some text indicating using the pvt region of the lowest
-        // perforated cell
-        // TODO: later to investigate how to handle the pvt region
-        //
-        // auto info = this->getFirstPerforationFluidStateInfo(simulator);
-        // const Scalar firstPerfTemperature = std::get<0>(info);
-        // const Scalar firstPerfSaltConcentration = std::get<1>(info);
-        //
-        // this->segments_.computeFluidProperties(firstPerfTemperature,
-        //                                        firstPerfSaltConcentration,
-        //                                        this->primary_variables_,
-        //                                        deferred_logger);
         const int nseg = this->numberOfSegments();
         const int nquantities = this->numConservationQuantities();
         const auto nseg_size = static_cast<std::size_t>(nseg);
@@ -1189,6 +1173,7 @@ namespace Opm
                 }
                 const int compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
 
+                // there was some code to handle negative fractions before the refactoring of this part
                 phase_fractions[seg][compIdx] = fs.saturation(phaseIdx);
                 phase_viscosities[seg][compIdx] = fs.viscosity(phaseIdx);
                 viscosities[seg] += phase_fractions[seg][compIdx] * phase_viscosities[seg][compIdx];
@@ -2229,25 +2214,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
-    typename MultisegmentWell<TypeTag>::EvalWell
-    MultisegmentWell<TypeTag>::
-    getSegmentSurfaceVolume(const int seg_idx,
-                            const FSInfo& info,
-                            DeferredLogger& deferred_logger) const
-    {
-        const Scalar firstPerfTemperature = std::get<0>(info);
-        const Scalar firstPerfSaltConcentration = std::get<1>(info);
-
-        return this->segments_.getSurfaceVolume(firstPerfTemperature,
-                                                firstPerfSaltConcentration,
-                                                this->primary_variables_,
-                                                seg_idx,
-                                                deferred_logger);
-    }
-
-
-    template<typename TypeTag>
+    template <typename TypeTag>
     std::optional<typename MultisegmentWell<TypeTag>::Scalar>
     MultisegmentWell<TypeTag>::
     computeBhpAtThpLimitProd(const WellStateType& well_state,
@@ -2537,7 +2504,7 @@ namespace Opm
         if constexpr (has_energy) {
             fluid_state.setTemperature(temperature);
         }
-        if constexpr (has_brine) {
+        if constexpr (Base::has_brine) {
             fluid_state.setSaltConcentration(saltConcentration);
         }
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
