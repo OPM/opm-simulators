@@ -76,7 +76,7 @@
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
-    BlackoilWellModel(Simulator& simulator)
+    BlackoilWellModel(Simulator& simulator, const NewtonIterationContext& iter_ctx)
         : WellConnectionModule(*this, simulator.gridView().comm())
         , BlackoilWellModelGeneric<Scalar, IndexTraits>(simulator.vanguard().schedule(),
                                                         gaslift_,
@@ -85,7 +85,8 @@ namespace Opm {
                                                         simulator.vanguard().eclState(),
                                                         FluidSystem::phaseUsage(),
                                                         simulator.gridView().comm(),
-                                                        param_)
+                                                        param_,
+                                                        iter_ctx)
         , simulator_(simulator)
         , guide_rate_handler_{
             *this,
@@ -374,7 +375,6 @@ namespace Opm {
         this->wellState().gliftTimeStepInit();
 
         const double simulationTime = simulator_.time();
-        const auto& iterCtx = simulator_.problem().iterationContext();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             // test wells
@@ -393,9 +393,7 @@ namespace Opm {
 
             // we need to update the group data after the well is created
             // to make sure we get the correct mapping.
-            this->updateAndCommunicateGroupData(reportStepIdx,
-                                    iterCtx,
-                                    /*update_wellgrouptarget*/ false);
+            this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ false);
 
             // Wells are active if they are active wells on at least one process.
             const Grid& grid = simulator_.vanguard().grid();
@@ -502,9 +500,7 @@ namespace Opm {
             OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
         }
 
-        this->updateAndCommunicateGroupData(reportStepIdx,
-                                    iterCtx,
-                                    /*update_wellgrouptarget*/ true);
+        this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -540,9 +536,7 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingSlave()) {
             if (slave_needs_well_solution) {
-                this->updateAndCommunicateGroupData(reportStepIdx,
-                                            iterCtx,
-                                            /*update_wellgrouptarget*/ false);
+                this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ false);
                 this->sendSlaveGroupDataToMaster();
             }
         }
@@ -1296,8 +1290,7 @@ namespace Opm {
             if (network_update_iteration >= max_iteration ) {
                 // only output to terminal if we at the last newton iterations where we try to balance the network.
                 const int episodeIdx = simulator_.episodeIndex();
-                const auto& iterCtx = simulator_.problem().iterationContext();
-                if (this->network_.willBalanceOnNextIteration(episodeIdx, iterCtx)) {
+                if (this->network_.willBalanceOnNextIteration(episodeIdx)) {
                     if (this->terminal_output_) {
                         const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update, \n"
                             "and try again after the next Newton iteration (imbalance = {:.2e} bar)",
@@ -1343,10 +1336,8 @@ namespace Opm {
                                           DeferredLogger& local_deferredLogger)
     {
         OPM_TIMEFUNCTION();
-        const auto& iterCtx = simulator_.problem().iterationContext();
         const int reportStepIdx = simulator_.episodeIndex();
-        this->updateAndCommunicateGroupData(reportStepIdx, iterCtx,
-            /*update_wellgrouptarget*/ true);
+        this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
         // We need to call updateWellControls before we update the network as
         // network updates are only done on thp controlled wells.
         // Note that well controls are allowed to change during updateNetwork
@@ -1363,7 +1354,7 @@ namespace Opm {
             if (optimize_gas_lift) {
                 // we need to update the potentials if the thp limit as been modified by
                 // the network balancing
-                const bool updatePotentials = (this->network_.shouldBalance(reportStepIdx, iterCtx) ||
+                const bool updatePotentials = (this->network_.shouldBalance(reportStepIdx) ||
                                                mandatory_network_balance);
                 alq_updated = gaslift_.maybeDoGasLiftOptimize(simulator_,
                                                           well_container_,
@@ -1392,7 +1383,7 @@ namespace Opm {
         }
         // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
         // the inner iterations are did not converge
-        const bool more_network_update = this->network_.shouldBalance(reportStepIdx, iterCtx) &&
+        const bool more_network_update = this->network_.shouldBalance(reportStepIdx) &&
                     (more_inner_network_update || alq_updated);
         return {well_group_control_changed, more_network_update, network_imbalance};
     }
@@ -1781,10 +1772,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateAndCommunicate(const int reportStepIdx)
     {
-        const auto& iterCtx = simulator_.problem().iterationContext();
-        this->updateAndCommunicateGroupData(reportStepIdx,
-                                            iterCtx,
-                                            /*update_wellgrouptarget*/ true);
+        this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
 
         // updateWellStateWithTarget might throw for multisegment wells hence we
         // have a parallel try catch here to thrown on all processes.
@@ -1803,9 +1791,7 @@ namespace Opm {
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAndCommunicate failed: ",
                                    simulator_.gridView().comm())
-        this->updateAndCommunicateGroupData(reportStepIdx,
-                                            iterCtx,
-                                            /*update_wellgrouptarget*/ true);
+        this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
     }
 
     template<typename TypeTag>

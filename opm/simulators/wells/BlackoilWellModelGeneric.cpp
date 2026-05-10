@@ -99,12 +99,14 @@ BlackoilWellModelGeneric(Schedule& schedule,
                          const EclipseState& eclState,
                          const PhaseUsageInfo<IndexTraits>& pu,
                          const Parallel::Communication& comm,
-                         const BlackoilModelParameters<Scalar>& param)
+                         const BlackoilModelParameters<Scalar>& param,
+                         const NewtonIterationContext& iter_ctx)
     : schedule_(schedule)
     , summaryState_(summaryState)
     , eclState_(eclState)
     , comm_(comm)
     , param_(param)
+    , iter_ctx_(iter_ctx)
     , gen_gaslift_(gaslift)
     , wbp_(*this)
     , phase_usage_info_(pu)
@@ -1215,7 +1217,6 @@ groupAndNetworkData(const int reportStepIdx) const
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 updateAndCommunicateGroupData(const int reportStepIdx,
-                              const NewtonIterationContext& iterCtx,
                               const bool update_wellgrouptarget)
 {
     OPM_TIMEFUNCTION();
@@ -1223,7 +1224,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     const int nupcol = schedule()[reportStepIdx].nupcol();
 
     // Update accumulated group consumption/import rates for current report step
-    if (iterCtx.isFirstGlobalIteration()) {
+    if (iter_ctx_.isFirstGlobalIteration()) {
         this->groupState().update_gconsump(schedule(), reportStepIdx, this->summaryState_);
     }
 
@@ -1240,7 +1241,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     this->wellState().updateGlobalIsGrup(comm_, well_status);
 
     GroupStateHelperType &group_state_helper = this->groupStateHelper();
-    if (iterCtx.withinNupcol(nupcol)) {
+    if (iter_ctx_.withinNupcol(nupcol)) {
         OPM_TIMEBLOCK(updateNupcol);
         this->updateNupcolWGState();
     } else {
@@ -1291,7 +1292,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                 const std::string control_str = is_vrep? "VREP" : "REIN";
                                 const std::string msg = fmt::format("Group prodution relative change {} larger than tolerance {} "
                                                         "at iteration {}. Update {} for Group {} even if iteration is larger than {} given by NUPCOL." ,
-                                                        rel_change, tol_nupcol, iterCtx.iteration(), control_str, gr_name, nupcol);
+                                                        rel_change, tol_nupcol, iter_ctx_.iteration(), control_str, gr_name, nupcol);
                                 group_state_helper.deferredLogger().debug(msg);
                             }
                         }
@@ -1327,7 +1328,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     this->wellState().communicateGroupRates(comm_);
     this->groupState().communicate_rates(comm_);
 
-    if (iterCtx.isFirstGlobalIteration()) {
+    if (iter_ctx_.isFirstGlobalIteration()) {
         group_state_helper.updatePreviousGroupProductionRates(fieldGroup);
     }
 

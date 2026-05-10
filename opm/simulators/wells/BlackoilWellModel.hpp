@@ -141,7 +141,7 @@ template<class Scalar> class WellContributions;
             using AverageRegionalPressureType = RegionAverageCalculator::
                 AverageRegionalPressure<FluidSystem, std::vector<int> >;
 
-            explicit BlackoilWellModel(Simulator& simulator);
+            BlackoilWellModel(Simulator& simulator, const NewtonIterationContext& iter_ctx);
 
             void init();
             void initWellContainer(const int reportStepIdx) override;
