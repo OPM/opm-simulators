@@ -163,64 +163,6 @@ MultisegmentWellSegments(const int numSegments,
     }
 }
 
-// template<class FluidSystem, class Indices>
-// void MultisegmentWellSegments<FluidSystem,Indices>::
-// computeFluidProperties(const Scalar firstPerfTemperature,
-//                        const Scalar firstPerfSaltConcentration,
-//                        const PrimaryVariables& primary_variables,
-//                        DeferredLogger& deferred_logger)
-// {
-//     const int num_quantities = well_.numConservationQuantities();
-//     PhaseCalcResult result(static_cast<size_t>(num_quantities));
-//
-//     // \Note: we do not have salt concentration supported as primary variable yet.
-//     // \Note: this will change when we implement the brine equation in the multisegment well
-//     const EvalWell saltConcentration = firstPerfSaltConcentration;
-//
-//     for (std::size_t seg = 0; seg < perforations_.size(); ++seg) {
-//         const EvalWell temperature = enable_energy ?  primary_variables.getSegmentTemperature(seg) : firstPerfTemperature;
-//
-//         calculatePhaseProperties(result, temperature, saltConcentration,
-//                                  primary_variables, seg, true, deferred_logger);
-//
-//         phase_densities_[seg] = result.phase_densities;
-//         phase_viscosities_[seg] = result.phase_viscosities;
-//
-//         const auto& mix = result.mix;
-//         const auto& mix_s = result.mix_s;
-//         const auto& b = result.b;
-//         const auto& volrat = result.vol_ratio;
-//
-//         volume_ratios_[seg] = volrat;
-//
-//         viscosities_[seg] = 0.;
-//         // calculate the average viscosity
-//         for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
-//             const EvalWell fraction =  mix[comp_idx] / b[comp_idx] / volrat;
-//             // TODO: a little more work needs to be done to handle the negative fractions here
-//             phase_fractions_[seg][comp_idx] = fraction; // >= 0.0 ? fraction : 0.0;
-//             viscosities_[seg] += phase_viscosities_[seg][comp_idx] * phase_fractions_[seg][comp_idx];
-//         }
-//
-//         EvalWell density(0.0);
-//         for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
-//             density += surface_densities_[comp_idx] * mix_s[comp_idx];
-//         }
-//         densities_[seg] = density / volrat;
-//
-//         // TODO: the enthalpy flux rate should be calculated in the similar manner.
-//         // calculate the mass rates
-//         mass_rates_[seg] = 0.;
-//         for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
-//             const int upwind_seg = upwinding_segments_[seg];
-//             const EvalWell rate = primary_variables.getSegmentRateUpwinding(seg,
-//                                                                             upwind_seg,
-//                                                                             comp_idx);
-//             mass_rates_[seg] += rate * surface_densities_[comp_idx];
-//         }
-//     }
-// }
-
 template<class FluidSystem, class Indices>
 void MultisegmentWellSegments<FluidSystem,Indices>::
 updateFluidProperties(const std::vector<std::vector<EvalWell>>& phase_densities,
