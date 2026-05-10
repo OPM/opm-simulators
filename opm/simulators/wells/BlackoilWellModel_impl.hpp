@@ -48,13 +48,6 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/wells/rescoup/RescoupReceiveGroupConstraints.hpp>
-#include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
-#include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
-#include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
-#endif
-
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #if HAVE_MPI
 #include <opm/simulators/utils/MPIPacker.hpp>
@@ -96,6 +89,9 @@ namespace Opm {
         }
         , gaslift_(this->terminal_output_)
         , network_(*this)
+#ifdef RESERVOIR_COUPLING_ENABLED
+        , rescoupHelper_(*this)
+#endif
     {
         local_num_cells_ = simulator_.gridView().size(0);
 
@@ -338,7 +334,7 @@ namespace Opm {
         auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-        auto rescoup_logger_guard = this->setupRescoupScopedLogger(local_deferredLogger);
+        auto rescoup_logger_guard = this->rescoupHelper_.setupScopedLogger(local_deferredLogger);
 #endif
 
         this->switched_prod_groups_.clear();
@@ -386,7 +382,7 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
             if (this->isReservoirCouplingMaster()) {
                 if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
-                    this->receiveSlaveGroupData();
+                    this->rescoupHelper_.receiveSlaveGroupData();
                 }
             }
 #endif
@@ -472,16 +468,16 @@ namespace Opm {
         );
         bool slave_needs_well_solution = false;
 #ifdef RESERVOIR_COUPLING_ENABLED
-        if (this->isReservoirCouplingSlave()) {
-            if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
-                this->sendSlaveGroupDataToMaster();
-                this->receiveGroupConstraintsFromMaster();
-                this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
-                this->reservoirCouplingSlave().markSlaveGroupsInSchedule(
-                    this->schedule_, reportStepIdx);
-                slave_needs_well_solution = true;
-            }
+    if (this->isReservoirCouplingSlave()) {
+        if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
+            this->rescoupHelper_.sendSlaveGroupDataToMaster();
+            this->rescoupHelper_.receiveGroupConstraintsFromMaster();
+            this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
+            this->reservoirCouplingSlave().markSlaveGroupsInSchedule(
+                this->schedule_, reportStepIdx);
+            slave_needs_well_solution = true;
         }
+    }
 #endif
         std::string exc_msg;
         auto exc_type = ExceptionType::NONE;
@@ -534,19 +530,15 @@ namespace Opm {
         OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-        if (this->isReservoirCouplingSlave()) {
-            if (slave_needs_well_solution) {
-                this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ false);
-                this->sendSlaveGroupDataToMaster();
-            }
+        if (slave_needs_well_solution) {  // isReservoirCouplingSlave()
+            // Need to update group data based on new well solution.
+            this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ false);
+            this->rescoupHelper_.sendSlaveGroupDataToMaster();
         }
-#endif
-
-#ifdef RESERVOIR_COUPLING_ENABLED
-        if (this->isReservoirCouplingMaster()) {
+        else if (this->isReservoirCouplingMaster()) {
             if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
-                this->sendMasterGroupConstraintsToSlaves();
-                this->receiveSlaveGroupData();
+                this->rescoupHelper_.sendMasterGroupConstraintsToSlaves();
+                this->rescoupHelper_.receiveSlaveGroupData();
             }
         }
 #endif
@@ -561,115 +553,6 @@ namespace Opm {
                                          exc_type, "beginTimeStep() failed: " + exc_msg, this->terminal_output_, comm);
 
     }
-
-#ifdef RESERVOIR_COUPLING_ENABLED
-    // Automatically manages the lifecycle of the DeferredLogger pointer
-    // in the reservoir coupling logger. Ensures the logger is properly
-    // cleared when it goes out of scope, preventing dangling pointer issues:
-    //
-    // - The ScopedLoggerGuard constructor sets the logger pointer
-    // - When the guard goes out of scope, the destructor clears the pointer
-    // - Move semantics transfer ownership safely when returning from this function
-    //    - The moved-from guard is "nullified" and its destructor does nothing
-    //    - Only the final guard in the caller will clear the logger
-    template<typename TypeTag>
-    std::optional<ReservoirCoupling::ScopedLoggerGuard>
-    BlackoilWellModel<TypeTag>::
-    setupRescoupScopedLogger(DeferredLogger& local_logger) {
-        if (this->isReservoirCouplingMaster()) {
-            return ReservoirCoupling::ScopedLoggerGuard{
-                this->reservoirCouplingMaster().logger(),
-                &local_logger
-            };
-        } else if (this->isReservoirCouplingSlave()) {
-            return ReservoirCoupling::ScopedLoggerGuard{
-                this->reservoirCouplingSlave().logger(),
-                &local_logger
-            };
-        }
-        return std::nullopt;
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    receiveSlaveGroupData()
-    {
-        OPM_TIMEFUNCTION();
-        assert(this->isReservoirCouplingMaster());
-        RescoupReceiveSlaveGroupData<Scalar, IndexTraits> slave_group_data_receiver{
-            this->groupStateHelper(),
-        };
-        slave_group_data_receiver.receiveSlaveGroupData();
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    sendSlaveGroupDataToMaster()
-    {
-        OPM_TIMEFUNCTION();
-        assert(this->isReservoirCouplingSlave());
-        RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{this->groupStateHelper()};
-        slave_group_data_sender.sendSlaveGroupDataToMaster();
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    sendMasterGroupConstraintsToSlaves()
-    {
-        OPM_TIMEFUNCTION();
-        // This function is called by the master process to send the group constraints to the slaves.
-        RescoupConstraintsCalculator<Scalar, IndexTraits> constraints_calculator{
-            this->guide_rate_handler_,
-            this->groupStateHelper()
-        };
-        constraints_calculator.calculateMasterGroupConstraintsAndSendToSlaves();
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    receiveGroupConstraintsFromMaster()
-    {
-        OPM_TIMEFUNCTION();
-        RescoupReceiveGroupConstraints<Scalar, IndexTraits> constraint_receiver{
-            this->guide_rate_handler_,
-            this->groupStateHelper()
-        };
-        constraint_receiver.receiveGroupConstraintsFromMaster();
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    rescoupSyncSummaryData()
-    {
-        // Reservoir coupling: exchange production data between slaves and master.
-        //
-        // Master side: after its first substep, the master blocks here until all
-        // slaves have completed the sync step and sent their production data.
-        // This ensures evalSummaryState() (called next in endTimeStep) and all
-        // subsequent master substeps have correct slave production rates.
-        //
-        // Slave side: on the last substep of the sync step, the slave sends its
-        // production data to the master.  The master is already waiting at this
-        // point (blocked on MPI_Recv from its first substep's timeStepSucceeded).
-        if (this->isReservoirCouplingMaster()) {
-            if (this->reservoirCouplingMaster().needsSlaveDataReceive()) {
-                this->receiveSlaveGroupData();
-                this->reservoirCouplingMaster().setNeedsSlaveDataReceive(false);
-            }
-        }
-        if (this->isReservoirCouplingSlave()) {
-            if (this->reservoirCouplingSlave().isLastSubstepOfSyncTimestep()) {
-                this->sendSlaveGroupDataToMaster();
-            }
-        }
-    }
-
-#endif // RESERVOIR_COUPLING_ENABLED
 
     template<typename TypeTag>
     void
@@ -825,7 +708,7 @@ namespace Opm {
         this->groupStateHelper().updateNONEProductionGroups();
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-        this->rescoupSyncSummaryData();
+        this->rescoupHelper_.rescoupSyncSummaryData();
 #endif
         this->commitWGState();
 

@@ -1175,6 +1175,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp
   opm/simulators/wells/BlackoilWellModelNldd.hpp
   opm/simulators/wells/BlackoilWellModelNldd_impl.hpp
+  opm/simulators/wells/BlackoilWellModelRescoup.hpp
+  opm/simulators/wells/BlackoilWellModelRescoup_impl.hpp
   opm/simulators/wells/BlackoilWellModelRestart.hpp
   opm/simulators/wells/BlackoilWellModelWBP.hpp
   opm/simulators/wells/ConnectionIndexMap.hpp
