@@ -55,11 +55,6 @@ public:
                              const ParallelWellInfo<Scalar>& parallel_well_info,
                              WellInterfaceGeneric<Scalar, IndexTraits>& well);
 
-    void computeFluidProperties(const Scalar firstPerfTemperature,
-                                const Scalar firstPerfSaltConcentration,
-                                const PrimaryVariables& primary_variables,
-                                DeferredLogger& deferred_logger);
-
     void updateFluidProperties(const std::vector<std::vector<EvalWell>>& phase_densities,
                                const std::vector<std::vector<EvalWell>>& phase_viscosities,
                                const std::vector<std::vector<EvalWell>>& phase_fractions,
@@ -76,12 +71,6 @@ public:
     //! Pressure difference between segment and perforation.
     Scalar getPressureDiffSegLocalPerf(const int seg,
                                        const int local_perf_index) const;
-
-    EvalWell getSurfaceVolume(const Scalar firstPerfTemperature,
-                              const Scalar firstPerfSaltConcentration,
-                              const PrimaryVariables& primary_variables,
-                              const int seg_idx,
-                              DeferredLogger& deferred_logger) const;
 
     EvalWell getSurfaceVolume(const int seg_idx,
                               DeferredLogger& deferred_logger) const;
@@ -216,34 +205,6 @@ private:
     Scalar mixtureDensity(const int seg) const;
     Scalar mixtureDensityWithExponents(const int seg) const;
     Scalar mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const;
-
-    // this class is used to store the result of phase property calculation
-    struct PhaseCalcResult {
-        explicit PhaseCalcResult(const std::size_t num_quantities)
-            : b(num_quantities, 0.0)
-            , mix(num_quantities, 0.0)
-            , mix_s(num_quantities, 0.0)
-            , phase_viscosities(num_quantities, 0.0)
-            , phase_densities(num_quantities, 0.0)
-        {}
-
-        void clear();
-
-        std::vector<EvalWell> b;
-        std::vector<EvalWell> mix;
-        std::vector<EvalWell> mix_s;
-        std::vector<EvalWell> phase_viscosities;
-        std::vector<EvalWell> phase_densities;
-        EvalWell vol_ratio{0.};
-    };
-
-    void calculatePhaseProperties(PhaseCalcResult& result,
-                                  const EvalWell& temperature,
-                                  const EvalWell& saltConcentration,
-                                  const PrimaryVariables& primary_variables,
-                                  int seg,
-                                  bool update_visc_and_den,
-                                  DeferredLogger& deferred_logger) const;
 };
 
 } // namespace Opm

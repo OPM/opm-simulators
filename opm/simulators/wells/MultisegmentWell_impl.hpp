@@ -1196,6 +1196,7 @@ namespace Opm
                 phase_densities[seg][compIdx] = fs.density(phaseIdx);
                 densities[seg] += phase_fractions[seg][compIdx] * phase_densities[seg][compIdx];
             }
+            // TODO: surface densities might not be needed in segments anymore.
             const auto& surface_densities = this->segments_.surfaceDensities();
 
             for (int compIdx = 0; compIdx < nquantities; ++compIdx) {
