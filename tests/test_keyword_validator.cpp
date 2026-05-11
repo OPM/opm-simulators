@@ -73,6 +73,14 @@ const SupportedKeywordItems<int> test_int_items = {
             {3, {false, allow_values<int> {1}, std::nullopt}}, // J
         },
     },
+    {
+        "EQUIL",
+        {
+            // No values allowed: any explicit user value should fail, but a defaulted item must not trigger an error even though the default
+            // value would not satisfy the validator.
+            {10,{false,allow_values<int> {},"EQUIL(COMP_INIT_TYPE): compositional option not used, should be defaulted"}},
+        },
+    },
 };
 
 
@@ -575,4 +583,54 @@ EQLOPTS
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(errors.size() == 0);
+}
+
+
+
+
+// When an item is defaulted by the deck, its value comes
+// from the keyword's default and should not be reported as an unsupported
+// value, even when no explicit values are permitted by the validator.
+BOOST_AUTO_TEST_CASE(defaulted_item_does_not_trigger_validation_error)
+{
+    // EQUIL item 10 (COMP_INIT_TYPE) has a default value of 1. Here it is
+    // explicitly defaulted (using 1*), so no validation error should be
+    // produced even though the test config disallows all explicit values.
+    const auto keywords_string = std::string {R"(
+RUNSPEC
+EQLDIMS
+/
+SOLUTION
+EQUIL
+ 2000.0 200.0 2200.0 0.0 1500.0 0.0 1 0 1* /
+)"};
+    const auto deck = Parser {}.parseString(keywords_string);
+    const auto& test_keyword = deck["EQUIL"].back();
+    KeywordValidator validator(test_unsupported_keywords, partiallySupported, fullySupported, {});
+    std::vector<ValidationError> errors;
+    validator.validateDeckKeyword(test_keyword, errors);
+    BOOST_CHECK_EQUAL(errors.size(), 0);
+}
+
+
+BOOST_AUTO_TEST_CASE(explicit_value_for_defaulted_item_still_validated)
+{
+    // Sanity check: when the user explicitly supplies a value for the same
+    // item, validation still applies and an error should be reported.
+    const auto keywords_string = std::string {R"(
+RUNSPEC
+EQLDIMS
+/
+SOLUTION
+EQUIL
+ 2000.0 200.0 2200.0 0.0 1500.0 0.0 1 0 1 1 /
+)"};
+    const auto deck = Parser {}.parseString(keywords_string);
+    const auto& test_keyword = deck["EQUIL"].back();
+    KeywordValidator validator(test_unsupported_keywords, partiallySupported, fullySupported, {});
+    std::vector<ValidationError> errors;
+    validator.validateDeckKeyword(test_keyword, errors);
+    BOOST_CHECK_EQUAL(errors.size(), 1);
+    BOOST_CHECK(errors[0].item_number == 10);
+    BOOST_CHECK(errors[0].item_value == "1");
 }
