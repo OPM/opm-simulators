@@ -152,7 +152,7 @@ namespace Opm::KeywordValidation {
     {
         const auto& keyword_properties = partially_or_fully_supported_items.find(keyword.name());
         if (keyword_properties != partially_or_fully_supported_items.end()) {
-            // If this keywords has partially or fully supported items to validate, iterate over all of them.
+            // If this keyword has partially or fully supported items to validate, iterate over all of them.
             for (std::size_t record_index = 0; record_index < keyword.size(); record_index++) {
                 const auto& record = keyword.getRecord(record_index);
                 for (std::size_t item_index = 0; item_index < record.size(); item_index++) {
@@ -160,7 +160,7 @@ namespace Opm::KeywordValidation {
                     // Find the index number, which starts counting at one, so item_index + 1
                     const auto& item_properties = keyword_properties->second.find(item_index + 1);
                     if (item_properties != keyword_properties->second.end()) {
-                        if (item.hasValue(0)) {
+                        if (item.hasValue(0) && !item.defaultApplied(0)) {
                             // Validate the item
                             validateKeywordItem<T>(keyword,
                                                    item_properties->second,
