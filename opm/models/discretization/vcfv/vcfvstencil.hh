@@ -740,19 +740,19 @@ public:
 
     struct SubControlVolume //! finite volume intersected with element
     {
-        const GlobalPosition& globalPos() const
+        GlobalPosition globalPos() const
         { return global; }
 
-        const GlobalPosition center() const
+        GlobalPosition center() const
         { return geometry_.center(); }
 
         Scalar volume() const
         { return volume_; }
 
-        const ScvLocalGeometry& localGeometry() const
+        ScvLocalGeometry localGeometry() const
         { return geometry_.localGeometry(); }
 
-        const ScvGeometry& geometry() const
+        ScvGeometry geometry() const
         { return geometry_; }
 
         //! local vertex position
@@ -773,7 +773,7 @@ public:
 
     struct SubControlVolumeFace //! interior face of a sub control volume
     {
-        const DimVector& normal() const
+        DimVector normal() const
         { return normal_; }
 
         unsigned short interiorIndex() const
@@ -785,10 +785,10 @@ public:
         Scalar area() const
         { return area_; }
 
-        const LocalPosition& localPos() const
+        LocalPosition localPos() const
         { return ipLocal_; }
 
-        const GlobalPosition& integrationPos() const
+        GlobalPosition integrationPos() const
         { return ipGlobal_; }
 
         //! scvf seperates corner i and j of elem
