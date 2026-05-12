@@ -45,8 +45,18 @@
 #endif
 
 #include <charconv>
+#include <concepts>
 #include <cstddef>
 #include <memory>
+
+namespace Opm::GeomechChecks {
+    template <typename Problem>
+    concept HasGeomechFinalTiming = requires(Problem problem)
+    {
+        problem.geoMechModel();
+        problem.geoMechModel().finalTimingSummary();
+    };
+}
 
 namespace Opm::Parameters {
 
@@ -421,8 +431,8 @@ namespace Opm {
                 = omp_get_max_threads();
 #endif
 
-            std::string extra_summary;
-            if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
+            std::string extra_summary{};
+            if constexpr (GeomechChecks::HasGeomechFinalTiming<decltype(simulator_->model().simulator().problem())>) {
                 extra_summary = simulator_->model().simulator().problem().geoMechModel().finalTimingSummary();
             }
 
