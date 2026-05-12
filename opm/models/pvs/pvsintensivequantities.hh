@@ -198,9 +198,11 @@ public:
             }
 
             for (; auxIdx < numAuxConstraints; ++auxIdx, ++switchIdx) {
-                const unsigned compIdx = numPhases - numNonPresentPhases + auxIdx;
-                auxConstraints[auxIdx].set(lowestPresentPhaseIdx, compIdx,
-                                           priVars.makeEvaluation(switch0Idx + switchIdx, timeIdx));
+                assert(0 && "Should not be here!");
+                // This code is commented out because it causes oob indexing warnings
+                // const unsigned compIdx = numPhases - numNonPresentPhases + auxIdx;
+                // auxConstraints[auxIdx].set(lowestPresentPhaseIdx, compIdx,
+                //                            priVars.makeEvaluation(switch0Idx + switchIdx, timeIdx));
             }
 
             // both phases are present, i.e. phase compositions are a result of the the
