@@ -49,10 +49,20 @@
 
 #include <array>
 #include <cassert>
+#include <concepts>
 #include <cstring>
 #include <limits>
 #include <stdexcept>
 #include <utility>
+
+namespace Opm::GeomechChecks {
+    template <typename Problem, typename Scalar>
+    concept HasPorosityChange = requires(Problem problem, unsigned int spaceIdx, unsigned int timeIdx)
+    {
+        { problem.rockBiotComp(spaceIdx)                } -> std::convertible_to<Scalar>;
+        { problem.rockMechPoroChange(spaceIdx, timeIdx) } -> std::convertible_to<Scalar>;
+    };
+} // namespace Opm::GeomechChecks
 
 namespace Opm {
 
@@ -649,7 +659,7 @@ public:
 
 
         // Geomechanical updates to porosity/pore volume
-        if constexpr (enableMech) {
+        if constexpr (enableMech && GeomechChecks::HasPorosityChange<Problem, Scalar>) {
             // TPSA calculations
             if (problem.simulator().vanguard().eclState().runspec().mechSolver().tpsa()) {
                 // TPSA compressibility term
