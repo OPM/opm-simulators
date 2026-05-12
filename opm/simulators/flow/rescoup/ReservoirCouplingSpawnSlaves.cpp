@@ -69,6 +69,7 @@ spawn()
     // Communication order is important - slaves need master group names
     // before they can determine their activation date (for history mode detection).
     this->spawnSlaveProcesses_();
+    this->receiveSlaveStatus_();
     this->receiveSimulationStartDateFromSlaves_();
     this->sendSlaveNamesToSlaves_();
     // These methods handle empty masterGroups gracefully (history mode)
@@ -262,6 +263,49 @@ receiveActivationDateFromSlaves_()
     const double* data = this->master_.getSlaveActivationDates();
     this->comm_.broadcast(const_cast<double *>(data), /*count=*/num_slaves, /*emitter_rank=*/0);
     this->logger_.debug("Broadcasted slave activation dates to all ranks");
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSpawnSlaves<Scalar>::
+receiveSlaveStatus_()
+{
+    auto num_slaves = this->master_.numSlavesStarted();
+    if (this->comm_.rank() == 0) {
+        for (unsigned int i = 0; i < num_slaves; i++) {
+            int status = 0;
+            MPI_Recv(
+                &status,
+                /*count=*/1,
+                /*datatype=*/MPI_INT,
+                /*source_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SlaveStatus),
+                this->master_.getSlaveComm(i),
+                MPI_STATUS_IGNORE
+            );
+            if (status != 0) {
+                this->logger_.error(fmt::format(
+                    "Slave '{}' failed to initialize (parse error or other failure). "
+                    "The master cannot continue without all slaves.",
+                    this->master_.getSlaveName(i)
+                ));
+                // Disconnect from all slave communicators to avoid hanging
+                for (unsigned int j = 0; j < num_slaves; j++) {
+                    auto comm = this->master_.getSlaveComm(j);
+                    if (comm != MPI_COMM_NULL) {
+                        MPI_Comm_disconnect(&comm);
+                    }
+                }
+                RCOUP_LOG_THROW(std::runtime_error,
+                    "Reservoir coupling slave '" + this->master_.getSlaveName(i) +
+                    "' failed to initialize"
+                );
+            }
+            this->logger_.debug(fmt::format(
+                "Received OK status from slave '{}'", this->master_.getSlaveName(i)
+            ));
+        }
+    }
 }
 
 template <class Scalar>

@@ -1,0 +1,44 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Copyright (C) 2026 Equinor
+
+-- Deliberately broken slave deck for reservoir coupling parse error testing.
+-- The INCLUDE in the GRID section references a non-existent file, which
+-- triggers a parse error regardless of --parsing-strictness setting.
+
+------------------------------------------------------------------------------------------------
+RUNSPEC
+------------------------------------------------------------------------------------------------
+
+DIMENS
+ 2 2 2 /
+
+OIL
+WATER
+
+METRIC
+
+START
+ 1 'JAN' 2019 /
+
+EQLDIMS
+ 1 /
+
+TABDIMS
+ 1 1 /
+
+UNIFIN
+UNIFOUT
+
+------------------------------------------------------------------------------------------------
+GRID
+------------------------------------------------------------------------------------------------
+
+-- Intentional error: this file does not exist
+INCLUDE
+ 'nonexistent_grid_file.inc' /
+
+END

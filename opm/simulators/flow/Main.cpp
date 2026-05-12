@@ -279,6 +279,29 @@ void Main::handleTestSplitCommunicatorCmdLine_()
     }
 }
 
+void Main::notifyMasterSlaveInitFailed_()
+{
+#if HAVE_MPI
+    if (Parameters::Get<Parameters::Slave>()) {
+        MPI_Comm parent_comm = MPI_COMM_NULL;
+        MPI_Comm_get_parent(&parent_comm);
+        if (parent_comm != MPI_COMM_NULL) {
+            int rank;
+            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+            if (rank == 0) {
+                int slave_status = 1;  // FAILED
+                MPI_Send(
+                    &slave_status, 1, MPI_INT, /*dest=*/0,
+                    static_cast<int>(ReservoirCoupling::MessageTag::SlaveStatus),
+                    parent_comm
+                );
+            }
+            MPI_Comm_disconnect(&parent_comm);
+        }
+    }
+#endif
+}
+
 void Main::readDeck(const std::string& deckFilename,
                     const std::string& outputDir,
                     const std::string& outputMode,

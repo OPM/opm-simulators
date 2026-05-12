@@ -684,6 +684,9 @@ list (APPEND TEST_DATA_FILES
   tests/include/PVT-WET-GAS.INC
   tests/include/scal_mod2.inc
   tests/include/summary_rc.inc
+  tests/rescoup/slave_parse_error/RC_MASTER.DATA
+  tests/rescoup/slave_parse_error/run_test.sh
+  tests/rescoup/slave_parse_error/slave/RC_SLAVE.DATA
   tests/test10.partition
   tests/parametersystem.ini
   tests/data/co2injection.dgf

@@ -42,6 +42,7 @@
 
 #if HAVE_MPI
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #endif
 
 #if HAVE_CUDA
@@ -329,6 +330,12 @@ protected:
                 std::cerr << "Failed to create valid EclipseState object." << std::endl;
                 std::cerr << e.what() << std::endl;
             }
+#if HAVE_MPI
+            // If we are a spawned slave, notify the master that initialization
+            // failed so it does not hang waiting for our initial data exchange.
+            // Only rank 0 sends the status (master receives from source=0).
+            notifyMasterSlaveInitFailed_();
+#endif
             exitCode = EXIT_FAILURE;
             return false;
         }
@@ -376,6 +383,10 @@ private:
     // Note: initializing the parameter system before MPI could make this
     // use the parameter system instead.
     void handleTestSplitCommunicatorCmdLine_();
+
+    // If this process is a reservoir coupling slave, notify the master that
+    // initialization failed so it does not hang waiting for the initial data exchange.
+    void notifyMasterSlaveInitFailed_();
 
     /// Dispatch to actual simulation functions based on input deck's setup.
     ///
