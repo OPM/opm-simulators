@@ -2713,6 +2713,9 @@ namespace Opm
                 cq_r_thermal = this->surfaceToReservoirRate(phaseIdx, seg_fs, cq_s,
                                                             seg, "energy assembly (injecting)",
                                                             deferred_logger);
+                // \Note: cq_s calculation uses rs, rv and b from the connection cells, while
+                // the enthalpy and density is based on the wellbore condition in the wellbore,
+                // some inconsistency can exist here and remain to be investigated and refined.
                 energy_flux += cq_r_thermal * seg_fs.enthalpy(phaseIdx) * seg_fs.density(phaseIdx);
             } else {
                 // producing connection: use reservoir cell fluid properties
