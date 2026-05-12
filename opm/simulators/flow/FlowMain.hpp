@@ -45,8 +45,18 @@
 #endif
 
 #include <charconv>
+#include <concepts>
 #include <cstddef>
 #include <memory>
+
+namespace Opm::GeomechChecks {
+    template <typename Problem>
+    concept HasGeomechFinalTiming = requires(Problem problem)
+    {
+        problem.geoMechModel();
+        problem.geoMechModel().finalTimingSummary();
+    };
+}
 
 namespace Opm::Parameters {
 
