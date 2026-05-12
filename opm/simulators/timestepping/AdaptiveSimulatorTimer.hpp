@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <memory>
 #include <numeric>
+#include <optional>
 
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
@@ -112,6 +113,24 @@ namespace Opm
         /// \brief tell the timestepper whether timestep failed or not
         void setLastStepFailed(bool last_step_failed) { last_step_failed_ = last_step_failed; }
 
+        /// \brief Reservoir coupling constructs a fresh timer per sync chunk,
+        /// so `start_time_`, `total_time_`, and `current_step_` describe the
+        /// chunk rather than the enclosing report step. The accessors below
+        /// return a "report step view" that the rescoup outer loop populates
+        /// (via the setters) so that log lines can show the report-step start
+        /// and end and a substep counter that increments across chunks. When
+        /// the view is not set, they fall through to the per-timer fields, so
+        /// the non-rescoup path's behavior and output are unchanged.
+        double reportStepStartTime() const;
+        double reportStepTotalTime() const;
+        int reportStepSubstepNum() const;
+
+        void setReportStepStartTime(double t) { report_step_start_time_ = t; }
+        void setReportStepTotalTime(double t) { report_step_total_time_ = t; }
+        void setReportStepSubstepOffset(int n) { report_step_substep_offset_ = n; }
+
+        int reportStepSubstepOffset() const { return report_step_substep_offset_; }
+
         /// return copy of object
         std::unique_ptr<SimulatorTimerInterface> clone() const override;
 
@@ -128,6 +147,19 @@ namespace Opm
 
         std::vector< double > steps_;
         bool last_step_failed_;
+
+        /// \brief Optional report-step start time for the "report step view"
+        ///   accessors. Set by the rescoup outer loop on each per-sync-chunk
+        ///   timer; unset on a non-rescoup timer.
+        std::optional<double> report_step_start_time_;
+        /// \brief Optional report-step end time for the "report step view"
+        ///   accessors. Same population pattern as `report_step_start_time_`.
+        std::optional<double> report_step_total_time_;
+        /// \brief Number of substeps already taken in this report step before
+        ///   this timer was constructed (i.e. in earlier sync chunks). Added to
+        ///   `current_step_` by `reportStepSubstepNum()` to give a counter that
+        ///   increments across sync chunks. Zero on a non-rescoup timer.
+        int report_step_substep_offset_ = 0;
 
     };
 

@@ -25,10 +25,10 @@ void logTimer(const AdaptiveSimulatorTimer& substepTimer)
     std::ostringstream ss;
     boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
     ss.imbue(std::locale(std::locale::classic(), facet));
-    ss << "\nStarting time step " << substepTimer.currentStepNum() << ", stepsize "
+    ss << "\nStarting time step " << substepTimer.reportStepSubstepNum() << ", stepsize "
        << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " days,"
        << " at day " << (double)unit::convert::to(substepTimer.simulationTimeElapsed(), unit::day)
-       << "/" << (double)unit::convert::to(substepTimer.totalTime(), unit::day);
+       << "/" << (double)unit::convert::to(substepTimer.reportStepTotalTime(), unit::day);
     if ((substepTimer.currentDateTime() <= boost::posix_time::ptime(boost::posix_time::max_date_time)) &&
         (boost::posix_time::ptime(boost::posix_time::min_date_time) <= substepTimer.currentDateTime())) {
         ss << ", date = " << substepTimer.currentDateTime();

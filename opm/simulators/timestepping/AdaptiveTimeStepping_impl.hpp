@@ -716,6 +716,8 @@ runStepReservoirCouplingMaster_()
     const double original_time_step = this->simulator_timer_.currentStepLength();
     double current_time{this->simulator_timer_.simulationTimeElapsed()};
     double step_end_time = current_time + original_time_step;
+    const double report_step_start_time = current_time;
+    int report_step_substep_offset = 0;
     // In RSYNC mode this variable persists across outer iterations and
     // carries the previously-chopped sync span into the next iteration.  In
     // TSYNC mode it is overwritten each iteration by
@@ -750,6 +752,12 @@ runStepReservoirCouplingMaster_()
             /*reportStep=*/this->simulator_timer_.reportStepNum(),
             maxTimeStep_()
         };
+        // Make the per-chunk timer log the enclosing report step's span and a
+        // cumulative substep counter (see AdaptiveSimulatorTimer "report step
+        // view"). Without this, log lines would show one sync chunk only.
+        substep_timer.setReportStepStartTime(report_step_start_time);
+        substep_timer.setReportStepTotalTime(step_end_time);
+        substep_timer.setReportStepSubstepOffset(report_step_substep_offset);
         const bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
             current_time + current_step_length, step_end_time
         );
@@ -764,6 +772,7 @@ runStepReservoirCouplingMaster_()
         SubStepIteration<Solver> substepIteration{*this, substep_timer, current_step_length, final_step};
         const auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
+        report_step_substep_offset += substep_timer.currentStepNum();
         current_time += current_step_length;
         if (final_step) {
             break;
@@ -783,6 +792,8 @@ runStepReservoirCouplingSlave_()
     const double original_time_step = this->simulator_timer_.currentStepLength();
     double current_time{this->simulator_timer_.simulationTimeElapsed()};
     double step_end_time = current_time + original_time_step;
+    const double report_step_start_time = current_time;
+    int report_step_substep_offset = 0;
     SimulatorReport report;
     auto report_step_idx = this->simulator_timer_.currentStepNum();
     if (report_step_idx == 0 && iteration == 0) {
@@ -808,6 +819,12 @@ runStepReservoirCouplingSlave_()
             this->simulator_timer_.reportStepNum(),
             maxTimeStep_()
         };
+        // Make the per-chunk timer log the enclosing report step's span and a
+        // cumulative substep counter (see AdaptiveSimulatorTimer "report step
+        // view"). Without this, log lines would show one sync chunk only.
+        substep_timer.setReportStepStartTime(report_step_start_time);
+        substep_timer.setReportStepTotalTime(step_end_time);
+        substep_timer.setReportStepSubstepOffset(report_step_substep_offset);
         const bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
             current_time + timestep, step_end_time
         );
@@ -818,6 +835,7 @@ runStepReservoirCouplingSlave_()
         SubStepIteration<Solver> substepIteration{*this, substep_timer, timestep, final_step};
         const auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
+        report_step_substep_offset += substep_timer.currentStepNum();
         current_time += timestep;
         if (final_step) {
             break;
