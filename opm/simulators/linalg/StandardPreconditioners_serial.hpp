@@ -92,20 +92,20 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             DUNE_UNUSED_PARAMETER(prm);
             return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat());
         });
-        F::addCreator("haugen-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
             return std::make_shared<MixedPreconditioner<M,V,V>>(op.getmat());
         });
-        F::addCreator("haugen-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
             return std::make_shared<MixedPreconditioner<M,V,V>>(op.getmat(),true);
         });
-        F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("legacy-mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
             DUNE_UNUSED_PARAMETER(op);
             return std::make_shared<TrivialPreconditioner<V,V>>();
         });
-        F::addCreator("mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("legacy-mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
             DUNE_UNUSED_PARAMETER(op);
             return std::make_shared<TrivialPreconditioner<V,V>>();

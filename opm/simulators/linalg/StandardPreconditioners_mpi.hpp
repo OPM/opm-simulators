@@ -165,11 +165,11 @@ struct StandardPreconditioners
             DUNE_UNUSED_PARAMETER(prm);
             return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
         });
-        F::addCreator("haugen-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             DUNE_UNUSED_PARAMETER(prm);
             return wrapBlockPreconditioner<MixedPreconditioner<M,V,V>>(comm, op.getmat());
         });
-        F::addCreator("haugen-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             DUNE_UNUSED_PARAMETER(prm);
             return wrapBlockPreconditioner<MixedPreconditioner<M,V,V>>(comm, op.getmat(), true);
         });
