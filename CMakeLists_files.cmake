@@ -1352,6 +1352,9 @@ if (HAVE_AVX2_EXTENSION)
     opm/simulators/linalg/mixed/prec.h
     opm/simulators/linalg/mixed/vec.h
     opm/simulators/linalg/mixed/wrapper.hpp
+    opm/simulators/linalg/mixed/MatrixWrapper.hpp
+    opm/simulators/linalg/mixed/PreconditionerWrapper.hpp
+    opm/simulators/linalg/mixed/SolverAdapter.hpp
   )
 endif()
 
