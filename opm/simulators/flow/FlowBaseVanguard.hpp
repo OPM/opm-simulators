@@ -199,7 +199,35 @@ public:
     {
         auto index_pair = cartesianToCompressed_.find(cartesianCellIdx);
         if (index_pair == cartesianToCompressed_.end() ||
+            is_interior_[index_pair->second] != 1)
+        {
+            return -1;
+        }
+        else
+        {
+            return index_pair->second;
+        }
+    }
+
+    int compressedIndexForInteriorOrOverlap(int cartesianCellIdx) const
+    {
+        auto index_pair = cartesianToCompressed_.find(cartesianCellIdx);
+        if (index_pair == cartesianToCompressed_.end() ||
             !is_interior_[index_pair->second])
+        {
+            return -1;
+        }
+        else
+        {
+            return index_pair->second;
+        }
+    }
+
+    int compressedIndexForOverlap(int cartesianCellIdx) const
+    {
+        auto index_pair = cartesianToCompressed_.find(cartesianCellIdx);
+        if (index_pair == cartesianToCompressed_.end() ||
+            is_interior_[index_pair->second] != 2)
         {
             return -1;
         }
@@ -344,13 +372,10 @@ protected:
             const auto elemIdx = elemMapper.index(element);
             unsigned cartesianCellIdx = cartesianIndex(elemIdx);
             cartesianToCompressed_[cartesianCellIdx] = elemIdx;
-            if (element.partitionType() == Dune::InteriorEntity)
-            {
-                is_interior_[elemIdx] = 1;
-            }
-            else
-            {
-                is_interior_[elemIdx] = 0;
+            switch (element.partitionType()) {
+                case Dune::InteriorEntity: is_interior_[elemIdx] = 1; break;
+                case Dune::OverlapEntity:  is_interior_[elemIdx] = 2; break;
+                default: is_interior_[elemIdx] = 0;
             }
         }
     }

@@ -188,6 +188,9 @@ namespace Opm
                                       const bool use_well_weights,
                                       const WellStateType& well_state) const override;
 
+        void addWellOverlapConnectionsToPressureEquations(PressureMatrix& mat,
+                                                          const int cell_number) const override;
+
         // iterate well equations with the specified control until converged
         bool iterateWellEqWithControl(const Simulator& simulator,
                                       const double dt,
